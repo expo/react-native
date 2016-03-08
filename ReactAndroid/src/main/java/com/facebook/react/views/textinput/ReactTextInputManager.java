@@ -181,6 +181,15 @@ public class ReactTextInputManager extends
     }
   }
 
+  @ReactProp(name = "onChangeContentSize", defaultBoolean = false)
+  public void setOnChangecontentSize(final ReactEditText view, boolean onChangeContentSize) {
+    if (onChangeContentSize) {
+      view.setContentSizeWatcher(new ReactContentSizeWatcher(view));
+    } else {
+      view.setContentSizeWatcher(null);
+    }
+  }
+
   @ReactProp(name = "placeholder")
   public void setPlaceholder(ReactEditText view, @Nullable String placeholder) {
     view.setHint(placeholder);
@@ -390,6 +399,7 @@ public class ReactTextInputManager extends
       mPreviousText = null;
     }
 
+
     @Override
     public void beforeTextChanged(CharSequence s, int start, int count, int after) {
       // Incoming charSequence gets mutated before onTextChanged() is invoked
@@ -411,15 +421,17 @@ public class ReactTextInputManager extends
       if (count == before && newText.equals(oldText)) {
         return;
       }
+
+      // TODO: remove contentSize from onTextChanged entirely now that onChangeContentSize exists?
       int contentWidth = mEditText.getWidth();
       int contentHeight = mEditText.getHeight();
 
       // Use instead size of text content within EditText when available
       if (mEditText.getLayout() != null) {
         contentWidth = mEditText.getCompoundPaddingLeft() + mEditText.getLayout().getWidth() +
-            mEditText.getCompoundPaddingRight();
+          mEditText.getCompoundPaddingRight();
         contentHeight = mEditText.getCompoundPaddingTop() + mEditText.getLayout().getHeight() +
-            mEditText.getCompoundPaddingTop();
+          mEditText.getCompoundPaddingTop();
       }
 
       // The event that contains the event counter and updates it must be sent first.
@@ -496,6 +508,45 @@ public class ReactTextInputManager extends
             return false;
           }
         });
+  }
+
+  private class ReactContentSizeWatcher implements ContentSizeWatcher {
+    private ReactEditText mEditText;
+    private EventDispatcher mEventDispatcher;
+    private int mPreviousContentWidth = 0;
+    private int mPreviousContentHeight = 0;
+
+    public ReactContentSizeWatcher(ReactEditText editText) {
+      mEditText = editText;
+      ReactContext reactContext = (ReactContext) editText.getContext();
+      mEventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
+    }
+
+    @Override
+    public void onLayout() {
+      int contentWidth = mEditText.getWidth();
+      int contentHeight = mEditText.getHeight();
+
+      // Use instead size of text content within EditText when available
+      if (mEditText.getLayout() != null) {
+        contentWidth = mEditText.getCompoundPaddingLeft() + mEditText.getLayout().getWidth() +
+          mEditText.getCompoundPaddingRight();
+        contentHeight = mEditText.getCompoundPaddingTop() + mEditText.getLayout().getHeight() +
+          mEditText.getCompoundPaddingTop();
+      }
+
+      if (contentWidth != mPreviousContentWidth || contentHeight != mPreviousContentHeight) {
+        mPreviousContentHeight = contentHeight;
+        mPreviousContentWidth = contentWidth;
+
+        mEventDispatcher.dispatchEvent(
+          new ReactContentSizeChangedEvent(
+            mEditText.getId(),
+            SystemClock.uptimeMillis(),
+            (int) PixelUtil.toDIPFromPixel(contentWidth),
+            (int) PixelUtil.toDIPFromPixel(contentHeight)));
+      }
+    }
   }
 
   private class ReactSelectionWatcher implements SelectionWatcher {

@@ -28,7 +28,7 @@ var base64Icon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEsAAABLCAQAAACS
 
 var ImageCapInsetsExample = require('./ImageCapInsetsExample');
 const IMAGE_PREFETCH_URL = 'http://facebook.github.io/origami/public/images/blog-hero.jpg?r=1&t=' + Date.now();
-Image.prefetch(IMAGE_PREFETCH_URL);
+// Image.prefetch(IMAGE_PREFETCH_URL);
 
 var NetworkImageCallbackExample = React.createClass({
   getInitialState: function() {

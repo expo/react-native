@@ -68,6 +68,7 @@ public class ReactEditText extends EditText {
   private int mStagedInputType;
   private boolean mContainsImages;
   private @Nullable SelectionWatcher mSelectionWatcher;
+  private @Nullable ContentSizeWatcher mContentSizeWatcher;
   private final InternalKeyListener mKeyListener;
 
   private static final KeyListener sKeyListener = QwertyKeyListener.getInstanceForFullKeyboard();
@@ -99,6 +100,13 @@ public class ReactEditText extends EditText {
   @Override
   public boolean isLayoutRequested() {
     return false;
+  }
+
+  @Override
+  protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+    if (mContentSizeWatcher != null) {
+      mContentSizeWatcher.onLayout();
+    }
   }
 
   // Consume 'Enter' key events: TextView tries to give focus to the next TextInput, but it can't
@@ -156,6 +164,10 @@ public class ReactEditText extends EditText {
         super.removeTextChangedListener(getTextWatcherDelegator());
       }
     }
+  }
+
+  public void setContentSizeWatcher(ContentSizeWatcher contentSizeWatcher) {
+    mContentSizeWatcher = contentSizeWatcher;
   }
 
   @Override
@@ -426,7 +438,7 @@ public class ReactEditText extends EditText {
     @Override
     public void afterTextChanged(Editable s) {
       if (!mIsSettingTextFromJS && mListeners != null) {
-        for (android.text.TextWatcher listener : mListeners) {
+        for (TextWatcher listener : mListeners) {
           listener.afterTextChanged(s);
         }
       }
