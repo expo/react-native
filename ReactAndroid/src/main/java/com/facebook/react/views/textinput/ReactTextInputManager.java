@@ -399,7 +399,6 @@ public class ReactTextInputManager extends
       mPreviousText = null;
     }
 
-
     @Override
     public void beforeTextChanged(CharSequence s, int start, int count, int after) {
       // Incoming charSequence gets mutated before onTextChanged() is invoked
