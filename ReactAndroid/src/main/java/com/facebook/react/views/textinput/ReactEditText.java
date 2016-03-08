@@ -99,7 +99,11 @@ public class ReactEditText extends EditText {
   // TODO: t6408636 verify if we should schedule a layout after a View does a requestLayout()
   @Override
   public boolean isLayoutRequested() {
-    return false;
+    if (mContentSizeWatcher != null) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @Override
