@@ -459,7 +459,7 @@ exports.examples = [
   {
     title: 'Image Size',
     render: function() {
-      return <ImageSizeExample source={fullImage} />; 
+      return <ImageSizeExample source={fullImage} />;
     },
     platform: 'ios',
   },

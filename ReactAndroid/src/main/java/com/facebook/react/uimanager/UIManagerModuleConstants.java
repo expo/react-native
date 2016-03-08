@@ -72,6 +72,7 @@ import com.facebook.react.uimanager.events.TouchEventType;
   /* package */ static Map getDirectEventTypeConstants() {
     return MapBuilder.builder()
         .put("topSelectionChange", MapBuilder.of("registrationName", "onSelectionChange"))
+        .put("topTextContentSizeChange", MapBuilder.of("registrationName", "onChangeContentSize"))
         .put("topLoadingStart", MapBuilder.of("registrationName", "onLoadingStart"))
         .put("topLoadingFinish", MapBuilder.of("registrationName", "onLoadingFinish"))
         .put("topLoadingError", MapBuilder.of("registrationName", "onLoadingError"))

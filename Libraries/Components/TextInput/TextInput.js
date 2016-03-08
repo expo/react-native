@@ -200,6 +200,10 @@ var TextInput = React.createClass({
      */
     onChange: PropTypes.func,
     /**
+     * Callback that is called when the text input's content size changes.
+     */
+    onChangeContentSize: PropTypes.func,
+    /**
      * Callback that is called when the text input's text changes.
      * Changed text is passed as an argument to the callback handler.
      */
@@ -483,6 +487,13 @@ var TextInput = React.createClass({
       };
     }
 
+    var onChangeContentSize;
+    if (this.props.onChangeContentSize) {
+      onChangeContentSize = (event: Event) => {
+        this.props.onChangeContentSize(event);
+      }
+    }
+
     var autoCapitalize =
       UIManager.AndroidTextInput.Constants.AutoCapitalizationType[this.props.autoCapitalize];
     var children = this.props.children;
@@ -510,6 +521,7 @@ var TextInput = React.createClass({
         onFocus={this._onFocus}
         onBlur={this._onBlur}
         onChange={this._onChange}
+        onChangeContentSize={onChangeContentSize}
         onSelectionChange={onSelectionChange}
         onTextInput={this._onTextInput}
         onEndEditing={this.props.onEndEditing}
