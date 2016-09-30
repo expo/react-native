@@ -14,6 +14,7 @@
 var Animated = require('Animated');
 var EdgeInsetsPropType = require('EdgeInsetsPropType');
 var NativeMethodsMixin = require('react/lib/NativeMethodsMixin');
+var Platform = require('Platform');
 var React = require('React');
 var Touchable = require('Touchable');
 
