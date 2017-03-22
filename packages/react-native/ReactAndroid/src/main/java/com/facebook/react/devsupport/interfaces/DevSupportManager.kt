@@ -82,6 +82,8 @@ public interface DevSupportManager : JSExceptionHandler {
 
   public fun handleReloadJS()
 
+  public fun reloadExpoApp(): Unit = Unit
+
   public fun reloadJSFromServer(bundleURL: String, callback: BundleLoadCallback)
 
   public fun isPackagerRunning(callback: PackagerStatusCallback)
