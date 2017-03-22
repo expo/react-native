@@ -329,24 +329,48 @@ public abstract class DevSupportManagerBase(
     }
   }
 
+  private fun getExponentActivityId(): Int {
+    return -1
+  }
+
+  override fun reloadExpoApp() {
+    try {
+      val clazz = Class.forName("host.exp.exponent.ReactNativeStaticHelpers")
+      val method = clazz.getMethod("reloadFromManifest", Int::class.javaPrimitiveType)
+      method.invoke(null, getExponentActivityId())
+    } catch (expoHandleErrorException: Exception) {
+      expoHandleErrorException.printStackTrace()
+
+      // reloadExpoApp replaces handleReloadJS in some places
+      // where in Expo we would like to reload from manifest.
+      // If so, if anything goes wrong here, we can fall back
+      // to plain JS reload.
+
+      // NOTE(brentvatne): rather than reload just JS we need to reload the entire project from manifest
+      reloadExpoApp()
+    }
+  }
+
+
   override fun showDevOptionsDialog() {
     if (devOptionsDialog != null || !isDevSupportEnabled || ActivityManager.isUserAMonkey()) {
       return
     }
     val options = LinkedHashMap<String, DevOptionHandler>()
     val disabledItemKeys: MutableSet<String?> = HashSet() /* register standard options */
-    options[applicationContext.getString(R.string.catalyst_reload)] = DevOptionHandler {
-      if (!devSettings.isJSDevModeEnabled && devSettings.isHotModuleReplacementEnabled) {
-        Toast.makeText(
-                applicationContext,
-                applicationContext.getString(R.string.catalyst_hot_reloading_auto_disable),
-                Toast.LENGTH_LONG,
-            )
-            .show()
-        devSettings.isHotModuleReplacementEnabled = false
-      }
-      handleReloadJS()
-    }
+    // NOTE(brentvatne): This option does not make sense for Expo
+    // options[applicationContext.getString(R.string.catalyst_reload)] = DevOptionHandler {
+    //   if (!devSettings.isJSDevModeEnabled && devSettings.isHotModuleReplacementEnabled) {
+    //     Toast.makeText(
+    //             applicationContext,
+    //             applicationContext.getString(R.string.catalyst_hot_reloading_auto_disable),
+    //             Toast.LENGTH_LONG,
+    //         )
+    //         .show()
+    //     devSettings.isHotModuleReplacementEnabled = false
+    //   }
+    //   handleReloadJS()
+    // }
 
     if (devSettings.isDeviceDebugEnabled) {
       // On-device JS debugging (CDP). Render action to open debugger frontend.
@@ -438,16 +462,17 @@ public abstract class DevSupportManagerBase(
           reactContext.getJSModule(HMRClient::class.java)?.disable()
         }
       }
-      if (nextEnabled && !devSettings.isJSDevModeEnabled) {
-        Toast.makeText(
-                applicationContext,
-                applicationContext.getString(R.string.catalyst_hot_reloading_auto_enable),
-                Toast.LENGTH_LONG,
-            )
-            .show()
-        devSettings.isJSDevModeEnabled = true
-        handleReloadJS()
-      }
+      // NOTE(brentvatne): This option does not make sense for Expo
+      // if (nextEnabled && !devSettings.isJSDevModeEnabled) {
+      //   Toast.makeText(
+      //           applicationContext,
+      //           applicationContext.getString(R.string.catalyst_hot_reloading_auto_enable),
+      //           Toast.LENGTH_LONG,
+      //       )
+      //       .show()
+      //   devSettings.isJSDevModeEnabled = true
+      //   handleReloadJS()
+      // }
     }
 
     // Do not show legacy performance overlay if V2 is enabled
@@ -468,11 +493,12 @@ public abstract class DevSupportManagerBase(
         }
         devSettings.isFpsDebugEnabled = !devSettings.isFpsDebugEnabled
       }
-      options[applicationContext.getString(R.string.catalyst_settings)] = DevOptionHandler {
-        val intent = Intent(applicationContext, DevSettingsActivity::class.java)
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        applicationContext.startActivity(intent)
-      }
+      // NOTE(brentvatne): This option does not make sense for Expo
+      // options[applicationContext.getString(R.string.catalyst_settings)] = DevOptionHandler {
+      //   val intent = Intent(applicationContext, DevSettingsActivity::class.java)
+      //   intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      //   applicationContext.startActivity(intent)
+      // }
     }
 
     if (customDevOptions.isNotEmpty()) {
@@ -841,6 +867,7 @@ public abstract class DevSupportManagerBase(
     }
   }
 
+  // NOTE(brentvatne): this is confusingly called the first time the app loads!
   private fun reload() {
     UiThreadUtil.assertOnUiThread()
 
@@ -889,7 +916,11 @@ public abstract class DevSupportManagerBase(
                 // Disable debugger to resume the JsVM & avoid thread locks while reloading
                 devServerHelper.disableDebugger()
               }
-              UiThreadUtil.runOnUiThread { handleReloadJS() }
+              UiThreadUtil.runOnUiThread {
+                // NOTE(brentvatne): rather than reload just JS we need to reload the entire project from manifest
+                // handleReloadJS();
+                reloadExpoApp();
+              }
             }
 
             override fun onPackagerDevMenuCommand() {
