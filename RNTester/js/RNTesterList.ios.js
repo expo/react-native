@@ -69,6 +69,11 @@ const ComponentExamples: Array<RNTesterExample> = [
     supportsTVOS: true,
   },
   {
+    key: 'MaskedViewExample',
+    module: require('./MaskedViewExample'),
+    supportsTVOS: true,
+  },
+  {
     key: 'ModalExample',
     module: require('./ModalExample'),
     supportsTVOS: true,

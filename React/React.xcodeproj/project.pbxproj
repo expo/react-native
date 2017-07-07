@@ -965,6 +965,14 @@
 		59FBEFB51E46D91C0095D885 /* RCTScrollContentViewManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 59FBEFAE1E46D91C0095D885 /* RCTScrollContentViewManager.h */; };
 		59FBEFB61E46D91C0095D885 /* RCTScrollContentViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 59FBEFAF1E46D91C0095D885 /* RCTScrollContentViewManager.m */; };
 		59FBEFB71E46D91C0095D885 /* RCTScrollContentViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 59FBEFAF1E46D91C0095D885 /* RCTScrollContentViewManager.m */; };
+		66CD94951F0F35E900CB3C7C /* RCTMaskedView.h in Headers */ = {isa = PBXBuildFile; fileRef = 66CD94911F0F35E900CB3C7C /* RCTMaskedView.h */; };
+		66CD94961F0F35E900CB3C7C /* RCTMaskedView.h in Headers */ = {isa = PBXBuildFile; fileRef = 66CD94911F0F35E900CB3C7C /* RCTMaskedView.h */; };
+		66CD94971F0F35E900CB3C7C /* RCTMaskedView.m in Sources */ = {isa = PBXBuildFile; fileRef = 66CD94921F0F35E900CB3C7C /* RCTMaskedView.m */; };
+		66CD94981F0F35E900CB3C7C /* RCTMaskedView.m in Sources */ = {isa = PBXBuildFile; fileRef = 66CD94921F0F35E900CB3C7C /* RCTMaskedView.m */; };
+		66CD94991F0F35E900CB3C7C /* RCTMaskedViewManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 66CD94931F0F35E900CB3C7C /* RCTMaskedViewManager.h */; };
+		66CD949A1F0F35E900CB3C7C /* RCTMaskedViewManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 66CD94931F0F35E900CB3C7C /* RCTMaskedViewManager.h */; };
+		66CD949B1F0F35E900CB3C7C /* RCTMaskedViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 66CD94941F0F35E900CB3C7C /* RCTMaskedViewManager.m */; };
+		66CD949C1F0F35E900CB3C7C /* RCTMaskedViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 66CD94941F0F35E900CB3C7C /* RCTMaskedViewManager.m */; };
 		68EFE4EE1CF6EB3900A1DE13 /* RCTBundleURLProvider.m in Sources */ = {isa = PBXBuildFile; fileRef = 68EFE4ED1CF6EB3900A1DE13 /* RCTBundleURLProvider.m */; };
 		830A229E1A66C68A008503DA /* RCTRootView.m in Sources */ = {isa = PBXBuildFile; fileRef = 830A229D1A66C68A008503DA /* RCTRootView.m */; };
 		83392EB31B6634E10013B15F /* RCTModalHostViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 83392EB21B6634E10013B15F /* RCTModalHostViewController.m */; };
@@ -1813,6 +1821,10 @@
 		59FBEFAD1E46D91C0095D885 /* RCTScrollContentShadowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RCTScrollContentShadowView.m; sourceTree = "<group>"; };
 		59FBEFAE1E46D91C0095D885 /* RCTScrollContentViewManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RCTScrollContentViewManager.h; sourceTree = "<group>"; };
 		59FBEFAF1E46D91C0095D885 /* RCTScrollContentViewManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RCTScrollContentViewManager.m; sourceTree = "<group>"; };
+		66CD94911F0F35E900CB3C7C /* RCTMaskedView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RCTMaskedView.h; sourceTree = "<group>"; };
+		66CD94921F0F35E900CB3C7C /* RCTMaskedView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RCTMaskedView.m; sourceTree = "<group>"; };
+		66CD94931F0F35E900CB3C7C /* RCTMaskedViewManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RCTMaskedViewManager.h; sourceTree = "<group>"; };
+		66CD94941F0F35E900CB3C7C /* RCTMaskedViewManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RCTMaskedViewManager.m; sourceTree = "<group>"; };
 		68EFE4EC1CF6EB3000A1DE13 /* RCTBundleURLProvider.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RCTBundleURLProvider.h; sourceTree = "<group>"; };
 		68EFE4ED1CF6EB3900A1DE13 /* RCTBundleURLProvider.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RCTBundleURLProvider.m; sourceTree = "<group>"; };
 		6A15FB0C1BDF663500531DFB /* RCTRootViewInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RCTRootViewInternal.h; sourceTree = "<group>"; };
@@ -2119,6 +2131,10 @@
 				58C571BF1AA56C1900CDF9C8 /* RCTDatePickerManager.m */,
 				3D37B5801D522B190042D5B5 /* RCTFont.h */,
 				3D37B5811D522B190042D5B5 /* RCTFont.mm */,
+				66CD94911F0F35E900CB3C7C /* RCTMaskedView.h */,
+				66CD94921F0F35E900CB3C7C /* RCTMaskedView.m */,
+				66CD94931F0F35E900CB3C7C /* RCTMaskedViewManager.h */,
+				66CD94941F0F35E900CB3C7C /* RCTMaskedViewManager.m */,
 				83A1FE8A1B62640A00BE0E65 /* RCTModalHostView.h */,
 				83A1FE8B1B62640A00BE0E65 /* RCTModalHostView.m */,
 				83392EB11B6634E10013B15F /* RCTModalHostViewController.h */,
@@ -2583,6 +2599,7 @@
 				3D302F421DF828F800D6DDAE /* RCTMultipartDataTask.h in Headers */,
 				3D302F431DF828F800D6DDAE /* RCTMultipartStreamReader.h in Headers */,
 				3D302F441DF828F800D6DDAE /* RCTNullability.h in Headers */,
+				66CD949A1F0F35E900CB3C7C /* RCTMaskedViewManager.h in Headers */,
 				3D302F451DF828F800D6DDAE /* RCTParserUtils.h in Headers */,
 				3D302F461DF828F800D6DDAE /* RCTPerformanceLogger.h in Headers */,
 				3D302F481DF828F800D6DDAE /* RCTRootView.h in Headers */,
@@ -2650,6 +2667,7 @@
 				CF2731C21E7B8DEF0044CA4F /* RCTDeviceInfo.h in Headers */,
 				3D302F8B1DF828F800D6DDAE /* RCTScrollViewManager.h in Headers */,
 				3D302F8C1DF828F800D6DDAE /* RCTSegmentedControl.h in Headers */,
+				66CD94961F0F35E900CB3C7C /* RCTMaskedView.h in Headers */,
 				3D302F8D1DF828F800D6DDAE /* RCTSegmentedControlManager.h in Headers */,
 				3D302F8E1DF828F800D6DDAE /* RCTShadowView.h in Headers */,
 				3D302F8F1DF828F800D6DDAE /* RCTSlider.h in Headers */,
@@ -2872,6 +2890,7 @@
 				3D80DA571DF820620028D040 /* RCTSourceCode.h in Headers */,
 				3D80DA581DF820620028D040 /* RCTStatusBarManager.h in Headers */,
 				3D80DA591DF820620028D040 /* RCTTiming.h in Headers */,
+				66CD94991F0F35E900CB3C7C /* RCTMaskedViewManager.h in Headers */,
 				3D80DA5A1DF820620028D040 /* RCTUIManager.h in Headers */,
 				3D80DA5B1DF820620028D040 /* RCTFPSGraph.h in Headers */,
 				3D80DA5D1DF820620028D040 /* RCTMacros.h in Headers */,
@@ -2926,6 +2945,7 @@
 				3D80DA8D1DF820620028D040 /* RCTView.h in Headers */,
 				3D80DA8E1DF820620028D040 /* RCTViewControllerProtocol.h in Headers */,
 				590D7BFD1EBD458B00D8A370 /* RCTShadowView+Layout.h in Headers */,
+				66CD94951F0F35E900CB3C7C /* RCTMaskedView.h in Headers */,
 				3D80DA8F1DF820620028D040 /* RCTViewManager.h in Headers */,
 				13134CA01E296B2A00B9F3CB /* RCTCxxUtils.h in Headers */,
 				3D80DA901DF820620028D040 /* RCTWebView.h in Headers */,
@@ -3309,6 +3329,7 @@
 				2D3B5EC91D9B095C00451313 /* RCTBorderDrawing.m in Sources */,
 				2D3B5E991D9B089A00451313 /* RCTDisplayLink.m in Sources */,
 				2D3B5EA11D9B08B600451313 /* RCTModuleData.mm in Sources */,
+				66CD949C1F0F35E900CB3C7C /* RCTMaskedViewManager.m in Sources */,
 				2D3B5EEA1D9B09CD00451313 /* RCTTabBar.m in Sources */,
 				590D7C001EBD458B00D8A370 /* RCTShadowView+Layout.m in Sources */,
 				2D3B5EAE1D9B08F800451313 /* RCTEventEmitter.m in Sources */,
@@ -3352,6 +3373,7 @@
 				2D3B5E9F1D9B08AF00451313 /* RCTKeyCommands.m in Sources */,
 				2D3B5EA51D9B08C700451313 /* RCTRootView.m in Sources */,
 				13134C871E296B2A00B9F3CB /* RCTCxxBridge.mm in Sources */,
+				66CD94981F0F35E900CB3C7C /* RCTMaskedView.m in Sources */,
 				CF2731C31E7B8DF30044CA4F /* RCTDeviceInfo.m in Sources */,
 				2D3B5EB11D9B090100451313 /* RCTAppState.m in Sources */,
 				1384E20B1E806D5B00545659 /* RCTNativeModule.mm in Sources */,
@@ -3534,6 +3556,7 @@
 				130443A21E3FEAA900D93A67 /* RCTFollyConvert.mm in Sources */,
 				58114A501AAE93D500E7D092 /* RCTAsyncLocalStorage.m in Sources */,
 				130E3D891E6A082100ACE484 /* RCTDevSettings.mm in Sources */,
+				66CD949B1F0F35E900CB3C7C /* RCTMaskedViewManager.m in Sources */,
 				13513F3C1B1F43F400FCE529 /* RCTProgressViewManager.m in Sources */,
 				14F7A0F01BDA714B003C6C10 /* RCTFPSGraph.m in Sources */,
 				3D7BFD171EA8E351008DFB7A /* RCTPackagerClient.m in Sources */,
@@ -3572,6 +3595,7 @@
 				13D033631C1837FE0021DC29 /* RCTClipboard.m in Sources */,
 				14C2CA741B3AC64300E6CBB2 /* RCTModuleData.mm in Sources */,
 				142014191B32094000CC17BA /* RCTPerformanceLogger.m in Sources */,
+				66CD94971F0F35E900CB3C7C /* RCTMaskedView.m in Sources */,
 				83CBBA981A6020BB00E9B192 /* RCTTouchHandler.m in Sources */,
 				3EDCA8A51D3591E700450C31 /* RCTErrorInfo.m in Sources */,
 				83CBBA521A601E3B00E9B192 /* RCTLog.mm in Sources */,
