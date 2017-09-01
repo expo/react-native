@@ -10,7 +10,7 @@
 
 'use strict';
 
-var bezier = require('bezier');
+var bezier = require('../bezier');
 
 var identity = function (x) { return x; };
 

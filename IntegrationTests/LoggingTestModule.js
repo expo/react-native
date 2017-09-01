@@ -10,7 +10,7 @@
  */
 'use strict';
 
-var BatchedBridge = require('BatchedBridge');
+var BatchedBridge = require('../Libraries/BatchedBridge/BatchedBridge');
 
 var warning = require('fbjs/lib/warning');
 var invariant = require('fbjs/lib/invariant');

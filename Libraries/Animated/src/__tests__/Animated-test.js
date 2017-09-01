@@ -8,7 +8,7 @@
  */
 'use strict';
 
-var Animated = require('Animated');
+var Animated = require('../Animated');
 describe('Animated tests', () => {
   beforeEach(() => {
     jest.resetModules();
@@ -560,13 +560,13 @@ describe('Animated tests', () => {
     var InteractionManager;
 
     beforeEach(() => {
-      jest.mock('InteractionManager');
-      Animated = require('Animated');
-      InteractionManager = require('InteractionManager');
+      jest.mock('../../../Interaction/InteractionManager');
+      Animated = require('../Animated');
+      InteractionManager = require('../../../Interaction/InteractionManager');
     });
 
     afterEach(()=> {
-      jest.unmock('InteractionManager');
+      jest.unmock('../../../Interaction/InteractionManager');
     });
 
     it('registers an interaction by default', () => {

@@ -9,19 +9,19 @@
 'use strict';
 
 jest
-  .setMock('Text', {})
-  .setMock('View', {})
-  .setMock('Image', {})
-  .setMock('React', {Component: class {}})
-  .setMock('NativeModules', {
+  .setMock('../../../Text/Text', {})
+  .setMock('../../../Components/View/View', {})
+  .setMock('../../../Image/Image', {})
+  .setMock('../../../react-native/React', {Component: class {}})
+  .setMock('../../../BatchedBridge/NativeModules', {
     NativeAnimatedModule: {},
   })
-  .mock('NativeEventEmitter')
+  .mock('../../../EventEmitter/NativeEventEmitter')
   // findNodeHandle is imported from ReactNative so mock that whole module.
-  .setMock('ReactNative', {findNodeHandle: () => 1});
+  .setMock('../../../Renderer/shims/ReactNative', {findNodeHandle: () => 1});
 
-const Animated = require('Animated');
-const NativeAnimatedHelper = require('NativeAnimatedHelper');
+const Animated = require('../Animated');
+const NativeAnimatedHelper = require('../NativeAnimatedHelper');
 
 function createAndMountComponent(ComponentClass, props) {
   const component = new ComponentClass();
@@ -35,7 +35,7 @@ function createAndMountComponent(ComponentClass, props) {
 
 describe('Native Animated', () => {
 
-  const nativeAnimatedModule = require('NativeModules').NativeAnimatedModule;
+  const nativeAnimatedModule = require('../../../BatchedBridge/NativeModules').NativeAnimatedModule;
 
   beforeEach(() => {
     nativeAnimatedModule.addAnimatedEventToView = jest.fn();

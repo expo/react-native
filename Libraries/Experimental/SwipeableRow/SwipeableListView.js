@@ -11,11 +11,11 @@
  */
 'use strict';
 
-const ListView = require('ListView');
+const ListView = require('../../Lists/ListView/ListView');
 const PropTypes = require('prop-types');
-const React = require('React');
-const SwipeableListViewDataSource = require('SwipeableListViewDataSource');
-const SwipeableRow = require('SwipeableRow');
+const React = require('../../react-native/React');
+const SwipeableListViewDataSource = require('./SwipeableListViewDataSource');
+const SwipeableRow = require('./SwipeableRow');
 
 type DefaultProps = {
   bounceFirstRowOnMount: boolean,

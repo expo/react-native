@@ -11,9 +11,9 @@
  */
 'use strict';
 
-const AsyncStorage = require('AsyncStorage');
-const BackHandler = require('BackHandler');
-const Linking = require('Linking');
+const AsyncStorage = require('../../Libraries/Storage/AsyncStorage');
+const BackHandler = require('../../Libraries/Utilities/BackHandler');
+const Linking = require('../../Libraries/Linking/Linking');
 const React = require('react');
 const ReactNative = require('react-native');
 const RNTesterActions = require('./RNTesterActions');

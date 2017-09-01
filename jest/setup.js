@@ -27,28 +27,28 @@ global.cancelAnimationFrame = function(id) {
 };
 
 jest
-  .mock('setupDevtools')
+  .mock('../Libraries/Core/Devtools/setupDevtools')
   .mock('npmlog');
 
 // there's a __mock__ for it.
-jest.setMock('ErrorUtils', require('ErrorUtils'));
+jest.setMock('../Libraries/vendor/core/ErrorUtils', require('../Libraries/vendor/core/ErrorUtils'));
 
 jest
-  .mock('InitializeCore')
-  .mock('Image', () => mockComponent('Image'))
-  .mock('Text', () => mockComponent('Text'))
-  .mock('TextInput', () => mockComponent('TextInput'))
-  .mock('Modal', () => mockComponent('Modal'))
-  .mock('View', () => mockComponent('View'))
-  .mock('RefreshControl', () => require.requireMock('RefreshControlMock'))
-  .mock('ScrollView', () => require.requireMock('ScrollViewMock'))
+  .mock('../Libraries/Core/InitializeCore')
+  .mock('../Libraries/Image/Image', () => mockComponent('../Libraries/Image/Image'))
+  .mock('../Libraries/Text/Text', () => mockComponent('../Libraries/Text/Text'))
+  .mock('../Libraries/Components/TextInput/TextInput', () => mockComponent('../Libraries/Components/TextInput/TextInput'))
+  .mock('../Libraries/Modal/Modal', () => mockComponent('../Libraries/Modal/Modal'))
+  .mock('../Libraries/Components/View/View', () => mockComponent('../Libraries/Components/View/View'))
+  .mock('../Libraries/Components/RefreshControl/RefreshControl', () => require.requireMock('RefreshControlMock'))
+  .mock('../Libraries/Components/ScrollView/ScrollView', () => require.requireMock('ScrollViewMock'))
   .mock(
-    'ActivityIndicator',
-    () => mockComponent('ActivityIndicator'),
+    '../Libraries/Components/ActivityIndicator/ActivityIndicator',
+    () => mockComponent('../Libraries/Components/ActivityIndicator/ActivityIndicator'),
   )
-  .mock('ListView', () => require.requireMock('ListViewMock'))
-  .mock('ListViewDataSource', () => {
-    const DataSource = require.requireActual('ListViewDataSource');
+  .mock('../Libraries/Lists/ListView/ListView', () => require.requireMock('ListViewMock'))
+  .mock('../Libraries/Lists/ListView/ListViewDataSource', () => {
+    const DataSource = require.requireActual('../Libraries/Lists/ListView/ListViewDataSource');
     DataSource.prototype.toJSON = function() {
       function ListViewDataSource(dataBlob) {
         this.items = 0;
@@ -68,7 +68,7 @@ jest
     };
     return DataSource;
   })
-  .mock('ensureComponentIsNative', () => () => true);
+  .mock('../Libraries/Components/Touchable/ensureComponentIsNative', () => () => true);
 
 const mockEmptyObject = {};
 const mockNativeModules = {
@@ -248,22 +248,33 @@ const mockNativeModules = {
   },
 };
 
-Object.keys(mockNativeModules).forEach(module => {
+const mockNativeModuleJS = {
+  '../Libraries/AppState/AppState': mockNativeModules.AppState,
+  '../Libraries/Components/Clipboard/Clipboard': mockNativeModules.Clipboard,
+  '../Libraries/Utilities/DeviceInfo': mockNativeModules.DeviceInfo,
+  '../Libraries/Linking/Linking': mockNativeModules.Linking,
+  '../Libraries/Network/NetInfo': mockNativeModules.NetInfo,
+  '../Libraries/ReactNative/UIManager': mockNativeModules.UIManager,
+};
+
+const allRNMocks = {...mockNativeModules, mockNativeModuleJS};
+
+Object.keys(allRNMocks).forEach(module => {
   try {
-    jest.doMock(module, () => mockNativeModules[module]); // needed by FacebookSDK-test
+    jest.doMock(module, () => allRNMocks[module]); // needed by FacebookSDK-test
   } catch (e) {
-    jest.doMock(module, () => mockNativeModules[module], {virtual: true});
+    jest.doMock(module, () => allRNMocks[module], {virtual: true});
   }
 });
 
 jest
-  .doMock('NativeModules', () => mockNativeModules)
-  .doMock('ReactNativePropRegistry', () => ({
+  .doMock('../Libraries/BatchedBridge/NativeModules', () => mockNativeModules)
+  .doMock('../Libraries/Renderer/shims/ReactNativePropRegistry', () => ({
     register: id => id,
     getByID: () => mockEmptyObject,
   }));
 
-jest.doMock('requireNativeComponent', () => {
+jest.doMock('../Libraries/ReactNative/requireNativeComponent', () => {
   const React = require('react');
 
   return viewName => props => React.createElement(

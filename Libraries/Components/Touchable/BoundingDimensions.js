@@ -11,7 +11,7 @@
 
 'use strict';
 
-var PooledClass = require('PooledClass');
+var PooledClass = require('../../Renderer/shims/PooledClass');
 
 var twoArgumentPooler = PooledClass.twoArgumentPooler;
 

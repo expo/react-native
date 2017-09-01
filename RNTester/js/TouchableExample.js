@@ -25,7 +25,7 @@ var {
   View,
 } = ReactNative;
 
-const NativeModules = require('NativeModules');
+const NativeModules = require('../../Libraries/BatchedBridge/NativeModules');
 
 const forceTouchAvailable = (NativeModules.PlatformConstants &&
   NativeModules.PlatformConstants.forceTouchAvailable) || false;

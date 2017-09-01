@@ -11,15 +11,15 @@
 'use strict';
 
 jest
-  .mock('ErrorUtils')
-  .mock('BatchedBridge');
+  .mock('../../vendor/core/ErrorUtils')
+  .mock('../../BatchedBridge/BatchedBridge');
 
 function expectToBeCalledOnce(fn) {
   expect(fn.mock.calls.length).toBe(1);
 }
 
 describe('Batchinator', () => {
-  const Batchinator = require('Batchinator');
+  const Batchinator = require('../Batchinator');
 
   it('executes vanilla tasks', () => {
     const callback = jest.fn();

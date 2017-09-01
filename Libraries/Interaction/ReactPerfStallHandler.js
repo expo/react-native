@@ -11,8 +11,8 @@
  */
 'use strict';
 
-const JSEventLoopWatchdog = require('JSEventLoopWatchdog');
-const ReactPerf = require('ReactPerf');
+const JSEventLoopWatchdog = require('./JSEventLoopWatchdog');
+const ReactPerf = require('../Renderer/shims/ReactPerf');
 
 const ReactPerfStallHandler = {
   register: function() {

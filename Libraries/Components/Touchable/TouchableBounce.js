@@ -11,13 +11,13 @@
  */
 'use strict';
 
-var Animated = require('Animated');
-var EdgeInsetsPropType = require('EdgeInsetsPropType');
-var NativeMethodsMixin = require('NativeMethodsMixin');
-var React = require('React');
+var Animated = require('../../Animated/src/Animated');
+var EdgeInsetsPropType = require('../../StyleSheet/EdgeInsetsPropType');
+var NativeMethodsMixin = require('../../Renderer/shims/NativeMethodsMixin');
+var React = require('../../react-native/React');
 var createReactClass = require('create-react-class');
 var PropTypes = require('prop-types');
-var Touchable = require('Touchable');
+var Touchable = require('./Touchable');
 
 type Event = Object;
 

@@ -27,7 +27,7 @@ const {
   Switch,
   View,
 } = ReactNative;
-const Platform = require('Platform');
+const Platform = require('../../Libraries/Utilities/Platform');
 
 
 const RNTesterPage = require('./RNTesterPage');

@@ -8,8 +8,8 @@
  */
 'use strict';
 
-const {OS} = require('Platform');
-const processColor = require('processColor');
+const {OS} = require('../../Utilities/Platform');
+const processColor = require('../processColor');
 
 const platformSpecific = OS === 'android'
   ? unsigned => unsigned | 0 //eslint-disable-line no-bitwise

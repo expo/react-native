@@ -12,7 +12,7 @@
  */
 'use strict';
 
-const MessageQueue = require('MessageQueue');
+const MessageQueue = require('./MessageQueue');
 
 const BatchedBridge = new MessageQueue();
 

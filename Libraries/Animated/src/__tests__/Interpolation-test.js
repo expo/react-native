@@ -8,8 +8,8 @@
  */
 'use strict';
 
-var Interpolation = require('Interpolation');
-var Easing = require('Easing');
+var Interpolation = require('../Interpolation');
+var Easing = require('../Easing');
 
 describe('Interpolation', () => {
   it('should work with defaults', () => {

@@ -10,17 +10,17 @@
  */
 'use strict';
 
-var Platform = require('Platform');
-var React = require('React');
+var Platform = require('../../Utilities/Platform');
+var React = require('../../react-native/React');
 var PropTypes = require('prop-types');
-var ReactNative = require('ReactNative');
-var Touchable = require('Touchable');
-var TouchableWithoutFeedback = require('TouchableWithoutFeedback');
-var UIManager = require('UIManager');
+var ReactNative = require('../../Renderer/shims/ReactNative');
+var Touchable = require('./Touchable');
+var TouchableWithoutFeedback = require('./TouchableWithoutFeedback');
+var UIManager = require('../../ReactNative/UIManager');
 
 var createReactClass = require('create-react-class');
-var ensurePositiveDelayProps = require('ensurePositiveDelayProps');
-var processColor = require('processColor');
+var ensurePositiveDelayProps = require('./ensurePositiveDelayProps');
+var processColor = require('../../StyleSheet/processColor');
 
 var rippleBackgroundPropType = PropTypes.shape({
   type: PropTypes.oneOf(['RippleAndroid']),

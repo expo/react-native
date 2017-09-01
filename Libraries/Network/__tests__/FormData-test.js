@@ -9,7 +9,7 @@
 
 'use strict';
 
-const FormData = require('FormData');
+const FormData = require('../FormData');
 
 describe('FormData', function() {
   var formData;

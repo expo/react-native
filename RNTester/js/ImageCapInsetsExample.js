@@ -14,7 +14,7 @@
 var React = require('react');
 var ReactNative = require('react-native');
 
-var nativeImageSource = require('nativeImageSource');
+var nativeImageSource = require('../../Libraries/Image/nativeImageSource');
 var {
   Image,
   StyleSheet,

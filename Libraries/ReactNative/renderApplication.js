@@ -13,14 +13,14 @@
 
 'use strict';
 
-const AppContainer = require('AppContainer');
-const React = require('React');
-const ReactNative = require('ReactNative');
+const AppContainer = require('./AppContainer');
+const React = require('../react-native/React');
+const ReactNative = require('../Renderer/shims/ReactNative');
 
 const invariant = require('fbjs/lib/invariant');
 
 // require BackHandler so it sets the default handler that exits the app if no listeners respond
-require('BackHandler');
+require('../Utilities/BackHandler');
 
 function renderApplication<Props: Object>(
   RootComponent: ReactClass<Props>,

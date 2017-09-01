@@ -11,11 +11,11 @@
  */
 "use strict";
 
-var invariant = require("fbjs/lib/invariant"), warning = require("fbjs/lib/warning"), ExceptionsManager = require("ExceptionsManager");
+var invariant = require("fbjs/lib/invariant"), warning = require("fbjs/lib/warning"), ExceptionsManager = require('../Core/ExceptionsManager');
 
-require("InitializeCore");
+require('../Core/InitializeCore');
 
-var RCTEventEmitter = require("RCTEventEmitter"), emptyFunction = require("fbjs/lib/emptyFunction"), UIManager = require("UIManager"), checkPropTypes = require("prop-types/checkPropTypes"), emptyObject = require("fbjs/lib/emptyObject"), react = require("react"), shallowEqual = require("fbjs/lib/shallowEqual"), deepDiffer = require("deepDiffer"), flattenStyle = require("flattenStyle"), TextInputState = require("TextInputState"), deepFreezeAndThrowOnMutationInDev = require("deepFreezeAndThrowOnMutationInDev"), ExecutionEnvironment = require("fbjs/lib/ExecutionEnvironment"), performanceNow = require("fbjs/lib/performanceNow"), defaultShowDialog = function(capturedError) {
+var RCTEventEmitter = require('../EventEmitter/RCTEventEmitter'), emptyFunction = require("fbjs/lib/emptyFunction"), UIManager = require('../ReactNative/UIManager'), checkPropTypes = require("prop-types/checkPropTypes"), emptyObject = require("fbjs/lib/emptyObject"), react = require("react"), shallowEqual = require("fbjs/lib/shallowEqual"), deepDiffer = require('../Utilities/differ/deepDiffer'), flattenStyle = require('../StyleSheet/flattenStyle'), TextInputState = require('../Components/TextInput/TextInputState'), deepFreezeAndThrowOnMutationInDev = require('../Utilities/deepFreezeAndThrowOnMutationInDev'), ExecutionEnvironment = require("fbjs/lib/ExecutionEnvironment"), performanceNow = require("fbjs/lib/performanceNow"), defaultShowDialog = function(capturedError) {
     return !0;
 }, showDialog = defaultShowDialog;
 
@@ -3998,7 +3998,7 @@ getInspectorDataForViewTag = function(viewTag) {
 
 var ReactNativeFiberInspector = {
     getInspectorDataForViewTag: getInspectorDataForViewTag
-}, ReactVersion = "16.0.0-alpha.13", ReactNativeFeatureFlags = require("ReactNativeFeatureFlags"), ReactCurrentOwner$3 = ReactGlobalSharedState_1.ReactCurrentOwner, injectedFindNode = ReactNativeFeatureFlags.useFiber ? function(fiber) {
+}, ReactVersion = "16.0.0-alpha.13", ReactNativeFeatureFlags = require('./shims/ReactNativeFeatureFlags'), ReactCurrentOwner$3 = ReactGlobalSharedState_1.ReactCurrentOwner, injectedFindNode = ReactNativeFeatureFlags.useFiber ? function(fiber) {
     return ReactNativeFiberRenderer.findHostInstance(fiber);
 } : function(instance) {
     return instance;
@@ -4040,7 +4040,7 @@ function _inherits(subClass, superClass) {
     }), superClass && (Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass);
 }
 
-var ReactNativeFeatureFlags$1 = require("ReactNativeFeatureFlags"), mountSafeCallback$2 = NativeMethodsMixinUtils.mountSafeCallback, findNumericNodeHandle = ReactNativeFeatureFlags$1.useFiber ? findNumericNodeHandleFiber : DevOnlyStubShim, ReactNativeComponent = function(_React$Component) {
+var ReactNativeFeatureFlags$1 = require('./shims/ReactNativeFeatureFlags'), mountSafeCallback$2 = NativeMethodsMixinUtils.mountSafeCallback, findNumericNodeHandle = ReactNativeFeatureFlags$1.useFiber ? findNumericNodeHandleFiber : DevOnlyStubShim, ReactNativeComponent = function(_React$Component) {
     _inherits(ReactNativeComponent, _React$Component);
     function ReactNativeComponent() {
         return _classCallCheck$2(this, ReactNativeComponent), _possibleConstructorReturn(this, _React$Component.apply(this, arguments));
@@ -4088,7 +4088,7 @@ var injectedSetNativeProps = void 0;
 
 injectedSetNativeProps = ReactNativeFeatureFlags$1.useFiber ? setNativePropsFiber : setNativePropsStack;
 
-var ReactNativeComponent_1 = ReactNativeComponent, ReactNativeFeatureFlags$2 = require("ReactNativeFeatureFlags"), mountSafeCallback$3 = NativeMethodsMixinUtils.mountSafeCallback, throwOnStylesProp$1 = NativeMethodsMixinUtils.throwOnStylesProp, warnForStyleProps$2 = NativeMethodsMixinUtils.warnForStyleProps, findNumericNodeHandle$1 = ReactNativeFeatureFlags$2.useFiber ? findNumericNodeHandleFiber : DevOnlyStubShim, NativeMethodsMixin = {
+var ReactNativeComponent_1 = ReactNativeComponent, ReactNativeFeatureFlags$2 = require('./shims/ReactNativeFeatureFlags'), mountSafeCallback$3 = NativeMethodsMixinUtils.mountSafeCallback, throwOnStylesProp$1 = NativeMethodsMixinUtils.throwOnStylesProp, warnForStyleProps$2 = NativeMethodsMixinUtils.warnForStyleProps, findNumericNodeHandle$1 = ReactNativeFeatureFlags$2.useFiber ? findNumericNodeHandleFiber : DevOnlyStubShim, NativeMethodsMixin = {
     measure: function(callback) {
         UIManager.measure(findNumericNodeHandle$1(this), mountSafeCallback$3(this, callback));
     },
@@ -4185,7 +4185,7 @@ var NativeMethodsMixin_1 = NativeMethodsMixin, TouchHistoryMath = {
     noCentroid: -1
 }, TouchHistoryMath_1 = TouchHistoryMath, createReactNativeComponentClassFiber = function(viewConfig) {
     return ReactNativeViewConfigRegistry_1.register(viewConfig);
-}, createReactNativeComponentClassFiber_1 = createReactNativeComponentClassFiber, ReactNativeFeatureFlags$3 = require("ReactNativeFeatureFlags"), createReactNativeComponentClass = ReactNativeFeatureFlags$3.useFiber ? createReactNativeComponentClassFiber_1 : DevOnlyStubShim, ReactNativeFeatureFlags$4 = require("ReactNativeFeatureFlags"), findNumericNodeHandle$2 = ReactNativeFeatureFlags$4.useFiber ? findNumericNodeHandleFiber : DevOnlyStubShim;
+}, createReactNativeComponentClassFiber_1 = createReactNativeComponentClassFiber, ReactNativeFeatureFlags$3 = require('./shims/ReactNativeFeatureFlags'), createReactNativeComponentClass = ReactNativeFeatureFlags$3.useFiber ? createReactNativeComponentClassFiber_1 : DevOnlyStubShim, ReactNativeFeatureFlags$4 = require('./shims/ReactNativeFeatureFlags'), findNumericNodeHandle$2 = ReactNativeFeatureFlags$4.useFiber ? findNumericNodeHandleFiber : DevOnlyStubShim;
 
 function takeSnapshot(view, options) {
     return "number" != typeof view && "window" !== view && (view = findNumericNodeHandle$2(view) || "window"), 

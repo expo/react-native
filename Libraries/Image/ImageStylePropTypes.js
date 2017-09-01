@@ -11,12 +11,12 @@
  */
 'use strict';
 
-var ColorPropType = require('ColorPropType');
-var ImageResizeMode = require('ImageResizeMode');
-var LayoutPropTypes = require('LayoutPropTypes');
+var ColorPropType = require('../StyleSheet/ColorPropType');
+var ImageResizeMode = require('./ImageResizeMode');
+var LayoutPropTypes = require('../StyleSheet/LayoutPropTypes');
 var ReactPropTypes = require('prop-types');
-var ShadowPropTypesIOS = require('ShadowPropTypesIOS');
-var TransformPropTypes = require('TransformPropTypes');
+var ShadowPropTypesIOS = require('../Components/View/ShadowPropTypesIOS');
+var TransformPropTypes = require('../StyleSheet/TransformPropTypes');
 
 var ImageStylePropTypes = {
   ...LayoutPropTypes,

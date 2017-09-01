@@ -9,7 +9,7 @@
  */
 'use strict';
 
-const SceneTracker = require('SceneTracker');
+const SceneTracker = require('../SceneTracker');
 
 describe('setActiveScene', function() {
 

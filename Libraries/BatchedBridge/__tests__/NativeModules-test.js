@@ -11,10 +11,10 @@
 
 jest
   .enableAutomock()
-  .unmock('BatchedBridge')
-  .unmock('defineLazyObjectProperty')
-  .unmock('MessageQueue')
-  .unmock('NativeModules');
+  .unmock('../BatchedBridge')
+  .unmock('../../Utilities/defineLazyObjectProperty')
+  .unmock('../MessageQueue')
+  .unmock('../NativeModules');
 
 let BatchedBridge;
 let NativeModules;
@@ -45,8 +45,8 @@ describe('MessageQueue', function() {
     jest.resetModules();
 
     global.__fbBatchedBridgeConfig = require('MessageQueueTestConfig');
-    BatchedBridge = require('BatchedBridge');
-    NativeModules = require('NativeModules');
+    BatchedBridge = require('../BatchedBridge');
+    NativeModules = require('../NativeModules');
   });
 
   it('should generate native modules', () => {

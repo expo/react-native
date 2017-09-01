@@ -23,7 +23,7 @@ var {
   View,
 } = ReactNative;
 
-var NativeModules = require('NativeModules');
+var NativeModules = require('../../Libraries/BatchedBridge/NativeModules');
 var {
   UIManager,
 } = NativeModules;

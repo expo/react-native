@@ -18,9 +18,9 @@ import type {ExtendedError} from 'parseErrorStack';
  */
 let exceptionID = 0;
 function reportException(e: ExtendedError, isFatal: bool) {
-  const {ExceptionsManager} = require('NativeModules');
+  const {ExceptionsManager} = require('../BatchedBridge/NativeModules');
   if (ExceptionsManager) {
-    const parseErrorStack = require('parseErrorStack');
+    const parseErrorStack = require('./Devtools/parseErrorStack');
     const stack = parseErrorStack(e);
     const currentExceptionID = ++exceptionID;
     if (isFatal) {
@@ -29,7 +29,7 @@ function reportException(e: ExtendedError, isFatal: bool) {
       ExceptionsManager.reportSoftException(e.message, stack, currentExceptionID);
     }
     if (__DEV__) {
-      const symbolicateStackTrace = require('symbolicateStackTrace');
+      const symbolicateStackTrace = require('./Devtools/symbolicateStackTrace');
       symbolicateStackTrace(stack).then(
         (prettyStack) => {
           if (prettyStack) {
@@ -78,7 +78,7 @@ function reactConsoleErrorHandler() {
   if (arguments[0] && arguments[0].stack) {
     reportException(arguments[0], /* isFatal */ false);
   } else {
-    const stringifySafe = require('stringifySafe');
+    const stringifySafe = require('../Utilities/stringifySafe');
     const str = Array.prototype.map.call(arguments, stringifySafe).join(', ');
     if (str.slice(0, 10) === '"Warning: ') {
       // React warnings use console.error so that a stack trace is shown, but

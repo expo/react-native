@@ -15,7 +15,7 @@
 const invariant = require('fbjs/lib/invariant');
 const uuid = require('uuid');
 
-const { BlobModule } = require('NativeModules');
+const { BlobModule } = require('../BatchedBridge/NativeModules');
 
 import type { BlobProps } from 'BlobTypes';
 

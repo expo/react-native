@@ -23,7 +23,7 @@ var {
 } = ReactNative;
 var { TestModule } = ReactNative.NativeModules;
 
-var deepDiffer = require('deepDiffer');
+var deepDiffer = require('../Libraries/Utilities/differ/deepDiffer');
 
 function debug(...args) {
   // console.log.apply(null, arguments);

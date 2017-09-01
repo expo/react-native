@@ -14,16 +14,16 @@
 
 'use strict';
 
-const Dimensions = require('Dimensions');
-const InspectorOverlay = require('InspectorOverlay');
-const InspectorPanel = require('InspectorPanel');
-const Platform = require('Platform');
-const React = require('React');
-const ReactNative = require('ReactNative');
-const StyleSheet = require('StyleSheet');
-const Touchable = require('Touchable');
-const UIManager = require('UIManager');
-const View = require('View');
+const Dimensions = require('../Utilities/Dimensions');
+const InspectorOverlay = require('./InspectorOverlay');
+const InspectorPanel = require('./InspectorPanel');
+const Platform = require('../Utilities/Platform');
+const React = require('../react-native/React');
+const ReactNative = require('../Renderer/shims/ReactNative');
+const StyleSheet = require('../StyleSheet/StyleSheet');
+const Touchable = require('../Components/Touchable/Touchable');
+const UIManager = require('../ReactNative/UIManager');
+const View = require('../Components/View/View');
 
 const emptyObject = require('fbjs/lib/emptyObject');
 const invariant = require('fbjs/lib/invariant');
@@ -35,7 +35,7 @@ export type ReactRenderer = {
 const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
 const renderer: ReactRenderer = findRenderer();
 // required for devtools to be able to edit react native styles
-hook.resolveRNStyle = require('flattenStyle');
+hook.resolveRNStyle = require('../StyleSheet/flattenStyle');
 
 function findRenderer(): ReactRenderer {
   const renderers = hook._renderers;

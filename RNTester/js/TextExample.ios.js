@@ -11,7 +11,7 @@
  */
 'use strict';
 
-const Platform = require('Platform');
+const Platform = require('../../Libraries/Utilities/Platform');
 var React = require('react');
 var createReactClass = require('create-react-class');
 var ReactNative = require('react-native');

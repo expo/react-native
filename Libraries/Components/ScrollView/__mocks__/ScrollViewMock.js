@@ -10,10 +10,10 @@
  */
 'use strict';
 
-const React = require('React');
-const View = require('View');
+const React = require('../../../react-native/React');
+const View = require('../../View/View');
 
-const requireNativeComponent = require('requireNativeComponent');
+const requireNativeComponent = require('../../../ReactNative/requireNativeComponent');
 
 const RCTScrollView = requireNativeComponent('RCTScrollView');
 

@@ -11,15 +11,15 @@
  */
 'use strict';
 
-var Image = require('Image');
-var NativeMethodsMixin = require('NativeMethodsMixin');
-var React = require('React');
+var Image = require('../../Image/Image');
+var NativeMethodsMixin = require('../../Renderer/shims/NativeMethodsMixin');
+var React = require('../../react-native/React');
 var PropTypes = require('prop-types');
-var StyleSheet = require('StyleSheet');
-var ViewPropTypes = require('ViewPropTypes');
+var StyleSheet = require('../../StyleSheet/StyleSheet');
+var ViewPropTypes = require('../View/ViewPropTypes');
 
 var createReactClass = require('create-react-class');
-var requireNativeComponent = require('requireNativeComponent');
+var requireNativeComponent = require('../../ReactNative/requireNativeComponent');
 
 /**
  * Use `ProgressViewIOS` to render a UIProgressView on iOS.

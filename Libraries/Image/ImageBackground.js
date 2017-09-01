@@ -12,12 +12,12 @@
  */
 'use strict';
 
-const Image = require('Image');
-const React = require('React');
-const StyleSheet = require('StyleSheet');
-const View = require('View');
+const Image = require('./Image');
+const React = require('../react-native/React');
+const StyleSheet = require('../StyleSheet/StyleSheet');
+const View = require('../Components/View/View');
 
-const ensureComponentIsNative = require('ensureComponentIsNative');
+const ensureComponentIsNative = require('../Components/Touchable/ensureComponentIsNative');
 
 import type {NativeMethodsMixinType} from 'ReactNativeTypes';
 

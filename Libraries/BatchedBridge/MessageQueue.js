@@ -15,12 +15,12 @@
 
 'use strict';
 
-const ErrorUtils = require('ErrorUtils');
-const Systrace = require('Systrace');
+const ErrorUtils = require('../vendor/core/ErrorUtils');
+const Systrace = require('../Performance/Systrace');
 
-const deepFreezeAndThrowOnMutationInDev = require('deepFreezeAndThrowOnMutationInDev');
+const deepFreezeAndThrowOnMutationInDev = require('../Utilities/deepFreezeAndThrowOnMutationInDev');
 const invariant = require('fbjs/lib/invariant');
-const stringifySafe = require('stringifySafe');
+const stringifySafe = require('../Utilities/stringifySafe');
 
 export type SpyData = {
   type: number,
@@ -277,7 +277,7 @@ class MessageQueue {
   __callImmediates() {
     Systrace.beginEvent('JSTimers.callImmediates()');
     if (!JSTimers) {
-      JSTimers = require('JSTimers');
+      JSTimers = require('../Core/Timers/JSTimers');
     }
     JSTimers.callImmediates();
     Systrace.endEvent();

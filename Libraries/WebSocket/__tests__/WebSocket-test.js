@@ -3,14 +3,14 @@
  */
 'use strict';
 
-jest.enableAutomock().unmock('WebSocket');
-jest.setMock('NativeModules', {
+jest.enableAutomock().unmock('../WebSocket');
+jest.setMock('../../BatchedBridge/NativeModules', {
   WebSocketModule: {
     connect: () => {}
   }
 });
 
-var WebSocket = require('WebSocket');
+var WebSocket = require('../WebSocket');
 
 describe('WebSocket', function() {
 

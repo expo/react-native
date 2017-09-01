@@ -8,7 +8,7 @@
  */
 'use strict';
 
-const processTransform = require('processTransform');
+const processTransform = require('../processTransform');
 
 describe('processTransform', () => {
   describe('validation', () => {

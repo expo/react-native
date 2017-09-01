@@ -10,11 +10,11 @@
  * @flow
  */
 
-const Platform = require('Platform');
+const Platform = require('../../Utilities/Platform');
 
 var TVViewPropTypes = {};
 if (Platform.isTVOS) {
-  TVViewPropTypes = require('TVViewPropTypes');
+  TVViewPropTypes = require('../AppleTV/TVViewPropTypes');
 }
 
 module.exports = TVViewPropTypes;

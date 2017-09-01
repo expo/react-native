@@ -8,9 +8,9 @@
  */
 'use strict';
 
-var AssetRegistry = require('AssetRegistry');
-var Platform = require('Platform');
-var NativeModules = require('NativeModules');
+var AssetRegistry = require('../AssetRegistry');
+var Platform = require('../../Utilities/Platform');
+var NativeModules = require('../../BatchedBridge/NativeModules');
 var resolveAssetSource = require('../resolveAssetSource');
 
 function expectResolvesAsset(input, expectedSource) {

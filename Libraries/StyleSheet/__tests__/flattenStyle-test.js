@@ -8,7 +8,7 @@
  */
 'use strict';
 
-var flattenStyle = require('flattenStyle');
+var flattenStyle = require('../flattenStyle');
 
 describe('flattenStyle', () => {
 

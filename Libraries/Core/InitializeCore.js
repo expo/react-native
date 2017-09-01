@@ -36,7 +36,7 @@ if (global.window === undefined) {
   global.window = global;
 }
 
-const defineLazyObjectProperty = require('defineLazyObjectProperty');
+const defineLazyObjectProperty = require('../Utilities/defineLazyObjectProperty');
 
 /**
  * Sets an object's property. If a property with the same name exists, this will
@@ -91,17 +91,17 @@ if (!global.process.env.NODE_ENV) {
 
 // Setup the Systrace profiling hooks if necessary
 if (global.__RCTProfileIsProfiling) {
-  const Systrace = require('Systrace');
+  const Systrace = require('../Performance/Systrace');
   Systrace.setEnabled(true);
 }
 
 if (__DEV__ && global.performance === undefined) {
-  const Systrace = require('Systrace');
+  const Systrace = require('../Performance/Systrace');
   global.performance = Systrace.getUserTimingPolyfill();
 }
 
 // Set up console
-const ExceptionsManager = require('ExceptionsManager');
+const ExceptionsManager = require('./ExceptionsManager');
 ExceptionsManager.installConsoleErrorReporter();
 
 // Set up error handler
@@ -117,23 +117,23 @@ if (!global.__fbDisableExceptionsManager) {
     }
   };
 
-  const ErrorUtils = require('ErrorUtils');
+  const ErrorUtils = require('../vendor/core/ErrorUtils');
   ErrorUtils.setGlobalHandler(handleError);
 }
 
 // Set up collections
-const _shouldPolyfillCollection = require('_shouldPolyfillES6Collection');
+const _shouldPolyfillCollection = require('../vendor/core/_shouldPolyfillES6Collection');
 if (_shouldPolyfillCollection('Map')) {
-  polyfillGlobal('Map', () => require('Map'));
+  polyfillGlobal('Map', () => require('../vendor/core/Map'));
 }
 if (_shouldPolyfillCollection('Set')) {
-  polyfillGlobal('Set', () => require('Set'));
+  polyfillGlobal('Set', () => require('../vendor/core/Set'));
 }
 
 // Set up Promise
 // The native Promise implementation throws the following error:
 // ERROR: Event loop not supported.
-polyfillGlobal('Promise', () => require('Promise'));
+polyfillGlobal('Promise', () => require('../Promise'));
 
 // Set up regenerator.
 polyfillGlobal('regeneratorRuntime', () => {
@@ -146,7 +146,7 @@ polyfillGlobal('regeneratorRuntime', () => {
 
 // Set up timers
 const defineLazyTimer = name => {
-  polyfillGlobal(name, () => require('JSTimers')[name]);
+  polyfillGlobal(name, () => require('./Timers/JSTimers')[name]);
 };
 defineLazyTimer('setTimeout');
 defineLazyTimer('setInterval');
@@ -162,23 +162,23 @@ defineLazyTimer('cancelIdleCallback');
 // Set up XHR
 // The native XMLHttpRequest in Chrome dev tools is CORS aware and won't
 // let you fetch anything from the internet
-polyfillGlobal('XMLHttpRequest', () => require('XMLHttpRequest'));
-polyfillGlobal('FormData', () => require('FormData'));
+polyfillGlobal('XMLHttpRequest', () => require('../Network/XMLHttpRequest'));
+polyfillGlobal('FormData', () => require('../Network/FormData'));
 
-polyfillGlobal('fetch', () => require('fetch').fetch);
-polyfillGlobal('Headers', () => require('fetch').Headers);
-polyfillGlobal('Request', () => require('fetch').Request);
-polyfillGlobal('Response', () => require('fetch').Response);
-polyfillGlobal('WebSocket', () => require('WebSocket'));
-polyfillGlobal('Blob', () => require('Blob'));
-polyfillGlobal('URL', () => require('URL'));
+polyfillGlobal('fetch', () => require('../Network/fetch').fetch);
+polyfillGlobal('Headers', () => require('../Network/fetch').Headers);
+polyfillGlobal('Request', () => require('../Network/fetch').Request);
+polyfillGlobal('Response', () => require('../Network/fetch').Response);
+polyfillGlobal('WebSocket', () => require('../WebSocket/WebSocket'));
+polyfillGlobal('Blob', () => require('../Blob/Blob'));
+polyfillGlobal('URL', () => require('../Blob/URL'));
 
 // Set up alert
 if (!global.alert) {
   global.alert = function(text) {
     // Require Alert on demand. Requiring it too early can lead to issues
     // with things like Platform not being fully initialized.
-    require('Alert').alert('Alert', '' + text);
+    require('../Alert/Alert').alert('Alert', '' + text);
   };
 }
 
@@ -190,33 +190,33 @@ if (navigator === undefined) {
 
 // see https://github.com/facebook/react-native/issues/10881
 defineLazyProperty(navigator, 'product', () => 'ReactNative');
-defineLazyProperty(navigator, 'geolocation', () => require('Geolocation'));
+defineLazyProperty(navigator, 'geolocation', () => require('../Geolocation/Geolocation'));
 
 // Just to make sure the JS gets packaged up. Wait until the JS environment has
 // been initialized before requiring them.
-const BatchedBridge = require('BatchedBridge');
-BatchedBridge.registerLazyCallableModule('Systrace', () => require('Systrace'));
-BatchedBridge.registerLazyCallableModule('JSTimers', () => require('JSTimers'));
-BatchedBridge.registerLazyCallableModule('HeapCapture', () => require('HeapCapture'));
-BatchedBridge.registerLazyCallableModule('SamplingProfiler', () => require('SamplingProfiler'));
-BatchedBridge.registerLazyCallableModule('RCTLog', () => require('RCTLog'));
-BatchedBridge.registerLazyCallableModule('RCTDeviceEventEmitter', () => require('RCTDeviceEventEmitter'));
-BatchedBridge.registerLazyCallableModule('RCTNativeAppEventEmitter', () => require('RCTNativeAppEventEmitter'));
-BatchedBridge.registerLazyCallableModule('PerformanceLogger', () => require('PerformanceLogger'));
+const BatchedBridge = require('../BatchedBridge/BatchedBridge');
+BatchedBridge.registerLazyCallableModule('Systrace', () => require('../Performance/Systrace'));
+BatchedBridge.registerLazyCallableModule('JSTimers', () => require('./Timers/JSTimers'));
+BatchedBridge.registerLazyCallableModule('HeapCapture', () => require('../Utilities/HeapCapture'));
+BatchedBridge.registerLazyCallableModule('SamplingProfiler', () => require('../Performance/SamplingProfiler'));
+BatchedBridge.registerLazyCallableModule('RCTLog', () => require('../Utilities/RCTLog'));
+BatchedBridge.registerLazyCallableModule('RCTDeviceEventEmitter', () => require('../EventEmitter/RCTDeviceEventEmitter'));
+BatchedBridge.registerLazyCallableModule('RCTNativeAppEventEmitter', () => require('../EventEmitter/RCTNativeAppEventEmitter'));
+BatchedBridge.registerLazyCallableModule('PerformanceLogger', () => require('../Utilities/PerformanceLogger'));
 
 // Set up devtools
 if (__DEV__) {
   if (!global.__RCTProfileIsProfiling) {
-    BatchedBridge.registerCallableModule('HMRClient', require('HMRClient'));
+    BatchedBridge.registerCallableModule('HMRClient', require('../Utilities/HMRClient'));
 
     // not when debugging in chrome
     // TODO(t12832058) This check is broken
     if (!window.document) {
-      require('setupDevtools');
+      require('./Devtools/setupDevtools');
     }
 
     // Set up inspector
-    const JSInspector = require('JSInspector');
-    JSInspector.registerAgent(require('NetworkAgent'));
+    const JSInspector = require('../JSInspector/JSInspector');
+    JSInspector.registerAgent(require('../JSInspector/NetworkAgent'));
   }
 }

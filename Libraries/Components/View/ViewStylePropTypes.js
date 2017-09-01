@@ -11,11 +11,11 @@
  */
 'use strict';
 
-var ColorPropType = require('ColorPropType');
-var LayoutPropTypes = require('LayoutPropTypes');
+var ColorPropType = require('../../StyleSheet/ColorPropType');
+var LayoutPropTypes = require('../../StyleSheet/LayoutPropTypes');
 var ReactPropTypes = require('prop-types');
-var ShadowPropTypesIOS = require('ShadowPropTypesIOS');
-var TransformPropTypes = require('TransformPropTypes');
+var ShadowPropTypesIOS = require('./ShadowPropTypesIOS');
+var TransformPropTypes = require('../../StyleSheet/TransformPropTypes');
 
 /**
  * Warning: Some of these properties may not be supported in all releases.

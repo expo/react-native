@@ -11,8 +11,8 @@
  */
 'use strict';
 
-const EventEmitter = require('EventEmitter');
-const EventSubscriptionVendor = require('EventSubscriptionVendor');
+const EventEmitter = require('../vendor/emitter/EventEmitter');
+const EventSubscriptionVendor = require('../vendor/emitter/EventSubscriptionVendor');
 
 import type EmitterSubscription from 'EmitterSubscription';
 

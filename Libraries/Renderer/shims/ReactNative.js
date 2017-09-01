@@ -11,7 +11,7 @@
  */
 'use strict';
 
-const ReactNativeFeatureFlags = require('ReactNativeFeatureFlags');
+const ReactNativeFeatureFlags = require('./ReactNativeFeatureFlags');
 
 import type {ReactNativeType} from 'ReactNativeTypes';
 
@@ -19,12 +19,12 @@ let ReactNative;
 
 if (__DEV__) {
   ReactNative = ReactNativeFeatureFlags.useFiber
-    ? require('ReactNativeFiber-dev')
-    : require('ReactNativeStack-dev');
+    ? require('../ReactNativeFiber-dev')
+    : require('../ReactNativeStack-dev');
 } else {
   ReactNative = ReactNativeFeatureFlags.useFiber
-    ? require('ReactNativeFiber-prod')
-    : require('ReactNativeStack-prod');
+    ? require('../ReactNativeFiber-prod')
+    : require('../ReactNativeStack-prod');
 }
 
 module.exports = (ReactNative: ReactNativeType);

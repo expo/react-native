@@ -13,9 +13,9 @@
 
 var invariant = require("fbjs/lib/invariant");
 
-require("InitializeCore");
+require('../Core/InitializeCore');
 
-var warning = require("fbjs/lib/warning"), RCTEventEmitter = require("RCTEventEmitter"), emptyFunction = require("fbjs/lib/emptyFunction"), UIManager = require("UIManager"), React = require("react"), ExecutionEnvironment = require("fbjs/lib/ExecutionEnvironment"), performanceNow = require("fbjs/lib/performanceNow"), emptyObject = require("fbjs/lib/emptyObject"), checkPropTypes = require("prop-types/checkPropTypes"), shallowEqual = require("fbjs/lib/shallowEqual"), deepDiffer = require("deepDiffer"), flattenStyle = require("flattenStyle"), TextInputState = require("TextInputState"), deepFreezeAndThrowOnMutationInDev = require("deepFreezeAndThrowOnMutationInDev"), instanceCache = {}, instanceProps = {};
+var warning = require("fbjs/lib/warning"), RCTEventEmitter = require('../EventEmitter/RCTEventEmitter'), emptyFunction = require("fbjs/lib/emptyFunction"), UIManager = require('../ReactNative/UIManager'), React = require("react"), ExecutionEnvironment = require("fbjs/lib/ExecutionEnvironment"), performanceNow = require("fbjs/lib/performanceNow"), emptyObject = require("fbjs/lib/emptyObject"), checkPropTypes = require("prop-types/checkPropTypes"), shallowEqual = require("fbjs/lib/shallowEqual"), deepDiffer = require('../Utilities/differ/deepDiffer'), flattenStyle = require('../StyleSheet/flattenStyle'), TextInputState = require('../Components/TextInput/TextInputState'), deepFreezeAndThrowOnMutationInDev = require('../Utilities/deepFreezeAndThrowOnMutationInDev'), instanceCache = {}, instanceProps = {};
 
 function getRenderedHostOrTextFromComponent(component) {
     for (var rendered; rendered = component._renderedComponent; ) component = rendered;
@@ -1971,7 +1971,7 @@ Object.assign(ReactCompositeComponentWrapper.prototype, ReactCompositeComponent_
     _instantiateReactComponent: instantiateReactComponent
 });
 
-var instantiateReactComponent_1 = instantiateReactComponent, DevOnlyStubShim = null, ReactNativeFeatureFlags = require("ReactNativeFeatureFlags"), ReactCurrentOwner$2 = ReactGlobalSharedState_1.ReactCurrentOwner, injectedFindNode = ReactNativeFeatureFlags.useFiber ? function(fiber) {
+var instantiateReactComponent_1 = instantiateReactComponent, DevOnlyStubShim = null, ReactNativeFeatureFlags = require('./shims/ReactNativeFeatureFlags'), ReactCurrentOwner$2 = ReactGlobalSharedState_1.ReactCurrentOwner, injectedFindNode = ReactNativeFeatureFlags.useFiber ? function(fiber) {
     return DevOnlyStubShim.findHostInstance(fiber);
 } : function(instance) {
     return instance;
@@ -2237,7 +2237,7 @@ function inject$1() {
     ReactUpdates_1.injection.injectBatchingStrategy(ReactDefaultBatchingStrategy_1), 
     ReactComponentEnvironment_1.injection.injectEnvironment(ReactNativeComponentEnvironment_1);
     var EmptyComponent = function(instantiate) {
-        var View = require("View");
+        var View = require('../Components/View/View');
         return new ReactSimpleEmptyComponent_1(React.createElement(View, {
             collapsable: !0,
             style: {
@@ -2488,7 +2488,7 @@ function _inherits(subClass, superClass) {
     }), superClass && (Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass);
 }
 
-var ReactNativeFeatureFlags$1 = require("ReactNativeFeatureFlags"), mountSafeCallback = NativeMethodsMixinUtils.mountSafeCallback, findNumericNodeHandle = ReactNativeFeatureFlags$1.useFiber ? DevOnlyStubShim : findNumericNodeHandleStack, ReactNativeComponent = function(_React$Component) {
+var ReactNativeFeatureFlags$1 = require('./shims/ReactNativeFeatureFlags'), mountSafeCallback = NativeMethodsMixinUtils.mountSafeCallback, findNumericNodeHandle = ReactNativeFeatureFlags$1.useFiber ? DevOnlyStubShim : findNumericNodeHandleStack, ReactNativeComponent = function(_React$Component) {
     _inherits(ReactNativeComponent, _React$Component);
     function ReactNativeComponent() {
         return _classCallCheck$1(this, ReactNativeComponent), _possibleConstructorReturn(this, _React$Component.apply(this, arguments));
@@ -2536,7 +2536,7 @@ var injectedSetNativeProps = void 0;
 
 injectedSetNativeProps = ReactNativeFeatureFlags$1.useFiber ? setNativePropsFiber : setNativePropsStack;
 
-var ReactNativeComponent_1 = ReactNativeComponent, ReactNativeFeatureFlags$2 = require("ReactNativeFeatureFlags"), mountSafeCallback$2 = NativeMethodsMixinUtils.mountSafeCallback, throwOnStylesProp$1 = NativeMethodsMixinUtils.throwOnStylesProp, warnForStyleProps$1 = NativeMethodsMixinUtils.warnForStyleProps, findNumericNodeHandle$1 = ReactNativeFeatureFlags$2.useFiber ? DevOnlyStubShim : findNumericNodeHandleStack, NativeMethodsMixin = {
+var ReactNativeComponent_1 = ReactNativeComponent, ReactNativeFeatureFlags$2 = require('./shims/ReactNativeFeatureFlags'), mountSafeCallback$2 = NativeMethodsMixinUtils.mountSafeCallback, throwOnStylesProp$1 = NativeMethodsMixinUtils.throwOnStylesProp, warnForStyleProps$1 = NativeMethodsMixinUtils.warnForStyleProps, findNumericNodeHandle$1 = ReactNativeFeatureFlags$2.useFiber ? DevOnlyStubShim : findNumericNodeHandleStack, NativeMethodsMixin = {
     measure: function(callback) {
         UIManager.measure(findNumericNodeHandle$1(this), mountSafeCallback$2(this, callback));
     },
@@ -2979,7 +2979,7 @@ var ReactNativeBaseComponent_1 = ReactNativeBaseComponent, createReactNativeComp
     return Constructor.displayName = viewConfig.uiViewClassName, Constructor.viewConfig = viewConfig, 
     Constructor.propTypes = viewConfig.propTypes, Constructor.prototype = new ReactNativeBaseComponent_1(viewConfig), 
     Constructor.prototype.constructor = Constructor, Constructor;
-}, createReactNativeComponentClassStack_1 = createReactNativeComponentClassStack, ReactNativeFeatureFlags$3 = require("ReactNativeFeatureFlags"), createReactNativeComponentClass = ReactNativeFeatureFlags$3.useFiber ? DevOnlyStubShim : createReactNativeComponentClassStack_1, ReactNativeFeatureFlags$4 = require("ReactNativeFeatureFlags"), findNumericNodeHandle$2 = ReactNativeFeatureFlags$4.useFiber ? DevOnlyStubShim : findNumericNodeHandleStack;
+}, createReactNativeComponentClassStack_1 = createReactNativeComponentClassStack, ReactNativeFeatureFlags$3 = require('./shims/ReactNativeFeatureFlags'), createReactNativeComponentClass = ReactNativeFeatureFlags$3.useFiber ? DevOnlyStubShim : createReactNativeComponentClassStack_1, ReactNativeFeatureFlags$4 = require('./shims/ReactNativeFeatureFlags'), findNumericNodeHandle$2 = ReactNativeFeatureFlags$4.useFiber ? DevOnlyStubShim : findNumericNodeHandleStack;
 
 function takeSnapshot(view, options) {
     return "number" != typeof view && "window" !== view && (view = findNumericNodeHandle$2(view) || "window"), 

@@ -14,9 +14,9 @@
 
 const PropTypes = require('prop-types');
 const {checkPropTypes} = PropTypes;
-const RCTCameraRollManager = require('NativeModules').CameraRollManager;
+const RCTCameraRollManager = require('../BatchedBridge/NativeModules').CameraRollManager;
 
-const createStrictShapeTypeChecker = require('createStrictShapeTypeChecker');
+const createStrictShapeTypeChecker = require('../Utilities/createStrictShapeTypeChecker');
 const invariant = require('fbjs/lib/invariant');
 
 const GROUP_TYPES_OPTIONS = {

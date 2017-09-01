@@ -11,18 +11,18 @@
 
 'use strict';
 
-var Image = require('Image');
-var NativeMethodsMixin = require('NativeMethodsMixin');
-var React = require('React');
+var Image = require('../../Image/Image');
+var NativeMethodsMixin = require('../../Renderer/shims/NativeMethodsMixin');
+var React = require('../../react-native/React');
 var PropTypes = require('prop-types');
-var ReactNativeViewAttributes = require('ReactNativeViewAttributes');
-var UIManager = require('UIManager');
-var ViewPropTypes = require('ViewPropTypes');
-var ColorPropType = require('ColorPropType');
+var ReactNativeViewAttributes = require('../View/ReactNativeViewAttributes');
+var UIManager = require('../../ReactNative/UIManager');
+var ViewPropTypes = require('../View/ViewPropTypes');
+var ColorPropType = require('../../StyleSheet/ColorPropType');
 
 var createReactClass = require('create-react-class');
-var requireNativeComponent = require('requireNativeComponent');
-var resolveAssetSource = require('resolveAssetSource');
+var requireNativeComponent = require('../../ReactNative/requireNativeComponent');
+var resolveAssetSource = require('../../Image/resolveAssetSource');
 
 var optionalImageSource = PropTypes.oneOfType([
   Image.propTypes.source,

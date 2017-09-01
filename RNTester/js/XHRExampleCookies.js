@@ -21,7 +21,7 @@ var {
   WebView,
 } = ReactNative;
 
-var RCTNetworking = require('RCTNetworking');
+var RCTNetworking = require('../../Libraries/Network/RCTNetworking');
 
 class XHRExampleCookies extends React.Component {
   state: any;

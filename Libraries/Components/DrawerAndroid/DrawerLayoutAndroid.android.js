@@ -10,23 +10,23 @@
  */
 'use strict';
 
-var ColorPropType = require('ColorPropType');
-var NativeMethodsMixin = require('NativeMethodsMixin');
-var Platform = require('Platform');
-var React = require('React');
+var ColorPropType = require('../../StyleSheet/ColorPropType');
+var NativeMethodsMixin = require('../../Renderer/shims/NativeMethodsMixin');
+var Platform = require('../../Utilities/Platform');
+var React = require('../../react-native/React');
 var PropTypes = require('prop-types');
-var ReactNative = require('ReactNative');
-var StatusBar = require('StatusBar');
-var StyleSheet = require('StyleSheet');
-var UIManager = require('UIManager');
-var View = require('View');
-var ViewPropTypes = require('ViewPropTypes');
+var ReactNative = require('../../Renderer/shims/ReactNative');
+var StatusBar = require('../StatusBar/StatusBar');
+var StyleSheet = require('../../StyleSheet/StyleSheet');
+var UIManager = require('../../ReactNative/UIManager');
+var View = require('../View/View');
+var ViewPropTypes = require('../View/ViewPropTypes');
 
 var DrawerConsts = UIManager.AndroidDrawerLayout.Constants;
 
 var createReactClass = require('create-react-class');
-var dismissKeyboard = require('dismissKeyboard');
-var requireNativeComponent = require('requireNativeComponent');
+var dismissKeyboard = require('../../Utilities/dismissKeyboard');
+var requireNativeComponent = require('../../ReactNative/requireNativeComponent');
 
 var RK_DRAWER_REF = 'drawerlayout';
 var INNERVIEW_REF = 'innerView';

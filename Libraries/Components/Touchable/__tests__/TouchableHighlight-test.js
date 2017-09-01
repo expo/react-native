@@ -8,10 +8,10 @@
  */
 'use strict';
 
-const React = require('React');
+const React = require('../../../react-native/React');
 const ReactTestRenderer = require('react-test-renderer');
-const Text = require('Text');
-const TouchableHighlight = require('TouchableHighlight');
+const Text = require('../../../Text/Text');
+const TouchableHighlight = require('../TouchableHighlight');
 
 describe('TouchableHighlight', () => {
   it('renders correctly', () => {

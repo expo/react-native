@@ -11,10 +11,10 @@
  */
 'use strict';
 
-const ListViewDataSource = require('ListViewDataSource');
-const React = require('React');
-const ScrollView = require('ScrollView');
-const StaticRenderer = require('StaticRenderer');
+const ListViewDataSource = require('../ListViewDataSource');
+const React = require('../../../react-native/React');
+const ScrollView = require('../../../Components/ScrollView/ScrollView');
+const StaticRenderer = require('../../../Components/StaticRenderer');
 
 class ListViewMock extends React.Component {
   static latestRef: ?ListViewMock;

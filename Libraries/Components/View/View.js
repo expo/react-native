@@ -11,17 +11,17 @@
  */
 'use strict';
 
-const NativeMethodsMixin = require('NativeMethodsMixin');
-const Platform = require('Platform');
+const NativeMethodsMixin = require('../../Renderer/shims/NativeMethodsMixin');
+const Platform = require('../../Utilities/Platform');
 const PropTypes = require('prop-types');
-const React = require('React');
-const ReactNativeStyleAttributes = require('ReactNativeStyleAttributes');
-const ReactNativeViewAttributes = require('ReactNativeViewAttributes');
-const ViewPropTypes = require('ViewPropTypes');
+const React = require('../../react-native/React');
+const ReactNativeStyleAttributes = require('./ReactNativeStyleAttributes');
+const ReactNativeViewAttributes = require('./ReactNativeViewAttributes');
+const ViewPropTypes = require('./ViewPropTypes');
 
 const createReactClass = require('create-react-class');
 const invariant = require('fbjs/lib/invariant');
-const requireNativeComponent = require('requireNativeComponent');
+const requireNativeComponent = require('../../ReactNative/requireNativeComponent');
 
 import type {ViewProps} from 'ViewPropTypes';
 
@@ -122,7 +122,7 @@ const RCTView = requireNativeComponent('RCTView', View, {
 });
 
 if (__DEV__) {
-  const UIManager = require('UIManager');
+  const UIManager = require('../../ReactNative/UIManager');
   const viewConfig = UIManager.viewConfigs && UIManager.viewConfigs.RCTView || {};
   for (const prop in viewConfig.nativeProps) {
     const viewAny: any = View; // Appease flow

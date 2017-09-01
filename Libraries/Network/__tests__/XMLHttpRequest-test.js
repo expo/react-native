@@ -8,8 +8,8 @@
  */
 
 'use strict';
-jest.unmock('Platform');
-const Platform = require('Platform');
+jest.unmock('../../Utilities/Platform');
+const Platform = require('../../Utilities/Platform');
 let requestId = 1;
 
 function setRequestId(id){
@@ -21,7 +21,7 @@ function setRequestId(id){
 
 jest
   .dontMock('event-target-shim')
-  .setMock('NativeModules', {
+  .setMock('../../BatchedBridge/NativeModules', {
     Networking: {
       addListener: function() {},
       removeListeners: function() {},
@@ -34,7 +34,7 @@ jest
     },
   });
 
-const XMLHttpRequest = require('XMLHttpRequest');
+const XMLHttpRequest = require('../XMLHttpRequest');
 
 describe('XMLHttpRequest', function() {
   var xhr;

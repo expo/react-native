@@ -11,13 +11,13 @@
  */
 'use strict';
 
-var Dimensions = require('Dimensions');
-var ElementBox = require('ElementBox');
+var Dimensions = require('../Utilities/Dimensions');
+var ElementBox = require('./ElementBox');
 var PropTypes = require('prop-types');
-var React = require('React');
-var StyleSheet = require('StyleSheet');
-var UIManager = require('UIManager');
-var View = require('View');
+var React = require('../react-native/React');
+var StyleSheet = require('../StyleSheet/StyleSheet');
+var UIManager = require('../ReactNative/UIManager');
+var View = require('../Components/View/View');
 
 type EventLike = {
   nativeEvent: Object,

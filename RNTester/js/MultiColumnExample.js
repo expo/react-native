@@ -22,7 +22,7 @@ const {
 
 const RNTesterPage = require('./RNTesterPage');
 
-const infoLog = require('infoLog');
+const infoLog = require('../../Libraries/Utilities/infoLog');
 
 const {
   FooterComponent,

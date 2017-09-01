@@ -11,8 +11,8 @@
 'use strict';
 
 jest
-  .mock('ErrorUtils')
-  .mock('BatchedBridge');
+  .mock('../../vendor/core/ErrorUtils')
+  .mock('../../BatchedBridge/BatchedBridge');
 
 function expectToBeCalledOnce(fn) {
   expect(fn.mock.calls.length).toBe(1);
@@ -25,7 +25,7 @@ describe('InteractionManager', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    InteractionManager = require('InteractionManager');
+    InteractionManager = require('../InteractionManager');
 
     interactionStart = jest.fn();
     interactionComplete = jest.fn();
@@ -164,8 +164,8 @@ describe('promise tasks', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.useFakeTimers();
-    InteractionManager = require('InteractionManager');
-    BatchedBridge = require('BatchedBridge');
+    InteractionManager = require('../InteractionManager');
+    BatchedBridge = require('../../BatchedBridge/BatchedBridge');
     sequenceId = 0;
   });
 

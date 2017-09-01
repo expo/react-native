@@ -11,15 +11,15 @@
  */
 'use strict';
 
-const Blob = require('Blob');
+const Blob = require('../Blob/Blob');
 const EventTarget = require('event-target-shim');
-const NativeEventEmitter = require('NativeEventEmitter');
-const NativeModules = require('NativeModules');
-const Platform = require('Platform');
-const WebSocketEvent = require('WebSocketEvent');
+const NativeEventEmitter = require('../EventEmitter/NativeEventEmitter');
+const NativeModules = require('../BatchedBridge/NativeModules');
+const Platform = require('../Utilities/Platform');
+const WebSocketEvent = require('./WebSocketEvent');
 
 const base64 = require('base64-js');
-const binaryToBase64 = require('binaryToBase64');
+const binaryToBase64 = require('../Utilities/binaryToBase64');
 const invariant = require('fbjs/lib/invariant');
 
 const {WebSocketModule} = NativeModules;

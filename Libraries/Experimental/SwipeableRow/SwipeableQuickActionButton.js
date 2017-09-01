@@ -11,13 +11,13 @@
  */
 'use strict';
 
-const Image = require('Image');
+const Image = require('../../Image/Image');
 const PropTypes = require('prop-types');
-const React = require('React');
-const Text = require('Text');
-const TouchableHighlight = require('TouchableHighlight');
-const View = require('View');
-const ViewPropTypes = require('ViewPropTypes');
+const React = require('../../react-native/React');
+const Text = require('../../Text/Text');
+const TouchableHighlight = require('../../Components/Touchable/TouchableHighlight');
+const View = require('../../Components/View/View');
+const ViewPropTypes = require('../../Components/View/ViewPropTypes');
 
 import type {ImageSource} from 'ImageSource';
 

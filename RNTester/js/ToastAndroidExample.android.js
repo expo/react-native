@@ -21,8 +21,8 @@ var {
   TouchableWithoutFeedback,
 } = ReactNative;
 
-var RNTesterBlock = require('RNTesterBlock');
-var RNTesterPage = require('RNTesterPage');
+var RNTesterBlock = require('./RNTesterBlock');
+var RNTesterPage = require('./RNTesterPage');
 
 class ToastExample extends React.Component {
   static title = 'Toast Example';

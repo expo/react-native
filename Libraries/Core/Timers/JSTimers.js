@@ -12,11 +12,11 @@
  */
 'use strict';
 
-const Platform = require('Platform');
-const Systrace = require('Systrace');
+const Platform = require('../../Utilities/Platform');
+const Systrace = require('../../Performance/Systrace');
 
 const invariant = require('fbjs/lib/invariant');
-const {Timing} = require('NativeModules');
+const {Timing} = require('../../BatchedBridge/NativeModules');
 
 import type {ExtendedError} from 'parseErrorStack';
 
@@ -84,7 +84,7 @@ function _allocateCallback(func: Function, type: JSTimerType): number {
   callbacks[freeIndex] = func;
   types[freeIndex] = type;
   if (__DEV__) {
-    const parseErrorStack = require('parseErrorStack');
+    const parseErrorStack = require('../Devtools/parseErrorStack');
     const error: ExtendedError = new Error();
     error.framesToPop = 1;
     const stack = parseErrorStack(error);

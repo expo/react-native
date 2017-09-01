@@ -12,8 +12,8 @@
 var React = require('react');
 var createReactClass = require('create-react-class');
 var ReactNative = require('react-native');
-var RCTNativeAppEventEmitter = require('RCTNativeAppEventEmitter');
-var Subscribable = require('Subscribable');
+var RCTNativeAppEventEmitter = require('../Libraries/EventEmitter/RCTNativeAppEventEmitter');
+var Subscribable = require('../Libraries/Components/Subscribable');
 var { View } = ReactNative;
 
 var { TestModule } = ReactNative.NativeModules;

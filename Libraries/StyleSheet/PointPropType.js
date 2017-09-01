@@ -13,7 +13,7 @@
 
 var PropTypes = require('prop-types');
 
-var createStrictShapeTypeChecker = require('createStrictShapeTypeChecker');
+var createStrictShapeTypeChecker = require('../Utilities/createStrictShapeTypeChecker');
 
 var PointPropType = createStrictShapeTypeChecker({
   x: PropTypes.number,

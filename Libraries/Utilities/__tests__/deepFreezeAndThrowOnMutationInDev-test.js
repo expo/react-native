@@ -7,7 +7,7 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-var deepFreezeAndThrowOnMutationInDev = require('deepFreezeAndThrowOnMutationInDev');
+var deepFreezeAndThrowOnMutationInDev = require('../deepFreezeAndThrowOnMutationInDev');
 
 describe('deepFreezeAndThrowOnMutationInDev', function() {
 

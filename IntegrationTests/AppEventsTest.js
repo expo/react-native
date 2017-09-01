@@ -21,7 +21,7 @@ var {
 } = ReactNative;
 var { TestModule } = ReactNative.NativeModules;
 
-var deepDiffer = require('deepDiffer');
+var deepDiffer = require('../Libraries/Utilities/differ/deepDiffer');
 
 var TEST_PAYLOAD = {foo: 'bar'};
 
