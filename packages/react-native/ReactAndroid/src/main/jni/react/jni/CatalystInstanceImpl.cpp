@@ -105,6 +105,8 @@ void CatalystInstanceImpl::registerNatives() {
       makeNativeMethod(
           "jniLoadScriptFromFile", CatalystInstanceImpl::jniLoadScriptFromFile),
       makeNativeMethod(
+          "jniLoadScriptFromString", CatalystInstanceImpl::jniLoadScriptFromString),
+      makeNativeMethod(
           "jniCallJSFunction", CatalystInstanceImpl::jniCallJSFunction),
       makeNativeMethod(
           "jniCallJSCallback", CatalystInstanceImpl::jniCallJSCallback),
@@ -291,6 +293,14 @@ void CatalystInstanceImpl::jniLoadScriptFromFile(
           std::move(script), sourceURL, loadSynchronously);
     }
   }
+}
+
+void CatalystInstanceImpl::jniLoadScriptFromString(
+    const std::string& scriptStdString,
+    const std::string& sourceURL,
+    bool loadSynchronously) {
+  std::unique_ptr<const JSBigStdString> script = std::make_unique<const JSBigStdString>(scriptStdString);
+  instance_->loadScriptFromString(std::move(script), sourceURL, loadSynchronously);
 }
 
 void CatalystInstanceImpl::jniCallJSFunction(
