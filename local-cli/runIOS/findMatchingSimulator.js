@@ -26,13 +26,21 @@ function findMatchingSimulator(simulators, simulatorName) {
   }
   const devices = simulators.devices;
   var match;
-  for (let version in devices) {
+  for (const versionDescriptor in devices) {
+    const device = devices[versionDescriptor];
+    let version = versionDescriptor;
+
+    if ((/^com\.apple\.CoreSimulator\.SimRuntime\./g).test(version)) {
+      // Transform "com.apple.CoreSimulator.SimRuntime.iOS-12-2" into "iOS 12.2"
+      version = version.replace(/^com\.apple\.CoreSimulator\.SimRuntime\.([^-]+)-([^-]+)-([^-]+)$/g, '$1 $2.$3');
+    }
+
     // Making sure the version of the simulator is an iOS or tvOS (Removes Apple Watch, etc)
     if (!version.startsWith('iOS') && !version.startsWith('tvOS')) {
       continue;
     }
-    for (let i in devices[version]) {
-      let simulator = devices[version][i];
+    for (const i in device) {
+      const simulator = device[i];
       // Skipping non-available simulator
       if (simulator.availability !== '(available)') {
         continue;
