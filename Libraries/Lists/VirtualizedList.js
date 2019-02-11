@@ -791,7 +791,9 @@ class VirtualizedList extends React.PureComponent<Props, State> {
               const initBlock = this._getFrameMetricsApprox(lastInitialIndex);
               const stickyBlock = this._getFrameMetricsApprox(ii);
               const leadSpace =
-                stickyBlock.offset - (initBlock.offset + initBlock.length);
+                stickyBlock.offset -
+                initBlock.offset -
+                (this.props.initialScrollIndex ? 0 : initBlock.length);
               cells.push(
                 <View key="$sticky_lead" style={{[spacerKey]: leadSpace}} />,
               );
