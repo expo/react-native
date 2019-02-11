@@ -446,18 +446,23 @@ public final class NetworkingModule extends ReactContextBaseJavaModule {
 
   private static WritableMap translateHeaders(Headers headers) {
     WritableMap responseHeaders = Arguments.createMap();
-    for (int i = 0; i < headers.size(); i++) {
+    HashMap<String, String> responseHeadersMap = new HashMap<>();
+
+   for (int i = 0; i < headers.size(); i++) {
       String headerName = headers.name(i);
-      // multiple values for the same header
-      if (responseHeaders.hasKey(headerName)) {
-        responseHeaders.putString(
-            headerName,
-            responseHeaders.getString(headerName) + ", " + headers.value(i));
+      String headerValue = headers.value(i);
+
+     if(responseHeadersMap.containsKey(headerName)) {
+        String existingValueForHeaderName = responseHeadersMap.get(headerName);
+        responseHeadersMap.put(headerName, existingValueForHeaderName + ", " + headerValue);
+        responseHeaders.putString(headerName, existingValueForHeaderName + ", " + headerValue);
       } else {
-        responseHeaders.putString(headerName, headers.value(i));
-      }
-    }
-    return responseHeaders;
+       responseHeadersMap.put(headerName, headerValue);
+       responseHeaders.putString(headerName, headerValue);
+     }
+   }
+
+   return responseHeaders;
   }
 
   @ReactMethod
