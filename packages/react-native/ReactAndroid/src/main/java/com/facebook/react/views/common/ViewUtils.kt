@@ -20,5 +20,5 @@ public object ViewUtils {
    * @return the value of testId if defined for the view, otherwise null
    */
   @JvmStatic
-  public fun getTestId(view: View?): String? = view?.getTag(R.id.react_test_id) as? String
+  public fun getTestId(view: View?): String? = view?.getTag(R.id.reactandroid_react_test_id) as? String
 }

@@ -70,17 +70,17 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   protected T prepareToRecycleView(@NonNull ThemedReactContext reactContext, T view) {
     // Reset tags
     view.setTag(null);
-    view.setTag(R.id.pointer_events, null);
-    view.setTag(R.id.react_test_id, null);
-    view.setTag(R.id.view_tag_native_id, null);
-    view.setTag(R.id.labelled_by, null);
-    view.setTag(R.id.accessibility_label, null);
-    view.setTag(R.id.accessibility_hint, null);
-    view.setTag(R.id.accessibility_role, null);
-    view.setTag(R.id.accessibility_state, null);
-    view.setTag(R.id.accessibility_actions, null);
-    view.setTag(R.id.accessibility_value, null);
-    view.setTag(R.id.accessibility_state_expanded, null);
+    view.setTag(R.id.reactandroid_pointer_events, null);
+    view.setTag(R.id.reactandroid_react_test_id, null);
+    view.setTag(R.id.reactandroid_view_tag_native_id, null);
+    view.setTag(R.id.reactandroid_labelled_by, null);
+    view.setTag(R.id.reactandroid_accessibility_label, null);
+    view.setTag(R.id.reactandroid_accessibility_hint, null);
+    view.setTag(R.id.reactandroid_accessibility_role, null);
+    view.setTag(R.id.reactandroid_accessibility_state, null);
+    view.setTag(R.id.reactandroid_accessibility_actions, null);
+    view.setTag(R.id.reactandroid_accessibility_value, null);
+    view.setTag(R.id.reactandroid_accessibility_state_expanded, null);
 
     // This indirectly calls (and resets):
     // setTranslationX
@@ -102,13 +102,13 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     view.setElevation(0);
     view.setAnimationMatrix(null);
 
-    view.setTag(R.id.transform, null);
-    view.setTag(R.id.transform_origin, null);
-    view.setTag(R.id.invalidate_transform, null);
+    view.setTag(R.id.reactandroid_transform, null);
+    view.setTag(R.id.reactandroid_transform_origin, null);
+    view.setTag(R.id.reactandroid_invalidate_transform, null);
     view.removeOnLayoutChangeListener(this);
 
-    view.setTag(R.id.use_hardware_layer, null);
-    view.setTag(R.id.filter, null);
+    view.setTag(R.id.reactandroid_use_hardware_layer, null);
+    view.setTag(R.id.reactandroid_filter, null);
     applyFilter(view, null);
 
     // setShadowColor
@@ -171,8 +171,8 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     int currentHeight = bottom - top;
 
     if ((currentHeight != oldHeight || currentWidth != oldWidth)) {
-      ReadableArray transformOrigin = (ReadableArray) v.getTag(R.id.transform_origin);
-      ReadableArray transforms = (ReadableArray) v.getTag(R.id.transform);
+      ReadableArray transformOrigin = (ReadableArray) v.getTag(R.id.reactandroid_transform_origin);
+      ReadableArray transforms = (ReadableArray) v.getTag(R.id.reactandroid_transform);
       if (transforms != null || transformOrigin != null) {
         setTransformProperty((T) v, transforms, transformOrigin);
       }
@@ -191,21 +191,21 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @Override
   @ReactProp(name = ViewProps.FILTER, customType = "Filter")
   public void setFilter(@NonNull T view, @Nullable ReadableArray filter) {
-    view.setTag(R.id.filter, filter);
+    view.setTag(R.id.reactandroid_filter, filter);
   }
 
   @Override
   @ReactProp(name = ViewProps.TRANSFORM)
   public void setTransform(@NonNull T view, @Nullable ReadableArray matrix) {
-    view.setTag(R.id.transform, matrix);
-    view.setTag(R.id.invalidate_transform, true);
+    view.setTag(R.id.reactandroid_transform, matrix);
+    view.setTag(R.id.reactandroid_invalidate_transform, true);
   }
 
   @Override
   @ReactProp(name = ViewProps.TRANSFORM_ORIGIN)
   public void setTransformOrigin(@NonNull T view, @Nullable ReadableArray transformOrigin) {
-    view.setTag(R.id.transform_origin, transformOrigin);
-    view.setTag(R.id.invalidate_transform, true);
+    view.setTag(R.id.reactandroid_transform_origin, transformOrigin);
+    view.setTag(R.id.reactandroid_invalidate_transform, true);
   }
 
   @Override
@@ -243,13 +243,13 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @Override
   @ReactProp(name = ViewProps.RENDER_TO_HARDWARE_TEXTURE)
   public void setRenderToHardwareTexture(@NonNull T view, boolean useHWTexture) {
-    view.setTag(R.id.use_hardware_layer, useHWTexture);
+    view.setTag(R.id.reactandroid_use_hardware_layer, useHWTexture);
   }
 
   @Override
   @ReactProp(name = ViewProps.TEST_ID)
   public void setTestId(@NonNull T view, @Nullable String testId) {
-    view.setTag(R.id.react_test_id, testId);
+    view.setTag(R.id.reactandroid_react_test_id, testId);
 
     // temporarily set the tag and keyed tags to avoid end to end test regressions
     view.setTag(testId);
@@ -258,7 +258,7 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @Override
   @ReactProp(name = ViewProps.NATIVE_ID)
   public void setNativeId(@NonNull T view, @Nullable String nativeId) {
-    view.setTag(R.id.view_tag_native_id, nativeId);
+    view.setTag(R.id.reactandroid_view_tag_native_id, nativeId);
     ReactFindViewUtil.notifyViewRendered(view);
   }
 
@@ -269,25 +269,25 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
       return;
     }
     if (nativeId.getType() == ReadableType.String) {
-      view.setTag(R.id.labelled_by, nativeId.asString());
+      view.setTag(R.id.reactandroid_labelled_by, nativeId.asString());
     } else if (nativeId.getType() == ReadableType.Array) {
       // On Android, this takes a single View as labeledBy. If an array is specified, set the first
       // element in the tag.
-      view.setTag(R.id.labelled_by, nativeId.asArray().getString(0));
+      view.setTag(R.id.reactandroid_labelled_by, nativeId.asArray().getString(0));
     }
   }
 
   @Override
   @ReactProp(name = ViewProps.ACCESSIBILITY_LABEL)
   public void setAccessibilityLabel(@NonNull T view, @Nullable String accessibilityLabel) {
-    view.setTag(R.id.accessibility_label, accessibilityLabel);
+    view.setTag(R.id.reactandroid_accessibility_label, accessibilityLabel);
     updateViewContentDescription(view);
   }
 
   @Override
   @ReactProp(name = ViewProps.ACCESSIBILITY_HINT)
   public void setAccessibilityHint(@NonNull T view, @Nullable String accessibilityHint) {
-    view.setTag(R.id.accessibility_hint, accessibilityHint);
+    view.setTag(R.id.reactandroid_accessibility_hint, accessibilityHint);
     updateViewContentDescription(view);
   }
 
@@ -295,9 +295,9 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @ReactProp(name = ViewProps.ACCESSIBILITY_ROLE)
   public void setAccessibilityRole(@NonNull T view, @Nullable String accessibilityRole) {
     if (accessibilityRole == null) {
-      view.setTag(R.id.accessibility_role, null);
+      view.setTag(R.id.reactandroid_accessibility_role, null);
     } else {
-      view.setTag(R.id.accessibility_role, AccessibilityRole.fromValue(accessibilityRole));
+      view.setTag(R.id.reactandroid_accessibility_role, AccessibilityRole.fromValue(accessibilityRole));
     }
   }
 
@@ -305,14 +305,14 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @ReactProp(name = ViewProps.ACCESSIBILITY_COLLECTION)
   public void setAccessibilityCollection(
       @NonNull T view, @Nullable ReadableMap accessibilityCollection) {
-    view.setTag(R.id.accessibility_collection, accessibilityCollection);
+    view.setTag(R.id.reactandroid_accessibility_collection, accessibilityCollection);
   }
 
   @Override
   @ReactProp(name = ViewProps.ACCESSIBILITY_COLLECTION_ITEM)
   public void setAccessibilityCollectionItem(
       @NonNull T view, @Nullable ReadableMap accessibilityCollectionItem) {
-    view.setTag(R.id.accessibility_collection_item, accessibilityCollectionItem);
+    view.setTag(R.id.reactandroid_accessibility_collection_item, accessibilityCollectionItem);
   }
 
   @Override
@@ -322,7 +322,7 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
       return;
     }
     if (accessibilityState.hasKey("expanded")) {
-      view.setTag(R.id.accessibility_state_expanded, accessibilityState.getBoolean("expanded"));
+      view.setTag(R.id.reactandroid_accessibility_state_expanded, accessibilityState.getBoolean("expanded"));
     }
     if (accessibilityState.hasKey("selected")) {
       boolean prevSelected = view.isSelected();
@@ -334,12 +334,12 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
       // So manually announce this.
       if (view.isAccessibilityFocused() && prevSelected && !nextSelected) {
         view.announceForAccessibility(
-            view.getContext().getString(R.string.state_unselected_description));
+            view.getContext().getString(R.string.reactandroid_state_unselected_description));
       }
     } else {
       view.setSelected(false);
     }
-    view.setTag(R.id.accessibility_state, accessibilityState);
+    view.setTag(R.id.reactandroid_accessibility_state, accessibilityState);
     if (accessibilityState.hasKey("disabled") && !accessibilityState.getBoolean("disabled")) {
       view.setEnabled(true);
     }
@@ -369,10 +369,10 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   }
 
   private void updateViewContentDescription(@NonNull T view) {
-    final String accessibilityLabel = (String) view.getTag(R.id.accessibility_label);
-    final ReadableMap accessibilityState = (ReadableMap) view.getTag(R.id.accessibility_state);
+    final String accessibilityLabel = (String) view.getTag(R.id.reactandroid_accessibility_label);
+    final ReadableMap accessibilityState = (ReadableMap) view.getTag(R.id.reactandroid_accessibility_state);
     final List<String> contentDescription = new ArrayList<>();
-    final ReadableMap accessibilityValue = (ReadableMap) view.getTag(R.id.accessibility_value);
+    final ReadableMap accessibilityValue = (ReadableMap) view.getTag(R.id.reactandroid_accessibility_value);
     if (accessibilityLabel != null) {
       contentDescription.add(accessibilityLabel);
     }
@@ -384,11 +384,11 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
         if (state.equals(STATE_CHECKED)
             && value.getType() == ReadableType.String
             && value.asString().equals(STATE_MIXED)) {
-          contentDescription.add(view.getContext().getString(R.string.state_mixed_description));
+          contentDescription.add(view.getContext().getString(R.string.reactandroid_state_mixed_description));
         } else if (state.equals(STATE_BUSY)
             && value.getType() == ReadableType.Boolean
             && value.asBoolean()) {
-          contentDescription.add(view.getContext().getString(R.string.state_busy_description));
+          contentDescription.add(view.getContext().getString(R.string.reactandroid_state_busy_description));
         }
       }
     }
@@ -410,16 +410,16 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
       return;
     }
 
-    view.setTag(R.id.accessibility_actions, accessibilityActions);
+    view.setTag(R.id.reactandroid_accessibility_actions, accessibilityActions);
   }
 
   @ReactProp(name = ViewProps.ACCESSIBILITY_VALUE)
   public void setAccessibilityValue(T view, ReadableMap accessibilityValue) {
     if (accessibilityValue == null) {
-      view.setTag(R.id.accessibility_value, null);
+      view.setTag(R.id.reactandroid_accessibility_value, null);
       view.setContentDescription(null);
     } else {
-      view.setTag(R.id.accessibility_value, accessibilityValue);
+      view.setTag(R.id.reactandroid_accessibility_value, accessibilityValue);
       if (accessibilityValue.hasKey("text")) {
         updateViewContentDescription(view);
       }
@@ -446,9 +446,9 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @ReactProp(name = ViewProps.ROLE)
   public void setRole(@NonNull T view, @Nullable String role) {
     if (role == null) {
-      view.setTag(R.id.role, null);
+      view.setTag(R.id.reactandroid_role, null);
     } else {
-      view.setTag(R.id.role, Role.fromValue(role));
+      view.setTag(R.id.reactandroid_role, Role.fromValue(role));
     }
   }
 
@@ -503,7 +503,7 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       view.setRenderEffect(null);
     }
-    Boolean useHWLayer = (Boolean) view.getTag(R.id.use_hardware_layer);
+    Boolean useHWLayer = (Boolean) view.getTag(R.id.reactandroid_use_hardware_layer);
     int layerType =
         useHWLayer != null && useHWLayer ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE;
     view.setLayerType(layerType, null);
@@ -621,21 +621,21 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     super.onAfterUpdateTransaction(view);
     updateViewAccessibility(view);
 
-    Boolean invalidateTransform = (Boolean) view.getTag(R.id.invalidate_transform);
+    Boolean invalidateTransform = (Boolean) view.getTag(R.id.reactandroid_invalidate_transform);
     if (invalidateTransform != null && invalidateTransform) {
       view.addOnLayoutChangeListener(this);
-      ReadableArray transformOrigin = (ReadableArray) view.getTag(R.id.transform_origin);
-      ReadableArray transforms = (ReadableArray) view.getTag(R.id.transform);
+      ReadableArray transformOrigin = (ReadableArray) view.getTag(R.id.reactandroid_transform_origin);
+      ReadableArray transforms = (ReadableArray) view.getTag(R.id.reactandroid_transform);
       setTransformProperty(view, transforms, transformOrigin);
-      view.setTag(R.id.invalidate_transform, false);
+      view.setTag(R.id.reactandroid_invalidate_transform, false);
     }
 
-    Boolean useHWLayer = (Boolean) view.getTag(R.id.use_hardware_layer);
+    Boolean useHWLayer = (Boolean) view.getTag(R.id.reactandroid_use_hardware_layer);
     if (useHWLayer != null) {
       view.setLayerType(useHWLayer ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, null);
     }
 
-    ReadableArray filter = (ReadableArray) view.getTag(R.id.filter);
+    ReadableArray filter = (ReadableArray) view.getTag(R.id.reactandroid_filter);
     applyFilter(view, filter);
   }
 
@@ -754,10 +754,10 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
 
   private static void setPointerEventsFlag(
       @NonNull View view, PointerEventHelper.EVENT event, boolean isListening) {
-    Integer tag = (Integer) view.getTag(R.id.pointer_events);
+    Integer tag = (Integer) view.getTag(R.id.reactandroid_pointer_events);
     int currentValue = tag != null ? tag.intValue() : 0;
     int flag = 1 << event.ordinal();
-    view.setTag(R.id.pointer_events, isListening ? (currentValue | flag) : (currentValue & ~flag));
+    view.setTag(R.id.reactandroid_pointer_events, isListening ? (currentValue | flag) : (currentValue & ~flag));
   }
 
   /* Experimental W3C Pointer events start */

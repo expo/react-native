@@ -29,7 +29,7 @@ internal class FpsView(reactContext: ReactContext?) : FrameLayout(reactContext!!
   private val fpsMonitorRunnable: FPSMonitorRunnable
 
   init {
-    inflate(reactContext, R.layout.fps_view, this)
+    inflate(reactContext, R.layout.reactandroid_fps_view, this)
     textView = findViewById<View>(R.id.fps_text) as TextView
     frameCallback = FpsDebugFrameCallback(reactContext!!)
     fpsMonitorRunnable = FPSMonitorRunnable()

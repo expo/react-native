@@ -20,7 +20,7 @@ import com.facebook.react.R
 public class DevSettingsActivity : PreferenceActivity() {
   public override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    title = application.resources.getString(R.string.catalyst_settings_title)
-    addPreferencesFromResource(R.xml.rn_dev_preferences)
+    title = application.resources.getString(R.string.reactandroid_catalyst_settings_title)
+    addPreferencesFromResource(R.xml.reactandroid_rn_dev_preferences)
   }
 }

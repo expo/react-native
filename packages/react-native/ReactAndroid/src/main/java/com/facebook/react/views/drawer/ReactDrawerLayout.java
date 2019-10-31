@@ -55,7 +55,7 @@ class ReactDrawerLayout extends DrawerLayout {
           public void onInitializeAccessibilityEvent(View host, AccessibilityEvent event) {
             super.onInitializeAccessibilityEvent(host, event);
             final AccessibilityRole accessibilityRole =
-                (AccessibilityRole) host.getTag(R.id.accessibility_role);
+                (AccessibilityRole) host.getTag(R.id.reactandroid_accessibility_role);
             if (accessibilityRole != null) {
               event.setClassName(AccessibilityRole.getValue(accessibilityRole));
             }
