@@ -97,22 +97,22 @@ public class PointerEventHelper {
       case CANCEL_CAPTURE:
         return true;
       case ENTER:
-        value = view.getTag(R.id.pointer_enter);
+        value = view.getTag(R.id.reactandroid_pointer_enter);
         break;
       case ENTER_CAPTURE:
-        value = view.getTag(R.id.pointer_enter_capture);
+        value = view.getTag(R.id.reactandroid_pointer_enter_capture);
         break;
       case LEAVE:
-        value = view.getTag(R.id.pointer_leave);
+        value = view.getTag(R.id.reactandroid_pointer_leave);
         break;
       case LEAVE_CAPTURE:
-        value = view.getTag(R.id.pointer_leave_capture);
+        value = view.getTag(R.id.reactandroid_pointer_leave_capture);
         break;
       case MOVE:
-        value = view.getTag(R.id.pointer_move);
+        value = view.getTag(R.id.reactandroid_pointer_move);
         break;
       case MOVE_CAPTURE:
-        value = view.getTag(R.id.pointer_move_capture);
+        value = view.getTag(R.id.reactandroid_pointer_move_capture);
         break;
     }
 

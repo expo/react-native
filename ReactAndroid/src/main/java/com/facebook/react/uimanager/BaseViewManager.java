@@ -50,9 +50,9 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   public static final Map<String, Integer> sStateDescription = new HashMap<>();
 
   static {
-    sStateDescription.put("busy", R.string.state_busy_description);
-    sStateDescription.put("expanded", R.string.state_expanded_description);
-    sStateDescription.put("collapsed", R.string.state_collapsed_description);
+    sStateDescription.put("busy", R.string.reactandroid_state_busy_description);
+    sStateDescription.put("expanded", R.string.reactandroid_state_expanded_description);
+    sStateDescription.put("collapsed", R.string.reactandroid_state_collapsed_description);
   }
 
   // State definition constants -- must match the definition in
@@ -67,18 +67,18 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @Override
   protected T prepareToRecycleView(@NonNull ThemedReactContext reactContext, T view) {
     // Reset tags
-    view.setTag(R.id.pointer_enter, null);
-    view.setTag(R.id.pointer_leave, null);
-    view.setTag(R.id.pointer_move, null);
-    view.setTag(R.id.react_test_id, null);
-    view.setTag(R.id.view_tag_native_id, null);
-    view.setTag(R.id.labelled_by, null);
-    view.setTag(R.id.accessibility_label, null);
-    view.setTag(R.id.accessibility_hint, null);
-    view.setTag(R.id.accessibility_role, null);
-    view.setTag(R.id.accessibility_state, null);
-    view.setTag(R.id.accessibility_actions, null);
-    view.setTag(R.id.accessibility_value, null);
+    view.setTag(R.id.reactandroid_pointer_enter, null);
+    view.setTag(R.id.reactandroid_pointer_leave, null);
+    view.setTag(R.id.reactandroid_pointer_move, null);
+    view.setTag(R.id.reactandroid_react_test_id, null);
+    view.setTag(R.id.reactandroid_view_tag_native_id, null);
+    view.setTag(R.id.reactandroid_labelled_by, null);
+    view.setTag(R.id.reactandroid_accessibility_label, null);
+    view.setTag(R.id.reactandroid_accessibility_hint, null);
+    view.setTag(R.id.reactandroid_accessibility_role, null);
+    view.setTag(R.id.reactandroid_accessibility_state, null);
+    view.setTag(R.id.reactandroid_accessibility_actions, null);
+    view.setTag(R.id.reactandroid_accessibility_value, null);
 
     // This indirectly calls (and resets):
     // setTranslationX
@@ -200,7 +200,7 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @Override
   @ReactProp(name = ViewProps.TEST_ID)
   public void setTestId(@NonNull T view, @Nullable String testId) {
-    view.setTag(R.id.react_test_id, testId);
+    view.setTag(R.id.reactandroid_react_test_id, testId);
 
     // temporarily set the tag and keyed tags to avoid end to end test regressions
     view.setTag(testId);
@@ -209,7 +209,7 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @Override
   @ReactProp(name = ViewProps.NATIVE_ID)
   public void setNativeId(@NonNull T view, @Nullable String nativeId) {
-    view.setTag(R.id.view_tag_native_id, nativeId);
+    view.setTag(R.id.reactandroid_view_tag_native_id, nativeId);
     ReactFindViewUtil.notifyViewRendered(view);
   }
 
@@ -220,25 +220,25 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
       return;
     }
     if (nativeId.getType() == ReadableType.String) {
-      view.setTag(R.id.labelled_by, nativeId.asString());
+      view.setTag(R.id.reactandroid_labelled_by, nativeId.asString());
     } else if (nativeId.getType() == ReadableType.Array) {
       // On Android, this takes a single View as labeledBy. If an array is specified, set the first
       // element in the tag.
-      view.setTag(R.id.labelled_by, nativeId.asArray().getString(0));
+      view.setTag(R.id.reactandroid_labelled_by, nativeId.asArray().getString(0));
     }
   }
 
   @Override
   @ReactProp(name = ViewProps.ACCESSIBILITY_LABEL)
   public void setAccessibilityLabel(@NonNull T view, @Nullable String accessibilityLabel) {
-    view.setTag(R.id.accessibility_label, accessibilityLabel);
+    view.setTag(R.id.reactandroid_accessibility_label, accessibilityLabel);
     updateViewContentDescription(view);
   }
 
   @Override
   @ReactProp(name = ViewProps.ACCESSIBILITY_HINT)
   public void setAccessibilityHint(@NonNull T view, @Nullable String accessibilityHint) {
-    view.setTag(R.id.accessibility_hint, accessibilityHint);
+    view.setTag(R.id.reactandroid_accessibility_hint, accessibilityHint);
     updateViewContentDescription(view);
   }
 
@@ -248,21 +248,21 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     if (accessibilityRole == null) {
       return;
     }
-    view.setTag(R.id.accessibility_role, AccessibilityRole.fromValue(accessibilityRole));
+    view.setTag(R.id.reactandroid_accessibility_role, AccessibilityRole.fromValue(accessibilityRole));
   }
 
   @Override
   @ReactProp(name = ViewProps.ACCESSIBILITY_COLLECTION)
   public void setAccessibilityCollection(
       @NonNull T view, @Nullable ReadableMap accessibilityCollection) {
-    view.setTag(R.id.accessibility_collection, accessibilityCollection);
+    view.setTag(R.id.reactandroid_accessibility_collection, accessibilityCollection);
   }
 
   @Override
   @ReactProp(name = ViewProps.ACCESSIBILITY_COLLECTION_ITEM)
   public void setAccessibilityCollectionItem(
       @NonNull T view, @Nullable ReadableMap accessibilityCollectionItem) {
-    view.setTag(R.id.accessibility_collection_item, accessibilityCollectionItem);
+    view.setTag(R.id.reactandroid_accessibility_collection_item, accessibilityCollectionItem);
   }
 
   @Override
@@ -281,12 +281,12 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
       // So manually announce this.
       if (view.isAccessibilityFocused() && prevSelected && !nextSelected) {
         view.announceForAccessibility(
-            view.getContext().getString(R.string.state_unselected_description));
+            view.getContext().getString(R.string.reactandroid_state_unselected_description));
       }
     } else {
       view.setSelected(false);
     }
-    view.setTag(R.id.accessibility_state, accessibilityState);
+    view.setTag(R.id.reactandroid_accessibility_state, accessibilityState);
     if (accessibilityState.hasKey("disabled") && !accessibilityState.getBoolean("disabled")) {
       view.setEnabled(true);
     }
@@ -316,11 +316,11 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   }
 
   private void updateViewContentDescription(@NonNull T view) {
-    final String accessibilityLabel = (String) view.getTag(R.id.accessibility_label);
-    final ReadableMap accessibilityState = (ReadableMap) view.getTag(R.id.accessibility_state);
-    final String accessibilityHint = (String) view.getTag(R.id.accessibility_hint);
+    final String accessibilityLabel = (String) view.getTag(R.id.reactandroid_accessibility_label);
+    final ReadableMap accessibilityState = (ReadableMap) view.getTag(R.id.reactandroid_accessibility_state);
+    final String accessibilityHint = (String) view.getTag(R.id.reactandroid_accessibility_hint);
     final List<String> contentDescription = new ArrayList<>();
-    final ReadableMap accessibilityValue = (ReadableMap) view.getTag(R.id.accessibility_value);
+    final ReadableMap accessibilityValue = (ReadableMap) view.getTag(R.id.reactandroid_accessibility_value);
     if (accessibilityLabel != null) {
       contentDescription.add(accessibilityLabel);
     }
@@ -332,18 +332,18 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
         if (state.equals(STATE_CHECKED)
             && value.getType() == ReadableType.String
             && value.asString().equals(STATE_MIXED)) {
-          contentDescription.add(view.getContext().getString(R.string.state_mixed_description));
+          contentDescription.add(view.getContext().getString(R.string.reactandroid_state_mixed_description));
         } else if (state.equals(STATE_BUSY)
             && value.getType() == ReadableType.Boolean
             && value.asBoolean()) {
-          contentDescription.add(view.getContext().getString(R.string.state_busy_description));
+          contentDescription.add(view.getContext().getString(R.string.reactandroid_state_busy_description));
         } else if (state.equals(STATE_EXPANDED) && value.getType() == ReadableType.Boolean) {
           contentDescription.add(
               view.getContext()
                   .getString(
                       value.asBoolean()
-                          ? R.string.state_expanded_description
-                          : R.string.state_collapsed_description));
+                          ? R.string.reactandroid_state_expanded_description
+                          : R.string.reactandroid_state_collapsed_description));
         }
       }
     }
@@ -368,7 +368,7 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
       return;
     }
 
-    view.setTag(R.id.accessibility_actions, accessibilityActions);
+    view.setTag(R.id.reactandroid_accessibility_actions, accessibilityActions);
   }
 
   @ReactProp(name = ViewProps.ACCESSIBILITY_VALUE)
@@ -377,7 +377,7 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
       return;
     }
 
-    view.setTag(R.id.accessibility_value, accessibilityValue);
+    view.setTag(R.id.reactandroid_accessibility_value, accessibilityValue);
     if (accessibilityValue.hasKey("text")) {
       updateViewContentDescription(view);
     }
@@ -636,32 +636,32 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   /* Experimental W3C Pointer events start */
   @ReactProp(name = "onPointerEnter")
   public void setPointerEnter(@NonNull T view, boolean value) {
-    view.setTag(R.id.pointer_enter, value);
+    view.setTag(R.id.reactandroid_pointer_enter, value);
   }
 
   @ReactProp(name = "onPointerEnterCapture")
   public void setPointerEnterCapture(@NonNull T view, boolean value) {
-    view.setTag(R.id.pointer_enter_capture, value);
+    view.setTag(R.id.reactandroid_pointer_enter_capture, value);
   }
 
   @ReactProp(name = "onPointerLeave")
   public void setPointerLeave(@NonNull T view, boolean value) {
-    view.setTag(R.id.pointer_leave, value);
+    view.setTag(R.id.reactandroid_pointer_leave, value);
   }
 
   @ReactProp(name = "onPointerLeaveCapture")
   public void setPointerLeaveCapture(@NonNull T view, boolean value) {
-    view.setTag(R.id.pointer_leave_capture, value);
+    view.setTag(R.id.reactandroid_pointer_leave_capture, value);
   }
 
   @ReactProp(name = "onPointerMove")
   public void setPointerMove(@NonNull T view, boolean value) {
-    view.setTag(R.id.pointer_move, value);
+    view.setTag(R.id.reactandroid_pointer_move, value);
   }
 
   @ReactProp(name = "onPointerMoveCapture")
   public void setPointerMoveCapture(@NonNull T view, boolean value) {
-    view.setTag(R.id.pointer_move_capture, value);
+    view.setTag(R.id.reactandroid_pointer_move_capture, value);
   }
 
   /* Experimental W3C Pointer events end */
