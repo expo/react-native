@@ -223,9 +223,9 @@ public class ReactModalHostView(context: ThemedReactContext) :
     createNewDialog = false
     val theme: Int =
         when (animationType) {
-          "fade" -> R.style.Theme_FullScreenDialogAnimatedFade
-          "slide" -> R.style.Theme_FullScreenDialogAnimatedSlide
-          else -> R.style.Theme_FullScreenDialog
+          "fade" -> R.style.ReactAndroidTheme_FullScreenDialogAnimatedFade
+          "slide" -> R.style.ReactAndroidTheme_FullScreenDialogAnimatedSlide
+          else -> R.style.ReactAndroidTheme_FullScreenDialog
         }
 
     val currentActivity = getCurrentActivity()

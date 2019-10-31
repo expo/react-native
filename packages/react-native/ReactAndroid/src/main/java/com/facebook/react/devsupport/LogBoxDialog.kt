@@ -15,7 +15,7 @@ import com.facebook.react.R
 
 /** Dialog for displaying JS errors in LogBox. */
 internal class LogBoxDialog(context: Activity, reactRootView: View?) :
-    Dialog(context, R.style.Theme_Catalyst_LogBox) {
+    Dialog(context, R.style.ReactAndroidTheme_Catalyst_LogBox) {
   init {
     requestWindowFeature(Window.FEATURE_NO_TITLE)
     if (reactRootView != null) {
