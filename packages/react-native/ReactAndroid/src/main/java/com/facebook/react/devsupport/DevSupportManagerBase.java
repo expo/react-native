@@ -383,7 +383,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     LinkedHashMap<String, DevOptionHandler> options = new LinkedHashMap<>();
     /* register standard options */
     options.put(
-        mApplicationContext.getString(R.string.catalyst_reload),
+        mApplicationContext.getString(R.string.reactandroid_catalyst_reload),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -391,7 +391,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
                 && mDevSettings.isHotModuleReplacementEnabled()) {
               Toast.makeText(
                       mApplicationContext,
-                      mApplicationContext.getString(R.string.catalyst_hot_reloading_auto_disable),
+                      mApplicationContext.getString(R.string.reactandroid_catalyst_hot_reloading_auto_disable),
                       Toast.LENGTH_LONG)
                   .show();
               mDevSettings.setHotModuleReplacementEnabled(false);
@@ -411,31 +411,31 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
         handleReloadJS();
       }
       options.put(
-          mApplicationContext.getString(R.string.catalyst_debug_open),
+          mApplicationContext.getString(R.string.reactandroid_catalyst_debug_open),
           new DevOptionHandler() {
             @Override
             public void onOptionSelected() {
               mDevServerHelper.openUrl(
                   mCurrentContext,
                   FLIPPER_DEBUGGER_URL,
-                  mApplicationContext.getString(R.string.catalyst_open_flipper_error));
+                  mApplicationContext.getString(R.string.reactandroid_catalyst_open_flipper_error));
             }
           });
       options.put(
-          mApplicationContext.getString(R.string.catalyst_devtools_open),
+          mApplicationContext.getString(R.string.reactandroid_catalyst_devtools_open),
           new DevOptionHandler() {
             @Override
             public void onOptionSelected() {
               mDevServerHelper.openUrl(
                   mCurrentContext,
                   FLIPPER_DEVTOOLS_URL,
-                  mApplicationContext.getString(R.string.catalyst_open_flipper_error));
+                  mApplicationContext.getString(R.string.reactandroid_catalyst_open_flipper_error));
             }
           });
     }
 
     options.put(
-        mApplicationContext.getString(R.string.catalyst_change_bundle_location),
+        mApplicationContext.getString(R.string.reactandroid_catalyst_change_bundle_location),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -453,7 +453,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
             AlertDialog bundleLocationDialog =
                 new AlertDialog.Builder(context)
                     .setTitle(
-                        mApplicationContext.getString(R.string.catalyst_change_bundle_location))
+                        mApplicationContext.getString(R.string.reactandroid_catalyst_change_bundle_location))
                     .setView(input)
                     .setPositiveButton(
                         android.R.string.ok,
@@ -472,8 +472,8 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
 
     options.put(
         mDevSettings.isElementInspectorEnabled()
-            ? mApplicationContext.getString(R.string.catalyst_inspector_stop)
-            : mApplicationContext.getString(R.string.catalyst_inspector),
+            ? mApplicationContext.getString(R.string.reactandroid_catalyst_inspector_stop)
+            : mApplicationContext.getString(R.string.reactandroid_catalyst_inspector),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -484,8 +484,8 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
 
     options.put(
         mDevSettings.isHotModuleReplacementEnabled()
-            ? mApplicationContext.getString(R.string.catalyst_hot_reloading_stop)
-            : mApplicationContext.getString(R.string.catalyst_hot_reloading),
+            ? mApplicationContext.getString(R.string.reactandroid_catalyst_hot_reloading_stop)
+            : mApplicationContext.getString(R.string.reactandroid_catalyst_hot_reloading),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -501,7 +501,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
             if (nextEnabled && !mDevSettings.isJSDevModeEnabled()) {
               Toast.makeText(
                       mApplicationContext,
-                      mApplicationContext.getString(R.string.catalyst_hot_reloading_auto_enable),
+                      mApplicationContext.getString(R.string.reactandroid_catalyst_hot_reloading_auto_enable),
                       Toast.LENGTH_LONG)
                   .show();
               mDevSettings.setJSDevModeEnabled(true);
@@ -512,8 +512,8 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
 
     options.put(
         mDevSettings.isFpsDebugEnabled()
-            ? mApplicationContext.getString(R.string.catalyst_perf_monitor_stop)
-            : mApplicationContext.getString(R.string.catalyst_perf_monitor),
+            ? mApplicationContext.getString(R.string.reactandroid_catalyst_perf_monitor_stop)
+            : mApplicationContext.getString(R.string.reactandroid_catalyst_perf_monitor),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -530,7 +530,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
           }
         });
     options.put(
-        mApplicationContext.getString(R.string.catalyst_settings),
+        mApplicationContext.getString(R.string.reactandroid_catalyst_settings),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -791,7 +791,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     int port = parsedURL.getPort() != -1 ? parsedURL.getPort() : parsedURL.getDefaultPort();
     mDevLoadingViewManager.showMessage(
         mApplicationContext.getString(
-            R.string.catalyst_loading_from_url, parsedURL.getHost() + ":" + port));
+            R.string.reactandroid_catalyst_loading_from_url, parsedURL.getHost() + ":" + port));
     mDevLoadingViewVisible = true;
   }
 
@@ -802,7 +802,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     }
 
     mDevLoadingViewManager.showMessage(
-        mApplicationContext.getString(R.string.catalyst_debug_connecting));
+        mApplicationContext.getString(R.string.reactandroid_catalyst_debug_connecting));
     mDevLoadingViewVisible = true;
   }
 
@@ -1040,7 +1040,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
               showNewJavaError(debugServerException.getMessage(), cause);
             } else {
               showNewJavaError(
-                  mApplicationContext.getString(R.string.catalyst_reload_error), cause);
+                  mApplicationContext.getString(R.string.reactandroid_catalyst_reload_error), cause);
             }
           }
         });
