@@ -54,7 +54,7 @@ class ReactScrollViewAccessibilityDelegate extends AccessibilityDelegateCompat {
 
   private void onInitializeAccessibilityEventInternal(View view, AccessibilityEvent event) {
     final ReadableMap accessibilityCollection =
-        (ReadableMap) view.getTag(R.id.accessibility_collection);
+        (ReadableMap) view.getTag(R.id.reactandroid_accessibility_collection);
 
     if (accessibilityCollection != null) {
       event.setItemCount(accessibilityCollection.getInt("itemCount"));
@@ -85,7 +85,7 @@ class ReactScrollViewAccessibilityDelegate extends AccessibilityDelegateCompat {
           return;
         }
         ReadableMap accessibilityCollectionItem =
-            (ReadableMap) nextChild.getTag(R.id.accessibility_collection_item);
+            (ReadableMap) nextChild.getTag(R.id.reactandroid_accessibility_collection_item);
 
         if (!(nextChild instanceof ViewGroup)) {
           return;
@@ -101,7 +101,7 @@ class ReactScrollViewAccessibilityDelegate extends AccessibilityDelegateCompat {
           View nestedNextChild = ((ViewGroup) nextChild).getChildAt(0);
           if (nestedNextChild != null) {
             ReadableMap nestedChildAccessibility =
-                (ReadableMap) nestedNextChild.getTag(R.id.accessibility_collection_item);
+                (ReadableMap) nestedNextChild.getTag(R.id.reactandroid_accessibility_collection_item);
             if (nestedChildAccessibility != null) {
               accessibilityCollectionItem = nestedChildAccessibility;
             }
@@ -133,7 +133,7 @@ class ReactScrollViewAccessibilityDelegate extends AccessibilityDelegateCompat {
     }
 
     final ReadableMap accessibilityCollection =
-        (ReadableMap) view.getTag(R.id.accessibility_collection);
+        (ReadableMap) view.getTag(R.id.reactandroid_accessibility_collection);
 
     if (accessibilityCollection != null) {
       int rowCount = accessibilityCollection.getInt("rowCount");

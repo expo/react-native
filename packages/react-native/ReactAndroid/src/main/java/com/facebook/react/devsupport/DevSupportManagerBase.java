@@ -349,7 +349,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     Set<String> disabledItemKeys = new HashSet<>();
     /* register standard options */
     options.put(
-        mApplicationContext.getString(R.string.catalyst_reload),
+        mApplicationContext.getString(R.string.reactandroid_catalyst_reload),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -357,7 +357,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
                 && mDevSettings.isHotModuleReplacementEnabled()) {
               Toast.makeText(
                       mApplicationContext,
-                      mApplicationContext.getString(R.string.catalyst_hot_reloading_auto_disable),
+                      mApplicationContext.getString(R.string.reactandroid_catalyst_hot_reloading_auto_disable),
                       Toast.LENGTH_LONG)
                   .show();
               mDevSettings.setHotModuleReplacementEnabled(false);
@@ -379,20 +379,20 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
       boolean isConnected = mIsPackagerConnected;
       String debuggerItemString =
           mApplicationContext.getString(
-              isConnected ? R.string.catalyst_debug_open : R.string.catalyst_debug_open_disabled);
+              isConnected ? R.string.reactandroid_catalyst_debug_open : R.string.reactandroid_catalyst_debug_open_disabled);
       if (!isConnected) {
         disabledItemKeys.add(debuggerItemString);
       }
       options.put(
-          debuggerItemString,
+          mApplicationContext.getString(R.string.reactandroid_catalyst_debug_open),
           () ->
               mDevServerHelper.openDebugger(
                   mCurrentContext,
-                  mApplicationContext.getString(R.string.catalyst_open_debugger_error)));
+                  mApplicationContext.getString(R.string.reactandroid_catalyst_open_debugger_error)));
     }
 
     options.put(
-        mApplicationContext.getString(R.string.catalyst_change_bundle_location),
+        mApplicationContext.getString(R.string.reactandroid_catalyst_change_bundle_location),
         () -> {
           Activity context = mReactInstanceDevHelper.getCurrentActivity();
           if (context == null || context.isFinishing()) {
@@ -407,7 +407,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
 
           AlertDialog bundleLocationDialog =
               new AlertDialog.Builder(context)
-                  .setTitle(mApplicationContext.getString(R.string.catalyst_change_bundle_location))
+                  .setTitle(mApplicationContext.getString(R.string.reactandroid_catalyst_change_bundle_location))
                   .setView(input)
                   .setPositiveButton(
                       android.R.string.ok,
@@ -424,7 +424,9 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
         });
 
     options.put(
-        mApplicationContext.getString(R.string.catalyst_inspector_toggle),
+        mDevSettings.isElementInspectorEnabled()
+            ? mApplicationContext.getString(R.string.reactandroid_catalyst_inspector_stop)
+            : mApplicationContext.getString(R.string.reactandroid_catalyst_inspector),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -435,8 +437,8 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
 
     options.put(
         mDevSettings.isHotModuleReplacementEnabled()
-            ? mApplicationContext.getString(R.string.catalyst_hot_reloading_stop)
-            : mApplicationContext.getString(R.string.catalyst_hot_reloading),
+            ? mApplicationContext.getString(R.string.reactandroid_catalyst_hot_reloading_stop)
+            : mApplicationContext.getString(R.string.reactandroid_catalyst_hot_reloading),
         () -> {
           boolean nextEnabled = !mDevSettings.isHotModuleReplacementEnabled();
           mDevSettings.setHotModuleReplacementEnabled(nextEnabled);
@@ -450,7 +452,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
           if (nextEnabled && !mDevSettings.isJSDevModeEnabled()) {
             Toast.makeText(
                     mApplicationContext,
-                    mApplicationContext.getString(R.string.catalyst_hot_reloading_auto_enable),
+                    mApplicationContext.getString(R.string.reactandroid_catalyst_hot_reloading_auto_enable),
                     Toast.LENGTH_LONG)
                 .show();
             mDevSettings.setJSDevModeEnabled(true);
@@ -460,8 +462,8 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
 
     options.put(
         mDevSettings.isFpsDebugEnabled()
-            ? mApplicationContext.getString(R.string.catalyst_perf_monitor_stop)
-            : mApplicationContext.getString(R.string.catalyst_perf_monitor),
+            ? mApplicationContext.getString(R.string.reactandroid_catalyst_perf_monitor_stop)
+            : mApplicationContext.getString(R.string.reactandroid_catalyst_perf_monitor),
         () -> {
           if (!mDevSettings.isFpsDebugEnabled()) {
             // Request overlay permission if needed when "Show Perf Monitor" option is selected
@@ -475,7 +477,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
           mDevSettings.setFpsDebugEnabled(!mDevSettings.isFpsDebugEnabled());
         });
     options.put(
-        mApplicationContext.getString(R.string.catalyst_settings),
+        mApplicationContext.getString(R.string.reactandroid_catalyst_settings),
         () -> {
           Intent intent = new Intent(mApplicationContext, DevSettingsActivity.class);
           intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -500,7 +502,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     header.setOrientation(LinearLayout.VERTICAL);
 
     final TextView title = new TextView(context);
-    title.setText(context.getString(R.string.catalyst_dev_menu_header, getUniqueTag()));
+    title.setText(context.getString(R.string.reactandroid_catalyst_dev_menu_header, getUniqueTag()));
     title.setPadding(0, 50, 0, 0);
     title.setGravity(Gravity.CENTER);
     title.setTextSize(16);
@@ -512,7 +514,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     if (jsExecutorDescription != null) {
       final TextView jsExecutorLabel = new TextView(context);
       jsExecutorLabel.setText(
-          context.getString(R.string.catalyst_dev_menu_sub_header, jsExecutorDescription));
+          context.getString(R.string.reactandroid_catalyst_dev_menu_sub_header, jsExecutorDescription));
       jsExecutorLabel.setPadding(0, 20, 0, 0);
       jsExecutorLabel.setGravity(Gravity.CENTER);
       jsExecutorLabel.setTextSize(14);
@@ -750,7 +752,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     int port = parsedURL.getPort() != -1 ? parsedURL.getPort() : parsedURL.getDefaultPort();
     mDevLoadingViewManager.showMessage(
         mApplicationContext.getString(
-            R.string.catalyst_loading_from_url, parsedURL.getHost() + ":" + port));
+            R.string.reactandroid_catalyst_loading_from_url, parsedURL.getHost() + ":" + port));
     mDevLoadingViewVisible = true;
   }
 
@@ -761,7 +763,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     }
 
     mDevLoadingViewManager.showMessage(
-        mApplicationContext.getString(R.string.catalyst_debug_connecting));
+        mApplicationContext.getString(R.string.reactandroid_catalyst_debug_connecting));
     mDevLoadingViewVisible = true;
   }
 
@@ -958,7 +960,7 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
             DebugServerException debugServerException = (DebugServerException) cause;
             showNewJavaError(debugServerException.getMessage(), cause);
           } else {
-            showNewJavaError(mApplicationContext.getString(R.string.catalyst_reload_error), cause);
+            showNewJavaError(mApplicationContext.getString(R.string.reactandroid_catalyst_reload_error), cause);
           }
         });
   }

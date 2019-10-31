@@ -101,7 +101,7 @@ public final class BridgeDevSupportManager extends DevSupportManagerBase {
     }
 
     addCustomDevOption(
-        applicationContext.getString(R.string.catalyst_sample_profiler_toggle),
+        applicationContext.getString(R.string.reactandroid_catalyst_sample_profiler_toggle),
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {
@@ -152,7 +152,7 @@ public final class BridgeDevSupportManager extends DevSupportManagerBase {
         FLog.e(ReactConstants.TAG, "Failed to connect to debugger!", cause);
         future.setException(
             new IOException(
-                getApplicationContext().getString(com.facebook.react.R.string.catalyst_debug_error),
+                getApplicationContext().getString(com.facebook.react.R.string.reactandroid_catalyst_debug_error),
                 cause));
       }
     };

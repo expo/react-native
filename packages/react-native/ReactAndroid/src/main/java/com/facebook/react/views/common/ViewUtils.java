@@ -26,7 +26,7 @@ public class ViewUtils {
     if (view == null) {
       return null;
     }
-    Object tag = view.getTag(R.id.react_test_id);
+    Object tag = view.getTag(R.id.reactandroid_react_test_id);
     if (tag instanceof String) {
       return (String) tag;
     } else {
