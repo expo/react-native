@@ -424,13 +424,22 @@ public class DevSupportManagerImpl
         });
   }
 
+  private int getExponentActivityId() {
+    return -1;
+  }
+
   @Override
   public void reloadExpoApp() {
     try {
-      int activityId = mDevServerHelper.mSettings.exponentActivityId;
-      Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod("reloadFromManifest", int.class).invoke(null, activityId);
+      Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod("reloadFromManifest", int.class).invoke(null, getExponentActivityId());
     } catch (Exception expoHandleErrorException) {
       expoHandleErrorException.printStackTrace();
+
+      // reloadExpoApp replaces handleReloadJS in some places
+      // where in Expo we would like to reload from manifest.
+      // If so, if anything goes wrong here, we can fall back
+      // to plain JS reload.
+      handleReloadJS();
     }
   }
 
