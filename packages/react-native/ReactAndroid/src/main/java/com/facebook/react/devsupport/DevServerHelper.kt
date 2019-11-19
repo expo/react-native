@@ -95,6 +95,7 @@ public open class DevServerHelper(
   private val packagerStatusCheck: PackagerStatusCheck = PackagerStatusCheck(client)
   private val packageName: String = applicationContext.packageName
 
+  private var packagerConnectionLock: Boolean = false;
   private var packagerClient: JSPackagerClient? = null
   private var inspectorPackagerConnection: IInspectorPackagerConnection? = null
 
@@ -143,10 +144,11 @@ public open class DevServerHelper(
     get() = settings.isJSMinifyEnabled
 
   public fun openPackagerConnection(clientId: String?, commandListener: PackagerCommandListener) {
-    if (packagerClient != null) {
+    if (packagerClient != null || packagerConnectionLock) {
       FLog.w(ReactConstants.TAG, "Packager connection already open, nooping.")
       return
     }
+    packagerConnectionLock = true;
     object : AsyncTask<Void, Void, Void>() {
           @Deprecated("This needs to be rewritten to not use AsyncTasks")
           override fun doInBackground(vararg backgroundParams: Void): Void? {
@@ -183,19 +185,40 @@ public open class DevServerHelper(
                         clientId, packagerConnectionSettings, handlers, onPackagerConnectedCallback)
                     .apply { init() }
 
-            return null
+            return packagerClient
+          }
+
+          override fun onPostExecute(packagerClient: JSPackagerClient) {
+            UiThreadUtil.assertOnUiThread()
+            mPackagerClient = packagerClient
+            mPackagerConnectionLock = false
           }
         }
         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
   }
 
   public fun closePackagerConnection() {
+    if (packagerConnectionLock) {
+      FLog.w(ReactConstants.TAG, "Packager connection lock acquired, cannot close current connection.");
+      return;
+    }
+    packagerConnectionLock = true;
+
     object : AsyncTask<Void, Void, Void>() {
           @Deprecated("This class needs to be rewritten to don't use AsyncTasks")
           override fun doInBackground(vararg params: Void): Void? {
-            packagerClient?.close()
+            if (params.isNotEmpty() && params[0] != null) {
+              val packagerClient = params[0]
+              packagerClient?.close()
+            }
             packagerClient = null
             return null
+          }
+
+          override fun onPostExecute(result: Void?) {
+            UiThreadUtil.assertOnUiThread()
+            mPackagerClient = null
+            mPackagerConnectionLock = false
           }
         }
         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
