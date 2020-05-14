@@ -139,6 +139,9 @@ public class ReleaseDevSupportManager implements DevSupportManager {
   public void handleReloadJS() {}
 
   @Override
+  public void reloadExpoApp() {}
+
+  @Override
   public void reloadJSFromServer(final String bundleURL, final BundleLoadCallback callback) {}
 
   @Override
