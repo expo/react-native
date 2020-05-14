@@ -67,6 +67,8 @@ public interface DevSupportManager : JSExceptionHandler {
 
   public fun handleReloadJS()
 
+  public fun reloadExpoApp()
+
   public fun reloadJSFromServer(bundleURL: String, callback: BundleLoadCallback)
 
   public fun loadSplitBundleFromServer(bundlePath: String, callback: DevSplitBundleCallback)
