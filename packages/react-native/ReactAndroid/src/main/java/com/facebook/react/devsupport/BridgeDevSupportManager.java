@@ -101,8 +101,8 @@ public final class BridgeDevSupportManager extends DevSupportManagerBase {
       }
     }
 
-    addCustomDevOption(
-        applicationContext.getString(R.string.reactandroid_catalyst_sample_profiler_toggle),
+    expo_transformer_remove: addCustomDevOption(
+        mIsSamplingProfilerEnabled ? "Disable Sampling Profiler" : "Enable Sampling Profiler",
         new DevOptionHandler() {
           @Override
           public void onOptionSelected() {

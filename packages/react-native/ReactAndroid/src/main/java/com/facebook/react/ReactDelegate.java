@@ -332,7 +332,7 @@ public class ReactDelegate {
         Assertions.assertNotNull(mDoubleTapReloadRecognizer)
             .didDoubleTapR(keyCode, mActivity.getCurrentFocus());
     if (didDoubleTapR) {
-      devSupportManager.handleReloadJS();
+      devSupportManager.reloadExpoApp();
       return true;
     }
     return false;
