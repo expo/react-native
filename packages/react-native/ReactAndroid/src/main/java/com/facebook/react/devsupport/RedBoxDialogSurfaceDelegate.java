@@ -106,7 +106,7 @@ class RedBoxDialogSurfaceDelegate implements SurfaceDelegate {
                 return true;
               }
               if (mDoubleTapReloadRecognizer.didDoubleTapR(keyCode, getCurrentFocus())) {
-                mDevSupportManager.handleReloadJS();
+                mDevSupportManager.reloadExpoApp();
               }
               return super.onKeyUp(keyCode, event);
             }
