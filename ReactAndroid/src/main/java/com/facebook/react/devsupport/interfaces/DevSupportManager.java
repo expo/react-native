@@ -72,6 +72,8 @@ public interface DevSupportManager extends NativeModuleCallExceptionHandler {
 
   void handleReloadJS();
 
+  void reloadExpoApp();
+
   void reloadJSFromServer(final String bundleURL);
 
   void reloadJSFromServer(final String bundleURL, final BundleLoadCallback callback);
