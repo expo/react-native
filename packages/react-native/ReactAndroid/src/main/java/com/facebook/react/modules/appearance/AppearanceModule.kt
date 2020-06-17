@@ -9,6 +9,7 @@ package com.facebook.react.modules.appearance
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import com.facebook.fbreact.specs.NativeAppearanceSpec
 import com.facebook.react.bridge.Arguments
@@ -35,9 +36,20 @@ constructor(
     public fun getScheme(): String
   }
 
+  // NOTE(brentvatne): this was static previously, but it wasn't necessary and we need it to not be
+  // in order to use getCurrentActivity
   private fun colorSchemeForCurrentConfiguration(context: Context): String {
     if (overrideColorScheme != null) {
       return overrideColorScheme.getScheme()
+    }
+    // NOTE(brentvatne): Same code (roughly) that we use in ExpoAppearanceModule to get the config
+    // as set by ExperienceActivityUtils to force the dark/light mode config on the activity
+    if (currentActivity is AppCompatActivity) {
+      val mode = (currentActivity as AppCompatActivity?)!!.delegate.localNightMode
+      when (mode) {
+        AppCompatDelegate.MODE_NIGHT_YES -> return "dark"
+        AppCompatDelegate.MODE_NIGHT_NO -> return "light"
+      }
     }
 
     val currentNightMode =
