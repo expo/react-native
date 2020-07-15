@@ -63,10 +63,17 @@ internal class JavaModuleWrapper(
     var classForMethods: Class<*> = moduleHolder.module.javaClass
     val superClass = classForMethods.superclass
     if (superClass != null && TurboModule::class.java.isAssignableFrom(superClass)) {
-      // For java module that is based on generated flow-type spec, inspect the
-      // spec abstract class instead, which is the super class of the given Java
-      // module.
-      classForMethods = superClass
+      // Check if the parent class also conforms to ReactModuleWithSpec
+      // this accounts for cases when a module is extended i.e. Expo's sandbox AsyncStorage and Intent module.
+      val superSuperClass = superClass.superclass
+      classForMethods = if (TurboModule::class.java.isAssignableFrom(superSuperClass)) {
+        superSuperClass
+      } else {
+        // For java module that is based on generated flow-type spec, inspect the
+        // spec abstract class instead, which is the super class of the given Java
+        // module.
+        superClass
+      }
     }
 
     val targetMethods = classForMethods.declaredMethods
