@@ -7,8 +7,6 @@
 
 #import "NSTextStorage+FontScaling.h"
 
-#import <React/RCTLog.h>
-
 typedef NS_OPTIONS(NSInteger, RCTTextSizeComparisonOptions) {
   RCTTextSizeComparisonSmaller     = 1 << 0,
   RCTTextSizeComparisonLarger      = 1 << 1,
@@ -127,14 +125,9 @@ typedef NS_OPTIONS(NSInteger, RCTTextSizeComparisonOptions) {
 
       CGFloat fontSize = MAX(MIN(font.pointSize * ratio, maximumFontSize), minimumFontSize);
 
-      UIFont *scaledFont = [font fontWithSize:fontSize];
-      if (scaledFont) {
-        [self addAttribute:NSFontAttributeName
-                    value:scaledFont
-                    range:range];
-      } else {
-        RCTLogError(@"Font \"%@"" doesn't support automatic scaling.", font.familyName);
-      }
+      [self addAttribute:NSFontAttributeName
+                   value:[font fontWithSize:fontSize]
+                   range:range];
     }
   ];
 
