@@ -11,7 +11,8 @@
 
 let RNCodegen;
 try {
-  RNCodegen = require('react-native-codegen/lib/generators/RNCodegen.js');
+  // Use the `react-native-codegen` from the `react-native` repository instead of node_modules.
+  RNCodegen = require(__dirname + '/../packages/react-native-codegen/lib/generators/RNCodegen.js');
 } catch (e) {
   RNCodegen = require('../packages/react-native-codegen/lib/generators/RNCodegen.js');
   if (!RNCodegen) {
