@@ -62,7 +62,8 @@ main() {
     exit 1
   fi
 
-  CODEGEN_PATH=$("$NODE_BINARY" -e "console.log(require('path').dirname(require.resolve('react-native-codegen/package.json')))")
+  # Use the `react-native-codegen` from the `react-native` repository instead of node_modules.
+  CODEGEN_PATH="$RN_DIR/packages/react-native-codegen"
 
   # Special case for running CodeGen from source: build it
   if [ ! -d "$CODEGEN_PATH/lib" ]; then
