@@ -14,7 +14,7 @@
 #import "RCTDefines.h"
 #import "RCTUtils.h"
 
-#if RCT_DEV && (TARGET_OS_SIMULATOR || TARGET_OS_MACCATALYST)
+#if TARGET_IPHONE_SIMULATOR
 
 @interface UIEvent (UIPhysicalKeyboardEvent)
 
