@@ -375,12 +375,23 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithCoder : (NSCoder *)aDecoder)
 {
   [super traitCollectionDidChange:previousTraitCollection];
 
+  // note(brentvatne):
+  // When backgrounding the app, perhaps due to a bug on iOS 13 beta the
+  // user interface style changes to the opposite color scheme and then back to
+  // the current color scheme immediately afterwards. I'm not sure how to prevent
+  // this so instead I debounce the notification calls by 10ms.
+  [NSObject cancelPreviousPerformRequestsWithTarget:self selector: @selector(notifyUserInterfaceStyleChanged) object:nil];
+  [self performSelector:@selector(notifyUserInterfaceStyleChanged) withObject:nil afterDelay:0.01];
+}
+
+- (void)notifyUserInterfaceStyleChanged
+{
   [[NSNotificationCenter defaultCenter]
-      postNotificationName:RCTUserInterfaceStyleDidChangeNotification
-                    object:self
-                  userInfo:@{
-                    RCTUserInterfaceStyleDidChangeNotificationTraitCollectionKey : self.traitCollection,
-                  }];
+  postNotificationName:RCTUserInterfaceStyleDidChangeNotification
+                object:self
+              userInfo:@{
+                RCTUserInterfaceStyleDidChangeNotificationTraitCollectionKey : self.traitCollection,
+              }];
 }
 
 - (void)dealloc

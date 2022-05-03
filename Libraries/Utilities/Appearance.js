@@ -29,6 +29,8 @@ type NativeAppearanceEventDefinitions = {
   appearanceChanged: [AppearancePreferences],
 };
 
+let previousPreferences: ?AppearancePreferences = null;
+
 if (NativeAppearance) {
   const nativeEventEmitter =
     new NativeEventEmitter<NativeAppearanceEventDefinitions>(
@@ -46,7 +48,11 @@ if (NativeAppearance) {
           colorScheme == null,
         "Unrecognized color scheme. Did you mean 'dark' or 'light'?",
       );
-      eventEmitter.emit('change', {colorScheme});
+
+      if (previousPreferences?.colorScheme !== colorScheme) {
+        previousPreferences = newAppearance;
+        eventEmitter.emit('change', {colorScheme});
+      }
     },
   );
 }
