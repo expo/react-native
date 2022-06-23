@@ -502,6 +502,8 @@ android {
     ndkVersion = libs.versions.ndkVersion.get()
   }
 
+  resourcePrefix = "reactandroid_"
+
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
@@ -767,6 +769,13 @@ dependencies {
   api(libs.okio)
   compileOnly(libs.javax.annotation.api)
   api(libs.javax.inject)
+
+  if (!buildHermesSource) {
+      debugCompileOnly(files("${prebuiltHermesDir}/hermes-engine-debug.aar"))
+      releaseCompileOnly(files("${prebuiltHermesDir}/hermes-engine-release.aar"))
+  } else {
+      compileOnly(project(":packages:react-native:ReactAndroid:hermes-engine"))
+  }
 
   // It's up to the consumer to decide if hermes should be included or not.
   // Therefore hermes-engine is a compileOnly dependency.
