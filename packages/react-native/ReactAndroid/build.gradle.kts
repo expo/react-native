@@ -272,6 +272,12 @@ val preparePrefab by
       outputDir.set(prefabHeadersDir)
     }
 
+val prebuiltHermesDir = findProperty("expo.prebuiltHermesDir") ?: File("$rootDir/prebuiltHermes")
+val prebuiltHermesVersion = if (File("${prebuiltHermesDir}/.hermesversion").exists()) File("${prebuiltHermesDir}/.hermesversion").readText() else null
+val currentHermesVersion = if (File("${project(":packages:react-native:ReactAndroid").projectDir}/../sdks/.hermesversion").exists()) File("${project(":packages:react-native:ReactAndroid").projectDir}/../sdks/.hermesversion").readText() else null
+val buildHermesSource = currentHermesVersion != prebuiltHermesVersion
+logger.info(":ReactAndroid - buildHermesSource[$buildHermesSource]")
+
 val createNativeDepsDirectories by
     tasks.registering {
       downloadsDir.mkdirs()
