@@ -46,6 +46,12 @@ def boostPath = dependenciesPath ?: System.getenv("REACT_NATIVE_BOOST_PATH")
 // Setup build type for NDK, supported values: {debug, release}
 def nativeBuildType = System.getenv("NATIVE_BUILD_TYPE") ?: "release"
 
+def prebuiltHermesDir = findProperty("expo.prebuiltHermesDir") ?: file("${projectDir}/prebuiltHermes")
+def prebuiltHermesVersion = file("${prebuiltHermesDir}/.hermesversion").exists() ? file("${prebuiltHermesDir}/.hermesversion").text : null
+def currentHermesVersion = file("${rootDir}/sdks/.hermesversion").exists() ? file("${rootDir}/sdks/.hermesversion").text : null
+def buildHermesSource = currentHermesVersion != prebuiltHermesVersion
+logger.info(":ReactAndroid - buildHermesSource[${buildHermesSource}]")
+
 // We put the publishing version from gradle.properties inside ext. so other
 // subprojects can access it as well.
 ext.publishing_version = VERSION_NAME
@@ -395,7 +401,12 @@ dependencies {
 
     // It's up to the consumer to decide if hermes should be included or not.
     // Therefore hermes-engine is a compileOnly dependency.
-    compileOnly(project(":ReactAndroid:hermes-engine"))
+    if (!buildHermesSource) {
+        debugCompileOnly(files("${prebuiltHermesDir}/hermes-engine-debug.aar"))
+        releaseCompileOnly(files("${prebuiltHermesDir}/hermes-engine-release.aar"))
+    } else {
+        compileOnly(project(":ReactAndroid:hermes-engine"))
+    }
 
     testImplementation("junit:junit:${JUNIT_VERSION}")
     testImplementation("org.powermock:powermock-api-mockito2:${POWERMOCK_VERSION}")
