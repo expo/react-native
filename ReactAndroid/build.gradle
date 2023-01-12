@@ -27,7 +27,7 @@ import kotlin.Pair
 
 import de.undercouch.gradle.tasks.download.Download
 
-version = VERSION_NAME
+version = '48.0.0'
 group = "com.facebook.react"
 
 // We download various C++ open-source dependencies into downloads.
@@ -230,7 +230,7 @@ logger.info(":ReactAndroid - buildHermesSource[${buildHermesSource}]")
 
 // We put the publishing version from gradle.properties inside ext. so other
 // subprojects can access it as well.
-ext.publishing_version = VERSION_NAME
+ext.publishing_version = '48.0.0'
 
 task createNativeDepsDirectories {
     downloadsDir.mkdirs()
