@@ -27,7 +27,7 @@ import kotlin.Pair
 
 import de.undercouch.gradle.tasks.download.Download
 
-version = VERSION_NAME
+version = '48.0.0'
 group = "com.facebook.react"
 
 // We download various C++ open-source dependencies into downloads.
@@ -41,7 +41,7 @@ def reactNativeRootDir = projectDir.parent
 
 // We put the publishing version from gradle.properties inside ext. so other
 // subprojects can access it as well.
-ext.publishing_version = VERSION_NAME
+ext.publishing_version = '48.0.0'
 
 // This is the version of CMake we're requesting to the Android SDK to use.
 // If missing it will be downloaded automatically. Only CMake versions shipped with the
