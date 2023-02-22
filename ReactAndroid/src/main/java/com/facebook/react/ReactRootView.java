@@ -922,7 +922,11 @@ public class ReactRootView extends FrameLayout implements RootView, ReactRoot {
       while (!(context instanceof Activity) && context instanceof ContextWrapper) {
         context = ((ContextWrapper) context).getBaseContext();
       }
-      return (Activity) context;
+      if(context instanceof Activity){
+        return (Activity) context;
+      }
+
+      return null;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.R)
@@ -942,7 +946,12 @@ public class ReactRootView extends FrameLayout implements RootView, ReactRoot {
           Insets barInsets = rootInsets.getInsets(WindowInsets.Type.systemBars());
           int height = imeInsets.bottom - barInsets.bottom;
 
-          int softInputMode = getActivity().getWindow().getAttributes().softInputMode;
+          Activity activity = getActivity();
+          if(activity == null){
+            return;
+          }
+
+          int softInputMode = activity.getWindow().getAttributes().softInputMode;
           int screenY =
               softInputMode == WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
                   ? mVisibleViewArea.bottom - height
