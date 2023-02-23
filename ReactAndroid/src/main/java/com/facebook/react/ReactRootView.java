@@ -917,16 +917,13 @@ public class ReactRootView extends FrameLayout implements RootView, ReactRoot {
       checkForDeviceDimensionsChanges();
     }
 
+    @Nullable
     private Activity getActivity() {
       Context context = getContext();
       while (!(context instanceof Activity) && context instanceof ContextWrapper) {
         context = ((ContextWrapper) context).getBaseContext();
       }
-      if(context instanceof Activity){
-        return (Activity) context;
-      }
-
-      return null;
+      return (context instanceof Activity) ? (Activity) context : null;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.R)
@@ -947,7 +944,7 @@ public class ReactRootView extends FrameLayout implements RootView, ReactRoot {
           int height = imeInsets.bottom - barInsets.bottom;
 
           Activity activity = getActivity();
-          if(activity == null){
+          if (activity == null) {
             return;
           }
 
