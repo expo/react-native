@@ -59,4 +59,5 @@ Pod::Spec.new do |s|
   s.dependency "React-jsi", version
   s.dependency "React-Core/RCTImageHeaders", version
   s.dependency "React-RCTNetwork", version
+  s.dependency "React-NativeModulesApple", version
 end
