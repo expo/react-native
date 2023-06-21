@@ -58,6 +58,7 @@ Pod::Spec.new do |s|
   s.dependency "React-Core/RCTBlobHeaders", version
   s.dependency "React-Core/RCTWebSocket", version
   s.dependency "React-RCTNetwork", version
+  s.dependency "React-NativeModulesApple", version
 
   if ENV["USE_HERMES"] == nil || ENV["USE_HERMES"] == "1"
     s.dependency "hermes-engine"

@@ -59,4 +59,5 @@ Pod::Spec.new do |s|
   s.dependency "React-Core/RCTLinkingHeaders", version
   s.dependency "ReactCommon/turbomodule/core", version
   s.dependency "React-jsi", version
+  s.dependency "React-NativeModulesApple", version
 end
