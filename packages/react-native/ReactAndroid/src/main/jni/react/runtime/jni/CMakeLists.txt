@@ -18,7 +18,13 @@ add_library(rninstance
 
 target_compile_reactnative_options(rninstance PRIVATE)
 if(${CMAKE_BUILD_TYPE} MATCHES Debug OR REACT_NATIVE_DEBUG_OPTIMIZED)
-  target_compile_options(rninstance PRIVATE -DHERMES_ENABLE_DEBUGGER=1)
+  target_compile_options(
+        rninstance
+        PRIVATE
+        -DHERMES_ENABLE_DEBUGGER=1
+        -std=c++20
+        -fexceptions
+  )
 endif ()
 
 target_merge_so(rninstance)
