@@ -30,7 +30,8 @@ function get_deployment_target {
     echo ${IPHONEOS_DEPLOYMENT_TARGET}
 }
 
-enable_debugger="false"
+# Expo Go requires debugging on release build
+enable_debugger="true"
 if [[ "$CONFIGURATION" == "Debug" ]]; then
   enable_debugger="true"
 fi
