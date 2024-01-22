@@ -15,6 +15,13 @@ add_library(hermes_executor
         OBJECT
         ${hermes_executor_SRC}
 )
+target_compile_options(
+        hermes_executor
+        PRIVATE
+        -DHERMES_ENABLE_DEBUGGER=1
+        -std=c++20
+        -fexceptions
+)
 target_merge_so(hermes_executor)
 target_include_directories(hermes_executor PRIVATE .)
 target_link_libraries(
