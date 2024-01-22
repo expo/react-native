@@ -16,7 +16,13 @@ add_library(bridgeless
         ${bridgeless_SRC}
 )
 target_compile_reactnative_options(bridgeless PRIVATE)
-target_compile_options(bridgeless PRIVATE $<$<CONFIG:Debug>:-DHERMES_ENABLE_DEBUGGER=1>)
+target_compile_options(
+        bridgeless
+        PRIVATE
+        -DHERMES_ENABLE_DEBUGGER=1
+        -std=c++20
+        -fexceptions
+)
 target_include_directories(bridgeless PUBLIC .)
 
 react_native_android_selector(fabricjni fabricjni "")
