@@ -17,7 +17,13 @@ add_library(bridgeless
 )
 target_compile_reactnative_options(bridgeless PRIVATE)
 if(${CMAKE_BUILD_TYPE} MATCHES Debug OR REACT_NATIVE_DEBUG_OPTIMIZED)
-  target_compile_options(bridgeless PRIVATE -DHERMES_ENABLE_DEBUGGER=1)
+  target_compile_options(
+        bridgeless
+        PRIVATE
+        -DHERMES_ENABLE_DEBUGGER=1
+        -std=c++20
+        -fexceptions
+  )
 endif ()
 target_include_directories(bridgeless PUBLIC .)
 
