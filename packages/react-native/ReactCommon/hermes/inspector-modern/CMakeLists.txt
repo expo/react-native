@@ -23,6 +23,14 @@ if(${CMAKE_BUILD_TYPE} MATCHES Debug OR REACT_NATIVE_DEBUG_OPTIMIZED)
                 PRIVATE
                 -DHERMES_ENABLE_DEBUGGER=1
         )
+else()
+        # Expo Go requires debugging on release builds
+        target_compile_options(
+                hermes_inspector_modern
+                PRIVATE
+                # Expo Go requires debugging on release builds
+                -DHERMES_ENABLE_DEBUGGER=1
+        )
 
         if (HERMES_V1_ENABLED)
                 target_compile_options(hermes_inspector_modern PRIVATE -DHERMES_V1_ENABLED=1)
