@@ -25,6 +25,9 @@ versionProperties = Hash[*File.read("version.properties").split(/[=\n]+/)]
 
 version = versionProperties['HERMES_VERSION_NAME']
 
+# Force building Hermes from source because Expo Go requires customized Hermes build
+ENV['RCT_BUILD_HERMES_FROM_SOURCE'] = 'true'
+
 source_type = hermes_source_type(version, react_native_path)
 source = podspec_source(source_type, version, react_native_path)
 
