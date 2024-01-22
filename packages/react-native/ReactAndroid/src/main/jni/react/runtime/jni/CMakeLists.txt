@@ -17,7 +17,13 @@ add_library(rninstance
 )
 
 target_compile_reactnative_options(rninstance PRIVATE)
-target_compile_options(rninstance PRIVATE $<$<CONFIG:Debug>:-DHERMES_ENABLE_DEBUGGER=1>)
+target_compile_options(
+        rninstance
+        PRIVATE
+        -DHERMES_ENABLE_DEBUGGER=1
+        -std=c++20
+        -fexceptions
+)
 
 target_merge_so(rninstance)
 target_include_directories(rninstance PUBLIC .)
