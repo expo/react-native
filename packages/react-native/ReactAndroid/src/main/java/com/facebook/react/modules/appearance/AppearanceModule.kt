@@ -65,12 +65,21 @@ constructor(
   }
 
   public override fun setColorScheme(style: String) {
+    var nightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+    if (style == "dark") {
+      nightMode = AppCompatDelegate.MODE_NIGHT_YES
+    } else if (style == "light") {
+      nightMode = AppCompatDelegate.MODE_NIGHT_NO
+    } else if (style == "unspecified") {
+      nightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+    }
+
     UiThreadUtil.runOnUiThread {
-      when (style) {
-        "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-        "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        "unspecified" ->
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+      val activity = currentActivity
+      if (activity is AppCompatActivity) {
+        activity.delegate.localNightMode = nightMode
+      } else {
+        AppCompatDelegate.setDefaultNightMode(nightMode)
       }
     }
   }
