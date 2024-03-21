@@ -20,8 +20,7 @@ plugins {
   alias(libs.plugins.kotlin.android)
 }
 
-version = project.findProperty("VERSION_NAME")?.toString()!!
-
+version = "51.0.0"
 group = "com.facebook.react"
 
 // We download various C++ open-source dependencies into downloads.
@@ -411,6 +410,18 @@ val prepareJSC by
       outputDir = project.layout.buildDirectory.dir("third-party-ndk/jsc")
     }
 
+// As ReactAndroid builds from source, the codegen needs to be built before it can be invoked.
+// This is not the case for users of React Native, as we ship a compiled version of the codegen.
+val buildCodegenCLI by
+tasks.registering(BuildCodegenCLITask::class) {
+    codegenDir.set(file("${project(":packages:react-native:ReactAndroid").projectDir.parent}/../react-native-codegen"))
+    bashWindowsHome.set(project.findProperty("react.internal.windowsBashPath").toString())
+    onlyIf {
+        // For build from source scenario, we don't need to build the codegen at all.
+        rootProject.name != "react-native-build-from-source"
+    }
+}
+
 val prepareKotlinBuildScriptModel by
     tasks.registering {
       // This task is run when Gradle Sync is running.
@@ -610,6 +621,8 @@ android {
   tasks
       .getByName("preBuild")
       .dependsOn(
+          buildCodegenCLI,
+          "generateCodegenArtifactsFromSchema",
           prepareBoost,
           prepareDoubleConversion,
           prepareFmt,
@@ -618,6 +631,7 @@ android {
           prepareGtest,
           prepareJSC,
           preparePrefab)
+  tasks.getByName("generateCodegenSchemaFromJavaScript").dependsOn(buildCodegenCLI)
   prepareKotlinBuildScriptModel.dependsOn("preBuild")
   prepareKotlinBuildScriptModel.dependsOn(
       ":packages:react-native:ReactAndroid:hermes-engine:preBuild")
