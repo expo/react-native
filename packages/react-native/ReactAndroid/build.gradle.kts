@@ -271,12 +271,6 @@ val preparePrefab by
       outputDir.set(prefabHeadersDir)
     }
 
-val prebuiltHermesDir = findProperty("expo.prebuiltHermesDir") ?: File("$rootDir/prebuiltHermes")
-val prebuiltHermesVersion = if (File("${prebuiltHermesDir}/.hermesversion").exists()) File("${prebuiltHermesDir}/.hermesversion").readText() else null
-val currentHermesVersion = if (File("${project(":packages:react-native:ReactAndroid").projectDir}/../sdks/.hermesversion").exists()) File("${project(":packages:react-native:ReactAndroid").projectDir}/../sdks/.hermesversion").readText() else null
-val buildHermesSource = currentHermesVersion != prebuiltHermesVersion
-logger.info(":ReactAndroid - buildHermesSource[$buildHermesSource]")
-
 val createNativeDepsDirectories by
     tasks.registering {
       downloadsDir.mkdirs()
@@ -777,12 +771,8 @@ dependencies {
   compileOnly(libs.javax.annotation.api)
   api(libs.javax.inject)
 
-  if (!buildHermesSource) {
-      debugCompileOnly(files("${prebuiltHermesDir}/hermes-engine-debug.aar"))
-      releaseCompileOnly(files("${prebuiltHermesDir}/hermes-engine-release.aar"))
-  } else {
-      compileOnly(project(":packages:react-native:ReactAndroid:hermes-engine"))
-  }
+
+  compileOnly(project(":packages:react-native:ReactAndroid:hermes-engine"))
 
   // It's up to the consumer to decide if hermes should be included or not.
   // Therefore hermes-engine is a compileOnly dependency.
