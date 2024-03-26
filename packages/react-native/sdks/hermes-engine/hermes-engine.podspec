@@ -13,7 +13,7 @@ package = JSON.parse(File.read(File.join(react_native_path, "package.json")))
 version = package['version']
 
 # Force building Hermes from source because Expo Go requires customized Hermes build
-ENV['BUILD_FROM_SOURCE'] = 'true'
+ENV['RCT_BUILD_HERMES_FROM_SOURCE'] = 'true'
 
 source_type = hermes_source_type(version, react_native_path)
 source = podspec_source(source_type, version, react_native_path)
