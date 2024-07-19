@@ -22,7 +22,7 @@ import com.facebook.react.packagerconnection.PackagerConnectionSettings
  * [com.facebook.react.devsupport]. For accessing some of the settings by external modules this
  * class implements an external interface [DeveloperSettings].
  */
-internal class DevInternalSettings(applicationContext: Context, private val listener: Listener?) :
+public class DevInternalSettings(applicationContext: Context, private val listener: Listener?) :
     DeveloperSettings, OnSharedPreferenceChangeListener {
   private val preferences: SharedPreferences =
       PreferenceManager.getDefaultSharedPreferences(applicationContext)
@@ -89,7 +89,7 @@ internal class DevInternalSettings(applicationContext: Context, private val list
     }
 
   // Not supported.
-  override fun addMenuItem(title: String) = Unit
+  override fun addMenuItem(title: String): Unit = Unit
 
   override var isHotModuleReplacementEnabled: Boolean
     get() = preferences.getBoolean(PREFS_HOT_MODULE_REPLACEMENT_KEY, true)
@@ -97,11 +97,21 @@ internal class DevInternalSettings(applicationContext: Context, private val list
       preferences.edit().putBoolean(PREFS_HOT_MODULE_REPLACEMENT_KEY, enabled).apply()
     }
 
-  interface Listener {
-    fun onInternalSettingsChanged()
+  private var exponentActivityId: Int = -1
+
+  public fun setExponentActivityId(value: Int) {
+    exponentActivityId = value
   }
 
-  companion object {
+  public override fun getExponentActivityId(): Int {
+    return exponentActivityId
+  }
+
+  public interface Listener {
+    public fun onInternalSettingsChanged()
+  }
+
+  public companion object {
     private const val PREFS_FPS_DEBUG_KEY = "fps_debug"
     private const val PREFS_JS_DEV_MODE_DEBUG_KEY = "js_dev_mode_debug"
     private const val PREFS_JS_MINIFY_DEBUG_KEY = "js_minify_debug"
