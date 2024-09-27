@@ -298,7 +298,8 @@ RCT_EXPORT_MODULE()
 
   [self updateStats];
 
-  [RCTKeyWindow() addSubview:self.container];
+  UIWindow *window = RCTSharedApplication().delegate.window;
+  [window addSubview:self.container];
 
   _uiDisplayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(threadUpdate:)];
   [_uiDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
