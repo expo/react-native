@@ -300,7 +300,7 @@ RCT_EXPORT_MODULE()
 
   // This change is causing the performance monitor and element inspector to be added to the dev menus UIWindow
   // instead of the main app
-//  [RCTKeyWindow() addSubview:self.container];
+  // [RCTKeyWindow() addSubview:self.container];
   UIWindow *window = RCTSharedApplication().delegate.window;
   [window addSubview:self.container];
 
