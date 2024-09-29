@@ -177,6 +177,13 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
 
 #pragma mark - RCTTurboModuleManagerDelegate
 
+- (NSArray<id<RCTBridgeModule>> *)extraModulesForBridge:(RCTBridge *)bridge {
+  if ([_appTMMDelegate respondsToSelector:@selector(extraModulesForBridge:)]) {
+    return [_appTMMDelegate extraModulesForBridge:bridge];
+  }
+  return @[];
+}
+
 - (Class)getModuleClassFromName:(const char *)name
 {
   if ([_appTMMDelegate respondsToSelector:@selector(getModuleClassFromName:)]) {
