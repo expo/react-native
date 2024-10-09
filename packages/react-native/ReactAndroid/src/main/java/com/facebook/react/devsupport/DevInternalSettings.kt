@@ -107,4 +107,15 @@ internal class DevInternalSettings(applicationContext: Context, private val list
     private const val PREFS_HOT_MODULE_REPLACEMENT_KEY = "hot_module_replacement"
     private const val PREFS_REMOTE_JS_DEBUG_KEY = "remote_js_debug"
   }
+
+  private var exponentActivityId: Int = -1
+
+  public fun setExponentActivityId(value: Int) {
+     exponentActivityId = value
+  }
+
+  public override fun getExponentActivityId(): Int {
+    return exponentActivityId
+  }
+
 }
