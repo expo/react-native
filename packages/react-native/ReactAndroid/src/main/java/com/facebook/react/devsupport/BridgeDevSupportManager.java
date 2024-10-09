@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
 package com.facebook.react.devsupport;
 
 import android.content.Context;
@@ -55,138 +54,94 @@ import java.util.concurrent.TimeoutException;
  * is responsible for enabling/disabling dev support in case when app is backgrounded or when all
  * the views has been detached from the instance (through {@link #setDevSupportEnabled} method).
  */
-public final class BridgeDevSupportManager extends DevSupportManagerBase {
-  private boolean mIsSamplingProfilerEnabled = false;
+public class BridgeDevSupportManager extends DevSupportManagerBase {
 
-  public BridgeDevSupportManager(
-      Context applicationContext,
-      ReactInstanceDevHelper reactInstanceManagerHelper,
-      @Nullable String packagerPathForJSBundleName,
-      boolean enableOnCreate,
-      @Nullable RedBoxHandler redBoxHandler,
-      @Nullable DevBundleDownloadListener devBundleDownloadListener,
-      int minNumShakes,
-      @Nullable Map<String, RequestHandler> customPackagerCommandHandlers,
-      @Nullable SurfaceDelegateFactory surfaceDelegateFactory,
-      @Nullable DevLoadingViewManager devLoadingViewManager,
-      @Nullable PausedInDebuggerOverlayManager pausedInDebuggerOverlayManager) {
-    super(
-        applicationContext,
-        reactInstanceManagerHelper,
-        packagerPathForJSBundleName,
-        enableOnCreate,
-        redBoxHandler,
-        devBundleDownloadListener,
-        minNumShakes,
-        customPackagerCommandHandlers,
-        surfaceDelegateFactory,
-        devLoadingViewManager,
-        pausedInDebuggerOverlayManager);
-  }
+    public boolean mIsSamplingProfilerEnabled = false;
 
-  @Override
-  protected String getUniqueTag() {
-    return "Bridge";
-  }
-
-  @Override
-  public void loadSplitBundleFromServer(
-      final String bundlePath, final DevSplitBundleCallback callback) {
-    fetchSplitBundleAndCreateBundleLoader(
-        bundlePath,
-        new CallbackWithBundleLoader() {
-          @Override
-          public void onSuccess(JSBundleLoader bundleLoader) {
-            bundleLoader.loadScript(getCurrentContext().getCatalystInstance());
-            getCurrentContext()
-                .getJSModule(HMRClient.class)
-                .registerBundle(getDevServerHelper().getDevServerSplitBundleURL(bundlePath));
-            callback.onSuccess();
-          }
-
-          @Override
-          public void onError(String url, Throwable cause) {
-            callback.onError(url, cause);
-          }
-        });
-  }
-
-  private WebsocketJavaScriptExecutor.JSExecutorConnectCallback getExecutorConnectCallback(
-      final SimpleSettableFuture<Boolean> future) {
-    return new WebsocketJavaScriptExecutor.JSExecutorConnectCallback() {
-      @Override
-      public void onSuccess() {
-        future.set(true);
-        hideDevLoadingView();
-      }
-
-      @Override
-      public void onFailure(final Throwable cause) {
-        hideDevLoadingView();
-        FLog.e(ReactConstants.TAG, "Failed to connect to debugger!", cause);
-        future.setException(
-            new IOException(
-                getApplicationContext().getString(com.facebook.react.R.string.catalyst_debug_error),
-                cause));
-      }
-    };
-  }
-
-  private void reloadJSInProxyMode() {
-    // When using js proxy, there is no need to fetch JS bundle as proxy executor will do that
-    // anyway
-    getDevServerHelper().launchJSDevtools();
-
-    JavaJSExecutor.Factory factory =
-        new JavaJSExecutor.Factory() {
-          @Override
-          public JavaJSExecutor create() throws Exception {
-            WebsocketJavaScriptExecutor executor = new WebsocketJavaScriptExecutor();
-            SimpleSettableFuture<Boolean> future = new SimpleSettableFuture<>();
-            executor.connect(
-                getDevServerHelper().getWebsocketProxyURL(), getExecutorConnectCallback(future));
-            // TODO(t9349129) Don't use timeout
-            try {
-              future.get(90, TimeUnit.SECONDS);
-              return executor;
-            } catch (ExecutionException e) {
-              throw (Exception) e.getCause();
-            } catch (InterruptedException | TimeoutException e) {
-              throw new RuntimeException(e);
-            }
-          }
-        };
-    getReactInstanceDevHelper().onReloadWithJSDebugger(factory);
-  }
-
-  @Override
-  public void handleReloadJS() {
-
-    UiThreadUtil.assertOnUiThread();
-
-    ReactMarker.logMarker(
-        ReactMarkerConstants.RELOAD,
-        getDevSettings().getPackagerConnectionSettings().getDebugServerHost());
-
-    // dismiss redbox if exists
-    hideRedboxDialog();
-
-    if (getDevSettings().isRemoteJSDebugEnabled()) {
-      PrinterHolder.getPrinter()
-          .logMessage(ReactDebugOverlayTags.RN_CORE, "RNCore: load from Proxy");
-      showDevLoadingViewForRemoteJSEnabled();
-      reloadJSInProxyMode();
-    } else {
-      PrinterHolder.getPrinter()
-          .logMessage(ReactDebugOverlayTags.RN_CORE, "RNCore: load from Server");
-      String bundleURL =
-          getDevServerHelper()
-              .getDevServerBundleURL(Assertions.assertNotNull(getJSAppBundleName()));
-      reloadJSFromServer(
-          bundleURL,
-          () ->
-              UiThreadUtil.runOnUiThread(
-                  () -> getReactInstanceDevHelper().onJSBundleLoadedFromServer()));
+    public BridgeDevSupportManager(Context applicationContext, ReactInstanceDevHelper reactInstanceManagerHelper, @Nullable String packagerPathForJSBundleName, boolean enableOnCreate, @Nullable RedBoxHandler redBoxHandler, @Nullable DevBundleDownloadListener devBundleDownloadListener, int minNumShakes, @Nullable Map<String, RequestHandler> customPackagerCommandHandlers, @Nullable SurfaceDelegateFactory surfaceDelegateFactory, @Nullable DevLoadingViewManager devLoadingViewManager, @Nullable PausedInDebuggerOverlayManager pausedInDebuggerOverlayManager) {
+        super(applicationContext, reactInstanceManagerHelper, packagerPathForJSBundleName, enableOnCreate, redBoxHandler, devBundleDownloadListener, minNumShakes, customPackagerCommandHandlers, surfaceDelegateFactory, devLoadingViewManager, pausedInDebuggerOverlayManager);
     }
-  }
+
+    @Override
+    protected String getUniqueTag() {
+        return "Bridge";
+    }
+
+    @Override
+    public void loadSplitBundleFromServer(final String bundlePath, final DevSplitBundleCallback callback) {
+        fetchSplitBundleAndCreateBundleLoader(bundlePath, new CallbackWithBundleLoader() {
+
+            @Override
+            public void onSuccess(JSBundleLoader bundleLoader) {
+                bundleLoader.loadScript(getCurrentContext().getCatalystInstance());
+                getCurrentContext().getJSModule(HMRClient.class).registerBundle(getDevServerHelper().getDevServerSplitBundleURL(bundlePath));
+                callback.onSuccess();
+            }
+
+            @Override
+            public void onError(String url, Throwable cause) {
+                callback.onError(url, cause);
+            }
+        });
+    }
+
+    private WebsocketJavaScriptExecutor.JSExecutorConnectCallback getExecutorConnectCallback(final SimpleSettableFuture<Boolean> future) {
+        return new WebsocketJavaScriptExecutor.JSExecutorConnectCallback() {
+
+            @Override
+            public void onSuccess() {
+                future.set(true);
+                hideDevLoadingView();
+            }
+
+            @Override
+            public void onFailure(final Throwable cause) {
+                hideDevLoadingView();
+                FLog.e(ReactConstants.TAG, "Failed to connect to debugger!", cause);
+                future.setException(new IOException(getApplicationContext().getString(com.facebook.react.R.string.catalyst_debug_error), cause));
+            }
+        };
+    }
+
+    private void reloadJSInProxyMode() {
+        // When using js proxy, there is no need to fetch JS bundle as proxy executor will do that
+        // anyway
+        getDevServerHelper().launchJSDevtools();
+        JavaJSExecutor.Factory factory = new JavaJSExecutor.Factory() {
+
+            @Override
+            public JavaJSExecutor create() throws Exception {
+                WebsocketJavaScriptExecutor executor = new WebsocketJavaScriptExecutor();
+                SimpleSettableFuture<Boolean> future = new SimpleSettableFuture<>();
+                executor.connect(getDevServerHelper().getWebsocketProxyURL(), getExecutorConnectCallback(future));
+                // TODO(t9349129) Don't use timeout
+                try {
+                    future.get(90, TimeUnit.SECONDS);
+                    return executor;
+                } catch (ExecutionException e) {
+                    throw (Exception) e.getCause();
+                } catch (InterruptedException | TimeoutException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+        getReactInstanceDevHelper().onReloadWithJSDebugger(factory);
+    }
+
+    @Override
+    public void handleReloadJS() {
+        UiThreadUtil.assertOnUiThread();
+        ReactMarker.logMarker(ReactMarkerConstants.RELOAD, getDevSettings().getPackagerConnectionSettings().getDebugServerHost());
+        // dismiss redbox if exists
+        hideRedboxDialog();
+        if (getDevSettings().isRemoteJSDebugEnabled()) {
+            PrinterHolder.getPrinter().logMessage(ReactDebugOverlayTags.RN_CORE, "RNCore: load from Proxy");
+            showDevLoadingViewForRemoteJSEnabled();
+            reloadJSInProxyMode();
+        } else {
+            PrinterHolder.getPrinter().logMessage(ReactDebugOverlayTags.RN_CORE, "RNCore: load from Server");
+            String bundleURL = getDevServerHelper().getDevServerBundleURL(Assertions.assertNotNull(getJSAppBundleName()));
+            reloadJSFromServer(bundleURL, () -> UiThreadUtil.runOnUiThread(() -> getReactInstanceDevHelper().onJSBundleLoadedFromServer()));
+        }
+    }
 }
