@@ -20,27 +20,66 @@ import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.util.ExceptionDataHelper.getExtraDataAsJson
 import com.facebook.react.util.JSStackTrace.format
 
+
 @ReactModule(name = NativeExceptionsManagerSpec.NAME)
 public open class ExceptionsManagerModule(private val devSupportManager: DevSupportManager) :
     NativeExceptionsManagerSpec(null) {
-  override fun reportFatalException(message: String?, stack: ReadableArray?, idDouble: Double) {
-    val id = idDouble.toInt()
-    val data = JavaOnlyMap()
-    data.putString("message", message)
-    data.putArray("stack", stack)
-    data.putInt("id", id)
-    data.putBoolean("isFatal", true)
-    reportException(data)
+
+   override fun reportFatalException(message: String?, stack: ReadableArray?, idDouble: Double) {
+    if (devSupportManager.devSupportEnabled) {
+      run {
+        val id = idDouble.toInt()
+        val data = JavaOnlyMap()
+        data.putString("message", message)
+        data.putArray("stack", stack)
+        data.putInt("id", id)
+        data.putBoolean("isFatal", true)
+        reportException(data)
+      }
+    } else {
+      run {
+        try {
+          Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod(
+            "handleReactNativeError",
+            String::class.java,
+            Any::class.java,
+            Int::class.java,
+            Boolean::class.java
+          ).invoke(null, message, stack, idDouble.toInt(), true)
+        } catch (expoHandleErrorException: Exception) {
+          expoHandleErrorException.printStackTrace()
+        }
+      }
+    }
   }
 
+
   override fun reportSoftException(message: String?, stack: ReadableArray?, idDouble: Double) {
-    val id = idDouble.toInt()
-    val data = JavaOnlyMap()
-    data.putString("message", message)
-    data.putArray("stack", stack)
-    data.putInt("id", id)
-    data.putBoolean("isFatal", false)
-    reportException(data)
+    if (devSupportManager.devSupportEnabled) {
+      run {
+        val id = idDouble.toInt()
+        val data = JavaOnlyMap()
+        data.putString("message", message)
+        data.putArray("stack", stack)
+        data.putInt("id", id)
+        data.putBoolean("isFatal", false)
+        reportException(data)
+      }
+    } else {
+      run {
+        try {
+          Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod(
+            "handleReactNativeError",
+            String::class.java,
+            Any::class.java,
+            Int::class.java,
+            Boolean::class.java
+          ).invoke(null, message, stack, idDouble.toInt(), false)
+        } catch (expoHandleErrorException: java.lang.Exception) {
+          expoHandleErrorException.printStackTrace()
+        }
+      }
+    }
   }
 
   override fun reportException(data: ReadableMap) {
@@ -61,13 +100,31 @@ public open class ExceptionsManagerModule(private val devSupportManager: DevSupp
   }
 
   override fun updateExceptionMessage(
-      title: String?,
-      details: ReadableArray?,
-      exceptionIdDouble: Double
+    title: String?,
+    details: ReadableArray?,
+    exceptionIdDouble: Double
   ) {
-    val exceptionId = exceptionIdDouble.toInt()
     if (devSupportManager.devSupportEnabled) {
-      devSupportManager.updateJSError(title, details, exceptionId)
+      run {
+        val exceptionId = exceptionIdDouble.toInt()
+        if (devSupportManager.devSupportEnabled) {
+          devSupportManager.updateJSError(title, details, exceptionId)
+        }
+      }
+    } else {
+      run {
+        try {
+          Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod(
+            "handleReactNativeError",
+            String::class.java,
+            Any::class.java,
+            Int::class.java,
+            Boolean::class.java
+          ).invoke(null, title, details, exceptionIdDouble.toInt(), false)
+        } catch (expoHandleErrorException: java.lang.Exception) {
+          expoHandleErrorException.printStackTrace()
+        }
+      }
     }
   }
 
