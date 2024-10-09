@@ -21,7 +21,7 @@ plugins {
   alias(libs.plugins.kotlin.android)
 }
 
-version = project.findProperty("VERSION_NAME")?.toString()!!
+version = "0.76.0"
 
 group = "com.facebook.react"
 
