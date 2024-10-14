@@ -18,13 +18,20 @@ import com.facebook.react.bridge.JavaJSExecutor;
 import com.facebook.react.bridge.JavaScriptExecutorFactory;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.UiThreadUtil;
+import com.facebook.react.common.SurfaceDelegateFactory;
 import com.facebook.react.devsupport.DevSupportManagerBase;
 import com.facebook.react.devsupport.HMRClient;
 import com.facebook.react.devsupport.ReactInstanceDevHelper;
+import com.facebook.react.devsupport.interfaces.DevBundleDownloadListener;
+import com.facebook.react.devsupport.interfaces.DevLoadingViewManager;
 import com.facebook.react.devsupport.interfaces.DevSplitBundleCallback;
+import com.facebook.react.devsupport.interfaces.PausedInDebuggerOverlayManager;
+import com.facebook.react.devsupport.interfaces.RedBoxHandler;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+import com.facebook.react.packagerconnection.RequestHandler;
 import com.facebook.react.runtime.internal.bolts.Continuation;
 import com.facebook.react.runtime.internal.bolts.Task;
+import java.util.Map;
 
 /**
  * An implementation of {@link com.facebook.react.devsupport.interfaces.DevSupportManager} that
@@ -32,24 +39,56 @@ import com.facebook.react.runtime.internal.bolts.Task;
  * APIs for asynchronously loading the JS bundle.
  */
 @Nullsafe(Nullsafe.Mode.LOCAL)
-class BridgelessDevSupportManager extends DevSupportManagerBase {
+public class BridgelessDevSupportManager extends DevSupportManagerBase {
 
   private final ReactHostImpl mReactHost;
 
   public BridgelessDevSupportManager(
-      ReactHostImpl host, Context context, @Nullable String packagerPathForJSBundleName) {
+    ReactHostImpl host, Context context, @Nullable String packagerPathForJSBundleName) {
+    this(
+      host,
+      context.getApplicationContext(),
+      createInstanceDevHelper(host),
+      packagerPathForJSBundleName,
+      true /* enableOnCreate */,
+      null /* redBoxHandler */,
+      null /* devBundleDownloadListener */,
+      2 /* minNumShakes */,
+      null /* customPackagerCommandHandlers */,
+      null /* surfaceDelegateFactory */,
+      null /* devLoadingViewManager */,
+      null /* pausedInDebuggerOverlayManager */);
+  }
+
+  /**
+   * This constructor mirrors the same constructor we have for {@link BridgeDevSupportManager} and
+   * is kept for backward compatibility.
+   */
+  public BridgelessDevSupportManager(
+    ReactHostImpl host,
+    Context applicationContext,
+    ReactInstanceDevHelper reactInstanceManagerHelper,
+    @Nullable String packagerPathForJSBundleName,
+    boolean enableOnCreate,
+    @Nullable RedBoxHandler redBoxHandler,
+    @Nullable DevBundleDownloadListener devBundleDownloadListener,
+    int minNumShakes,
+    @Nullable Map<String, RequestHandler> customPackagerCommandHandlers,
+    @Nullable SurfaceDelegateFactory surfaceDelegateFactory,
+    @Nullable DevLoadingViewManager devLoadingViewManager,
+    @Nullable PausedInDebuggerOverlayManager pausedInDebuggerOverlayManager) {
     super(
-        context.getApplicationContext(),
-        createInstanceDevHelper(host),
-        packagerPathForJSBundleName,
-        true /* enableOnCreate */,
-        null /* redBoxHandler */,
-        null /* devBundleDownloadListener */,
-        2 /* minNumShakes */,
-        null /* customPackagerCommandHandlers */,
-        null /* surfaceDelegateFactory */,
-        null /* devLoadingViewManager */,
-        null /* pausedInDebuggerOverlayManager */);
+      applicationContext,
+      reactInstanceManagerHelper,
+      packagerPathForJSBundleName,
+      enableOnCreate,
+      redBoxHandler,
+      devBundleDownloadListener,
+      minNumShakes,
+      customPackagerCommandHandlers,
+      surfaceDelegateFactory,
+      devLoadingViewManager,
+      pausedInDebuggerOverlayManager);
     mReactHost = host;
   }
 
@@ -60,37 +99,37 @@ class BridgelessDevSupportManager extends DevSupportManagerBase {
 
   @Override
   public void loadSplitBundleFromServer(
-      final String bundlePath, final DevSplitBundleCallback callback) {
+    final String bundlePath, final DevSplitBundleCallback callback) {
     fetchSplitBundleAndCreateBundleLoader(
-        bundlePath,
-        new CallbackWithBundleLoader() {
-          @Override
-          public void onSuccess(final JSBundleLoader bundleLoader) {
-            mReactHost
-                .loadBundle(bundleLoader)
-                .onSuccess(
-                    new Continuation<Boolean, Void>() {
-                      @Override
-                      public Void then(Task<Boolean> task) {
-                        if (task.getResult().equals(Boolean.TRUE)) {
-                          String bundleURL =
-                              getDevServerHelper().getDevServerSplitBundleURL(bundlePath);
-                          ReactContext reactContext = mReactHost.getCurrentReactContext();
-                          if (reactContext != null) {
-                            reactContext.getJSModule(HMRClient.class).registerBundle(bundleURL);
-                          }
-                          callback.onSuccess();
-                        }
-                        return null;
-                      }
-                    });
-          }
+      bundlePath,
+      new CallbackWithBundleLoader() {
+        @Override
+        public void onSuccess(final JSBundleLoader bundleLoader) {
+          mReactHost
+            .loadBundle(bundleLoader)
+            .onSuccess(
+              new Continuation<Boolean, Void>() {
+                @Override
+                public Void then(Task<Boolean> task) {
+                  if (task.getResult().equals(Boolean.TRUE)) {
+                    String bundleURL =
+                      getDevServerHelper().getDevServerSplitBundleURL(bundlePath);
+                    ReactContext reactContext = mReactHost.getCurrentReactContext();
+                    if (reactContext != null) {
+                      reactContext.getJSModule(HMRClient.class).registerBundle(bundleURL);
+                    }
+                    callback.onSuccess();
+                  }
+                  return null;
+                }
+              });
+        }
 
-          @Override
-          public void onError(String url, Throwable cause) {
-            callback.onError(url, cause);
-          }
-        });
+        @Override
+        public void onError(String url, Throwable cause) {
+          callback.onError(url, cause);
+        }
+      });
   }
 
   @Override
@@ -102,7 +141,7 @@ class BridgelessDevSupportManager extends DevSupportManagerBase {
     mReactHost.reload("BridgelessDevSupportManager.handleReloadJS()");
   }
 
-  private static ReactInstanceDevHelper createInstanceDevHelper(final ReactHostImpl reactHost) {
+  public static ReactInstanceDevHelper createInstanceDevHelper(final ReactHostImpl reactHost) {
     return new ReactInstanceDevHelper() {
       @Override
       public void onReloadWithJSDebugger(JavaJSExecutor.Factory proxyExecutorFactory) {
@@ -119,8 +158,8 @@ class BridgelessDevSupportManager extends DevSupportManagerBase {
         ReactContext reactContext = reactHost.getCurrentReactContext();
         if (reactContext != null) {
           reactContext
-              .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-              .emit("toggleElementInspector", null);
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+            .emit("toggleElementInspector", null);
         }
       }
 
@@ -141,7 +180,7 @@ class BridgelessDevSupportManager extends DevSupportManagerBase {
         Activity currentActivity = getCurrentActivity();
         if (currentActivity != null && !reactHost.isSurfaceWithModuleNameAttached(appKey)) {
           ReactSurfaceImpl reactSurface =
-              ReactSurfaceImpl.createWithView(currentActivity, appKey, new Bundle());
+            ReactSurfaceImpl.createWithView(currentActivity, appKey, new Bundle());
           reactSurface.attach(reactHost);
           reactSurface.start();
 
