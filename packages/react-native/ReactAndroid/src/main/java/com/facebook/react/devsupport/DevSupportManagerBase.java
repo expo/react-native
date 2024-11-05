@@ -61,6 +61,7 @@ import com.facebook.react.devsupport.interfaces.RedBoxHandler;
 import com.facebook.react.devsupport.interfaces.StackFrame;
 import com.facebook.react.modules.core.RCTNativeAppEventEmitter;
 import com.facebook.react.modules.debug.interfaces.DeveloperSettings;
+import com.facebook.react.packagerconnection.JSPackagerClient;
 import com.facebook.react.packagerconnection.RequestHandler;
 import java.io.File;
 import java.net.MalformedURLException;
@@ -343,6 +344,12 @@ public abstract class DevSupportManagerBase implements DevSupportManager {
     @Override
     public void reloadExpoApp() {
         try {
+            if (mDevServerHelper.mPackagerClient != null) {
+                // In Expo Go's multi-Activity structure, reloading means destroying the current Activity and creating a new one with a fresh React instance.
+                // To prevent reentrant `reloadExpoApp` from being triggered by a long press of the "r" key in the CLI, which could lead to an unexpected state,
+                // we must terminate the packager connection immediately. This is done without waiting a worker thread by using `mDevServerHelper.closePackagerConnection()`.
+                mDevServerHelper.mPackagerClient.close();
+            }
             Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod("reloadFromManifest", int.class).invoke(null, getExponentActivityId());
         } catch (Exception expoHandleErrorException) {
             expoHandleErrorException.printStackTrace();
