@@ -98,8 +98,9 @@ public open class DevServerHelper(
   private val packageName: String = applicationContext.packageName
 
   private var packagerConnectionLock: Boolean = false;
-  private var packagerClient: JSPackagerClient? = null
   private var inspectorPackagerConnection: IInspectorPackagerConnection? = null
+
+  public var packagerClient: JSPackagerClient? = null
 
   /** Returns an opaque ID which is stable for the current combination of device and app, stable */
   private val inspectorDeviceId: String
