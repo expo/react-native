@@ -18,12 +18,19 @@ import java.util.Locale
 
 public object AndroidInfoHelpers {
 
-  public const val EMULATOR_LOCALHOST: String = "10.0.2.2"
-  public const val GENYMOTION_LOCALHOST: String = "10.0.3.2"
-  public const val DEVICE_LOCALHOST: String = "localhost"
-  public const val METRO_HOST_PROP_NAME: String = "metro.host"
+  public var EMULATOR_LOCALHOST: String? = "10.0.2.2"
+  public var GENYMOTION_LOCALHOST: String? = "10.0.3.2"
+  @JvmField
+  public var DEVICE_LOCALHOST: String? = "localhost"
+  public val METRO_HOST_PROP_NAME: String = "metro.host"
   private val TAG = AndroidInfoHelpers::class.java.simpleName
   private var metroHostPropValue: String? = null
+
+  @JvmField
+  public var sDevServerPortOverride: Int? = null
+
+  @JvmField
+  public var sInspectorProxyPortOverride: Int? = null
 
   private fun isRunningOnGenymotion(): Boolean = Build.FINGERPRINT.contains("vbox")
 
@@ -84,10 +91,23 @@ public object AndroidInfoHelpers {
   }
 
   private fun getDevServerPort(context: Context): Int =
-      context.resources.getInteger(R.integer.react_native_dev_server_port)
+      sDevServerPortOverride ?: context.resources.getInteger(R.integer.react_native_dev_server_port)
+
+  private fun getInspectorProxyPort(context: Context): Int =
+      sInspectorProxyPortOverride ?: context.resources.getInteger(R.integer.react_native_dev_server_port)
+
+  @JvmStatic
+  public fun setDevServerPort(port: Int?) {
+    sDevServerPortOverride = port
+  }
+
+  @JvmStatic
+  public fun setInspectorProxyPort(port: Int?) {
+    sInspectorProxyPortOverride = port
+  }
 
   private fun getServerIpAddress(port: Int): String {
-    val ipAddress: String =
+    val ipAddress =
         when {
           getMetroHostPropValue().isNotEmpty() -> getMetroHostPropValue()
           isRunningOnGenymotion() -> GENYMOTION_LOCALHOST
