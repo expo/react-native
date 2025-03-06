@@ -9,13 +9,27 @@ package com.facebook.react.bridge
 
 /** Crashy crashy exception handler. */
 public class DefaultJSExceptionHandler : JSExceptionHandler {
-  override fun handleException(e: Exception) {
-    throw if (e is RuntimeException) {
-      // Because we are rethrowing the original exception, the original stacktrace will be
-      // preserved.
-      e
-    } else {
-      RuntimeException(e)
+   public override fun handleException(e: Exception) {
+    try {
+      run {
+        if (e is RuntimeException) {
+          throw e
+        } else {
+          throw RuntimeException(e)
+        }
+      }
+    } catch (expoException: RuntimeException) {
+      try {
+        Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod(
+          "handleReactNativeError",
+          String::class.java,
+          Any::class.java,
+          Int::class.java,
+          Boolean::class.java
+        ).invoke(null, expoException.message, null, -1, true)
+      } catch (expoHandleErrorException: Exception) {
+        expoHandleErrorException.printStackTrace()
+      }
     }
   }
 }
