@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
 package com.facebook.react.devsupport;
 
 import android.content.Context;
@@ -47,82 +46,45 @@ import java.util.Map;
  * is responsible for enabling/disabling dev support in case when app is backgrounded or when all
  * the views has been detached from the instance (through {@link #setDevSupportEnabled} method).
  */
-public final class BridgeDevSupportManager extends DevSupportManagerBase {
-  private boolean mIsSamplingProfilerEnabled = false;
+public class BridgeDevSupportManager extends DevSupportManagerBase {
 
-  public BridgeDevSupportManager(
-      Context applicationContext,
-      ReactInstanceDevHelper reactInstanceManagerHelper,
-      @Nullable String packagerPathForJSBundleName,
-      boolean enableOnCreate,
-      @Nullable RedBoxHandler redBoxHandler,
-      @Nullable DevBundleDownloadListener devBundleDownloadListener,
-      int minNumShakes,
-      @Nullable Map<String, RequestHandler> customPackagerCommandHandlers,
-      @Nullable SurfaceDelegateFactory surfaceDelegateFactory,
-      @Nullable DevLoadingViewManager devLoadingViewManager,
-      @Nullable PausedInDebuggerOverlayManager pausedInDebuggerOverlayManager) {
-    super(
-        applicationContext,
-        reactInstanceManagerHelper,
-        packagerPathForJSBundleName,
-        enableOnCreate,
-        redBoxHandler,
-        devBundleDownloadListener,
-        minNumShakes,
-        customPackagerCommandHandlers,
-        surfaceDelegateFactory,
-        devLoadingViewManager,
-        pausedInDebuggerOverlayManager);
-  }
+    public boolean mIsSamplingProfilerEnabled = false;
 
-  @Override
-  protected String getUniqueTag() {
-    return "Bridge";
-  }
+    public BridgeDevSupportManager(Context applicationContext, ReactInstanceDevHelper reactInstanceManagerHelper, @Nullable String packagerPathForJSBundleName, boolean enableOnCreate, @Nullable RedBoxHandler redBoxHandler, @Nullable DevBundleDownloadListener devBundleDownloadListener, int minNumShakes, @Nullable Map<String, RequestHandler> customPackagerCommandHandlers, @Nullable SurfaceDelegateFactory surfaceDelegateFactory, @Nullable DevLoadingViewManager devLoadingViewManager, @Nullable PausedInDebuggerOverlayManager pausedInDebuggerOverlayManager) {
+        super(applicationContext, reactInstanceManagerHelper, packagerPathForJSBundleName, enableOnCreate, redBoxHandler, devBundleDownloadListener, minNumShakes, customPackagerCommandHandlers, surfaceDelegateFactory, devLoadingViewManager, pausedInDebuggerOverlayManager);
+    }
 
-  @Override
-  public void loadSplitBundleFromServer(
-      final String bundlePath, final DevSplitBundleCallback callback) {
-    fetchSplitBundleAndCreateBundleLoader(
-        bundlePath,
-        new CallbackWithBundleLoader() {
-          @Override
-          public void onSuccess(JSBundleLoader bundleLoader) {
-            bundleLoader.loadScript(getCurrentReactContext().getCatalystInstance());
-            getCurrentReactContext()
-                .getJSModule(HMRClient.class)
-                .registerBundle(getDevServerHelper().getDevServerSplitBundleURL(bundlePath));
-            callback.onSuccess();
-          }
+    @Override
+    protected String getUniqueTag() {
+        return "Bridge";
+    }
 
-          @Override
-          public void onError(String url, Throwable cause) {
-            callback.onError(url, cause);
-          }
+    @Override
+    public void loadSplitBundleFromServer(final String bundlePath, final DevSplitBundleCallback callback) {
+        fetchSplitBundleAndCreateBundleLoader(bundlePath, new CallbackWithBundleLoader() {
+
+            @Override
+            public void onSuccess(JSBundleLoader bundleLoader) {
+                bundleLoader.loadScript(getCurrentReactContext().getCatalystInstance());
+                getCurrentReactContext().getJSModule(HMRClient.class).registerBundle(getDevServerHelper().getDevServerSplitBundleURL(bundlePath));
+                callback.onSuccess();
+            }
+
+            @Override
+            public void onError(String url, Throwable cause) {
+                callback.onError(url, cause);
+            }
         });
-  }
+    }
 
-  @Override
-  public void handleReloadJS() {
-
-    UiThreadUtil.assertOnUiThread();
-
-    ReactMarker.logMarker(
-        ReactMarkerConstants.RELOAD,
-        getDevSettings().getPackagerConnectionSettings().getDebugServerHost());
-
-    // dismiss redbox if exists
-    hideRedboxDialog();
-
-    PrinterHolder.getPrinter()
-        .logMessage(ReactDebugOverlayTags.RN_CORE, "RNCore: load from Server");
-    String bundleURL =
-        getDevServerHelper().getDevServerBundleURL(Assertions.assertNotNull(getJSAppBundleName()));
-    reloadJSFromServer(
-        bundleURL,
-        () ->
-            UiThreadUtil.runOnUiThread(
-                () -> getReactInstanceDevHelper().onJSBundleLoadedFromServer()));
-  }
+    @Override
+    public void handleReloadJS() {
+        UiThreadUtil.assertOnUiThread();
+        ReactMarker.logMarker(ReactMarkerConstants.RELOAD, getDevSettings().getPackagerConnectionSettings().getDebugServerHost());
+        // dismiss redbox if exists
+        hideRedboxDialog();
+        PrinterHolder.getPrinter().logMessage(ReactDebugOverlayTags.RN_CORE, "RNCore: load from Server");
+        String bundleURL = getDevServerHelper().getDevServerBundleURL(Assertions.assertNotNull(getJSAppBundleName()));
+        reloadJSFromServer(bundleURL, () -> UiThreadUtil.runOnUiThread(() -> getReactInstanceDevHelper().onJSBundleLoadedFromServer()));
+    }
 }
