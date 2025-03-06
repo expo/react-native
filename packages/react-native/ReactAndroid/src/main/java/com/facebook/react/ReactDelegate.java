@@ -274,7 +274,7 @@ public class ReactDelegate {
     }
 
     // Reload in DEBUG mode
-    devSupportManager.handleReloadJS();
+    devSupportManager.reloadExpoApp();
   }
 
   /** Start the React surface with the app key supplied in the {@link ReactDelegate} constructor. */
