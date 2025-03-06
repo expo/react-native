@@ -199,7 +199,7 @@ internal class RedBoxContentView(
         }
 
     findViewById<Button>(R.id.rn_redbox_reload_button).setOnClickListener {
-      devSupportManager.handleReloadJS()
+      devSupportManager.reloadExpoApp()
     }
     findViewById<Button>(R.id.rn_redbox_dismiss_button).setOnClickListener {
       devSupportManager.hideRedboxDialog()
