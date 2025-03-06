@@ -42,4 +42,6 @@ public interface DeveloperSettings {
 
   /** Add an item to the dev menu. */
   public fun addMenuItem(title: String)
+
+public fun getExponentActivityId(): Int
 }

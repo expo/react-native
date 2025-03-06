@@ -22,7 +22,7 @@ import com.facebook.react.packagerconnection.PackagerConnectionSettings
  * [com.facebook.react.devsupport]. For accessing some of the settings by external modules this
  * class implements an external interface [DeveloperSettings].
  */
-internal class DevInternalSettings(applicationContext: Context, private val listener: Listener?) :
+public class DevInternalSettings(applicationContext: Context, private val listener: Listener?) :
     DeveloperSettings, OnSharedPreferenceChangeListener {
   private val preferences: SharedPreferences =
       PreferenceManager.getDefaultSharedPreferences(applicationContext)
@@ -80,7 +80,7 @@ internal class DevInternalSettings(applicationContext: Context, private val list
   override var isStartSamplingProfilerOnInit: Boolean = false
 
   // Not supported.
-  override fun addMenuItem(title: String) = Unit
+  override fun addMenuItem(title: String): Unit = Unit
 
   override var isHotModuleReplacementEnabled: Boolean
     get() = preferences.getBoolean(PREFS_HOT_MODULE_REPLACEMENT_KEY, true)
@@ -88,11 +88,11 @@ internal class DevInternalSettings(applicationContext: Context, private val list
       preferences.edit().putBoolean(PREFS_HOT_MODULE_REPLACEMENT_KEY, enabled).apply()
     }
 
-  interface Listener {
-    fun onInternalSettingsChanged()
+  public interface Listener {
+    public fun onInternalSettingsChanged()
   }
 
-  companion object {
+  public companion object {
     private const val PREFS_FPS_DEBUG_KEY = "fps_debug"
     private const val PREFS_JS_DEV_MODE_DEBUG_KEY = "js_dev_mode_debug"
     private const val PREFS_JS_MINIFY_DEBUG_KEY = "js_minify_debug"
@@ -100,4 +100,15 @@ internal class DevInternalSettings(applicationContext: Context, private val list
     private const val PREFS_INSPECTOR_DEBUG_KEY = "inspector_debug"
     private const val PREFS_HOT_MODULE_REPLACEMENT_KEY = "hot_module_replacement"
   }
+
+  private var exponentActivityId: Int = -1
+
+  public fun setExponentActivityId(value: Int) {
+     exponentActivityId = value
+  }
+
+  public override fun getExponentActivityId(): Int {
+    return exponentActivityId
+  }
+
 }
