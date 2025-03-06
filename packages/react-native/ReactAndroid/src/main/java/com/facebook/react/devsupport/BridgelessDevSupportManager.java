@@ -28,7 +28,7 @@ import java.util.Map;
  * APIs for asynchronously loading the JS bundle.
  */
 @Nullsafe(Nullsafe.Mode.LOCAL)
-class BridgelessDevSupportManager extends DevSupportManagerBase {
+public class BridgelessDevSupportManager extends DevSupportManagerBase {
 
   public BridgelessDevSupportManager(
       Context context,
