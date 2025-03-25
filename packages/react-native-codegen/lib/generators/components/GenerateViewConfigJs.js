@@ -10,7 +10,8 @@
 
 'use strict';
 
-const j = require('jscodeshift');
+const core = require('@babel/core');
+const t = core.types;
 
 // File path -> contents
 
@@ -36,6 +37,9 @@ ${componentConfig}
 // We use this to add to a set. Need to make sure we aren't importing
 // this multiple times.
 const UIMANAGER_IMPORT = 'const {UIManager} = require("react-native")';
+function expression(input) {
+  return core.template.expression(input)();
+}
 function getReactDiffProcessValue(typeAnnotation) {
   switch (typeAnnotation.type) {
     case 'BooleanTypeAnnotation':
@@ -47,25 +51,29 @@ function getReactDiffProcessValue(typeAnnotation) {
     case 'StringEnumTypeAnnotation':
     case 'Int32EnumTypeAnnotation':
     case 'MixedTypeAnnotation':
-      return j.literal(true);
+      return t.booleanLiteral(true);
     case 'ReservedPropTypeAnnotation':
       switch (typeAnnotation.name) {
         case 'ColorPrimitive':
-          return j.template
-            .expression`{ process: require('react-native/Libraries/StyleSheet/processColor').default }`;
+          return expression(
+            `{ process: require('react-native/Libraries/StyleSheet/processColor').default }`,
+          );
         case 'ImageSourcePrimitive':
-          return j.template
-            .expression`{ process: require('react-native/Libraries/Image/resolveAssetSource') }`;
+          return expression(
+            `{ process: require('react-native/Libraries/Image/resolveAssetSource') }`,
+          );
         case 'ImageRequestPrimitive':
           throw new Error('ImageRequest should not be used in props');
         case 'PointPrimitive':
-          return j.template
-            .expression`{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/pointsDiffer')) }`;
+          return expression(
+            `{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/pointsDiffer')) }`,
+          );
         case 'EdgeInsetsPrimitive':
-          return j.template
-            .expression`{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/insetsDiffer')) }`;
+          return expression(
+            `{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/insetsDiffer')) }`,
+          );
         case 'DimensionPrimitive':
-          return j.literal(true);
+          return t.booleanLiteral(true);
         default:
           typeAnnotation.name;
           throw new Error(
@@ -76,20 +84,21 @@ function getReactDiffProcessValue(typeAnnotation) {
       if (typeAnnotation.elementType.type === 'ReservedPropTypeAnnotation') {
         switch (typeAnnotation.elementType.name) {
           case 'ColorPrimitive':
-            return j.template
-              .expression`{ process: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/StyleSheet/processColorArray')) }`;
+            return expression(
+              `{ process: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/StyleSheet/processColorArray')) }`,
+            );
           case 'ImageSourcePrimitive':
           case 'PointPrimitive':
           case 'EdgeInsetsPrimitive':
           case 'DimensionPrimitive':
-            return j.literal(true);
+            return t.booleanLiteral(true);
           default:
             throw new Error(
               `Received unknown array native typeAnnotation: "${typeAnnotation.elementType.name}"`,
             );
         }
       }
-      return j.literal(true);
+      return t.booleanLiteral(true);
     default:
       typeAnnotation;
       throw new Error(
@@ -117,7 +126,7 @@ ${
     : ''
 }
 
-export const __INTERNAL_VIEW_CONFIG = VIEW_CONFIG;
+export const __INTERNAL_VIEW_CONFIG = %%VIEW_CONFIG%%;
 
 export default NativeComponentRegistry.get(nativeComponentName, () => __INTERNAL_VIEW_CONFIG);
 `.trim();
@@ -155,44 +164,45 @@ function getValidAttributesForEvents(events, imports) {
   imports.add(
     "const {ConditionallyIgnoredEventHandlers} = require('react-native/Libraries/NativeComponent/ViewConfigIgnore');",
   );
-  const validAttributes = j.objectExpression(
+  const validAttributes = t.objectExpression(
     events.map(eventType => {
-      return j.property('init', j.identifier(eventType.name), j.literal(true));
+      return t.objectProperty(
+        t.identifier(eventType.name),
+        t.booleanLiteral(true),
+      );
     }),
   );
-  return j.callExpression(j.identifier('ConditionallyIgnoredEventHandlers'), [
+  return t.callExpression(t.identifier('ConditionallyIgnoredEventHandlers'), [
     validAttributes,
   ]);
 }
 function generateBubblingEventInfo(event, nameOveride) {
-  return j.property(
-    'init',
-    j.identifier(normalizeInputEventName(nameOveride || event.name)),
-    j.objectExpression([
-      j.property(
-        'init',
-        j.identifier('phasedRegistrationNames'),
-        j.objectExpression([
-          j.property(
-            'init',
-            j.identifier('captured'),
-            j.literal(`${event.name}Capture`),
+  return t.objectProperty(
+    t.identifier(normalizeInputEventName(nameOveride || event.name)),
+    t.objectExpression([
+      t.objectProperty(
+        t.identifier('phasedRegistrationNames'),
+        t.objectExpression([
+          t.objectProperty(
+            t.identifier('captured'),
+            t.stringLiteral(`${event.name}Capture`),
           ),
-          j.property('init', j.identifier('bubbled'), j.literal(event.name)),
+          t.objectProperty(
+            t.identifier('bubbled'),
+            t.stringLiteral(event.name),
+          ),
         ]),
       ),
     ]),
   );
 }
 function generateDirectEventInfo(event, nameOveride) {
-  return j.property(
-    'init',
-    j.identifier(normalizeInputEventName(nameOveride || event.name)),
-    j.objectExpression([
-      j.property(
-        'init',
-        j.identifier('registrationName'),
-        j.literal(event.name),
+  return t.objectProperty(
+    t.identifier(normalizeInputEventName(nameOveride || event.name)),
+    t.objectExpression([
+      t.objectProperty(
+        t.identifier('registrationName'),
+        t.stringLiteral(event.name),
       ),
     ]),
   );
@@ -218,20 +228,15 @@ function buildViewConfig(schema, componentName, component, imports) {
         throw new Error('Invalid extended type');
     }
   });
-  const validAttributes = j.objectExpression([
+  const validAttributes = t.objectExpression([
     ...componentProps.map(schemaProp => {
-      return j.property(
-        'init',
-        j.identifier(schemaProp.name),
+      return t.objectProperty(
+        t.identifier(schemaProp.name),
         getReactDiffProcessValue(schemaProp.typeAnnotation),
       );
     }),
     ...(componentEvents.length > 0
-      ? [
-          j.spreadProperty(
-            getValidAttributesForEvents(componentEvents, imports),
-          ),
-        ]
+      ? [t.spreadElement(getValidAttributesForEvents(componentEvents, imports))]
       : []),
   ]);
   const bubblingEventNames = component.events
@@ -249,14 +254,6 @@ function buildViewConfig(schema, componentName, component, imports) {
       }
       return bubblingEvents;
     }, []);
-  const bubblingEvents =
-    bubblingEventNames.length > 0
-      ? j.property(
-          'init',
-          j.identifier('bubblingEventTypes'),
-          j.objectExpression(bubblingEventNames),
-        )
-      : null;
   const directEventNames = component.events
     .filter(event => event.bubblingType === 'direct')
     .reduce((directEvents, event) => {
@@ -272,25 +269,32 @@ function buildViewConfig(schema, componentName, component, imports) {
       }
       return directEvents;
     }, []);
-  const directEvents =
-    directEventNames.length > 0
-      ? j.property(
-          'init',
-          j.identifier('directEventTypes'),
-          j.objectExpression(directEventNames),
-        )
-      : null;
   const properties = [
-    j.property(
-      'init',
-      j.identifier('uiViewClassName'),
-      j.literal(componentName),
+    t.objectProperty(
+      t.identifier('uiViewClassName'),
+      t.stringLiteral(componentName),
     ),
-    bubblingEvents,
-    directEvents,
-    j.property('init', j.identifier('validAttributes'), validAttributes),
-  ].filter(Boolean);
-  return j.objectExpression(properties);
+  ];
+  if (bubblingEventNames.length > 0) {
+    properties.push(
+      t.objectProperty(
+        t.identifier('bubblingEventTypes'),
+        t.objectExpression(bubblingEventNames),
+      ),
+    );
+  }
+  if (directEventNames.length > 0) {
+    properties.push(
+      t.objectProperty(
+        t.identifier('directEventTypes'),
+        t.objectExpression(directEventNames),
+      ),
+    );
+  }
+  properties.push(
+    t.objectProperty(t.identifier('validAttributes'), validAttributes),
+  );
+  return t.objectExpression(properties);
 }
 function buildCommands(schema, componentName, component, imports) {
   const commands = component.commands;
@@ -300,39 +304,29 @@ function buildCommands(schema, componentName, component, imports) {
   imports.add(
     'const {dispatchCommand} = require("react-native/Libraries/ReactNative/RendererProxy");',
   );
-  const properties = commands.map(command => {
-    const commandName = command.name;
-    const params = command.typeAnnotation.params;
-    const commandNameLiteral = j.literal(commandName);
-    const commandNameIdentifier = j.identifier(commandName);
-    const arrayParams = j.arrayExpression(
-      params.map(param => {
-        return j.identifier(param.name);
-      }),
-    );
-    const expression = j.template
-      .expression`dispatchCommand(ref, ${commandNameLiteral}, ${arrayParams})`;
-    const functionParams = params.map(param => {
-      return j.identifier(param.name);
-    });
-    const property = j.property(
-      'init',
-      commandNameIdentifier,
-      j.functionExpression(
-        null,
-        [j.identifier('ref'), ...functionParams],
-        j.blockStatement([j.expressionStatement(expression)]),
-      ),
-    );
-    property.method = true;
-    return property;
-  });
-  return j.exportNamedDeclaration(
-    j.variableDeclaration('const', [
-      j.variableDeclarator(
-        j.identifier('Commands'),
-        j.objectExpression(properties),
-      ),
+  const commandsObject = t.objectExpression(
+    commands.map(command => {
+      const commandName = command.name;
+      const params = command.typeAnnotation.params;
+      const dispatchCommandCall = t.callExpression(
+        t.identifier('dispatchCommand'),
+        [
+          t.identifier('ref'),
+          t.stringLiteral(commandName),
+          t.arrayExpression(params.map(param => t.identifier(param.name))),
+        ],
+      );
+      return t.objectMethod(
+        'method',
+        t.identifier(commandName),
+        [t.identifier('ref'), ...params.map(param => t.identifier(param.name))],
+        t.blockStatement([t.expressionStatement(dispatchCommandCall)]),
+      );
+    }),
+  );
+  return t.exportNamedDeclaration(
+    t.variableDeclaration('const', [
+      t.variableDeclarator(t.identifier('Commands'), commandsObject),
     ]),
   );
 }
@@ -361,40 +355,40 @@ module.exports = {
                 paperComponentNameDeprecated:
                   component.paperComponentNameDeprecated,
               });
-              const replacedSourceRoot = j.withParser('flow')(replacedTemplate);
               const paperComponentName =
                 (_component$paperCompo = component.paperComponentName) !==
                   null && _component$paperCompo !== void 0
                   ? _component$paperCompo
                   : componentName;
-              replacedSourceRoot
-                .find(j.Identifier, {
-                  name: 'VIEW_CONFIG',
-                })
-                .replaceWith(
-                  buildViewConfig(
-                    schema,
-                    paperComponentName,
-                    component,
-                    imports,
-                  ),
-                );
-              const commands = buildCommands(
+              const replacedSourceRoot = core.template.program(
+                replacedTemplate,
+              )({
+                VIEW_CONFIG: buildViewConfig(
+                  schema,
+                  paperComponentName,
+                  component,
+                  imports,
+                ),
+              });
+              const commandsExport = buildCommands(
                 schema,
                 paperComponentName,
                 component,
                 imports,
               );
-              if (commands) {
-                replacedSourceRoot
-                  .find(j.ExportDefaultDeclaration)
-                  .insertAfter(j(commands).toSource());
+              if (commandsExport) {
+                replacedSourceRoot.body.push(commandsExport);
               }
-              const replacedSource = replacedSourceRoot.toSource({
-                quote: 'single',
-                trailingComma: true,
-              });
-              return replacedSource;
+              const replacedSource = core.transformFromAstSync(
+                replacedSourceRoot,
+                undefined,
+                {
+                  babelrc: false,
+                  browserslistConfigFile: false,
+                  configFile: false,
+                },
+              );
+              return replacedSource.code;
             })
             .join('\n\n');
         })
