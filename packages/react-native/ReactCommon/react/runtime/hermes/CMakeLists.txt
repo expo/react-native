@@ -31,4 +31,11 @@ if(${CMAKE_BUILD_TYPE} MATCHES Debug)
                 PRIVATE
                 -DHERMES_ENABLE_DEBUGGER=1
         )
+else()
+        target_compile_options(
+                bridgelesshermes
+                PRIVATE
+                # Expo Go requires debugging on release builds
+                -DHERMES_ENABLE_DEBUGGER=1
+        )
 endif()
