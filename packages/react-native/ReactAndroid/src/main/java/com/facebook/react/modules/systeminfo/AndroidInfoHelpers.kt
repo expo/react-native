@@ -18,10 +18,10 @@ import java.util.Locale
 
 public object AndroidInfoHelpers {
 
-  public var EMULATOR_LOCALHOST: String? = "10.0.2.2"
-  public var GENYMOTION_LOCALHOST: String? = "10.0.3.2"
+  public var EMULATOR_LOCALHOST: String = "10.0.2.2"
+  public var GENYMOTION_LOCALHOST: String = "10.0.3.2"
   @JvmField
-  public var DEVICE_LOCALHOST: String? = "localhost"
+  public var DEVICE_LOCALHOST: String = "localhost"
   public val METRO_HOST_PROP_NAME: String = "metro.host"
   private val TAG = AndroidInfoHelpers::class.java.simpleName
   private var metroHostPropValue: String? = null
