@@ -18,6 +18,7 @@ import android.os.AsyncTask
 import android.provider.Settings.Secure
 import com.facebook.common.logging.FLog
 import com.facebook.react.bridge.ReactContext
+import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.devsupport.InspectorFlags.getFuseboxEnabled
 import com.facebook.react.devsupport.InspectorFlags.getIsProfilingBuild
@@ -149,9 +150,9 @@ public open class DevServerHelper(
       return
     }
     packagerConnectionLock = true;
-    object : AsyncTask<Void, Void, Void>() {
+    object : AsyncTask<Void, Void, JSPackagerClient>() {
           @Deprecated("This needs to be rewritten to not use AsyncTasks")
-          override fun doInBackground(vararg backgroundParams: Void): Void? {
+          override fun doInBackground(vararg backgroundParams: Void): JSPackagerClient? {
             val handlers: MutableMap<String, RequestHandler> = mutableMapOf()
             handlers["reload"] =
                 object : NotificationOnlyHandler() {
@@ -188,10 +189,11 @@ public open class DevServerHelper(
             return packagerClient
           }
 
-          override fun onPostExecute(packagerClient: JSPackagerClient) {
+          @Deprecated("This needs to be rewritten to not use AsyncTasks")
+          override fun onPostExecute(result: JSPackagerClient?) {
             UiThreadUtil.assertOnUiThread()
-            mPackagerClient = packagerClient
-            mPackagerConnectionLock = false
+            packagerClient = result
+            packagerConnectionLock = false
           }
         }
         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
@@ -204,24 +206,25 @@ public open class DevServerHelper(
     }
     packagerConnectionLock = true;
 
-    object : AsyncTask<Void, Void, Void>() {
-          @Deprecated("This class needs to be rewritten to don't use AsyncTasks")
-          override fun doInBackground(vararg params: Void): Void? {
-            if (params.isNotEmpty() && params[0] != null) {
-              val packagerClient = params[0]
-              packagerClient?.close()
-            }
-            packagerClient = null
-            return null
-          }
-
-          override fun onPostExecute(result: Void?) {
-            UiThreadUtil.assertOnUiThread()
-            mPackagerClient = null
-            mPackagerConnectionLock = false
-          }
+    object : AsyncTask<JSPackagerClient, Void, Void>() {
+      @Deprecated("This class needs to be rewritten to don't use AsyncTasks")
+      override fun doInBackground(vararg params: JSPackagerClient): Void? {
+        if (params.isNotEmpty()) {
+          val packagerClient = params[0]
+          packagerClient.close()
         }
-        .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+        packagerClient = null
+        return null
+      }
+
+      @Deprecated("This class needs to be rewritten to don't use AsyncTasks")
+      override fun onPostExecute(result: Void?) {
+        UiThreadUtil.assertOnUiThread()
+        packagerClient = null
+        packagerConnectionLock = false
+      }
+    }
+    .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
   }
 
   public fun openInspectorConnection() {
