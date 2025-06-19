@@ -10,14 +10,13 @@
 
 'use strict';
 
-const _require = require('../Utils'),
-  indent = _require.indent,
-  toSafeCppString = _require.toSafeCppString;
-const _require2 = require('./CppHelpers'),
-  generateEventStructName = _require2.generateEventStructName,
-  getCppArrayTypeForAnnotation = _require2.getCppArrayTypeForAnnotation,
-  getCppTypeForAnnotation = _require2.getCppTypeForAnnotation,
-  getImports = _require2.getImports;
+const {indent, toSafeCppString} = require('../Utils');
+const {
+  generateEventStructName,
+  getCppArrayTypeForAnnotation,
+  getCppTypeForAnnotation,
+  getImports,
+} = require('./CppHelpers');
 const nullthrows = require('nullthrows');
 
 // File path -> contents
@@ -68,7 +67,7 @@ static char const *toString(const ${enumName} value) {
 }
 `.trim();
 function getNativeTypeFromAnnotation(componentName, eventProperty, nameParts) {
-  const type = eventProperty.typeAnnotation.type;
+  const {type} = eventProperty.typeAnnotation;
   switch (type) {
     case 'BooleanTypeAnnotation':
     case 'StringTypeAnnotation':
@@ -159,8 +158,7 @@ function generateStruct(structs, componentName, nameParts, properties) {
     })
     .join('\n' + '  ');
   properties.forEach(property => {
-    const name = property.name,
-      typeAnnotation = property.typeAnnotation;
+    const {name, typeAnnotation} = property;
     switch (typeAnnotation.type) {
       case 'BooleanTypeAnnotation':
       case 'StringTypeAnnotation':
@@ -248,7 +246,7 @@ module.exports = {
         if (module.type !== 'Component') {
           return null;
         }
-        const components = module.components;
+        const {components} = module;
         // No components in this module
         if (components == null) {
           return null;
@@ -256,6 +254,7 @@ module.exports = {
         return components;
       })
       .filter(Boolean)
+      // $FlowFixMe[unsafe-object-assign]
       .reduce((acc, components) => Object.assign(acc, components), {});
     const extraIncludes = new Set();
     const componentEmitters = Object.keys(moduleComponents)

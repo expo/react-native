@@ -10,9 +10,9 @@
 
 'use strict';
 
-const _require = require('./ComponentsProviderUtils'),
-  generateSupportedApplePlatformsMacro =
-    _require.generateSupportedApplePlatformsMacro;
+const {
+  generateSupportedApplePlatformsMacro,
+} = require('./ComponentsProviderUtils');
 
 // File path -> contents
 
@@ -71,7 +71,7 @@ module.exports = {
             if (module.type !== 'Component') {
               return;
             }
-            const components = module.components;
+            const {components} = module;
             // No components in this module
             if (components == null) {
               return null;

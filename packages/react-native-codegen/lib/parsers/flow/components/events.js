@@ -10,24 +10,27 @@
 
 'use strict';
 
-const _require = require('../../error-utils'),
-  throwIfArgumentPropsAreNull = _require.throwIfArgumentPropsAreNull,
-  throwIfBubblingTypeIsNull = _require.throwIfBubblingTypeIsNull,
-  throwIfEventHasNoName = _require.throwIfEventHasNoName;
-const _require2 = require('../../parsers-commons'),
-  buildPropertiesForEvent = _require2.buildPropertiesForEvent,
-  emitBuildEventSchema = _require2.emitBuildEventSchema,
-  getEventArgument = _require2.getEventArgument,
-  handleEventHandler = _require2.handleEventHandler;
-const _require3 = require('../../parsers-primitives'),
-  emitBoolProp = _require3.emitBoolProp,
-  emitDoubleProp = _require3.emitDoubleProp,
-  emitFloatProp = _require3.emitFloatProp,
-  emitInt32Prop = _require3.emitInt32Prop,
-  emitMixedProp = _require3.emitMixedProp,
-  emitObjectProp = _require3.emitObjectProp,
-  emitStringProp = _require3.emitStringProp,
-  emitUnionProp = _require3.emitUnionProp;
+const {
+  throwIfArgumentPropsAreNull,
+  throwIfBubblingTypeIsNull,
+  throwIfEventHasNoName,
+} = require('../../error-utils');
+const {
+  buildPropertiesForEvent,
+  emitBuildEventSchema,
+  getEventArgument,
+  handleEventHandler,
+} = require('../../parsers-commons');
+const {
+  emitBoolProp,
+  emitDoubleProp,
+  emitFloatProp,
+  emitInt32Prop,
+  emitMixedProp,
+  emitObjectProp,
+  emitStringProp,
+  emitUnionProp,
+} = require('../../parsers-primitives');
 function getPropertyType(
   /* $FlowFixMe[missing-local-annot] The type annotation(s) required by Flow's
    * LTI update could not be added via codemod */
@@ -215,15 +218,8 @@ function buildEventSchema(types, property, parser) {
   ) {
     return null;
   }
-  const _findEventArgumentsAn = findEventArgumentsAndType(
-      parser,
-      typeAnnotation,
-      types,
-    ),
-    argumentProps = _findEventArgumentsAn.argumentProps,
-    bubblingType = _findEventArgumentsAn.bubblingType,
-    paperTopLevelNameDeprecated =
-      _findEventArgumentsAn.paperTopLevelNameDeprecated;
+  const {argumentProps, bubblingType, paperTopLevelNameDeprecated} =
+    findEventArgumentsAndType(parser, typeAnnotation, types);
   const nonNullableArgumentProps = throwIfArgumentPropsAreNull(
     argumentProps,
     name,

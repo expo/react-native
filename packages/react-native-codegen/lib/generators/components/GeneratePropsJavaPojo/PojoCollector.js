@@ -10,33 +10,6 @@
 
 'use strict';
 
-function ownKeys(e, r) {
-  var t = Object.keys(e);
-  if (Object.getOwnPropertySymbols) {
-    var o = Object.getOwnPropertySymbols(e);
-    r &&
-      (o = o.filter(function (r) {
-        return Object.getOwnPropertyDescriptor(e, r).enumerable;
-      })),
-      t.push.apply(t, o);
-  }
-  return t;
-}
-function _objectSpread(e) {
-  for (var r = 1; r < arguments.length; r++) {
-    var t = null != arguments[r] ? arguments[r] : {};
-    r % 2
-      ? ownKeys(Object(t), !0).forEach(function (r) {
-          _defineProperty(e, r, t[r]);
-        })
-      : Object.getOwnPropertyDescriptors
-      ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t))
-      : ownKeys(Object(t)).forEach(function (r) {
-          Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
-        });
-  }
-  return e;
-}
 function _defineProperty(e, r, t) {
   return (
     (r = _toPropertyKey(r)) in e
@@ -64,8 +37,7 @@ function _toPrimitive(t, r) {
   }
   return ('string' === r ? String : Number)(t);
 }
-const _require = require('../../Utils'),
-  capitalize = _require.capitalize;
+const {capitalize} = require('../../Utils');
 class PojoCollector {
   constructor() {
     _defineProperty(this, '_pojos', new Map());
@@ -92,7 +64,7 @@ class PojoCollector {
               };
             }
             case 'ArrayTypeAnnotation': {
-              const objectTypeAnnotation = elementType.elementType;
+              const {elementType: objectTypeAnnotation} = elementType;
               this._insertPojo(
                 namespace,
                 `${pojoName}ElementElement`,
@@ -123,17 +95,14 @@ class PojoCollector {
   _insertPojo(namespace, pojoName, objectTypeAnnotation) {
     const properties = objectTypeAnnotation.properties.map(property => {
       const propertyPojoName = pojoName + capitalize(property.name);
-      return _objectSpread(
-        _objectSpread({}, property),
-        {},
-        {
-          typeAnnotation: this.process(
-            namespace,
-            propertyPojoName,
-            property.typeAnnotation,
-          ),
-        },
-      );
+      return {
+        ...property,
+        typeAnnotation: this.process(
+          namespace,
+          propertyPojoName,
+          property.typeAnnotation,
+        ),
+      };
     });
     this._pojos.set(pojoName, {
       name: pojoName,

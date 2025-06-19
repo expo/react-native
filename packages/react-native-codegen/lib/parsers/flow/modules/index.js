@@ -10,104 +10,31 @@
 
 'use strict';
 
-function _slicedToArray(r, e) {
-  return (
-    _arrayWithHoles(r) ||
-    _iterableToArrayLimit(r, e) ||
-    _unsupportedIterableToArray(r, e) ||
-    _nonIterableRest()
-  );
-}
-function _nonIterableRest() {
-  throw new TypeError(
-    'Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.',
-  );
-}
-function _unsupportedIterableToArray(r, a) {
-  if (r) {
-    if ('string' == typeof r) return _arrayLikeToArray(r, a);
-    var t = {}.toString.call(r).slice(8, -1);
-    return (
-      'Object' === t && r.constructor && (t = r.constructor.name),
-      'Map' === t || 'Set' === t
-        ? Array.from(r)
-        : 'Arguments' === t ||
-          /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t)
-        ? _arrayLikeToArray(r, a)
-        : void 0
-    );
-  }
-}
-function _arrayLikeToArray(r, a) {
-  (null == a || a > r.length) && (a = r.length);
-  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
-  return n;
-}
-function _iterableToArrayLimit(r, l) {
-  var t =
-    null == r
-      ? null
-      : ('undefined' != typeof Symbol && r[Symbol.iterator]) || r['@@iterator'];
-  if (null != t) {
-    var e,
-      n,
-      i,
-      u,
-      a = [],
-      f = !0,
-      o = !1;
-    try {
-      if (((i = (t = t.call(r)).next), 0 === l)) {
-        if (Object(t) !== t) return;
-        f = !1;
-      } else
-        for (
-          ;
-          !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l);
-          f = !0
-        );
-    } catch (r) {
-      (o = !0), (n = r);
-    } finally {
-      try {
-        if (!f && null != t.return && ((u = t.return()), Object(u) !== u))
-          return;
-      } finally {
-        if (o) throw n;
-      }
-    }
-    return a;
-  }
-}
-function _arrayWithHoles(r) {
-  if (Array.isArray(r)) return r;
-}
-const _require = require('../../errors'),
-  UnsupportedEnumDeclarationParserError =
-    _require.UnsupportedEnumDeclarationParserError,
-  UnsupportedGenericParserError = _require.UnsupportedGenericParserError,
-  UnsupportedObjectPropertyWithIndexerTypeAnnotationParserError =
-    _require.UnsupportedObjectPropertyWithIndexerTypeAnnotationParserError,
-  UnsupportedTypeAnnotationParserError =
-    _require.UnsupportedTypeAnnotationParserError;
-const _require2 = require('../../parsers-commons'),
-  assertGenericTypeAnnotationHasExactlyOneTypeParameter =
-    _require2.assertGenericTypeAnnotationHasExactlyOneTypeParameter,
-  parseObjectProperty = _require2.parseObjectProperty,
-  unwrapNullable = _require2.unwrapNullable,
-  wrapNullable = _require2.wrapNullable;
-const _require3 = require('../../parsers-primitives'),
-  emitArrayType = _require3.emitArrayType,
-  emitCommonTypes = _require3.emitCommonTypes,
-  emitDictionary = _require3.emitDictionary,
-  emitFunction = _require3.emitFunction,
-  emitNumberLiteral = _require3.emitNumberLiteral,
-  emitPromise = _require3.emitPromise,
-  emitRootTag = _require3.emitRootTag,
-  emitUnion = _require3.emitUnion,
-  translateArrayTypeAnnotation = _require3.translateArrayTypeAnnotation,
-  typeAliasResolution = _require3.typeAliasResolution,
-  typeEnumResolution = _require3.typeEnumResolution;
+const {
+  UnsupportedEnumDeclarationParserError,
+  UnsupportedGenericParserError,
+  UnsupportedObjectPropertyWithIndexerTypeAnnotationParserError,
+  UnsupportedTypeAnnotationParserError,
+} = require('../../errors');
+const {
+  assertGenericTypeAnnotationHasExactlyOneTypeParameter,
+  parseObjectProperty,
+  unwrapNullable,
+  wrapNullable,
+} = require('../../parsers-commons');
+const {
+  emitArrayType,
+  emitCommonTypes,
+  emitDictionary,
+  emitFunction,
+  emitNumberLiteral,
+  emitPromise,
+  emitRootTag,
+  emitUnion,
+  translateArrayTypeAnnotation,
+  typeAliasResolution,
+  typeEnumResolution,
+} = require('../../parsers-primitives');
 function translateTypeAnnotation(
   hasteModuleName,
   /**
@@ -122,14 +49,8 @@ function translateTypeAnnotation(
   parser,
 ) {
   const resolveTypeAnnotationFN = parser.getResolveTypeAnnotationFN();
-  const _resolveTypeAnnotatio = resolveTypeAnnotationFN(
-      flowTypeAnnotation,
-      types,
-      parser,
-    ),
-    nullable = _resolveTypeAnnotatio.nullable,
-    typeAnnotation = _resolveTypeAnnotatio.typeAnnotation,
-    typeResolutionStatus = _resolveTypeAnnotatio.typeResolutionStatus;
+  const {nullable, typeAnnotation, typeResolutionStatus} =
+    resolveTypeAnnotationFN(flowTypeAnnotation, types, parser);
   switch (typeAnnotation.type) {
     case 'ArrayTypeAnnotation': {
       return translateArrayTypeAnnotation(
@@ -184,21 +105,18 @@ function translateTypeAnnotation(
             typeAnnotation,
             parser,
           );
-          const _unwrapNullable = unwrapNullable(
-              translateTypeAnnotation(
-                hasteModuleName,
-                typeAnnotation.typeParameters.params[0],
-                types,
-                aliasMap,
-                enumMap,
-                tryParse,
-                cxxOnly,
-                parser,
-              ),
+          const [paramType, isParamNullable] = unwrapNullable(
+            translateTypeAnnotation(
+              hasteModuleName,
+              typeAnnotation.typeParameters.params[0],
+              types,
+              aliasMap,
+              enumMap,
+              tryParse,
+              cxxOnly,
+              parser,
             ),
-            _unwrapNullable2 = _slicedToArray(_unwrapNullable, 2),
-            paramType = _unwrapNullable2[0],
-            isParamNullable = _unwrapNullable2[1];
+          );
           return wrapNullable(nullable || isParamNullable, paramType);
         }
         default: {

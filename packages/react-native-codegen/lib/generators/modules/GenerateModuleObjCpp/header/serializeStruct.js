@@ -10,10 +10,8 @@
 
 'use strict';
 
-const _require = require('./serializeConstantsStruct'),
-  serializeConstantsStruct = _require.serializeConstantsStruct;
-const _require2 = require('./serializeRegularStruct'),
-  serializeRegularStruct = _require2.serializeRegularStruct;
+const {serializeConstantsStruct} = require('./serializeConstantsStruct');
+const {serializeRegularStruct} = require('./serializeRegularStruct');
 function serializeStruct(hasteModuleName, struct) {
   if (struct.context === 'REGULAR') {
     return serializeRegularStruct(hasteModuleName, struct);

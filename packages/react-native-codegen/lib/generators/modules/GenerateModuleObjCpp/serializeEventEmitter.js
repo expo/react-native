@@ -8,8 +8,7 @@
  * @format
  */
 
-const _require = require('../../Utils'),
-  toPascalCase = _require.toPascalCase;
+const {toPascalCase} = require('../../Utils');
 function getEventEmitterTypeObjCType(eventEmitter) {
   const type = eventEmitter.typeAnnotation.typeAnnotation.type;
   switch (type) {

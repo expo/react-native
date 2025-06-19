@@ -10,12 +10,11 @@
 
 'use strict';
 
-const _require = require('../utils.js'),
-  getValueFromTypes = _require.getValueFromTypes;
+const {getValueFromTypes} = require('../utils.js');
 
 // $FlowFixMe[unclear-type] there's no flowtype for ASTs
 
-function buildCommandSchema(property, types) {
+function buildCommandSchema(property, types, parser) {
   const name = property.key.name;
   const optional = property.optional;
   const value = getValueFromTypes(property.value, types);
@@ -37,7 +36,7 @@ function buildCommandSchema(property, types) {
     const paramValue = getValueFromTypes(param.typeAnnotation, types);
     const type =
       paramValue.type === 'GenericTypeAnnotation'
-        ? paramValue.id.name
+        ? parser.getTypeAnnotationName(paramValue)
         : paramValue.type;
     let returnType;
     switch (type) {
@@ -83,13 +82,17 @@ function buildCommandSchema(property, types) {
           type: 'ArrayTypeAnnotation',
           elementType: getCommandArrayElementTypeType(
             paramValue.typeParameters.params[0],
+            parser,
           ),
         };
         break;
       case 'ArrayTypeAnnotation':
         returnType = {
           type: 'ArrayTypeAnnotation',
-          elementType: getCommandArrayElementTypeType(paramValue.elementType),
+          elementType: getCommandArrayElementTypeType(
+            paramValue.elementType,
+            parser,
+          ),
         };
         break;
       default:
@@ -116,8 +119,7 @@ function buildCommandSchema(property, types) {
     },
   };
 }
-function getCommandArrayElementTypeType(inputType) {
-  var _inputType$id;
+function getCommandArrayElementTypeType(inputType, parser) {
   // TODO: T172453752 support more complex type annotation for array element
   if (typeof inputType !== 'object') {
     throw new Error('Expected an object');
@@ -139,9 +141,7 @@ function getCommandArrayElementTypeType(inputType) {
     case 'GenericTypeAnnotation':
       const name =
         typeof inputType.id === 'object'
-          ? (_inputType$id = inputType.id) === null || _inputType$id === void 0
-            ? void 0
-            : _inputType$id.name
+          ? parser.getTypeAnnotationName(inputType)
           : null;
       if (typeof name !== 'string') {
         throw new Error(
@@ -174,10 +174,10 @@ function getCommandArrayElementTypeType(inputType) {
       throw new Error(`Unsupported array element type ${type}`);
   }
 }
-function getCommands(commandTypeAST, types) {
+function getCommands(commandTypeAST, types, parser) {
   return commandTypeAST
     .filter(property => property.type === 'ObjectTypeProperty')
-    .map(property => buildCommandSchema(property, types))
+    .map(property => buildCommandSchema(property, types, parser))
     .filter(Boolean);
 }
 module.exports = {

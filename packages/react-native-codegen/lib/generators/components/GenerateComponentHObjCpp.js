@@ -105,7 +105,7 @@ ${componentContent}
 NS_ASSUME_NONNULL_END
 `.trim();
 function getObjCParamType(param) {
-  const typeAnnotation = param.typeAnnotation;
+  const {typeAnnotation} = param;
   switch (typeAnnotation.type) {
     case 'ReservedTypeAnnotation':
       switch (typeAnnotation.name) {
@@ -133,7 +133,7 @@ function getObjCParamType(param) {
   }
 }
 function getObjCExpectedKindParamType(param) {
-  const typeAnnotation = param.typeAnnotation;
+  const {typeAnnotation} = param;
   switch (typeAnnotation.type) {
     case 'ReservedTypeAnnotation':
       switch (typeAnnotation.name) {
@@ -161,7 +161,7 @@ function getObjCExpectedKindParamType(param) {
   }
 }
 function getReadableExpectedKindParamType(param) {
-  const typeAnnotation = param.typeAnnotation;
+  const {typeAnnotation} = param;
   switch (typeAnnotation.type) {
     case 'ReservedTypeAnnotation':
       switch (typeAnnotation.name) {
@@ -189,7 +189,7 @@ function getReadableExpectedKindParamType(param) {
   }
 }
 function getObjCRightHandAssignmentParamType(param, index) {
-  const typeAnnotation = param.typeAnnotation;
+  const {typeAnnotation} = param;
   switch (typeAnnotation.type) {
     case 'ReservedTypeAnnotation':
       switch (typeAnnotation.name) {
@@ -308,7 +308,7 @@ module.exports = {
         if (module.type !== 'Component') {
           return;
         }
-        const components = module.components;
+        const {components} = module;
         // No components in this module
         if (components == null) {
           return null;

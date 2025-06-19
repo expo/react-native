@@ -10,17 +10,17 @@
 
 'use strict';
 
-const _require = require('../Utils'),
-  getEnumName = _require.getEnumName,
-  toSafeCppString = _require.toSafeCppString;
-const _require2 = require('./ComponentsGeneratorUtils.js'),
-  getLocalImports = _require2.getLocalImports,
-  getNativeTypeFromAnnotation = _require2.getNativeTypeFromAnnotation;
-const _require3 = require('./CppHelpers.js'),
-  generateStructName = _require3.generateStructName,
-  getDefaultInitializerString = _require3.getDefaultInitializerString,
-  getEnumMaskName = _require3.getEnumMaskName,
-  toIntEnumValueName = _require3.toIntEnumValueName;
+const {getEnumName, toSafeCppString} = require('../Utils');
+const {
+  getLocalImports,
+  getNativeTypeFromAnnotation,
+} = require('./ComponentsGeneratorUtils.js');
+const {
+  generateStructName,
+  getDefaultInitializerString,
+  getEnumMaskName,
+  toIntEnumValueName,
+} = require('./CppHelpers.js');
 
 // File path -> contents
 
@@ -572,7 +572,7 @@ module.exports = {
         if (module.type !== 'Component') {
           return;
         }
-        const components = module.components;
+        const {components} = module;
         // No components in this module
         if (components == null) {
           return null;

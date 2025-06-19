@@ -10,38 +10,24 @@
 
 'use strict';
 
-const _require = require('./errors'),
-  IncorrectModuleRegistryCallArgumentTypeParserError =
-    _require.IncorrectModuleRegistryCallArgumentTypeParserError,
-  IncorrectModuleRegistryCallArityParserError =
-    _require.IncorrectModuleRegistryCallArityParserError,
-  IncorrectModuleRegistryCallTypeParameterParserError =
-    _require.IncorrectModuleRegistryCallTypeParameterParserError,
-  MisnamedModuleInterfaceParserError =
-    _require.MisnamedModuleInterfaceParserError,
-  ModuleInterfaceNotFoundParserError =
-    _require.ModuleInterfaceNotFoundParserError,
-  MoreThanOneModuleInterfaceParserError =
-    _require.MoreThanOneModuleInterfaceParserError,
-  MoreThanOneModuleRegistryCallsParserError =
-    _require.MoreThanOneModuleRegistryCallsParserError,
-  UnsupportedArrayElementTypeAnnotationParserError =
-    _require.UnsupportedArrayElementTypeAnnotationParserError,
-  UnsupportedFunctionParamTypeAnnotationParserError =
-    _require.UnsupportedFunctionParamTypeAnnotationParserError,
-  UnsupportedFunctionReturnTypeAnnotationParserError =
-    _require.UnsupportedFunctionReturnTypeAnnotationParserError,
-  UnsupportedModuleEventEmitterPropertyParserError =
-    _require.UnsupportedModuleEventEmitterPropertyParserError,
-  UnsupportedModuleEventEmitterTypePropertyParserError =
-    _require.UnsupportedModuleEventEmitterTypePropertyParserError,
-  UnsupportedModulePropertyParserError =
-    _require.UnsupportedModulePropertyParserError,
-  UnsupportedObjectPropertyValueTypeAnnotationParserError =
-    _require.UnsupportedObjectPropertyValueTypeAnnotationParserError,
-  UntypedModuleRegistryCallParserError =
-    _require.UntypedModuleRegistryCallParserError,
-  UnusedModuleInterfaceParserError = _require.UnusedModuleInterfaceParserError;
+const {
+  IncorrectModuleRegistryCallArgumentTypeParserError,
+  IncorrectModuleRegistryCallArityParserError,
+  IncorrectModuleRegistryCallTypeParameterParserError,
+  MisnamedModuleInterfaceParserError,
+  ModuleInterfaceNotFoundParserError,
+  MoreThanOneModuleInterfaceParserError,
+  MoreThanOneModuleRegistryCallsParserError,
+  UnsupportedArrayElementTypeAnnotationParserError,
+  UnsupportedFunctionParamTypeAnnotationParserError,
+  UnsupportedFunctionReturnTypeAnnotationParserError,
+  UnsupportedModuleEventEmitterPropertyParserError,
+  UnsupportedModuleEventEmitterTypePropertyParserError,
+  UnsupportedModulePropertyParserError,
+  UnsupportedObjectPropertyValueTypeAnnotationParserError,
+  UntypedModuleRegistryCallParserError,
+  UnusedModuleInterfaceParserError,
+} = require('./errors');
 function throwIfModuleInterfaceIsMisnamed(
   nativeModuleName,
   moduleSpecId,
@@ -290,7 +276,7 @@ function throwIfIncorrectModuleRegistryCallArgument(
     callExpressionArg.type !== 'StringLiteral' &&
     callExpressionArg.type !== 'Literal'
   ) {
-    const type = callExpressionArg.type;
+    const {type} = callExpressionArg;
     throw new IncorrectModuleRegistryCallArgumentTypeParserError(
       nativeModuleName,
       callExpressionArg,

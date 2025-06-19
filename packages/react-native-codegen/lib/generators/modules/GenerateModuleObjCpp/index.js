@@ -10,19 +10,12 @@
 
 'use strict';
 
-const _require = require('../Utils'),
-  createAliasResolver = _require.createAliasResolver,
-  getModules = _require.getModules;
-const _require2 = require('./header/serializeStruct'),
-  serializeStruct = _require2.serializeStruct;
-const _require3 = require('./serializeEventEmitter'),
-  EventEmitterHeaderTemplate = _require3.EventEmitterHeaderTemplate;
-const _require4 = require('./serializeMethod'),
-  serializeMethod = _require4.serializeMethod;
-const _require5 = require('./source/serializeModule'),
-  serializeModuleSource = _require5.serializeModuleSource;
-const _require6 = require('./StructCollector'),
-  StructCollector = _require6.StructCollector;
+const {createAliasResolver, getModules} = require('../Utils');
+const {serializeStruct} = require('./header/serializeStruct');
+const {EventEmitterHeaderTemplate} = require('./serializeEventEmitter');
+const {serializeMethod} = require('./serializeMethod');
+const {serializeModuleSource} = require('./source/serializeModule');
+const {StructCollector} = require('./StructCollector');
 const ModuleDeclarationTemplate = ({
   hasteModuleName,
   structDeclarations,
@@ -128,10 +121,8 @@ module.exports = {
     const moduleImplementations = [];
     const hasteModuleNames = Object.keys(nativeModules).sort();
     for (const hasteModuleName of hasteModuleNames) {
-      const _nativeModules$hasteM = nativeModules[hasteModuleName],
-        aliasMap = _nativeModules$hasteM.aliasMap,
-        excludedPlatforms = _nativeModules$hasteM.excludedPlatforms,
-        spec = _nativeModules$hasteM.spec;
+      const {aliasMap, excludedPlatforms, spec} =
+        nativeModules[hasteModuleName];
       if (excludedPlatforms != null && excludedPlatforms.includes('iOS')) {
         continue;
       }
@@ -163,9 +154,7 @@ module.exports = {
       const structStrs = [];
       const methodStrs = [];
       for (const struct of generatedStructs) {
-        const _serializeStruct = serializeStruct(hasteModuleName, struct),
-          methods = _serializeStruct.methods,
-          declaration = _serializeStruct.declaration;
+        const {methods, declaration} = serializeStruct(hasteModuleName, struct);
         structStrs.push(declaration);
         methodStrs.push(methods);
       }

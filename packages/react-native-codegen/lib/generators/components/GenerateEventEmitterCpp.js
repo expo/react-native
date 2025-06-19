@@ -10,11 +10,8 @@
 
 'use strict';
 
-const _require = require('../Utils'),
-  indent = _require.indent;
-const _require2 = require('./CppHelpers'),
-  IncludeTemplate = _require2.IncludeTemplate,
-  generateEventStructName = _require2.generateEventStructName;
+const {indent} = require('../Utils');
+const {IncludeTemplate, generateEventStructName} = require('./CppHelpers');
 
 // File path -> contents
 
@@ -45,11 +42,11 @@ const ComponentTemplate = ({
   dispatchEventName,
   implementation,
 }) => {
-  const capture = implementation.includes('$event')
-    ? '$event=std::move($event)'
+  const capture = implementation.includes('event')
+    ? 'event=std::move(event)'
     : '';
   return `
-void ${className}EventEmitter::${eventName}(${structName} $event) const {
+void ${className}EventEmitter::${eventName}(${structName} event) const {
   dispatchEvent("${dispatchEventName}", [${capture}](jsi::Runtime &runtime) {
     ${implementation}
   });
@@ -70,7 +67,7 @@ function generateSetter(
   valueMapper = value => value,
 ) {
   const eventChain = usingEvent
-    ? `$event.${[...propertyParts, propertyName].join('.')}`
+    ? `event.${[...propertyParts, propertyName].join('.')}`
     : [...propertyParts, propertyName].join('.');
   return `${variableName}.setProperty(runtime, "${propertyName}", ${valueMapper(
     eventChain,
@@ -120,7 +117,7 @@ function generateArraySetter(
   usingEvent,
 ) {
   const eventChain = usingEvent
-    ? `$event.${[...propertyParts, propertyName].join('.')}`
+    ? `event.${[...propertyParts, propertyName].join('.')}`
     : [...propertyParts, propertyName].join('.');
   const indexVar = `${propertyName}Index`;
   const innerLoopVar = `${propertyName}Value`;
@@ -258,7 +255,7 @@ function generateSetters(
 ) {
   const propSetters = properties
     .map(eventProperty => {
-      const typeAnnotation = eventProperty.typeAnnotation;
+      const {typeAnnotation} = eventProperty;
       switch (typeAnnotation.type) {
         case 'BooleanTypeAnnotation':
         case 'StringTypeAnnotation':
@@ -329,14 +326,14 @@ function generateEvent(componentName, event, extraIncludes) {
       : `${event.name[2].toLowerCase()}${event.name.slice(3)}`;
   if (event.typeAnnotation.argument) {
     const implementation = `
-    auto $payload = jsi::Object(runtime);
+    auto payload = jsi::Object(runtime);
     ${generateSetters(
-      '$payload',
+      'payload',
       event.typeAnnotation.argument.properties,
       [],
       extraIncludes,
     )}
-    return $payload;
+    return payload;
   `.trim();
     if (!event.name.startsWith('on')) {
       throw new Error('Expected the event name to start with `on`');
@@ -369,7 +366,7 @@ module.exports = {
         if (module.type !== 'Component') {
           return;
         }
-        const components = module.components;
+        const {components} = module;
         // No components in this module
         if (components == null) {
           return null;
@@ -377,6 +374,7 @@ module.exports = {
         return components;
       })
       .filter(Boolean)
+      // $FlowFixMe[unsafe-object-assign]
       .reduce((acc, components) => Object.assign(acc, components), {});
     const extraIncludes = new Set();
     const componentEmitters = Object.keys(moduleComponents)

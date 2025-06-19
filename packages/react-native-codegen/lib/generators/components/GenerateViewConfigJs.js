@@ -56,21 +56,21 @@ function getReactDiffProcessValue(typeAnnotation) {
       switch (typeAnnotation.name) {
         case 'ColorPrimitive':
           return expression(
-            `{ process: require('react-native/Libraries/StyleSheet/processColor').default }`,
+            "{ process: require('react-native/Libraries/StyleSheet/processColor').default }",
           );
         case 'ImageSourcePrimitive':
           return expression(
-            `{ process: require('react-native/Libraries/Image/resolveAssetSource') }`,
+            "{ process: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Image/resolveAssetSource')) }",
           );
         case 'ImageRequestPrimitive':
           throw new Error('ImageRequest should not be used in props');
         case 'PointPrimitive':
           return expression(
-            `{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/pointsDiffer')) }`,
+            "{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/pointsDiffer')) }",
           );
         case 'EdgeInsetsPrimitive':
           return expression(
-            `{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/insetsDiffer')) }`,
+            "{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/insetsDiffer')) }",
           );
         case 'DimensionPrimitive':
           return t.booleanLiteral(true);
@@ -85,7 +85,7 @@ function getReactDiffProcessValue(typeAnnotation) {
         switch (typeAnnotation.elementType.name) {
           case 'ColorPrimitive':
             return expression(
-              `{ process: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/StyleSheet/processColorArray')) }`,
+              "{ process: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/StyleSheet/processColorArray')) }",
             );
           case 'ImageSourcePrimitive':
           case 'PointPrimitive':
@@ -341,7 +341,7 @@ module.exports = {
           if (module.type !== 'Component') {
             return;
           }
-          const components = module.components;
+          const {components} = module;
           return Object.keys(components)
             .map(componentName => {
               var _component$paperCompo;

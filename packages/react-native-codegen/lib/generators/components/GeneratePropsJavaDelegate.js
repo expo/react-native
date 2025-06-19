@@ -10,11 +10,12 @@
 
 'use strict';
 
-const _require = require('./JavaHelpers'),
-  getDelegateJavaClassName = _require.getDelegateJavaClassName,
-  getImports = _require.getImports,
-  getInterfaceJavaClassName = _require.getInterfaceJavaClassName,
-  toSafeJavaString = _require.toSafeJavaString;
+const {
+  getDelegateJavaClassName,
+  getImports,
+  getInterfaceJavaClassName,
+  toSafeJavaString,
+} = require('./JavaHelpers');
 
 // File path -> contents
 
@@ -147,7 +148,7 @@ function generatePropCasesString(component, componentName) {
     }`;
 }
 function getCommandArgJavaType(param, index) {
-  const typeAnnotation = param.typeAnnotation;
+  const {typeAnnotation} = param;
   switch (typeAnnotation.type) {
     case 'ReservedTypeAnnotation':
       switch (typeAnnotation.name) {
@@ -260,7 +261,7 @@ module.exports = {
       if (module.type !== 'Component') {
         return;
       }
-      const components = module.components;
+      const {components} = module;
       // No components in this module
       if (components == null) {
         return;

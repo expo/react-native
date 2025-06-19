@@ -10,180 +10,42 @@
 
 'use strict';
 
-function ownKeys(e, r) {
-  var t = Object.keys(e);
-  if (Object.getOwnPropertySymbols) {
-    var o = Object.getOwnPropertySymbols(e);
-    r &&
-      (o = o.filter(function (r) {
-        return Object.getOwnPropertyDescriptor(e, r).enumerable;
-      })),
-      t.push.apply(t, o);
-  }
-  return t;
-}
-function _objectSpread(e) {
-  for (var r = 1; r < arguments.length; r++) {
-    var t = null != arguments[r] ? arguments[r] : {};
-    r % 2
-      ? ownKeys(Object(t), !0).forEach(function (r) {
-          _defineProperty(e, r, t[r]);
-        })
-      : Object.getOwnPropertyDescriptors
-      ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t))
-      : ownKeys(Object(t)).forEach(function (r) {
-          Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
-        });
-  }
-  return e;
-}
-function _defineProperty(e, r, t) {
-  return (
-    (r = _toPropertyKey(r)) in e
-      ? Object.defineProperty(e, r, {
-          value: t,
-          enumerable: !0,
-          configurable: !0,
-          writable: !0,
-        })
-      : (e[r] = t),
-    e
-  );
-}
-function _toPropertyKey(t) {
-  var i = _toPrimitive(t, 'string');
-  return 'symbol' == typeof i ? i : i + '';
-}
-function _toPrimitive(t, r) {
-  if ('object' != typeof t || !t) return t;
-  var e = t[Symbol.toPrimitive];
-  if (void 0 !== e) {
-    var i = e.call(t, r || 'default');
-    if ('object' != typeof i) return i;
-    throw new TypeError('@@toPrimitive must return a primitive value.');
-  }
-  return ('string' === r ? String : Number)(t);
-}
-function _slicedToArray(r, e) {
-  return (
-    _arrayWithHoles(r) ||
-    _iterableToArrayLimit(r, e) ||
-    _unsupportedIterableToArray(r, e) ||
-    _nonIterableRest()
-  );
-}
-function _nonIterableRest() {
-  throw new TypeError(
-    'Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.',
-  );
-}
-function _unsupportedIterableToArray(r, a) {
-  if (r) {
-    if ('string' == typeof r) return _arrayLikeToArray(r, a);
-    var t = {}.toString.call(r).slice(8, -1);
-    return (
-      'Object' === t && r.constructor && (t = r.constructor.name),
-      'Map' === t || 'Set' === t
-        ? Array.from(r)
-        : 'Arguments' === t ||
-          /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t)
-        ? _arrayLikeToArray(r, a)
-        : void 0
-    );
-  }
-}
-function _arrayLikeToArray(r, a) {
-  (null == a || a > r.length) && (a = r.length);
-  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
-  return n;
-}
-function _iterableToArrayLimit(r, l) {
-  var t =
-    null == r
-      ? null
-      : ('undefined' != typeof Symbol && r[Symbol.iterator]) || r['@@iterator'];
-  if (null != t) {
-    var e,
-      n,
-      i,
-      u,
-      a = [],
-      f = !0,
-      o = !1;
-    try {
-      if (((i = (t = t.call(r)).next), 0 === l)) {
-        if (Object(t) !== t) return;
-        f = !1;
-      } else
-        for (
-          ;
-          !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l);
-          f = !0
-        );
-    } catch (r) {
-      (o = !0), (n = r);
-    } finally {
-      try {
-        if (!f && null != t.return && ((u = t.return()), Object(u) !== u))
-          return;
-      } finally {
-        if (o) throw n;
-      }
-    }
-    return a;
-  }
-}
-function _arrayWithHoles(r) {
-  if (Array.isArray(r)) return r;
-}
-const _require = require('./error-utils'),
-  throwIfConfigNotfound = _require.throwIfConfigNotfound,
-  throwIfEventEmitterEventTypeIsUnsupported =
-    _require.throwIfEventEmitterEventTypeIsUnsupported,
-  throwIfEventEmitterTypeIsUnsupported =
-    _require.throwIfEventEmitterTypeIsUnsupported,
-  throwIfIncorrectModuleRegistryCallArgument =
-    _require.throwIfIncorrectModuleRegistryCallArgument,
-  throwIfIncorrectModuleRegistryCallTypeParameterParserError =
-    _require.throwIfIncorrectModuleRegistryCallTypeParameterParserError,
-  throwIfModuleInterfaceIsMisnamed = _require.throwIfModuleInterfaceIsMisnamed,
-  throwIfModuleInterfaceNotFound = _require.throwIfModuleInterfaceNotFound,
-  throwIfModuleTypeIsUnsupported = _require.throwIfModuleTypeIsUnsupported,
-  throwIfMoreThanOneCodegenNativecommands =
-    _require.throwIfMoreThanOneCodegenNativecommands,
-  throwIfMoreThanOneConfig = _require.throwIfMoreThanOneConfig,
-  throwIfMoreThanOneModuleInterfaceParserError =
-    _require.throwIfMoreThanOneModuleInterfaceParserError,
-  throwIfMoreThanOneModuleRegistryCalls =
-    _require.throwIfMoreThanOneModuleRegistryCalls,
-  throwIfPropertyValueTypeIsUnsupported =
-    _require.throwIfPropertyValueTypeIsUnsupported,
-  throwIfTypeAliasIsNotInterface = _require.throwIfTypeAliasIsNotInterface,
-  throwIfUnsupportedFunctionParamTypeAnnotationParserError =
-    _require.throwIfUnsupportedFunctionParamTypeAnnotationParserError,
-  throwIfUnsupportedFunctionReturnTypeAnnotationParserError =
-    _require.throwIfUnsupportedFunctionReturnTypeAnnotationParserError,
-  throwIfUntypedModule = _require.throwIfUntypedModule,
-  throwIfUnusedModuleInterfaceParserError =
-    _require.throwIfUnusedModuleInterfaceParserError,
-  throwIfWrongNumberOfCallExpressionArgs =
-    _require.throwIfWrongNumberOfCallExpressionArgs;
-const _require2 = require('./errors'),
-  MissingTypeParameterGenericParserError =
-    _require2.MissingTypeParameterGenericParserError,
-  MoreThanOneTypeParameterGenericParserError =
-    _require2.MoreThanOneTypeParameterGenericParserError,
-  UnnamedFunctionParamParserError = _require2.UnnamedFunctionParamParserError,
-  UnsupportedObjectDirectRecursivePropertyParserError =
-    _require2.UnsupportedObjectDirectRecursivePropertyParserError;
-const _require3 = require('./utils'),
-  createParserErrorCapturer = _require3.createParserErrorCapturer,
-  extractNativeModuleName = _require3.extractNativeModuleName,
-  getConfigType = _require3.getConfigType,
-  getSortedObject = _require3.getSortedObject,
-  isModuleRegistryCall = _require3.isModuleRegistryCall,
-  verifyPlatforms = _require3.verifyPlatforms,
-  visit = _require3.visit;
+const {
+  throwIfConfigNotfound,
+  throwIfEventEmitterEventTypeIsUnsupported,
+  throwIfEventEmitterTypeIsUnsupported,
+  throwIfIncorrectModuleRegistryCallArgument,
+  throwIfIncorrectModuleRegistryCallTypeParameterParserError,
+  throwIfModuleInterfaceIsMisnamed,
+  throwIfModuleInterfaceNotFound,
+  throwIfModuleTypeIsUnsupported,
+  throwIfMoreThanOneCodegenNativecommands,
+  throwIfMoreThanOneConfig,
+  throwIfMoreThanOneModuleInterfaceParserError,
+  throwIfMoreThanOneModuleRegistryCalls,
+  throwIfPropertyValueTypeIsUnsupported,
+  throwIfTypeAliasIsNotInterface,
+  throwIfUnsupportedFunctionParamTypeAnnotationParserError,
+  throwIfUnsupportedFunctionReturnTypeAnnotationParserError,
+  throwIfUntypedModule,
+  throwIfUnusedModuleInterfaceParserError,
+  throwIfWrongNumberOfCallExpressionArgs,
+} = require('./error-utils');
+const {
+  MissingTypeParameterGenericParserError,
+  MoreThanOneTypeParameterGenericParserError,
+  UnnamedFunctionParamParserError,
+  UnsupportedObjectDirectRecursivePropertyParserError,
+} = require('./errors');
+const {
+  createParserErrorCapturer,
+  extractNativeModuleName,
+  getConfigType,
+  getSortedObject,
+  isModuleRegistryCall,
+  verifyPlatforms,
+  visit,
+} = require('./utils');
 const invariant = require('invariant');
 
 // $FlowFixMe[unclear-type] TODO(T108222691): Use flow-types for @babel/parser
@@ -314,8 +176,7 @@ function parseObjectProperty(
 ) {
   const language = parser.language();
   const name = parser.getKeyName(property, hasteModuleName);
-  const _property$optional = property.optional,
-    optional = _property$optional === void 0 ? false : _property$optional;
+  const {optional = false} = property;
   const languageTypeAnnotation =
     language === 'TypeScript'
       ? property.typeAnnotation.typeAnnotation
@@ -365,21 +226,18 @@ function parseObjectProperty(
   }
 
   // Handle non-recursive types
-  const _unwrapNullable = unwrapNullable(
-      translateTypeAnnotation(
-        hasteModuleName,
-        languageTypeAnnotation,
-        types,
-        aliasMap,
-        enumMap,
-        tryParse,
-        cxxOnly,
-        parser,
-      ),
+  const [propertyTypeAnnotation, isPropertyNullable] = unwrapNullable(
+    translateTypeAnnotation(
+      hasteModuleName,
+      languageTypeAnnotation,
+      types,
+      aliasMap,
+      enumMap,
+      tryParse,
+      cxxOnly,
+      parser,
     ),
-    _unwrapNullable2 = _slicedToArray(_unwrapNullable, 2),
-    propertyTypeAnnotation = _unwrapNullable2[0],
-    isPropertyNullable = _unwrapNullable2[1];
+  );
   if (
     (propertyTypeAnnotation.type === 'FunctionTypeAnnotation' && !cxxOnly) ||
     propertyTypeAnnotation.type === 'PromiseTypeAnnotation' ||
@@ -420,7 +278,8 @@ function translateFunctionTypeAnnotation(
         throw new UnnamedFunctionParamParserError(param, hasteModuleName);
       }
       const paramName = parser.getParameterName(param);
-      const _unwrapNullable3 = unwrapNullable(
+      const [paramTypeAnnotation, isParamTypeAnnotationNullable] =
+        unwrapNullable(
           translateTypeAnnotation(
             hasteModuleName,
             parser.getParameterTypeAnnotation(param),
@@ -431,10 +290,7 @@ function translateFunctionTypeAnnotation(
             cxxOnly,
             parser,
           ),
-        ),
-        _unwrapNullable4 = _slicedToArray(_unwrapNullable3, 2),
-        paramTypeAnnotation = _unwrapNullable4[0],
-        isParamTypeAnnotationNullable = _unwrapNullable4[1];
+        );
       if (
         paramTypeAnnotation.type === 'VoidTypeAnnotation' ||
         paramTypeAnnotation.type === 'PromiseTypeAnnotation'
@@ -459,21 +315,18 @@ function translateFunctionTypeAnnotation(
       params.push(parsedParam);
     }
   }
-  const _unwrapNullable5 = unwrapNullable(
-      translateTypeAnnotation(
-        hasteModuleName,
-        parser.getFunctionTypeAnnotationReturnType(functionTypeAnnotation),
-        types,
-        aliasMap,
-        enumMap,
-        tryParse,
-        cxxOnly,
-        parser,
-      ),
+  const [returnTypeAnnotation, isReturnTypeAnnotationNullable] = unwrapNullable(
+    translateTypeAnnotation(
+      hasteModuleName,
+      parser.getFunctionTypeAnnotationReturnType(functionTypeAnnotation),
+      types,
+      aliasMap,
+      enumMap,
+      tryParse,
+      cxxOnly,
+      parser,
     ),
-    _unwrapNullable6 = _slicedToArray(_unwrapNullable5, 2),
-    returnTypeAnnotation = _unwrapNullable6[0],
-    isReturnTypeAnnotationNullable = _unwrapNullable6[1];
+  );
   throwIfUnsupportedFunctionReturnTypeAnnotationParserError(
     hasteModuleName,
     functionTypeAnnotation,
@@ -507,8 +360,7 @@ function buildPropertySchema(
   parser,
 ) {
   let nullable = false;
-  let key = property.key,
-    value = property.value;
+  let {key, value} = property;
   const methodName = key.name;
   if (parser.language() === 'TypeScript') {
     value =
@@ -517,9 +369,11 @@ function buildPropertySchema(
         : property.typeAnnotation;
   }
   const resolveTypeAnnotationFN = parser.getResolveTypeAnnotationFN();
-  var _resolveTypeAnnotatio = resolveTypeAnnotationFN(value, types, parser);
-  nullable = _resolveTypeAnnotatio.nullable;
-  value = _resolveTypeAnnotatio.typeAnnotation;
+  ({nullable, typeAnnotation: value} = resolveTypeAnnotationFN(
+    value,
+    types,
+    parser,
+  ));
   throwIfModuleTypeIsUnsupported(
     hasteModuleName,
     property.value,
@@ -562,17 +416,14 @@ function buildEventEmitterSchema(
   translateTypeAnnotation,
   parser,
 ) {
-  const key = property.key;
+  const {key} = property;
   const value =
     parser.language() === 'TypeScript'
       ? property.typeAnnotation.typeAnnotation
       : property.value;
   const eventemitterName = key.name;
   const resolveTypeAnnotationFN = parser.getResolveTypeAnnotationFN();
-  const _unwrapNullable7 = unwrapNullable(value),
-    _unwrapNullable8 = _slicedToArray(_unwrapNullable7, 2),
-    typeAnnotation = _unwrapNullable8[0],
-    typeAnnotationNullable = _unwrapNullable8[1];
+  const [typeAnnotation, typeAnnotationNullable] = unwrapNullable(value);
   const typeAnnotationUntyped =
     value.typeParameters.params.length === 1 &&
     parser.language() === 'TypeScript'
@@ -638,10 +489,7 @@ function buildSchemaFromConfigType(
         throw new Error('Filepath expected while parasing a module');
       }
       const nativeModuleName = extractNativeModuleName(filename);
-      const _createParserErrorCap = createParserErrorCapturer(),
-        _createParserErrorCap2 = _slicedToArray(_createParserErrorCap, 2),
-        parsingErrors = _createParserErrorCap2[0],
-        tryParse = _createParserErrorCap2[1];
+      const [parsingErrors, tryParse] = createParserErrorCapturer();
       const schema = tryParse(() =>
         buildModuleSchema(
           nativeModuleName,
@@ -707,20 +555,17 @@ function buildSchema(
   );
 }
 function createComponentConfig(foundConfig, commandsTypeNames) {
-  return _objectSpread(
-    _objectSpread({}, foundConfig),
-    {},
-    {
-      commandTypeName:
-        commandsTypeNames[0] == null
-          ? null
-          : commandsTypeNames[0].commandTypeName,
-      commandOptionsExpression:
-        commandsTypeNames[0] == null
-          ? null
-          : commandsTypeNames[0].commandOptionsExpression,
-    },
-  );
+  return {
+    ...foundConfig,
+    commandTypeName:
+      commandsTypeNames[0] == null
+        ? null
+        : commandsTypeNames[0].commandTypeName,
+    commandOptionsExpression:
+      commandsTypeNames[0] == null
+        ? null
+        : commandsTypeNames[0].commandOptionsExpression,
+  };
 }
 const parseModuleName = (hasteModuleName, moduleSpec, ast, parser) => {
   const callExpressions = [];
@@ -741,7 +586,7 @@ const parseModuleName = (hasteModuleName, moduleSpec, ast, parser) => {
     callExpressions,
     callExpressions.length,
   );
-  const callExpression = callExpressions[0];
+  const [callExpression] = callExpressions;
   const typeParameters = parser.callExpressionTypeParameters(callExpression);
   const methodName = callExpression.callee.property.name;
   throwIfWrongNumberOfCallExpressionArgs(
@@ -795,8 +640,7 @@ const buildModuleSchema = (
     moduleSpecs,
     language,
   );
-  const _moduleSpecs = _slicedToArray(moduleSpecs, 1),
-    moduleSpec = _moduleSpecs[0];
+  const [moduleSpec] = moduleSpecs;
   throwIfModuleInterfaceIsMisnamed(hasteModuleName, moduleSpec.id, language);
 
   // Parse Module Name
@@ -806,9 +650,10 @@ const buildModuleSchema = (
   // Eventually this should be made explicit in the Flow type itself.
   // Also check the hasteModuleName for platform suffix.
   // Note: this shape is consistent with ComponentSchema.
-  const _verifyPlatforms = verifyPlatforms(hasteModuleName, moduleName),
-    cxxOnly = _verifyPlatforms.cxxOnly,
-    excludedPlatforms = _verifyPlatforms.excludedPlatforms;
+  const {cxxOnly, excludedPlatforms} = verifyPlatforms(
+    hasteModuleName,
+    moduleName,
+  );
   const aliasMap = cxxOnly
     ? getObjectTypeAnnotations(
         hasteModuleName,
@@ -829,38 +674,32 @@ const buildModuleSchema = (
         property.type === 'TSMethodSignature',
     )
     .map(property => {
-      var _property$typeAnnotat, _property$value, _property$value2;
+      var _property$typeAnnotat, _property$value;
       const enumMap = {};
       const isEventEmitter =
         language === 'TypeScript'
           ? (property === null || property === void 0
               ? void 0
               : property.type) === 'TSPropertySignature' &&
-            (property === null ||
-            property === void 0 ||
-            (_property$typeAnnotat = property.typeAnnotation) === null ||
-            _property$typeAnnotat === void 0 ||
-            (_property$typeAnnotat = _property$typeAnnotat.typeAnnotation) ===
-              null ||
-            _property$typeAnnotat === void 0 ||
-            (_property$typeAnnotat = _property$typeAnnotat.typeName) === null ||
-            _property$typeAnnotat === void 0
-              ? void 0
-              : _property$typeAnnotat.name) === 'EventEmitter'
+            parser.getTypeAnnotationName(
+              property === null ||
+                property === void 0 ||
+                (_property$typeAnnotat = property.typeAnnotation) === null ||
+                _property$typeAnnotat === void 0
+                ? void 0
+                : _property$typeAnnotat.typeAnnotation,
+            ) === 'EventEmitter'
           : (property === null ||
             property === void 0 ||
             (_property$value = property.value) === null ||
             _property$value === void 0
               ? void 0
               : _property$value.type) === 'GenericTypeAnnotation' &&
-            (property === null ||
-            property === void 0 ||
-            (_property$value2 = property.value) === null ||
-            _property$value2 === void 0 ||
-            (_property$value2 = _property$value2.id) === null ||
-            _property$value2 === void 0
-              ? void 0
-              : _property$value2.name) === 'EventEmitter';
+            parser.getTypeAnnotationName(
+              property === null || property === void 0
+                ? void 0
+                : property.value,
+            ) === 'EventEmitter';
       return tryParse(() => ({
         aliasMap,
         enumMap,
@@ -899,14 +738,14 @@ const buildModuleSchema = (
     .reduce(
       (moduleSchema, {enumMap, propertyShape}) => ({
         type: 'NativeModule',
-        aliasMap: _objectSpread(
-          _objectSpread({}, moduleSchema.aliasMap),
-          aliasMap,
-        ),
-        enumMap: _objectSpread(
-          _objectSpread({}, moduleSchema.enumMap),
-          enumMap,
-        ),
+        aliasMap: {
+          ...moduleSchema.aliasMap,
+          ...aliasMap,
+        },
+        enumMap: {
+          ...moduleSchema.enumMap,
+          ...enumMap,
+        },
         spec: {
           eventEmitters: [...moduleSchema.spec.eventEmitters].concat(
             propertyShape.type === 'eventEmitter' ? [propertyShape.value] : [],
@@ -1093,15 +932,11 @@ function extendsForProp(prop, types, parser) {
 }
 function buildPropSchema(property, types, parser) {
   const getSchemaInfoFN = parser.getGetSchemaInfoFN();
-  const info = getSchemaInfoFN(property, types);
+  const info = getSchemaInfoFN(property, types, parser);
   if (info == null) {
     return null;
   }
-  const name = info.name,
-    optional = info.optional,
-    typeAnnotation = info.typeAnnotation,
-    defaultValue = info.defaultValue,
-    withNullDefault = info.withNullDefault;
+  const {name, optional, typeAnnotation, defaultValue, withNullDefault} = info;
   const getTypeAnnotationFN = parser.getGetTypeAnnotationFN();
   return {
     name,
@@ -1154,9 +989,10 @@ function findComponentConfig(ast, parser) {
 
 // $FlowFixMe[signature-verification-failure] there's no flowtype for AST
 function getCommandProperties(ast, parser) {
-  const _findComponentConfig = findComponentConfig(ast, parser),
-    commandTypeName = _findComponentConfig.commandTypeName,
-    commandOptionsExpression = _findComponentConfig.commandOptionsExpression;
+  const {commandTypeName, commandOptionsExpression} = findComponentConfig(
+    ast,
+    parser,
+  );
   if (commandTypeName == null) {
     return [];
   }

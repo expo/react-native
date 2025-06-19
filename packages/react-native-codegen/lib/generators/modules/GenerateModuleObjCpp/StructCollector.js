@@ -10,105 +10,6 @@
 
 'use strict';
 
-function ownKeys(e, r) {
-  var t = Object.keys(e);
-  if (Object.getOwnPropertySymbols) {
-    var o = Object.getOwnPropertySymbols(e);
-    r &&
-      (o = o.filter(function (r) {
-        return Object.getOwnPropertyDescriptor(e, r).enumerable;
-      })),
-      t.push.apply(t, o);
-  }
-  return t;
-}
-function _objectSpread(e) {
-  for (var r = 1; r < arguments.length; r++) {
-    var t = null != arguments[r] ? arguments[r] : {};
-    r % 2
-      ? ownKeys(Object(t), !0).forEach(function (r) {
-          _defineProperty(e, r, t[r]);
-        })
-      : Object.getOwnPropertyDescriptors
-      ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t))
-      : ownKeys(Object(t)).forEach(function (r) {
-          Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
-        });
-  }
-  return e;
-}
-function _slicedToArray(r, e) {
-  return (
-    _arrayWithHoles(r) ||
-    _iterableToArrayLimit(r, e) ||
-    _unsupportedIterableToArray(r, e) ||
-    _nonIterableRest()
-  );
-}
-function _nonIterableRest() {
-  throw new TypeError(
-    'Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.',
-  );
-}
-function _unsupportedIterableToArray(r, a) {
-  if (r) {
-    if ('string' == typeof r) return _arrayLikeToArray(r, a);
-    var t = {}.toString.call(r).slice(8, -1);
-    return (
-      'Object' === t && r.constructor && (t = r.constructor.name),
-      'Map' === t || 'Set' === t
-        ? Array.from(r)
-        : 'Arguments' === t ||
-          /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t)
-        ? _arrayLikeToArray(r, a)
-        : void 0
-    );
-  }
-}
-function _arrayLikeToArray(r, a) {
-  (null == a || a > r.length) && (a = r.length);
-  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
-  return n;
-}
-function _iterableToArrayLimit(r, l) {
-  var t =
-    null == r
-      ? null
-      : ('undefined' != typeof Symbol && r[Symbol.iterator]) || r['@@iterator'];
-  if (null != t) {
-    var e,
-      n,
-      i,
-      u,
-      a = [],
-      f = !0,
-      o = !1;
-    try {
-      if (((i = (t = t.call(r)).next), 0 === l)) {
-        if (Object(t) !== t) return;
-        f = !1;
-      } else
-        for (
-          ;
-          !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l);
-          f = !0
-        );
-    } catch (r) {
-      (o = !0), (n = r);
-    } finally {
-      try {
-        if (!f && null != t.return && ((u = t.return()), Object(u) !== u))
-          return;
-      } finally {
-        if (o) throw n;
-      }
-    }
-    return a;
-  }
-}
-function _arrayWithHoles(r) {
-  if (Array.isArray(r)) return r;
-}
 function _defineProperty(e, r, t) {
   return (
     (r = _toPropertyKey(r)) in e
@@ -136,20 +37,17 @@ function _toPrimitive(t, r) {
   }
   return ('string' === r ? String : Number)(t);
 }
-const _require = require('../../../parsers/parsers-commons'),
-  unwrapNullable = _require.unwrapNullable,
-  wrapNullable = _require.wrapNullable;
-const _require2 = require('../../Utils'),
-  capitalize = _require2.capitalize;
+const {
+  unwrapNullable,
+  wrapNullable,
+} = require('../../../parsers/parsers-commons');
+const {capitalize} = require('../../Utils');
 class StructCollector {
   constructor() {
     _defineProperty(this, '_structs', new Map());
   }
   process(structName, structContext, resolveAlias, nullableTypeAnnotation) {
-    const _unwrapNullable = unwrapNullable(nullableTypeAnnotation),
-      _unwrapNullable2 = _slicedToArray(_unwrapNullable, 2),
-      typeAnnotation = _unwrapNullable2[0],
-      nullable = _unwrapNullable2[1];
+    const [typeAnnotation, nullable] = unwrapNullable(nullableTypeAnnotation);
     switch (typeAnnotation.type) {
       case 'ObjectTypeAnnotation': {
         this._insertStruct(
@@ -237,18 +135,15 @@ class StructCollector {
     // $FlowFixMe[missing-type-arg]
     const properties = objectTypeAnnotation.properties.map(property => {
       const propertyStructName = structName + capitalize(property.name);
-      return _objectSpread(
-        _objectSpread({}, property),
-        {},
-        {
-          typeAnnotation: this.process(
-            propertyStructName,
-            structContext,
-            resolveAlias,
-            property.typeAnnotation,
-          ),
-        },
-      );
+      return {
+        ...property,
+        typeAnnotation: this.process(
+          propertyStructName,
+          structContext,
+          resolveAlias,
+          property.typeAnnotation,
+        ),
+      };
     });
     switch (structContext) {
       case 'REGULAR':

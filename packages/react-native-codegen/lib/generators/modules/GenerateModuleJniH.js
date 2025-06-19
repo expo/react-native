@@ -10,8 +10,7 @@
 
 'use strict';
 
-const _require = require('./Utils'),
-  getModules = _require.getModules;
+const {getModules} = require('./Utils');
 const ModuleClassDeclarationTemplate = ({hasteModuleName}) => {
   return `/**
  * JNI C++ class for module '${hasteModuleName}'

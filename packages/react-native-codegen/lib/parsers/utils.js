@@ -10,8 +10,7 @@
 
 'use strict';
 
-const _require = require('./errors'),
-  ParserError = _require.ParserError;
+const {ParserError} = require('./errors');
 const path = require('path');
 function extractNativeModuleName(filename) {
   // this should drop everything after the file name. For Example it will drop:
@@ -104,8 +103,7 @@ function getConfigType(
     isModule: false,
   };
   visit(ast, Visitor(infoMap));
-  const isModule = infoMap.isModule,
-    isComponent = infoMap.isComponent;
+  const {isModule, isComponent} = infoMap;
   if (isModule && isComponent) {
     throw new Error(
       'Found type extending "TurboModule" and exported "codegenNativeComponent" declaration in one file. Split them into separated files.',

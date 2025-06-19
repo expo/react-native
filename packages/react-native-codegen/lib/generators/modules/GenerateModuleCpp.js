@@ -10,83 +10,8 @@
 
 'use strict';
 
-function _slicedToArray(r, e) {
-  return (
-    _arrayWithHoles(r) ||
-    _iterableToArrayLimit(r, e) ||
-    _unsupportedIterableToArray(r, e) ||
-    _nonIterableRest()
-  );
-}
-function _nonIterableRest() {
-  throw new TypeError(
-    'Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.',
-  );
-}
-function _unsupportedIterableToArray(r, a) {
-  if (r) {
-    if ('string' == typeof r) return _arrayLikeToArray(r, a);
-    var t = {}.toString.call(r).slice(8, -1);
-    return (
-      'Object' === t && r.constructor && (t = r.constructor.name),
-      'Map' === t || 'Set' === t
-        ? Array.from(r)
-        : 'Arguments' === t ||
-          /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t)
-        ? _arrayLikeToArray(r, a)
-        : void 0
-    );
-  }
-}
-function _arrayLikeToArray(r, a) {
-  (null == a || a > r.length) && (a = r.length);
-  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
-  return n;
-}
-function _iterableToArrayLimit(r, l) {
-  var t =
-    null == r
-      ? null
-      : ('undefined' != typeof Symbol && r[Symbol.iterator]) || r['@@iterator'];
-  if (null != t) {
-    var e,
-      n,
-      i,
-      u,
-      a = [],
-      f = !0,
-      o = !1;
-    try {
-      if (((i = (t = t.call(r)).next), 0 === l)) {
-        if (Object(t) !== t) return;
-        f = !1;
-      } else
-        for (
-          ;
-          !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l);
-          f = !0
-        );
-    } catch (r) {
-      (o = !0), (n = r);
-    } finally {
-      try {
-        if (!f && null != t.return && ((u = t.return()), Object(u) !== u))
-          return;
-      } finally {
-        if (o) throw n;
-      }
-    }
-    return a;
-  }
-}
-function _arrayWithHoles(r) {
-  if (Array.isArray(r)) return r;
-}
-const _require = require('../../parsers/parsers-commons'),
-  unwrapNullable = _require.unwrapNullable;
-const _require2 = require('./Utils'),
-  createAliasResolver = _require2.createAliasResolver,
-  getModules = _require2.getModules;
+const {unwrapNullable} = require('../../parsers/parsers-commons');
+const {createAliasResolver, getModules} = require('./Utils');
 const HostFunctionTemplate = ({
   hasteModuleName,
   methodName,
@@ -151,12 +76,8 @@ ${modules}
 `;
 };
 function serializeArg(moduleName, arg, index, resolveAlias, enumMap) {
-  const nullableTypeAnnotation = arg.typeAnnotation,
-    optional = arg.optional;
-  const _unwrapNullable = unwrapNullable(nullableTypeAnnotation),
-    _unwrapNullable2 = _slicedToArray(_unwrapNullable, 2),
-    typeAnnotation = _unwrapNullable2[0],
-    nullable = _unwrapNullable2[1];
+  const {typeAnnotation: nullableTypeAnnotation, optional} = arg;
+  const [typeAnnotation, nullable] = unwrapNullable(nullableTypeAnnotation);
   let realTypeAnnotation = typeAnnotation;
   if (realTypeAnnotation.type === 'TypeAliasTypeAnnotation') {
     realTypeAnnotation = resolveAlias(realTypeAnnotation.name);
@@ -257,9 +178,7 @@ function serializePropertyIntoHostFunction(
   resolveAlias,
   enumMap,
 ) {
-  const _unwrapNullable3 = unwrapNullable(property.typeAnnotation),
-    _unwrapNullable4 = _slicedToArray(_unwrapNullable3, 1),
-    propertyTypeAnnotation = _unwrapNullable4[0];
+  const [propertyTypeAnnotation] = unwrapNullable(property.typeAnnotation);
   return HostFunctionTemplate({
     hasteModuleName,
     methodName: property.name,
@@ -281,10 +200,12 @@ module.exports = {
     const modules = Object.keys(nativeModules)
       .map(hasteModuleName => {
         const nativeModule = nativeModules[hasteModuleName];
-        const aliasMap = nativeModule.aliasMap,
-          enumMap = nativeModule.enumMap,
-          methods = nativeModule.spec.methods,
-          moduleName = nativeModule.moduleName;
+        const {
+          aliasMap,
+          enumMap,
+          spec: {methods},
+          moduleName,
+        } = nativeModule;
         const resolveAlias = createAliasResolver(aliasMap);
         const hostFunctions = methods.map(property =>
           serializePropertyIntoHostFunction(
@@ -301,9 +222,7 @@ module.exports = {
           moduleName,
           methods: methods.map(
             ({name: propertyName, typeAnnotation: nullableTypeAnnotation}) => {
-              const _unwrapNullable5 = unwrapNullable(nullableTypeAnnotation),
-                _unwrapNullable6 = _slicedToArray(_unwrapNullable5, 1),
-                params = _unwrapNullable6[0].params;
+              const [{params}] = unwrapNullable(nullableTypeAnnotation);
               return {
                 methodName: propertyName,
                 paramCount: params.length,

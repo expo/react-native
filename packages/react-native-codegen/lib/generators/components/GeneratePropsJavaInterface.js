@@ -10,10 +10,11 @@
 
 'use strict';
 
-const _require = require('./JavaHelpers'),
-  getImports = _require.getImports,
-  getInterfaceJavaClassName = _require.getInterfaceJavaClassName,
-  toSafeJavaString = _require.toSafeJavaString;
+const {
+  getImports,
+  getInterfaceJavaClassName,
+  toSafeJavaString,
+} = require('./JavaHelpers');
 
 // File path -> contents
 
@@ -125,7 +126,7 @@ function generatePropsString(component, imports) {
     .join('\n' + '  ');
 }
 function getCommandArgJavaType(param) {
-  const typeAnnotation = param.typeAnnotation;
+  const {typeAnnotation} = param;
   switch (typeAnnotation.type) {
     case 'ReservedTypeAnnotation':
       switch (typeAnnotation.name) {
@@ -209,7 +210,7 @@ module.exports = {
       if (module.type !== 'Component') {
         return;
       }
-      const components = module.components;
+      const {components} = module;
 
       // No components in this module
       if (components == null) {

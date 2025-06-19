@@ -63,7 +63,7 @@ module.exports = {
         if (module.type !== 'Component') {
           return;
         }
-        const components = module.components;
+        const {components} = module;
         // No components in this module
         if (components == null) {
           return null;

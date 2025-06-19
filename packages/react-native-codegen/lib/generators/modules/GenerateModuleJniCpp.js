@@ -10,83 +10,8 @@
 
 'use strict';
 
-function _slicedToArray(r, e) {
-  return (
-    _arrayWithHoles(r) ||
-    _iterableToArrayLimit(r, e) ||
-    _unsupportedIterableToArray(r, e) ||
-    _nonIterableRest()
-  );
-}
-function _nonIterableRest() {
-  throw new TypeError(
-    'Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.',
-  );
-}
-function _unsupportedIterableToArray(r, a) {
-  if (r) {
-    if ('string' == typeof r) return _arrayLikeToArray(r, a);
-    var t = {}.toString.call(r).slice(8, -1);
-    return (
-      'Object' === t && r.constructor && (t = r.constructor.name),
-      'Map' === t || 'Set' === t
-        ? Array.from(r)
-        : 'Arguments' === t ||
-          /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t)
-        ? _arrayLikeToArray(r, a)
-        : void 0
-    );
-  }
-}
-function _arrayLikeToArray(r, a) {
-  (null == a || a > r.length) && (a = r.length);
-  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
-  return n;
-}
-function _iterableToArrayLimit(r, l) {
-  var t =
-    null == r
-      ? null
-      : ('undefined' != typeof Symbol && r[Symbol.iterator]) || r['@@iterator'];
-  if (null != t) {
-    var e,
-      n,
-      i,
-      u,
-      a = [],
-      f = !0,
-      o = !1;
-    try {
-      if (((i = (t = t.call(r)).next), 0 === l)) {
-        if (Object(t) !== t) return;
-        f = !1;
-      } else
-        for (
-          ;
-          !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l);
-          f = !0
-        );
-    } catch (r) {
-      (o = !0), (n = r);
-    } finally {
-      try {
-        if (!f && null != t.return && ((u = t.return()), Object(u) !== u))
-          return;
-      } finally {
-        if (o) throw n;
-      }
-    }
-    return a;
-  }
-}
-function _arrayWithHoles(r) {
-  if (Array.isArray(r)) return r;
-}
-const _require = require('../../parsers/parsers-commons'),
-  unwrapNullable = _require.unwrapNullable;
-const _require2 = require('./Utils'),
-  createAliasResolver = _require2.createAliasResolver,
-  getModules = _require2.getModules;
+const {unwrapNullable} = require('../../parsers/parsers-commons');
+const {createAliasResolver, getModules} = require('./Utils');
 const HostFunctionTemplate = ({
   hasteModuleName,
   propertyName,
@@ -122,7 +47,7 @@ ${methods
   }${
     eventEmitters.length > 0
       ? `
-  setEventEmitterCallback(params.instance);`
+  configureEventEmitterCallback();`
       : ''
   }
 }`.trim();
@@ -158,9 +83,7 @@ ${moduleLookups.map(ModuleLookupTemplate).join('\n')}
 `;
 };
 function translateReturnTypeToKind(nullableTypeAnnotation, resolveAlias) {
-  const _unwrapNullable = unwrapNullable(nullableTypeAnnotation),
-    _unwrapNullable2 = _slicedToArray(_unwrapNullable, 1),
-    typeAnnotation = _unwrapNullable2[0];
+  const [typeAnnotation] = unwrapNullable(nullableTypeAnnotation);
   let realTypeAnnotation = typeAnnotation;
   if (realTypeAnnotation.type === 'TypeAliasTypeAnnotation') {
     realTypeAnnotation = resolveAlias(realTypeAnnotation.name);
@@ -236,12 +159,8 @@ function translateReturnTypeToKind(nullableTypeAnnotation, resolveAlias) {
   }
 }
 function translateParamTypeToJniType(param, resolveAlias) {
-  const optional = param.optional,
-    nullableTypeAnnotation = param.typeAnnotation;
-  const _unwrapNullable3 = unwrapNullable(nullableTypeAnnotation),
-    _unwrapNullable4 = _slicedToArray(_unwrapNullable3, 2),
-    typeAnnotation = _unwrapNullable4[0],
-    nullable = _unwrapNullable4[1];
+  const {optional, typeAnnotation: nullableTypeAnnotation} = param;
+  const [typeAnnotation, nullable] = unwrapNullable(nullableTypeAnnotation);
   const isRequired = !optional && !nullable;
   let realTypeAnnotation = typeAnnotation;
   if (realTypeAnnotation.type === 'TypeAliasTypeAnnotation') {
@@ -316,10 +235,7 @@ function translateParamTypeToJniType(param, resolveAlias) {
   }
 }
 function translateReturnTypeToJniType(nullableTypeAnnotation, resolveAlias) {
-  const _unwrapNullable5 = unwrapNullable(nullableTypeAnnotation),
-    _unwrapNullable6 = _slicedToArray(_unwrapNullable5, 2),
-    typeAnnotation = _unwrapNullable6[0],
-    nullable = _unwrapNullable6[1];
+  const [typeAnnotation, nullable] = unwrapNullable(nullableTypeAnnotation);
   let realTypeAnnotation = typeAnnotation;
   if (realTypeAnnotation.type === 'TypeAliasTypeAnnotation') {
     realTypeAnnotation = resolveAlias(realTypeAnnotation.name);
@@ -395,13 +311,8 @@ function translateReturnTypeToJniType(nullableTypeAnnotation, resolveAlias) {
   }
 }
 function translateMethodTypeToJniSignature(property, resolveAlias) {
-  const name = property.name,
-    typeAnnotation = property.typeAnnotation;
-  let _unwrapNullable7 = unwrapNullable(typeAnnotation),
-    _unwrapNullable8 = _slicedToArray(_unwrapNullable7, 1),
-    _unwrapNullable8$ = _unwrapNullable8[0],
-    returnTypeAnnotation = _unwrapNullable8$.returnTypeAnnotation,
-    params = _unwrapNullable8$.params;
+  const {name, typeAnnotation} = property;
+  let [{returnTypeAnnotation, params}] = unwrapNullable(typeAnnotation);
   params = [...params];
   let processedReturnTypeAnnotation = returnTypeAnnotation;
   const isPromiseReturn = returnTypeAnnotation.type === 'PromiseTypeAnnotation';
@@ -434,10 +345,8 @@ function translateMethodForImplementation(
   property,
   resolveAlias,
 ) {
-  const _unwrapNullable9 = unwrapNullable(property.typeAnnotation),
-    _unwrapNullable10 = _slicedToArray(_unwrapNullable9, 1),
-    propertyTypeAnnotation = _unwrapNullable10[0];
-  const returnTypeAnnotation = propertyTypeAnnotation.returnTypeAnnotation;
+  const [propertyTypeAnnotation] = unwrapNullable(property.typeAnnotation);
+  const {returnTypeAnnotation} = propertyTypeAnnotation;
   if (
     property.name === 'getConstants' &&
     returnTypeAnnotation.type === 'ObjectTypeAnnotation' &&
@@ -471,11 +380,10 @@ module.exports = {
       })
       .sort()
       .map(hasteModuleName => {
-        const _nativeModules$hasteM = nativeModules[hasteModuleName],
-          aliasMap = _nativeModules$hasteM.aliasMap,
-          _nativeModules$hasteM2 = _nativeModules$hasteM.spec,
-          eventEmitters = _nativeModules$hasteM2.eventEmitters,
-          methods = _nativeModules$hasteM2.methods;
+        const {
+          aliasMap,
+          spec: {eventEmitters, methods},
+        } = nativeModules[hasteModuleName];
         const resolveAlias = createAliasResolver(aliasMap);
         const translatedMethods = methods
           .map(property =>
@@ -494,12 +402,8 @@ module.exports = {
             eventEmitters,
             methods: methods
               .map(({name: propertyName, typeAnnotation}) => {
-                const _unwrapNullable11 = unwrapNullable(typeAnnotation),
-                  _unwrapNullable12 = _slicedToArray(_unwrapNullable11, 1),
-                  _unwrapNullable12$ = _unwrapNullable12[0],
-                  returnTypeAnnotation =
-                    _unwrapNullable12$.returnTypeAnnotation,
-                  params = _unwrapNullable12$.params;
+                const [{returnTypeAnnotation, params}] =
+                  unwrapNullable(typeAnnotation);
                 if (
                   propertyName === 'getConstants' &&
                   returnTypeAnnotation.type === 'ObjectTypeAnnotation' &&

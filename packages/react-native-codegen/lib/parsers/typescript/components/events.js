@@ -10,28 +10,29 @@
 
 'use strict';
 
-const _require = require('../../error-utils'),
-  throwIfArgumentPropsAreNull = _require.throwIfArgumentPropsAreNull,
-  throwIfBubblingTypeIsNull = _require.throwIfBubblingTypeIsNull,
-  throwIfEventHasNoName = _require.throwIfEventHasNoName;
-const _require2 = require('../../parsers-commons'),
-  buildPropertiesForEvent = _require2.buildPropertiesForEvent,
-  emitBuildEventSchema = _require2.emitBuildEventSchema,
-  getEventArgument = _require2.getEventArgument,
-  handleEventHandler = _require2.handleEventHandler;
-const _require3 = require('../../parsers-primitives'),
-  emitBoolProp = _require3.emitBoolProp,
-  emitDoubleProp = _require3.emitDoubleProp,
-  emitFloatProp = _require3.emitFloatProp,
-  emitInt32Prop = _require3.emitInt32Prop,
-  emitMixedProp = _require3.emitMixedProp,
-  emitObjectProp = _require3.emitObjectProp,
-  emitStringProp = _require3.emitStringProp,
-  emitUnionProp = _require3.emitUnionProp;
-const _require4 = require('../parseTopLevelType'),
-  parseTopLevelType = _require4.parseTopLevelType;
-const _require5 = require('./componentsUtils'),
-  flattenProperties = _require5.flattenProperties;
+const {
+  throwIfArgumentPropsAreNull,
+  throwIfBubblingTypeIsNull,
+  throwIfEventHasNoName,
+} = require('../../error-utils');
+const {
+  buildPropertiesForEvent,
+  emitBuildEventSchema,
+  getEventArgument,
+  handleEventHandler,
+} = require('../../parsers-commons');
+const {
+  emitBoolProp,
+  emitDoubleProp,
+  emitFloatProp,
+  emitInt32Prop,
+  emitMixedProp,
+  emitObjectProp,
+  emitStringProp,
+  emitUnionProp,
+} = require('../../parsers-primitives');
+const {parseTopLevelType} = require('../parseTopLevelType');
+const {flattenProperties} = require('./componentsUtils');
 function getPropertyType(
   /* $FlowFixMe[missing-local-annot] The type annotation(s) required by Flow's
    * LTI update could not be added via codemod */
@@ -42,7 +43,7 @@ function getPropertyType(
   annotation,
   parser,
 ) {
-  const topLevelType = parseTopLevelType(annotation);
+  const topLevelType = parseTopLevelType(annotation, parser);
   const typeAnnotation = topLevelType.type;
   const optional = optionalProperty || topLevelType.optional;
   const type =
@@ -219,20 +220,14 @@ function buildEventSchema(types, property, parser) {
   // unpack WithDefault, (T) or T|U
   const topLevelType = parseTopLevelType(
     property.typeAnnotation.typeAnnotation,
+    parser,
     types,
   );
   const name = property.key.name;
   const typeAnnotation = topLevelType.type;
   const optional = property.optional || topLevelType.optional;
-  const _findEventArgumentsAn = findEventArgumentsAndType(
-      parser,
-      typeAnnotation,
-      types,
-    ),
-    argumentProps = _findEventArgumentsAn.argumentProps,
-    bubblingType = _findEventArgumentsAn.bubblingType,
-    paperTopLevelNameDeprecated =
-      _findEventArgumentsAn.paperTopLevelNameDeprecated;
+  const {argumentProps, bubblingType, paperTopLevelNameDeprecated} =
+    findEventArgumentsAndType(parser, typeAnnotation, types);
   const nonNullableArgumentProps = throwIfArgumentPropsAreNull(
     argumentProps,
     name,

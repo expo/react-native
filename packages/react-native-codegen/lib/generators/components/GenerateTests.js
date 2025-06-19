@@ -10,10 +10,8 @@
 
 'use strict';
 
-const _require = require('../Utils'),
-  toSafeCppString = _require.toSafeCppString;
-const _require2 = require('./CppHelpers'),
-  getImports = _require2.getImports;
+const {toSafeCppString} = require('../Utils');
+const {getImports} = require('./CppHelpers');
 const FileTemplate = ({libraryName, imports, componentTests}) =>
   `
 /**
@@ -144,7 +142,7 @@ module.exports = {
         if (module.type !== 'Component') {
           return;
         }
-        const components = module.components;
+        const {components} = module;
         if (components == null) {
           return null;
         }

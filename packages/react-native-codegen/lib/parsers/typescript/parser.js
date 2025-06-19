@@ -37,30 +37,26 @@ function _toPrimitive(t, r) {
   }
   return ('string' === r ? String : Number)(t);
 }
-const _require = require('../errors'),
-  UnsupportedObjectPropertyTypeAnnotationParserError =
-    _require.UnsupportedObjectPropertyTypeAnnotationParserError;
-const _require2 = require('../parsers-commons.js'),
-  buildModuleSchema = _require2.buildModuleSchema,
-  buildPropSchema = _require2.buildPropSchema,
-  buildSchema = _require2.buildSchema,
-  extendsForProp = _require2.extendsForProp,
-  handleGenericTypeAnnotation = _require2.handleGenericTypeAnnotation;
-const _require3 = require('../parsers-primitives'),
-  Visitor = _require3.Visitor;
-const _require4 = require('../schema.js'),
-  wrapComponentSchema = _require4.wrapComponentSchema;
-const _require5 = require('./components'),
-  buildComponentSchema = _require5.buildComponentSchema;
-const _require6 = require('./components/componentsUtils'),
-  flattenProperties = _require6.flattenProperties,
-  getSchemaInfo = _require6.getSchemaInfo,
-  getTypeAnnotation = _require6.getTypeAnnotation;
-const _require7 = require('./modules'),
-  typeScriptTranslateTypeAnnotation =
-    _require7.typeScriptTranslateTypeAnnotation;
-const _require8 = require('./parseTopLevelType'),
-  parseTopLevelType = _require8.parseTopLevelType;
+const {
+  UnsupportedObjectPropertyTypeAnnotationParserError,
+} = require('../errors');
+const {
+  buildModuleSchema,
+  buildPropSchema,
+  buildSchema,
+  extendsForProp,
+  handleGenericTypeAnnotation,
+} = require('../parsers-commons.js');
+const {Visitor} = require('../parsers-primitives');
+const {wrapComponentSchema} = require('../schema.js');
+const {buildComponentSchema} = require('./components');
+const {
+  flattenProperties,
+  getSchemaInfo,
+  getTypeAnnotation,
+} = require('./components/componentsUtils');
+const {typeScriptTranslateTypeAnnotation} = require('./modules');
+const {parseTopLevelType} = require('./parseTopLevelType');
 // $FlowFixMe[untyped-import] Use flow-types for @babel/parser
 const babelParser = require('@babel/parser');
 const fs = require('fs');
@@ -100,13 +96,23 @@ class TypeScriptParser {
     return 'TypeScript';
   }
   getTypeAnnotationName(typeAnnotation) {
-    var _typeAnnotation$typeN;
-    return typeAnnotation === null ||
+    var _typeAnnotation$typeN, _typeAnnotation$typeN2;
+    if (
+      (typeAnnotation === null ||
       typeAnnotation === void 0 ||
       (_typeAnnotation$typeN = typeAnnotation.typeName) === null ||
       _typeAnnotation$typeN === void 0
+        ? void 0
+        : _typeAnnotation$typeN.type) === 'TSQualifiedName'
+    ) {
+      return typeAnnotation.typeName.right.name;
+    }
+    return typeAnnotation === null ||
+      typeAnnotation === void 0 ||
+      (_typeAnnotation$typeN2 = typeAnnotation.typeName) === null ||
+      _typeAnnotation$typeN2 === void 0
       ? void 0
-      : _typeAnnotation$typeN.name;
+      : _typeAnnotation$typeN2.name;
   }
   checkIfInvalidModule(typeArguments) {
     return (
@@ -467,7 +473,7 @@ class TypeScriptParser {
       successful: false,
     };
     for (;;) {
-      const topLevelType = parseTopLevelType(node);
+      const topLevelType = parseTopLevelType(node, parser);
       nullable = nullable || topLevelType.optional;
       node = topLevelType.type;
       if (node.type !== 'TSTypeReference') {
@@ -478,13 +484,8 @@ class TypeScriptParser {
       if (resolvedTypeAnnotation == null) {
         break;
       }
-      const _handleGenericTypeAnn = handleGenericTypeAnnotation(
-          node,
-          resolvedTypeAnnotation,
-          this,
-        ),
-        typeAnnotationNode = _handleGenericTypeAnn.typeAnnotation,
-        status = _handleGenericTypeAnn.typeResolutionStatus;
+      const {typeAnnotation: typeAnnotationNode, typeResolutionStatus: status} =
+        handleGenericTypeAnnotation(node, resolvedTypeAnnotation, this);
       typeResolutionStatus = status;
       node = typeAnnotationNode;
     }
@@ -536,6 +537,7 @@ class TypeScriptParser {
     for (const prop of flattenProperties(remaining, types, this)) {
       const topLevelType = parseTopLevelType(
         prop.typeAnnotation.typeAnnotation,
+        this,
         types,
       );
       if (

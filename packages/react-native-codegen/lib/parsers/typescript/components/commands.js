@@ -10,14 +10,12 @@
 
 'use strict';
 
-const _require = require('../parseTopLevelType'),
-  parseTopLevelType = _require.parseTopLevelType;
-const _require2 = require('./componentsUtils'),
-  getPrimitiveTypeAnnotation = _require2.getPrimitiveTypeAnnotation;
+const {parseTopLevelType} = require('../parseTopLevelType');
+const {getPrimitiveTypeAnnotation} = require('./componentsUtils');
 
 // $FlowFixMe[unclear-type] there's no flowtype for ASTs
 
-function buildCommandSchemaInternal(name, optional, parameters, types) {
+function buildCommandSchemaInternal(name, optional, parameters, types, parser) {
   var _firstParam$typeAnnot, _firstParam$typeAnnot2;
   const firstParam = parameters[0].typeAnnotation;
   if (
@@ -42,11 +40,12 @@ function buildCommandSchemaInternal(name, optional, parameters, types) {
     const paramName = param.name;
     const paramValue = parseTopLevelType(
       param.typeAnnotation.typeAnnotation,
+      parser,
       types,
     ).type;
     const type =
       paramValue.type === 'TSTypeReference'
-        ? paramValue.typeName.name
+        ? parser.getTypeAnnotationName(paramValue)
         : paramValue.type;
     let returnType;
     switch (type) {
@@ -74,13 +73,17 @@ function buildCommandSchemaInternal(name, optional, parameters, types) {
           type: 'ArrayTypeAnnotation',
           elementType: getCommandArrayElementTypeType(
             paramValue.typeParameters.params[0],
+            parser,
           ),
         };
         break;
       case 'TSArrayType':
         returnType = {
           type: 'ArrayTypeAnnotation',
-          elementType: getCommandArrayElementTypeType(paramValue.elementType),
+          elementType: getCommandArrayElementTypeType(
+            paramValue.elementType,
+            parser,
+          ),
         };
         break;
       default:
@@ -107,7 +110,7 @@ function buildCommandSchemaInternal(name, optional, parameters, types) {
     },
   };
 }
-function getCommandArrayElementTypeType(inputType) {
+function getCommandArrayElementTypeType(inputType, parser) {
   // TODO: T172453752 support more complex type annotation for array element
 
   if (inputType == null || typeof inputType !== 'object') {
@@ -123,13 +126,9 @@ function getCommandArrayElementTypeType(inputType) {
   // validate those deeper objects for breaking changes and the generators can do something smarter.
   // As of now, the generators just create ReadableMap or (const NSArray *) which are untyped
   if (type === 'TSTypeReference') {
-    var _inputType$typeName;
     const name =
       typeof inputType.typeName === 'object'
-        ? (_inputType$typeName = inputType.typeName) === null ||
-          _inputType$typeName === void 0
-          ? void 0
-          : _inputType$typeName.name
+        ? parser.getTypeAnnotationName(inputType)
         : null;
     if (typeof name !== 'string') {
       throw new Error('Expected TSTypeReference AST name to be a string');
@@ -144,31 +143,44 @@ function getCommandArrayElementTypeType(inputType) {
   }
   return getPrimitiveTypeAnnotation(type);
 }
-function buildCommandSchema(property, types) {
+function buildCommandSchema(property, types, parser) {
   if (property.type === 'TSPropertySignature') {
     const topLevelType = parseTopLevelType(
       property.typeAnnotation.typeAnnotation,
+      parser,
       types,
     );
     const name = property.key.name;
     const optional = property.optional || topLevelType.optional;
     const parameters = topLevelType.type.parameters || topLevelType.type.params;
-    return buildCommandSchemaInternal(name, optional, parameters, types);
+    return buildCommandSchemaInternal(
+      name,
+      optional,
+      parameters,
+      types,
+      parser,
+    );
   } else {
     const name = property.key.name;
     const optional = property.optional || false;
     const parameters = property.parameters || property.params;
-    return buildCommandSchemaInternal(name, optional, parameters, types);
+    return buildCommandSchemaInternal(
+      name,
+      optional,
+      parameters,
+      types,
+      parser,
+    );
   }
 }
-function getCommands(commandTypeAST, types) {
+function getCommands(commandTypeAST, types, parser) {
   return commandTypeAST
     .filter(
       property =>
         property.type === 'TSPropertySignature' ||
         property.type === 'TSMethodSignature',
     )
-    .map(property => buildCommandSchema(property, types))
+    .map(property => buildCommandSchema(property, types, parser))
     .filter(Boolean);
 }
 module.exports = {

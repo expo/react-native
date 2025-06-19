@@ -10,9 +10,7 @@
 
 'use strict';
 
-const _require = require('../Utils'),
-  getEnumName = _require.getEnumName,
-  toSafeCppString = _require.toSafeCppString;
+const {getEnumName, toSafeCppString} = require('../Utils');
 function toIntEnumValueName(propName, value) {
   return `${toSafeCppString(propName)}${value}`;
 }

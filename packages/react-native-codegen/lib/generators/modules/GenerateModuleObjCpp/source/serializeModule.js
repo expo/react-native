@@ -10,9 +10,9 @@
 
 'use strict';
 
-const _require = require('./../serializeEventEmitter'),
-  EventEmitterImplementationTemplate =
-    _require.EventEmitterImplementationTemplate;
+const {
+  EventEmitterImplementationTemplate,
+} = require('./../serializeEventEmitter');
 const ModuleTemplate = ({
   hasteModuleName,
   structs,

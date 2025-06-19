@@ -10,11 +10,9 @@
 
 'use strict';
 
-const _require = require('../../Utils'),
-  capitalize = _require.capitalize;
+const {capitalize} = require('../../Utils');
 const PojoCollector = require('./PojoCollector');
-const _require2 = require('./serializePojo'),
-  serializePojo = _require2.serializePojo;
+const {serializePojo} = require('./serializePojo');
 module.exports = {
   generate(libraryName, schema, packageName) {
     const pojoCollector = new PojoCollector();
@@ -24,7 +22,7 @@ module.exports = {
       if (module.type !== 'Component') {
         return;
       }
-      const components = module.components;
+      const {components} = module;
       // No components in this module
       if (components == null) {
         return null;
@@ -42,7 +40,7 @@ module.exports = {
           if (component == null) {
             return;
           }
-          const props = component.props;
+          const {props} = component;
           pojoCollector.process(
             capitalize(hasteModuleName),
             `${capitalize(componentName)}Props`,

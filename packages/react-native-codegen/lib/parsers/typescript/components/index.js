@@ -10,36 +10,32 @@
 
 'use strict';
 
-const _require = require('../../parsers-commons'),
-  findComponentConfig = _require.findComponentConfig,
-  getCommandProperties = _require.getCommandProperties,
-  getOptions = _require.getOptions;
-const _require2 = require('./commands'),
-  getCommands = _require2.getCommands;
-const _require3 = require('./events'),
-  getEvents = _require3.getEvents;
-const _require4 = require('./extends'),
-  categorizeProps = _require4.categorizeProps;
+const {
+  findComponentConfig,
+  getCommandProperties,
+  getOptions,
+} = require('../../parsers-commons');
+const {getCommands} = require('./commands');
+const {getEvents} = require('./events');
+const {categorizeProps} = require('./extends');
 
 // $FlowFixMe[unclear-type] TODO(T108222691): Use flow-types for @babel/parser
 
 // $FlowFixMe[signature-verification-failure] TODO(T108222691): Use flow-types for @babel/parser
 function buildComponentSchema(ast, parser) {
-  const _findComponentConfig = findComponentConfig(ast, parser),
-    componentName = _findComponentConfig.componentName,
-    propsTypeName = _findComponentConfig.propsTypeName,
-    optionsExpression = _findComponentConfig.optionsExpression;
+  const {componentName, propsTypeName, optionsExpression} = findComponentConfig(
+    ast,
+    parser,
+  );
   const types = parser.getTypes(ast);
   const propProperties = parser.getProperties(propsTypeName, types);
   const commandProperties = getCommandProperties(ast, parser);
   const options = getOptions(optionsExpression);
   const componentEventAsts = [];
-  categorizeProps(propProperties, types, componentEventAsts);
-  const _parser$getProps = parser.getProps(propProperties, types),
-    props = _parser$getProps.props,
-    extendsProps = _parser$getProps.extendsProps;
+  categorizeProps(propProperties, types, componentEventAsts, parser);
+  const {props, extendsProps} = parser.getProps(propProperties, types);
   const events = getEvents(componentEventAsts, types, parser);
-  const commands = getCommands(commandProperties, types);
+  const commands = getCommands(commandProperties, types, parser);
   return {
     filename: componentName,
     componentName,

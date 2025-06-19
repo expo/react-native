@@ -10,11 +10,11 @@
 
 'use strict';
 
-const _require = require('../../parsers-commons'),
-  verifyPropNotAlreadyDefined = _require.verifyPropNotAlreadyDefined;
-const _require2 = require('../parseTopLevelType'),
-  flattenIntersectionType = _require2.flattenIntersectionType,
-  parseTopLevelType = _require2.parseTopLevelType;
+const {verifyPropNotAlreadyDefined} = require('../../parsers-commons');
+const {
+  flattenIntersectionType,
+  parseTopLevelType,
+} = require('../parseTopLevelType');
 function getUnionOfLiterals(name, forArray, elementTypes, defaultValue, types) {
   var _elementTypes$0$liter, _elementTypes$0$liter2;
   elementTypes.reduce((lastType, currType) => {
@@ -196,7 +196,7 @@ function getCommonTypeAnnotation(
       return buildObjectType([typeAnnotation], types, parser, buildSchema);
     case 'TSIntersectionType':
       return buildObjectType(
-        flattenIntersectionType(typeAnnotation, types),
+        flattenIntersectionType(typeAnnotation, parser, types),
         types,
         parser,
         buildSchema,
@@ -263,9 +263,9 @@ function getTypeAnnotationForArray(
   parser,
   buildSchema,
 ) {
-  var _extractedTypeAnnotat, _extractedTypeAnnotat2;
+  var _extractedTypeAnnotat;
   // unpack WithDefault, (T) or T|U
-  const topLevelType = parseTopLevelType(typeAnnotation, types);
+  const topLevelType = parseTopLevelType(typeAnnotation, parser, types);
   if (topLevelType.defaultValue !== undefined) {
     throw new Error(
       'Nested optionals such as "ReadonlyArray<boolean | null | undefined>" are not supported, please declare optionals at the top level of value definitions as in "ReadonlyArray<boolean> | null | undefined"',
@@ -295,15 +295,12 @@ function getTypeAnnotationForArray(
   }
   const type =
     extractedTypeAnnotation.elementType === 'TSTypeReference'
-      ? extractedTypeAnnotation.elementType.typeName.name
+      ? parser.getTypeAnnotationName(extractedTypeAnnotation.elementType)
       : ((_extractedTypeAnnotat = extractedTypeAnnotation.elementType) ===
           null || _extractedTypeAnnotat === void 0
           ? void 0
           : _extractedTypeAnnotat.type) ||
-        ((_extractedTypeAnnotat2 = extractedTypeAnnotation.typeName) === null ||
-        _extractedTypeAnnotat2 === void 0
-          ? void 0
-          : _extractedTypeAnnotat2.name) ||
+        parser.getTypeAnnotationName(extractedTypeAnnotation) ||
         extractedTypeAnnotation.type;
   const common = getCommonTypeAnnotation(
     name,
@@ -357,7 +354,7 @@ function getTypeAnnotation(
   buildSchema,
 ) {
   // unpack WithDefault, (T) or T|U
-  const topLevelType = parseTopLevelType(annotation, types);
+  const topLevelType = parseTopLevelType(annotation, parser, types);
   const typeAnnotation = topLevelType.type;
   const arrayType = detectArrayType(
     name,
@@ -410,10 +407,11 @@ function getTypeAnnotation(
       throw new Error(`Unknown prop type for "${name}": "${type}"`);
   }
 }
-function getSchemaInfo(property, types) {
+function getSchemaInfo(property, types, parser) {
   // unpack WithDefault, (T) or T|U
   const topLevelType = parseTopLevelType(
     property.typeAnnotation.typeAnnotation,
+    parser,
     types,
   );
   const name = property.key.name;

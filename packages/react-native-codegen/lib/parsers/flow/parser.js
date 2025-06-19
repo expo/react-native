@@ -37,28 +37,25 @@ function _toPrimitive(t, r) {
   }
   return ('string' === r ? String : Number)(t);
 }
-const _require = require('../errors'),
-  UnsupportedObjectPropertyTypeAnnotationParserError =
-    _require.UnsupportedObjectPropertyTypeAnnotationParserError;
-const _require2 = require('../parsers-commons'),
-  buildModuleSchema = _require2.buildModuleSchema,
-  buildPropSchema = _require2.buildPropSchema,
-  buildSchema = _require2.buildSchema,
-  handleGenericTypeAnnotation = _require2.handleGenericTypeAnnotation;
-const _require3 = require('../parsers-primitives'),
-  Visitor = _require3.Visitor;
-const _require4 = require('../schema.js'),
-  wrapComponentSchema = _require4.wrapComponentSchema;
-const _require5 = require('./components'),
-  buildComponentSchema = _require5.buildComponentSchema;
-const _require6 = require('./components/componentsUtils'),
-  flattenProperties = _require6.flattenProperties,
-  getSchemaInfo = _require6.getSchemaInfo,
-  getTypeAnnotation = _require6.getTypeAnnotation;
-const _require7 = require('./modules'),
-  flowTranslateTypeAnnotation = _require7.flowTranslateTypeAnnotation;
-const _require8 = require('./parseFlowAndThrowErrors'),
-  parseFlowAndThrowErrors = _require8.parseFlowAndThrowErrors;
+const {
+  UnsupportedObjectPropertyTypeAnnotationParserError,
+} = require('../errors');
+const {
+  buildModuleSchema,
+  buildPropSchema,
+  buildSchema,
+  handleGenericTypeAnnotation,
+} = require('../parsers-commons');
+const {Visitor} = require('../parsers-primitives');
+const {wrapComponentSchema} = require('../schema.js');
+const {buildComponentSchema} = require('./components');
+const {
+  flattenProperties,
+  getSchemaInfo,
+  getTypeAnnotation,
+} = require('./components/componentsUtils');
+const {flowTranslateTypeAnnotation} = require('./modules');
+const {parseFlowAndThrowErrors} = require('./parseFlowAndThrowErrors');
 const fs = require('fs');
 const invariant = require('invariant');
 class FlowParser {
@@ -100,13 +97,23 @@ class FlowParser {
     return 'Flow';
   }
   getTypeAnnotationName(typeAnnotation) {
-    var _typeAnnotation$id;
-    return typeAnnotation === null ||
+    var _typeAnnotation$id, _typeAnnotation$id2;
+    if (
+      (typeAnnotation === null ||
       typeAnnotation === void 0 ||
       (_typeAnnotation$id = typeAnnotation.id) === null ||
       _typeAnnotation$id === void 0
+        ? void 0
+        : _typeAnnotation$id.type) === 'QualifiedTypeIdentifier'
+    ) {
+      return typeAnnotation.id.id.name;
+    }
+    return typeAnnotation === null ||
+      typeAnnotation === void 0 ||
+      (_typeAnnotation$id2 = typeAnnotation.id) === null ||
+      _typeAnnotation$id2 === void 0
       ? void 0
-      : _typeAnnotation$id.name;
+      : _typeAnnotation$id2.name;
   }
   checkIfInvalidModule(typeArguments) {
     return (
@@ -392,13 +399,8 @@ class FlowParser {
       if (resolvedTypeAnnotation == null) {
         break;
       }
-      const _handleGenericTypeAnn = handleGenericTypeAnnotation(
-          node,
-          resolvedTypeAnnotation,
-          this,
-        ),
-        typeAnnotationNode = _handleGenericTypeAnn.typeAnnotation,
-        status = _handleGenericTypeAnn.typeResolutionStatus;
+      const {typeAnnotation: typeAnnotationNode, typeResolutionStatus: status} =
+        handleGenericTypeAnnotation(node, resolvedTypeAnnotation, this);
       typeResolutionStatus = status;
       node = typeAnnotationNode;
     }

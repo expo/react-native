@@ -38,15 +38,12 @@ function _toPrimitive(t, r) {
   return ('string' === r ? String : Number)(t);
 }
 import invariant from 'invariant';
-const _require = require('./errors'),
-  UnsupportedObjectPropertyTypeAnnotationParserError =
-    _require.UnsupportedObjectPropertyTypeAnnotationParserError;
-const _require2 = require('./flow/parseFlowAndThrowErrors'),
-  parseFlowAndThrowErrors = _require2.parseFlowAndThrowErrors;
-const _require3 = require('./parsers-commons'),
-  buildPropSchema = _require3.buildPropSchema;
-const _require4 = require('./typescript/components/componentsUtils'),
-  flattenProperties = _require4.flattenProperties;
+const {
+  UnsupportedObjectPropertyTypeAnnotationParserError,
+} = require('./errors');
+const {parseFlowAndThrowErrors} = require('./flow/parseFlowAndThrowErrors');
+const {buildPropSchema} = require('./parsers-commons');
+const {flattenProperties} = require('./typescript/components/componentsUtils');
 const schemaMock = {
   modules: {
     StringPropNativeComponentView: {

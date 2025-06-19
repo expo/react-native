@@ -10,13 +10,13 @@
 
 'use strict';
 
-const _require = require('../Utils'),
-  getEnumName = _require.getEnumName;
-const _require2 = require('./CppHelpers.js'),
-  generateStructName = _require2.generateStructName,
-  getCppTypeForAnnotation = _require2.getCppTypeForAnnotation,
-  getEnumMaskName = _require2.getEnumMaskName,
-  getImports = _require2.getImports;
+const {getEnumName} = require('../Utils');
+const {
+  generateStructName,
+  getCppTypeForAnnotation,
+  getEnumMaskName,
+  getImports,
+} = require('./CppHelpers.js');
 function getNativeTypeFromAnnotation(componentName, prop, nameParts) {
   const typeAnnotation = prop.typeAnnotation;
   switch (typeAnnotation.type) {

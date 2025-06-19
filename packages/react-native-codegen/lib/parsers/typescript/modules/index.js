@@ -10,33 +10,29 @@
 
 'use strict';
 
-const _require = require('../../errors'),
-  UnsupportedEnumDeclarationParserError =
-    _require.UnsupportedEnumDeclarationParserError,
-  UnsupportedGenericParserError = _require.UnsupportedGenericParserError,
-  UnsupportedObjectPropertyWithIndexerTypeAnnotationParserError =
-    _require.UnsupportedObjectPropertyWithIndexerTypeAnnotationParserError,
-  UnsupportedTypeAnnotationParserError =
-    _require.UnsupportedTypeAnnotationParserError;
-const _require2 = require('../../parsers-commons'),
-  parseObjectProperty = _require2.parseObjectProperty;
-const _require3 = require('../../parsers-primitives'),
-  emitArrayType = _require3.emitArrayType,
-  emitCommonTypes = _require3.emitCommonTypes,
-  emitDictionary = _require3.emitDictionary,
-  emitFunction = _require3.emitFunction,
-  emitNumberLiteral = _require3.emitNumberLiteral,
-  emitPromise = _require3.emitPromise,
-  emitRootTag = _require3.emitRootTag,
-  emitStringLiteral = _require3.emitStringLiteral,
-  emitUnion = _require3.emitUnion,
-  translateArrayTypeAnnotation = _require3.translateArrayTypeAnnotation,
-  typeAliasResolution = _require3.typeAliasResolution,
-  typeEnumResolution = _require3.typeEnumResolution;
-const _require4 = require('../components/componentsUtils'),
-  flattenProperties = _require4.flattenProperties;
-const _require5 = require('../parseTopLevelType'),
-  flattenIntersectionType = _require5.flattenIntersectionType;
+const {
+  UnsupportedEnumDeclarationParserError,
+  UnsupportedGenericParserError,
+  UnsupportedObjectPropertyWithIndexerTypeAnnotationParserError,
+  UnsupportedTypeAnnotationParserError,
+} = require('../../errors');
+const {parseObjectProperty} = require('../../parsers-commons');
+const {
+  emitArrayType,
+  emitCommonTypes,
+  emitDictionary,
+  emitFunction,
+  emitNumberLiteral,
+  emitPromise,
+  emitRootTag,
+  emitStringLiteral,
+  emitUnion,
+  translateArrayTypeAnnotation,
+  typeAliasResolution,
+  typeEnumResolution,
+} = require('../../parsers-primitives');
+const {flattenProperties} = require('../components/componentsUtils');
+const {flattenIntersectionType} = require('../parseTopLevelType');
 function translateObjectTypeAnnotation(
   hasteModuleName,
   /**
@@ -174,14 +170,8 @@ function translateTypeAnnotation(
   cxxOnly,
   parser,
 ) {
-  const _parser$getResolvedTy = parser.getResolvedTypeAnnotation(
-      typeScriptTypeAnnotation,
-      types,
-      parser,
-    ),
-    nullable = _parser$getResolvedTy.nullable,
-    typeAnnotation = _parser$getResolvedTy.typeAnnotation,
-    typeResolutionStatus = _parser$getResolvedTy.typeResolutionStatus;
+  const {nullable, typeAnnotation, typeResolutionStatus} =
+    parser.getResolvedTypeAnnotation(typeScriptTypeAnnotation, types, parser);
   const resolveTypeaAnnotationFn = parser.getResolveTypeAnnotationFN();
   resolveTypeaAnnotationFn(typeScriptTypeAnnotation, types, parser);
   switch (typeAnnotation.type) {
@@ -286,7 +276,7 @@ function translateTypeAnnotation(
         typeScriptTypeAnnotation,
         nullable,
         flattenProperties(
-          flattenIntersectionType(typeAnnotation, types),
+          flattenIntersectionType(typeAnnotation, parser, types),
           types,
           parser,
         ),

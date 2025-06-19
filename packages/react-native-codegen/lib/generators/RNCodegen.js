@@ -69,7 +69,10 @@ const ALL_GENERATORS = {
   generateViewConfigJs: generateViewConfigJs.generate,
 };
 const LIBRARY_GENERATORS = {
-  descriptors: [generateComponentDescriptorH.generate],
+  descriptors: [
+    generateComponentDescriptorCpp.generate,
+    generateComponentDescriptorH.generate,
+  ],
   events: [generateEventEmitterCpp.generate, generateEventEmitterH.generate],
   states: [generateStateCpp.generate, generateStateH.generate],
   props: [

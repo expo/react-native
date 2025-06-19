@@ -10,8 +10,7 @@
 
 'use strict';
 
-const _require = require('../../Utils'),
-  capitalize = _require.capitalize;
+const {capitalize} = require('../../Utils');
 function toJavaType(typeAnnotation, addImport) {
   const importNullable = () => addImport('androidx.annotation.Nullable');
   const importReadableMap = () =>
@@ -117,7 +116,7 @@ function toJavaType(typeAnnotation, addImport) {
      * Arrays
      */
     case 'ArrayTypeAnnotation': {
-      const elementType = typeAnnotation.elementType;
+      const {elementType} = typeAnnotation;
       const elementTypeString = (() => {
         switch (elementType.type) {
           /**
@@ -198,7 +197,7 @@ function toJavaType(typeAnnotation, addImport) {
 
           // Arrays
           case 'ArrayTypeAnnotation': {
-            const pojoTypeAliasTypeAnnotation = elementType.elementType;
+            const {elementType: pojoTypeAliasTypeAnnotation} = elementType;
             importArrayList();
             return `ArrayList<${pojoTypeAliasTypeAnnotation.name}>`;
           }

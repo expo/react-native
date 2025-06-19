@@ -10,8 +10,7 @@
 
 'use strict';
 
-const _require = require('./CppHelpers'),
-  IncludeTemplate = _require.IncludeTemplate;
+const {IncludeTemplate} = require('./CppHelpers');
 
 // File path -> contents
 
@@ -55,7 +54,7 @@ module.exports = {
         if (module.type !== 'Component') {
           return;
         }
-        const components = module.components;
+        const {components} = module;
         // No components in this module
         if (components == null) {
           return null;
