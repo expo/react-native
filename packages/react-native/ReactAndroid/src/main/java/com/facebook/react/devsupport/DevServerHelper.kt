@@ -290,28 +290,26 @@ public open class DevServerHelper(
       modulesOnly: Boolean = false,
       runModule: Boolean = true
   ): String {
-    val dev = devMode
-    val additionalOptionsBuilder = StringBuilder()
-    for ((key, value) in packagerConnectionSettings.additionalOptionsForPackager) {
-      if (value.isEmpty()) {
-        continue
+      try {
+          return Class.forName("host.exp.exponent.ReactNativeStaticHelpers")
+              .getMethod("getBundleUrlForActivityId",
+                  Int::class.javaPrimitiveType,
+                  String::class.java,
+                  String::class.java,
+                  String::class.java,
+                  Boolean::class.javaPrimitiveType,
+                  Boolean::class.javaPrimitiveType)
+              .invoke(null,
+                  settings.getExponentActivityId(),
+                  host,
+                  mainModuleID,
+                  type.typeID,
+                  devMode,
+                  jSMinifyMode) as String
+      } catch (expoHandleErrorException: Exception) {
+          expoHandleErrorException.printStackTrace()
+          return ""
       }
-      additionalOptionsBuilder.append("&" + key + "=" + Uri.encode(value))
-    }
-    return (String.format(
-        Locale.US,
-        "http://%s/%s.%s?platform=android&dev=%s&lazy=%s&minify=%s&app=%s&modulesOnly=%s&runModule=%s",
-        host,
-        mainModuleID,
-        type.typeID,
-        dev, // dev
-        dev, // lazy
-        jSMinifyMode,
-        packageName,
-        if (modulesOnly) "true" else "false",
-        if (runModule) "true" else "false") +
-        (if (getFuseboxEnabled()) "&excludeSource=true&sourcePaths=url-server" else "") +
-        additionalOptionsBuilder.toString())
   }
 
   public open fun getDevServerBundleURL(jsModulePath: String): String =
