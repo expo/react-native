@@ -29,6 +29,9 @@ public interface DeveloperSettings {
   /** Whether element inspector is enabled. */
   public var isElementInspectorEnabled: Boolean
 
+  /** Whether floating action button is enabled */
+  public var isFloatingActionButtonEnabled: Boolean
+
   /** Whether Nuclide JS debugging is enabled. */
   public var isDeviceDebugEnabled: Boolean
 
