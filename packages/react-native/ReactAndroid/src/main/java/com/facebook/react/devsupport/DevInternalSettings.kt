@@ -60,12 +60,21 @@ internal class DevInternalSettings(applicationContext: Context, private val list
   override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String?) {
     if (listener != null) {
       if (PREFS_FPS_DEBUG_KEY == key ||
-          PREFS_JS_DEV_MODE_DEBUG_KEY == key ||
-          PREFS_JS_MINIFY_DEBUG_KEY == key) {
+        PREFS_JS_DEV_MODE_DEBUG_KEY == key ||
+        PREFS_JS_MINIFY_DEBUG_KEY == key ||
+        PREFS_FLOATING_ACTION_BUTTON_KEY == key
+      ) {
         listener.onInternalSettingsChanged()
       }
     }
   }
+
+  override var isFloatingActionButtonEnabled: Boolean
+    // TODO: @behenate change the default to true for VR
+    get() = preferences.getBoolean(PREFS_FLOATING_ACTION_BUTTON_KEY, false)
+    set(value) {
+      preferences.edit().putBoolean(PREFS_FLOATING_ACTION_BUTTON_KEY, value).apply()
+    }
 
   override var isElementInspectorEnabled: Boolean
     get() = preferences.getBoolean(PREFS_INSPECTOR_DEBUG_KEY, false)
@@ -95,5 +104,6 @@ internal class DevInternalSettings(applicationContext: Context, private val list
     private const val PREFS_ANIMATIONS_DEBUG_KEY = "animations_debug"
     private const val PREFS_INSPECTOR_DEBUG_KEY = "inspector_debug"
     private const val PREFS_HOT_MODULE_REPLACEMENT_KEY = "hot_module_replacement"
+    private const val PREFS_FLOATING_ACTION_BUTTON_KEY = "floating_action_button"
   }
 }
