@@ -22,11 +22,11 @@ import com.facebook.react.packagerconnection.RequestHandler
  * [DevSupportManagerBase] with some additional, more flexible APIs for asynchronously loading the
  * JS bundle.
  *
- * @constructor The primary constructor mirrors the same constructor we have for
+ * @public constructor The primary public constructor mirrors the same public constructor we have for
  *   [BridgeDevSupportManager] and
  *     * is kept for backward compatibility.
  */
-internal class BridgelessDevSupportManager(
+public class BridgelessDevSupportManager(
     applicationContext: Context,
     reactInstanceManagerHelper: ReactInstanceDevHelper,
     packagerPathForJSBundleName: String?,
@@ -52,7 +52,7 @@ internal class BridgelessDevSupportManager(
         devLoadingViewManager,
         pausedInDebuggerOverlayManager) {
 
-  constructor(
+  public constructor(
       context: Context,
       reactInstanceManagerHelper: ReactInstanceDevHelper,
       packagerPathForJSBundleName: String?
