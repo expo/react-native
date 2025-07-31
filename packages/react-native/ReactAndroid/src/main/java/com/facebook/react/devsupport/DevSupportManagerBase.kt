@@ -739,6 +739,12 @@ public abstract class DevSupportManagerBase(
     UiThreadUtil.runOnUiThread { devSettings.isFpsDebugEnabled = isFpsDebugEnabled }
   }
 
+  public override fun setFloatingActionButtonEnabled(isFabEnabled: Boolean) {
+    UiThreadUtil.runOnUiThread {
+      devSettings.isFloatingActionButtonEnabled = isFabEnabled
+    }
+  }
+
   override fun toggleElementInspector() {
     if (!isDevSupportEnabled) {
       return

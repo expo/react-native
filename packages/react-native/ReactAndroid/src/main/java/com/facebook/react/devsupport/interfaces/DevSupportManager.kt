@@ -74,6 +74,8 @@ public interface DevSupportManager : JSExceptionHandler {
 
   public fun setFpsDebugEnabled(isFpsDebugEnabled: Boolean)
 
+  public fun setFloatingActionButtonEnabled(isFabEnabled: Boolean)
+
   public fun toggleElementInspector()
 
   public fun downloadBundleResourceFromUrlSync(resourceURL: String, outputFile: File): File?
