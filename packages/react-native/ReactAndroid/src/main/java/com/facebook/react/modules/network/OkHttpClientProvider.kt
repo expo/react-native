@@ -35,9 +35,17 @@ public object OkHttpClientProvider {
   }
 
   @JvmStatic
-  public fun createClient(): OkHttpClient {
-    return factory?.createNewNetworkModuleClient() ?: createClientBuilder().build()
-  }
+public fun createClient(): OkHttpClient {
+    try {
+        return (Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod(
+            "getOkHttpClient",
+            Class::class.java
+        ).invoke(null, OkHttpClientProvider::class.java) as OkHttpClient)
+    } catch (expoHandleErrorException: Exception) {
+        expoHandleErrorException.printStackTrace()
+        return factory?.createNewNetworkModuleClient() ?: createClientBuilder().build()
+    }
+}
 
   @JvmStatic
   public fun createClient(context: Context): OkHttpClient {
