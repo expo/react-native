@@ -28,6 +28,9 @@ target_link_libraries(jsinspector
 )
 target_compile_reactnative_options(jsinspector PRIVATE)
 target_compile_options(jsinspector PRIVATE
-        $<$<CONFIG:Debug>:-DREACT_NATIVE_DEBUGGER_ENABLED=1>
-        $<$<CONFIG:Debug>:-DREACT_NATIVE_DEBUGGER_ENABLED_DEVONLY=1>
+        # Expo Go requires debugging on release builds
+        -DREACT_NATIVE_DEBUGGER_ENABLED=1
+        -DREACT_NATIVE_DEBUGGER_ENABLED_DEVONLY=1
+        # $<$<CONFIG:Debug>:-DREACT_NATIVE_DEBUGGER_ENABLED=1>
+        # $<$<CONFIG:Debug>:-DREACT_NATIVE_DEBUGGER_ENABLED_DEVONLY=1>
 )
