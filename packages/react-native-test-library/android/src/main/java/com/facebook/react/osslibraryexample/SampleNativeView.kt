@@ -66,16 +66,16 @@ public class SampleNativeView(context: ThemedReactContext) : View(context) {
     }
 
     val payload =
-        Arguments.createMap().apply {
-          putArray("values", newIntArray)
-          putArray("boolValues", newBoolArray)
-          putArray("floats", newFloatArray)
-          putArray("doubles", newDoubleArray)
-          putArray("yesNos", newYesNoArray)
-          putArray("strings", newStringArray)
-          putArray("latLons", newObjectArray)
-          putArray("multiArrays", newArrayArray)
-        }
+      Arguments.createMap().apply {
+        putArray("values", newIntArray)
+        putArray("boolValues", newBoolArray)
+        putArray("floats", newFloatArray)
+        putArray("doubles", newDoubleArray)
+        putArray("yesNos", newYesNoArray)
+        putArray("strings", newStringArray)
+        putArray("latLons", newObjectArray)
+        putArray("multiArrays", newArrayArray)
+      }
 
     val reactContext = context as ReactContext
     val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
@@ -86,9 +86,9 @@ public class SampleNativeView(context: ThemedReactContext) : View(context) {
   }
 
   private inner class OnIntArrayChangedEvent(
-      surfaceId: Int,
-      viewId: Int,
-      private val payload: WritableMap
+    surfaceId: Int,
+    viewId: Int,
+    private val payload: WritableMap
   ) : Event<OnIntArrayChangedEvent>(surfaceId, viewId) {
     override fun getEventName() = "topIntArrayChanged"
 

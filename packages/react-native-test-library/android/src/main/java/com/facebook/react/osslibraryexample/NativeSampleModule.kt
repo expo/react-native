@@ -15,7 +15,7 @@ import com.facebook.react.module.annotations.ReactModule
 
 @ReactModule(name = NativeSampleModuleSpec.NAME)
 public class NativeSampleModule(reactContext: ReactApplicationContext?) :
-    ReactContextBaseJavaModule(reactContext) {
+  ReactContextBaseJavaModule(reactContext) {
 
   override fun getName(): String = NAME
 
