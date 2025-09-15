@@ -20,7 +20,7 @@ import com.facebook.react.viewmanagers.SampleNativeComponentManagerInterface
 /** Legacy View manager (non Fabric compatible) for {@link SampleNativeView} components. */
 @ReactModule(name = SampleNativeComponentViewManager.REACT_CLASS)
 internal class SampleNativeComponentViewManager :
-    SimpleViewManager<SampleNativeView>(), SampleNativeComponentManagerInterface<SampleNativeView> {
+  SimpleViewManager<SampleNativeView>(), SampleNativeComponentManagerInterface<SampleNativeView> {
 
   override fun getName(): String = REACT_CLASS
 
@@ -41,7 +41,7 @@ internal class SampleNativeComponentViewManager :
   }
 
   override fun createViewInstance(reactContext: ThemedReactContext): SampleNativeView =
-      SampleNativeView(reactContext)
+    SampleNativeView(reactContext)
 
   @SuppressLint("BadMethodUse-android.view.View.setBackgroundColor")
   override fun changeBackgroundColor(view: SampleNativeView, color: String) {
@@ -52,20 +52,23 @@ internal class SampleNativeComponentViewManager :
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
-        "onColorChanged" to
+      "onColorChanged" to
+        mapOf(
+          "phasedRegistrationNames" to
             mapOf(
-                "phasedRegistrationNames" to
-                    mapOf(
-                        "bubbled" to "onColorChanged",
-                        "captured" to "onColorChangedCapture",
-                    )),
-        "topIntArrayChanged" to
+              "bubbled" to "onColorChanged",
+              "captured" to "onColorChangedCapture"
+            )
+        ),
+      "topIntArrayChanged" to
+        mapOf(
+          "phasedRegistrationNames" to
             mapOf(
-                "phasedRegistrationNames" to
-                    mapOf(
-                        "bubbled" to "topIntArrayChanged",
-                        "captured" to "topIntArrayChangedCapture",
-                    )))
+              "bubbled" to "topIntArrayChanged",
+              "captured" to "topIntArrayChangedCapture"
+            )
+        )
+    )
   }
 
   @SuppressLint("BadMethodUse-android.view.View.setBackgroundColor")
@@ -89,7 +92,7 @@ internal class SampleNativeComponentViewManager :
   }
 
   override fun getCommandsMap(): Map<String, Int> =
-      mapOf("changeBackgroundColor" to COMMAND_CHANGE_BACKGROUND_COLOR)
+    mapOf("changeBackgroundColor" to COMMAND_CHANGE_BACKGROUND_COLOR)
 
   companion object {
     const val REACT_CLASS = "SampleNativeComponent"

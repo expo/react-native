@@ -16,8 +16,8 @@ import com.facebook.react.uimanager.ViewManager
 public class OSSLibraryExamplePackage : ReactPackage {
   @Deprecated("Migrate to [BaseReactPackage] and implement [getModule] instead.")
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> =
-      listOf(NativeSampleModule(reactContext))
+    listOf(NativeSampleModule(reactContext))
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> =
-      listOf(SampleNativeComponentViewManager())
+    listOf(SampleNativeComponentViewManager())
 }
