@@ -26,7 +26,7 @@ import com.facebook.react.packagerconnection.RequestHandler
  * @constructor The primary constructor mirrors the same constructor we had for
  *   `BridgeDevSupportManager` and is kept for backward compatibility.
  */
-internal class BridgelessDevSupportManager(
+public class BridgelessDevSupportManager(
     applicationContext: Context,
     reactInstanceManagerHelper: ReactInstanceDevHelper,
     packagerPathForJSBundleName: String?,
@@ -53,7 +53,7 @@ internal class BridgelessDevSupportManager(
         pausedInDebuggerOverlayManager,
     ) {
 
-  constructor(
+  public constructor(
       context: Context,
       reactInstanceManagerHelper: ReactInstanceDevHelper,
       packagerPathForJSBundleName: String?,
