@@ -22,7 +22,6 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.devsupport.InspectorFlags.getFuseboxEnabled
 import com.facebook.react.devsupport.InspectorFlags.getIsProfilingBuild
-import com.facebook.react.devsupport.inspector.DevSupportHttpClient
 import com.facebook.react.devsupport.interfaces.DevBundleDownloadListener
 import com.facebook.react.devsupport.interfaces.PackagerStatusCallback
 import com.facebook.react.modules.debug.interfaces.DeveloperSettings
@@ -40,6 +39,7 @@ import java.io.UnsupportedEncodingException
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -83,7 +83,12 @@ public open class DevServerHelper(
     MAP("map"),
   }
 
-  private val client: OkHttpClient = DevSupportHttpClient.httpClient
+  private val client: OkHttpClient =
+      OkHttpClient.Builder()
+          .connectTimeout(HTTP_CONNECT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+          .readTimeout(0, TimeUnit.MILLISECONDS)
+          .writeTimeout(0, TimeUnit.MILLISECONDS)
+          .build()
   private val bundleDownloader: BundleDownloader = BundleDownloader(client)
   private val packagerStatusCheck: PackagerStatusCheck = PackagerStatusCheck(client)
   private val packageName: String = applicationContext.packageName
@@ -123,8 +128,7 @@ public open class DevServerHelper(
     get() =
         String.format(
             Locale.US,
-            "%s://%s/inspector/device?name=%s&app=%s&device=%s&profiling=%b",
-            DevSupportHttpClient.httpScheme(packagerConnectionSettings.debugServerHost),
+            "http://%s/inspector/device?name=%s&app=%s&device=%s&profiling=%b",
             packagerConnectionSettings.debugServerHost,
             Uri.encode(getFriendlyDeviceName()),
             Uri.encode(packageName),
@@ -294,36 +298,28 @@ public open class DevServerHelper(
       type: BundleType,
       host: String = packagerConnectionSettings.debugServerHost,
       modulesOnly: Boolean = false,
-      runModule: Boolean = true,
+      runModule: Boolean = true
   ): String {
-    val dev = devMode
-    val additionalOptionsBuilder = StringBuilder()
-    val packagerOptions =
-        packagerConnectionSettings.updatePackagerOptions(
-            packagerConnectionSettings.additionalOptionsForPackager,
-        )
-    for ((key, value) in packagerOptions) {
-      if (value.isEmpty()) {
-        continue
+      try {
+          return Class.forName("host.exp.exponent.ReactNativeStaticHelpers")
+              .getMethod("getBundleUrlForActivityId",
+                  Int::class.javaPrimitiveType,
+                  String::class.java,
+                  String::class.java,
+                  String::class.java,
+                  Boolean::class.javaPrimitiveType,
+                  Boolean::class.javaPrimitiveType)
+              .invoke(null,
+                  settings.getExponentActivityId(),
+                  host,
+                  mainModuleID,
+                  type.typeID,
+                  devMode,
+                  jSMinifyMode) as String
+      } catch (expoHandleErrorException: Exception) {
+          expoHandleErrorException.printStackTrace()
+          return ""
       }
-      additionalOptionsBuilder.append("&" + key + "=" + Uri.encode(value))
-    }
-    return (String.format(
-        Locale.US,
-        "%s://%s/%s.%s?platform=android&dev=%s&lazy=%s&minify=%s&app=%s&modulesOnly=%s&runModule=%s",
-        DevSupportHttpClient.httpScheme(host),
-        host,
-        mainModuleID,
-        type.typeID,
-        dev, // dev
-        dev, // lazy
-        jSMinifyMode,
-        packageName,
-        if (modulesOnly) "true" else "false",
-        if (runModule) "true" else "false",
-    ) +
-        (if (getFuseboxEnabled()) "&excludeSource=true&sourcePaths=url-server" else "") +
-        additionalOptionsBuilder.toString())
   }
 
   public open fun getDevServerBundleURL(jsModulePath: String): String =
@@ -386,8 +382,7 @@ public open class DevServerHelper(
     requestUrlBuilder.append(
         String.format(
             Locale.US,
-            "%s://%s/open-debugger?device=%s",
-            DevSupportHttpClient.httpScheme(packagerConnectionSettings.debugServerHost),
+            "http://%s/open-debugger?device=%s",
             packagerConnectionSettings.debugServerHost,
             Uri.encode(inspectorDeviceId),
         ),
@@ -417,6 +412,7 @@ public open class DevServerHelper(
   }
 
   private companion object {
+    private const val HTTP_CONNECT_TIMEOUT_MS = 5000
     private const val DEBUGGER_MSG_DISABLE = "{ \"id\":1,\"method\":\"Debugger.disable\" }"
 
     private fun getSHA256(string: String): String {
@@ -465,13 +461,7 @@ public open class DevServerHelper(
         FLog.w(ReactConstants.TAG, "Resource path should not begin with `/`, removing it.")
         resourcePath = resourcePath.substring(1)
       }
-      return String.format(
-          Locale.US,
-          "%s://%s/%s",
-          DevSupportHttpClient.httpScheme(host),
-          host,
-          resourcePath,
-      )
+      return String.format(Locale.US, "http://%s/%s", host, resourcePath)
     }
   }
 }
