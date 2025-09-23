@@ -134,20 +134,23 @@ public class NativeViewHierarchyManager {
   }
 
   public synchronized void updateProperties(int tag, ReactStylesDiffMap props) {
-    if (DEBUG_MODE) {
-      FLog.d(TAG, "updateProperties[%d]: %s", tag, props.toString());
-    }
-    UiThreadUtil.assertOnUiThread();
-
     try {
-      ViewManager viewManager = resolveViewManager(tag);
-      View viewToUpdate = resolveView(tag);
+        if (DEBUG_MODE) {
+            FLog.d(TAG, "updateProperties[%d]: %s", tag, props.toString());
+        }
+        UiThreadUtil.assertOnUiThread();
 
-      if (props != null) {
-        viewManager.updateProperties(viewToUpdate, props);
-      }
-    } catch (IllegalViewOperationException e) {
-      FLog.e(TAG, "Unable to update properties for view tag " + tag, e);
+        try {
+            ViewManager viewManager = resolveViewManager(tag);
+            View viewToUpdate = resolveView(tag);
+
+            if (props != null) {
+                viewManager.updateProperties(viewToUpdate, props);
+            }
+        } catch (IllegalViewOperationException e) {
+            FLog.e(TAG, "Unable to update properties for view tag " + tag, e);
+        }
+    } catch (Throwable expoException) {
     }
   }
 
