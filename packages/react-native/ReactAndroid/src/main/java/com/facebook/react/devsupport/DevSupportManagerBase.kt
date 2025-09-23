@@ -330,8 +330,9 @@ public abstract class DevSupportManagerBase(
   }
 
   private fun getExponentActivityId(): Int {
-    return -1
-  }
+    val devInternalSettings = devSettings as? DevInternalSettings
+    return devInternalSettings?.getExponentActivityId() ?: -1
+}
 
   override fun reloadExpoApp() {
     try {
