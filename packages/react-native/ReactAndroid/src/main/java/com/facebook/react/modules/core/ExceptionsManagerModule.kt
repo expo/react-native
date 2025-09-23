@@ -24,14 +24,28 @@ import com.facebook.react.util.JSStackTrace.format
 public open class ExceptionsManagerModule(private val devSupportManager: DevSupportManager) :
     NativeExceptionsManagerSpec(null) {
   override fun reportFatalException(message: String?, stack: ReadableArray?, idDouble: Double) {
-    val id = idDouble.toInt()
-    val data = JavaOnlyMap()
-    data.putString("message", message)
-    data.putArray("stack", stack)
-    data.putInt("id", id)
-    data.putBoolean("isFatal", true)
-    reportException(data)
-  }
+        try {
+                val id = idDouble.toInt()
+        val data = JavaOnlyMap()
+        data.putString("message", message)
+        data.putArray("stack", stack)
+        data.putInt("id", id)
+        data.putBoolean("isFatal", true)
+        reportException(data)
+        } catch (expoException: Exception) {
+                try {
+                    Class.forName("host.exp.exponent.ReactNativeStaticHelpers").getMethod(
+                        "handleReactNativeError",
+                        String::class.java,
+                        Any::class.java,
+                        Int::class.java,
+                        Boolean::class.java
+                    ).invoke(null, message, stack, (idDouble as Double).toInt(), true)
+                } catch (expoHandleErrorException: Exception) {
+                    expoHandleErrorException.printStackTrace()
+                }
+        }
+    }
 
   override fun reportSoftException(message: String?, stack: ReadableArray?, idDouble: Double) {
     val id = idDouble.toInt()
