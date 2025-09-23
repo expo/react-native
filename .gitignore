@@ -136,7 +136,7 @@ vendor/
 
 # @react-native/codegen
 /packages/react-native/React/FBReactNativeSpec/
-/packages/react-native-codegen/lib
+# /packages/react-native-codegen/lib
 /packages/react-native-codegen/tmp/
 /packages/rn-tester/NativeModuleExample/ScreenshotManagerSpec*
 /**/RCTThirdPartyFabricComponentsProvider.*
