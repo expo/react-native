@@ -27,7 +27,7 @@ import com.facebook.react.packagerconnection.RequestHandler
  *   [BridgeDevSupportManager] and
  *     * is kept for backward compatibility.
  */
-public class BridgelessDevSupportManager(
+public open class BridgelessDevSupportManager(
     applicationContext: Context,
     reactInstanceManagerHelper: ReactInstanceDevHelper,
     packagerPathForJSBundleName: String?,
