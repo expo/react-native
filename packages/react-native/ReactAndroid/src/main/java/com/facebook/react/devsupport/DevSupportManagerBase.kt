@@ -983,7 +983,8 @@ public abstract class DevSupportManagerBase(
     // reload settings, show/hide debug overlay if required & start/stop shake detector
     if (isDevSupportEnabled) {
       // update visibility of FPS debug overlay depending on the settings
-      debugOverlayController?.setFpsDebugViewVisible(devSettings.isFpsDebugEnabled)
+      // NOTE(lukmccall): We have our own performance monitor overlay, so we disable the default one.
+      debugOverlayController?.setFpsDebugViewVisible(false)
 
       // start shake gesture detector
       if (!isShakeDetectorStarted && shakeGestureEnabled) {
