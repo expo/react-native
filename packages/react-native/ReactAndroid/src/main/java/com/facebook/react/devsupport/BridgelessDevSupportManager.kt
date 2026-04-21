@@ -82,7 +82,7 @@ public open class BridgelessDevSupportManager(
     reactInstanceDevHelper.reload("BridgelessDevSupportManager.handleReloadJS()")
   }
 
-  public fun tracingState(): TracingState {
+  internal fun tracingState(): TracingState {
     return TracingState.ENABLED_IN_CDP_MODE
   }
 }
