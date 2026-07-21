@@ -14,7 +14,7 @@
 #import <react/renderer/components/text/ParagraphProps.h>
 #import <react/renderer/components/text/ParagraphState.h>
 #import <react/renderer/components/text/InlineTextTagShadowNodes.h>
-#import <react/renderer/components/text/RawTextComponentDescriptor.h>
+#import <react/renderer/components/text/TextNodeComponentDescriptor.h>
 #import <react/renderer/components/text/TextComponentDescriptor.h>
 #import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
 #import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
@@ -111,7 +111,7 @@ using namespace facebook::react;
 + (std::vector<facebook::react::ComponentDescriptorProvider>)supplementalComponentDescriptorProviders
 {
   return {
-      concreteComponentDescriptorProvider<RawTextComponentDescriptor>(),
+      concreteComponentDescriptorProvider<TextNodeComponentDescriptor>(),
       concreteComponentDescriptorProvider<TextComponentDescriptor>(),
       concreteComponentDescriptorProvider<BTagComponentDescriptor>(),
       concreteComponentDescriptorProvider<ITagComponentDescriptor>(),

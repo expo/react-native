@@ -12,7 +12,6 @@
 #include <react/renderer/components/root/RootComponentDescriptor.h>
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
-#include <react/renderer/components/text/RawTextComponentDescriptor.h>
 #include <react/renderer/components/text/TextNodeComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
 #include <react/renderer/components/view/ViewComponentDescriptor.h>
@@ -33,7 +32,6 @@ inline ComponentBuilder simpleComponentBuilder(std::shared_ptr<const ContextCont
   componentDescriptorProviderRegistry.add(concreteComponentDescriptorProvider<ScrollViewComponentDescriptor>());
   componentDescriptorProviderRegistry.add(concreteComponentDescriptorProvider<ParagraphComponentDescriptor>());
   componentDescriptorProviderRegistry.add(concreteComponentDescriptorProvider<TextComponentDescriptor>());
-  componentDescriptorProviderRegistry.add(concreteComponentDescriptorProvider<RawTextComponentDescriptor>());
   componentDescriptorProviderRegistry.add(concreteComponentDescriptorProvider<TextNodeComponentDescriptor>());
   componentDescriptorProviderRegistry.add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
 

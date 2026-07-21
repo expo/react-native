@@ -17,8 +17,8 @@
 #import <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #import <react/renderer/components/text/ParagraphShadowNode.h>
 #import <react/renderer/components/text/ParagraphState.h>
-#import <react/renderer/components/text/RawTextComponentDescriptor.h>
-#import <react/renderer/components/text/RawTextShadowNode.h>
+#import <react/renderer/components/text/TextNodeComponentDescriptor.h>
+#import <react/renderer/components/text/TextNodeShadowNode.h>
 #import <react/renderer/components/text/TextComponentDescriptor.h>
 #import <react/renderer/components/text/TextShadowNode.h>
 #import <react/renderer/components/view/ViewComponentDescriptor.h>
@@ -96,16 +96,16 @@ using namespace facebook::react;
   std::shared_ptr<TextShadowNode> TextShadowNodeCA_;
   std::shared_ptr<TextShadowNode> TextShadowNodeCB_;
   std::shared_ptr<TextShadowNode> TextShadowNodeCC_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeAAA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeABA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeACA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeADA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeAEA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeBAA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeBBA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeCAA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeCBA_;
-  std::shared_ptr<RawTextShadowNode> RawTextShadowNodeCCA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeAAA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeABA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeACA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeADA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeAEA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeBAA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeBBA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeCAA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeCBA_;
+  std::shared_ptr<TextNodeShadowNode> TextNodeShadowNodeCCA_;
 }
 
 - (void)setUp
@@ -148,8 +148,8 @@ using namespace facebook::react;
                             auto sharedProps = std::make_shared<TextProps>();
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeAAA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeAAA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text = "Please check out ";
                             return sharedProps;
@@ -162,8 +162,8 @@ using namespace facebook::react;
                             props.textAttributes.accessibilityRole = AccessibilityRole::Link;
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeABA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeABA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text = "facebook";
                             return sharedProps;
@@ -174,8 +174,8 @@ using namespace facebook::react;
                             auto sharedProps = std::make_shared<TextProps>();
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeACA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeACA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text = " and ";
                             return sharedProps;
@@ -188,8 +188,8 @@ using namespace facebook::react;
                             props.textAttributes.accessibilityRole = AccessibilityRole::Link;
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeADA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeADA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text = "instagram";
                             return sharedProps;
@@ -200,8 +200,8 @@ using namespace facebook::react;
                             auto sharedProps = std::make_shared<TextProps>();
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeAEA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeAEA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text = " for a full description.";
                             return sharedProps;
@@ -230,8 +230,8 @@ using namespace facebook::react;
                             props.textAttributes.accessibilityRole = AccessibilityRole::Link;
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeBAA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeBAA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text =
                                 "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas ut risus et sapien bibendum volutpat. Nulla facilisi. Cras imperdiet gravida tincidunt. ";
@@ -243,8 +243,8 @@ using namespace facebook::react;
                             auto sharedProps = std::make_shared<TextProps>();
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeBBA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeBBA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text =
                                 "In tempor, tellus et vestibulum venenatis, lorem nunc eleifend lectus, a consectetur magna augue at arcu.";
@@ -274,8 +274,8 @@ using namespace facebook::react;
                             props.textAttributes.accessibilityRole = AccessibilityRole::Link;
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeCAA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeCAA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text = "Lorem ipsum";
                             return sharedProps;
@@ -286,8 +286,8 @@ using namespace facebook::react;
                             auto sharedProps = std::make_shared<TextProps>();
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeCBA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeCBA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text =
                                 " dolor sit amet, consectetur adipiscing elit. Maecenas ut risus et sapien bibendum volutpat. Nulla facilisi. Cras imperdiet gravida tincidunt. In tempor, tellus et vestibulum venenatis, lorem nunc eleifend lectus, a consectetur magna augue at arcu. ";
@@ -301,8 +301,8 @@ using namespace facebook::react;
                             props.textAttributes.accessibilityRole = AccessibilityRole::Button;
                             return sharedProps;
                           })
-                          .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeCCA_).props([] {
-                            auto sharedProps = std::make_shared<RawTextProps>();
+                          .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeCCA_).props([] {
+                            auto sharedProps = std::make_shared<TextNodeProps>();
                             auto &props = *sharedProps;
                             props.text = "See Less";
                             return sharedProps;
@@ -448,8 +448,8 @@ static ParagraphShadowNode::ConcreteState::Shared stateWithShadowNode(
                                        props.textAttributes.accessibilityRole = AccessibilityRole::Link;
                                        return sharedProps;
                                      })
-                                     .children({Element<RawTextShadowNode>().reference(RawTextShadowNodeABA_).props([] {
-                                       auto sharedProps = std::make_shared<RawTextProps>();
+                                     .children({Element<TextNodeShadowNode>().reference(TextNodeShadowNodeABA_).props([] {
+                                       auto sharedProps = std::make_shared<TextNodeProps>();
                                        auto &props = *sharedProps;
                                        props.text = "A long text that happens to be a link";
                                        return sharedProps;

@@ -14,7 +14,6 @@
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/InlineTextTagShadowNodes.h>
-#include <react/renderer/components/text/RawTextComponentDescriptor.h>
 #include <react/renderer/components/text/TextNodeComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
 #include <react/renderer/components/view/DivShadowNode.h>
@@ -31,7 +30,6 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<ImageComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ParagraphComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ScrollViewComponentDescriptor>());
-      providerRegistry->add(concreteComponentDescriptorProvider<RawTextComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<TextNodeComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<TextComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<BTagComponentDescriptor>());

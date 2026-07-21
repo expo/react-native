@@ -7,8 +7,6 @@
 
 #include "BaseTextShadowNode.h"
 
-#include <react/renderer/components/text/RawTextProps.h>
-#include <react/renderer/components/text/RawTextShadowNode.h>
 #include <react/renderer/components/text/TextEffectShadowNode.h>
 #include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/components/text/TextProps.h>
@@ -40,19 +38,10 @@ void BaseTextShadowNode::buildAttributedString(
     Attachments& outAttachments) {
   bool lastFragmentWasRawText = false;
   for (const auto& childNode : parentNode.getChildren()) {
-    // Character data: the first-class `#text` node (§3.F), or the legacy
-    // `RawText` node during the transition.
-    const std::string* textData = nullptr;
-    if (auto* textNode =
-            dynamic_cast<const TextNodeShadowNode*>(childNode.get())) {
-      textData = &textNode->getText();
-    } else if (
-        auto* rawTextShadowNode =
-            dynamic_cast<const RawTextShadowNode*>(childNode.get())) {
-      textData = &rawTextShadowNode->getConcreteProps().text;
-    }
-    if (textData != nullptr) {
-      const auto& rawText = *textData;
+    // Character data: the first-class `#text` node (§3.F).
+    auto* textNode = dynamic_cast<const TextNodeShadowNode*>(childNode.get());
+    if (textNode != nullptr) {
+      const auto& rawText = textNode->getText();
       if (lastFragmentWasRawText) {
         outAttributedString.getFragments().back().string += rawText;
       } else {
