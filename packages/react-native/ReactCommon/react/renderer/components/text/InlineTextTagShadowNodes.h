@@ -125,9 +125,15 @@ class ImgTagProps final : public Props {
       const ImgTagProps &sourceProps,
       const RawProps &rawProps)
       : Props(context, sourceProps, rawProps),
-        src(convertRawProp(context, rawProps, "src", sourceProps.src, std::string{})) {}
+        src(convertRawProp(context, rawProps, "src", sourceProps.src, std::string{})),
+        width(convertRawProp(context, rawProps, "width", sourceProps.width, {})),
+        height(convertRawProp(context, rawProps, "height", sourceProps.height, {})) {}
 
   std::string src{};
+  // Intrinsic size of the replaced box (points). The IFC reserves this space in
+  // the run so text flows around it (implicit-text-plan.md §3.C).
+  Float width{};
+  Float height{};
 };
 
 class ImgTagShadowNode final : public ConcreteShadowNode<ImgTagComponentName, ShadowNode, ImgTagProps> {

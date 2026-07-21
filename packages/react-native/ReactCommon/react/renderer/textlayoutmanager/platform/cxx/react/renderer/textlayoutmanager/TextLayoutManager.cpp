@@ -7,6 +7,7 @@
 
 #include "TextLayoutManager.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
@@ -46,8 +47,20 @@ TextMeasurement measureDeterministically(
     TextMeasurement::Attachments attachments) {
   size_t characterCount = 0;
   Float intrinsicWidth = 0;
+  Float maxAttachmentHeight = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
-    if (!fragment.isAttachment()) {
+    if (fragment.isAttachment()) {
+      // Inline replaced element (the `<img>` tag): reserve its intrinsic box in
+      // the run — width adds to the line, height can grow the line box. The size
+      // is carried on the attachment fragment's layout metrics (set by
+      // `InlineContentShadowNode::sizeImageAttachments`). Contract extension
+      // documented in implicit-text-onboarding.md §4.
+      const auto& attachmentSize =
+          fragment.parentShadowView.layoutMetrics.frame.size;
+      intrinsicWidth += attachmentSize.width;
+      maxAttachmentHeight = std::max(maxAttachmentHeight, attachmentSize.height);
+      characterCount += 1;
+    } else {
       characterCount += fragment.string.size();
       // Per-character advance is layout-observable so inheritance of weight/
       // style/letterSpacing can be asserted headlessly. Contract: base 10pt,
@@ -67,7 +80,8 @@ TextMeasurement measureDeterministically(
     }
   }
 
-  const auto lineHeight = deterministicLineHeight(attributedStringBox);
+  const auto lineHeight =
+      std::max(deterministicLineHeight(attributedStringBox), maxAttachmentHeight);
 
   if (characterCount == 0) {
     return TextMeasurement{

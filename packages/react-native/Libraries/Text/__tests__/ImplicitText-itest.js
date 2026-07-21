@@ -904,12 +904,35 @@ milestone(5, 'M5: intrinsic inline tags', () => {
       );
     });
 
-    // <img> joins the run (single line), sized like 'ab' (attachment 0-width in
-    // Stage 1) — it does NOT blockify.
+    // <img> joins the run (single line), sized like 'ab' (attachment 0-width
+    // when no width/height) — it does NOT blockify.
     expect(rectOf(imgRef).height).toBe(rectOf(controlRef).height);
     expect(rectOf(imgRef).width).toBe(rectOf(controlRef).width);
     // Contrast: an inline text element (<b>) DOES blockify into 3 stacked items.
     expect(rectOf(blockifyRef).height).toBe(rectOf(controlRef).height * 3);
+  });
+
+  it('<img width height> reserves its box in the run (inline replaced sizing)', () => {
+    // Stage 2: a sized <img> occupies its intrinsic box in the run — width adds
+    // to the line and the taller image box grows the line height. Here
+    // 'a<img 30x40/>b' = 10 + 30 + 10 = 50pt wide and 40pt tall (> the 20pt text
+    // line). Deterministic-measurer contract extension (onboarding §4).
+    const sizedRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} ref={sizedRef} style={{alignSelf: 'flex-start'}}>
+          {'a'}
+          {/* $FlowExpectedError[not-a-component] intrinsic <img> tag */}
+          <img width={30} height={40} />
+          {'b'}
+        </View>,
+      );
+    });
+
+    expect(rectOf(sizedRef).width).toBe(50);
+    expect(rectOf(sizedRef).height).toBe(40);
   });
 });
 

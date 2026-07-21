@@ -91,7 +91,7 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 **Renumbered 2026-07-21** (per direction): the iOS simulator items were pulled forward to
 T5–T7 and first-class text nodes (Track C, the plan's own-review item) deferred to **T8**.
 T1–T6 are done (T5 paint order + T6 hit-testing simulator-verified); T7 (inline `<img>`) has its
-classification Stage 1 done (headless); its iOS rendering (Stage 2) and T8–T11 remain.
+inline-replaced layout done (Stage 1+2, headless); its iOS pixel rendering (Stage 3) and T8–T10 remain.
 
 | # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
 |---|---|---|---|---|---|---|
@@ -101,11 +101,10 @@ classification Stage 1 done (headless); its iOS rendering (Stage 2) and T8–T11
 | T4 | Native Yoga `display:block` | B | ✅ (Fantom parity) | XL | own flag | ✅ done (Stage 1) |
 | T5 | iOS paint order + per-run views | D | ❌ (simulator) | M | — | ✅ done |
 | T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | ✅ done |
-| T7 | Intrinsic `<img>` tag | D | ~ (classification only) | M | — | ◑ Stage 1 done |
+| T7 | Intrinsic `<img>` tag | D | ~ (layout; render open) | M | — | ◑ layout done |
 | T8 | First-class text nodes (replace RawText) | C | ~ (dev/shared only) | XL | — | deferred (own review) |
 | T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | open |
 | T10 | Android mounting story | E | ❌ (Android) | XL | — | open |
-| T11 | Upstream the dev-warning removal | A | n/a | S | — | open |
 
 ---
 
@@ -155,7 +154,7 @@ classification Stage 1 done (headless); its iOS rendering (Stage 2) and T8–T11
   prop when the component is `"unknown"`, so `tagName`/`nodeName` report `"RN:<tag>"`. Tests:
   `ImplicitText-itest.js` M5b (per-instance `<foo>`/`<bar>`) + web-mirror twin (Safari 18/18).
   **Prod follow-up:** the `ReactFabric-prod.js` injection is not done (minified-bundle edit —
-  same fork-carry category as T11); until then the prod path falls back to `unknown`.
+  same fork-carry category as the §3.E dev-warning bundle edit); until then the prod path falls back to `unknown`.
 - **Goal.** `document`-style DOM APIs report `<foo>`'s tag as `foo` (e.g. `tagName === "RN:foo"`)
   instead of the generic `unknown`.
 - **Why / context.** HTMLUnknownElement keeps its tag name. Today unregistered lowercase tags
@@ -179,7 +178,7 @@ classification Stage 1 done (headless); its iOS rendering (Stage 2) and T8–T11
   element via the DOM API, assert `element.tagName` / `nodeName` reflects `foo`. Web-mirror twin:
   `document.querySelector('foo').tagName === 'FOO'`.
 - **Acceptance.** DoD 1–5; a bare-`<foo>` DOM-API test reads `foo`; prod-bundle edit noted as a
-  follow-up (prod path is a fork carry until upstreamed — see T11).
+  follow-up (prod path is a vendored-bundle fork carry).
 - **Effort / risk / deps.** S. Risk: minified prod-bundle edit (defer to follow-up).
 
 ### T3. Lazy View state — ✅ DONE
@@ -397,27 +396,32 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 - **Acceptance.** Both taps behave per spec on device; plan updated.
 - **Effort / risk / deps.** M. Dep: T5 (run views/frames). Simulator-only.
 
-### T7. Intrinsic `<img>` tag (inline replaced element) — ◑ Stage 1 DONE (classification)
+### T7. Intrinsic `<img>` tag (inline replaced element) — ◑ Stage 1+2 layout DONE; pixel-render open
 
-- **Status (Stage 1 done — inline-attachment classification).** Registered the `<img>` tag:
-  `ImgTagShadowNode`/`ImgTagProps` (`src`) in `InlineTextTagShadowNodes.{h,cpp}`, a **plain
-  `ShadowNode`** (deliberately not `YogaLayoutableShadowNode` and not `InlineText`) so
+- **Stage 1 done — inline-attachment classification.** Registered the `<img>` tag:
+  `ImgTagShadowNode`/`ImgTagProps` (`src`/`width`/`height`) in `InlineTextTagShadowNodes.{h,cpp}`,
+  a **plain `ShadowNode`** (deliberately not `YogaLayoutableShadowNode` and not `InlineText`) so
   `updateYogaChildren` routes it into the current run as a non-text attachment rather than a
   block-level Yoga child; registered in the Fantom stub registry and the iOS paragraph
-  supplemental providers; JS config in `InlineTags.js` (`src`/`width`/`height`). `isInlineTextContent`
-  now includes `"img"`, and the run-grouping predicate lets `<img>` join the run even in flex
-  containers (a replaced element flows inline, never blockifies — unlike `<b>`).
-  Verified headlessly: `ImplicitText-itest.js` M5 — `a<img/>b` flows on one line sized like `ab`
-  (attachment 0-width in Stage 1), while `a<b>b</b>c` blockifies to 3× height; regressions green
-  (baselines 4, native-block 7, Text 151, ReadOnlyText 30). Web-mirror twin added (asserts
-  `<img>` is `display:inline`); Safari re-run was blocked by a transient safaridriver launch
-  failure this session (mirror passed 20/20 earlier).
-- **Stage 2 (follow-up, iOS + image pipeline):** attachment layout for the anonymous IFC (size
-  from `src`/`width`/`height`, positioned by text layout) and mounting an actual image view at
-  the attachment frame — reuse Paragraph's inline-attachment loop
-  (`ParagraphShadowNode.cpp:363-446`). Not headless (deterministic measurer treats attachments
-  as 0×0); needs device. Optionally extend the measurer with a documented attachment-size
-  contract for a headless size assertion.
+  supplemental providers; JS config in `InlineTags.js`. `isInlineTextContent` includes `"img"`,
+  and the run-grouping predicate lets `<img>` join the run even in flex (a replaced element
+  flows inline, never blockifies — unlike `<b>`). Verified: `a<img/>b` flows on one line vs
+  `a<b>b</b>c` blockifying to 3× height.
+- **Stage 2 done — inline-replaced layout/sizing (headless).** A sized `<img width height>` now
+  reserves its intrinsic box in the run: `InlineContentShadowNode::sizeImageAttachments` sets the
+  attachment fragment's size from the `<img>`'s width/height props (before whitespace collapse,
+  so fragment indices stay valid), and the deterministic cxx measurer was extended (documented
+  contract) to add the attachment width to the line and grow the line height to the tallest
+  attachment. Verified headlessly: `a<img 30x40/>b` = 50×40pt. Regressions green (baselines 4,
+  native-block 7, Text 151, ReadOnlyText 30, ReactNativeElement 170, View-itest 224). Web-mirror
+  twins added (display:inline + sized-box); Safari re-run was blocked by a persistent safaridriver
+  launch failure this session (mirror passed 20/20 earlier).
+- **Stage 3 (open, iOS + image pipeline) — actual pixel rendering.** The `<img>` still renders
+  nothing on screen: it needs to mount an image view at the attachment frame (or draw via the
+  run view). This requires (a) a mounting-reconciliation design — the `<img>` is authored under
+  the View but positioned by the synthetic run box, unlike Paragraph attachments which the
+  paragraph itself owns/mounts — and (b) the image pipeline for `src` loading/decoding. Reuse
+  Paragraph's attachment loop (`ParagraphShadowNode.cpp:363-446`) as the model. Device effort.
 - **Goal.** `<img src=…>` flows inside a bare-text IFC as an inline **replaced** box, like the
   web (distinct from the block-level RN `Image` component).
 - **Why / context.** Plan §3.C. Reuses Paragraph's inline-attachment machinery
@@ -462,22 +466,6 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 - **Testing methodology.** Android instrumentation / on-device; not headless here.
 - **Acceptance.** Bare text renders and updates on Android behind the flag; regression parity.
 - **Effort / risk / deps.** XL. Needs Android toolchain.
-
----
-
-## Track A (cleanup) — upstreaming
-
-### T11. Upstream the `createTextInstance` dev-warning removal
-
-- **Goal.** The "Text strings must be rendered within a `<Text>`" dev-warning removal lives in the
-  `react` repo host config, not as a vendored-bundle fork carry.
-- **Entry points.** `react` repo Fabric host config; our edit is in
-  `Libraries/Renderer/implementations/ReactFabric-dev.js`. (Prod needs nothing for the warning;
-  the T2 prod-bundle `nodeName` injection is the related prod fork-carry to upstream too.)
-- **Testing methodology.** n/a in this repo; verified by the vendored bundle regenerating clean
-  from the upstreamed host config.
-- **Acceptance.** The fork no longer carries the bundle edit for the warning.
-- **Effort / risk / deps.** S. External repo.
 
 ---
 

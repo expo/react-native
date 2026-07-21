@@ -222,8 +222,10 @@ events, and DOM APIs).
   **Stage 1 done (next-steps T7):** the `<img>` tag is a plain (non-Yoga, non-`InlineText`)
   `ShadowNode` so it becomes an inline attachment; registered (Fantom + iOS supplemental + JS)
   and classified so it joins the run even in flex, never blockifying. Headless test proves
-  `a<img/>b` flows on one line (attachment 0-size in Stage 1) vs `<b>` blockifying. Stage 2
-  (iOS attachment layout + image rendering) is a device follow-up.
+  `a<img/>b` flows on one line vs `<b>` blockifying, and a sized `a<img 30x40/>b`
+  reserves its 30x40 box in the run (measurer contract extended). Actual iOS pixel
+  rendering (mount an image view at the attachment frame + `src` loading) is the device
+  follow-up.
 - **`<div>` — block element.** The lowercase `<div>` tag is a block-level container with
   block *inner* display (§3.A block section): it is the intrinsic analog of a `View` but with
   `display:block` instead of `flex`, so ported web markup (`<div><span>…</span></div>`) lays
@@ -547,10 +549,10 @@ DOM semantics (incl. `nodeName`/`tagName` fidelity, dev bundle), the §3.E warni
 removal, CSS `white-space: normal` collapsing inside anonymous IFCs (§3.A/§4.4),
 lazy View state (§4.2), native Yoga `display:block` Stage 1 (§3.A/§4.5,
 `enableYogaDisplayBlock`), iOS per-run paint-order views (§3.B), iOS touch
-hit-testing on drawn text (§3.G), and the intrinsic `<img>` inline-attachment
-classification (§3.C Stage 1) are
+hit-testing on drawn text (§3.G), and the intrinsic `<img>` inline-replaced
+layout (§3.C, classification + sizing) are
 implemented on this branch and verified: Fantom
-40/40 matrix + 7/7 native-block + regression sweeps (View-itest 224), Safari web
+41/41 matrix + 7/7 native-block + regression sweeps (View-itest 224), Safari web
 mirror 20/20 (+ img/native-block twins added), iPhone 17
 Pro (iOS 26.5) simulator screenshots (incl. paint-order interleaving + hit-test log), and live CDP layout reads
 (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:

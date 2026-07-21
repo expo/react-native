@@ -181,6 +181,18 @@ kase('<img> is inline-replaced: flows in the text run, not blockified',
       Math.abs(a.height - b.height) < 2 && Math.abs(a.width - b.width) < 2;
   });
 
+// A sized <img> reserves its intrinsic box in the run: it adds its width to the
+// line and its (taller) box grows the line height — RN parity for T7 Stage 2
+// (inline-replaced sizing/layout).
+kase('sized <img> reserves its box in the run (inline replaced sizing)',
+  `<div class="view" id="imgsized" style="align-self:flex-start; position:absolute; visibility:hidden">a<img style="width:30px;height:40px" alt="">b</div>`,
+  'a<img 30x40>b is >= 40px tall and wider than plain text',
+  (root) => {
+    const r = root.querySelector('#imgsized').getBoundingClientRect();
+    // width includes the 30px image box; height grows to the 40px image.
+    return r.height >= 40 - 1 && r.width >= 30;
+  });
+
 kase('unknown elements keep their authored tagName/nodeName',
   `<div class="view block" id="unktag">a<foo>b</foo><bar>c</bar></div>`,
   'tagName reflects the authored tag',
