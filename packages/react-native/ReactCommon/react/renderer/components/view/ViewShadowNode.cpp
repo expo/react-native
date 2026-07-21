@@ -124,8 +124,10 @@ void ViewShadowNode::updateTextRunStateIfNeeded() {
 
   auto textRuns = std::vector<ViewState::TextRun>{};
   auto layoutManager = std::weak_ptr<const TextLayoutManager>{};
+  const auto& childIndices = getAnonymousTextContentChildIndices();
   textRuns.reserve(anonymousBoxes.size());
-  for (const auto& box : anonymousBoxes) {
+  for (size_t i = 0; i < anonymousBoxes.size(); i++) {
+    const auto& box = anonymousBoxes[i];
     const auto* contentAccessor =
         dynamic_cast<const InlineTextContentAccessor*>(box.get());
     if (contentAccessor == nullptr) {
@@ -137,7 +139,10 @@ void ViewShadowNode::updateTextRunStateIfNeeded() {
     textRuns.push_back(
         ViewState::TextRun{
             .attributedString = contentAccessor->getContentAttributedString(),
-            .frame = box->getLayoutMetrics().frame});
+            .frame = box->getLayoutMetrics().frame,
+            .documentOrder = i < childIndices.size()
+                ? childIndices[i]
+                : static_cast<int>(i)});
   }
 
   if (state_ == nullptr) {

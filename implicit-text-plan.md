@@ -183,7 +183,11 @@ paint "a" and "b" in document position relative to the inner view, per CSS paint
 Hence per-run views: they are *component-view-internal* subviews (never differ-driven — the
 differ still only sees the View), and `layoutSubviews` re-establishes z-order after every
 mount/state change by interleaving React-mounted subviews and run views per the authored
-child order recorded in state. React child mounting stays index-based and untouched; run
+child order recorded in state. **Done (next-steps T5):** `RCTImplicitTextRunView` (one per
+run) + `ViewState::TextRun::documentOrder` (count of preceding mounted children, recorded in
+`YogaLayoutableShadowNode`) + `reorderImplicitTextRunViewsIfNeeded` in `layoutSubviews`.
+Simulator-verified on iPhone 17 Pro: text authored before an overlapping child paints under
+it, text after paints over it. React child mounting stays index-based and untouched; run
 views are excluded from those indices (same pattern as the paragraph's content view today).
 
 **Text-bearing Views must not flatten.** View-flattening removes prop-less Views
@@ -531,11 +535,12 @@ in there being no `rn-paragraph` wrapper — the View itself carries the text ru
 All matrix milestones (M1-M7) plus iOS painting, intrinsic tags, unknown-element
 DOM semantics (incl. `nodeName`/`tagName` fidelity, dev bundle), the §3.E warning
 removal, CSS `white-space: normal` collapsing inside anonymous IFCs (§3.A/§4.4),
-lazy View state (§4.2), and native Yoga `display:block` Stage 1 (§3.A/§4.5,
-`enableYogaDisplayBlock`) are implemented on this branch and verified: Fantom
+lazy View state (§4.2), native Yoga `display:block` Stage 1 (§3.A/§4.5,
+`enableYogaDisplayBlock`), and iOS per-run paint-order views (§3.B) are
+implemented on this branch and verified: Fantom
 39/39 matrix + 7/7 native-block + regression sweeps (View-itest 224), Safari web
 mirror 20/20, iPhone 17
-Pro (iOS 26.5) simulator screenshots, and live CDP layout reads
+Pro (iOS 26.5) simulator screenshots (incl. paint-order interleaving), and live CDP layout reads
 (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:
 `packages/rn-tester/js/ImplicitTextDemo.js`. Next: mine Web Platform Tests
 (css/CSS2 normal-flow + visuren, css-flexbox anonymous items, css-display,

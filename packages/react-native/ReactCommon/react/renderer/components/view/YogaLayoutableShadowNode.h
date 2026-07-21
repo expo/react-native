@@ -111,6 +111,17 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   }
 
   /*
+   * Parallel to `getAnonymousTextContentChildren()`: for each anonymous run box,
+   * the number of block-level (mounted) React children that precede it in
+   * document order. Used to interleave per-run paint views with mounted children
+   * in authored order (implicit-text-plan.md §3.B).
+   */
+  const std::vector<int> &getAnonymousTextContentChildIndices() const
+  {
+    return anonymousTextContentChildIndices_;
+  }
+
+  /*
    * Effective inherited text attributes for this node (element-tree cascade,
    * implicit-text-plan.md §3.D). Propagated top-down in `configureYogaTree`.
    */
@@ -248,7 +259,8 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * the Yoga children (it is never part of `children_` — box tree only).
    */
   void appendAnonymousTextContentChild(
-      std::vector<std::shared_ptr<const ShadowNode>> &&runChildren);
+      std::vector<std::shared_ptr<const ShadowNode>> &&runChildren,
+      int precedingMountedChildCount);
 
 #pragma mark - Private member variables
   /*
@@ -262,6 +274,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * `yogaLayoutableChildren_` and the Yoga node, never in `children_`.
    */
   std::vector<std::shared_ptr<YogaLayoutableShadowNode>> anonymousTextContentChildren_;
+
+  /*
+   * Parallel to `anonymousTextContentChildren_`: preceding mounted-child count
+   * per run box (document-order interleaving, implicit-text-plan.md §3.B).
+   */
+  std::vector<int> anonymousTextContentChildIndices_;
 
   /*
    * Effective inherited text attributes (cascade input ⊕ own inheritable

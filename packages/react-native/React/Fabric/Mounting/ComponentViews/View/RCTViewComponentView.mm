@@ -47,12 +47,21 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
  * (implicit-text-plan.md §3.B). Installed as `contentView` only when runs
  * exist.
  */
-@interface RCTImplicitTextContentView : UIView
+/*
+ * One lightweight paint view per anonymous text run (implicit-text-plan.md
+ * §3.B). Using one view per run (instead of a single content view drawing all
+ * runs on top) lets the mounting layer interleave runs with mounted child views
+ * in authored order — CSS painting order — via `layoutSubviews` z-ordering.
+ * These views are component-view-internal: they are never differ-driven and
+ * never appear in the React child indices.
+ */
+@interface RCTImplicitTextRunView : UIView
 @end
 
-@implementation RCTImplicitTextContentView {
+@implementation RCTImplicitTextRunView {
  @public
-  facebook::react::ViewState _viewState;
+  facebook::react::ViewState::TextRun _run;
+  std::weak_ptr<const facebook::react::TextLayoutManager> _layoutManager;
   CGPoint _drawingOffset;
 }
 
@@ -62,29 +71,28 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
     self.backgroundColor = UIColor.clearColor;
     self.opaque = NO;
     self.userInteractionEnabled = NO;
+    self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
   }
   return self;
 }
 
 - (void)drawRect:(CGRect)rect
 {
-  auto textLayoutManager = _viewState.layoutManager.lock();
+  auto textLayoutManager = _layoutManager.lock();
   if (!textLayoutManager) {
     return;
   }
   RCTTextLayoutManager *nativeTextLayoutManager =
       (RCTTextLayoutManager *)facebook::react::unwrapManagedObject(textLayoutManager->getNativeTextLayoutManager());
-  for (const auto &run : _viewState.textRuns) {
-    CGRect frame = CGRectMake(
-        run.frame.origin.x - _drawingOffset.x,
-        run.frame.origin.y - _drawingOffset.y,
-        run.frame.size.width,
-        run.frame.size.height);
-    [nativeTextLayoutManager drawAttributedString:run.attributedString
-                              paragraphAttributes:facebook::react::ParagraphAttributes{}
-                                            frame:frame
-                                drawHighlightPath:nil];
-  }
+  CGRect frame = CGRectMake(
+      _run.frame.origin.x - _drawingOffset.x,
+      _run.frame.origin.y - _drawingOffset.y,
+      _run.frame.size.width,
+      _run.frame.size.height);
+  [nativeTextLayoutManager drawAttributedString:_run.attributedString
+                            paragraphAttributes:facebook::react::ParagraphAttributes{}
+                                          frame:frame
+                              drawHighlightPath:nil];
 }
 
 @end
@@ -107,6 +115,9 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   NSMutableSet<NSString *> *_accessibilityOrderNativeIDs;
   RCTSwiftUIContainerViewWrapper *_swiftUIWrapper;
   BOOL _focusable;
+  // One paint view per anonymous text run, interleaved with mounted children in
+  // document order (implicit-text-plan.md §3.B). Internal, never differ-driven.
+  NSMutableArray<RCTImplicitTextRunView *> *_textRunViews;
 }
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -322,24 +333,82 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   }
 
   const auto &data = viewState->getData();
+
+  // Remove surplus run views when the run count shrinks (incl. to zero).
+  while (_textRunViews.count > data.textRuns.size()) {
+    [_textRunViews.lastObject removeFromSuperview];
+    [_textRunViews removeLastObject];
+  }
   if (data.textRuns.empty()) {
-    if ([self.contentView isKindOfClass:[RCTImplicitTextContentView class]]) {
-      self.contentView = nil;
-    }
     return;
   }
 
-  RCTImplicitTextContentView *textContentView = nil;
-  if ([self.contentView isKindOfClass:[RCTImplicitTextContentView class]]) {
-    textContentView = (RCTImplicitTextContentView *)self.contentView;
-  } else {
-    textContentView = [RCTImplicitTextContentView new];
-    self.contentView = textContentView;
+  if (_textRunViews == nil) {
+    _textRunViews = [NSMutableArray new];
   }
-  textContentView->_viewState = data;
   CGRect contentFrame = RCTCGRectFromRect(_layoutMetrics.getContentFrame());
-  textContentView->_drawingOffset = contentFrame.origin;
-  [textContentView setNeedsDisplay];
+  for (size_t i = 0; i < data.textRuns.size(); i++) {
+    RCTImplicitTextRunView *runView = nil;
+    if (i < _textRunViews.count) {
+      runView = _textRunViews[i];
+    } else {
+      runView = [[RCTImplicitTextRunView alloc] initWithFrame:self.currentContainerView.bounds];
+      [_textRunViews addObject:runView];
+      [self.currentContainerView addSubview:runView];
+    }
+    runView->_run = data.textRuns[i];
+    runView->_layoutManager = data.layoutManager;
+    runView->_drawingOffset = contentFrame.origin;
+    runView.frame = self.currentContainerView.bounds;
+    [runView setNeedsDisplay];
+  }
+  // Re-establish authored paint order relative to mounted children.
+  [self setNeedsLayout];
+}
+
+// Interleaves the internal per-run paint views with mounted child views in
+// authored document order (CSS painting order, implicit-text-plan.md §3.B): a
+// run with `documentOrder == d` is placed just below the d-th mounted child, so
+// text authored before a child paints under it and text after paints over it.
+- (void)reorderImplicitTextRunViewsIfNeeded
+{
+  if (_textRunViews.count == 0) {
+    return;
+  }
+  UIView *container = self.currentContainerView;
+  NSMutableArray<UIView *> *mountedChildren = [NSMutableArray new];
+  for (UIView *subview in container.subviews) {
+    if (![subview isKindOfClass:[RCTImplicitTextRunView class]]) {
+      [mountedChildren addObject:subview];
+    }
+  }
+  for (NSUInteger i = 0; i < _textRunViews.count; i++) {
+    RCTImplicitTextRunView *runView = _textRunViews[i];
+    int documentOrder = runView->_run.documentOrder;
+    if (documentOrder >= (int)mountedChildren.count) {
+      // After all mounted children: on top.
+      [container bringSubviewToFront:runView];
+    } else {
+      // Just below the child it precedes in document order.
+      UIView *anchor = mountedChildren[documentOrder];
+      NSUInteger anchorIndex = [container.subviews indexOfObject:anchor];
+      if (anchorIndex != NSNotFound) {
+        [container insertSubview:runView belowSubview:anchor];
+        (void)anchorIndex;
+      }
+    }
+  }
+}
+
+- (void)layoutSubviews
+{
+  [super layoutSubviews];
+  if (_textRunViews.count > 0) {
+    for (RCTImplicitTextRunView *runView in _textRunViews) {
+      runView.frame = self.currentContainerView.bounds;
+    }
+    [self reorderImplicitTextRunViewsIfNeeded];
+  }
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps
@@ -777,6 +846,15 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   }
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
     self.layer.opacity = (float)props.opacity;
+  }
+
+  // Clean up per-run text paint views (implicit-text-plan.md §3.B).
+  if (_textRunViews != nil) {
+    for (RCTImplicitTextRunView *runView in _textRunViews) {
+      [runView removeFromSuperview];
+    }
+    [_textRunViews removeAllObjects];
+    _textRunViews = nil;
   }
 
   // Clean up box shadow layers to prevent cross-component contamination

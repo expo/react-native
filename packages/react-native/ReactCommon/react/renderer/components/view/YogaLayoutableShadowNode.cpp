@@ -441,15 +441,20 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
   yogaNode_.setChildren({});
   yogaLayoutableChildren_.clear();
   anonymousTextContentChildren_.clear();
+  anonymousTextContentChildIndices_.clear();
   yogaLayoutableChildren_.reserve(getChildren().size());
 
   // Contiguous inline-level content (text nodes; inline text elements get
   // blockified into their own single-node runs per css-flexbox-1 §4) is
   // wrapped in anonymous boxes established by the text module's factory.
+  // `mountedChildCount` tracks how many block-level (mounted) children precede
+  // the run being flushed, so the mounting layer can interleave the per-run
+  // paint views with mounted children in document order (§3.B).
+  int mountedChildCount = 0;
   std::vector<std::shared_ptr<const ShadowNode>> inlineRun;
   auto flushInlineRun = [&]() {
     if (!inlineRun.empty()) {
-      appendAnonymousTextContentChild(std::move(inlineRun));
+      appendAnonymousTextContentChild(std::move(inlineRun), mountedChildCount);
       inlineRun.clear();
       isClean = false;
     }
@@ -462,6 +467,7 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       flushInlineRun();
       appendYogaChild(yogaLayoutableChild);
       adoptYogaChild(i);
+      mountedChildCount++;
 
       if (isClean) {
         auto yogaChildIndex = yogaLayoutableChildren_.size() - 1;
@@ -531,12 +537,14 @@ bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
 }
 
 void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
-    std::vector<std::shared_ptr<const ShadowNode>>&& runChildren) {
+    std::vector<std::shared_ptr<const ShadowNode>>&& runChildren,
+    int precedingMountedChildCount) {
   auto box = getAnonymousTextContentFactory()(std::move(runChildren), *this);
   if (box == nullptr) {
     // The run generates no box (e.g. whitespace-only anonymous flex item).
     return;
   }
+  anonymousTextContentChildIndices_.push_back(precedingMountedChildCount);
 
   if (static_cast<const YogaStylableProps&>(*props_).displayBlock) {
     // Anonymous block boxes always fill the containing block on web; pin

@@ -103,6 +103,37 @@ export default function ImplicitTextDemo(): React.Node {
           <Greeting />
         </View>
       </Case>
+
+      <Case label="8. paint order: left text is authored BEFORE the box (paints under, hidden); right text is authored AFTER (paints over, visible)">
+        <View style={{flexDirection: 'row'}}>
+          <View style={{width: 120, height: 24, marginRight: 8}}>
+            UNDER
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: '#f88',
+              }}
+            />
+          </View>
+          <View style={{width: 120, height: 24}}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: '#8f8',
+              }}
+            />
+            OVER
+          </View>
+        </View>
+      </Case>
     </ScrollView>
   );
 }

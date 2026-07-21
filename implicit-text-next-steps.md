@@ -88,19 +88,23 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 **Track B/C** are the two large core efforts (pick one and give it a dedicated run).
 **Track D/E** need a simulator/device or Android and are best batched when you have that set up.
 
-| # | Task | Track | Verifiable headlessly? | Size | Depends on |
-|---|---|---|---|---|---|
-| T1 | White-space processing | A | ✅ (after a decision) | S–M | §7 sign-off |
-| T2 | Unknown-element nodeName fidelity | A | ✅ (Fantom, dev bundle) | S | — |
-| T3 | Lazy View state | A | ~ (alloc + regression) | M | — |
-| T4 | Native Yoga `display:block` | B | ✅ (Fantom parity) | XL | own flag |
-| T5 | First-class text nodes | C | ✅ (Fantom) | XL | — |
-| T6 | iOS paint order + per-run views | D | ❌ (simulator) | M | — |
-| T7 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | T6 |
-| T8 | Intrinsic `<img>` tag | D | ❌ (image pipeline+device) | M | — |
-| T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** |
-| T10 | Android mounting story | E | ❌ (Android) | XL | — |
-| T11 | Upstream the dev-warning removal | A | n/a | S | — |
+**Renumbered 2026-07-21** (per direction): the iOS simulator items were pulled forward to
+T5–T7 and first-class text nodes (Track C, the plan's own-review item) deferred to **T8**.
+T1–T5 are done; T6–T7 are the active simulator items. (T5 = iOS paint order, simulator-verified.)
+
+| # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
+|---|---|---|---|---|---|---|
+| T1 | White-space processing | A | ✅ | S–M | — | ✅ done |
+| T2 | Unknown-element nodeName fidelity | A | ✅ (dev bundle) | S | — | ✅ done |
+| T3 | Lazy View state | A | ~ (alloc + regression) | M | — | ✅ done |
+| T4 | Native Yoga `display:block` | B | ✅ (Fantom parity) | XL | own flag | ✅ done (Stage 1) |
+| T5 | iOS paint order + per-run views | D | ❌ (simulator) | M | — | ✅ done |
+| T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | open |
+| T7 | Intrinsic `<img>` tag | D | ❌ (image pipeline+device) | M | — | open |
+| T8 | First-class text nodes (replace RawText) | C | ~ (dev/shared only) | XL | — | deferred (own review) |
+| T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | open |
+| T10 | Android mounting story | E | ❌ (Android) | XL | — | open |
+| T11 | Upstream the dev-warning removal | A | n/a | S | — | open |
 
 ---
 
@@ -286,7 +290,13 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 
 ## Track C — core representation refactor
 
-### T5. First-class text nodes (replace `RawText`)
+### T8. First-class text nodes (replace `RawText`) — DEFERRED (own review; see note)
+
+> **Deferred (2026-07-21).** Sequenced as its own reviewed effort. Scope spans the native
+> FabricUIManager jsi binding (`createTextNode`/`commitTextUpdate`), a slim `#text` node kind,
+> **three vendored renderer bundles** (dev/prod/profiling), the DOM layer, and deleting
+> `RCTRawText` across iOS/Android/core registries + an iOS test. Only the shared-C++/dev-bundle
+> slice is headless-verifiable; the rest needs platform builds. Original write-up below.
 
 - **Goal.** Character data is a slim first-class `Text` node (`"#text"`, DOM `nodeName`) instead
   of `RawTextShadowNode`'s fake-component packaging — no EventTarget, no RawProps parsing, no
@@ -323,8 +333,21 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 `node packages/rn-tester/scripts/implicit-text-cdp-verify.js` (Metro's inspector proxy needs
 `Origin: http://localhost:8081`). Demo page: `packages/rn-tester/js/ImplicitTextDemo.js`.
 
-### T6. iOS paint order + per-run views
+### T5. iOS paint order + per-run views — ✅ DONE (simulator-verified)
 
+- **Status (done).** Replaced the single `RCTImplicitTextContentView` (which drew every run on
+  top) with one lightweight `RCTImplicitTextRunView` per run (`RCTViewComponentView.mm`), each
+  drawing its single run via `RCTTextLayoutManager drawAttributedString:`. Authored document
+  order is threaded through: `YogaLayoutableShadowNode` records, per anonymous box, the count of
+  preceding mounted children (`anonymousTextContentChildIndices_`), `ViewShadowNode` copies it
+  into `ViewState::TextRun::documentOrder`, and iOS `reorderImplicitTextRunViewsIfNeeded`
+  (called from `layoutSubviews`) inserts each run view just below the child it precedes — so
+  text authored before a child paints under it and text after paints over it. Run views are
+  component-view-internal (never differ-driven), cleared in `prepareForRecycle`.
+  **Verified:** RNTester on iPhone 17 Pro (iOS 26.5) — demo case 8 shows bare text authored
+  before an overlapping box hidden beneath it (left cell) and text authored after painted over
+  it (right cell); cases 1–7 unregressed. Headless: shared-C++ `documentOrder` plumbing green
+  (ImplicitText 39, baselines 4, native-block 7, View-itest 224).
 - **Goal.** `<View>a<View/>b</View>` paints "a", the inner view, then "b" in document order —
   one lightweight run view per anonymous item, interleaved with React-mounted children.
 - **Why / context.** Plan §3.B. A single content view can't interleave text with mounted
@@ -342,7 +365,7 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
   plan updated.
 - **Effort / risk / deps.** M. Simulator-only.
 
-### T7. iOS touch hit-testing on drawn text
+### T6. iOS touch hit-testing on drawn text
 
 - **Goal.** Tapping an inline element with a handler (`<b onPress>`) fires it; tapping bare text
   fires the containing View's handlers (text nodes are never targets).
@@ -355,9 +378,9 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
   the View's handler fires. (The JS-observable half of event semantics — target/bubbling — is
   already covered headlessly by the M6 matrix cases; this is the on-device hit-test half.)
 - **Acceptance.** Both taps behave per spec on device; plan updated.
-- **Effort / risk / deps.** M. Dep: T6 (run views/frames). Simulator-only.
+- **Effort / risk / deps.** M. Dep: T5 (run views/frames). Simulator-only.
 
-### T8. Intrinsic `<img>` tag (inline replaced element)
+### T7. Intrinsic `<img>` tag (inline replaced element)
 
 - **Goal.** `<img src=…>` flows inside a bare-text IFC as an inline **replaced** box, like the
   web (distinct from the block-level RN `Image` component).

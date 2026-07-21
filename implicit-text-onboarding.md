@@ -264,10 +264,11 @@ has the full design for all of these.
    inside anonymous IFCs only. Touch: `InlineContentShadowNode::getContentAttributedString`
    (or a shared preprocessing step in `BaseTextShadowNode`). Tests first; get sign-off on
    the §7 open question.
-2. **Paint order + per-run views on iOS** — replace the single `RCTImplicitTextContentView`
-   with one lightweight view per run, interleaved with React-mounted children in authored
-   order (`layoutSubviews` re-sorting). Plan §3.B. Verify by simulator screenshot with an
-   overlapping child between two runs.
+2. **Paint order + per-run views on iOS** — ✅ **DONE (simulator-verified).**
+   `RCTImplicitTextRunView` (one per run) replaces the single content view; authored order is
+   threaded via `ViewState::TextRun::documentOrder` and `layoutSubviews` interleaves run views
+   with mounted children. iPhone 17 Pro screenshot: text before an overlapping child paints
+   under it, text after paints over. Plan §3.B / next-steps T5.
 3. **Touch hit-testing on drawn text (iOS)** — implement `touchEventEmitterAtPoint:` on
    `RCTViewComponentView` when runs exist (mirror `RCTParagraphComponentView`'s). Verify on
    simulator: tapping an inline element with a handler fires it; bare text fires the View's

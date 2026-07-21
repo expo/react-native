@@ -27,9 +27,18 @@ class ViewState final {
     AttributedString attributedString;
     Rect frame;
 
+    /*
+     * Number of block-level (mounted) React children that precede this run in
+     * document order. Lets the mounting layer interleave the per-run paint views
+     * with mounted child views in authored order (CSS painting order), rather
+     * than drawing all text on top (implicit-text-plan.md §3.B).
+     */
+    int documentOrder{0};
+
     bool operator==(const TextRun &other) const
     {
-      return attributedString == other.attributedString && frame == other.frame;
+      return attributedString == other.attributedString && frame == other.frame &&
+          documentOrder == other.documentOrder;
     }
     bool operator!=(const TextRun &other) const
     {
