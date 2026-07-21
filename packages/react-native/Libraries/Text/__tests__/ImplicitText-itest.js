@@ -919,6 +919,35 @@ milestone(5, 'M5b: unknown elements behave like HTMLUnknownElement', () => {
 
     expect(rectOf(flexRef).height).toBe(rectOf(oneRunRef).height * 3);
   });
+
+  it('unknown tags keep their authored name (tagName/nodeName fidelity)', () => {
+    // HTMLUnknownElement keeps its tag name; today an unregistered lowercase
+    // tag resolves to the singleton "unknown" component and the name is lost.
+    // T2 plumbs the raw tag through the `nodeName` prop so DOM APIs report it
+    // (RN prefixes component names with "RN:").
+    const fooRef = createRef<HostInstance>();
+    const barRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} style={{display: 'block'}}>
+          a{/* $FlowExpectedError[not-a-component] unknown tag */}
+          <foo ref={fooRef}>b</foo>
+          {/* $FlowExpectedError[not-a-component] unknown tag */}
+          <bar ref={barRef}>c</bar>
+        </View>,
+      );
+    });
+
+    const foo = ensureInstance(fooRef.current, ReactNativeElement);
+    const bar = ensureInstance(barRef.current, ReactNativeElement);
+    // Each unknown element reports its own authored tag, not the generic
+    // "unknown" — proving the name is per-instance, not per-descriptor.
+    expect(foo.tagName).toBe('RN:foo');
+    expect(foo.nodeName).toBe('RN:foo');
+    expect(bar.tagName).toBe('RN:bar');
+  });
 });
 
 milestone(6, 'M6: event semantics (JS-observable part)', () => {

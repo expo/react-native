@@ -334,8 +334,12 @@ has the full design for all of these.
     `StyleSheetTypes.js`) now pass `flow focus-check` clean (0 errors). Inherited text-style
     keys on `View` stay intentionally un-public-typed (flag-gated) — tests keep precise
     suppressions.
-11. **Unknown-element nodeName fidelity** — plumb the original tag name as a prop so DOM APIs
-   report `<foo>` instead of `unknown`.
+11. **Unknown-element nodeName fidelity** — ✅ **DONE (dev bundle).** The original tag name is
+   plumbed through a `nodeName` prop so DOM APIs report `<foo>` (`tagName`/`nodeName` →
+   `"RN:foo"`) instead of `unknown`. `UnknownElementProps : TextProps` carries it,
+   `createInstance` injects `workInProgress.type` for the `"unknown"` view config, and
+   `getTagName` reads the prop. Tests: `ImplicitText-itest.js` M5b + web-mirror twin. Prod
+   bundle injection deferred (minified fork carry, like T11/§3.E).
    - **Design finding (2026-07-21).** The raw tag name is lost at the JS boundary:
      `ReactFabric` calls `createNode(tag, viewConfig.uiViewClassName, …)` and the unknown
      view config's `uiViewClassName` is the singleton `'unknown'`

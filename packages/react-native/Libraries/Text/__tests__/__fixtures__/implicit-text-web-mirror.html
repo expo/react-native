@@ -139,6 +139,19 @@ kase('unknown elements are inline and unstyled (HTMLUnknownElement)',
       getComputedStyle(el.querySelector('foo')).display === 'inline';
   });
 
+// HTMLUnknownElement keeps its tag name (DOM/HTML §htmlunknownelement). RN
+// parity: the unknown element reports its authored tag via tagName/nodeName
+// (prefixed "RN:" in RN), not a generic "unknown" — implicit-text T2.
+kase('unknown elements keep their authored tagName/nodeName',
+  `<div class="view block" id="unktag">a<foo>b</foo><bar>c</bar></div>`,
+  'tagName reflects the authored tag',
+  (root) => {
+    const foo = root.querySelector('#unktag foo');
+    const bar = root.querySelector('#unktag bar');
+    return foo.tagName === 'FOO' && foo.nodeName === 'FOO' &&
+      bar.tagName === 'BAR' && foo instanceof HTMLUnknownElement;
+  });
+
 // M4: inheritance
 kase('color inherits into bare text; blocks inherit too (web default)',
   `<div class="view" style="color:rgb(255,0,0)" id="inherit">hello</div>`,

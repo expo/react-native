@@ -521,9 +521,10 @@ in there being no `rn-paragraph` wrapper — the View itself carries the text ru
 ## Status addendum (2026-07-21, post-implementation)
 
 All matrix milestones (M1-M7) plus iOS painting, intrinsic tags, unknown-element
-DOM semantics, the §3.E warning removal, and CSS `white-space: normal` collapsing
-inside anonymous IFCs (§3.A/§4.4) are implemented on this branch and
-verified: Fantom 38/38 + regression sweeps, Safari web mirror 17/17, iPhone 17
+DOM semantics (incl. `nodeName`/`tagName` fidelity, dev bundle), the §3.E warning
+removal, and CSS `white-space: normal` collapsing inside anonymous IFCs
+(§3.A/§4.4) are implemented on this branch and verified: Fantom 39/39 +
+regression sweeps, Safari web mirror 18/18, iPhone 17
 Pro (iOS 26.5) simulator screenshots, and live CDP layout reads
 (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:
 `packages/rn-tester/js/ImplicitTextDemo.js`. Next: mine Web Platform Tests

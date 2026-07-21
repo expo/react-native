@@ -106,7 +106,11 @@ function getUnknownElementViewConfig(): ViewConfig {
       uiViewClassName: 'unknown',
       bubblingEventTypes: {},
       directEventTypes: {},
-      validAttributes: {},
+      // `nodeName` carries the authored tag name so DOM APIs report it
+      // (HTMLUnknownElement keeps its tag). It is injected in createInstance,
+      // not authored, since the raw tag is otherwise lost here (all unknown
+      // tags share this one config). See implicit-text-plan.md §3.C / T2.
+      validAttributes: {nodeName: true},
     };
   }
   return unknownElementViewConfig;

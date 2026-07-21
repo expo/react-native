@@ -27,8 +27,8 @@ updates, and public `display:'block'` types. Matrix is 35/35 under Fantom; the w
 15/15 in Safari.
 
 Three §5 items are done: **inherited-property set**, **cascade correctness**, **`display:'block'`
-public types**. **T1 (white-space processing) is now done** — see its section. Everything else
-below is open.
+public types**. **T1 (white-space) and T2 (unknown-element `nodeName`, dev bundle) are now
+done** — see their sections. Everything else below is open.
 
 ## 1. The shared build / test loop (all tasks use this)
 
@@ -138,8 +138,18 @@ Do the **Track A** items first — they close in the headless loop with the tigh
   verbatim test proves the split); the §7 decision is recorded in the plan.
 - **Effort / risk / deps.** S–M. Risk: leaking normalization into `<Text>`. Dep: sign-off.
 
-### T2. Unknown-element `nodeName` fidelity
+### T2. Unknown-element `nodeName` fidelity — ✅ DONE (dev bundle; prod is a follow-up)
 
+- **Status (done).** (a) Added `UnknownElementProps : TextProps` with a `nodeName` field parsed
+  from a raw `"nodeName"` prop (`InlineTextTagShadowNodes.h`); `UnknownElementShadowNode` now
+  uses it. (b) `createInstance` injects `nodeName: workInProgress.type` into the attribute
+  payload when the resolved view config is the `"unknown"` singleton
+  (`ReactFabric-dev.js`), and `nodeName` was added to the unknown config's `validAttributes`
+  (`ReactNativeViewConfigRegistry.js`). (c) `getTagName` (`renderer/dom/DOM.cpp`) reads the
+  prop when the component is `"unknown"`, so `tagName`/`nodeName` report `"RN:<tag>"`. Tests:
+  `ImplicitText-itest.js` M5b (per-instance `<foo>`/`<bar>`) + web-mirror twin (Safari 18/18).
+  **Prod follow-up:** the `ReactFabric-prod.js` injection is not done (minified-bundle edit —
+  same fork-carry category as T11); until then the prod path falls back to `unknown`.
 - **Goal.** `document`-style DOM APIs report `<foo>`'s tag as `foo` (e.g. `tagName === "RN:foo"`)
   instead of the generic `unknown`.
 - **Why / context.** HTMLUnknownElement keeps its tag name. Today unregistered lowercase tags

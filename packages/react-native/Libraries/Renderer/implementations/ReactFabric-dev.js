@@ -10052,6 +10052,14 @@ __DEV__ &&
               newProps,
               _type2.validAttributes
             );
+            // implicit-text: unknown elements keep their authored tag name so
+            // DOM APIs report it (HTMLUnknownElement). The raw tag is lost here
+            // (all unknown tags share the "unknown" view config), so inject it
+            // as the nodeName prop. See implicit-text-plan.md §3.C / T2.
+            if ("unknown" === _type2.uiViewClassName)
+              keepChildren = Object.assign({}, keepChildren, {
+                nodeName: workInProgress.type
+              });
             current = {
               node: createNode(
                 renderLanes,

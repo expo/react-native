@@ -7,9 +7,14 @@
 
 #pragma once
 
+#include <string>
+
 #include <react/renderer/components/text/TextShadowNode.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/ConcreteShadowNode.h>
+#include <react/renderer/core/PropsParserContext.h>
+#include <react/renderer/core/RawProps.h>
+#include <react/renderer/core/propsConversions.h>
 
 namespace facebook::react {
 
@@ -72,12 +77,32 @@ class SpanTagShadowNode final
 };
 
 /*
+ * Props for unknown elements. Carries the authored lowercase tag name so DOM
+ * APIs can report it (HTMLUnknownElement keeps its tag). The raw tag is lost at
+ * the JS boundary — every unknown tag shares the singleton "unknown" view
+ * config — so `createInstance` injects it as the `nodeName` prop, the only
+ * per-instance channel (implicit-text-plan.md §3.C; next-steps T2).
+ */
+class UnknownElementProps final : public TextProps {
+ public:
+  UnknownElementProps() = default;
+  UnknownElementProps(
+      const PropsParserContext &context,
+      const UnknownElementProps &sourceProps,
+      const RawProps &rawProps)
+      : TextProps(context, sourceProps, rawProps),
+        nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})) {}
+
+  std::string nodeName{};
+};
+
+/*
  * DOM semantics for unknown elements (HTMLUnknownElement): inline, unstyled,
  * content renders — i.e. a span. Unregistered lowercase JSX tags resolve here
  * via the JS view-config fallback.
  */
 class UnknownElementShadowNode final
-    : public ConcreteShadowNode<UnknownElementComponentName, TextShadowNode, TextProps, TextEventEmitter> {
+    : public ConcreteShadowNode<UnknownElementComponentName, TextShadowNode, UnknownElementProps, TextEventEmitter> {
  public:
   using ConcreteShadowNode::ConcreteShadowNode;
 };
