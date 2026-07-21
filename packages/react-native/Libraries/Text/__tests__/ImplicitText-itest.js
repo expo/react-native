@@ -562,6 +562,57 @@ milestone(5, 'M5: intrinsic inline tags', () => {
   });
 });
 
+milestone(5, 'M5b: unknown elements behave like HTMLUnknownElement', () => {
+  it('unknown tags are inline: content joins the block flow unstyled', () => {
+    const blockRef = createRef<HostInstance>();
+    const controlRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[incompatible-call] display:'block' is new */}
+          <View collapsable={false} ref={blockRef} style={{display: 'block'}}>
+            a{/* $FlowExpectedError[not-a-component] unknown tag */}
+            <foo>b</foo>c
+          </View>
+          <View collapsable={false} ref={controlRef}>
+            abc
+          </View>
+        </>,
+      );
+    });
+
+    // One inline flow, same size as plain text — content renders, no styling.
+    expect(rectOf(blockRef).height).toBe(rectOf(controlRef).height);
+    expect(
+      JSON.stringify(root.getRenderedOutput({props: []}).toJSX()),
+    ).toContain('b');
+  });
+
+  it('unknown tags blockify in flex containers like other inline elements', () => {
+    const flexRef = createRef<HostInstance>();
+    const oneRunRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View collapsable={false} ref={flexRef}>
+            a{/* $FlowExpectedError[not-a-component] unknown tag */}
+            <bar>b</bar>c
+          </View>
+          <View collapsable={false} ref={oneRunRef}>
+            a
+          </View>
+        </>,
+      );
+    });
+
+    expect(rectOf(flexRef).height).toBe(rectOf(oneRunRef).height * 3);
+  });
+});
+
 milestone(6, 'M6: event semantics (JS-observable part)', () => {
   it('touch events dispatched at an inline element bubble to ancestor Views', () => {
     const inlineRef = createRef<HostInstance>();

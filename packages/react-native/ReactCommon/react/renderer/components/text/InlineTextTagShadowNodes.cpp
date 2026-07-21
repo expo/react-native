@@ -10,6 +10,7 @@
 namespace facebook::react {
 
 // NOLINTBEGIN(facebook-hte-CArray, modernize-avoid-c-arrays)
+const char UnknownElementComponentName[] = "unknown";
 const char BTagComponentName[] = "b";
 const char ITagComponentName[] = "i";
 const char SpanTagComponentName[] = "span";

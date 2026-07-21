@@ -106,6 +106,16 @@ kase('block container mixes inline flows with block children',
     return Math.abs(h - (lineH * 2 + 10)) < 2;
   });
 
+kase('unknown elements are inline and unstyled (HTMLUnknownElement)',
+  `<div class="view block" id="unk">a<foo>b</foo>c</div>`,
+  'one line; content renders',
+  (root) => {
+    const el = root.querySelector('#unk');
+    return Math.abs(el.getBoundingClientRect().height - lineH) < 2 &&
+      el.textContent === 'abc' &&
+      getComputedStyle(el.querySelector('foo')).display === 'inline';
+  });
+
 // M4: inheritance
 kase('color inherits into bare text; blocks inherit too (web default)',
   `<div class="view" style="color:rgb(255,0,0)" id="inherit">hello</div>`,

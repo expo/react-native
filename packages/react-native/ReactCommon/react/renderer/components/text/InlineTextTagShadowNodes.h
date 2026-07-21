@@ -20,6 +20,7 @@ namespace facebook::react {
  * styles still override the defaults.
  */
 
+extern const char UnknownElementComponentName[];
 extern const char BTagComponentName[];
 extern const char ITagComponentName[];
 extern const char SpanTagComponentName[];
@@ -70,6 +71,18 @@ class SpanTagShadowNode final
   using ConcreteShadowNode::ConcreteShadowNode;
 };
 
+/*
+ * DOM semantics for unknown elements (HTMLUnknownElement): inline, unstyled,
+ * content renders — i.e. a span. Unregistered lowercase JSX tags resolve here
+ * via the JS view-config fallback.
+ */
+class UnknownElementShadowNode final
+    : public ConcreteShadowNode<UnknownElementComponentName, TextShadowNode, TextProps, TextEventEmitter> {
+ public:
+  using ConcreteShadowNode::ConcreteShadowNode;
+};
+
+using UnknownElementComponentDescriptor = ConcreteComponentDescriptor<UnknownElementShadowNode>;
 using BTagComponentDescriptor = ConcreteComponentDescriptor<BTagShadowNode>;
 using ITagComponentDescriptor = ConcreteComponentDescriptor<ITagShadowNode>;
 using SpanTagComponentDescriptor = ConcreteComponentDescriptor<SpanTagShadowNode>;

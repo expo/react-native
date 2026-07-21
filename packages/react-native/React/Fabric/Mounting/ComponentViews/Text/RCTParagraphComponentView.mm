@@ -115,7 +115,8 @@ using namespace facebook::react;
       concreteComponentDescriptorProvider<TextComponentDescriptor>(),
       concreteComponentDescriptorProvider<BTagComponentDescriptor>(),
       concreteComponentDescriptorProvider<ITagComponentDescriptor>(),
-      concreteComponentDescriptorProvider<SpanTagComponentDescriptor>()};
+      concreteComponentDescriptorProvider<SpanTagComponentDescriptor>(),
+      concreteComponentDescriptorProvider<UnknownElementComponentDescriptor>()};
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps
