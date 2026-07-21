@@ -57,6 +57,12 @@ class YogaStylableProps : public Props {
   yoga::Style::Length paddingBlockStart;
   yoga::Style::Length paddingBlockEnd;
 
+  /*
+   * True when style `display` is 'block' (CSS block container, emulated on
+   * Yoga flex primitives; implicit-text-plan.md §3.A).
+   */
+  bool displayBlock{false};
+
 #if RN_DEBUG_STRING_CONVERTIBLE
 
 #pragma mark - DebugStringConvertible (Partial)

@@ -429,6 +429,13 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     result = yoga::Display::Contents;
     return;
   }
+  if (stringValue == "block") {
+    // display:'block' is emulated on Yoga flex primitives
+    // (implicit-text-plan.md §3.A); Yoga sees Flex, blockness is recorded in
+    // YogaStylableProps::displayBlock.
+    result = yoga::Display::Flex;
+    return;
+  }
   LOG(ERROR) << "Could not parse yoga::Display: " << stringValue;
 }
 

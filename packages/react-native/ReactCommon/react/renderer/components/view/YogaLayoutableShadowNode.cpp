@@ -418,11 +418,17 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       }
     } else if (implicitTextEnabled && isInlineTextContent(*getChildren()[i])) {
       const auto& child = getChildren()[i];
-      if (std::string_view{child->getComponentName()} == "RawText") {
+      const auto isBlockContainer =
+          static_cast<const YogaStylableProps&>(*props_).displayBlock;
+      if (isBlockContainer ||
+          std::string_view{child->getComponentName()} == "RawText") {
+        // Text runs always join the current run; in block containers inline
+        // *elements* join it too (single inline formatting context,
+        // CSS2 §9.2.1.1).
         inlineRun.push_back(child);
       } else {
         // Inline text *element* in a flex container: blockified into its own
-        // anonymous item, exactly as on web.
+        // anonymous item, exactly as on web (css-flexbox-1 §4).
         flushInlineRun();
         inlineRun.push_back(child);
         flushInlineRun();
@@ -474,6 +480,14 @@ void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
     return;
   }
 
+  if (static_cast<const YogaStylableProps&>(*props_).displayBlock) {
+    // Anonymous block boxes always fill the containing block on web; pin
+    // stretch so `alignItems` overrides cannot shrink-wrap the text.
+    auto boxStyle = box->yogaNode_.style();
+    boxStyle.setAlignSelf(yoga::Align::Stretch);
+    box->yogaNode_.setStyle(boxStyle);
+  }
+
   yogaLayoutableChildren_.push_back(box);
   yogaNode_.insertChild(&box->yogaNode_, YGNodeGetChildCount(&yogaNode_));
   box->yogaNode_.setOwner(&yogaNode_);
@@ -485,6 +499,14 @@ void YogaLayoutableShadowNode::updateYogaProps() {
 
   auto& props = static_cast<const YogaStylableProps&>(*props_);
   auto styleResult = applyAliasedProps(props.yogaStyle, props);
+
+  if (ReactNativeFeatureFlags::enableImplicitTextChildren() &&
+      props.displayBlock) {
+    // Block containers are emulated on Yoga flex primitives: vertical
+    // stacking with full-width children (implicit-text-plan.md §3.A).
+    styleResult.setFlexDirection(yoga::FlexDirection::Column);
+    styleResult.setAlignItems(yoga::Align::Stretch);
+  }
 
   // Resetting `dirty` flag only if `yogaStyle` portion of `Props` was
   // changed.

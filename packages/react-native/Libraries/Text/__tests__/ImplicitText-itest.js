@@ -43,7 +43,7 @@ import {NativeVirtualText} from 'react-native/Libraries/Text/TextNativeComponent
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 import ReadOnlyText from 'react-native/src/private/webapis/dom/nodes/ReadOnlyText';
 
-const IMPLEMENTED_MILESTONE = 2;
+const IMPLEMENTED_MILESTONE = 3;
 
 function milestone(n: number, name: string, fn: () => void) {
   if (IMPLEMENTED_MILESTONE >= n) {
