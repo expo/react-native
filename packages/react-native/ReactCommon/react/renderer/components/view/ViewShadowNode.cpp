@@ -115,12 +115,16 @@ void ViewShadowNode::updateTextRunStateIfNeeded() {
   ensureUnsealed();
 
   auto textRuns = std::vector<ViewState::TextRun>{};
+  auto layoutManager = std::weak_ptr<const TextLayoutManager>{};
   textRuns.reserve(anonymousBoxes.size());
   for (const auto& box : anonymousBoxes) {
     const auto* contentAccessor =
         dynamic_cast<const InlineTextContentAccessor*>(box.get());
     if (contentAccessor == nullptr) {
       continue;
+    }
+    if (layoutManager.expired()) {
+      layoutManager = contentAccessor->getContentTextLayoutManager();
     }
     textRuns.push_back(
         ViewState::TextRun{
@@ -129,7 +133,9 @@ void ViewShadowNode::updateTextRunStateIfNeeded() {
   }
 
   if (getStateData().textRuns != textRuns) {
-    setStateData(ViewState{std::move(textRuns)});
+    setStateData(ViewState{
+        .textRuns = std::move(textRuns),
+        .layoutManager = std::move(layoutManager)});
   }
 }
 

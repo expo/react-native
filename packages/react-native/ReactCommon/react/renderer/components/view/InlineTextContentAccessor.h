@@ -7,9 +7,13 @@
 
 #pragma once
 
+#include <memory>
+
 #include <react/renderer/attributedstring/AttributedString.h>
 
 namespace facebook::react {
+
+class TextLayoutManager;
 
 /*
  * Implemented by anonymous inline-formatting-context boxes so their containing
@@ -21,6 +25,8 @@ class InlineTextContentAccessor {
   virtual ~InlineTextContentAccessor() = default;
 
   virtual AttributedString getContentAttributedString() const = 0;
+
+  virtual std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const = 0;
 };
 
 } // namespace facebook::react

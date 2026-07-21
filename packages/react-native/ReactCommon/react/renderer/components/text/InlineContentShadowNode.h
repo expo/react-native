@@ -50,6 +50,11 @@ class InlineContentShadowNode final
 
   AttributedString getContentAttributedString() const override;
 
+  std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const override
+  {
+    return textLayoutManager_;
+  }
+
  private:
   std::shared_ptr<const TextLayoutManager> textLayoutManager_;
 };

@@ -24,6 +24,11 @@
 #import <React/RCTRadialGradient.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/components/view/ViewComponentDescriptor.h>
+#import <react/renderer/components/view/ViewShadowNode.h>
+#import <react/renderer/components/view/ViewState.h>
+#import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
+#import <react/renderer/textlayoutmanager/TextLayoutManager.h>
+#import <react/utils/ManagedObjectWrapper.h>
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
@@ -36,6 +41,53 @@
 using namespace facebook::react;
 
 const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
+
+/*
+ * Paints a View's anonymous inline-formatting-context text runs
+ * (implicit-text-plan.md §3.B). Installed as `contentView` only when runs
+ * exist.
+ */
+@interface RCTImplicitTextContentView : UIView
+@end
+
+@implementation RCTImplicitTextContentView {
+ @public
+  facebook::react::ViewState _viewState;
+  CGPoint _drawingOffset;
+}
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    self.backgroundColor = UIColor.clearColor;
+    self.opaque = NO;
+    self.userInteractionEnabled = NO;
+  }
+  return self;
+}
+
+- (void)drawRect:(CGRect)rect
+{
+  auto textLayoutManager = _viewState.layoutManager.lock();
+  if (!textLayoutManager) {
+    return;
+  }
+  RCTTextLayoutManager *nativeTextLayoutManager =
+      (RCTTextLayoutManager *)facebook::react::unwrapManagedObject(textLayoutManager->getNativeTextLayoutManager());
+  for (const auto &run : _viewState.textRuns) {
+    CGRect frame = CGRectMake(
+        run.frame.origin.x - _drawingOffset.x,
+        run.frame.origin.y - _drawingOffset.y,
+        run.frame.size.width,
+        run.frame.size.height);
+    [nativeTextLayoutManager drawAttributedString:run.attributedString
+                              paragraphAttributes:facebook::react::ParagraphAttributes{}
+                                            frame:frame
+                                drawHighlightPath:nil];
+  }
+}
+
+@end
 
 @implementation RCTViewComponentView {
   UIColor *_backgroundColor;
@@ -258,6 +310,36 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       [view removeFromSuperview];
     }
   }
+}
+
+- (void)updateState:(const facebook::react::State::Shared &)state
+           oldState:(const facebook::react::State::Shared &)oldState
+{
+  const auto *viewState =
+      std::dynamic_pointer_cast<const facebook::react::ConcreteState<facebook::react::ViewState>>(state).get();
+  if (viewState == nullptr) {
+    return;
+  }
+
+  const auto &data = viewState->getData();
+  if (data.textRuns.empty()) {
+    if ([self.contentView isKindOfClass:[RCTImplicitTextContentView class]]) {
+      self.contentView = nil;
+    }
+    return;
+  }
+
+  RCTImplicitTextContentView *textContentView = nil;
+  if ([self.contentView isKindOfClass:[RCTImplicitTextContentView class]]) {
+    textContentView = (RCTImplicitTextContentView *)self.contentView;
+  } else {
+    textContentView = [RCTImplicitTextContentView new];
+    self.contentView = textContentView;
+  }
+  textContentView->_viewState = data;
+  CGRect contentFrame = RCTCGRectFromRect(_layoutMetrics.getContentFrame());
+  textContentView->_drawingOffset = contentFrame.origin;
+  [textContentView setNeedsDisplay];
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps

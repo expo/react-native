@@ -14,6 +14,8 @@
 
 namespace facebook::react {
 
+class TextLayoutManager;
+
 /*
  * State for the <View> component: the laid-out text runs of its anonymous
  * inline formatting contexts (implicit-text-plan.md §3.B). Empty for Views
@@ -36,6 +38,12 @@ class ViewState final {
   };
 
   std::vector<TextRun> textRuns;
+
+  /*
+   * Connection to the platform text rendering infrastructure used to paint
+   * the runs (mirrors ParagraphState::layoutManager).
+   */
+  std::weak_ptr<const TextLayoutManager> layoutManager;
 };
 
 } // namespace facebook::react
