@@ -35,6 +35,7 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<ITagComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<SpanTagComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<UnknownElementComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<ImgTagComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
       return providerRegistry;

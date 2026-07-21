@@ -869,6 +869,48 @@ milestone(5, 'M5: intrinsic inline tags', () => {
 
     expect(rectOf(blockRef).height).toBe(rectOf(oneRunRef).height);
   });
+
+  it('<img> is an inline replaced element: flows in the run, not blockified', () => {
+    // Unlike an inline text *element* (<b>), which blockifies into its own item
+    // in a flex container, the replaced <img> flows inside the run as an inline
+    // attachment (implicit-text-plan.md §3.C). Stage 1: classification only —
+    // the attachment is 0-size until iOS attachment layout + image rendering
+    // land, so 'a<img/>b' measures like 'ab' on a single line.
+    const imgRef = createRef<HostInstance>();
+    const controlRef = createRef<HostInstance>();
+    const blockifyRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View collapsable={false} ref={imgRef} style={{alignSelf: 'flex-start'}}>
+            {'a'}
+            {/* $FlowExpectedError[not-a-component] intrinsic <img> tag */}
+            <img />
+            {'b'}
+          </View>
+          <View
+            collapsable={false}
+            ref={controlRef}
+            style={{alignSelf: 'flex-start'}}>
+            {'ab'}
+          </View>
+          <View collapsable={false} ref={blockifyRef}>
+            a{/* $FlowExpectedError[not-a-component] intrinsic tags are new */}
+            <b>b</b>c
+          </View>
+        </>,
+      );
+    });
+
+    // <img> joins the run (single line), sized like 'ab' (attachment 0-width in
+    // Stage 1) — it does NOT blockify.
+    expect(rectOf(imgRef).height).toBe(rectOf(controlRef).height);
+    expect(rectOf(imgRef).width).toBe(rectOf(controlRef).width);
+    // Contrast: an inline text element (<b>) DOES blockify into 3 stacked items.
+    expect(rectOf(blockifyRef).height).toBe(rectOf(controlRef).height * 3);
+  });
 });
 
 milestone(5, 'M5b: unknown elements behave like HTMLUnknownElement', () => {

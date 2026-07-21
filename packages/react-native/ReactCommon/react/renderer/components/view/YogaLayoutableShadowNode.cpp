@@ -482,11 +482,13 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       const auto& child = getChildren()[i];
       const auto isBlockContainer =
           static_cast<const YogaStylableProps&>(*props_).displayBlock;
-      if (isBlockContainer ||
-          std::string_view{child->getComponentName()} == "RawText") {
+      const std::string_view childComponentName{child->getComponentName()};
+      if (isBlockContainer || childComponentName == "RawText" ||
+          childComponentName == "img") {
         // Text runs always join the current run; in block containers inline
         // *elements* join it too (single inline formatting context,
-        // CSS2 §9.2.1.1).
+        // CSS2 §9.2.1.1). The replaced `<img>` always flows inside the run as
+        // an inline attachment, never blockified (implicit-text-plan.md §3.C).
         inlineRun.push_back(child);
       } else {
         // Inline text *element* in a flex container: blockified into its own
@@ -533,7 +535,8 @@ bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   std::string_view componentName{child.getComponentName()};
   return componentName == "RawText" || componentName == "Text" ||
       componentName == "b" || componentName == "i" ||
-      componentName == "span" || componentName == "unknown";
+      componentName == "span" || componentName == "unknown" ||
+      componentName == "img";
 }
 
 void YogaLayoutableShadowNode::appendAnonymousTextContentChild(

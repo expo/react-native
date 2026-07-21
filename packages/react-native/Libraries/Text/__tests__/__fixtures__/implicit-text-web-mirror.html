@@ -166,6 +166,21 @@ kase('unknown elements are inline and unstyled (HTMLUnknownElement)',
 // HTMLUnknownElement keeps its tag name (DOM/HTML §htmlunknownelement). RN
 // parity: the unknown element reports its authored tag via tagName/nodeName
 // (prefixed "RN:" in RN), not a generic "unknown" — implicit-text T2.
+// The intrinsic <img> is an inline replaced element (implicit-text-plan.md
+// §3.C): it flows inside the text run, not as a block — RN parity for T7 Stage 1
+// (classification). A 0-size img contributes no width, so 'a<img>b' == 'ab'.
+kase('<img> is inline-replaced: flows in the text run, not blockified',
+  `<div class="view block" id="imgcase">a<img style="width:0;height:0" alt="">b</div>
+   <div class="view block" id="imgctrl">ab</div>`,
+  'img is display:inline; a<img>b lays out like ab on one line',
+  (root) => {
+    const img = root.querySelector('#imgcase img');
+    const a = root.querySelector('#imgcase').getBoundingClientRect();
+    const b = root.querySelector('#imgctrl').getBoundingClientRect();
+    return getComputedStyle(img).display === 'inline' &&
+      Math.abs(a.height - b.height) < 2 && Math.abs(a.width - b.width) < 2;
+  });
+
 kase('unknown elements keep their authored tagName/nodeName',
   `<div class="view block" id="unktag">a<foo>b</foo><bar>c</bar></div>`,
   'tagName reflects the authored tag',

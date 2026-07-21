@@ -337,7 +337,11 @@ has the full design for all of these.
      by every RN view — needs a full flexbox-regression pass. The emulation already covers the
      floor (block-stacking + single inline flow) behaviorally, so this is fidelity, not
      function. Estimated multi-session; sequence as its own workstream (plan §7).
-9. **Intrinsic `<img>` and `<div>` tags** — register `<img>` as an inline replaced element
+9. **Intrinsic `<img>` and `<div>` tags** — ◑ **`<img>` Stage 1 done (classification).** Registered
+   `<img>` as a plain non-Yoga `ShadowNode` (→ inline attachment) that joins the run even in flex
+   (never blockifies); headless test (`a<img/>b` on one line vs `<b>` blockifying) + web-mirror
+   twin. iOS attachment layout + image rendering (Stage 2) and the `<div>` tag remain. Original:
+   register `<img>` as an inline replaced element
    (reuse Paragraph's inline-attachment machinery; classification routes it into the run,
    not blockified) and `<div>` as a block container (backed by the `display:block` path
    above). JS registration mirrors the `<b>`/`<i>`/`<span>` config; add TS/Flow JSX typings.

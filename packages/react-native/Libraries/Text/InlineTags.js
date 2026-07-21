@@ -39,3 +39,18 @@ function registerInlineTag(name: string) {
 registerInlineTag('b');
 registerInlineTag('i');
 registerInlineTag('span');
+
+// The intrinsic <img> tag: an inline *replaced* element (implicit-text-plan.md
+// §3.C), distinct from the block-level RN <Image> component. It flows inside a
+// bare-text IFC as an inline attachment. Stage 1 wires classification + the
+// `src`/sizing props; iOS attachment layout + image rendering are a follow-up.
+createReactNativeComponentClass('img', () =>
+  createViewConfig({
+    validAttributes: {
+      src: true,
+      width: true,
+      height: true,
+    },
+    uiViewClassName: 'img',
+  }),
+);

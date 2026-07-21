@@ -29,6 +29,7 @@ extern const char UnknownElementComponentName[];
 extern const char BTagComponentName[];
 extern const char ITagComponentName[];
 extern const char SpanTagComponentName[];
+extern const char ImgTagComponentName[];
 
 class BTagProps final : public TextProps {
  public:
@@ -107,7 +108,35 @@ class UnknownElementShadowNode final
   using ConcreteShadowNode::ConcreteShadowNode;
 };
 
+/*
+ * The intrinsic `<img>` tag: an inline **replaced** element (implicit-text-plan.md
+ * §3.C). Unlike RN's block-level `Image` component, `<img>` flows inside an IFC as
+ * an inline attachment. It is deliberately a plain `ShadowNode` (not a
+ * `YogaLayoutableShadowNode` and not an `InlineText`), so the container's
+ * `updateYogaChildren` routes it into the current run as a non-text attachment
+ * rather than treating it as a block-level Yoga child. (Stage 1: inline-attachment
+ * classification. iOS attachment layout + image rendering are a follow-up.)
+ */
+class ImgTagProps final : public Props {
+ public:
+  ImgTagProps() = default;
+  ImgTagProps(
+      const PropsParserContext &context,
+      const ImgTagProps &sourceProps,
+      const RawProps &rawProps)
+      : Props(context, sourceProps, rawProps),
+        src(convertRawProp(context, rawProps, "src", sourceProps.src, std::string{})) {}
+
+  std::string src{};
+};
+
+class ImgTagShadowNode final : public ConcreteShadowNode<ImgTagComponentName, ShadowNode, ImgTagProps> {
+ public:
+  using ConcreteShadowNode::ConcreteShadowNode;
+};
+
 using UnknownElementComponentDescriptor = ConcreteComponentDescriptor<UnknownElementShadowNode>;
+using ImgTagComponentDescriptor = ConcreteComponentDescriptor<ImgTagShadowNode>;
 using BTagComponentDescriptor = ConcreteComponentDescriptor<BTagShadowNode>;
 using ITagComponentDescriptor = ConcreteComponentDescriptor<ITagShadowNode>;
 using SpanTagComponentDescriptor = ConcreteComponentDescriptor<SpanTagShadowNode>;

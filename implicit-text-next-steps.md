@@ -90,7 +90,8 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 
 **Renumbered 2026-07-21** (per direction): the iOS simulator items were pulled forward to
 T5–T7 and first-class text nodes (Track C, the plan's own-review item) deferred to **T8**.
-T1–T6 are done (T5 paint order + T6 hit-testing simulator-verified); T7 (inline `<img>`) is next.
+T1–T6 are done (T5 paint order + T6 hit-testing simulator-verified); T7 (inline `<img>`) has its
+classification Stage 1 done (headless); its iOS rendering (Stage 2) and T8–T11 remain.
 
 | # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
 |---|---|---|---|---|---|---|
@@ -100,7 +101,7 @@ T1–T6 are done (T5 paint order + T6 hit-testing simulator-verified); T7 (inlin
 | T4 | Native Yoga `display:block` | B | ✅ (Fantom parity) | XL | own flag | ✅ done (Stage 1) |
 | T5 | iOS paint order + per-run views | D | ❌ (simulator) | M | — | ✅ done |
 | T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | ✅ done |
-| T7 | Intrinsic `<img>` tag | D | ❌ (image pipeline+device) | M | — | open |
+| T7 | Intrinsic `<img>` tag | D | ~ (classification only) | M | — | ◑ Stage 1 done |
 | T8 | First-class text nodes (replace RawText) | C | ~ (dev/shared only) | XL | — | deferred (own review) |
 | T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | open |
 | T10 | Android mounting story | E | ❌ (Android) | XL | — | open |
@@ -396,8 +397,27 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 - **Acceptance.** Both taps behave per spec on device; plan updated.
 - **Effort / risk / deps.** M. Dep: T5 (run views/frames). Simulator-only.
 
-### T7. Intrinsic `<img>` tag (inline replaced element)
+### T7. Intrinsic `<img>` tag (inline replaced element) — ◑ Stage 1 DONE (classification)
 
+- **Status (Stage 1 done — inline-attachment classification).** Registered the `<img>` tag:
+  `ImgTagShadowNode`/`ImgTagProps` (`src`) in `InlineTextTagShadowNodes.{h,cpp}`, a **plain
+  `ShadowNode`** (deliberately not `YogaLayoutableShadowNode` and not `InlineText`) so
+  `updateYogaChildren` routes it into the current run as a non-text attachment rather than a
+  block-level Yoga child; registered in the Fantom stub registry and the iOS paragraph
+  supplemental providers; JS config in `InlineTags.js` (`src`/`width`/`height`). `isInlineTextContent`
+  now includes `"img"`, and the run-grouping predicate lets `<img>` join the run even in flex
+  containers (a replaced element flows inline, never blockifies — unlike `<b>`).
+  Verified headlessly: `ImplicitText-itest.js` M5 — `a<img/>b` flows on one line sized like `ab`
+  (attachment 0-width in Stage 1), while `a<b>b</b>c` blockifies to 3× height; regressions green
+  (baselines 4, native-block 7, Text 151, ReadOnlyText 30). Web-mirror twin added (asserts
+  `<img>` is `display:inline`); Safari re-run was blocked by a transient safaridriver launch
+  failure this session (mirror passed 20/20 earlier).
+- **Stage 2 (follow-up, iOS + image pipeline):** attachment layout for the anonymous IFC (size
+  from `src`/`width`/`height`, positioned by text layout) and mounting an actual image view at
+  the attachment frame — reuse Paragraph's inline-attachment loop
+  (`ParagraphShadowNode.cpp:363-446`). Not headless (deterministic measurer treats attachments
+  as 0×0); needs device. Optionally extend the measurer with a documented attachment-size
+  contract for a headless size assertion.
 - **Goal.** `<img src=…>` flows inside a bare-text IFC as an inline **replaced** box, like the
   web (distinct from the block-level RN `Image` component).
 - **Why / context.** Plan §3.C. Reuses Paragraph's inline-attachment machinery
