@@ -33,6 +33,7 @@ const textViewConfig = {
   validAttributes: {
     isHighlighted: true,
     isPressable: true,
+    inheritViewTextStyles: true,
     numberOfLines: true,
     ellipsizeMode: true,
     allowFontScaling: true,

@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <limits>
+
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/components/view/primitives.h>
@@ -45,6 +47,11 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // Color
   Float opacity{1.0};
   SharedColor backgroundColor{};
+
+  // Inheritable text attributes (implicit-text-plan.md §3.D): cascade to
+  // descendant text content when enableImplicitTextChildren is on.
+  SharedColor inheritedColor{};
+  Float inheritedFontSize{std::numeric_limits<Float>::quiet_NaN()};
 
   // Borders
   CascadedBorderRadii borderRadii{};

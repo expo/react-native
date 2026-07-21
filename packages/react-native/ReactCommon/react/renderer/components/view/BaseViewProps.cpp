@@ -71,6 +71,14 @@ BaseViewProps::BaseViewProps(
           "backgroundColor",
           sourceProps.backgroundColor,
           {})),
+      inheritedColor(convertRawProp(
+          context, rawProps, "color", sourceProps.inheritedColor, {})),
+      inheritedFontSize(convertRawProp(
+          context,
+          rawProps,
+          "fontSize",
+          sourceProps.inheritedFontSize,
+          std::numeric_limits<Float>::quiet_NaN())),
       borderRadii(convertRawProp(
           context,
           rawProps,
@@ -336,6 +344,8 @@ void BaseViewProps::setProp(
   switch (hash) {
     RAW_SET_PROP_SWITCH_CASE_BASIC(opacity);
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundColor);
+    RAW_SET_PROP_SWITCH_CASE(inheritedColor, "color");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontSize, "fontSize");
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundImage);
     RAW_SET_PROP_SWITCH_CASE(backgroundImage, "experimental_backgroundImage");
     RAW_SET_PROP_SWITCH_CASE(backgroundSize, "experimental_backgroundSize");

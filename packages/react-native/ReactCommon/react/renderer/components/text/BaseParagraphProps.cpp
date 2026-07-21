@@ -33,6 +33,12 @@ BaseParagraphProps::BaseParagraphProps(
           "selectable",
           sourceProps.isSelectable,
           false)),
+      inheritViewTextStyles(convertRawProp(
+          context,
+          rawProps,
+          "inheritViewTextStyles",
+          sourceProps.inheritViewTextStyles,
+          false)),
       onTextLayout(convertRawProp(
           context,
           rawProps,
@@ -126,6 +132,7 @@ void BaseParagraphProps::setProp(
 
   switch (hash) {
     RAW_SET_PROP_SWITCH_CASE(isSelectable, "selectable");
+    RAW_SET_PROP_SWITCH_CASE_BASIC(inheritViewTextStyles);
     RAW_SET_PROP_SWITCH_CASE_BASIC(onTextLayout);
   }
 

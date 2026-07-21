@@ -43,7 +43,7 @@ import {NativeVirtualText} from 'react-native/Libraries/Text/TextNativeComponent
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 import ReadOnlyText from 'react-native/src/private/webapis/dom/nodes/ReadOnlyText';
 
-const IMPLEMENTED_MILESTONE = 3;
+const IMPLEMENTED_MILESTONE = 4;
 
 function milestone(n: number, name: string, fn: () => void) {
   if (IMPLEMENTED_MILESTONE >= n) {
@@ -480,21 +480,33 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
   });
 
   it('authored <Text inheritViewTextStyles> opts into the cascade', () => {
+    const optInRef = createRef<HostInstance>();
+    const controlRef = createRef<HostInstance>();
     const root = Fantom.createRoot();
 
     Fantom.runTask(() => {
       root.render(
-        // $FlowExpectedError[incompatible-call] inheritable keys are new
-        <View collapsable={false} style={{color: 'red'}}>
-          {/* $FlowExpectedError[prop-missing] inheritViewTextStyles is new */}
-          <Text inheritViewTextStyles>hello</Text>
-        </View>,
+        <>
+          {/* $FlowExpectedError[incompatible-call] inheritable keys are new */}
+          <View collapsable={false} style={{fontSize: 30}}>
+            {/* $FlowExpectedError[prop-missing] inheritViewTextStyles is new */}
+            <Text inheritViewTextStyles ref={optInRef}>
+              hello
+            </Text>
+          </View>
+          <View collapsable={false}>
+            <Text style={{fontSize: 30}} ref={controlRef}>
+              hello
+            </Text>
+          </View>
+        </>,
       );
     });
 
-    expect(
-      JSON.stringify(root.getRenderedOutput({props: ['foregroundColor']}).toJSX()),
-    ).toContain('rgba(255, 0, 0, 1)');
+    // Layout-observable inheritance: the deterministic measurer scales line
+    // height with fontSize, so the opted-in paragraph matches the control.
+    expect(rectOf(optInRef).height).toBe(rectOf(controlRef).height);
+    expect(rectOf(optInRef).height).toBeGreaterThan(20);
   });
 });
 

@@ -13,6 +13,7 @@
 #include <yoga/node/Node.h>
 
 #include <react/debug/react_native_assert.h>
+#include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/core/Sealable.h>
@@ -107,6 +108,15 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   const std::vector<std::shared_ptr<YogaLayoutableShadowNode>> &getAnonymousTextContentChildren() const
   {
     return anonymousTextContentChildren_;
+  }
+
+  /*
+   * Effective inherited text attributes for this node (element-tree cascade,
+   * implicit-text-plan.md §3.D). Propagated top-down in `configureYogaTree`.
+   */
+  const TextAttributes &getInheritedTextAttributes() const
+  {
+    return inheritedTextAttributes_;
   }
 
  protected:
@@ -252,6 +262,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * `yogaLayoutableChildren_` and the Yoga node, never in `children_`.
    */
   std::vector<std::shared_ptr<YogaLayoutableShadowNode>> anonymousTextContentChildren_;
+
+  /*
+   * Effective inherited text attributes (cascade input ⊕ own inheritable
+   * props), assigned by the parent during `configureYogaTree`.
+   */
+  TextAttributes inheritedTextAttributes_{TextAttributes::defaultTextAttributes()};
 
   /*
    * Whether the full Yoga subtree of this Node has been configured.

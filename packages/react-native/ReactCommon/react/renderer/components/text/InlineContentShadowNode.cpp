@@ -25,7 +25,7 @@ void InlineContentShadowNode::setTextLayoutManager(
 }
 
 AttributedString InlineContentShadowNode::getContentAttributedString() const {
-  auto textAttributes = TextAttributes::defaultTextAttributes();
+  auto textAttributes = getInheritedTextAttributes();
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
   BaseTextShadowNode::buildAttributedString(
@@ -37,7 +37,7 @@ AttributedString InlineContentShadowNode::getContentAttributedString() const {
 Size InlineContentShadowNode::measureContent(
     const LayoutContext& layoutContext,
     const LayoutConstraints& layoutConstraints) const {
-  auto textAttributes = TextAttributes::defaultTextAttributes();
+  auto textAttributes = getInheritedTextAttributes();
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
 
   auto attributedString = AttributedString{};

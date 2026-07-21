@@ -12,6 +12,7 @@
 #include <react/debug/react_native_assert.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/LayoutConformanceShadowNode.h>
+#include <react/renderer/components/view/BaseViewProps.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/ViewShadowNode.h>
 #include <react/renderer/components/view/conversions.h>
@@ -22,6 +23,7 @@
 #include <react/utils/FloatComparison.h>
 #include <yoga/Yoga.h>
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <memory>
 
@@ -622,6 +624,23 @@ void YogaLayoutableShadowNode::configureYogaTree(
 
   yogaTreeHasBeenConfigured_ = true;
 
+  // Element-tree cascade of inheritable text attributes
+  // (implicit-text-plan.md §3.D): fold this node's inheritable props into the
+  // effective attributes assigned by our parent, then hand the result to
+  // children below.
+  if (ReactNativeFeatureFlags::enableImplicitTextChildren()) {
+    if (const auto* baseViewProps =
+            dynamic_cast<const BaseViewProps*>(props_.get())) {
+      if (baseViewProps->inheritedColor) {
+        inheritedTextAttributes_.foregroundColor =
+            baseViewProps->inheritedColor;
+      }
+      if (!std::isnan(baseViewProps->inheritedFontSize)) {
+        inheritedTextAttributes_.fontSize = baseViewProps->inheritedFontSize;
+      }
+    }
+  }
+
   // Recursively propagate the configuration to child nodes. If a child was
   // already configured as part of a previous ShadowTree generation, we only
   // need to reconfigure it if the context values passed to the Node have
@@ -642,13 +661,16 @@ void YogaLayoutableShadowNode::configureYogaTree(
 
     if (doesOwn(child)) {
       auto& mutableChild = const_cast<YogaLayoutableShadowNode&>(child);
+      mutableChild.inheritedTextAttributes_ = inheritedTextAttributes_;
       mutableChild.configureYogaTree(
           pointScaleFactor,
           fontSizeMultiplier,
           child.resolveErrata(errata),
           swapLeftAndRight);
     } else {
-      cloneChildInPlace(i).configureYogaTree(
+      auto& clonedChild = cloneChildInPlace(i);
+      clonedChild.inheritedTextAttributes_ = inheritedTextAttributes_;
+      clonedChild.configureYogaTree(
           pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);
     }
   }

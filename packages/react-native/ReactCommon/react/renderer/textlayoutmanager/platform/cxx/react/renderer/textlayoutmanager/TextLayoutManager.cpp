@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/attributedstring/TextAttributes.h>
 
 namespace facebook::react {
 
@@ -21,7 +22,17 @@ namespace {
 // `enableImplicitTextChildren` — the historical behavior of this stub is to
 // return `minimumSize`, which several test suites rely on.
 constexpr Float kDeterministicCharacterWidth = 10;
-constexpr Float kDeterministicLineHeight = 20;
+
+Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
+  // Line height tracks font size so inheritance is layout-observable:
+  // fontSize + 6 (default 14 -> 20, matching earlier fixed metrics).
+  auto fontSize = TextAttributes::defaultTextAttributes().fontSize;
+  const auto& fragments = attributedStringBox.getValue().getFragments();
+  if (!fragments.empty() && !std::isnan(fragments[0].textAttributes.fontSize)) {
+    fontSize = fragments[0].textAttributes.fontSize;
+  }
+  return fontSize + 6;
+}
 
 TextMeasurement measureDeterministically(
     const AttributedStringBox& attributedStringBox,
@@ -33,6 +44,8 @@ TextMeasurement measureDeterministically(
       characterCount += fragment.string.size();
     }
   }
+
+  const auto lineHeight = deterministicLineHeight(attributedStringBox);
 
   if (characterCount == 0) {
     return TextMeasurement{
@@ -55,8 +68,7 @@ TextMeasurement measureDeterministically(
   }
 
   return TextMeasurement{
-      .size = layoutConstraints.clamp(
-          {width, kDeterministicLineHeight * lineCount}),
+      .size = layoutConstraints.clamp({width, lineHeight * lineCount}),
       .attachments = std::move(attachments)};
 }
 

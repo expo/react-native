@@ -188,6 +188,11 @@ const directEventTypes = {
 };
 
 const validAttributesForNonEventProps = {
+  // Inheritable text attributes (implicit text, gated natively behind
+  // enableImplicitTextChildren; inert otherwise).
+  color: colorAttribute,
+  fontSize: true,
+
   // View Props
   accessible: true,
   accessibilityActions: true,
