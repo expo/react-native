@@ -912,6 +912,39 @@ milestone(5, 'M5: intrinsic inline tags', () => {
     expect(rectOf(blockifyRef).height).toBe(rectOf(controlRef).height * 3);
   });
 
+  it('<div> is a block container: inline children join one flow (not blockified)', () => {
+    // The intrinsic <div> is block-outer/block-inner (implicit-text-plan.md §3.C):
+    // like a View with display:'block'. Its inline children (text + <b>) join a
+    // single inline flow on one line, unlike a default flex View where the inline
+    // element blockifies into its own item.
+    const divRef = createRef<HostInstance>();
+    const oneRunRef = createRef<HostInstance>();
+    const flexRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+          <div collapsable={false} ref={divRef}>
+            a<NativeVirtualText>b</NativeVirtualText>c
+          </div>
+          <View collapsable={false} ref={oneRunRef}>
+            abc
+          </View>
+          <View collapsable={false} ref={flexRef}>
+            a<NativeVirtualText>b</NativeVirtualText>c
+          </View>
+        </>,
+      );
+    });
+
+    // <div> block-inner: one wrapping inline flow, one line — same as 'abc'.
+    expect(rectOf(divRef).height).toBe(rectOf(oneRunRef).height);
+    // Contrast: a default flex View blockifies the inline element -> 3 lines.
+    expect(rectOf(flexRef).height).toBe(rectOf(oneRunRef).height * 3);
+  });
+
   it('<img width height> reserves its box in the run (inline replaced sizing)', () => {
     // Stage 2: a sized <img> occupies its intrinsic box in the run — width adds
     // to the line and the taller image box grows the line height. Here

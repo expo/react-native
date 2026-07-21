@@ -16,6 +16,7 @@
 #include <react/renderer/components/text/InlineTextTagShadowNodes.h>
 #include <react/renderer/components/text/RawTextComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
+#include <react/renderer/components/view/DivShadowNode.h>
 #include <react/renderer/components/view/ViewComponentDescriptor.h>
 
 namespace facebook::react {
@@ -37,6 +38,7 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<UnknownElementComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ImgTagComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ViewComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<DivComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
       return providerRegistry;
     }();

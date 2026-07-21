@@ -54,3 +54,16 @@ createReactNativeComponentClass('img', () =>
     uiViewClassName: 'img',
   }),
 );
+
+// The intrinsic <div> tag: a block-level container with block *inner* display
+// (implicit-text-plan.md §3.C) — the intrinsic analog of a View but display:block.
+// Backed by the View block path (DivShadowNode forces displayBlock). Takes the
+// same style/layout attributes as a View.
+// createViewConfig already merges the base View validAttributes (style, layout,
+// display, …), so <div> accepts the same props as a View.
+createReactNativeComponentClass('div', () =>
+  createViewConfig({
+    validAttributes: {},
+    uiViewClassName: 'div',
+  }),
+);

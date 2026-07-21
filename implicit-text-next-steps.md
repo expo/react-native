@@ -91,7 +91,8 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 **Renumbered 2026-07-21** (per direction): the iOS simulator items were pulled forward to
 T5–T7 and first-class text nodes (Track C, the plan's own-review item) deferred to **T8**.
 T1–T6 are done (T5 paint order + T6 hit-testing simulator-verified); T7 (inline `<img>`) has its
-inline-replaced layout done (Stage 1+2, headless); its iOS pixel rendering (Stage 3) and T8–T10 remain.
+inline-replaced layout done (Stage 1+2, headless). T9 (`<div>`) done headless. T7 Stage 3
+(iOS `<img>` render), T8 (first-class text nodes), T10 (Android) remain.
 
 | # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
 |---|---|---|---|---|---|---|
@@ -103,7 +104,7 @@ inline-replaced layout done (Stage 1+2, headless); its iOS pixel rendering (Stag
 | T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | ✅ done |
 | T7 | Intrinsic `<img>` tag | D | ~ (layout; render open) | M | — | ◑ layout done |
 | T8 | First-class text nodes (replace RawText) | C | ~ (dev/shared only) | XL | — | deferred (own review) |
-| T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | open |
+| T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | ✅ done (headless) |
 | T10 | Android mounting story | E | ❌ (Android) | XL | — | open |
 
 ---
@@ -439,8 +440,24 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
   updated.
 - **Effort / risk / deps.** M. Needs image pipeline + device.
 
-### T9. Intrinsic `<div>` tag (block element)
+### T9. Intrinsic `<div>` tag (block element) — ✅ DONE (headless)
 
+- **Status (done).** `DivShadowNode`/`DivProps` (`components/view/DivShadowNode.h`) — a `View`
+  (`ConcreteViewShadowNode` with `ViewProps`/`ViewState`) that forces `displayBlock = true`, so
+  `<div>` is block-outer/block-inner and rides the existing View block path: native
+  `YGDisplayBlock` when `enableYogaDisplayBlock` is on, else the flex emulation, plus the shared
+  anonymous-IFC + `updateYogaChildren` machinery. `DivComponentName = "div"` (defined in
+  `ViewShadowNode.cpp`); registered in the Fantom stub registry; JS config in `InlineTags.js`
+  (reuses the base View `validAttributes` via `createViewConfig`). Being block-level (not in
+  `isInlineTextContent`), a parent treats `<div>` as a block child.
+  Verified headlessly: `ImplicitText-itest.js` M5 — `<div>a<b>b</b>c</div>` is one inline flow
+  (one line), vs a flex View blockifying to 3× height; `ImplicitTextNativeBlock-itest.js` — `<div>`
+  as a native block container (both flags on). Regressions green (baselines 4, Text 151,
+  ReadOnlyText 30, View-itest 224). Web-mirror twin added (literal `<div>` is `display:block`);
+  Safari re-run blocked by a persistent safaridriver launch failure this session (passed 20/20
+  earlier). **Follow-up:** iOS component-view registration for `"div"` (renders as a View) and
+  core/Android registry entries — Fantom uses the stub registry, so headless is covered;
+  on-device div rendering needs the platform registration.
 - **Goal.** `<div>` is a block-level container with block inner display — the intrinsic analog of
   a `View` but `display:block`.
 - **Entry points.** Register `div` like the other intrinsic tags, backed by the block-display

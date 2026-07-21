@@ -340,8 +340,8 @@ has the full design for all of these.
 9. **Intrinsic `<img>` and `<div>` tags** — ◑ **`<img>` layout done (classification + sizing).** Registered
    `<img>` as a plain non-Yoga `ShadowNode` (→ inline attachment) that joins the run even in flex
    (never blockifies); a sized `<img width height>` reserves its box in the run (measurer contract
-   extended). Headless tests + web-mirror twins. iOS pixel rendering and the `<div>` tag remain.
-   Original:
+   extended). Headless tests + web-mirror twins. `<div>` is done headless (a View with `displayBlock`
+   forced on — `DivShadowNode`); iOS `<img>` pixel rendering remains. Original:
    register `<img>` as an inline replaced element
    (reuse Paragraph's inline-attachment machinery; classification routes it into the run,
    not blockified) and `<div>` as a block container (backed by the `display:block` path

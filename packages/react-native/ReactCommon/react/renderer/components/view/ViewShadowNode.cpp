@@ -7,6 +7,7 @@
 
 #include "ViewShadowNode.h"
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/view/DivShadowNode.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
@@ -17,6 +18,10 @@ namespace facebook::react {
 
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char ViewComponentName[] = "View";
+
+// The intrinsic `<div>` tag (implicit-text-plan.md §3.C); see DivShadowNode.h.
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+const char DivComponentName[] = "div";
 
 ViewShadowNode::ViewShadowNode(
     const ShadowNodeFragment& fragment,

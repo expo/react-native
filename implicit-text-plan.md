@@ -230,7 +230,11 @@ events, and DOM APIs).
   block *inner* display (§3.A block section): it is the intrinsic analog of a `View` but with
   `display:block` instead of `flex`, so ported web markup (`<div><span>…</span></div>`) lays
   out with true block semantics. It is registered like the other intrinsic tags and backed
-  by the block-display path, not by `InlineText`.
+  by the block-display path, not by `InlineText`. **Done (next-steps T9):** `DivShadowNode` is
+  a `View` with `displayBlock` forced on, so it rides the View block path (native `YGDisplayBlock`
+  or the flex emulation) and the shared anonymous-IFC machinery; headless tests prove
+  `<div>a<b>b</b>c</div>` is one inline flow vs a flex View blockifying. iOS/Android/core
+  component registration is a follow-up (Fantom uses the stub registry).
 - **The back-compat exception, stated precisely:** authored `<Text>` keeps today's RN
   semantics in full — block-level from the outside (a `<p>`), RN's own nested-text/inline
   rules, verbatim whitespace, and untouched Paragraph internals. Apps using explicit
@@ -552,7 +556,7 @@ lazy View state (§4.2), native Yoga `display:block` Stage 1 (§3.A/§4.5,
 hit-testing on drawn text (§3.G), and the intrinsic `<img>` inline-replaced
 layout (§3.C, classification + sizing) are
 implemented on this branch and verified: Fantom
-41/41 matrix + 7/7 native-block + regression sweeps (View-itest 224), Safari web
+42/42 matrix + 8/8 native-block + regression sweeps (View-itest 224), Safari web
 mirror 20/20 (+ img/native-block twins added), iPhone 17
 Pro (iOS 26.5) simulator screenshots (incl. paint-order interleaving + hit-test log), and live CDP layout reads
 (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:

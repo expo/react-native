@@ -153,6 +153,21 @@ kase('whitespace collapses across an inline element boundary (block flow)',
     return a > 0 && Math.abs(a - b) < 1;
   });
 
+// The intrinsic <div> is block-outer/block-inner (implicit-text-plan.md §3.C):
+// a literal <div> (default display:block) makes its inline children join one flow.
+// RN parity for T9. (Here compared against a plain flex .view where the inline
+// element would blockify.)
+kase('<div> is a block container: inline children join one flow',
+  `<div id="divcase">a<b style="font-weight:normal">b</b>c</div>
+   <p id="divctrl" style="margin:0">abc</p>`,
+  'div lays a<b>b</b>c out on one line like abc',
+  (root) => {
+    const d = root.querySelector('#divcase').getBoundingClientRect();
+    const c = root.querySelector('#divctrl').getBoundingClientRect();
+    return getComputedStyle(root.querySelector('#divcase')).display === 'block' &&
+      Math.abs(d.height - c.height) < 2;
+  });
+
 kase('unknown elements are inline and unstyled (HTMLUnknownElement)',
   `<div class="view block" id="unk">a<foo>b</foo>c</div>`,
   'one line; content renders',

@@ -184,6 +184,31 @@ describe('native block — fidelity the emulation lacks', () => {
     expect(rectOf(outerRef).height).toBe(200);
   });
 
+  it('the intrinsic <div> tag is a native block container', () => {
+    // <div> is backed by the block path; with enableYogaDisplayBlock on it uses
+    // native YGDisplayBlock. Inline children join one flow (block-inner), and a
+    // block-level child inside it does not flex-grow.
+    const divRef = createRef<HostInstance>();
+    const oneRunRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+          <div collapsable={false} ref={divRef}>
+            a<NativeVirtualText>b</NativeVirtualText>c
+          </div>
+          <View collapsable={false} ref={oneRunRef}>
+            abc
+          </View>
+        </>,
+      );
+    });
+
+    expect(rectOf(divRef).height).toBe(rectOf(oneRunRef).height);
+  });
+
   it('a block-level child fills the container content width', () => {
     const childRef = createRef<HostInstance>();
     const root = Fantom.createRoot();
