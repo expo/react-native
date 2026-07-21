@@ -29,6 +29,25 @@
 
 namespace facebook::react {
 
+// Whether the inheritable text props that feed the element-tree cascade
+// (implicit-text-plan.md §3.D) differ between two revisions of a View's props.
+// A change here must re-run the cascade into descendant IFCs even though none
+// of these keys is a Yoga layout style. Extend this as the inherited set grows
+// (§5.6).
+static bool inheritableTextPropsDiffer(
+    const BaseViewProps& a,
+    const BaseViewProps& b) {
+  if (a.inheritedColor != b.inheritedColor) {
+    return true;
+  }
+  const bool aNan = std::isnan(a.inheritedFontSize);
+  const bool bNan = std::isnan(b.inheritedFontSize);
+  if (aNan || bNan) {
+    return aNan != bNan;
+  }
+  return a.inheritedFontSize != b.inheritedFontSize;
+}
+
 static int FabricDefaultYogaLog(
     const YGConfigConstRef /*unused*/,
     const YGNodeConstRef /*unused*/,
@@ -142,6 +161,24 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
 
   if (fragment.props) {
     updateYogaProps();
+  }
+
+  // Inheritable text props (the `color`/`fontSize` cascade, §3.D) touch no Yoga
+  // style, so a change to them alone would not dirty layout — yet descendant
+  // anonymous IFC boxes must re-measure and re-cascade. Dirty this node so a
+  // layout pass runs and `configureYogaTree` re-propagates the cascade
+  // (implicit-text-plan.md §3.D). The dirty flag is picked up by the parent's
+  // `updateYogaChildren` (which compares child dirtiness) and propagated to the
+  // surface root, so `layoutIfNeeded` actually runs the pass.
+  if (ReactNativeFeatureFlags::enableImplicitTextChildren() && fragment.props) {
+    const auto& source =
+        static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode);
+    const auto* oldProps = dynamic_cast<const BaseViewProps*>(source.props_.get());
+    const auto* newProps = dynamic_cast<const BaseViewProps*>(props_.get());
+    if (oldProps != nullptr && newProps != nullptr &&
+        inheritableTextPropsDiffer(*oldProps, *newProps)) {
+      yogaNode_.setDirty(true);
+    }
   }
 
   if (fragment.children) {
@@ -652,7 +689,17 @@ void YogaLayoutableShadowNode::configureYogaTree(
     auto childLayoutMetrics = child.getLayoutMetrics();
     auto childErrata = YGConfigGetErrata(&child.yogaConfig_);
 
-    if (child.yogaTreeHasBeenConfigured_ &&
+    // The layout-context skip guard below is not enough on its own: when an
+    // ancestor's inheritable text prop changes but a descendant subtree is
+    // otherwise unchanged (same props, same layout context), we must still
+    // push the new cascade value down to its anonymous IFC boxes. Detect a
+    // changed cascade by comparing against what we handed this child last time
+    // (implicit-text-plan.md §3.D).
+    const bool cascadeChanged =
+        ReactNativeFeatureFlags::enableImplicitTextChildren() &&
+        !(child.receivedTextAttributes_ == inheritedTextAttributes_);
+
+    if (child.yogaTreeHasBeenConfigured_ && !cascadeChanged &&
         childLayoutMetrics.pointScaleFactor == pointScaleFactor &&
         floatEquality(
             childLayoutMetrics.fontSizeMultiplier, fontSizeMultiplier) &&
@@ -663,7 +710,18 @@ void YogaLayoutableShadowNode::configureYogaTree(
 
     if (doesOwn(child)) {
       auto& mutableChild = const_cast<YogaLayoutableShadowNode&>(child);
+      mutableChild.receivedTextAttributes_ = inheritedTextAttributes_;
       mutableChild.inheritedTextAttributes_ = inheritedTextAttributes_;
+      // An anonymous IFC box measures and paints from the cascade. A cascade
+      // change that does not alter size (e.g. `color`) leaves Yoga's cached
+      // layout valid, so the box would never be revisited and its containing
+      // View would never republish the run. Dirty it to force a re-measure and
+      // a state republish with the new attributes.
+      if (cascadeChanged &&
+          mutableChild.getTraits().check(
+              ShadowNodeTraits::Trait::AnonymousBox)) {
+        mutableChild.yogaNode_.markDirtyAndPropagate();
+      }
       mutableChild.configureYogaTree(
           pointScaleFactor,
           fontSizeMultiplier,
@@ -671,6 +729,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
           swapLeftAndRight);
     } else {
       auto& clonedChild = cloneChildInPlace(i);
+      clonedChild.receivedTextAttributes_ = inheritedTextAttributes_;
       clonedChild.inheritedTextAttributes_ = inheritedTextAttributes_;
       clonedChild.configureYogaTree(
           pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);

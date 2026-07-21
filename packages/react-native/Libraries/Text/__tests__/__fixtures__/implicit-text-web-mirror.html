@@ -122,6 +122,35 @@ kase('color inherits into bare text; blocks inherit too (web default)',
   'computed color red on text container',
   (root) => getComputedStyle(root.querySelector('#inherit')).color === 'rgb(255, 0, 0)');
 
+// css-cascade-4 §7.3: inheritance is a *live* computed value — updating an
+// ancestor's inheritable property re-cascades into an unchanged descendant
+// subtree (RN parity: implicit-text-plan.md §5.7).
+kase('updating grandparent color re-cascades into an unchanged subtree',
+  `<div class="view" id="gpc" style="color:rgb(0,0,255)"><div class="view" id="midc">hello</div></div>`,
+  'text color tracks a grandparent update',
+  (root) => {
+    const gpc = root.querySelector('#gpc');
+    const midc = root.querySelector('#midc');
+    const before = getComputedStyle(midc).color;
+    gpc.style.color = 'rgb(255,0,0)';
+    const after = getComputedStyle(midc).color;
+    return before === 'rgb(0, 0, 255)' && after === 'rgb(255, 0, 0)';
+  });
+
+kase('updating grandparent font-size re-measures an unchanged subtree',
+  `<div class="view" id="gpf" style="font-size:8px; line-height:normal"><div class="view" id="midf">hello</div></div>
+   <div class="view" style="font-size:30px; line-height:normal"><p id="ctrlf">hello</p></div>`,
+  'grandchild height grows to match a 30px control after update',
+  (root) => {
+    const gpf = root.querySelector('#gpf');
+    const midf = root.querySelector('#midf');
+    const ctrlf = root.querySelector('#ctrlf');
+    const before = midf.getBoundingClientRect().height;
+    gpf.style.fontSize = '30px';
+    const after = midf.getBoundingClientRect().height;
+    return after > before && Math.abs(after - ctrlf.getBoundingClientRect().height) < 1;
+  });
+
 // M6: events
 kase('text-node click targets the parent element',
   `<div class="view" id="evt">hello</div>`,

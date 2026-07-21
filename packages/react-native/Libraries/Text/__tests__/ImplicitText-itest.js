@@ -509,6 +509,76 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
     expect(rectOf(optInRef).height).toBe(rectOf(controlRef).height);
     expect(rectOf(optInRef).height).toBeGreaterThan(20);
   });
+
+  // Regression: configureYogaTree's skip-optimization must not skip cascade
+  // updates into an unchanged subtree when only an ancestor's inheritable prop
+  // changes (implicit-text-plan.md §5.7). The middle View below never changes,
+  // so the layout-context skip guard fires — the cascade still has to reach the
+  // grandchild IFC.
+  it('updating a grandparent color re-cascades into an unchanged subtree (non-size)', () => {
+    let setColor: (c: string) => void = () => {};
+    function Grandparent(): React.Node {
+      const [color, set] = useState('rgb(0, 0, 255)');
+      setColor = set;
+      return (
+        // $FlowExpectedError[incompatible-call] inheritable keys are new
+        <View collapsable={false} style={{color}}>
+          <View collapsable={false}>hello</View>
+        </View>
+      );
+    }
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(<Grandparent />);
+    });
+    expect(
+      JSON.stringify(root.getRenderedOutput({props: ['foregroundColor']}).toJSX()),
+    ).toContain('rgba(0, 0, 255, 1)');
+
+    Fantom.runTask(() => {
+      setColor('rgb(255, 0, 0)');
+    });
+    expect(
+      JSON.stringify(root.getRenderedOutput({props: ['foregroundColor']}).toJSX()),
+    ).toContain('rgba(255, 0, 0, 1)');
+  });
+
+  it('updating a grandparent fontSize re-measures an unchanged subtree', () => {
+    let setFontSize: (n: number) => void = () => {};
+    const innerRef = createRef<HostInstance>();
+    const controlRef = createRef<HostInstance>();
+    function Tree(): React.Node {
+      const [fontSize, set] = useState(8);
+      setFontSize = set;
+      return (
+        <>
+          {/* $FlowExpectedError[incompatible-call] inheritable keys are new */}
+          <View collapsable={false} style={{fontSize}}>
+            <View collapsable={false} ref={innerRef}>
+              hello
+            </View>
+          </View>
+          <View collapsable={false} ref={controlRef}>
+            <Text style={{fontSize: 30}}>hello</Text>
+          </View>
+        </>
+      );
+    }
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(<Tree />);
+    });
+    // fontSize 8 grandchild is shorter than the fontSize 30 control.
+    expect(rectOf(innerRef).height).toBeLessThan(rectOf(controlRef).height);
+
+    Fantom.runTask(() => {
+      setFontSize(30);
+    });
+    // After the grandparent grows, the unchanged grandchild must re-measure.
+    expect(rectOf(innerRef).height).toBe(rectOf(controlRef).height);
+  });
 });
 
 milestone(5, 'M5: intrinsic inline tags', () => {

@@ -270,6 +270,15 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   TextAttributes inheritedTextAttributes_{TextAttributes::defaultTextAttributes()};
 
   /*
+   * The cascade value handed down by the parent during `configureYogaTree`,
+   * before this node folds in its own inheritable props. Retained across
+   * revisions so a later pass can detect when an ancestor's inheritable prop
+   * changed and re-cascade into an otherwise unchanged subtree that the
+   * layout-context skip guard would skip (implicit-text-plan.md §3.D).
+   */
+  TextAttributes receivedTextAttributes_{TextAttributes::defaultTextAttributes()};
+
+  /*
    * Whether the full Yoga subtree of this Node has been configured.
    */
   bool yogaTreeHasBeenConfigured_{false};
