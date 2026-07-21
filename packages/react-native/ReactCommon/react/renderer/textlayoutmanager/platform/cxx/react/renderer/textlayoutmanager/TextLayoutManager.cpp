@@ -24,10 +24,16 @@ namespace {
 constexpr Float kDeterministicCharacterWidth = 10;
 
 Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
-  // Line height tracks font size so inheritance is layout-observable:
-  // fontSize + 6 (default 14 -> 20, matching earlier fixed metrics).
-  auto fontSize = TextAttributes::defaultTextAttributes().fontSize;
+  // Line height is layout-observable so text-attribute inheritance can be
+  // asserted headlessly. Contract: an explicit `lineHeight` wins verbatim;
+  // otherwise it tracks font size as `fontSize + 6` (default 14 -> 20, matching
+  // the earlier fixed metrics).
   const auto& fragments = attributedStringBox.getValue().getFragments();
+  if (!fragments.empty() &&
+      !std::isnan(fragments[0].textAttributes.lineHeight)) {
+    return fragments[0].textAttributes.lineHeight;
+  }
+  auto fontSize = TextAttributes::defaultTextAttributes().fontSize;
   if (!fragments.empty() && !std::isnan(fragments[0].textAttributes.fontSize)) {
     fontSize = fragments[0].textAttributes.fontSize;
   }
@@ -43,13 +49,21 @@ TextMeasurement measureDeterministically(
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
     if (!fragment.isAttachment()) {
       characterCount += fragment.string.size();
-      // Bold characters measure wider (12pt vs 10pt) so weight is
-      // layout-observable in tests.
-      auto isBold = fragment.textAttributes.fontWeight.has_value() &&
-          *fragment.textAttributes.fontWeight == FontWeight::Bold;
-      intrinsicWidth += static_cast<Float>(fragment.string.size()) *
-          (isBold ? kDeterministicCharacterWidth + 2
-                  : kDeterministicCharacterWidth);
+      // Per-character advance is layout-observable so inheritance of weight/
+      // style/letterSpacing can be asserted headlessly. Contract: base 10pt,
+      // +2pt when bold, +1pt when italic, plus `letterSpacing` verbatim.
+      const auto& ta = fragment.textAttributes;
+      Float perCharacter = kDeterministicCharacterWidth;
+      if (ta.fontWeight.has_value() && *ta.fontWeight == FontWeight::Bold) {
+        perCharacter += 2;
+      }
+      if (ta.fontStyle.has_value() && *ta.fontStyle == FontStyle::Italic) {
+        perCharacter += 1;
+      }
+      if (!std::isnan(ta.letterSpacing)) {
+        perCharacter += ta.letterSpacing;
+      }
+      intrinsicWidth += static_cast<Float>(fragment.string.size()) * perCharacter;
     }
   }
 

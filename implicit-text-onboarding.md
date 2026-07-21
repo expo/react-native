@@ -198,10 +198,11 @@ between `root.render(<View>hi</View>)` and pixels.
 4. **Control-based assertions beat absolute numbers**: compare bare-string layout against an
    explicit-`<Text>` control rather than hardcoding sizes, wherever possible.
 5. **The deterministic measurer contract** (cxx `TextLayoutManager`, flag-gated): 10pt per
-   character (+2pt when bold), line height = fontSize + 6 (default 14 → 20), naive wrap at
-   the width constraint. This makes intrinsic text sizing assertable headlessly. If a new
-   test needs a new observable dimension (e.g. italic, letterSpacing), extend the contract
-   deliberately and document it in the same commit.
+   character (**+2pt when bold, +1pt when italic, plus `letterSpacing` per character**), line
+   height = **explicit `lineHeight` if set, else** fontSize + 6 (default 14 → 20), naive wrap
+   at the width constraint. This makes intrinsic text sizing (and now weight/style/
+   letterSpacing/lineHeight inheritance) assertable headlessly. If a new test needs a new
+   observable dimension, extend the contract deliberately and document it in the same commit.
 6. **Regressions stay green**: `Text-itest.js`, `ReadOnlyText-itest.js`,
    `ReactNativeElement-itest.js`, and the baselines run with every change.
 7. **Checkpoint commits** describe known-working / known-broken state explicitly.
@@ -273,10 +274,16 @@ has the full design for all of these.
    descriptor/props-parsing/EventTarget); host config gains `createTextNode`/
    `commitTextUpdate`; delete `RCTRawText` outright (no compat shims). Largest open item;
    read the whole §3.F first.
-6. **Full inherited-property set** — extend `BaseViewProps` + cascade + measurer
-   observability: `fontFamily`, `fontWeight`, `fontStyle`, `letterSpacing`, `lineHeight`,
-   `textAlign`, `textTransform` (mirror the CSS inherited list; keep `textAlign`
-   Yoga-interaction in mind).
+6. **Full inherited-property set** — ✅ **DONE.** `BaseViewProps` gains `inheritedFontFamily`/
+   `FontWeight`/`FontStyle`/`FontVariant`/`LetterSpacing`/`LineHeight`/`TextAlign`/
+   `TextTransform` (parsed via the shared attributedstring conversions — header-only, no
+   `rrc_view`↔attributedstring link, per §6 gotcha); folded in `configureYogaTree` and
+   compared in `inheritableTextPropsDiffer` for live updates; added to both View configs. The
+   deterministic measurer now makes `fontStyle` (italic +1pt/char), `letterSpacing`, and
+   `lineHeight` layout-observable; `fontFamily`/`textAlign` are asserted via the run's
+   rendered attributes. Tests: `ImplicitText-itest.js` M4b (5 cases) + web-mirror twin.
+   `fontVariant`/`textTransform` are plumbed and cascade through the same fold but are not
+   independently observable headlessly (not size-affecting, not serialized to the mount).
 7. **Cascade correctness fix** — ✅ **DONE.** Two-part fix (implicit-text-plan.md §3.D):
    (a) inheritable text props touch no Yoga style, so a change to them alone never dirtied
    layout and no re-cascade ran — `YogaLayoutableShadowNode`'s clone ctor now compares the

@@ -151,6 +151,23 @@ kase('updating grandparent font-size re-measures an unchanged subtree',
     return after > before && Math.abs(after - ctrlf.getBoundingClientRect().height) < 1;
   });
 
+// The full CSS inherited text-property set cascades into bare text (the run
+// uses the container's computed inherited values, exactly as the anonymous
+// text under a div does on the web). RN parity: implicit-text-plan.md §3.D/§5.6.
+kase('full CSS inherited text set cascades into bare text',
+  `<div class="view" id="allinh" style="font-weight:bold; font-style:italic; letter-spacing:5px; line-height:50px; font-family:Georgia; text-align:center; text-transform:uppercase">hello</div>`,
+  'weight/style/letter-spacing/line-height/family/text-align/transform all inherit',
+  (root) => {
+    const cs = getComputedStyle(root.querySelector('#allinh'));
+    return (cs.fontWeight === '700' || cs.fontWeight === 'bold') &&
+      cs.fontStyle === 'italic' &&
+      cs.letterSpacing === '5px' &&
+      cs.lineHeight === '50px' &&
+      /Georgia/.test(cs.fontFamily) &&
+      cs.textAlign === 'center' &&
+      cs.textTransform === 'uppercase';
+  });
+
 // M6: events
 kase('text-node click targets the parent element',
   `<div class="view" id="evt">hello</div>`,

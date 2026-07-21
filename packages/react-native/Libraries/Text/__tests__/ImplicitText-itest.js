@@ -581,6 +581,155 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
   });
 });
 
+// M4b: the full CSS inherited text-property set cascades into bare text
+// (implicit-text-plan.md §3.D / §5.6). Layout-observable keys are asserted via
+// the deterministic measurer contract (§4.5); the rest via the run's rendered
+// attributes, each compared to an explicit-<Text> control carrying the same key.
+milestone(4, 'M4b: full inherited-property set', () => {
+  // `alignSelf:'flex-start'` shrink-wraps the View to its text so intrinsic
+  // width (not the container) is what we measure.
+  function widthOf(ref: {current: HostInstance | null}) {
+    return rectOf(ref).width;
+  }
+
+  it('fontWeight inherits into bare text (bold measures wider, matches control)', () => {
+    const boldRef = createRef<HostInstance>();
+    const plainRef = createRef<HostInstance>();
+    const controlRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View
+            collapsable={false}
+            ref={boldRef}
+            // $FlowExpectedError[incompatible-call] inheritable keys are new
+            style={{fontWeight: 'bold', alignSelf: 'flex-start'}}>
+            hello
+          </View>
+          <View
+            collapsable={false}
+            ref={plainRef}
+            style={{alignSelf: 'flex-start'}}>
+            hello
+          </View>
+          <View
+            collapsable={false}
+            ref={controlRef}
+            style={{alignSelf: 'flex-start'}}>
+            <Text style={{fontWeight: 'bold'}}>hello</Text>
+          </View>
+        </>,
+      );
+    });
+    expect(widthOf(boldRef)).toBeGreaterThan(widthOf(plainRef));
+    expect(widthOf(boldRef)).toBe(widthOf(controlRef));
+  });
+
+  it('fontStyle inherits into bare text (italic measures wider, matches control)', () => {
+    const italicRef = createRef<HostInstance>();
+    const plainRef = createRef<HostInstance>();
+    const controlRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View
+            collapsable={false}
+            ref={italicRef}
+            // $FlowExpectedError[incompatible-call] inheritable keys are new
+            style={{fontStyle: 'italic', alignSelf: 'flex-start'}}>
+            hello
+          </View>
+          <View
+            collapsable={false}
+            ref={plainRef}
+            style={{alignSelf: 'flex-start'}}>
+            hello
+          </View>
+          <View
+            collapsable={false}
+            ref={controlRef}
+            style={{alignSelf: 'flex-start'}}>
+            <Text style={{fontStyle: 'italic'}}>hello</Text>
+          </View>
+        </>,
+      );
+    });
+    expect(widthOf(italicRef)).toBeGreaterThan(widthOf(plainRef));
+    expect(widthOf(italicRef)).toBe(widthOf(controlRef));
+  });
+
+  it('letterSpacing inherits into bare text (wider by spacing per character)', () => {
+    const spacedRef = createRef<HostInstance>();
+    const plainRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View
+            collapsable={false}
+            ref={spacedRef}
+            // $FlowExpectedError[incompatible-call] inheritable keys are new
+            style={{letterSpacing: 5, alignSelf: 'flex-start'}}>
+            hello
+          </View>
+          <View
+            collapsable={false}
+            ref={plainRef}
+            style={{alignSelf: 'flex-start'}}>
+            hello
+          </View>
+        </>,
+      );
+    });
+    // 'hello' is 5 chars; the measurer adds letterSpacing (5) per character.
+    expect(widthOf(spacedRef)).toBe(widthOf(plainRef) + 5 * 5);
+  });
+
+  it('lineHeight inherits into bare text (overrides the derived line height)', () => {
+    const tallRef = createRef<HostInstance>();
+    const controlRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[incompatible-call] inheritable keys are new */}
+          <View collapsable={false} ref={tallRef} style={{lineHeight: 50}}>
+            hello
+          </View>
+          <View collapsable={false} ref={controlRef}>
+            <Text style={{lineHeight: 50}}>hello</Text>
+          </View>
+        </>,
+      );
+    });
+    expect(rectOf(tallRef).height).toBe(50);
+    expect(rectOf(tallRef).height).toBe(rectOf(controlRef).height);
+  });
+
+  it('fontFamily and textAlign inherit into bare text (rendered attributes match control)', () => {
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        // $FlowExpectedError[incompatible-call] inheritable keys are new
+        <View collapsable={false} style={{fontFamily: 'Times', textAlign: 'center'}}>
+          hello
+        </View>,
+      );
+    });
+    // The bare-text run carries the inherited fontFamily and textAlign
+    // (serialized as `alignment`), exactly as an explicit <Text> would.
+    const out = JSON.stringify(
+      root
+        .getRenderedOutput({props: ['fontFamily', 'alignment']})
+        .toJSX(),
+    );
+    expect(out).toContain('"fontFamily":"Times"');
+    expect(out).toContain('"alignment":"center"');
+  });
+});
+
 milestone(5, 'M5: intrinsic inline tags', () => {
   it('<b> renders bold inside explicit <Text> (bold measures wider)', () => {
     const boldRef = createRef<HostInstance>();

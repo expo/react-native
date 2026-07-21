@@ -37,15 +37,32 @@ namespace facebook::react {
 static bool inheritableTextPropsDiffer(
     const BaseViewProps& a,
     const BaseViewProps& b) {
-  if (a.inheritedColor != b.inheritedColor) {
+  if (a.inheritedColor != b.inheritedColor ||
+      a.inheritedFontFamily != b.inheritedFontFamily ||
+      a.inheritedFontWeight != b.inheritedFontWeight ||
+      a.inheritedFontStyle != b.inheritedFontStyle ||
+      a.inheritedFontVariant != b.inheritedFontVariant ||
+      a.inheritedTextAlign != b.inheritedTextAlign ||
+      a.inheritedTextTransform != b.inheritedTextTransform) {
     return true;
   }
-  const bool aNan = std::isnan(a.inheritedFontSize);
-  const bool bNan = std::isnan(b.inheritedFontSize);
-  if (aNan || bNan) {
-    return aNan != bNan;
+  // NaN-aware compares for the optional-by-NaN Float props.
+  const std::pair<Float, Float> floatPairs[] = {
+      {a.inheritedFontSize, b.inheritedFontSize},
+      {a.inheritedLetterSpacing, b.inheritedLetterSpacing},
+      {a.inheritedLineHeight, b.inheritedLineHeight}};
+  for (const auto& [x, y] : floatPairs) {
+    const bool xNan = std::isnan(x);
+    const bool yNan = std::isnan(y);
+    if (xNan || yNan) {
+      if (xNan != yNan) {
+        return true;
+      }
+    } else if (x != y) {
+      return true;
+    }
   }
-  return a.inheritedFontSize != b.inheritedFontSize;
+  return false;
 }
 
 static int FabricDefaultYogaLog(
@@ -676,6 +693,36 @@ void YogaLayoutableShadowNode::configureYogaTree(
       }
       if (!std::isnan(baseViewProps->inheritedFontSize)) {
         inheritedTextAttributes_.fontSize = baseViewProps->inheritedFontSize;
+      }
+      if (!baseViewProps->inheritedFontFamily.empty()) {
+        inheritedTextAttributes_.fontFamily =
+            baseViewProps->inheritedFontFamily;
+      }
+      if (baseViewProps->inheritedFontWeight) {
+        inheritedTextAttributes_.fontWeight =
+            baseViewProps->inheritedFontWeight;
+      }
+      if (baseViewProps->inheritedFontStyle) {
+        inheritedTextAttributes_.fontStyle = baseViewProps->inheritedFontStyle;
+      }
+      if (baseViewProps->inheritedFontVariant) {
+        inheritedTextAttributes_.fontVariant =
+            baseViewProps->inheritedFontVariant;
+      }
+      if (!std::isnan(baseViewProps->inheritedLetterSpacing)) {
+        inheritedTextAttributes_.letterSpacing =
+            baseViewProps->inheritedLetterSpacing;
+      }
+      if (!std::isnan(baseViewProps->inheritedLineHeight)) {
+        inheritedTextAttributes_.lineHeight =
+            baseViewProps->inheritedLineHeight;
+      }
+      if (baseViewProps->inheritedTextAlign) {
+        inheritedTextAttributes_.alignment = baseViewProps->inheritedTextAlign;
+      }
+      if (baseViewProps->inheritedTextTransform) {
+        inheritedTextAttributes_.textTransform =
+            baseViewProps->inheritedTextTransform;
       }
     }
   }
