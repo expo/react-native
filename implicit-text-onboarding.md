@@ -301,6 +301,20 @@ has the full design for all of these.
    position). Touch: Yoga's style + layout algorithm, RN's `display` conversions + codegen +
    TS/Flow types, and the anonymous-box grouping predicate in `updateYogaChildren`. Own
    sub-flag; staged. Plan §3.A/§4.5.
+   - **Scope assessment (2026-07-21).** Concrete entry points: (1) add `Block` to Yoga's
+     *generated* `Display` enum via `ReactCommon/yoga/enums.py` (precedent: the existing
+     `Display::Grid`), regenerate `enums/Display.h`; (2) implement the block layout path in
+     `yoga/algorithm/CalculateLayout.cpp` (~2805 lines) — the real work, a block formatting
+     context distinct from the flex algorithm; (3) audit every `style().display() ==` switch
+     site (`CalculateLayout.cpp`, `FlexLine.cpp`, `node/Node.cpp`, `AbsoluteLayout.cpp`) to
+     handle `Block`; (4) add the `enableYogaDisplayBlock` common feature flag
+     (`scripts/featureflags/ReactNativeFeatureFlags.config.js` → `yarn featureflags --update`,
+     **run under node 24 via `mise exec node@24 --`**, not the default node 25 which the
+     engines check rejects); (5) map RN `display:'block'` → `YGDisplayBlock` when the flag is
+     on, keeping the emulation as the flag-off fallback. Risk: this modifies core layout used
+     by every RN view — needs a full flexbox-regression pass. The emulation already covers the
+     floor (block-stacking + single inline flow) behaviorally, so this is fidelity, not
+     function. Estimated multi-session; sequence as its own workstream (plan §7).
 9. **Intrinsic `<img>` and `<div>` tags** — register `<img>` as an inline replaced element
    (reuse Paragraph's inline-attachment machinery; classification routes it into the run,
    not blockified) and `<div>` as a block container (backed by the `display:block` path
@@ -316,6 +330,18 @@ has the full design for all of these.
     suppressions.
 11. **Unknown-element nodeName fidelity** — plumb the original tag name as a prop so DOM APIs
    report `<foo>` instead of `unknown`.
+   - **Design finding (2026-07-21).** The raw tag name is lost at the JS boundary:
+     `ReactFabric` calls `createNode(tag, viewConfig.uiViewClassName, …)` and the unknown
+     view config's `uiViewClassName` is the singleton `'unknown'`
+     (`ReactNativeViewConfigRegistry.getUnknownElementViewConfig`); C++ component names are
+     static per-descriptor (`UnknownElementShadowNode` → `"unknown"`), and `getTagName`
+     (`renderer/dom/DOM.cpp`) returns `"RN:" + componentName`. So the only per-instance
+     channel is a **prop**. Implementation: (a) add a `nodeName` field to an
+     `UnknownElementProps` (subclass of `TextProps`), (b) inject it in `createInstance` for
+     unknown lowercase tags — a **vendored `ReactFabric-{dev,prod}.js` bundle edit**, same
+     fork-carry category as the §3.E dev-warning removal (Fantom uses the dev bundle, so that
+     suffices for headless tests), (c) have `getTagName` read the prop when the component is
+     `"unknown"`. Lower value than native block; do after.
 12. **Android** — the shared C++ compiles there but painting needs an Android mounting story
     (TextViews, not a drawing pass). Currently flag-off everywhere by default.
 13. **Upstreaming** — the `createTextInstance` dev-warning removal belongs in the `react`
