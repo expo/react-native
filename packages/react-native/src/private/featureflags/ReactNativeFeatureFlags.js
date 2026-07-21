@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<18f24b20806682b774fa5ba96f291fd2>>
+ * @generated SignedSource<<512db7107ae2ec2328aa0a46909bd542>>
  * @flow strict
  * @noformat
  */
@@ -76,6 +76,7 @@ export type ReactNativeFeatureFlags = Readonly<{
   enableIOSCompressedTextFrameAdjustment: Getter<boolean>,
   enableIOSTextBaselineOffsetPerLine: Getter<boolean>,
   enableIOSViewClipToPaddingBox: Getter<boolean>,
+  enableImplicitTextChildren: Getter<boolean>,
   enableImagePrefetchingAndroid: Getter<boolean>,
   enableImmediateUpdateModeForContentOffsetChanges: Getter<boolean>,
   enableImperativeFocus: Getter<boolean>,
@@ -316,6 +317,10 @@ export const enableIOSTextBaselineOffsetPerLine: Getter<boolean> = createNativeF
  * iOS Views will clip to their padding box vs border box
  */
 export const enableIOSViewClipToPaddingBox: Getter<boolean> = createNativeFlagGetter('enableIOSViewClipToPaddingBox', false);
+/**
+ * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
+ */
+export const enableImplicitTextChildren: Getter<boolean> = createNativeFlagGetter('enableImplicitTextChildren', false);
 /**
  * When enabled, Android will build and initiate image prefetch requests on ImageShadowNode::layout
  */

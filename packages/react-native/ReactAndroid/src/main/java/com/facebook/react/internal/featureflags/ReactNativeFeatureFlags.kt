@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<c5ce707ba940ef24ca6c261fd9b2baf7>>
+ * @generated SignedSource<<f5f1e3aeb5e278b072d1dd918c369888>>
  */
 
 /**
@@ -197,6 +197,12 @@ public object ReactNativeFeatureFlags {
    */
   @JvmStatic
   public fun enableIOSViewClipToPaddingBox(): Boolean = accessor.enableIOSViewClipToPaddingBox()
+
+  /**
+   * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
+   */
+  @JvmStatic
+  public fun enableImplicitTextChildren(): Boolean = accessor.enableImplicitTextChildren()
 
   /**
    * When enabled, Android will build and initiate image prefetch requests on ImageShadowNode::layout

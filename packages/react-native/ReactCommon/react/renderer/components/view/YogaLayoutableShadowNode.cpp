@@ -144,6 +144,11 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
 
   if (fragment.children) {
     updateYogaChildren();
+  } else if (!static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
+                  .anonymousTextContentChildren_.empty()) {
+    // Anonymous boxes are owned exclusively by one shadow-node revision
+    // (implicit-text-plan.md §4.1): rebuild rather than share the source's.
+    updateYogaChildren();
   }
 
   ensureConsistency();
@@ -230,6 +235,19 @@ void YogaLayoutableShadowNode::appendChild(
 
   if (getTraits().check(ShadowNodeTraits::Trait::LeafYogaNode)) {
     // This node is a declared leaf.
+    return;
+  }
+
+  if (ReactNativeFeatureFlags::enableImplicitTextChildren() &&
+      getAnonymousTextContentFactory() != nullptr &&
+      (isInlineTextContent(*childNode) ||
+       !anonymousTextContentChildren_.empty())) {
+    // Inline-level content joined (or its runs may have shifted): rebuild the
+    // Yoga children with anonymous boxes from scratch. O(children) per
+    // append; acceptable while runs are small.
+    yogaNode_.setDirty(true);
+    updateYogaChildren();
+    ensureConsistency();
     return;
   }
 
@@ -354,6 +372,10 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
 
   ensureUnsealed();
 
+  const auto implicitTextEnabled =
+      ReactNativeFeatureFlags::enableImplicitTextChildren() &&
+      getAnonymousTextContentFactory() != nullptr;
+
   bool isClean = !YGNodeIsDirty(&yogaNode_) &&
       getChildren().size() == YGNodeGetChildCount(&yogaNode_);
 
@@ -362,12 +384,26 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
 
   yogaNode_.setChildren({});
   yogaLayoutableChildren_.clear();
+  anonymousTextContentChildren_.clear();
   yogaLayoutableChildren_.reserve(getChildren().size());
+
+  // Contiguous inline-level content (text nodes; inline text elements get
+  // blockified into their own single-node runs per css-flexbox-1 §4) is
+  // wrapped in anonymous boxes established by the text module's factory.
+  std::vector<std::shared_ptr<const ShadowNode>> inlineRun;
+  auto flushInlineRun = [&]() {
+    if (!inlineRun.empty()) {
+      appendAnonymousTextContentChild(std::move(inlineRun));
+      inlineRun.clear();
+      isClean = false;
+    }
+  };
 
   for (size_t i = 0; i < getChildren().size(); i++) {
     if (auto yogaLayoutableChild =
             std::dynamic_pointer_cast<const YogaLayoutableShadowNode>(
                 getChildren()[i])) {
+      flushInlineRun();
       appendYogaChild(yogaLayoutableChild);
       adoptYogaChild(i);
 
@@ -380,13 +416,61 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
         isClean = isClean && !newYogaChildNode.isDirty() &&
             (newYogaChildNode.style() == oldYogaChildNode.style());
       }
+    } else if (implicitTextEnabled && isInlineTextContent(*getChildren()[i])) {
+      const auto& child = getChildren()[i];
+      if (std::string_view{child->getComponentName()} == "RawText") {
+        inlineRun.push_back(child);
+      } else {
+        // Inline text *element* in a flex container: blockified into its own
+        // anonymous item, exactly as on web.
+        flushInlineRun();
+        inlineRun.push_back(child);
+        flushInlineRun();
+      }
     }
   }
+  flushInlineRun();
 
   react_native_assert(
       yogaLayoutableChildren_.size() == YGNodeGetChildCount(&yogaNode_));
 
   yogaNode_.setDirty(!isClean);
+}
+
+static YogaLayoutableShadowNode::AnonymousTextContentFactory&
+anonymousTextContentFactorySingleton() {
+  static YogaLayoutableShadowNode::AnonymousTextContentFactory factory =
+      nullptr;
+  return factory;
+}
+
+void YogaLayoutableShadowNode::setAnonymousTextContentFactory(
+    AnonymousTextContentFactory factory) {
+  anonymousTextContentFactorySingleton() = factory;
+}
+
+YogaLayoutableShadowNode::AnonymousTextContentFactory
+YogaLayoutableShadowNode::getAnonymousTextContentFactory() {
+  return anonymousTextContentFactorySingleton();
+}
+
+bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
+  std::string_view componentName{child.getComponentName()};
+  return componentName == "RawText" || componentName == "Text";
+}
+
+void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
+    std::vector<std::shared_ptr<const ShadowNode>>&& runChildren) {
+  auto box = getAnonymousTextContentFactory()(std::move(runChildren), *this);
+  if (box == nullptr) {
+    // The run generates no box (e.g. whitespace-only anonymous flex item).
+    return;
+  }
+
+  yogaLayoutableChildren_.push_back(box);
+  yogaNode_.insertChild(&box->yogaNode_, YGNodeGetChildCount(&yogaNode_));
+  box->yogaNode_.setOwner(&yogaNode_);
+  anonymousTextContentChildren_.push_back(std::move(box));
 }
 
 void YogaLayoutableShadowNode::updateYogaProps() {

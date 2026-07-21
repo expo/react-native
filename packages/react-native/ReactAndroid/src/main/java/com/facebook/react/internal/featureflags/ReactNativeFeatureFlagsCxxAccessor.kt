@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<628ede95c745280c1ceaa73c6dc45de0>>
+ * @generated SignedSource<<2db8014b4299fa9173d2f490acaa3d28>>
  */
 
 /**
@@ -48,6 +48,7 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
   private var enableIOSCompressedTextFrameAdjustmentCache: Boolean? = null
   private var enableIOSTextBaselineOffsetPerLineCache: Boolean? = null
   private var enableIOSViewClipToPaddingBoxCache: Boolean? = null
+  private var enableImplicitTextChildrenCache: Boolean? = null
   private var enableImagePrefetchingAndroidCache: Boolean? = null
   private var enableImmediateUpdateModeForContentOffsetChangesCache: Boolean? = null
   private var enableImperativeFocusCache: Boolean? = null
@@ -354,6 +355,15 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
     if (cached == null) {
       cached = ReactNativeFeatureFlagsCxxInterop.enableIOSViewClipToPaddingBox()
       enableIOSViewClipToPaddingBoxCache = cached
+    }
+    return cached
+  }
+
+  override fun enableImplicitTextChildren(): Boolean {
+    var cached = enableImplicitTextChildrenCache
+    if (cached == null) {
+      cached = ReactNativeFeatureFlagsCxxInterop.enableImplicitTextChildren()
+      enableImplicitTextChildrenCache = cached
     }
     return cached
   }

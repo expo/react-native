@@ -91,6 +91,13 @@ class ShadowNodeTraits {
     // **Deprecated**: This trait is deprecated and will be removed in a future
     // version of React Native.
     DirtyYogaNode = 1 << 14,
+
+    // The node is an anonymous box generated at the layout level (e.g. an
+    // inline formatting context wrapping bare text children of a View). Such
+    // nodes exist only in the box tree: they never join the shadow tree's
+    // children lists and must not claim family parentage of the DOM children
+    // they lay out (implicit-text-plan.md §3.A).
+    AnonymousBox = 1 << 15,
   };
 
   /*

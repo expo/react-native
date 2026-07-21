@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @fantom_flags enableImplicitTextChildren:true
  * @flow strict-local
  * @format
  */
-
-// TODO(implicit-text M1): enable once the feature flag exists:
-// (add to the docblock above) @fantom_flags enableImplicitTextChildren:true
 
 /**
  * Implicit text: CSS/DOM-behavior test matrix (implicit-text-plan.md).
@@ -45,7 +43,7 @@ import {NativeVirtualText} from 'react-native/Libraries/Text/TextNativeComponent
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 import ReadOnlyText from 'react-native/src/private/webapis/dom/nodes/ReadOnlyText';
 
-const IMPLEMENTED_MILESTONE = 0;
+const IMPLEMENTED_MILESTONE = 1;
 
 function milestone(n: number, name: string, fn: () => void) {
   if (IMPLEMENTED_MILESTONE >= n) {

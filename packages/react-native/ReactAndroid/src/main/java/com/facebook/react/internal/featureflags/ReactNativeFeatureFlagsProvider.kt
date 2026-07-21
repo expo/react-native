@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<ee254c53ae1b4bc03045926028e898e5>>
+ * @generated SignedSource<<ff80afff5c4ff320014ab04f970115e1>>
  */
 
 /**
@@ -78,6 +78,8 @@ public interface ReactNativeFeatureFlagsProvider {
   @DoNotStrip public fun enableIOSTextBaselineOffsetPerLine(): Boolean
 
   @DoNotStrip public fun enableIOSViewClipToPaddingBox(): Boolean
+
+  @DoNotStrip public fun enableImplicitTextChildren(): Boolean
 
   @DoNotStrip public fun enableImagePrefetchingAndroid(): Boolean
 

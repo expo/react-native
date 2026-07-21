@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<e064956fa1ca7954fc2f1bdb3c166dac>>
+ * @generated SignedSource<<ff570a8fe2373d0b6ece708afa356e0d>>
  */
 
 /**
@@ -182,6 +182,11 @@ bool NativeReactNativeFeatureFlags::enableIOSTextBaselineOffsetPerLine(
 bool NativeReactNativeFeatureFlags::enableIOSViewClipToPaddingBox(
     jsi::Runtime& /*runtime*/) {
   return ReactNativeFeatureFlags::enableIOSViewClipToPaddingBox();
+}
+
+bool NativeReactNativeFeatureFlags::enableImplicitTextChildren(
+    jsi::Runtime& /*runtime*/) {
+  return ReactNativeFeatureFlags::enableImplicitTextChildren();
 }
 
 bool NativeReactNativeFeatureFlags::enableImagePrefetchingAndroid(

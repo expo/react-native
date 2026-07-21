@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<df8968adcf11283d6745bb2e0f5f7a5b>>
+ * @generated SignedSource<<cc86b96c9f9fb4911a7f3c26cd607098>>
  */
 
 /**
@@ -178,6 +178,11 @@ class ReactNativeFeatureFlags {
    * iOS Views will clip to their padding box vs border box
    */
   RN_EXPORT static bool enableIOSViewClipToPaddingBox();
+
+  /**
+   * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
+   */
+  RN_EXPORT static bool enableImplicitTextChildren();
 
   /**
    * When enabled, Android will build and initiate image prefetch requests on ImageShadowNode::layout

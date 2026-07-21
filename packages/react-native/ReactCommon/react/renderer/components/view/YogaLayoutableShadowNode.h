@@ -87,6 +87,23 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   Rect getContentBounds() const;
 
+#pragma mark - Implicit text content (anonymous inline formatting contexts)
+
+  /*
+   * Factory producing an anonymous box (a Yoga-layoutable node establishing an
+   * inline formatting context) for a run of inline-level children (text nodes
+   * and inline text elements) of a block container. Implemented and installed
+   * by the text module (components/text) to keep the dependency direction
+   * intact; returns nullptr for runs that generate no box (e.g. whitespace-only
+   * anonymous items, per css-flexbox-1 §4). See implicit-text-plan.md §3.A.
+   */
+  using AnonymousTextContentFactory = std::shared_ptr<YogaLayoutableShadowNode> (*)(
+      std::vector<std::shared_ptr<const ShadowNode>> runChildren,
+      const ShadowNode &containerShadowNode);
+
+  static void setAnonymousTextContentFactory(AnonymousTextContentFactory factory);
+  static AnonymousTextContentFactory getAnonymousTextContentFactory();
+
  protected:
   /**
    * Subclasses which provide MeasurableYogaNode may override to signal that a
@@ -203,11 +220,33 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void ensureYogaChildrenAlignment() const;
   void ensureYogaChildrenLookFine() const;
 
+#pragma mark - Implicit text content helpers
+
+  /*
+   * True when `child` is inline-level content (a text node or an inline text
+   * element) that participates in anonymous box generation under this node.
+   */
+  static bool isInlineTextContent(const ShadowNode &child);
+
+  /*
+   * Appends an anonymous box produced by the factory for the given run into
+   * the Yoga children (it is never part of `children_` — box tree only).
+   */
+  void appendAnonymousTextContentChild(
+      std::vector<std::shared_ptr<const ShadowNode>> &&runChildren);
+
 #pragma mark - Private member variables
   /*
    * List of children which derive from YogaLayoutableShadowNode
    */
   ListOfShared yogaLayoutableChildren_;
+
+  /*
+   * Anonymous boxes generated for runs of inline-level children. Owned
+   * exclusively by this shadow-node revision (rebuilt on clone); present in
+   * `yogaLayoutableChildren_` and the Yoga node, never in `children_`.
+   */
+  std::vector<std::shared_ptr<YogaLayoutableShadowNode>> anonymousTextContentChildren_;
 
   /*
    * Whether the full Yoga subtree of this Node has been configured.

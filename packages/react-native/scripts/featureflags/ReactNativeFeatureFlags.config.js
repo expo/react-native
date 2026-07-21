@@ -349,6 +349,17 @@ const definitions: FeatureFlagDefinitions = {
       },
       ossReleaseStage: 'none',
     },
+    enableImplicitTextChildren: {
+      defaultValue: false,
+      metadata: {
+        dateAdded: '2026-07-21',
+        description:
+          'Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).',
+        expectedReleaseValue: true,
+        purpose: 'experimentation',
+      },
+      ossReleaseStage: 'none',
+    },
     enableImagePrefetchingAndroid: {
       defaultValue: false,
       metadata: {
