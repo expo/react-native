@@ -429,3 +429,17 @@ touch lands on synthesized text, DevTools/DOM attribution work, and identity cac
 Kept because: it is the fastest path to a demo, exercises identical text machinery, and its
 Fantom test doubles as the acceptance suite for the §3 design (expected outputs differ only
 in there being no `rn-paragraph` wrapper — the View itself carries the text runs).
+
+---
+
+## Status addendum (2026-07-21, post-implementation)
+
+All matrix milestones (M1-M7) plus iOS painting, intrinsic tags, unknown-element
+DOM semantics, and the §3.E warning removal are implemented on this branch and
+verified: Fantom 32/32 + regression sweeps, Safari web mirror 12/12, iPhone 17
+Pro (iOS 26.5) simulator screenshots, and live CDP layout reads
+(`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:
+`packages/rn-tester/js/ImplicitTextDemo.js`. Next: mine Web Platform Tests
+(css/CSS2 normal-flow + visuren, css-flexbox anonymous items, css-display,
+css-text white-space, css-inline, dom/nodes, HTMLUnknownElement) for additional
+matrix cases; production hardening list in §4 unchanged.
