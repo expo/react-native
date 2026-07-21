@@ -360,6 +360,17 @@ const definitions: FeatureFlagDefinitions = {
       },
       ossReleaseStage: 'none',
     },
+    enableYogaDisplayBlock: {
+      defaultValue: false,
+      metadata: {
+        dateAdded: '2026-07-21',
+        description:
+          "Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableImplicitTextChildren; the emulation remains the flag-off fallback.",
+        expectedReleaseValue: true,
+        purpose: 'experimentation',
+      },
+      ossReleaseStage: 'none',
+    },
     enableImagePrefetchingAndroid: {
       defaultValue: false,
       metadata: {

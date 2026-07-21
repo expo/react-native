@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<fe8fd0539fec2b53766acf58d2159f7a>>
+ * @generated SignedSource<<2e9212b834c111d6d18281824fb8383c>>
  */
 
 /**
@@ -210,6 +210,12 @@ class ReactNativeFeatureFlagsJavaProvider
   bool enableImplicitTextChildren() override {
     static const auto method =
         getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableImplicitTextChildren");
+    return method(javaProvider_);
+  }
+
+  bool enableYogaDisplayBlock() override {
+    static const auto method =
+        getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableYogaDisplayBlock");
     return method(javaProvider_);
   }
 
@@ -704,6 +710,11 @@ bool JReactNativeFeatureFlagsCxxInterop::enableImplicitTextChildren(
   return ReactNativeFeatureFlags::enableImplicitTextChildren();
 }
 
+bool JReactNativeFeatureFlagsCxxInterop::enableYogaDisplayBlock(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
+  return ReactNativeFeatureFlags::enableYogaDisplayBlock();
+}
+
 bool JReactNativeFeatureFlagsCxxInterop::enableImagePrefetchingAndroid(
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
   return ReactNativeFeatureFlags::enableImagePrefetchingAndroid();
@@ -1107,6 +1118,9 @@ void JReactNativeFeatureFlagsCxxInterop::registerNatives() {
       makeNativeMethod(
         "enableImplicitTextChildren",
         JReactNativeFeatureFlagsCxxInterop::enableImplicitTextChildren),
+      makeNativeMethod(
+        "enableYogaDisplayBlock",
+        JReactNativeFeatureFlagsCxxInterop::enableYogaDisplayBlock),
       makeNativeMethod(
         "enableImagePrefetchingAndroid",
         JReactNativeFeatureFlagsCxxInterop::enableImagePrefetchingAndroid),

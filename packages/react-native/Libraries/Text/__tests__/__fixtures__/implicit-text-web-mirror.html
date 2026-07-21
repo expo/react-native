@@ -106,6 +106,30 @@ kase('block container mixes inline flows with block children',
     return Math.abs(h - (lineH * 2 + 10)) < 2;
   });
 
+// Native Yoga block fidelity (implicit-text T4): a block container is NOT a flex
+// container, so flex item properties do not apply to its children — flex-grow
+// does not stretch a block child, and block children fill the content width.
+kase('block-level child does not grow (flex-grow ignored in block flow)',
+  `<div class="block" id="nogrow" style="width:100px; height:100px">
+     <div style="height:10px"></div>
+     <div id="nogrowchild" style="flex-grow:1"></div>
+   </div>`,
+  'flex-grow child stays at content height (0), not stretched to fill',
+  (root) => {
+    const child = root.querySelector('#nogrowchild');
+    return child.getBoundingClientRect().height < 1;
+  });
+
+kase('block-level child fills the container content width',
+  `<div class="block" id="bfill" style="width:120px">
+     <div id="bfillchild" style="height:5px"></div>
+   </div>`,
+  'auto-width block child == containing block content width',
+  (root) => {
+    const child = root.querySelector('#bfillchild');
+    return Math.abs(child.getBoundingClientRect().width - 120) < 1;
+  });
+
 // css-text-3 §3 white-space:normal — the browser default. Bare-text runs in RN
 // collapse internal whitespace and trim IFC edges to match this (plan §3.A/§4.4;
 // the verbatim exception for explicit <Text> is RN-specific and has no web twin).

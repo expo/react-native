@@ -27,8 +27,9 @@ updates, and public `display:'block'` types. Matrix is 35/35 under Fantom; the w
 15/15 in Safari.
 
 Three §5 items are done: **inherited-property set**, **cascade correctness**, **`display:'block'`
-public types**. **T1 (white-space), T2 (unknown-element `nodeName`, dev bundle), and T3 (lazy
-View state) are now done** — see their sections. Everything else below is open.
+public types**. **T1 (white-space), T2 (unknown-element `nodeName`, dev bundle), T3 (lazy
+View state), and T4 (native Yoga `display:block`, Stage 1) are now done** — see their sections.
+Everything else below is open.
 
 ## 1. The shared build / test loop (all tasks use this)
 
@@ -216,8 +217,33 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 
 ## Track B — native Yoga block (the biggest layout item)
 
-### T4. Native `display:block` in Yoga (`YGDisplayBlock`)
+### T4. Native `display:block` in Yoga (`YGDisplayBlock`) — ✅ DONE (Stage 1 floor)
 
+- **Status (done, Stage 1).** `display:'block'` is now a first-class Yoga block formatting
+  context behind the new `enableYogaDisplayBlock` sub-flag (default off; the flex column+stretch
+  emulation remains the flag-off fallback). Implemented:
+  1. `Block` added to the Yoga `Display` enum (`YGEnums.h`/`.cpp`, `enums/Display.h`, `bitCount`
+     4→5). `displayTypeFromYGDisplay` maps `YGDisplayBlock`→`DisplayType::Flex` so the
+     RN-observable `displayType` is identical on both paths (parity).
+  2. `calculateBlockLayout` in `yoga/algorithm/CalculateLayout.cpp` — a dedicated block layout
+     path dispatched from `calculateLayoutImpl` **only** when `display == Block`, so the flex
+     algorithm is untouched. In-flow children stack in the block direction; each child's definite
+     dimensions are resolved (`getResolvedDimension`/`hasDefiniteLength`) and passed with
+     `StretchFit`, auto-height children are content-driven (`MaxContent`), auto-width children
+     fill the content width **only when the container width is definite** (else measured at
+     content width so the container shrink-wraps); flex-grow/shrink are ignored; absolute
+     descendants go through `layoutAbsoluteDescendants`.
+  3. `enableYogaDisplayBlock` common feature flag (config → regen under node 24); `updateYogaProps`
+     maps RN `display:'block'` → `Display::Block` when on, keeping the emulation when off. The
+     shared anonymous-box grouping predicate in `updateYogaChildren` already carries both paths.
+  Tests: `ImplicitTextNativeBlock-itest.js` — 4 parity cases (identical numbers to the M3
+  emulation) + 3 native-only fidelity cases (a `flexGrow:1` block child does NOT grow; children
+  stack at content size; a block child fills the content width). Web-mirror twins (Safari 20/20).
+  **Full regression sweep green**: ImplicitText 39, baselines 4, Text 151, View-itest 224,
+  View-flexBasisFitContent, yogaNodeOwnerAssertion, ReadOnlyText 30, ReactNativeElement 170.
+  **Not done (later stages, documented):** margin collapsing (Stage 3), floats/static-position
+  specifics (Stage 4); RTL block positioning is implemented via the inline-start edge but not yet
+  test-covered; auto-positioned absolute children use the flex static-position fallback.
 - **Goal.** `display:'block'` (and the `<div>` tag, T9) is a **true block container** — block
   inner display, block-level children stacked with block sizing (not flex items), natively
   generated anonymous block boxes — replacing the flex column+stretch emulation.

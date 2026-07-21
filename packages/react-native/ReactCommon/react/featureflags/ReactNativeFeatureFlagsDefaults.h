@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<618da5f17b724076b5f2e87ba1425e74>>
+ * @generated SignedSource<<e0e5e373de3ce9d907353742454fb2be>>
  */
 
 /**
@@ -140,6 +140,10 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enableImplicitTextChildren() override {
+    return false;
+  }
+
+  bool enableYogaDisplayBlock() override {
     return false;
   }
 

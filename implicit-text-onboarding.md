@@ -303,7 +303,15 @@ has the full design for all of these.
    descendant anonymous IFC box so it re-measures and republishes state (covers colour-only
    changes, which don't alter size). Tests: `ImplicitText-itest.js` M4 "updating a grandparent
    color/fontSize re-cascades into an unchanged subtree" + web-mirror twins (Safari 14/14).
-8. **Native Yoga `display:block`** — the biggest layout item: replace the flex emulation
+8. **Native Yoga `display:block`** — ✅ **DONE (Stage 1).** First-class `YGDisplayBlock` behind
+   the `enableYogaDisplayBlock` sub-flag (emulation is the flag-off fallback):
+   `calculateBlockLayout` in `CalculateLayout.cpp` dispatched only for `Display::Block` (flex
+   path untouched), children stacked with block sizing (flex-grow ignored, auto width fills a
+   definite container else shrink-wraps). `ImplicitTextNativeBlock-itest.js` (parity + native
+   fidelity) + web-mirror twins; full flexbox-regression sweep (View-itest 224) green. Later
+   stages (margin collapsing, floats/static-position, RTL coverage) remain open. Original scope
+   notes below.
+   - replace the flex emulation
    (column+stretch) with a first-class `YGDisplayBlock` in Yoga, so the intrinsic `<div>`
    tag is a *true* block container (block inner display, real block-level child stacking,
    natively-generated anonymous block boxes; then margin collapsing; then floats/static

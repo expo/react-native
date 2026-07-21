@@ -394,9 +394,14 @@ Everything ships behind a new common feature flag (`enableImplicitTextChildren`)
    survives as the flag-off fallback. The block algorithm lands in stages (block-inner
    layout + inline flow → anonymous block boxes → margin collapsing → floats/static
    position); each stage is documented and separately flag-gated, so partial conformance is
-   explicit rather than silent. Risk: this is a genuine Yoga change (new display type,
-   layout path, and cache/dirtying interactions) — larger than the shared-C++ box generation,
-   and the reason `<div>`/true-block is sequenced as its own workstream.
+   explicit rather than silent. **Stage 1 done (next-steps T4):** `calculateBlockLayout` in
+   `yoga/algorithm/CalculateLayout.cpp`, dispatched only for `Display::Block` (flex algorithm
+   untouched), behind the `enableYogaDisplayBlock` sub-flag. In-flow children stack in the
+   block direction with block sizing (flex-grow/shrink ignored; definite dims resolved and
+   passed StretchFit; auto width fills a definite container else shrink-wraps); anonymous
+   block boxes for mixed content come from the shared IFC grouping. Emulation-vs-native parity
+   + native-only fidelity tests green, full flexbox-regression sweep (View-itest 224 etc.)
+   green. Not yet: margin collapsing, floats/static-position, RTL test coverage.
 6. **Update path.** Text content changes arrive as RawText prop clones until stage 6, then
    as `commitTextUpdate` data updates on `Text` nodes (§3.F); either way the containing
    View's Yoga node must be dirtied and its anonymous item re-measured — Views don't
@@ -525,9 +530,11 @@ in there being no `rn-paragraph` wrapper — the View itself carries the text ru
 
 All matrix milestones (M1-M7) plus iOS painting, intrinsic tags, unknown-element
 DOM semantics (incl. `nodeName`/`tagName` fidelity, dev bundle), the §3.E warning
-removal, and CSS `white-space: normal` collapsing inside anonymous IFCs
-(§3.A/§4.4) are implemented on this branch and verified: Fantom 39/39 +
-regression sweeps, Safari web mirror 18/18, iPhone 17
+removal, CSS `white-space: normal` collapsing inside anonymous IFCs (§3.A/§4.4),
+lazy View state (§4.2), and native Yoga `display:block` Stage 1 (§3.A/§4.5,
+`enableYogaDisplayBlock`) are implemented on this branch and verified: Fantom
+39/39 matrix + 7/7 native-block + regression sweeps (View-itest 224), Safari web
+mirror 20/20, iPhone 17
 Pro (iOS 26.5) simulator screenshots, and live CDP layout reads
 (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:
 `packages/rn-tester/js/ImplicitTextDemo.js`. Next: mine Web Platform Tests

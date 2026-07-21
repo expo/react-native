@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<ec24a7e158c7e5e2470524d03544801a>>
+ * @generated SignedSource<<fe011f19fce60dfd0011784462a24cf7>>
  */
 
 /**
@@ -53,6 +53,7 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
   private var enableIOSTextBaselineOffsetPerLineCache: Boolean? = null
   private var enableIOSViewClipToPaddingBoxCache: Boolean? = null
   private var enableImplicitTextChildrenCache: Boolean? = null
+  private var enableYogaDisplayBlockCache: Boolean? = null
   private var enableImagePrefetchingAndroidCache: Boolean? = null
   private var enableImmediateUpdateModeForContentOffsetChangesCache: Boolean? = null
   private var enableImperativeFocusCache: Boolean? = null
@@ -397,6 +398,16 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
       cached = currentProvider.enableImplicitTextChildren()
       accessedFeatureFlags.add("enableImplicitTextChildren")
       enableImplicitTextChildrenCache = cached
+    }
+    return cached
+  }
+
+  override fun enableYogaDisplayBlock(): Boolean {
+    var cached = enableYogaDisplayBlockCache
+    if (cached == null) {
+      cached = currentProvider.enableYogaDisplayBlock()
+      accessedFeatureFlags.add("enableYogaDisplayBlock")
+      enableYogaDisplayBlockCache = cached
     }
     return cached
   }

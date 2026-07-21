@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<ac61db005b34251771a32952767665b6>>
+ * @generated SignedSource<<8c9792fab0bb1da4675da3964f38cc71>>
  */
 
 /**
@@ -304,6 +304,15 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     }
 
     return ReactNativeFeatureFlagsDefaults::enableImplicitTextChildren();
+  }
+
+  bool enableYogaDisplayBlock() override {
+    auto value = values_["enableYogaDisplayBlock"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::enableYogaDisplayBlock();
   }
 
   bool enableImagePrefetchingAndroid() override {

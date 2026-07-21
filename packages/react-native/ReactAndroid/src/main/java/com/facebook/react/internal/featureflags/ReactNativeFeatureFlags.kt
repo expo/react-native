@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<f5f1e3aeb5e278b072d1dd918c369888>>
+ * @generated SignedSource<<87e0ed595fd2921f5434247d675d58af>>
  */
 
 /**
@@ -203,6 +203,12 @@ public object ReactNativeFeatureFlags {
    */
   @JvmStatic
   public fun enableImplicitTextChildren(): Boolean = accessor.enableImplicitTextChildren()
+
+  /**
+   * Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableImplicitTextChildren; the emulation remains the flag-off fallback.
+   */
+  @JvmStatic
+  public fun enableYogaDisplayBlock(): Boolean = accessor.enableYogaDisplayBlock()
 
   /**
    * When enabled, Android will build and initiate image prefetch requests on ImageShadowNode::layout

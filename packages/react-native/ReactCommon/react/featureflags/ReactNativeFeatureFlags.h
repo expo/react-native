@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<cc86b96c9f9fb4911a7f3c26cd607098>>
+ * @generated SignedSource<<2e4d8c4ce2068245b924c24deca9676b>>
  */
 
 /**
@@ -183,6 +183,11 @@ class ReactNativeFeatureFlags {
    * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
    */
   RN_EXPORT static bool enableImplicitTextChildren();
+
+  /**
+   * Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableImplicitTextChildren; the emulation remains the flag-off fallback.
+   */
+  RN_EXPORT static bool enableYogaDisplayBlock();
 
   /**
    * When enabled, Android will build and initiate image prefetch requests on ImageShadowNode::layout

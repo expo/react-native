@@ -560,10 +560,18 @@ void YogaLayoutableShadowNode::updateYogaProps() {
 
   if (ReactNativeFeatureFlags::enableImplicitTextChildren() &&
       props.displayBlock) {
-    // Block containers are emulated on Yoga flex primitives: vertical
-    // stacking with full-width children (implicit-text-plan.md §3.A).
-    styleResult.setFlexDirection(yoga::FlexDirection::Column);
-    styleResult.setAlignItems(yoga::Align::Stretch);
+    if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
+      // Native block formatting context: a first-class Yoga display type
+      // (implicit-text-plan.md §3.A/§4.5). Block-level children stack in the
+      // block direction with block sizing (not flex items); the block layout
+      // algorithm lives in Yoga's CalculateLayout.
+      styleResult.setDisplay(yoga::Display::Block);
+    } else {
+      // Flag-off fallback: block is emulated on Yoga flex primitives —
+      // vertical stacking with full-width children.
+      styleResult.setFlexDirection(yoga::FlexDirection::Column);
+      styleResult.setAlignItems(yoga::Align::Stretch);
+    }
   }
 
   // Resetting `dirty` flag only if `yogaStyle` portion of `Props` was

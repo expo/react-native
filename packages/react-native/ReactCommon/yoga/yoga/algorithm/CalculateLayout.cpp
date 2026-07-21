@@ -1531,6 +1531,252 @@ static void justifyMainAxis(
 //    caller passes an available size of undefined then it must also pass a
 //    measure mode of SizingMode::MaxContent in that dimension.
 //
+
+// Lays out a node whose display is `Display::Block` as a CSS block formatting
+// context (implicit-text-plan.md §3.A/§4.5): in-flow children stack in the
+// block (vertical) direction, each sized to the container's content width (not
+// distributed as flex items — a `flex:1` block child does not grow), and the
+// container's block size is the sum of the children's margin boxes plus
+// padding/border. This is the first-release conformance floor (block-inner
+// layout + single inline flow); margin collapsing and floats are later stages.
+//
+// Reached only for `Display::Block`, which nothing produces unless
+// `enableYogaDisplayBlock` maps RN `display:'block'` onto it — so the flex
+// algorithm is entirely untouched (and the flex emulation remains the flag-off
+// fallback). Margins/borders/padding on `node` are already resolved by the
+// caller; `marginAxisRow`/`marginAxisColumn` are `node`'s own axis margins.
+static void calculateBlockLayout(
+    yoga::Node* const node,
+    const float availableWidth,
+    const float availableHeight,
+    const Direction direction,
+    const SizingMode widthSizingMode,
+    const SizingMode heightSizingMode,
+    const float ownerWidth,
+    const float ownerHeight,
+    const float marginAxisRow,
+    const float marginAxisColumn,
+    const bool performLayout,
+    LayoutData& layoutMarkerData,
+    const uint32_t depth,
+    const uint32_t generationCount) {
+  const float paddingAndBorderAxisRow =
+      paddingAndBorderForAxis(node, FlexDirection::Row, direction, ownerWidth);
+  const float paddingAndBorderAxisColumn = paddingAndBorderForAxis(
+      node, FlexDirection::Column, direction, ownerWidth);
+  const float leadingPaddingAndBorderColumn =
+      node->style().computeFlexStartPaddingAndBorder(
+          FlexDirection::Column, direction, ownerWidth);
+  const float leadingPaddingAndBorderRow =
+      node->style().computeFlexStartPaddingAndBorder(
+          FlexDirection::Row, direction, ownerWidth);
+
+  const float availableInnerWidth = calculateAvailableInnerDimension(
+      node,
+      direction,
+      Dimension::Width,
+      availableWidth - marginAxisRow,
+      paddingAndBorderAxisRow,
+      ownerWidth,
+      ownerWidth);
+  const float availableInnerHeight = calculateAvailableInnerDimension(
+      node,
+      direction,
+      Dimension::Height,
+      availableHeight - marginAxisColumn,
+      paddingAndBorderAxisColumn,
+      ownerHeight,
+      ownerWidth);
+
+  // Auto-width block children fill the container's content width only when the
+  // container's own width is definite (StretchFit). During a content-measuring
+  // pass (MaxContent/FitContent width) they are measured at their content width
+  // instead, so the container can shrink-wrap to its widest child.
+  const bool stretchChildrenToWidth =
+      widthSizingMode == SizingMode::StretchFit &&
+      yoga::isDefined(availableInnerWidth);
+  const PhysicalEdge inlineStartEdge =
+      direction == Direction::RTL ? PhysicalEdge::Right : PhysicalEdge::Left;
+
+  float accumulatedBlockDim = 0.0f; // running sum of children margin-box heights
+  float maxChildInlineDim = 0.0f; // widest child margin box (for shrink-wrap)
+
+  for (auto* child : node->getLayoutChildren()) {
+    if (child->style().display() == Display::None) {
+      continue;
+    }
+    child->processDimensions();
+
+    if (performLayout) {
+      child->setPosition(
+          child->resolveDirection(direction),
+          availableInnerWidth,
+          availableInnerHeight);
+    }
+
+    // Absolutely-positioned children do not participate in block flow; they are
+    // positioned later by layoutAbsoluteDescendants.
+    if (child->style().positionType() == PositionType::Absolute) {
+      continue;
+    }
+
+    const float childMarginRow =
+        child->style().computeMarginForAxis(FlexDirection::Row, ownerWidth);
+    const float childMarginColumn =
+        child->style().computeMarginForAxis(FlexDirection::Column, ownerWidth);
+    const float childLeadingMarginColumn = child->style().computeFlexStartMargin(
+        FlexDirection::Column, direction, ownerWidth);
+    const float childLeadingMarginRow = child->style().computeInlineStartMargin(
+        FlexDirection::Row, direction, ownerWidth);
+
+    // The available* values passed to calculateLayoutInternal are margin-box
+    // sizes (the callee subtracts the child's own margins). A definite style
+    // dimension is passed verbatim (StretchFit); an auto dimension is either
+    // stretched to the container (width) or content-driven (height).
+    const bool childWidthDefinite =
+        child->hasDefiniteLength(Dimension::Width, availableInnerWidth);
+    const bool childHeightDefinite =
+        child->hasDefiniteLength(Dimension::Height, availableInnerHeight);
+
+    // Inline (cross) axis: a block child fills the container's content width
+    // unless it has a definite width; when the container width is indefinite
+    // (a measurement pass) it is content-driven so the container can shrink-wrap.
+    float childWidth = YGUndefined;
+    SizingMode childWidthSizingMode = SizingMode::MaxContent;
+    if (childWidthDefinite) {
+      childWidth = child
+                       ->getResolvedDimension(
+                           direction,
+                           Dimension::Width,
+                           availableInnerWidth,
+                           ownerWidth)
+                       .unwrap() +
+          childMarginRow;
+      childWidthSizingMode = SizingMode::StretchFit;
+    } else if (stretchChildrenToWidth) {
+      childWidth = availableInnerWidth;
+      childWidthSizingMode = SizingMode::StretchFit;
+    }
+
+    // Block (main) axis: content-driven unless the child has a definite height.
+    float childHeight = YGUndefined;
+    SizingMode childHeightSizingMode = SizingMode::MaxContent;
+    if (childHeightDefinite) {
+      childHeight = child
+                        ->getResolvedDimension(
+                            direction,
+                            Dimension::Height,
+                            availableInnerHeight,
+                            ownerWidth)
+                        .unwrap() +
+          childMarginColumn;
+      childHeightSizingMode = SizingMode::StretchFit;
+    }
+
+    constrainMaxSizeForMode(
+        child,
+        direction,
+        FlexDirection::Row,
+        availableInnerWidth,
+        ownerWidth,
+        &childWidthSizingMode,
+        &childWidth);
+    constrainMaxSizeForMode(
+        child,
+        direction,
+        FlexDirection::Column,
+        availableInnerHeight,
+        ownerWidth,
+        &childHeightSizingMode,
+        &childHeight);
+
+    calculateLayoutInternal(
+        child,
+        childWidth,
+        childHeight,
+        node->getLayout().direction(),
+        childWidthSizingMode,
+        childHeightSizingMode,
+        availableInnerWidth,
+        availableInnerHeight,
+        performLayout,
+        performLayout ? LayoutPassReason::kFlexLayout
+                      : LayoutPassReason::kFlexMeasure,
+        layoutMarkerData,
+        depth,
+        generationCount);
+
+    const float childMeasuredHeight =
+        child->getLayout().measuredDimension(Dimension::Height);
+    const float childMeasuredWidth =
+        child->getLayout().measuredDimension(Dimension::Width);
+
+    if (performLayout) {
+      child->setLayoutPosition(
+          child->getLayout().position(PhysicalEdge::Top) +
+              leadingPaddingAndBorderColumn + accumulatedBlockDim +
+              childLeadingMarginColumn,
+          PhysicalEdge::Top);
+      child->setLayoutPosition(
+          child->getLayout().position(inlineStartEdge) +
+              leadingPaddingAndBorderRow + childLeadingMarginRow,
+          inlineStartEdge);
+    }
+
+    accumulatedBlockDim += childMarginColumn + childMeasuredHeight;
+    maxChildInlineDim =
+        yoga::maxOrDefined(maxChildInlineDim, childMeasuredWidth + childMarginRow);
+  }
+
+  // Container inline size: fill the available width when definite (a block box
+  // fills its containing block), otherwise shrink-wrap to the widest child.
+  float measuredWidth;
+  if (widthSizingMode == SizingMode::StretchFit &&
+      yoga::isDefined(availableWidth)) {
+    measuredWidth = availableWidth - marginAxisRow;
+  } else {
+    measuredWidth = maxChildInlineDim + paddingAndBorderAxisRow;
+  }
+  node->setLayoutMeasuredDimension(
+      boundAxis(
+          node, FlexDirection::Row, direction, measuredWidth, ownerWidth, ownerWidth),
+      Dimension::Width);
+
+  // Container block size: fill the available height when definite, otherwise the
+  // content height (sum of children margin boxes) plus padding/border.
+  float measuredHeight;
+  if (heightSizingMode == SizingMode::StretchFit &&
+      yoga::isDefined(availableHeight)) {
+    measuredHeight = availableHeight - marginAxisColumn;
+  } else {
+    measuredHeight = accumulatedBlockDim + paddingAndBorderAxisColumn;
+  }
+  node->setLayoutMeasuredDimension(
+      boundAxis(
+          node,
+          FlexDirection::Column,
+          direction,
+          measuredHeight,
+          ownerHeight,
+          ownerWidth),
+      Dimension::Height);
+
+  if (performLayout) {
+    layoutAbsoluteDescendants(
+        node,
+        node,
+        widthSizingMode,
+        direction,
+        layoutMarkerData,
+        depth,
+        generationCount,
+        0.0f,
+        0.0f,
+        availableInnerWidth,
+        availableInnerHeight);
+  }
+}
+
 static void calculateLayoutImpl(
     yoga::Node* const node,
     const float availableWidth,
@@ -1686,6 +1932,27 @@ static void calculateLayoutImpl(
   // Clean and update all display: contents nodes with a direct path to the
   // current node as they will not be traversed
   cleanupContentsNodesRecursively(node, performLayout);
+
+  // Block formatting context: `display: block` uses a dedicated block layout
+  // path rather than the flex algorithm below (implicit-text-plan.md §3.A/§4.5).
+  if (node->style().display() == Display::Block) {
+    calculateBlockLayout(
+        node,
+        availableWidth,
+        availableHeight,
+        direction,
+        widthSizingMode,
+        heightSizingMode,
+        ownerWidth,
+        ownerHeight,
+        marginAxisRow,
+        marginAxisColumn,
+        performLayout,
+        layoutMarkerData,
+        depth,
+        generationCount);
+    return;
+  }
 
   // STEP 1: CALCULATE VALUES FOR REMAINDER OF ALGORITHM
   const FlexDirection mainAxis =
