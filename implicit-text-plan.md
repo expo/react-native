@@ -286,7 +286,7 @@ Delete/gate the dev-only `console.error` in `createTextInstance`
 (`ReactFabric-dev.js:15895-15898`). Durable fix upstream in the `react` repo host config;
 one-line patch to the vendored bundles meanwhile (prod needs nothing).
 
-### F. First-class text nodes (replace RawText outright — no compat shims)
+### F. First-class text nodes (replace RawText outright — no compat shims) — ✅ DONE
 
 Adopt the DOM engines' *semantics* (`Text : CharacterData`) while staying inside Fabric's
 one node model — a family-less `ShadowNode` variant would be a second core model (cloning,
@@ -553,11 +553,12 @@ DOM semantics (incl. `nodeName`/`tagName` fidelity, dev bundle), the §3.E warni
 removal, CSS `white-space: normal` collapsing inside anonymous IFCs (§3.A/§4.4),
 lazy View state (§4.2), native Yoga `display:block` Stage 1 (§3.A/§4.5,
 `enableYogaDisplayBlock`), iOS per-run paint-order views (§3.B), iOS touch
-hit-testing on drawn text (§3.G), and the intrinsic `<img>` inline replaced
-element rendering real image pixels (§3.C) are
+hit-testing on drawn text (§3.G), the intrinsic `<img>` inline replaced
+element rendering real image pixels (§3.C), and first-class `#text` nodes
+replacing RawText outright (§3.F) are
 implemented on this branch and verified: Fantom
 42/42 matrix + 8/8 native-block + regression sweeps (View-itest 224, Image-itest
-99), Safari web mirror 20/20 (+ img/div/native-block twins added), iPhone 17
+99, ReadOnlyText 30, ReactNativeElement 170), Safari web mirror 20/20 (+ img/div/native-block twins added), iPhone 17
 Pro (iOS 26.5) simulator screenshots (incl. paint-order interleaving, hit-test log, and a real
 inline `<img>` rendering), and live CDP layout reads
 (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:

@@ -90,9 +90,8 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 
 **Renumbered 2026-07-21** (per direction): the iOS simulator items were pulled forward to
 T5–T7 and first-class text nodes (Track C, the plan's own-review item) deferred to **T8**.
-T1–T7 and T9 are done (T5 paint order, T6 hit-testing, and T7 `<img>` renders real pixels — all
-device-verified; T9 `<div>` headless). T8 (first-class text nodes, deferred own-review) and
-T10 (Android) remain.
+T1–T9 are done. T8 replaced RawText with first-class `#text` nodes (RawText deleted, headless-
+verified). Only T10 (Android mounting story) remains.
 
 | # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
 |---|---|---|---|---|---|---|
@@ -103,7 +102,7 @@ T10 (Android) remain.
 | T5 | iOS paint order + per-run views | D | ❌ (simulator) | M | — | ✅ done |
 | T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | ✅ done |
 | T7 | Intrinsic `<img>` tag | D | headless + device | M | — | ✅ done |
-| T8 | First-class text nodes (replace RawText) | C | ~ (dev/shared only) | XL | — | deferred (own review) |
+| T8 | First-class text nodes (replace RawText) | C | headless (dev bundle) | XL | — | ✅ done |
 | T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | ✅ done (headless) |
 | T10 | Android mounting story | E | ❌ (Android) | XL | — | open |
 
@@ -291,13 +290,36 @@ T10 (Android) remain.
 
 ## Track C — core representation refactor
 
-### T8. First-class text nodes (replace `RawText`) — DEFERRED (own review; see note)
+### T8. First-class text nodes (replace `RawText`) — ✅ DONE (RawText deleted)
 
-> **Deferred (2026-07-21).** Sequenced as its own reviewed effort. Scope spans the native
-> FabricUIManager jsi binding (`createTextNode`/`commitTextUpdate`), a slim `#text` node kind,
-> **three vendored renderer bundles** (dev/prod/profiling), the DOM layer, and deleting
-> `RCTRawText` across iOS/Android/core registries + an iOS test. Only the shared-C++/dev-bundle
-> slice is headless-verifiable; the rest needs platform builds. Original write-up below.
+- **Status (done).** Character data is now a slim first-class `#text` node (DOM
+  `Text`/CharacterData), created through a new `createTextNode` host-config path; `RawText` is
+  **deleted outright** (no compat shims).
+  - **Slim node (§3.F):** `TextNodeShadowNode`/`TextNodeProps`
+    (`components/text/TextNodeShadowNode.h`, name defined in `BaseTextShadowNode.cpp`) — component
+    name `"#text"`, character data as a **direct field** (no RawProps parsing), no state, never
+    resolvable from JS by name. `TextNodeComponentDescriptor` installs the anonymous-box factory.
+  - **Native binding:** `UIManager::createTextNode(tag, text, surfaceId, instanceHandle)` sets the
+    text directly; `UIManagerBinding` exposes the `"createTextNode"` jsi method. JS
+    `FabricUIManager` Spec + cached properties + **all three renderer bundles**
+    (dev/prod/profiling) rewrite `createTextInstance` to call `createTextNode` instead of
+    `createNode("RCTRawText", {text})`.
+  - **Consumers** read only `#text`: `buildAttributedString`, DOM `getTextContentInShadowNode`,
+    `isInlineTextContent` + the run predicate, `isWhitespaceOnlyRun`. `#text` registered on every
+    platform (Fantom stub, C++ element registry, iOS paragraph supplemental, Android
+    CoreComponentsRegistry). `RawText` deregistered from all of them + `RCTRawText`/Paper removed
+    (RCTBridge, Android name mapping).
+  - **Deleted:** `RawTextShadowNode.{h,cpp}`, `RawTextProps.{h,cpp}`, `RawTextComponentDescriptor.h`;
+    test fixtures migrated to `TextNode*`.
+  - **Verified headlessly** (Fantom uses the dev bundle): ImplicitText 42/42, native-block 8/8,
+    baselines 4, Text 151/151, ReadOnlyText 30/30, ReactNativeElement 170/170, View-itest 224,
+    Image-itest 99 — the whole feature runs on `#text` with RawText gone.
+  - **Platform tail / follow-ups:** the iOS build needs `pod install` to regenerate the
+    git-ignored CocoaPods header map (still lists the deleted RawText headers); the C++/ObjC gtest
+    targets weren't run (fixtures updated mechanically). `commitTextUpdate` (identity-preserving
+    text edits — Fabric currently re-creates text nodes on change) is a future optimization.
+- **Goal.** Character data is a slim first-class `Text` node (`"#text"`, DOM `nodeName`) instead
+  of `RawTextShadowNode`'s fake-component packaging — no EventTarget, no RawProps parsing, no
 
 - **Goal.** Character data is a slim first-class `Text` node (`"#text"`, DOM `nodeName`) instead
   of `RawTextShadowNode`'s fake-component packaging — no EventTarget, no RawProps parsing, no

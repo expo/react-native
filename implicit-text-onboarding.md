@@ -283,11 +283,15 @@ has the full design for all of these.
    null-safe early return. Probe evidence: 43 Views → 0 state allocations at construction, 2
    lazy allocations (the text Views). Full regression sweep green (matrix, View-itest 224,
    forced-clone commit hook, sync-on-commit).
-5. **First-class text nodes (plan §3.F)** — replace `RawTextShadowNode`'s component packaging
-   with a slim `"#text"` node kind (keeps family/instanceHandle for DOM APIs; drops
-   descriptor/props-parsing/EventTarget); host config gains `createTextNode`/
-   `commitTextUpdate`; delete `RCTRawText` outright (no compat shims). Largest open item;
-   read the whole §3.F first.
+5. **First-class text nodes (plan §3.F)** — ✅ **DONE.** Character data is now a slim first-class
+   `#text` node (`TextNodeShadowNode`, DOM `Text`/CharacterData) created via a new
+   `createTextNode` host-config path (`UIManager::createTextNode` + `UIManagerBinding` jsi method,
+   plumbed through all three renderer bundles); character data is a direct field (no RawProps
+   parsing). `RawText` is **deleted outright** — node/props/descriptor, every registry, the
+   Paper `RCTRawTextViewManager`. Headless-verified (Fantom uses the dev bundle): ReadOnlyText
+   30/30 + ReactNativeElement 170/170 (DOM traversal over `#text`), ImplicitText 42/42, Text
+   151/151. iOS build needs a `pod install` (git-ignored header map); `commitTextUpdate`
+   (identity-preserving edits) is a future optimization.
 6. **Full inherited-property set** — ✅ **DONE.** `BaseViewProps` gains `inheritedFontFamily`/
    `FontWeight`/`FontStyle`/`FontVariant`/`LetterSpacing`/`LineHeight`/`TextAlign`/
    `TextTransform` (parsed via the shared attributedstring conversions — header-only, no
