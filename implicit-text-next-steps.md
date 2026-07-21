@@ -27,8 +27,8 @@ updates, and public `display:'block'` types. Matrix is 35/35 under Fantom; the w
 15/15 in Safari.
 
 Three §5 items are done: **inherited-property set**, **cascade correctness**, **`display:'block'`
-public types**. **T1 (white-space) and T2 (unknown-element `nodeName`, dev bundle) are now
-done** — see their sections. Everything else below is open.
+public types**. **T1 (white-space), T2 (unknown-element `nodeName`, dev bundle), and T3 (lazy
+View state) are now done** — see their sections. Everything else below is open.
 
 ## 1. The shared build / test loop (all tasks use this)
 
@@ -176,8 +176,20 @@ Do the **Track A** items first — they close in the headless loop with the tigh
   follow-up (prod path is a fork carry until upstreamed — see T11).
 - **Effort / risk / deps.** S. Risk: minified prod-bundle edit (defer to follow-up).
 
-### T3. Lazy View state
+### T3. Lazy View state — ✅ DONE
 
+- **Status (done).** `ViewComponentDescriptor::createInitialState` now returns `nullptr`, so a
+  View starts stateless (restoring the exact pre-implicit-text hot path — `ViewState` is a
+  feature-only addition). `ViewShadowNode::updateTextRunStateIfNeeded` allocates the state
+  lazily on the first runs via the family `ConcreteState` ctor (the null→non-null transition),
+  and short-circuits to a null-safe early return when `state_ == nullptr` and there are no
+  boxes; once allocated the state persists (possibly emptied) for the node's life.
+  **Allocation evidence** (instrumented probe, reverted): a tree of 40 plain Views + 1 outer
+  + 2 text Views logged **43 `createInitialState` calls returning null → 0 `ViewState`
+  allocated at construction, and exactly 2 lazy allocations** (the text-bearing Views).
+  Correctness: full matrix + regressions green, incl. M2 remove-all-text and
+  not-flattened cases and the broad View-itest (224) / forced-clone-commit-hook / sync-on-commit
+  suites. No behavior change, so no new web-mirror twin (existing matrix guards correctness).
 - **Goal.** A View with no text runs allocates **no** `ViewState` (zero-cost), matching the
   pre-feature hot path; state is allocated only when anonymous runs exist.
 - **Why / context.** Plan §4.2 — the feature made `ViewShadowNode` stateful (`ViewState`), so

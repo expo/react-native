@@ -272,9 +272,12 @@ has the full design for all of these.
    `RCTViewComponentView` when runs exist (mirror `RCTParagraphComponentView`'s). Verify on
    simulator: tapping an inline element with a handler fires it; bare text fires the View's
    handlers.
-4. **Lazy View state** — today every View allocates an empty `ViewState`; production needs
-   allocation only when runs exist. Touch: `ViewShadowNode`/descriptor `createInitialState`
-   + a state-on-demand path. Verify: memory/alloc counters + full regression sweep.
+4. **Lazy View state** — ✅ **DONE.** `ViewComponentDescriptor::createInitialState` returns
+   `nullptr` (Views start stateless, as before the feature); `ViewShadowNode` allocates the
+   `ViewState` on demand via the family `ConcreteState` ctor on the first runs and has a
+   null-safe early return. Probe evidence: 43 Views → 0 state allocations at construction, 2
+   lazy allocations (the text Views). Full regression sweep green (matrix, View-itest 224,
+   forced-clone commit hook, sync-on-commit).
 5. **First-class text nodes (plan §3.F)** — replace `RawTextShadowNode`'s component packaging
    with a slim `"#text"` node kind (keeps family/instanceHandle for DOM APIs; drops
    descriptor/props-parsing/EventTarget); host config gains `createTextNode`/

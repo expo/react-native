@@ -7,10 +7,11 @@
 
 #include "ViewShadowNode.h"
 #include <react/featureflags/ReactNativeFeatureFlags.h>
-#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/ConcreteState.h>
+#include <react/renderer/core/LayoutContext.h>
 
 namespace facebook::react {
 
@@ -108,7 +109,14 @@ void ViewShadowNode::updateTextRunStateIfNeeded() {
   }
 
   const auto& anonymousBoxes = getAnonymousTextContentChildren();
-  if (anonymousBoxes.empty() && getStateData().textRuns.empty()) {
+
+  // Zero-cost hot path (implicit-text-plan.md §4.2 / next-steps T3): a View that
+  // has never carried anonymous text runs keeps a null `ViewState`, exactly like
+  // a plain pre-implicit-text View. State is allocated lazily on the first runs
+  // (the null -> non-null transition below); once allocated it persists —
+  // possibly emptied when text is removed — for the node's life.
+  if (anonymousBoxes.empty() &&
+      (state_ == nullptr || getStateData().textRuns.empty())) {
     return;
   }
 
@@ -132,10 +140,21 @@ void ViewShadowNode::updateTextRunStateIfNeeded() {
             .frame = box->getLayoutMetrics().frame});
   }
 
-  if (getStateData().textRuns != textRuns) {
-    setStateData(ViewState{
-        .textRuns = std::move(textRuns),
-        .layoutManager = std::move(layoutManager)});
+  if (state_ == nullptr) {
+    // First runs on a previously-stateless View: allocate the state on demand,
+    // seeded from the family like `createInitialState` would (there is no prior
+    // state to chain from).
+    state_ = std::make_shared<const ConcreteState>(
+        std::make_shared<const ViewState>(
+            ViewState{
+                .textRuns = std::move(textRuns),
+                .layoutManager = std::move(layoutManager)}),
+        getFamilyShared());
+  } else if (getStateData().textRuns != textRuns) {
+    setStateData(
+        ViewState{
+            .textRuns = std::move(textRuns),
+            .layoutManager = std::move(layoutManager)});
   }
 }
 

@@ -374,7 +374,10 @@ Everything ships behind a new common feature flag (`enableImplicitTextChildren`)
    it.
 2. **View state.** Views today have no state; adding an optional state type to the View
    descriptor touches a hot path — must stay `nullptr` (zero-cost) unless text sequences
-   exist.
+   exist. **Done (next-steps T3):** `ViewComponentDescriptor::createInitialState` returns
+   `nullptr`, and `ViewShadowNode::updateTextRunStateIfNeeded` allocates the `ViewState`
+   lazily on the first runs (family `ConcreteState` ctor; null-safe early return otherwise).
+   Probe: 43 Views constructed → 0 state allocations, 2 lazy allocations (the text Views).
 3. **Events on bare text.** Fragments carry event-emitter attributes when their parent has a
    component handle (`RCTAttributedTextUtils.mm:434-442`); for runs directly under a View the
    fragment parent is the View itself (real family, real instance handle) so taps dispatch
