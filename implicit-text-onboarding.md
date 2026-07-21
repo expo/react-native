@@ -254,6 +254,12 @@ node packages/rn-tester/scripts/implicit-text-cdp-verify.js
 Each item lists the entry-point files and the verification expectation. The plan doc §3-§4
 has the full design for all of these.
 
+> **The actionable backlog is `implicit-text-next-steps.md`** — a standalone work queue that
+> gives every remaining task a Goal / Entry points / Approach / **Testing methodology** /
+> **Acceptance** breakdown, a shared build-test-DoD section, and a recommended order by track
+> (headless / native-Yoga / core-refactor / iOS-simulator / Android). Start there to pick up
+> work; the list below is the quick index.
+
 1. **White-space processing decision + implementation** — css-text-3 `normal` collapsing
    inside anonymous IFCs only. Touch: `InlineContentShadowNode::getContentAttributedString`
    (or a shared preprocessing step in `BaseTextShadowNode`). Tests first; get sign-off on
