@@ -4994,10 +4994,10 @@ hasown@^2.0.0, hasown@^2.0.1, hasown@^2.0.2:
   dependencies:
     function-bind "^1.1.2"
 
-hermes-compiler@0.0.0:
-  version "0.0.0"
-  resolved "https://registry.yarnpkg.com/hermes-compiler/-/hermes-compiler-0.0.0.tgz#8d9f6a0b2740ce34d71258fec684e7b6bfd97efa"
-  integrity sha512-boVFutx6ME/Km2mB6vvsQcdnazEYYI/jV1pomx1wcFUG/EVqTkr5CU0CW9bKipOA/8Hyu3NYwW3THg2Q1kNCfA==
+hermes-compiler@250829098.0.16:
+  version "250829098.0.16"
+  resolved "https://registry.yarnpkg.com/hermes-compiler/-/hermes-compiler-250829098.0.16.tgz#10ace3a47c1f0068c55bf75ddef3501fcd3e5fb0"
+  integrity sha512-xsgzk+mUyvt9t1nUbF8USBlYxajTUtPJhVZ86q85s/SEoMKCF+52YZcudb0ENSnV3T3lV9mgB3s6R7+pH90zgw==
 
 hermes-eslint@0.37.0:
   version "0.37.0"
