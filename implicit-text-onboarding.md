@@ -306,7 +306,14 @@ has the full design for all of these.
    not blockified) and `<div>` as a block container (backed by the `display:block` path
    above). JS registration mirrors the `<b>`/`<i>`/`<span>` config; add TS/Flow JSX typings.
    Plan §3.C.
-10. **`display:'block'` public types** — TS/Flow style types + docs.
+10. **`display:'block'` public types** — ✅ **DONE.** Added `'block'` to the public `display`
+    union in Flow (`StyleSheetTypes.js`) and TS (`StyleSheetTypes.d.ts`) + doc comment;
+    dropped the now-obsolete `display:'block'` Flow suppressions and corrected the
+    inherited-key suppression codes to Flow's actual `[incompatible-type]`. The implicit-text
+    JS files (`ImplicitText-itest.js`, `ImplicitTextBaseline-itest.js`, `ImplicitTextDemo.js`,
+    `StyleSheetTypes.js`) now pass `flow focus-check` clean (0 errors). Inherited text-style
+    keys on `View` stay intentionally un-public-typed (flag-gated) — tests keep precise
+    suppressions.
 11. **Unknown-element nodeName fidelity** — plumb the original tag name as a prop so DOM APIs
    report `<foo>` instead of `unknown`.
 12. **Android** — the shared C++ compiles there but painting needs an Android mounting story

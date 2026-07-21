@@ -328,7 +328,6 @@ milestone(3, 'M3: block flow, inline elements, whitespace', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          {/* $FlowExpectedError[incompatible-call] display:'block' is new */}
           <View collapsable={false} ref={blockRef} style={{display: 'block'}}>
             a<NativeVirtualText>b</NativeVirtualText>c
           </View>
@@ -351,7 +350,6 @@ milestone(3, 'M3: block flow, inline elements, whitespace', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          {/* $FlowExpectedError[incompatible-call] display:'block' is new */}
           <View collapsable={false} ref={blockRef} style={{display: 'block'}}>
             a
             <NativeVirtualText>
@@ -377,7 +375,6 @@ milestone(3, 'M3: block flow, inline elements, whitespace', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          {/* $FlowExpectedError[incompatible-call] display:'block' is new */}
           <View collapsable={false} ref={blockRef} style={{display: 'block'}}>
             before
             <View collapsable={false} style={{height: 10}} />
@@ -423,7 +420,7 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
 
     Fantom.runTask(() => {
       root.render(
-        // $FlowExpectedError[incompatible-call] inheritable keys are new
+        // $FlowExpectedError[incompatible-type] inheritable keys are new
         <View collapsable={false} style={{color: 'red'}}>
           hello
         </View>,
@@ -443,7 +440,7 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          {/* $FlowExpectedError[incompatible-call] inheritable keys are new */}
+          {/* $FlowExpectedError[incompatible-type] inheritable keys are new */}
           <View collapsable={false} style={{fontSize: 30}}>
             <View collapsable={false} ref={innerRef}>
               hello
@@ -464,7 +461,7 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
 
     Fantom.runTask(() => {
       root.render(
-        // $FlowExpectedError[incompatible-call] inheritable keys are new
+        // $FlowExpectedError[incompatible-type] inheritable keys are new
         <View collapsable={false} style={{color: 'red'}}>
           <Text>hello</Text>
         </View>,
@@ -488,9 +485,9 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          {/* $FlowExpectedError[incompatible-call] inheritable keys are new */}
+          {/* $FlowExpectedError[incompatible-type] inheritable keys are new */}
           <View collapsable={false} style={{fontSize: 30}}>
-            {/* $FlowExpectedError[prop-missing] inheritViewTextStyles is new */}
+            {/* $FlowExpectedError[incompatible-type] inheritViewTextStyles is new */}
             <Text inheritViewTextStyles ref={optInRef}>
               hello
             </Text>
@@ -521,7 +518,7 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
       const [color, set] = useState('rgb(0, 0, 255)');
       setColor = set;
       return (
-        // $FlowExpectedError[incompatible-call] inheritable keys are new
+        // $FlowExpectedError[incompatible-type] inheritable keys are new
         <View collapsable={false} style={{color}}>
           <View collapsable={false}>hello</View>
         </View>
@@ -553,7 +550,7 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
       setFontSize = set;
       return (
         <>
-          {/* $FlowExpectedError[incompatible-call] inheritable keys are new */}
+          {/* $FlowExpectedError[incompatible-type] inheritable keys are new */}
           <View collapsable={false} style={{fontSize}}>
             <View collapsable={false} ref={innerRef}>
               hello
@@ -603,7 +600,7 @@ milestone(4, 'M4b: full inherited-property set', () => {
           <View
             collapsable={false}
             ref={boldRef}
-            // $FlowExpectedError[incompatible-call] inheritable keys are new
+            // $FlowExpectedError[incompatible-type] inheritable keys are new
             style={{fontWeight: 'bold', alignSelf: 'flex-start'}}>
             hello
           </View>
@@ -637,7 +634,7 @@ milestone(4, 'M4b: full inherited-property set', () => {
           <View
             collapsable={false}
             ref={italicRef}
-            // $FlowExpectedError[incompatible-call] inheritable keys are new
+            // $FlowExpectedError[incompatible-type] inheritable keys are new
             style={{fontStyle: 'italic', alignSelf: 'flex-start'}}>
             hello
           </View>
@@ -670,7 +667,7 @@ milestone(4, 'M4b: full inherited-property set', () => {
           <View
             collapsable={false}
             ref={spacedRef}
-            // $FlowExpectedError[incompatible-call] inheritable keys are new
+            // $FlowExpectedError[incompatible-type] inheritable keys are new
             style={{letterSpacing: 5, alignSelf: 'flex-start'}}>
             hello
           </View>
@@ -694,7 +691,7 @@ milestone(4, 'M4b: full inherited-property set', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          {/* $FlowExpectedError[incompatible-call] inheritable keys are new */}
+          {/* $FlowExpectedError[incompatible-type] inheritable keys are new */}
           <View collapsable={false} ref={tallRef} style={{lineHeight: 50}}>
             hello
           </View>
@@ -712,7 +709,7 @@ milestone(4, 'M4b: full inherited-property set', () => {
     const root = Fantom.createRoot();
     Fantom.runTask(() => {
       root.render(
-        // $FlowExpectedError[incompatible-call] inheritable keys are new
+        // $FlowExpectedError[incompatible-type] inheritable keys are new
         <View collapsable={false} style={{fontFamily: 'Times', textAlign: 'center'}}>
           hello
         </View>,
@@ -763,7 +760,6 @@ milestone(5, 'M5: intrinsic inline tags', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          {/* $FlowExpectedError[incompatible-call] display:'block' is new */}
           <View collapsable={false} ref={blockRef} style={{display: 'block'}}>
             a{/* $FlowExpectedError[not-a-component] intrinsic tags are new */}
             <b>b</b>
@@ -790,7 +786,6 @@ milestone(5, 'M5b: unknown elements behave like HTMLUnknownElement', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          {/* $FlowExpectedError[incompatible-call] display:'block' is new */}
           <View collapsable={false} ref={blockRef} style={{display: 'block'}}>
             a{/* $FlowExpectedError[not-a-component] unknown tag */}
             <foo>b</foo>c

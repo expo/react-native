@@ -37,7 +37,7 @@ export default function ImplicitTextDemo(): React.Node {
       // $FlowFixMe[prop-missing]
       ref.current?.measureInWindow((x, y, width, height) => {
         const payload = {x, y, width, height};
-        // 
+        // $FlowFixMe[prop-missing] verification hook read by the CDP client
         globalThis.__implicitTextVerify = payload;
         console.log(
           `IMPLICIT-TEXT-VERIFY bare-string-view ${JSON.stringify(payload)}`,
@@ -72,7 +72,6 @@ export default function ImplicitTextDemo(): React.Node {
       </Case>
 
       <Case label="4. display:'block': a<b>b</b>c is one inline flow">
-        {/* $FlowExpectedError[incompatible-call] */}
         <View style={{display: 'block'}}>
           a{/* $FlowExpectedError[not-a-component] */}
           <b>bold</b>
@@ -85,14 +84,14 @@ export default function ImplicitTextDemo(): React.Node {
       </Case>
 
       <Case label="5. inheritance: color+fontSize cascade from Views">
-        {/* $FlowExpectedError[incompatible-call] */}
+        {/* $FlowExpectedError[incompatible-type] */}
         <View style={{color: '#c2185b', fontSize: 18}}>
           <View>inherited pink 18pt bare text</View>
         </View>
       </Case>
 
       <Case label="6. explicit <Text> unaffected next to inherited bare text">
-        {/* $FlowExpectedError[incompatible-call] */}
+        {/* $FlowExpectedError[incompatible-type] */}
         <View style={{color: '#c2185b'}}>
           <Text>explicit Text stays default black</Text>
           bare text goes pink

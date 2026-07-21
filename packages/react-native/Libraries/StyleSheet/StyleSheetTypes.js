@@ -58,10 +58,12 @@ export type CursorValue = 'auto' | 'pointer';
 type ____LayoutStyle_Internal = Readonly<{
   /** `display` sets the display type of this component.
    *
-   *  It works similarly to `display` in CSS, but only support 'flex' and 'none'.
-   *  'flex' is the default.
+   *  It works similarly to `display` in CSS. 'flex' (the default) makes the
+   *  element a flex container; 'block' makes it a CSS block container (a true
+   *  block formatting context under the implicit-text feature, otherwise
+   *  emulated on flex); 'none' hides it; 'contents' removes the box itself.
    */
-  display?: 'none' | 'flex' | 'contents',
+  display?: 'none' | 'flex' | 'block' | 'contents',
 
   /** `width` sets the width of this component.
    *

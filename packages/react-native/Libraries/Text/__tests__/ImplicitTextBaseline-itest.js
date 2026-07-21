@@ -82,9 +82,9 @@ describe('implicit text: baseline (flag off)', () => {
 
     Fantom.runTask(() => {
       root.render(
-        // $FlowExpectedError[incompatible-call] - color is not a View style
-        // key today; apps have these inert keys in the wild, which is exactly
-        // what this guard is about.
+        // color is not a View style key today; apps have these inert keys in
+        // the wild, which is exactly what this guard is about.
+        // $FlowExpectedError[incompatible-type]
         <View collapsable={false} style={{color: 'red'}}>
           <Text>hello</Text>
         </View>,
