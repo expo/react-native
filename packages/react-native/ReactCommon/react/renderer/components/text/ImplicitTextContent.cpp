@@ -14,6 +14,7 @@
 #include <react/renderer/components/text/BaseParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/InlineContentShadowNode.h>
 #include <react/renderer/components/text/RawTextShadowNode.h>
+#include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/textlayoutmanager/TextLayoutManager.h>
@@ -56,13 +57,19 @@ Tag nextAnonymousTag() {
 bool isWhitespaceOnlyRun(
     const std::vector<std::shared_ptr<const ShadowNode>>& runChildren) {
   for (const auto& child : runChildren) {
-    const auto* rawTextChild =
-        dynamic_cast<const RawTextShadowNode*>(child.get());
-    if (rawTextChild == nullptr) {
-      // Inline text elements always generate a box.
+    const std::string* text = nullptr;
+    if (const auto* textNode =
+            dynamic_cast<const TextNodeShadowNode*>(child.get())) {
+      text = &textNode->getText();
+    } else if (
+        const auto* rawTextChild =
+            dynamic_cast<const RawTextShadowNode*>(child.get())) {
+      text = &rawTextChild->getConcreteProps().text;
+    } else {
+      // Inline text elements (and replaced elements) always generate a box.
       return false;
     }
-    for (auto character : rawTextChild->getConcreteProps().text) {
+    for (auto character : *text) {
       if (character != ' ' && character != '\t' && character != '\n' &&
           character != '\r' && character != '\f') {
         return false;

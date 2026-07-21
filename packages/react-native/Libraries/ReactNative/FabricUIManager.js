@@ -35,6 +35,13 @@ export interface Spec {
     props: NodeProps,
     instanceHandle: InternalInstanceHandle,
   ) => Node;
+  // First-class text node (DOM `Text`/`#text`), implicit-text-plan.md §3.F.
+  readonly createTextNode: (
+    reactTag: number,
+    text: string,
+    rootTag: RootTag,
+    instanceHandle: InternalInstanceHandle,
+  ) => Node;
   readonly cloneNode: (node: Node) => Node;
   readonly cloneNodeWithNewChildren: (node: Node) => Node;
   readonly cloneNodeWithNewProps: (node: Node, newProps: NodeProps) => Node;
@@ -114,6 +121,7 @@ let nativeFabricUIManagerProxy: ?Spec;
 // creates a new host function every time methods are accessed.
 const CACHED_PROPERTIES = [
   'createNode',
+  'createTextNode',
   'cloneNode',
   'cloneNodeWithNewChildren',
   'cloneNodeWithNewProps',

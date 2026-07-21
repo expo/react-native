@@ -493,8 +493,8 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       const auto isBlockContainer =
           static_cast<const YogaStylableProps&>(*props_).displayBlock;
       const std::string_view childComponentName{child->getComponentName()};
-      if (isBlockContainer || childComponentName == "RawText" ||
-          childComponentName == "img") {
+      if (isBlockContainer || childComponentName == "#text" ||
+          childComponentName == "RawText" || childComponentName == "img") {
         // Text runs always join the current run; in block containers inline
         // *elements* join it too (single inline formatting context,
         // CSS2 §9.2.1.1). The replaced `<img>` always flows inside the run as
@@ -543,8 +543,8 @@ YogaLayoutableShadowNode::getAnonymousTextContentFactory() {
 
 bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   std::string_view componentName{child.getComponentName()};
-  return componentName == "RawText" || componentName == "Text" ||
-      componentName == "b" || componentName == "i" ||
+  return componentName == "#text" || componentName == "RawText" ||
+      componentName == "Text" || componentName == "b" || componentName == "i" ||
       componentName == "span" || componentName == "unknown" ||
       componentName == "img";
 }

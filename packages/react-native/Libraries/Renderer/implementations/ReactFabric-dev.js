@@ -15901,14 +15901,15 @@ __DEV__ &&
       internalInstanceHandle
     ) {
       // implicit-text: bare strings are supported (implicit-text-plan.md §3.E).
+      // First-class text node via the createTextNode host-config path (§3.F):
+      // character data is passed directly (no RawText fake-component packaging).
       hostContext = nextReactTag;
       nextReactTag += 2;
       return {
-        node: createNode(
+        node: createTextNode(
           hostContext,
-          "RCTRawText",
+          text,
           rootContainerInstance.containerTag,
-          { text: text },
           internalInstanceHandle
         )
       };
@@ -18698,6 +18699,7 @@ __DEV__ &&
       suspendResource = shim,
       _nativeFabricUIManage = nativeFabricUIManager,
       createNode = _nativeFabricUIManage.createNode,
+      createTextNode = _nativeFabricUIManage.createTextNode,
       cloneNodeWithNewChildren = _nativeFabricUIManage.cloneNodeWithNewChildren,
       cloneNodeWithNewChildrenAndProps =
         _nativeFabricUIManage.cloneNodeWithNewChildrenAndProps,
