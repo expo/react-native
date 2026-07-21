@@ -13,6 +13,7 @@
 #import <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #import <react/renderer/components/text/ParagraphProps.h>
 #import <react/renderer/components/text/ParagraphState.h>
+#import <react/renderer/components/text/InlineTextTagShadowNodes.h>
 #import <react/renderer/components/text/RawTextComponentDescriptor.h>
 #import <react/renderer/components/text/TextComponentDescriptor.h>
 #import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
@@ -111,7 +112,10 @@ using namespace facebook::react;
 {
   return {
       concreteComponentDescriptorProvider<RawTextComponentDescriptor>(),
-      concreteComponentDescriptorProvider<TextComponentDescriptor>()};
+      concreteComponentDescriptorProvider<TextComponentDescriptor>(),
+      concreteComponentDescriptorProvider<BTagComponentDescriptor>(),
+      concreteComponentDescriptorProvider<ITagComponentDescriptor>(),
+      concreteComponentDescriptorProvider<SpanTagComponentDescriptor>()};
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps

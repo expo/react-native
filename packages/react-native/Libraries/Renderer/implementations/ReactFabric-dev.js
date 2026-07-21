@@ -15892,10 +15892,7 @@ __DEV__ &&
       hostContext,
       internalInstanceHandle
     ) {
-      hostContext.isInAParentText ||
-        console.error(
-          "Text strings must be rendered within a <Text> component."
-        );
+      // implicit-text: bare strings are supported (implicit-text-plan.md §3.E).
       hostContext = nextReactTag;
       nextReactTag += 2;
       return {
