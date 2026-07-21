@@ -471,7 +471,9 @@ YogaLayoutableShadowNode::getAnonymousTextContentFactory() {
 
 bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   std::string_view componentName{child.getComponentName()};
-  return componentName == "RawText" || componentName == "Text";
+  return componentName == "RawText" || componentName == "Text" ||
+      componentName == "b" || componentName == "i" ||
+      componentName == "span";
 }
 
 void YogaLayoutableShadowNode::appendAnonymousTextContentChild(

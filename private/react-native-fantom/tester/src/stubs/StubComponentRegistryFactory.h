@@ -13,6 +13,7 @@
 #include <react/renderer/components/modal/ModalHostViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
+#include <react/renderer/components/text/InlineTextTagShadowNodes.h>
 #include <react/renderer/components/text/RawTextComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
 #include <react/renderer/components/view/ViewComponentDescriptor.h>
@@ -30,6 +31,9 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<ScrollViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<RawTextComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<TextComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<BTagComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<ITagComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<SpanTagComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
       return providerRegistry;

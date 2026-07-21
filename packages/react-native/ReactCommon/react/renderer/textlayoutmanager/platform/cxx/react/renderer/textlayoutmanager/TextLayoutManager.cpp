@@ -39,9 +39,17 @@ TextMeasurement measureDeterministically(
     const LayoutConstraints& layoutConstraints,
     TextMeasurement::Attachments attachments) {
   size_t characterCount = 0;
+  Float intrinsicWidth = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
     if (!fragment.isAttachment()) {
       characterCount += fragment.string.size();
+      // Bold characters measure wider (12pt vs 10pt) so weight is
+      // layout-observable in tests.
+      auto isBold = fragment.textAttributes.fontWeight.has_value() &&
+          *fragment.textAttributes.fontWeight == FontWeight::Bold;
+      intrinsicWidth += static_cast<Float>(fragment.string.size()) *
+          (isBold ? kDeterministicCharacterWidth + 2
+                  : kDeterministicCharacterWidth);
     }
   }
 
@@ -53,8 +61,6 @@ TextMeasurement measureDeterministically(
         .attachments = std::move(attachments)};
   }
 
-  auto intrinsicWidth =
-      kDeterministicCharacterWidth * static_cast<Float>(characterCount);
   auto maximumWidth = layoutConstraints.maximumSize.width;
 
   Float width = intrinsicWidth;

@@ -31,6 +31,7 @@
  */
 
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
+import 'react-native/Libraries/Text/InlineTags';
 
 import type {HostInstance} from 'react-native';
 
@@ -43,7 +44,7 @@ import {NativeVirtualText} from 'react-native/Libraries/Text/TextNativeComponent
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 import ReadOnlyText from 'react-native/src/private/webapis/dom/nodes/ReadOnlyText';
 
-const IMPLEMENTED_MILESTONE = 4;
+const IMPLEMENTED_MILESTONE = 5;
 
 function milestone(n: number, name: string, fn: () => void) {
   if (IMPLEMENTED_MILESTONE >= n) {
@@ -511,21 +512,28 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
 });
 
 milestone(5, 'M5: intrinsic inline tags', () => {
-  it('<b> renders bold inside explicit <Text>', () => {
+  it('<b> renders bold inside explicit <Text> (bold measures wider)', () => {
+    const boldRef = createRef<HostInstance>();
+    const plainRef = createRef<HostInstance>();
     const root = Fantom.createRoot();
 
     Fantom.runTask(() => {
       root.render(
-        <Text>
-          a{/* $FlowExpectedError[not-a-component] intrinsic tags are new */}
-          <b>bold</b>
-        </Text>,
+        <>
+          <Text ref={boldRef} style={{alignSelf: 'flex-start'}}>
+            {/* $FlowExpectedError[not-a-component] intrinsic tags are new */}
+            <b>xx</b>
+          </Text>
+          <Text ref={plainRef} style={{alignSelf: 'flex-start'}}>
+            xx
+          </Text>
+        </>,
       );
     });
 
-    expect(
-      JSON.stringify(root.getRenderedOutput({props: ['fontWeight']}).toJSX()),
-    ).toContain('700');
+    // Structural: <b> resolves as a virtual inline element inside <Text>;
+    // metric: the deterministic measurer gives bold characters extra width.
+    expect(rectOf(boldRef).width).toBeGreaterThan(rectOf(plainRef).width);
   });
 
   it('<b> and <span> under a block View join the flow with their defaults', () => {
