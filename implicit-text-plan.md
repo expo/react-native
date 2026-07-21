@@ -142,7 +142,11 @@ web-exact mixed inline flow.
 **White-space:** inside newly-legal anonymous IFCs, apply CSS `white-space: normal`
 processing (collapse runs of whitespace, trim line edges) — there is no back-compat to
 violate since this content was invisible. Explicit `<Text>` keeps RN's verbatim behavior
-(the exception clause). Needs sign-off (§7).
+(the exception clause). **Decided and implemented** (§7): collapsing runs in
+`InlineContentShadowNode` (the anonymous-IFC box) only, spanning fragment boundaries so a
+space split across text nodes or around an inline element collapses to one; attachment
+fragments (`<img>`) are opaque anchors. Whitespace-only runs are still dropped upstream in
+`ImplicitTextContent.cpp` (flexbox rule).
 
 **Implementation inside `YogaLayoutableShadowNode`/`ViewShadowNode`** (identical machinery
 for both display types — only the sequence-grouping predicate differs):
@@ -377,10 +381,11 @@ Everything ships behind a new common feature flag (`enableImplicitTextChildren`)
    harmlessly to a real target — the synthetic-node `EventTarget::retain` null-deref hazard
    from Appendix A does not exist in this design. Inline tags with `onPress` work because
    their own families come from JS.
-4. **Whitespace.** Proposal: CSS `white-space: normal` processing inside the new anonymous
+4. **Whitespace.** Implemented: CSS `white-space: normal` processing inside the new anonymous
    IFCs (collapse + line-edge trim; no back-compat exists there), verbatim behavior kept
    inside explicit `<Text>` (the exception clause). Whitespace-only anonymous flex items are
-   dropped per flexbox.
+   dropped per flexbox. Landed in `InlineContentShadowNode::collapseWhitespace`; matrix M3 +
+   web-mirror twins.
 5. **Block layout is native Yoga, staged.** `display:'block'` (and the `<div>` tag) is a
    first-class `YGDisplayBlock` in Yoga (§3.A), not a flex emulation — the emulation only
    survives as the flag-off fallback. The block algorithm lands in stages (block-inner
@@ -460,8 +465,9 @@ compat shims, when it lands).
 
 - ~~Blockify inline elements or group them?~~ **Decided: follow CSS per display type** —
   blockify in flex containers (spec), group into one flow in `display:'block'` containers.
-- White-space processing inside new IFCs: CSS-normal collapsing as proposed in §4.4, or
-  JSX-verbatim everywhere? (Proposal: CSS-normal; needs sign-off.)
+- ~~White-space processing inside new IFCs: CSS-normal collapsing or JSX-verbatim
+  everywhere?~~ **Decided: CSS-normal collapsing** (§4.4), implemented in
+  `InlineContentShadowNode` for anonymous IFCs only; explicit `<Text>` stays verbatim.
 - Should `textAlign`/`lineHeight` inherit in v1 (interaction with Yoga alignment)?
 - `display:'inline'` opt-in for the RN `View`/`Image` components in v1 or later? (Distinct
   from the intrinsic `<img>` tag, which is inline by definition — this is about letting an
@@ -515,8 +521,9 @@ in there being no `rn-paragraph` wrapper — the View itself carries the text ru
 ## Status addendum (2026-07-21, post-implementation)
 
 All matrix milestones (M1-M7) plus iOS painting, intrinsic tags, unknown-element
-DOM semantics, and the §3.E warning removal are implemented on this branch and
-verified: Fantom 32/32 + regression sweeps, Safari web mirror 12/12, iPhone 17
+DOM semantics, the §3.E warning removal, and CSS `white-space: normal` collapsing
+inside anonymous IFCs (§3.A/§4.4) are implemented on this branch and
+verified: Fantom 38/38 + regression sweeps, Safari web mirror 17/17, iPhone 17
 Pro (iOS 26.5) simulator screenshots, and live CDP layout reads
 (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:
 `packages/rn-tester/js/ImplicitTextDemo.js`. Next: mine Web Platform Tests

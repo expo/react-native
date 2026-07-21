@@ -27,7 +27,8 @@ updates, and public `display:'block'` types. Matrix is 35/35 under Fantom; the w
 15/15 in Safari.
 
 Three §5 items are done: **inherited-property set**, **cascade correctness**, **`display:'block'`
-public types**. Everything below is open.
+public types**. **T1 (white-space processing) is now done** — see its section. Everything else
+below is open.
 
 ## 1. The shared build / test loop (all tasks use this)
 
@@ -104,8 +105,16 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 
 ## Track A — headless, tight loop
 
-### T1. White-space processing inside anonymous IFCs
+### T1. White-space processing inside anonymous IFCs — ✅ DONE
 
+- **Status (done).** Implemented as `collapseWhitespace` in
+  `InlineContentShadowNode.cpp`, applied in both `getContentAttributedString` (paint) and
+  `measureContent` (layout) after `buildAttributedString`, so it affects anonymous IFCs
+  only — explicit `<Text>` stays verbatim. Collapses runs of ASCII whitespace to a single
+  space across fragment boundaries, trims the IFC's leading/trailing edges, drops emptied
+  fragments; attachment fragments are opaque anchors; whitespace-only runs are still dropped
+  upstream in `ImplicitTextContent.cpp`. §7 decision (CSS-normal collapsing) recorded in the
+  plan. Tests: `ImplicitText-itest.js` M3 (3 cases) + web-mirror twins (Safari 17/17).
 - **Goal.** Bare-text runs collapse runs of whitespace and trim line edges per CSS
   `white-space: normal`, so `<View>{"  a   b  "}</View>` lays out like the web, while explicit
   `<Text>` keeps RN's verbatim behavior.

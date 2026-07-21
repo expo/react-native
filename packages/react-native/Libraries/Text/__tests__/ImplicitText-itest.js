@@ -412,6 +412,100 @@ milestone(3, 'M3: block flow, inline elements, whitespace', () => {
     const oneLine = rectOf(centeredRef).height;
     expect(oneLine).toBeGreaterThan(0);
   });
+
+  // White-space processing inside anonymous IFCs (css-text-3 §3, plan §3.A/§4.4;
+  // §7 decision: CSS `white-space: normal` collapsing). New surface, so no
+  // back-compat: bare-text runs collapse internal whitespace and trim IFC edges,
+  // while explicit <Text> keeps RN's verbatim whitespace (the exception clause).
+  it('collapses internal whitespace and trims IFC edges (bare text only)', () => {
+    const bareRef = createRef<HostInstance>();
+    const collapsedControlRef = createRef<HostInstance>();
+    const verbatimControlRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View
+            collapsable={false}
+            ref={bareRef}
+            style={{alignSelf: 'flex-start'}}>
+            {'  a   b  '}
+          </View>
+          <View
+            collapsable={false}
+            ref={collapsedControlRef}
+            style={{alignSelf: 'flex-start'}}>
+            <Text>a b</Text>
+          </View>
+          <View
+            collapsable={false}
+            ref={verbatimControlRef}
+            style={{alignSelf: 'flex-start'}}>
+            <Text>{'  a   b  '}</Text>
+          </View>
+        </>,
+      );
+    });
+
+    // '  a   b  ' collapses to 'a b' (3 chars = 30pt), matching an explicit
+    // collapsed control.
+    expect(rectOf(bareRef).width).toBe(30);
+    expect(rectOf(bareRef).width).toBe(rectOf(collapsedControlRef).width);
+    // Explicit <Text> keeps verbatim whitespace: 9 chars = 90pt (pixel-identity
+    // exception — collapsing must not leak into <Text>).
+    expect(rectOf(verbatimControlRef).width).toBe(90);
+  });
+
+  it('collapses whitespace across adjacent text nodes to a single space', () => {
+    const bareRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} ref={bareRef} style={{alignSelf: 'flex-start'}}>
+          {'a '}
+          {' b'}
+        </View>,
+      );
+    });
+
+    // 'a ' + ' b' — the space split across the two text nodes collapses to one:
+    // 'a b' = 30pt (not 'a  b' = 40pt).
+    expect(rectOf(bareRef).width).toBe(30);
+  });
+
+  it('collapses whitespace across an inline element boundary (block flow)', () => {
+    const blockRef = createRef<HostInstance>();
+    const controlRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View
+            collapsable={false}
+            ref={blockRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'a '}
+            <NativeVirtualText>{'b'}</NativeVirtualText>
+            {' c'}
+          </View>
+          <View
+            collapsable={false}
+            ref={controlRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'a b c'}
+          </View>
+        </>,
+      );
+    });
+
+    // One IFC across the inline element: 'a ' + 'b' + ' c' collapses to
+    // 'a b c' (5 chars = 50pt), same as the single-string control.
+    expect(rectOf(blockRef).width).toBe(rectOf(controlRef).width);
+    expect(rectOf(blockRef).width).toBe(50);
+  });
 });
 
 milestone(4, 'M4: style inheritance (element tree cascade)', () => {

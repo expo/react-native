@@ -106,6 +106,29 @@ kase('block container mixes inline flows with block children',
     return Math.abs(h - (lineH * 2 + 10)) < 2;
   });
 
+// css-text-3 §3 white-space:normal — the browser default. Bare-text runs in RN
+// collapse internal whitespace and trim IFC edges to match this (plan §3.A/§4.4;
+// the verbatim exception for explicit <Text> is RN-specific and has no web twin).
+kase('bare text collapses internal whitespace and trims IFC edges',
+  `<div class="view" id="wscollapse" style="position:absolute; visibility:hidden">  a   b  </div>
+   <div class="view" id="wscontrol" style="position:absolute; visibility:hidden">a b</div>`,
+  'collapsed width equals "a b"',
+  (root) => {
+    const a = root.querySelector('#wscollapse').getBoundingClientRect().width;
+    const b = root.querySelector('#wscontrol').getBoundingClientRect().width;
+    return a > 0 && Math.abs(a - b) < 1;
+  });
+
+kase('whitespace collapses across an inline element boundary (block flow)',
+  `<div class="view block" id="wsinline" style="position:absolute; visibility:hidden">a   <b style="font-weight:normal">b</b>   c</div>
+   <div class="view block" id="wsinlinectrl" style="position:absolute; visibility:hidden">a b c</div>`,
+  'width equals "a b c" (spaces around the inline element collapse to one)',
+  (root) => {
+    const a = root.querySelector('#wsinline').getBoundingClientRect().width;
+    const b = root.querySelector('#wsinlinectrl').getBoundingClientRect().width;
+    return a > 0 && Math.abs(a - b) < 1;
+  });
+
 kase('unknown elements are inline and unstyled (HTMLUnknownElement)',
   `<div class="view block" id="unk">a<foo>b</foo>c</div>`,
   'one line; content renders',
