@@ -16,8 +16,9 @@ Everything described below is already implemented and green unless explicitly ma
 React Native historically required every string to be wrapped in `<Text>`; bare strings under
 a `<View>` were silently dropped. This project makes `<View>hello</View>` render — with **CSS
 box semantics** (per-display-type layout), **DOM semantics** (node kinds, events, traversal
-APIs), web-like **style inheritance**, intrinsic inline tags (`<b>`, `<i>`, `<span>`), and
-DOM-faithful handling of unknown tags — behind one feature flag (`enableImplicitTextChildren`).
+APIs), web-like **style inheritance**, intrinsic tags (inline `<b>`, `<i>`, `<span>`, the
+replaced `<img>`; block `<div>`), and DOM-faithful handling of unknown tags — behind one
+feature flag (`enableImplicitTextChildren`).
 The single back-compat rule: **apps using explicit `<Text>` render pixel-identically** with the
 flag on.
 
@@ -48,9 +49,13 @@ Behavior rules, each anchored to the spec that defines it:
    - Anonymous boxes are **layout-only**: they never appear in the shadow tree, DOM APIs,
      DevTools, or event paths — exactly as anonymous boxes never appear in the web DOM.
 2. **Classification** (outer display): inline-level = text runs, inline text elements
-   (nested `<Text>`, `<b>`, `<i>`, `<span>`), unknown elements; block-level = everything else
-   (Views, top-level `<Text>` — the `<p>` analog — Image, …). `display:'inline'` opt-in for
-   arbitrary elements is a designed-but-unimplemented phase (plan §3.A).
+   (nested `<Text>`, `<b>`, `<i>`, `<span>`), the inline replaced `<img>` tag, unknown
+   elements; block-level = everything else (RN `View` and `Image` components, the intrinsic
+   `<div>` tag — a *true* block container — top-level `<Text>` the `<p>` analog, …). Each
+   tag gets its web-standard display, so `View`≠`<div>` (block-outer/flex-inner vs
+   block-outer/block-inner) and the RN `Image` component ≠ the inline `<img>` tag.
+   `display:'inline'` opt-in for the RN `View`/`Image` components is a
+   designed-but-unimplemented phase (plan §3.A).
 3. **Inheritance** is defined on the *element tree*, per
    [css-cascade-4 §7.3](https://www.w3.org/TR/css-cascade-4/#inheriting): inheritable text
    properties (currently `color`, `fontSize`; the full CSS inherited set is an open extension)
@@ -77,9 +82,12 @@ Behavior rules, each anchored to the spec that defines it:
    processing inside the new anonymous IFCs only (no back-compat exists there). This is an
    **open decision** and a prime test-suite area.
 9. **Deliberate deviations** (documented, not bugs): no whitespace collapsing yet (see 8);
-   `display:'block'` is emulated on Yoga flex primitives (no margin collapsing, no floats);
-   Image/View default to block-level (web's inline `<img>` default would break RN layouts);
-   `gap` and `flexDirection:'row'` interact with runs per flexbox, not block, rules.
+   `display:'block'` currently ships as a *flex emulation* on Yoga (column+stretch; no margin
+   collapsing, no floats) — the committed direction is a first-class `YGDisplayBlock` in Yoga
+   so the intrinsic `<div>` tag is a *true* block container (plan §3.A/§4.5); the RN `Image`
+   and `View` components stay block-level (the inline `<img>` *tag* is the web-inline-image
+   opt-in, distinct from the block-level `Image` component); `gap` and `flexDirection:'row'`
+   interact with runs per flexbox, not block, rules.
 
 ## 3. Becoming an expert: the two ramp-up tracks
 
@@ -269,16 +277,34 @@ has the full design for all of these.
    observability: `fontFamily`, `fontWeight`, `fontStyle`, `letterSpacing`, `lineHeight`,
    `textAlign`, `textTransform` (mirror the CSS inherited list; keep `textAlign`
    Yoga-interaction in mind).
-7. **Cascade correctness fix** — `configureYogaTree`'s skip-optimization can skip cascade
-   updates into unchanged subtrees when only an ancestor's inheritable props change. Needs
-   an invalidation path (dirty descendant IFCs when a node's contribution changes). Write
-   the failing test first (update `color` on a grandparent after initial render).
-8. **`display:'block'` public types** — TS/Flow style types + docs.
-9. **Unknown-element nodeName fidelity** — plumb the original tag name as a prop so DOM APIs
+7. **Cascade correctness fix** — ✅ **DONE.** Two-part fix (implicit-text-plan.md §3.D):
+   (a) inheritable text props touch no Yoga style, so a change to them alone never dirtied
+   layout and no re-cascade ran — `YogaLayoutableShadowNode`'s clone ctor now compares the
+   inheritable set (`inheritableTextPropsDiffer`) and `setDirty`s the node so a layout pass
+   runs (the parent's `updateYogaChildren` propagates the dirty flag to the surface root);
+   (b) `configureYogaTree`'s skip-optimization compares the cascade value it last handed each
+   child (`receivedTextAttributes_`) and, when it changed, re-propagates and dirties the
+   descendant anonymous IFC box so it re-measures and republishes state (covers colour-only
+   changes, which don't alter size). Tests: `ImplicitText-itest.js` M4 "updating a grandparent
+   color/fontSize re-cascades into an unchanged subtree" + web-mirror twins (Safari 14/14).
+8. **Native Yoga `display:block`** — the biggest layout item: replace the flex emulation
+   (column+stretch) with a first-class `YGDisplayBlock` in Yoga, so the intrinsic `<div>`
+   tag is a *true* block container (block inner display, real block-level child stacking,
+   natively-generated anonymous block boxes; then margin collapsing; then floats/static
+   position). Touch: Yoga's style + layout algorithm, RN's `display` conversions + codegen +
+   TS/Flow types, and the anonymous-box grouping predicate in `updateYogaChildren`. Own
+   sub-flag; staged. Plan §3.A/§4.5.
+9. **Intrinsic `<img>` and `<div>` tags** — register `<img>` as an inline replaced element
+   (reuse Paragraph's inline-attachment machinery; classification routes it into the run,
+   not blockified) and `<div>` as a block container (backed by the `display:block` path
+   above). JS registration mirrors the `<b>`/`<i>`/`<span>` config; add TS/Flow JSX typings.
+   Plan §3.C.
+10. **`display:'block'` public types** — TS/Flow style types + docs.
+11. **Unknown-element nodeName fidelity** — plumb the original tag name as a prop so DOM APIs
    report `<foo>` instead of `unknown`.
-10. **Android** — the shared C++ compiles there but painting needs an Android mounting story
+12. **Android** — the shared C++ compiles there but painting needs an Android mounting story
     (TextViews, not a drawing pass). Currently flag-off everywhere by default.
-11. **Upstreaming** — the `createTextInstance` dev-warning removal belongs in the `react`
+13. **Upstreaming** — the `createTextInstance` dev-warning removal belongs in the `react`
     repo host config; our vendored-bundle edit is a fork carry.
 
 ## 6. Environment gotchas (each cost real time; don't rediscover them)

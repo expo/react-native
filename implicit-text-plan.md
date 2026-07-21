@@ -78,10 +78,27 @@ back-compat exception is explicit `<Text>`, whose semantics do not change.** The
 `display` decides how inline-level content is boxed — no bespoke grouping rule:
 
 **Classification** (outer display of each child): *inline-level* = text runs, inline tags
-(§3.C), elements with `display:'inline'` (phase 2). *Block-level* = everything else: Views
-(`display:'flex'` stays the View default — every existing RN layout depends on it, and a
-flex-displayed div is perfectly legal CSS), authored `<Text>`/Paragraph (the `<p>` analog),
-Image, ….
+(`<span>`, `<b>`, `<i>`, and the replaced `<img>` — §3.C), elements with `display:'inline'`
+(phase 2). *Block-level* = everything else: `View` and `Image` (the RN components keep
+today's block-level outer display — `View`'s *inner* display stays `flex`, which every
+existing RN layout depends on), authored `<Text>`/Paragraph (the `<p>` analog), and the
+intrinsic `<div>` tag.
+
+The RN/HTML tag correspondence this fixes (each tag gets its web-standard display, so a
+snippet ported from the web lays out the same):
+
+| tag | outer display | inner display | notes |
+|---|---|---|---|
+| `View` (RN) | block | **flex** | unchanged; the RN default every layout relies on |
+| `Image` (RN) | block | replaced | unchanged |
+| `<div>` | block | **block** | true block container (block formatting context) — §3.A block section |
+| `<span>` / `<b>` / `<i>` | inline | inline | inline text elements (§3.C) |
+| `<img>` | inline | replaced | inline replaced element (attachment inside the IFC) |
+| `<Text>` (RN) | block | (RN paragraph) | the `<p>` analog, back-compat exception |
+
+`View` is deliberately **not** `<div>`: a View is block-outer/flex-inner (RN's model), a
+`<div>` is block-outer/block-inner (the web's). Keeping them distinct is what lets `<div>`
+mean *true block* — see the block-container implementation note below.
 
 **Flex containers (`display:'flex'`, the default)** — css-flexbox-1 §4, faithfully:
 - Each contiguous sequence of *text runs* is wrapped in one anonymous block-container flex
@@ -93,21 +110,30 @@ Image, ….
   default column direction). That is the spec. Single-flow text is what block containers are
   for — see below — or explicit `<Text>`.
 
-**Block containers (new: `display:'block'`)** — CSS2 §9.2.1.1:
+**Block containers (`display:'block'`, and the intrinsic `<div>`)** — CSS2 §9.2.1.1:
 - All inline-level children — text runs *and* inline elements — join a single flow; block
   containers with only inline-level children establish one IFC directly, and mixed content
   wraps each contiguous inline sequence in an anonymous block box between block siblings.
-- `<View style={{display:'block'}}>a<b>b</b>c</View>` renders "a**b**c" as one wrapping
-  inline flow — the web `<div>` behavior.
-- Implementation: block layout is *emulated on Yoga primitives* rather than a new Yoga
-  algorithm — Yoga is untouched in v1 (it still sees `YGDisplayFlex`). Concrete plumbing:
-  extend RN's `display` style type (`'flex' | 'none' | 'contents'` today) with `'block'`
-  through `YogaStylableProps`/conversions + TS/Flow types + codegen; when set, the shadow
-  node forces column + `alignItems:'stretch'` before Yoga runs, anonymous boxes are pinned
-  `alignSelf:'stretch'`, and the IFC machinery below uses the block-container grouping
-  predicate. Out of scope v1 (documented, no CSS-conformance claim): margin collapsing,
-  floats, `position:static` block specifics. A native Yoga `display:block` can replace the
-  emulation later without changing this plan's interfaces.
+- `<div>a<b>b</b>c</div>` (or `<View style={{display:'block'}}>…`) renders "a**b**c" as one
+  wrapping inline flow, and stacks block-level children as true block boxes — the web
+  `<div>` behavior.
+- **Implementation: a real `display:block` in Yoga, not a flex emulation.** The first
+  landing emulated block on flex primitives (force column + `alignItems:'stretch'`, pin
+  anonymous boxes to `alignSelf:'stretch'`, keep Yoga on `YGDisplayFlex`). That is enough
+  for a lone inline flow but it is *not* a genuine block container: a real `<div>` needs a
+  block formatting context (block-level children laid out in the block direction with block
+  sizing, not flex items; anonymous block boxes generated natively between block siblings;
+  and, incrementally, margin collapsing and static positioning). Flex cannot express these
+  without fighting the flex algorithm, so **`display:'block'` is implemented as a first-class
+  Yoga display type** (`YGDisplayBlock`): the block layout algorithm lives in Yoga, RN's
+  `display` style (`'flex' | 'none' | 'contents'` today) gains `'block'` through
+  `YogaStylableProps`/conversions + TS/Flow types + codegen, and the shadow node maps it
+  straight to `YGDisplayBlock` rather than rewriting styles. The IFC/anonymous-box machinery
+  below is shared with flex containers (only the sequence-grouping predicate differs). Staged
+  (documented, each a Yoga milestone): (1) block-inner layout of block-level children +
+  inline flow; (2) anonymous block boxes for mixed inline/block content; (3) margin
+  collapsing; (4) floats / static-position specifics. The flex emulation remains only as the
+  fallback when the native path is flag-gated off.
 
 Under default flex, a lone bare string (`<View>hello</View>`) still renders — one anonymous
 item — so the headline feature works everywhere; `display:'block'` is the opt-in for
@@ -165,7 +191,7 @@ This is the web-faithful part: the block box paints its own inline content; ther
 hidden text *element* at any layer (run views are paint artifacts, invisible to the tree,
 events, and DOM APIs).
 
-### C. Inline tags `<b>`, `<i>`, `<span>` (and `<Text>`'s role)
+### C. Intrinsic tags `<b>`, `<i>`, `<span>`, `<img>`, `<div>` (and `<Text>`'s role)
 
 - JSX lowercase types are plain strings resolved through
   `ReactNativeViewConfigRegistry.get` (`Libraries/Renderer/shims/ReactNativeViewConfigRegistry.js:75-98`),
@@ -179,6 +205,17 @@ events, and DOM APIs).
   Fantom/Android core registries). They are inline-level in §3.A's classification and work
   inside authored `<Text>` unchanged (nested-text traversal only requires the `InlineText`
   class, `BaseTextShadowNode.cpp:60-70`).
+- **`<img>` — inline replaced element.** Unlike RN's block-level `Image`, the lowercase
+  `<img>` tag is inline-level: it flows inside an IFC as a *replaced* box (an inline
+  attachment), exactly as on the web. It reuses the inline-attachment machinery Paragraph
+  already has for non-text children (`BaseTextShadowNode` attachments,
+  `ParagraphShadowNode.cpp:363-446`); classification in §3.A routes it into the current run
+  rather than blockifying it. `src`/sizing props map onto the existing image props.
+- **`<div>` — block element.** The lowercase `<div>` tag is a block-level container with
+  block *inner* display (§3.A block section): it is the intrinsic analog of a `View` but with
+  `display:block` instead of `flex`, so ported web markup (`<div><span>…</span></div>`) lays
+  out with true block semantics. It is registered like the other intrinsic tags and backed
+  by the block-display path, not by `InlineText`.
 - **The back-compat exception, stated precisely:** authored `<Text>` keeps today's RN
   semantics in full — block-level from the outside (a `<p>`), RN's own nested-text/inline
   rules, verbatim whitespace, and untouched Paragraph internals. Apps using explicit
@@ -199,7 +236,18 @@ Following CSS, inheritance is defined on the element (shadow) tree, not on boxes
   `ShadowNodeFamily` has a parent pointer (`ShadowNodeFamily.cpp:36-44`, chain-walk at
   `:101-115`), so a View building an anonymous IFC computes its effective base attributes as
   `defaults ⊕ (ancestor Views' inheritable attrs, root→self)`. Cache per node revision;
-  O(depth) only on cache miss.
+  O(depth) only on cache miss. (Implemented as a top-down fold in
+  `YogaLayoutableShadowNode::configureYogaTree`, which runs each layout pass.)
+- **Live updates (the cascade is a computed value, so it must re-resolve).** Inheritable
+  text props are *not* Yoga styles, so changing one (e.g. a grandparent's `color`) dirties no
+  layout by default and — without help — no re-cascade would run and descendants would keep
+  stale attributes. Two invalidations close this (implemented; regression-tested):
+  (1) when a node's inheritable text props change between revisions, its clone dirties its
+  Yoga node so a layout pass actually runs (the parent's `updateYogaChildren` propagates the
+  dirty flag to the surface root); (2) `configureYogaTree` remembers the cascade value it
+  handed each child and, when it differs on a later pass, re-propagates *and* dirties the
+  descendant anonymous IFC box so it re-measures and republishes state — necessary because a
+  colour-only change does not alter size and Yoga would otherwise keep the cached layout.
 - **Compatibility split (resolves a real contradiction with the `<Text>` exception):**
   anonymous IFCs *always* inherit — they are new surface, nothing rendered there before.
   Authored `<Text>` does **not** inherit by default: apps commonly have inert `color`/font
@@ -333,9 +381,14 @@ Everything ships behind a new common feature flag (`enableImplicitTextChildren`)
    IFCs (collapse + line-edge trim; no back-compat exists there), verbatim behavior kept
    inside explicit `<Text>` (the exception clause). Whitespace-only anonymous flex items are
    dropped per flexbox.
-5. **Block emulation limits.** `display:'block'` v1 is column+stretch emulation: no margin
-   collapsing, no floats, no static-position specifics. Documented; a native Yoga block
-   algorithm can slot in later.
+5. **Block layout is native Yoga, staged.** `display:'block'` (and the `<div>` tag) is a
+   first-class `YGDisplayBlock` in Yoga (§3.A), not a flex emulation — the emulation only
+   survives as the flag-off fallback. The block algorithm lands in stages (block-inner
+   layout + inline flow → anonymous block boxes → margin collapsing → floats/static
+   position); each stage is documented and separately flag-gated, so partial conformance is
+   explicit rather than silent. Risk: this is a genuine Yoga change (new display type,
+   layout path, and cache/dirtying interactions) — larger than the shared-C++ box generation,
+   and the reason `<div>`/true-block is sequenced as its own workstream.
 6. **Update path.** Text content changes arrive as RawText prop clones until stage 6, then
    as `commitTextUpdate` data updates on `Text` nodes (§3.F); either way the containing
    View's Yoga node must be dirtied and its anonymous item re-measured — Views don't
@@ -364,15 +417,23 @@ compat shims, when it lands).
    views, `layoutSubviews` paint-order interleaving, text-change dirty propagation (§4.6),
    E (warning removal). Accept: render + update + reorder cases, paint-order test with
    mixed children.
-3. **Block flow + inline elements + whitespace**: `display:'block'` plumbing (§3.A),
-   blockification in flex, whitespace mapping. Accept: `a<b>b</b>c` matrix across
-   flex/block.
+3. **Block flow (emulated) + inline elements + whitespace**: initial `display:'block'` via
+   the flex emulation (§3.A), blockification in flex, whitespace mapping. Accept: `a<b>b</b>c`
+   matrix across flex/block. *(This is the stepping stone; stage 8 replaces the emulation
+   with native Yoga block.)*
 4. **Inheritance** with the `inheritViewTextStyles` compatibility split (§3.D). Accept:
    explicit-`<Text>` pixel-identity suite with the flag on.
-5. **Intrinsic tags + typing**: `<b>`/`<i>`/`<span>` registration, TS/Flow JSX typings.
+5. **Intrinsic tags + typing**: `<b>`/`<i>`/`<span>` registration, the inline replaced
+   `<img>`, and the block `<div>`; TS/Flow JSX typings. Accept: each tag lays out per its
+   web display in the matrix + web mirror.
 6. **Core text-node replacement** (§3.F): `createTextNode`/`commitTextUpdate` host-config
    path, delete `RCTRawText`. Separate change, own review.
 7. RNTester page; Expo dogfood.
+8. **Native Yoga `display:block`** (§3.A, §4.5): first-class `YGDisplayBlock` replacing the
+   stage-3 emulation, so `<div>` is a true block container. Own sub-flag, own review;
+   staged internally (block-inner layout + inline flow → anonymous block boxes → margin
+   collapsing → floats/static position). This is the riskiest Yoga change and is sequenced
+   as its own workstream — it can land after the rest of implicit text ships.
 
 ## 6. Verification performed
 
@@ -402,10 +463,29 @@ compat shims, when it lands).
 - White-space processing inside new IFCs: CSS-normal collapsing as proposed in §4.4, or
   JSX-verbatim everywhere? (Proposal: CSS-normal; needs sign-off.)
 - Should `textAlign`/`lineHeight` inherit in v1 (interaction with Yoga alignment)?
-- `display:'inline'` opt-in for Image/View in v1 or later? (Attachment machinery is ready;
-  classification is trivial; API review is the work.)
-- Ship `display:'block'` in v1 alongside flex support (recommended — it is the container
-  developers will reach for to get web-exact mixed inline flow), or fast-follow?
+- `display:'inline'` opt-in for the RN `View`/`Image` components in v1 or later? (Distinct
+  from the intrinsic `<img>` tag, which is inline by definition — this is about letting an
+  authored `View`/`Image` go inline. Attachment machinery is ready; classification is
+  trivial; API review is the work.)
+- **Native Yoga `display:block`: decided.** `<div>`/true block is implemented as a real
+  `YGDisplayBlock` in Yoga (§3.A, §4.5), because a genuine `<div>` cannot be faked on flex
+  column+stretch.
+  - ~~First-release conformance floor?~~ **Decided: inline-flow + block-stacking is the
+    floor**; margin collapsing and floats/static-position are later, separately-gated stages.
+  - ~~Same flag or its own?~~ **Decided: its own sub-flag** (e.g. `enableYogaDisplayBlock`),
+    separate from `enableImplicitTextChildren`. Native block modifies Yoga's core layout
+    algorithm — it can regress *any* app's layout, not just implicit-text surface — so it
+    needs an independent kill-switch, rollout %, and emulation-vs-native parity testing. The
+    block grouping predicate carries both paths (native when on, flex emulation when off)
+    until the emulation is retired.
+- **North star: no flags — layout is determined by element type.** Feature flags
+  (`enableImplicitTextChildren`, `enableYogaDisplayBlock`) are *transitional rollout
+  scaffolding*, not the destination. The committed end-state is flag-free: an element's type
+  alone determines its layout (`View` → block/flex, `<div>` → block/block, `<span>`/`<img>`
+  → inline, `<Text>` → the `<p>` analog, bare strings → text runs). Each flag is removed once
+  its behavior is proven and default-on; the emulation fallbacks (and the flag branches
+  themselves) are deleted at that point. Design every stage so its flag is *retirable* — no
+  behavior that only makes sense while the flag exists.
 
 ---
 
