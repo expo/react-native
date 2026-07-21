@@ -1,0 +1,175 @@
+<!doctype html>
+<!--
+  Web mirror of ImplicitText-itest.js (implicit-text-plan.md).
+
+  Each case renders the browser-native equivalent of a React Native test case
+  and asserts the same behavioral invariant with real DOM/CSS. Open in any
+  browser (or drive with agent-browser): results render as a PASS/FAIL table
+  and are also exposed on window.__results as JSON.
+
+  RN <View> ≈ <div style="display:flex;flex-direction:column;align-items:stretch">
+  RN <Text> ≈ <p style="margin:0"> (block text container)
+  RN inline element ≈ <b>/<span>
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>implicit-text web mirror</title>
+<style>
+  .view { display: flex; flex-direction: column; align-items: stretch; }
+  .row { flex-direction: row; }
+  .block { display: block; }
+  p { margin: 0; }
+  body { font: 14px/18px -apple-system, sans-serif; }
+  #cases > div { border: 1px dotted #ccc; margin: 4px; }
+  table { border-collapse: collapse; margin-top: 12px; }
+  td, th { border: 1px solid #999; padding: 2px 8px; font-size: 12px; }
+  .pass { background: #cfc; }
+  .fail { background: #fcc; }
+</style>
+</head>
+<body>
+<div id="cases"></div>
+<table id="report"><tr><th>case</th><th>expectation</th><th>result</th></tr></table>
+<script>
+const cases = [];
+function kase(name, html, expectation, assert) {
+  cases.push({name, html, expectation, assert});
+}
+const lineH = (() => {
+  const d = document.createElement('div');
+  d.className = 'view';
+  d.innerHTML = 'x';
+  document.body.appendChild(d);
+  const h = d.getBoundingClientRect().height;
+  d.remove();
+  return h;
+})();
+
+// M1: layout & measurement (flex container rules)
+kase('bare string sizes like explicit text',
+  `<div class="view" id="bare">hello world</div>
+   <div class="view"><p id="control">hello world</p></div>`,
+  'equal heights',
+  (root) => {
+    const a = root.querySelector('#bare').getBoundingClientRect();
+    const b = root.querySelector('#control').getBoundingClientRect();
+    return Math.abs(a.height - b.height) < 1;
+  });
+
+kase('runs split around a block child and stack',
+  `<div class="view" id="mixed">before<div style="height:10px"></div>after</div>`,
+  'height = 2 lines + 10',
+  (root) => {
+    const h = root.querySelector('#mixed').getBoundingClientRect().height;
+    return Math.abs(h - (lineH * 2 + 10)) < 2;
+  });
+
+kase('whitespace-only anonymous items are not rendered',
+  `<div class="view" id="ws">   </div>`,
+  'zero height',
+  (root) => root.querySelector('#ws').getBoundingClientRect().height < 1);
+
+kase('inline elements blockify in a flex container (3 items)',
+  `<div class="view" id="blockified">a<b>b</b>c</div>`,
+  'height = 3 lines',
+  (root) => {
+    const h = root.querySelector('#blockified').getBoundingClientRect().height;
+    return Math.abs(h - lineH * 3) < 2;
+  });
+
+kase('row direction lays runs side by side',
+  `<div class="view row" id="rowcase" style="align-self:flex-start; position:absolute; visibility:hidden">aa<div style="width:10px;height:4px"></div>bb</div>
+   <span id="aa" style="position:absolute; visibility:hidden">aa</span><span id="bb" style="position:absolute; visibility:hidden">bb</span>`,
+  'row width = aa + 10 + bb',
+  (root) => {
+    const w = root.querySelector('#rowcase').getBoundingClientRect().width;
+    const aa = root.querySelector('#aa').getBoundingClientRect().width;
+    const bb = root.querySelector('#bb').getBoundingClientRect().width;
+    return Math.abs(w - (aa + 10 + bb)) < 2;
+  });
+
+// M3: block flow
+kase('display:block joins text and inline elements into one flow',
+  `<div class="view block" id="oneflow">a<b>b</b>c</div>`,
+  'height = 1 line',
+  (root) => {
+    const h = root.querySelector('#oneflow').getBoundingClientRect().height;
+    return Math.abs(h - lineH) < 2;
+  });
+
+kase('block container mixes inline flows with block children',
+  `<div class="view block" id="blockmix">before<div style="height:10px"></div>after</div>`,
+  'height = 2 lines + 10',
+  (root) => {
+    const h = root.querySelector('#blockmix').getBoundingClientRect().height;
+    return Math.abs(h - (lineH * 2 + 10)) < 2;
+  });
+
+// M4: inheritance
+kase('color inherits into bare text; blocks inherit too (web default)',
+  `<div class="view" style="color:rgb(255,0,0)" id="inherit">hello</div>`,
+  'computed color red on text container',
+  (root) => getComputedStyle(root.querySelector('#inherit')).color === 'rgb(255, 0, 0)');
+
+// M6: events
+kase('text-node click targets the parent element',
+  `<div class="view" id="evt">hello</div>`,
+  'event.target === div',
+  (root) => {
+    const div = root.querySelector('#evt');
+    let target = null;
+    div.addEventListener('click', (e) => { target = e.target; });
+    const textRect = div.getBoundingClientRect();
+    const ev = new MouseEvent('click', {bubbles: true, clientX: textRect.x + 2, clientY: textRect.y + 2});
+    div.firstChild.parentElement.dispatchEvent(ev);
+    return target === div;
+  });
+
+kase('inline element click targets it and bubbles to the container',
+  `<div class="view" id="evt2">a<b id="evt2b">b</b>c</div>`,
+  'target === b, bubbles to div',
+  (root) => {
+    const div = root.querySelector('#evt2');
+    const b = root.querySelector('#evt2b');
+    const order = [];
+    b.addEventListener('click', () => order.push('b'));
+    div.addEventListener('click', () => order.push('div'));
+    b.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+    return order.join(',') === 'b,div';
+  });
+
+// M7: DOM APIs
+kase('childNodes exposes text nodes; children excludes them; textContent concatenates',
+  `<div class="view" id="dom">before<div class="view">b</div>after</div>`,
+  '3 childNodes, 1 child element, textContent "beforebafter"',
+  (root) => {
+    const el = root.querySelector('#dom');
+    return el.childNodes.length === 3 &&
+      el.children.length === 1 &&
+      el.childNodes[0].nodeType === Node.TEXT_NODE &&
+      el.childNodes[0].parentNode === el &&
+      el.textContent === 'beforebafter';
+  });
+
+const report = document.getElementById('report');
+const container = document.getElementById('cases');
+const results = [];
+for (const c of cases) {
+  const host = document.createElement('div');
+  host.innerHTML = c.html;
+  container.appendChild(host);
+  let ok = false;
+  let err = '';
+  try { ok = c.assert(host); } catch (e) { err = String(e); }
+  results.push({name: c.name, ok, err});
+  const tr = document.createElement('tr');
+  tr.className = ok ? 'pass' : 'fail';
+  tr.innerHTML = `<td>${c.name}</td><td>${c.expectation}</td><td>${ok ? 'PASS' : 'FAIL ' + err}</td>`;
+  report.appendChild(tr);
+}
+window.__results = results;
+document.title = results.every(r => r.ok) ? 'ALL PASS' : 'FAILURES';
+</script>
+</body>
+</html>
