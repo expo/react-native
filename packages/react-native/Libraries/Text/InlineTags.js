@@ -42,14 +42,16 @@ registerInlineTag('span');
 
 // The intrinsic <img> tag: an inline *replaced* element (implicit-text-plan.md
 // §3.C), distinct from the block-level RN <Image> component. It flows inside a
-// bare-text IFC as an inline attachment. Stage 1 wires classification + the
-// `src`/sizing props; iOS attachment layout + image rendering are a follow-up.
+// bare-text IFC as an inline attachment, but reuses the RN Image machinery for
+// loading + rendering (ImageProps/ImageState). `source` takes the same shape as
+// <Image>; createViewConfig merges the base View attributes (style/layout, incl.
+// width/height). It is positioned by the owning View's attachment-layout pass.
 createReactNativeComponentClass('img', () =>
   createViewConfig({
     validAttributes: {
-      src: true,
-      width: true,
-      height: true,
+      source: true,
+      resizeMode: true,
+      tintColor: {process: require('../StyleSheet/processColor').default},
     },
     uiViewClassName: 'img',
   }),

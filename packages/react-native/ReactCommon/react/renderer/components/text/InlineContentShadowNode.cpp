@@ -12,8 +12,9 @@
 #include <react/renderer/attributedstring/AttributedStringBox.h>
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/components/text/BaseTextShadowNode.h>
-#include <react/renderer/components/text/InlineTextTagShadowNodes.h>
+#include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
+#include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/textlayoutmanager/TextLayoutContext.h>
 
 namespace facebook::react {
@@ -94,24 +95,45 @@ void collapseWhitespace(AttributedString& attributedString) {
   });
 }
 
-// Reserves the intrinsic box of each replaced `<img>` in the run: sets the
-// attachment fragment's size from the `<img>`'s width/height props, so the run
-// measures with the image's box included (implicit-text-plan.md §3.C). Runs
-// before whitespace collapsing so the attachment fragment indices are still
-// valid (collapsing only erases emptied text fragments; attachments are kept).
-void sizeImageAttachments(
+// Reserves each inline replaced element's (`<img>`) intrinsic box in the run by
+// measuring the attachment shadow node and stamping its size onto the attachment
+// fragment, so the run measures with the image's box included
+// (implicit-text-plan.md §3.C). Mirrors
+// `ParagraphShadowNode::getContentWithMeasuredAttachments`. Runs before
+// whitespace collapsing so the attachment fragment indices are still valid.
+void measureImageAttachments(
+    AttributedString& attributedString,
+    const BaseTextShadowNode::Attachments& attachments,
+    const LayoutContext& layoutContext,
+    const LayoutConstraints& layoutConstraints) {
+  auto& fragments = attributedString.getFragments();
+  auto constraints = layoutConstraints;
+  constraints.minimumSize = Size{0, 0};
+  for (const auto& attachment : attachments) {
+    const auto* layoutable =
+        dynamic_cast<const LayoutableShadowNode*>(attachment.shadowNode);
+    if (layoutable == nullptr || attachment.fragmentIndex >= fragments.size()) {
+      continue;
+    }
+    fragments[attachment.fragmentIndex].parentShadowView.layoutMetrics.frame.size =
+        layoutable->measure(layoutContext, constraints);
+  }
+}
+
+// Stamps the attachment fragment sizes from the attachment nodes' already-laid-out
+// metrics (used on the paint/state path, which has no layout context).
+void sizeImageAttachmentsFromLayout(
     AttributedString& attributedString,
     const BaseTextShadowNode::Attachments& attachments) {
   auto& fragments = attributedString.getFragments();
   for (const auto& attachment : attachments) {
-    const auto* img =
-        dynamic_cast<const ImgTagShadowNode*>(attachment.shadowNode);
-    if (img == nullptr || attachment.fragmentIndex >= fragments.size()) {
+    const auto* layoutable =
+        dynamic_cast<const LayoutableShadowNode*>(attachment.shadowNode);
+    if (layoutable == nullptr || attachment.fragmentIndex >= fragments.size()) {
       continue;
     }
-    const auto& imgProps = img->getConcreteProps();
     fragments[attachment.fragmentIndex].parentShadowView.layoutMetrics.frame.size =
-        Size{imgProps.width, imgProps.height};
+        layoutable->getLayoutMetrics().frame.size;
   }
 }
 
@@ -129,7 +151,7 @@ AttributedString InlineContentShadowNode::getContentAttributedString() const {
   auto attachments = BaseTextShadowNode::Attachments{};
   BaseTextShadowNode::buildAttributedString(
       textAttributes, *this, attributedString, attachments);
-  sizeImageAttachments(attributedString, attachments);
+  sizeImageAttachmentsFromLayout(attributedString, attachments);
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
   return attributedString;
@@ -145,7 +167,8 @@ Size InlineContentShadowNode::measureContent(
   auto attachments = BaseTextShadowNode::Attachments{};
   BaseTextShadowNode::buildAttributedString(
       textAttributes, *this, attributedString, attachments);
-  sizeImageAttachments(attributedString, attachments);
+  measureImageAttachments(
+      attributedString, attachments, layoutContext, layoutConstraints);
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
 

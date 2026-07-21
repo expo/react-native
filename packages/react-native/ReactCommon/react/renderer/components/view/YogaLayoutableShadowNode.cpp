@@ -461,6 +461,16 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
   };
 
   for (size_t i = 0; i < getChildren().size(); i++) {
+    // The replaced `<img>` is layoutable (it reuses the Image machinery) but is
+    // an *inline* replaced element: it flows inside the current run as an
+    // attachment, never as a block Yoga child (implicit-text-plan.md §3.C). It
+    // still mounts (differ-driven) and is positioned by the owning View's
+    // attachment-layout pass.
+    if (implicitTextEnabled &&
+        std::string_view{getChildren()[i]->getComponentName()} == "img") {
+      inlineRun.push_back(getChildren()[i]);
+      continue;
+    }
     if (auto yogaLayoutableChild =
             std::dynamic_pointer_cast<const YogaLayoutableShadowNode>(
                 getChildren()[i])) {

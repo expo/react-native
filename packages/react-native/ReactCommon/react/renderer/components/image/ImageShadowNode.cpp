@@ -11,13 +11,19 @@
 #include <limits>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/image/ImageComponentDescriptor.h>
 #include <react/renderer/components/image/ImageShadowNode.h>
+#include <react/renderer/components/image/ImgTagShadowNode.h>
 #include <react/renderer/core/LayoutContext.h>
+#include <react/renderer/imagemanager/ImageManager.h>
 #include <react/renderer/imagemanager/ImageRequestParams.h>
 
 namespace facebook::react {
 
 const char ImageComponentName[] = "Image";
+
+// NOLINTNEXTLINE(modernize-avoid-c-arrays)
+const char ImgTagComponentName[] = "img";
 
 void ImageShadowNode::setImageManager(
     const std::shared_ptr<ImageManager>& imageManager) {
@@ -157,6 +163,130 @@ ImageSource ImageShadowNode::getImageSource() const {
 void ImageShadowNode::layout(LayoutContext layoutContext) {
   updateStateIfNeeded();
   ConcreteViewShadowNode::layout(layoutContext);
+}
+
+#pragma mark - <img> tag (inline replaced element)
+
+// The following mirror `ImageShadowNode` exactly; duplicated because
+// `ImageShadowNode` is `final` with a fixed component handle (see
+// ImgTagShadowNode.h).
+
+void ImgTagShadowNode::setImageManager(
+    const std::shared_ptr<ImageManager>& imageManager) {
+  ensureUnsealed();
+  imageManager_ = imageManager;
+
+  if (getIsLayoutClean() ||
+      ReactNativeFeatureFlags::enableImagePrefetchingAndroid()) {
+    auto sources = getConcreteProps().sources;
+    auto layoutMetric = getLayoutMetrics();
+    if (sources.size() <= 1 ||
+        (layoutMetric.frame.size.width > 0 &&
+         layoutMetric.frame.size.height > 0)) {
+      updateStateIfNeeded();
+    }
+  }
+}
+
+void ImgTagShadowNode::updateStateIfNeeded() {
+  ensureUnsealed();
+
+  const auto& savedState = getStateData();
+  const auto& oldImageSource = savedState.getImageSource();
+  auto newImageSource = getImageSource();
+  const auto& oldImageRequestParams = savedState.getImageRequestParams();
+  const auto& imageProps = getConcreteProps();
+  const auto& newImageRequestParams = ImageRequestParams(
+      imageProps.blurRadius
+#ifdef ANDROID
+      ,
+      imageProps.defaultSource,
+      imageProps.resizeMode,
+      imageProps.resizeMethod,
+      imageProps.resizeMultiplier,
+      imageProps.shouldNotifyLoadEvents,
+      imageProps.overlayColor,
+      imageProps.tintColor,
+      imageProps.fadeDuration,
+      imageProps.progressiveRenderingEnabled,
+      imageProps.loadingIndicatorSource,
+      imageProps.internal_analyticTag,
+      Size{
+          .width =
+              layoutMetrics_.frame.size.width * layoutMetrics_.pointScaleFactor,
+          .height = layoutMetrics_.frame.size.height *
+              layoutMetrics_.pointScaleFactor}
+#endif
+  );
+
+  if (oldImageSource == newImageSource &&
+      oldImageRequestParams == newImageRequestParams) {
+    return;
+  }
+
+  ImageState state{
+      newImageSource,
+      imageManager_->requestImage(
+          newImageSource, getSurfaceId(), newImageRequestParams, getTag()),
+      newImageRequestParams};
+  setStateData(std::move(state));
+}
+
+ImageSource ImgTagShadowNode::getImageSource() const {
+  auto sources = getConcreteProps().sources;
+
+  if (sources.empty()) {
+    return {
+        /* .type = */ ImageSource::Type::Invalid,
+    };
+  }
+
+  auto layoutMetrics = getLayoutMetrics();
+  auto size = layoutMetrics.getContentFrame().size;
+  auto scale = layoutMetrics.pointScaleFactor;
+
+  if (sources.size() == 1) {
+    auto source = sources[0];
+    source.size = size;
+    source.scale = scale;
+    return source;
+  }
+
+  auto targetImageArea = size.width * size.height * scale * scale;
+  auto bestFit = std::numeric_limits<Float>::infinity();
+  auto bestSource = ImageSource{};
+
+  for (const auto& source : sources) {
+    auto sourceSize = source.size;
+    auto sourceScale = source.scale == 0 ? scale : source.scale;
+    auto sourceArea =
+        sourceSize.width * sourceSize.height * sourceScale * sourceScale;
+    auto fit = std::abs(1 - (sourceArea / targetImageArea));
+    if (fit < bestFit) {
+      bestFit = fit;
+      bestSource = source;
+    }
+  }
+
+  bestSource.size = size;
+  bestSource.scale = scale;
+  return bestSource;
+}
+
+void ImgTagShadowNode::layout(LayoutContext layoutContext) {
+  updateStateIfNeeded();
+  ConcreteViewShadowNode::layout(layoutContext);
+}
+
+ImgTagComponentDescriptor::ImgTagComponentDescriptor(
+    const ComponentDescriptorParameters& parameters)
+    : ConcreteComponentDescriptor(parameters),
+      imageManager_(
+          getManagerByName<ImageManager>(contextContainer_, ImageManagerKey)) {}
+
+void ImgTagComponentDescriptor::adopt(ShadowNode& shadowNode) const {
+  ConcreteComponentDescriptor::adopt(shadowNode);
+  static_cast<ImgTagShadowNode&>(shadowNode).setImageManager(imageManager_);
 }
 
 } // namespace facebook::react

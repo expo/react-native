@@ -958,7 +958,7 @@ milestone(5, 'M5: intrinsic inline tags', () => {
         <View collapsable={false} ref={sizedRef} style={{alignSelf: 'flex-start'}}>
           {'a'}
           {/* $FlowExpectedError[not-a-component] intrinsic <img> tag */}
-          <img width={30} height={40} />
+          <img style={{width: 30, height: 40}} />
           {'b'}
         </View>,
       );

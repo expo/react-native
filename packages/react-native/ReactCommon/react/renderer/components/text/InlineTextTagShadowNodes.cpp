@@ -14,7 +14,6 @@ const char UnknownElementComponentName[] = "unknown";
 const char BTagComponentName[] = "b";
 const char ITagComponentName[] = "i";
 const char SpanTagComponentName[] = "span";
-const char ImgTagComponentName[] = "img";
 // NOLINTEND(facebook-hte-CArray, modernize-avoid-c-arrays)
 
 } // namespace facebook::react
