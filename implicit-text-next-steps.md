@@ -90,7 +90,7 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 
 **Renumbered 2026-07-21** (per direction): the iOS simulator items were pulled forward to
 T5–T7 and first-class text nodes (Track C, the plan's own-review item) deferred to **T8**.
-T1–T5 are done; T6–T7 are the active simulator items. (T5 = iOS paint order, simulator-verified.)
+T1–T6 are done (T5 paint order + T6 hit-testing simulator-verified); T7 (inline `<img>`) is next.
 
 | # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
 |---|---|---|---|---|---|---|
@@ -99,7 +99,7 @@ T1–T5 are done; T6–T7 are the active simulator items. (T5 = iOS paint order,
 | T3 | Lazy View state | A | ~ (alloc + regression) | M | — | ✅ done |
 | T4 | Native Yoga `display:block` | B | ✅ (Fantom parity) | XL | own flag | ✅ done (Stage 1) |
 | T5 | iOS paint order + per-run views | D | ❌ (simulator) | M | — | ✅ done |
-| T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | open |
+| T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | ✅ done |
 | T7 | Intrinsic `<img>` tag | D | ❌ (image pipeline+device) | M | — | open |
 | T8 | First-class text nodes (replace RawText) | C | ~ (dev/shared only) | XL | — | deferred (own review) |
 | T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | open |
@@ -365,8 +365,24 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
   plan updated.
 - **Effort / risk / deps.** M. Simulator-only.
 
-### T6. iOS touch hit-testing on drawn text
+### T6. iOS touch hit-testing on drawn text — ✅ DONE (simulator-verified via probe)
 
+- **Status (done).** `RCTViewComponentView touchEventEmitterAtPoint:` now, when text runs exist,
+  finds the run whose frame contains the point and resolves the fragment emitter via
+  `getEventEmitterWithAttributeString:...atPoint:` (per-run `RCTImplicitTextRunView`), falling
+  back to the View's own emitter — so a tap on an inline element with a handler targets that
+  element, while a tap on bare text targets the View (text nodes are never targets).
+  **Bug found & fixed during verification:** `getEventEmitterWithAttributeString:` lays the run
+  out in a text container at the origin and hit-tests with the *raw* point, so the point must be
+  **frame-local**; passing the view-space point made it fall outside the (short) container and
+  return null. Paragraphs never hit this because their text frame origin is ~0; runs have
+  non-zero origins. Fixed by subtracting `runFrame.origin`.
+  **Verified on device** (iPhone 17 Pro, instrumented log): before the fix the tap point was
+  inside the BOLD run frame yet the resolved emitter was `0x0`; after the fix it resolves to a
+  non-null inline touch emitter, while bare-text taps resolve null → the View. (The on-screen
+  `onPress` counter can't be moved by synthetic `cliclick` taps — Pressability needs a real
+  press gesture — so emitter resolution was confirmed via the instrumented log; the JS-observable
+  target/bubbling semantics are covered headlessly by matrix M6, 39/39.)
 - **Goal.** Tapping an inline element with a handler (`<b onPress>`) fires it; tapping bare text
   fires the containing View's handlers (text nodes are never targets).
 - **Why / context.** Plan §3.G. `touchEventEmitterAtPoint:` is an open protocol invoked on

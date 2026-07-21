@@ -269,7 +269,11 @@ has the full design for all of these.
    threaded via `ViewState::TextRun::documentOrder` and `layoutSubviews` interleaves run views
    with mounted children. iPhone 17 Pro screenshot: text before an overlapping child paints
    under it, text after paints over. Plan §3.B / next-steps T5.
-3. **Touch hit-testing on drawn text (iOS)** — implement `touchEventEmitterAtPoint:` on
+3. **Touch hit-testing on drawn text (iOS)** — ✅ **DONE (device-verified).**
+   `RCTViewComponentView touchEventEmitterAtPoint:` resolves an inline element's fragment emitter
+   for taps on it (frame-local point — a bug found & fixed during verification) and the View's
+   emitter for bare text. Next-steps T6. Original note:
+   implement `touchEventEmitterAtPoint:` on
    `RCTViewComponentView` when runs exist (mirror `RCTParagraphComponentView`'s). Verify on
    simulator: tapping an inline element with a handler fires it; bare text fires the View's
    handlers.

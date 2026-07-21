@@ -313,7 +313,12 @@ node kind (`BaseTextShadowNode.cpp:34-55`); the differ/layout already ignore tex
 `RCTSurfaceTouchHandler.mm:84` / `RCTSurfacePointerHandler.mm:162`) — the protocol is open
 to any component view, so `RCTViewComponentView` implements it when it carries text runs
 (today only the paragraph view does): find the run whose frame contains the point, then
-resolve the fragment emitter via `characterIndexForPoint`
+resolve the fragment emitter via `characterIndexForPoint`. **Done (next-steps T6):** implemented
+on `RCTViewComponentView`, falling back to the View's emitter for bare text. Note: the point
+passed to `getEventEmitterWithAttributeString:...atPoint:` must be **frame-local** (the run is
+laid out in a container at the origin), so `runFrame.origin` is subtracted — a subtlety
+paragraphs avoid only because their text frame origin is ~0. Device-verified via instrumented
+log (inline taps resolve a non-null inline emitter; bare-text taps resolve the View).
 (`RCTTextLayoutManager.mm:255-283`), exactly as paragraphs do.
 - Tap on an inline element (`<b onPress>`, nested span): the fragment carries that element's
   emitter (`RCTAttributedTextUtils.mm:434-442`) — a real JS-created family with a real
@@ -536,7 +541,8 @@ All matrix milestones (M1-M7) plus iOS painting, intrinsic tags, unknown-element
 DOM semantics (incl. `nodeName`/`tagName` fidelity, dev bundle), the §3.E warning
 removal, CSS `white-space: normal` collapsing inside anonymous IFCs (§3.A/§4.4),
 lazy View state (§4.2), native Yoga `display:block` Stage 1 (§3.A/§4.5,
-`enableYogaDisplayBlock`), and iOS per-run paint-order views (§3.B) are
+`enableYogaDisplayBlock`), iOS per-run paint-order views (§3.B), and iOS touch
+hit-testing on drawn text (§3.G) are
 implemented on this branch and verified: Fantom
 39/39 matrix + 7/7 native-block + regression sweeps (View-itest 224), Safari web
 mirror 20/20, iPhone 17

@@ -11,8 +11,32 @@
 import 'react-native/Libraries/Text/InlineTags';
 
 import * as React from 'react';
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {ScrollView, Text, View} from 'react-native';
+import {NativeVirtualText} from 'react-native/Libraries/Text/TextNativeComponent';
+
+// T6 hit-testing: tapping the inline <b onPress> fires its own handler (and
+// bubbles to the View); tapping bare text fires only the View's handler. The
+// counters distinguish them: inline taps bump both; bare-text taps bump only
+// the View counter.
+function HitTestCase(): React.Node {
+  const [inlineTaps, setInlineTaps] = useState(0);
+  const [viewTouches, setViewTouches] = useState(0);
+  return (
+    <View
+      onTouchEnd={() => setViewTouches(v => v + 1)}
+      style={{padding: 6}}>
+      tap the bare text here, or the{' '}
+      <NativeVirtualText
+        onPress={() => setInlineTaps(v => v + 1)}
+        style={{color: '#0a0', fontWeight: 'bold'}}>
+        BOLD WORD
+      </NativeVirtualText>{' '}
+      here.
+      {`\ninline handler fired: ${inlineTaps}   view touches: ${viewTouches}`}
+    </View>
+  );
+}
 
 function Case({label, children}: {label: string, children: React.Node}) {
   return (
@@ -133,6 +157,10 @@ export default function ImplicitTextDemo(): React.Node {
             OVER
           </View>
         </View>
+      </Case>
+
+      <Case label="9. hit-testing: tap BOLD (inline handler) vs bare text (View handler)">
+        <HitTestCase />
       </Case>
     </ScrollView>
   );

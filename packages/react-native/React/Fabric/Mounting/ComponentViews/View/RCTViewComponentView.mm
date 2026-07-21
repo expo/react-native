@@ -1824,6 +1824,39 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 
 - (SharedTouchEventEmitter)touchEventEmitterAtPoint:(CGPoint)point
 {
+  // Hit-testing on drawn implicit text (implicit-text-plan.md §3.G / next-steps
+  // T6): a tap that lands on an inline element with its own handler (e.g.
+  // <b onPress>) resolves to that element's fragment emitter; a tap on bare text
+  // resolves to null here (text-node fragments carry the emitter-less anonymous
+  // box) and falls through to the View's own emitter — matching web semantics,
+  // where text nodes are not event targets but the containing element is.
+  for (RCTImplicitTextRunView *runView in _textRunViews) {
+    const auto &run = runView->_run;
+    CGRect runFrame = RCTCGRectFromRect(run.frame);
+    if (!CGRectContainsPoint(runFrame, point)) {
+      continue;
+    }
+    auto textLayoutManager = runView->_layoutManager.lock();
+    if (!textLayoutManager) {
+      continue;
+    }
+    RCTTextLayoutManager *nativeTextLayoutManager =
+        (RCTTextLayoutManager *)unwrapManagedObject(textLayoutManager->getNativeTextLayoutManager());
+    // `getEventEmitterWithAttributeString:` lays the run out in a text container
+    // at the origin and hit-tests with the raw point, so the point must be local
+    // to the run's frame (paragraphs get away with the raw point only because
+    // their text frame origin is ~zero).
+    CGPoint localPoint = CGPointMake(point.x - runFrame.origin.x, point.y - runFrame.origin.y);
+    auto eventEmitter = [nativeTextLayoutManager getEventEmitterWithAttributeString:run.attributedString
+                                                               paragraphAttributes:facebook::react::ParagraphAttributes{}
+                                                                             frame:runFrame
+                                                                           atPoint:localPoint];
+    if (eventEmitter) {
+      if (auto touchEventEmitter = std::dynamic_pointer_cast<const TouchEventEmitter>(eventEmitter)) {
+        return touchEventEmitter;
+      }
+    }
+  }
   return _eventEmitter;
 }
 
