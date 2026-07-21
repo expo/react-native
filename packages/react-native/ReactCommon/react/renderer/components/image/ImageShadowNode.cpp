@@ -13,7 +13,6 @@
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/image/ImageComponentDescriptor.h>
 #include <react/renderer/components/image/ImageShadowNode.h>
-#include <react/renderer/components/image/ImgTagShadowNode.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/imagemanager/ImageManager.h>
 #include <react/renderer/imagemanager/ImageRequestParams.h>
@@ -168,8 +167,8 @@ void ImageShadowNode::layout(LayoutContext layoutContext) {
 #pragma mark - <img> tag (inline replaced element)
 
 // The following mirror `ImageShadowNode` exactly; duplicated because
-// `ImageShadowNode` is `final` with a fixed component handle (see
-// ImgTagShadowNode.h).
+// `ImageShadowNode` is `final` with a fixed component handle (see the
+// `ImgTagShadowNode` declaration in ImageShadowNode.h).
 
 void ImgTagShadowNode::setImageManager(
     const std::shared_ptr<ImageManager>& imageManager) {

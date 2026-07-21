@@ -219,13 +219,13 @@ events, and DOM APIs).
   already has for non-text children (`BaseTextShadowNode` attachments,
   `ParagraphShadowNode.cpp:363-446`); classification in §3.A routes it into the current run
   rather than blockifying it. `src`/sizing props map onto the existing image props.
-  **Stage 1 done (next-steps T7):** the `<img>` tag is a plain (non-Yoga, non-`InlineText`)
-  `ShadowNode` so it becomes an inline attachment; registered (Fantom + iOS supplemental + JS)
-  and classified so it joins the run even in flex, never blockifying. Headless test proves
-  `a<img/>b` flows on one line vs `<b>` blockifying, and a sized `a<img 30x40/>b`
-  reserves its 30x40 box in the run (measurer contract extended). Actual iOS pixel
-  rendering (mount an image view at the attachment frame + `src` loading) is the device
-  follow-up.
+  **Done (next-steps T7):** the `<img>` tag is an **Image-backed** node with its own
+  component handle "img", so it reuses the whole Image load/render pipeline yet routes inline
+  (never blockifies) and gets its own `RCTImgComponentView`. `InlineContentShadowNode` sizes the
+  attachment by measuring the img; `ViewShadowNode::layoutInlineImageAttachments` clones + stamps
+  its `layoutMetrics` (ParagraphShadowNode pattern) so it mounts inline. Device-verified: a real
+  image renders inline in a bare-text flow. First-cut positioning is at the run box origin;
+  precise inter-character offset is a follow-up.
 - **`<div>` — block element.** The lowercase `<div>` tag is a block-level container with
   block *inner* display (§3.A block section): it is the intrinsic analog of a `View` but with
   `display:block` instead of `flex`, so ported web markup (`<div><span>…</span></div>`) lays
@@ -553,12 +553,13 @@ DOM semantics (incl. `nodeName`/`tagName` fidelity, dev bundle), the §3.E warni
 removal, CSS `white-space: normal` collapsing inside anonymous IFCs (§3.A/§4.4),
 lazy View state (§4.2), native Yoga `display:block` Stage 1 (§3.A/§4.5,
 `enableYogaDisplayBlock`), iOS per-run paint-order views (§3.B), iOS touch
-hit-testing on drawn text (§3.G), and the intrinsic `<img>` inline-replaced
-layout (§3.C, classification + sizing) are
+hit-testing on drawn text (§3.G), and the intrinsic `<img>` inline replaced
+element rendering real image pixels (§3.C) are
 implemented on this branch and verified: Fantom
-42/42 matrix + 8/8 native-block + regression sweeps (View-itest 224), Safari web
-mirror 20/20 (+ img/native-block twins added), iPhone 17
-Pro (iOS 26.5) simulator screenshots (incl. paint-order interleaving + hit-test log), and live CDP layout reads
+42/42 matrix + 8/8 native-block + regression sweeps (View-itest 224, Image-itest
+99), Safari web mirror 20/20 (+ img/div/native-block twins added), iPhone 17
+Pro (iOS 26.5) simulator screenshots (incl. paint-order interleaving, hit-test log, and a real
+inline `<img>` rendering), and live CDP layout reads
 (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:
 `packages/rn-tester/js/ImplicitTextDemo.js`. Next: mine Web Platform Tests
 (css/CSS2 normal-flow + visuren, css-flexbox anonymous items, css-display,

@@ -162,6 +162,17 @@ export default function ImplicitTextDemo(): React.Node {
       <Case label="9. hit-testing: tap BOLD (inline handler) vs bare text (View handler)">
         <HitTestCase />
       </Case>
+
+      <Case label="10. inline <img> renders a real image (leans on Image)">
+        <View style={{display: 'block'}}>
+          {/* $FlowExpectedError[not-a-component] intrinsic <img> tag */}
+          <img
+            source={{uri: 'https://reactnative.dev/img/tiny_logo.png'}}
+            style={{width: 32, height: 32}}
+          />
+          {' a bare-text caption next to an inline image'}
+        </View>
+      </Case>
     </ScrollView>
   );
 }

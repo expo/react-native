@@ -90,9 +90,9 @@ Do the **Track A** items first — they close in the headless loop with the tigh
 
 **Renumbered 2026-07-21** (per direction): the iOS simulator items were pulled forward to
 T5–T7 and first-class text nodes (Track C, the plan's own-review item) deferred to **T8**.
-T1–T6 are done (T5 paint order + T6 hit-testing simulator-verified); T7 (inline `<img>`) has its
-inline-replaced layout done (Stage 1+2, headless). T9 (`<div>`) done headless. T7 Stage 3
-(iOS `<img>` render), T8 (first-class text nodes), T10 (Android) remain.
+T1–T7 and T9 are done (T5 paint order, T6 hit-testing, and T7 `<img>` renders real pixels — all
+device-verified; T9 `<div>` headless). T8 (first-class text nodes, deferred own-review) and
+T10 (Android) remain.
 
 | # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
 |---|---|---|---|---|---|---|
@@ -102,7 +102,7 @@ inline-replaced layout done (Stage 1+2, headless). T9 (`<div>`) done headless. T
 | T4 | Native Yoga `display:block` | B | ✅ (Fantom parity) | XL | own flag | ✅ done (Stage 1) |
 | T5 | iOS paint order + per-run views | D | ❌ (simulator) | M | — | ✅ done |
 | T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | ✅ done |
-| T7 | Intrinsic `<img>` tag | D | ~ (layout; render open) | M | — | ◑ layout done |
+| T7 | Intrinsic `<img>` tag | D | headless + device | M | — | ✅ done |
 | T8 | First-class text nodes (replace RawText) | C | ~ (dev/shared only) | XL | — | deferred (own review) |
 | T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | ✅ done (headless) |
 | T10 | Android mounting story | E | ❌ (Android) | XL | — | open |
@@ -397,32 +397,32 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 - **Acceptance.** Both taps behave per spec on device; plan updated.
 - **Effort / risk / deps.** M. Dep: T5 (run views/frames). Simulator-only.
 
-### T7. Intrinsic `<img>` tag (inline replaced element) — ◑ Stage 1+2 layout DONE; pixel-render open
+### T7. Intrinsic `<img>` tag (inline replaced element) — ✅ DONE (renders real pixels; positioning is first-cut)
 
-- **Stage 1 done — inline-attachment classification.** Registered the `<img>` tag:
-  `ImgTagShadowNode`/`ImgTagProps` (`src`/`width`/`height`) in `InlineTextTagShadowNodes.{h,cpp}`,
-  a **plain `ShadowNode`** (deliberately not `YogaLayoutableShadowNode` and not `InlineText`) so
-  `updateYogaChildren` routes it into the current run as a non-text attachment rather than a
-  block-level Yoga child; registered in the Fantom stub registry and the iOS paragraph
-  supplemental providers; JS config in `InlineTags.js`. `isInlineTextContent` includes `"img"`,
-  and the run-grouping predicate lets `<img>` join the run even in flex (a replaced element
-  flows inline, never blockifies — unlike `<b>`). Verified: `a<img/>b` flows on one line vs
-  `a<b>b</b>c` blockifying to 3× height.
-- **Stage 2 done — inline-replaced layout/sizing (headless).** A sized `<img width height>` now
-  reserves its intrinsic box in the run: `InlineContentShadowNode::sizeImageAttachments` sets the
-  attachment fragment's size from the `<img>`'s width/height props (before whitespace collapse,
-  so fragment indices stay valid), and the deterministic cxx measurer was extended (documented
-  contract) to add the attachment width to the line and grow the line height to the tallest
-  attachment. Verified headlessly: `a<img 30x40/>b` = 50×40pt. Regressions green (baselines 4,
-  native-block 7, Text 151, ReadOnlyText 30, ReactNativeElement 170, View-itest 224). Web-mirror
-  twins added (display:inline + sized-box); Safari re-run was blocked by a persistent safaridriver
-  launch failure this session (mirror passed 20/20 earlier).
-- **Stage 3 (open, iOS + image pipeline) — actual pixel rendering.** The `<img>` still renders
-  nothing on screen: it needs to mount an image view at the attachment frame (or draw via the
-  run view). This requires (a) a mounting-reconciliation design — the `<img>` is authored under
-  the View but positioned by the synthetic run box, unlike Paragraph attachments which the
-  paragraph itself owns/mounts — and (b) the image pipeline for `src` loading/decoding. Reuse
-  Paragraph's attachment loop (`ParagraphShadowNode.cpp:363-446`) as the model. Device effort.
+- **Final design (Stage 3):** `<img>` is an **Image-backed** node — `ImgTagShadowNode`/
+  `ImgTagComponentDescriptor` (declared in `components/image/ImageShadowNode.h`, impls in
+  `ImageShadowNode.cpp`) reuse `ImageProps`/`ImageState`/`ImageManager` and mirror
+  `ImageShadowNode`'s image-request logic, but with a distinct component name/handle `"img"` so
+  it can be **routed inline** (not treated as a block Yoga child) and get its own component view.
+  It reuses the whole Image rendering: iOS `RCTImgComponentView` subclasses `RCTImageComponentView`
+  (overriding `componentDescriptorProvider`, self-registered via `+load`); JS `<img>` config
+  reuses Image's `source`/`resizeMode`/`tintColor` + Image's load `directEventTypes` (else the
+  reconciler rejects `topLoadStart`). `updateYogaChildren` routes `<img>` into the run as an
+  attachment even though it is layoutable; `InlineContentShadowNode` sizes the attachment by
+  measuring the img (`measureImageAttachments`, mirroring
+  `ParagraphShadowNode::getContentWithMeasuredAttachments`); and `ViewShadowNode::layoutInlineImageAttachments`
+  clones + stamps each img's `layoutMetrics` (`ParagraphShadowNode` clone-and-position pattern)
+  so the differ mounts it inline.
+- **Verified:** device (iPhone 17 Pro, iOS 26.5) — demo case 10 renders a real remote image
+  inline in a bare-text flow (leans on the Image pipeline for load/decode). Headless: ImplicitText
+  42/42 (`a<img/>b` inline, `a<img 30x40/>b` reserves 50×40 via real attachment measurement),
+  native-block 8/8, **Image-itest 99/99 (Image itself unaffected)**, baselines 4, Text 151,
+  ReadOnlyText 30, View-itest 224.
+- **First-cut / follow-up:** positioning places the img at its run box's origin (measured size,
+  right run), so precise inter-character offset within a mixed text+img run is not yet exact —
+  drive it from the text layout's per-attachment frame (the box already measures them). Also:
+  core/Android component registration (iOS + Fantom done); `src` string → `source` mapping (JS
+  currently takes the `source={{uri}}` shape).
 - **Goal.** `<img src=…>` flows inside a bare-text IFC as an inline **replaced** box, like the
   web (distinct from the block-level RN `Image` component).
 - **Why / context.** Plan §3.C. Reuses Paragraph's inline-attachment machinery

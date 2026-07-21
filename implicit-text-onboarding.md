@@ -337,11 +337,13 @@ has the full design for all of these.
      by every RN view — needs a full flexbox-regression pass. The emulation already covers the
      floor (block-stacking + single inline flow) behaviorally, so this is fidelity, not
      function. Estimated multi-session; sequence as its own workstream (plan §7).
-9. **Intrinsic `<img>` and `<div>` tags** — ◑ **`<img>` layout done (classification + sizing).** Registered
-   `<img>` as a plain non-Yoga `ShadowNode` (→ inline attachment) that joins the run even in flex
-   (never blockifies); a sized `<img width height>` reserves its box in the run (measurer contract
-   extended). Headless tests + web-mirror twins. `<div>` is done headless (a View with `displayBlock`
-   forced on — `DivShadowNode`); iOS `<img>` pixel rendering remains. Original:
+9. **Intrinsic `<img>` and `<div>` tags** — ✅ **DONE.** `<img>` is an **Image-backed** node with
+   its own `"img"` handle: it reuses the Image load/render pipeline (`RCTImgComponentView`) but
+   routes inline (never blockifies) and is positioned by the View's attachment pass
+   (`ViewShadowNode::layoutInlineImageAttachments`). **Device-verified**: a real image renders
+   inline in a bare-text flow; headless 42/42 + Image-itest 99/99 (Image unaffected). First-cut
+   positioning is at the run box origin. `<div>` is done headless too (a View with `displayBlock`
+   forced on — `DivShadowNode`). Original:
    register `<img>` as an inline replaced element
    (reuse Paragraph's inline-attachment machinery; classification routes it into the run,
    not blockified) and `<div>` as a block container (backed by the `display:block` path

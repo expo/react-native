@@ -6,13 +6,17 @@
  */
 
 #include "ViewShadowNode.h"
+#include <limits>
+#include <string_view>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/DivShadowNode.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/ConcreteState.h>
+#include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
+#include <react/renderer/core/LayoutableShadowNode.h>
 
 namespace facebook::react {
 
@@ -105,7 +109,70 @@ void ViewShadowNode::initialize() noexcept {
 
 void ViewShadowNode::layout(LayoutContext layoutContext) {
   YogaLayoutableShadowNode::layout(layoutContext);
+  layoutInlineImageAttachments(layoutContext);
   updateTextRunStateIfNeeded();
+}
+
+void ViewShadowNode::layoutInlineImageAttachments(LayoutContext layoutContext) {
+  if (!ReactNativeFeatureFlags::enableImplicitTextChildren()) {
+    return;
+  }
+  const auto& boxes = getAnonymousTextContentChildren();
+  if (boxes.empty()) {
+    return;
+  }
+
+  // Clone-and-position each inline `<img>` (a non-Yoga child) at its run box's
+  // origin with its own measured size. Precise inter-character offset within the
+  // run is a follow-up; this makes the image mount and render inline.
+  auto* current = this;
+  auto owning = std::shared_ptr<ShadowNode>{};
+
+  for (const auto& box : boxes) {
+    const auto boxFrame = box->getLayoutMetrics().frame;
+    for (const auto& runChild : box->getChildren()) {
+      if (std::string_view{runChild->getComponentName()} != "img") {
+        continue;
+      }
+      const auto* layoutable =
+          dynamic_cast<const LayoutableShadowNode*>(runChild.get());
+      if (layoutable == nullptr) {
+        continue;
+      }
+      auto imageSize = layoutable->getLayoutMetrics().frame.size;
+      if (imageSize.width == 0 && imageSize.height == 0) {
+        imageSize = layoutable->measure(
+            layoutContext,
+            LayoutConstraints{
+                .minimumSize = {0, 0},
+                .maximumSize = {
+                    std::numeric_limits<Float>::infinity(),
+                    std::numeric_limits<Float>::infinity()}});
+      }
+
+      owning = current->cloneTree(
+          runChild->getFamily(), [&](const ShadowNode& oldShadowNode) {
+            auto cloned = oldShadowNode.clone({});
+            auto& clonedLayoutable =
+                dynamic_cast<LayoutableShadowNode&>(*cloned);
+            clonedLayoutable.layoutTree(
+                layoutContext,
+                LayoutConstraints{
+                    .minimumSize = imageSize, .maximumSize = imageSize});
+            auto metrics = clonedLayoutable.getLayoutMetrics();
+            metrics.frame.origin = boxFrame.origin;
+            clonedLayoutable.setLayoutMetrics(metrics);
+            return cloned;
+          });
+      if (owning != nullptr) {
+        current = static_cast<ViewShadowNode*>(owning.get());
+      }
+    }
+  }
+
+  if (current != this) {
+    children_ = current->children_;
+  }
 }
 
 void ViewShadowNode::updateTextRunStateIfNeeded() {

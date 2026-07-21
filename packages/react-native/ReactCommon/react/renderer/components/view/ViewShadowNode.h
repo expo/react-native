@@ -38,6 +38,15 @@ class ViewShadowNode final
    * mounting layer can paint them (implicit-text-plan.md §3.B).
    */
   void updateTextRunStateIfNeeded();
+
+  /*
+   * Lays out and positions inline replaced `<img>` children within their run
+   * (implicit-text-plan.md §3.C), mirroring `ParagraphShadowNode`'s inline
+   * attachment layout: each `<img>` is not a Yoga child, so its frame is set
+   * here (from the run box it belongs to) by cloning it and stamping its
+   * `layoutMetrics`, which the differ then mounts.
+   */
+  void layoutInlineImageAttachments(LayoutContext layoutContext);
 };
 
 } // namespace facebook::react

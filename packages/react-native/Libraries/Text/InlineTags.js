@@ -48,6 +48,15 @@ registerInlineTag('span');
 // width/height). It is positioned by the owning View's attachment-layout pass.
 createReactNativeComponentClass('img', () =>
   createViewConfig({
+    // The image-load events the Image machinery fires must be declared, or the
+    // reconciler rejects e.g. "topLoadStart".
+    directEventTypes: {
+      topLoadStart: {registrationName: 'onLoadStart'},
+      topProgress: {registrationName: 'onProgress'},
+      topError: {registrationName: 'onError'},
+      topLoad: {registrationName: 'onLoad'},
+      topLoadEnd: {registrationName: 'onLoadEnd'},
+    },
     validAttributes: {
       source: true,
       resizeMode: true,
