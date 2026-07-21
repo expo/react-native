@@ -24,6 +24,16 @@ void InlineContentShadowNode::setTextLayoutManager(
   textLayoutManager_ = std::move(textLayoutManager);
 }
 
+AttributedString InlineContentShadowNode::getContentAttributedString() const {
+  auto textAttributes = TextAttributes::defaultTextAttributes();
+  auto attributedString = AttributedString{};
+  auto attachments = BaseTextShadowNode::Attachments{};
+  BaseTextShadowNode::buildAttributedString(
+      textAttributes, *this, attributedString, attachments);
+  attributedString.setBaseTextAttributes(textAttributes);
+  return attributedString;
+}
+
 Size InlineContentShadowNode::measureContent(
     const LayoutContext& layoutContext,
     const LayoutConstraints& layoutConstraints) const {

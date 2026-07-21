@@ -6,7 +6,10 @@
  */
 
 #include "ViewShadowNode.h"
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
+#include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
 
 namespace facebook::react {
@@ -68,6 +71,13 @@ void ViewShadowNode::initialize() noexcept {
       HostPlatformViewTraitsInitializer::formsView(viewProps) ||
       viewProps.outlineWidth > 0;
 
+  if (!getAnonymousTextContentChildren().empty()) {
+    // Text-bearing Views paint their runs and must not be flattened away
+    // (implicit-text-plan.md §3.B).
+    formsView = true;
+    formsStackingContext = true;
+  }
+
   if (formsView) {
     traits_.set(ShadowNodeTraits::Trait::FormsView);
   } else {
@@ -84,6 +94,42 @@ void ViewShadowNode::initialize() noexcept {
     traits_.set(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   } else {
     traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+  }
+}
+
+void ViewShadowNode::layout(LayoutContext layoutContext) {
+  YogaLayoutableShadowNode::layout(layoutContext);
+  updateTextRunStateIfNeeded();
+}
+
+void ViewShadowNode::updateTextRunStateIfNeeded() {
+  if (!ReactNativeFeatureFlags::enableImplicitTextChildren()) {
+    return;
+  }
+
+  const auto& anonymousBoxes = getAnonymousTextContentChildren();
+  if (anonymousBoxes.empty() && getStateData().textRuns.empty()) {
+    return;
+  }
+
+  ensureUnsealed();
+
+  auto textRuns = std::vector<ViewState::TextRun>{};
+  textRuns.reserve(anonymousBoxes.size());
+  for (const auto& box : anonymousBoxes) {
+    const auto* contentAccessor =
+        dynamic_cast<const InlineTextContentAccessor*>(box.get());
+    if (contentAccessor == nullptr) {
+      continue;
+    }
+    textRuns.push_back(
+        ViewState::TextRun{
+            .attributedString = contentAccessor->getContentAttributedString(),
+            .frame = box->getLayoutMetrics().frame});
+  }
+
+  if (getStateData().textRuns != textRuns) {
+    setStateData(ViewState{std::move(textRuns)});
   }
 }
 

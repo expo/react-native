@@ -104,6 +104,11 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   static void setAnonymousTextContentFactory(AnonymousTextContentFactory factory);
   static AnonymousTextContentFactory getAnonymousTextContentFactory();
 
+  const std::vector<std::shared_ptr<YogaLayoutableShadowNode>> &getAnonymousTextContentChildren() const
+  {
+    return anonymousTextContentChildren_;
+  }
+
  protected:
   /**
    * Subclasses which provide MeasurableYogaNode may override to signal that a

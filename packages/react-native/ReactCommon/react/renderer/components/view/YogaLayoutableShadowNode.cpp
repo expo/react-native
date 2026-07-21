@@ -431,6 +431,13 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
   }
   flushInlineRun();
 
+  if (!anonymousTextContentChildren_.empty()) {
+    // Text-bearing containers paint their runs and must not be flattened
+    // away by view flattening (implicit-text-plan.md §3.B).
+    traits_.set(ShadowNodeTraits::Trait::FormsView);
+    traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
+  }
+
   react_native_assert(
       yogaLayoutableChildren_.size() == YGNodeGetChildCount(&yogaNode_));
 

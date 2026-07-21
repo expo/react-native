@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <react/renderer/core/ConcreteShadowNode.h>
@@ -25,7 +26,8 @@ extern const char InlineContentComponentName[];
  * See implicit-text-plan.md §3.A.
  */
 class InlineContentShadowNode final
-    : public ConcreteShadowNode<InlineContentComponentName, YogaLayoutableShadowNode, ViewProps> {
+    : public ConcreteShadowNode<InlineContentComponentName, YogaLayoutableShadowNode, ViewProps>,
+      public InlineTextContentAccessor {
  public:
   using ConcreteShadowNode::ConcreteShadowNode;
 
@@ -43,6 +45,10 @@ class InlineContentShadowNode final
 #pragma mark - LayoutableShadowNode
 
   Size measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const override;
+
+#pragma mark - InlineTextContentAccessor
+
+  AttributedString getContentAttributedString() const override;
 
  private:
   std::shared_ptr<const TextLayoutManager> textLayoutManager_;
