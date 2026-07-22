@@ -93,6 +93,24 @@ T5–T7 and first-class text nodes (Track C, the plan's own-review item) deferre
 T1–T9 are done. T8 replaced RawText with first-class `#text` nodes (RawText deleted, headless-
 verified). Only T10 (Android mounting story) remains.
 
+**iOS-correctness pass 2026-07-21** (per direction "once iOS is 100% correct it will be a
+better starting point for Android"): brought the whole feature to correct on-device rendering on
+the `#text` model. (a) `pod install` regenerated the header map so the T8 RawText deletion +
+`#text`/`createTextNode` path compiles/links/runs on iOS. (b) **`<div>` was rendering an empty
+box** — `DivShadowNode` extended `ConcreteViewShadowNode` directly and so never inherited
+`ViewShadowNode`'s implicit-text layout/paint machinery; fixed by templatizing the view shadow
+node into `AbstractViewShadowNode<name, props>` (same non-type-param pattern the base
+`ConcreteViewShadowNode` uses) so `<View>` and `<div>` share one copy (View behavior byte-
+identical — same base types). (c) Registered `RCTDivComponentView` (seeds `_props` with a
+default `DivProps`, self-registers via `+load`). (d) **Inline `<img>`** now positions at its
+exact inline offset (text-layout attachment frame, exposed to the View through the
+`InlineTextContentAccessor` seam so the view module keeps no text-module dependency) and the
+painted run reserves the image's width (measure attachments on the paint path instead of reading
+the never-laid-out box child's zero metrics). **Verified:** RNTester on iPhone 17 Pro (iOS 26.5),
+all 11 demo cases render correctly; 54/54 Fantom itests (ImplicitText, ImplicitTextNativeBlock,
+ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChildren` flag default
+`true→false` before the checkpoint commit (flipped on for the demo), then T10 (Android).
+
 | # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
 |---|---|---|---|---|---|---|
 | T1 | White-space processing | A | ✅ | S–M | — | ✅ done |
@@ -101,9 +119,9 @@ verified). Only T10 (Android mounting story) remains.
 | T4 | Native Yoga `display:block` | B | ✅ (Fantom parity) | XL | own flag | ✅ done (Stage 1) |
 | T5 | iOS paint order + per-run views | D | ❌ (simulator) | M | — | ✅ done |
 | T6 | iOS touch hit-testing on drawn text | D | ❌ (simulator) | M | **T5** | ✅ done |
-| T7 | Intrinsic `<img>` tag | D | headless + device | M | — | ✅ done |
-| T8 | First-class text nodes (replace RawText) | C | headless (dev bundle) | XL | — | ✅ done |
-| T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | ✅ done (headless) |
+| T7 | Intrinsic `<img>` tag | D | headless + device | M | — | ✅ done (device: inline offset + width reserved) |
+| T8 | First-class text nodes (replace RawText) | C | headless (dev bundle) | XL | — | ✅ done (device-verified on iOS) |
+| T9 | Intrinsic `<div>` tag | B | ✅ | S | **T4** | ✅ done (device-verified; shared via `AbstractViewShadowNode`) |
 | T10 | Android mounting story | E | ❌ (Android) | XL | — | open |
 
 ---
