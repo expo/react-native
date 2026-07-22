@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<34643a9ad9cbbe01c9b23dd4a5f79f13>>
+ * @generated SignedSource<<4352be03247769c8ceb4615ba426a88d>>
  * @flow strict
  * @noformat
  */
@@ -321,7 +321,7 @@ export const enableIOSViewClipToPaddingBox: Getter<boolean> = createNativeFlagGe
 /**
  * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
  */
-export const enableImplicitTextChildren: Getter<boolean> = createNativeFlagGetter('enableImplicitTextChildren', false);
+export const enableImplicitTextChildren: Getter<boolean> = createNativeFlagGetter('enableImplicitTextChildren', true);
 /**
  * Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableImplicitTextChildren; the emulation remains the flag-off fallback.
  */
