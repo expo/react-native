@@ -34,9 +34,10 @@
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
 
-#ifdef RCT_DYNAMIC_FRAMEWORKS
+// The intrinsic `<div>` component view (RCTDivComponentView) self-registers with
+// the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
-#endif
+#import <react/renderer/components/view/DivShadowNode.h>
 
 using namespace facebook::react;
 
@@ -2033,6 +2034,41 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 }
 
 #endif
+
+@end
+
+/*
+ * Component view for the intrinsic `<div>` tag (implicit-text-plan.md §3.C): a
+ * block-level container that renders exactly like a `View` (its shadow node is a
+ * View with `displayBlock`), so it reuses `RCTViewComponentView` wholesale and
+ * only differs by component handle. Self-registered via `+load` since `<div>` is
+ * not part of the generated component provider.
+ */
+@interface RCTDivComponentView : RCTViewComponentView
+@end
+
+@implementation RCTDivComponentView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    // `RCTViewComponentView` requires each subclass to seed `_props` with a
+    // default of its own props type (here `DivProps`), so the first
+    // `updateProps:oldProps:` has a matching baseline to diff against.
+    _props = DivShadowNode::defaultSharedProps();
+  }
+  return self;
+}
+
++ (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
+{
+  return facebook::react::concreteComponentDescriptorProvider<facebook::react::DivComponentDescriptor>();
+}
+
++ (void)load
+{
+  [[RCTComponentViewFactory currentComponentViewFactory] registerComponentViewClass:self];
+}
 
 @end
 

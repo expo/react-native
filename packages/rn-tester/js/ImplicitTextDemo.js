@@ -173,6 +173,14 @@ export default function ImplicitTextDemo(): React.Node {
           {' a bare-text caption next to an inline image'}
         </View>
       </Case>
+
+      <Case label="11. intrinsic <div> block container (block-outer/block-inner)">
+        {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+        <div style={{borderWidth: 1, borderColor: '#8a8', padding: 4}}>
+          a<NativeVirtualText style={{fontWeight: 'bold'}}>bold</NativeVirtualText>c
+          — inline children join one flow inside a div, like a web block.
+        </div>
+      </Case>
     </ScrollView>
   );
 }

@@ -7,6 +7,8 @@
 
 #include "InlineContentShadowNode.h"
 
+#include <algorithm>
+#include <limits>
 #include <string>
 
 #include <react/renderer/attributedstring/AttributedStringBox.h>
@@ -120,23 +122,6 @@ void measureImageAttachments(
   }
 }
 
-// Stamps the attachment fragment sizes from the attachment nodes' already-laid-out
-// metrics (used on the paint/state path, which has no layout context).
-void sizeImageAttachmentsFromLayout(
-    AttributedString& attributedString,
-    const BaseTextShadowNode::Attachments& attachments) {
-  auto& fragments = attributedString.getFragments();
-  for (const auto& attachment : attachments) {
-    const auto* layoutable =
-        dynamic_cast<const LayoutableShadowNode*>(attachment.shadowNode);
-    if (layoutable == nullptr || attachment.fragmentIndex >= fragments.size()) {
-      continue;
-    }
-    fragments[attachment.fragmentIndex].parentShadowView.layoutMetrics.frame.size =
-        layoutable->getLayoutMetrics().frame.size;
-  }
-}
-
 } // namespace
 
 void InlineContentShadowNode::setTextLayoutManager(
@@ -151,10 +136,88 @@ AttributedString InlineContentShadowNode::getContentAttributedString() const {
   auto attachments = BaseTextShadowNode::Attachments{};
   BaseTextShadowNode::buildAttributedString(
       textAttributes, *this, attributedString, attachments);
-  sizeImageAttachmentsFromLayout(attributedString, attachments);
+  // Reserve each inline `<img>` box so the painted run offsets the surrounding
+  // glyphs past the image, matching the measured layout. The image nodes are
+  // never Yoga-laid-out in place (their owning View lays out clones), so their
+  // own layout metrics are zero here — we re-measure instead, exactly as
+  // `measureContent` does, using the box's own pixel scale.
+  auto layoutContext = LayoutContext{};
+  layoutContext.pointScaleFactor = getLayoutMetrics().pointScaleFactor;
+  measureImageAttachments(
+      attributedString,
+      attachments,
+      layoutContext,
+      LayoutConstraints{
+          .minimumSize = {0, 0},
+          .maximumSize = {
+              std::numeric_limits<Float>::infinity(),
+              std::numeric_limits<Float>::infinity()}});
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
   return attributedString;
+}
+
+std::vector<InlineAttachmentPlacement>
+InlineContentShadowNode::getInlineAttachmentPlacements(
+    const LayoutContext& layoutContext) const {
+  std::vector<InlineAttachmentPlacement> placements;
+  if (textLayoutManager_ == nullptr) {
+    return placements;
+  }
+
+  auto textAttributes = getInheritedTextAttributes();
+  textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
+
+  auto attributedString = AttributedString{};
+  auto attachments = BaseTextShadowNode::Attachments{};
+  BaseTextShadowNode::buildAttributedString(
+      textAttributes, *this, attributedString, attachments);
+  if (attachments.empty()) {
+    return placements;
+  }
+
+  // Reserve each image's box so the run lays out with the attachments included,
+  // exactly as `measureContent` does. The images are not laid out yet at this
+  // point (the owning View positions them right after), so we measure them here
+  // rather than reading their (still-zero) layout metrics.
+  measureImageAttachments(
+      attributedString,
+      attachments,
+      layoutContext,
+      LayoutConstraints{
+          .minimumSize = {0, 0},
+          .maximumSize = {
+              std::numeric_limits<Float>::infinity(),
+              std::numeric_limits<Float>::infinity()}});
+  collapseWhitespace(attributedString);
+  attributedString.setBaseTextAttributes(textAttributes);
+  if (attributedString.isEmpty()) {
+    return placements;
+  }
+
+  // Lay the run out at the box's final size so the attachment frames reflect
+  // wrapping and alignment as actually mounted.
+  auto boxSize = getLayoutMetrics().frame.size;
+  TextLayoutContext textLayoutContext{
+      .pointScaleFactor = layoutContext.pointScaleFactor,
+      .surfaceId = getSurfaceId(),
+  };
+  auto measurement = textLayoutManager_->measure(
+      AttributedStringBox{attributedString},
+      ParagraphAttributes{},
+      textLayoutContext,
+      LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
+
+  // `measurement.attachments` is parallel to the attachment fragments in the
+  // measured string, which preserves the order of `attachments`.
+  auto count = std::min(attachments.size(), measurement.attachments.size());
+  placements.reserve(count);
+  for (size_t i = 0; i < count; ++i) {
+    placements.push_back(
+        {&attachments[i].shadowNode->getFamily(),
+         measurement.attachments[i].frame});
+  }
+  return placements;
 }
 
 Size InlineContentShadowNode::measureContent(

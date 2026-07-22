@@ -27,23 +27,10 @@ const char ViewComponentName[] = "View";
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char DivComponentName[] = "div";
 
-ViewShadowNode::ViewShadowNode(
-    const ShadowNodeFragment& fragment,
-    const ShadowNodeFamily::Shared& family,
-    ShadowNodeTraits traits)
-    : ConcreteViewShadowNode(fragment, family, traits) {
-  initialize();
-}
-
-ViewShadowNode::ViewShadowNode(
-    const ShadowNode& sourceShadowNode,
-    const ShadowNodeFragment& fragment)
-    : ConcreteViewShadowNode(sourceShadowNode, fragment) {
-  initialize();
-}
-
-void ViewShadowNode::initialize() noexcept {
-  auto& viewProps = static_cast<const ViewProps&>(*props_);
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    initialize() noexcept {
+  auto& viewProps = static_cast<const ViewProps&>(*this->props_);
 
   auto hasBorder = [&]() {
     for (auto edge : yoga::ordinals<yoga::Edge>()) {
@@ -81,7 +68,7 @@ void ViewShadowNode::initialize() noexcept {
       HostPlatformViewTraitsInitializer::formsView(viewProps) ||
       viewProps.outlineWidth > 0;
 
-  if (!getAnonymousTextContentChildren().empty()) {
+  if (!this->getAnonymousTextContentChildren().empty()) {
     // Text-bearing Views paint their runs and must not be flattened away
     // (implicit-text-plan.md §3.B).
     formsView = true;
@@ -89,47 +76,59 @@ void ViewShadowNode::initialize() noexcept {
   }
 
   if (formsView) {
-    traits_.set(ShadowNodeTraits::Trait::FormsView);
+    this->traits_.set(ShadowNodeTraits::Trait::FormsView);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::FormsView);
+    this->traits_.unset(ShadowNodeTraits::Trait::FormsView);
   }
 
   if (formsStackingContext) {
-    traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
+    this->traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::FormsStackingContext);
+    this->traits_.unset(ShadowNodeTraits::Trait::FormsStackingContext);
   }
 
   if (!viewProps.collapsableChildren) {
-    traits_.set(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+    this->traits_.set(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+    this->traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   }
 }
 
-void ViewShadowNode::layout(LayoutContext layoutContext) {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::layout(
+    LayoutContext layoutContext) {
   YogaLayoutableShadowNode::layout(layoutContext);
   layoutInlineImageAttachments(layoutContext);
   updateTextRunStateIfNeeded();
 }
 
-void ViewShadowNode::layoutInlineImageAttachments(LayoutContext layoutContext) {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    layoutInlineImageAttachments(LayoutContext layoutContext) {
   if (!ReactNativeFeatureFlags::enableImplicitTextChildren()) {
     return;
   }
-  const auto& boxes = getAnonymousTextContentChildren();
+  const auto& boxes = this->getAnonymousTextContentChildren();
   if (boxes.empty()) {
     return;
   }
 
-  // Clone-and-position each inline `<img>` (a non-Yoga child) at its run box's
-  // origin with its own measured size. Precise inter-character offset within the
-  // run is a follow-up; this makes the image mount and render inline.
+  // Clone-and-position each inline `<img>` (a non-Yoga child) at its exact
+  // inline offset within the run. The run box resolves each attachment's frame
+  // via the text layout; the image is placed at the box origin plus that frame,
+  // so it sits between the surrounding glyphs and follows wrapping — like a
+  // replaced element in a web line box (implicit-text-plan.md §3.C).
   auto* current = this;
   auto owning = std::shared_ptr<ShadowNode>{};
 
   for (const auto& box : boxes) {
     const auto boxFrame = box->getLayoutMetrics().frame;
+    const auto* accessor =
+        dynamic_cast<const InlineTextContentAccessor*>(box.get());
+    const auto placements = accessor != nullptr
+        ? accessor->getInlineAttachmentPlacements(layoutContext)
+        : std::vector<InlineAttachmentPlacement>{};
+
     for (const auto& runChild : box->getChildren()) {
       if (std::string_view{runChild->getComponentName()} != "img") {
         continue;
@@ -139,7 +138,24 @@ void ViewShadowNode::layoutInlineImageAttachments(LayoutContext layoutContext) {
       if (layoutable == nullptr) {
         continue;
       }
-      auto imageSize = layoutable->getLayoutMetrics().frame.size;
+
+      // The text layout's frame for this image is authoritative for both offset
+      // and size; fall back to the box origin and a fresh measure only if the
+      // platform layout manager reported no attachment frame (e.g. the
+      // deterministic test manager).
+      const Rect* attachmentFrame = nullptr;
+      for (const auto& placement : placements) {
+        if (placement.family == &runChild->getFamily()) {
+          attachmentFrame = &placement.frame;
+          break;
+        }
+      }
+
+      auto imageSize = attachmentFrame != nullptr &&
+              (attachmentFrame->size.width != 0 ||
+               attachmentFrame->size.height != 0)
+          ? attachmentFrame->size
+          : layoutable->getLayoutMetrics().frame.size;
       if (imageSize.width == 0 && imageSize.height == 0) {
         imageSize = layoutable->measure(
             layoutContext,
@@ -148,6 +164,12 @@ void ViewShadowNode::layoutInlineImageAttachments(LayoutContext layoutContext) {
                 .maximumSize = {
                     std::numeric_limits<Float>::infinity(),
                     std::numeric_limits<Float>::infinity()}});
+      }
+
+      auto imageOrigin = boxFrame.origin;
+      if (attachmentFrame != nullptr) {
+        imageOrigin.x += attachmentFrame->origin.x;
+        imageOrigin.y += attachmentFrame->origin.y;
       }
 
       owning = current->cloneTree(
@@ -160,27 +182,29 @@ void ViewShadowNode::layoutInlineImageAttachments(LayoutContext layoutContext) {
                 LayoutConstraints{
                     .minimumSize = imageSize, .maximumSize = imageSize});
             auto metrics = clonedLayoutable.getLayoutMetrics();
-            metrics.frame.origin = boxFrame.origin;
+            metrics.frame.origin = imageOrigin;
             clonedLayoutable.setLayoutMetrics(metrics);
             return cloned;
           });
       if (owning != nullptr) {
-        current = static_cast<ViewShadowNode*>(owning.get());
+        current = static_cast<AbstractViewShadowNode*>(owning.get());
       }
     }
   }
 
   if (current != this) {
-    children_ = current->children_;
+    this->children_ = current->children_;
   }
 }
 
-void ViewShadowNode::updateTextRunStateIfNeeded() {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    updateTextRunStateIfNeeded() {
   if (!ReactNativeFeatureFlags::enableImplicitTextChildren()) {
     return;
   }
 
-  const auto& anonymousBoxes = getAnonymousTextContentChildren();
+  const auto& anonymousBoxes = this->getAnonymousTextContentChildren();
 
   // Zero-cost hot path (implicit-text-plan.md §4.2 / next-steps T3): a View that
   // has never carried anonymous text runs keeps a null `ViewState`, exactly like
@@ -188,15 +212,15 @@ void ViewShadowNode::updateTextRunStateIfNeeded() {
   // (the null -> non-null transition below); once allocated it persists —
   // possibly emptied when text is removed — for the node's life.
   if (anonymousBoxes.empty() &&
-      (state_ == nullptr || getStateData().textRuns.empty())) {
+      (this->state_ == nullptr || this->getStateData().textRuns.empty())) {
     return;
   }
 
-  ensureUnsealed();
+  this->ensureUnsealed();
 
   auto textRuns = std::vector<ViewState::TextRun>{};
   auto layoutManager = std::weak_ptr<const TextLayoutManager>{};
-  const auto& childIndices = getAnonymousTextContentChildIndices();
+  const auto& childIndices = this->getAnonymousTextContentChildIndices();
   textRuns.reserve(anonymousBoxes.size());
   for (size_t i = 0; i < anonymousBoxes.size(); i++) {
     const auto& box = anonymousBoxes[i];
@@ -217,22 +241,28 @@ void ViewShadowNode::updateTextRunStateIfNeeded() {
                 : static_cast<int>(i)});
   }
 
-  if (state_ == nullptr) {
+  if (this->state_ == nullptr) {
     // First runs on a previously-stateless View: allocate the state on demand,
     // seeded from the family like `createInitialState` would (there is no prior
     // state to chain from).
-    state_ = std::make_shared<const ConcreteState>(
+    this->state_ = std::make_shared<const ConcreteState<ViewState>>(
         std::make_shared<const ViewState>(
             ViewState{
                 .textRuns = std::move(textRuns),
                 .layoutManager = std::move(layoutManager)}),
-        getFamilyShared());
-  } else if (getStateData().textRuns != textRuns) {
-    setStateData(
+        this->getFamilyShared());
+  } else if (this->getStateData().textRuns != textRuns) {
+    this->setStateData(
         ViewState{
             .textRuns = std::move(textRuns),
             .layoutManager = std::move(layoutManager)});
   }
 }
+
+// Explicitly instantiate the two concrete specializations so their member
+// definitions above are emitted here (and linkable from other translation
+// units): `<View>` and the intrinsic `<div>`.
+template class AbstractViewShadowNode<ViewComponentName, ViewProps>;
+template class AbstractViewShadowNode<DivComponentName, DivProps>;
 
 } // namespace facebook::react

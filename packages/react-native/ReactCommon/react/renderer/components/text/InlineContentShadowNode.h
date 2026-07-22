@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/YogaLayoutableShadowNode.h>
@@ -54,6 +56,12 @@ class InlineContentShadowNode final
   {
     return textLayoutManager_;
   }
+
+  // Re-runs the run's text layout at the box's final laid-out size and returns
+  // the resolved frame of each inline replaced element (`<img>`). Empty when the
+  // run has no attachments or the platform layout manager reports none.
+  std::vector<InlineAttachmentPlacement> getInlineAttachmentPlacements(
+      const LayoutContext &layoutContext) const override;
 
  private:
   std::shared_ptr<const TextLayoutManager> textLayoutManager_;
