@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<628ede95c745280c1ceaa73c6dc45de0>>
+ * @generated SignedSource<<0a0af359b74f7e12c64d47eae9bd70d9>>
  */
 
 /**
@@ -63,6 +63,7 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
   private var enablePropsUpdateReconciliationAndroidCache: Boolean? = null
   private var enableRuntimeSchedulerQueueClearingOnErrorCache: Boolean? = null
   private var enableSchedulerDelegateInvalidationCache: Boolean? = null
+  private var enableStringChildrenCache: Boolean? = null
   private var enableSwiftUIBasedFiltersCache: Boolean? = null
   private var enableViewCullingCache: Boolean? = null
   private var enableViewRecyclingCache: Boolean? = null
@@ -71,6 +72,7 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
   private var enableViewRecyclingForTextCache: Boolean? = null
   private var enableViewRecyclingForViewCache: Boolean? = null
   private var enableVirtualViewContainerStateExperimentalCache: Boolean? = null
+  private var enableYogaDisplayBlockCache: Boolean? = null
   private var fixDifferentiatorParentTagForUnflattenCaseCache: Boolean? = null
   private var fixMappingOfEventPrioritiesBetweenFabricAndReactCache: Boolean? = null
   private var fixYogaFlexBasisFitContentInMainAxisCache: Boolean? = null
@@ -493,6 +495,15 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
     return cached
   }
 
+  override fun enableStringChildren(): Boolean {
+    var cached = enableStringChildrenCache
+    if (cached == null) {
+      cached = ReactNativeFeatureFlagsCxxInterop.enableStringChildren()
+      enableStringChildrenCache = cached
+    }
+    return cached
+  }
+
   override fun enableSwiftUIBasedFilters(): Boolean {
     var cached = enableSwiftUIBasedFiltersCache
     if (cached == null) {
@@ -561,6 +572,15 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
     if (cached == null) {
       cached = ReactNativeFeatureFlagsCxxInterop.enableVirtualViewContainerStateExperimental()
       enableVirtualViewContainerStateExperimentalCache = cached
+    }
+    return cached
+  }
+
+  override fun enableYogaDisplayBlock(): Boolean {
+    var cached = enableYogaDisplayBlockCache
+    if (cached == null) {
+      cached = ReactNativeFeatureFlagsCxxInterop.enableYogaDisplayBlock()
+      enableYogaDisplayBlockCache = cached
     }
     return cached
   }

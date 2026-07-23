@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<f06add35653810c872a7ac0bee2b198a>>
+ * @generated SignedSource<<dcec462ee2599237c86b23de22f16fa4>>
  */
 
 /**
@@ -199,6 +199,10 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
     return false;
   }
 
+  bool enableStringChildren() override {
+    return false;
+  }
+
   bool enableSwiftUIBasedFilters() override {
     return false;
   }
@@ -228,6 +232,10 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enableVirtualViewContainerStateExperimental() override {
+    return false;
+  }
+
+  bool enableYogaDisplayBlock() override {
     return false;
   }
 
