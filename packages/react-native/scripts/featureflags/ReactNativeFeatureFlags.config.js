@@ -508,7 +508,7 @@ const definitions: FeatureFlagDefinitions = {
       ossReleaseStage: 'experimental',
     },
     enableStringChildren: {
-      defaultValue: false,
+      defaultValue: true,
       metadata: {
         dateAdded: '2026-07-21',
         description:

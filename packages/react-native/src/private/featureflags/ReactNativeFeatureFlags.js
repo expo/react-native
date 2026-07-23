@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<8eeefd1b5b58fdbdf4345cf0f5012f40>>
+ * @generated SignedSource<<2ef902dce8884b94dde76480c92733a4>>
  * @flow strict
  * @noformat
  */
@@ -381,7 +381,7 @@ export const enableSchedulerDelegateInvalidation: Getter<boolean> = createNative
 /**
  * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
  */
-export const enableStringChildren: Getter<boolean> = createNativeFlagGetter('enableStringChildren', false);
+export const enableStringChildren: Getter<boolean> = createNativeFlagGetter('enableStringChildren', true);
 /**
  * When enabled, it will use SwiftUI for filter effects like blur on iOS.
  */
