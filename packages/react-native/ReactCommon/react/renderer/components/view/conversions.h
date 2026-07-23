@@ -136,6 +136,11 @@ inline DisplayType displayTypeFromYGDisplay(YGDisplay display)
       return DisplayType::Flex;
     case YGDisplayGrid:
       return DisplayType::Grid;
+    case YGDisplayBlock:
+      // RN has no distinct block display metric; a native block container
+      // reports Flex, exactly as the flex emulation does — so the RN-observable
+      // displayType is identical on both paths (implicit-text-plan.md §3.A).
+      return DisplayType::Flex;
   }
 }
 
@@ -427,6 +432,13 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   }
   if (stringValue == "contents") {
     result = yoga::Display::Contents;
+    return;
+  }
+  if (stringValue == "block") {
+    // display:'block' is emulated on Yoga flex primitives
+    // (implicit-text-plan.md §3.A); Yoga sees Flex, blockness is recorded in
+    // YogaStylableProps::displayBlock.
+    result = yoga::Display::Flex;
     return;
   }
   LOG(ERROR) << "Could not parse yoga::Display: " << stringValue;

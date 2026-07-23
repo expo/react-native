@@ -26,6 +26,13 @@ YogaStylableProps::YogaStylableProps(
     : Props(context, sourceProps, rawProps, filterObjectKeys),
       yogaStyle(convertRawProp(context, rawProps, sourceProps.yogaStyle)) {
   convertRawPropAliases(context, sourceProps, rawProps);
+
+  displayBlock = sourceProps.displayBlock;
+  if (const auto* rawDisplay = rawProps.at("display", nullptr, nullptr)) {
+    displayBlock = rawDisplay->hasValue() &&
+        rawDisplay->hasType<std::string>() &&
+        (std::string)*rawDisplay == "block";
+  }
 };
 
 template <typename T>
@@ -122,6 +129,11 @@ void YogaStylableProps::setProp(
   static const auto defaults = YogaStylableProps{};
 
   Props::setProp(context, hash, propName, value);
+
+  if (hash == CONSTEXPR_RAW_PROPS_KEY_HASH("display")) {
+    displayBlock = value.hasValue() && value.hasType<std::string>() &&
+        (std::string)value == "block";
+  }
 
   switch (hash) {
     REBUILD_FIELD_SWITCH_CASE_YSP(direction, setDirection);
