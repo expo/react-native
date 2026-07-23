@@ -13,8 +13,10 @@
 #include <react/renderer/components/modal/ModalHostViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
+#include <react/renderer/components/text/InlineTextTagShadowNodes.h>
 #include <react/renderer/components/text/TextNodeComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
+#include <react/renderer/components/view/DivShadowNode.h>
 #include <react/renderer/components/view/ViewComponentDescriptor.h>
 
 namespace facebook::react {
@@ -30,7 +32,13 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<ScrollViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<TextNodeComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<TextComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<BTagComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<ITagComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<SpanTagComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<UnknownElementComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<ImgTagComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ViewComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<DivComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
       return providerRegistry;
     }();

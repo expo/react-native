@@ -9,6 +9,7 @@
 #include <limits>
 #include <string_view>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/view/DivShadowNode.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
@@ -21,6 +22,10 @@ namespace facebook::react {
 
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char ViewComponentName[] = "View";
+
+// The intrinsic `<div>` tag (implicit-text-plan.md §3.C); see DivShadowNode.h.
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+const char DivComponentName[] = "div";
 
 template <const char* concreteComponentName, typename ViewPropsT>
 void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
@@ -256,7 +261,8 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
 
 // Explicitly instantiate the two concrete specializations so their member
 // definitions above are emitted here (and linkable from other translation
-// units).
+// units): `<View>` and the intrinsic `<div>`.
 template class AbstractViewShadowNode<ViewComponentName, ViewProps>;
+template class AbstractViewShadowNode<DivComponentName, DivProps>;
 
 } // namespace facebook::react
