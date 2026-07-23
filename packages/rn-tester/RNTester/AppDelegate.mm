@@ -12,6 +12,7 @@
 #endif
 
 #import <React/RCTBundleURLProvider.h>
+#import <React/RCTConstants.h>
 #import <React/RCTDefines.h>
 #import <React/RCTLinkingManager.h>
 #import <ReactCommon/RCTSampleTurboModule.h>
@@ -51,6 +52,11 @@ static NSString *kBundlePath = @"js/RNTesterApp.ios";
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+  // Enable W3C Pointer Events so DOM-style pointer/click events (and the DOM
+  // event/target APIs) dispatch — required for implicit text's inline elements
+  // to handle click events like the web (implicit-text demo).
+  RCTSetDispatchW3CPointerEvents(YES);
+
   self.reactNativeFactory = [[RCTReactNativeFactory alloc] initWithDelegate:self];
 #if USE_OSS_CODEGEN
   self.dependencyProvider = [RCTAppDependencyProvider new];
