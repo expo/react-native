@@ -523,7 +523,7 @@ export default function ImplicitTextDemo(): React.Node {
 
           <SubSection title="content + dynamics" />
 
-          <Case label="multi-line + emoji">
+          <Case label="newline collapses to one space (white-space:normal), not a line break; emoji renders">
             <View>{'line one\nline two 🎉'}</View>
           </Case>
 

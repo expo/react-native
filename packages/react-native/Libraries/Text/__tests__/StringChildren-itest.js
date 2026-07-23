@@ -272,10 +272,13 @@ describe('string children: composition & interleaving', () => {
 });
 
 describe('string children: content specifics', () => {
-  it('multi-line string renders', () => {
-    expect(
-      renderToText(<View collapsable={false}>{'line1\nline2'}</View>),
-    ).toContain('line1');
+  it('a literal \\n collapses to a single space (white-space:normal), not a line break', () => {
+    // CSS-faithful: like a web <div>, a newline in bare text is ASCII whitespace
+    // and collapses to one space under white-space:normal — it does NOT create a
+    // second line the way RN <Text> would. So height matches a spaced single line.
+    const oneSpacedLine = heightOf(<View>{'line1 line2'}</View>);
+    const withNewline = heightOf(<View>{'line1\nline2'}</View>);
+    expect(withNewline).toBe(oneSpacedLine);
   });
 
   it('unicode / emoji string renders', () => {
