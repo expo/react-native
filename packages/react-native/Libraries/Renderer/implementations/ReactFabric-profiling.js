@@ -12108,6 +12108,7 @@ function shim() {
 }
 var _nativeFabricUIManage = nativeFabricUIManager,
   createNode = _nativeFabricUIManage.createNode,
+  createTextNode = _nativeFabricUIManage.createTextNode,
   cloneNodeWithNewChildren = _nativeFabricUIManage.cloneNodeWithNewChildren,
   cloneNodeWithNewChildrenAndProps =
     _nativeFabricUIManage.cloneNodeWithNewChildrenAndProps,
@@ -12150,11 +12151,10 @@ function createTextInstance(
   hostContext = nextReactTag;
   nextReactTag += 2;
   return {
-    node: createNode(
+    node: createTextNode(
       hostContext,
-      "RCTRawText",
+      text,
       rootContainerInstance.containerTag,
-      { text: text },
       internalInstanceHandle
     )
   };

@@ -10052,6 +10052,14 @@ __DEV__ &&
               newProps,
               _type2.validAttributes
             );
+            // implicit-text: unknown elements keep their authored tag name so
+            // DOM APIs report it (HTMLUnknownElement). The raw tag is lost here
+            // (all unknown tags share the "unknown" view config), so inject it
+            // as the nodeName prop. See implicit-text-plan.md §3.C / T2.
+            if ("unknown" === _type2.uiViewClassName)
+              keepChildren = Object.assign({}, keepChildren, {
+                nodeName: workInProgress.type
+              });
             current = {
               node: createNode(
                 renderLanes,
@@ -15892,18 +15900,16 @@ __DEV__ &&
       hostContext,
       internalInstanceHandle
     ) {
-      hostContext.isInAParentText ||
-        console.error(
-          "Text strings must be rendered within a <Text> component."
-        );
+      // implicit-text: bare strings are supported (implicit-text-plan.md §3.E).
+      // First-class text node via the createTextNode host-config path (§3.F):
+      // character data is passed directly (no RawText fake-component packaging).
       hostContext = nextReactTag;
       nextReactTag += 2;
       return {
-        node: createNode(
+        node: createTextNode(
           hostContext,
-          "RCTRawText",
+          text,
           rootContainerInstance.containerTag,
-          { text: text },
           internalInstanceHandle
         )
       };
@@ -18693,6 +18699,7 @@ __DEV__ &&
       suspendResource = shim,
       _nativeFabricUIManage = nativeFabricUIManager,
       createNode = _nativeFabricUIManage.createNode,
+      createTextNode = _nativeFabricUIManage.createTextNode,
       cloneNodeWithNewChildren = _nativeFabricUIManage.cloneNodeWithNewChildren,
       cloneNodeWithNewChildrenAndProps =
         _nativeFabricUIManage.cloneNodeWithNewChildrenAndProps,

@@ -95,11 +95,35 @@ export function register(name: string, callback: () => ViewConfig): string {
  * If this is the first time the view has been used,
  * This configuration will be lazy-loaded from UIManager.
  */
+let unknownElementViewConfig: ?ViewConfig = null;
+
+function getUnknownElementViewConfig(): ViewConfig {
+  if (unknownElementViewConfig == null) {
+    // DOM semantics: unknown elements are HTMLUnknownElement — inline,
+    // unstyled, content renders (implicit-text-plan.md §3.C). Resolved to the
+    // native "unknown" inline element component.
+    unknownElementViewConfig = {
+      uiViewClassName: 'unknown',
+      bubblingEventTypes: {},
+      directEventTypes: {},
+      // `nodeName` carries the authored tag name so DOM APIs report it
+      // (HTMLUnknownElement keeps its tag). It is injected in createInstance,
+      // not authored, since the raw tag is otherwise lost here (all unknown
+      // tags share this one config). See implicit-text-plan.md §3.C / T2.
+      validAttributes: {nodeName: true},
+    };
+  }
+  return unknownElementViewConfig;
+}
+
 export function get(name: string): ViewConfig {
   let viewConfig = viewConfigs.get(name);
   if (viewConfig == null) {
     const callback = viewConfigCallbacks.get(name);
     if (typeof callback !== 'function') {
+      if (typeof name[0] === 'string' && /^[a-z]/.test(name)) {
+        return getUnknownElementViewConfig();
+      }
       invariant(
         false,
         'View config getter callback for component `%s` must be a function (received `%s`).%s',
