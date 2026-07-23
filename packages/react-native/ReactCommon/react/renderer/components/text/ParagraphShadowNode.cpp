@@ -76,6 +76,12 @@ const Content& ParagraphShadowNode::getContent(
   ensureUnsealed();
 
   auto textAttributes = TextAttributes::defaultTextAttributes();
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      getConcreteProps().inheritViewTextStyles) {
+    // Opt-in web-like inheritance from ancestor Views
+    // (implicit-text-plan.md §3.D).
+    textAttributes = getInheritedTextAttributes();
+  }
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
   textAttributes.apply(getConcreteProps().textAttributes);
   textAttributes.layoutDirection =
