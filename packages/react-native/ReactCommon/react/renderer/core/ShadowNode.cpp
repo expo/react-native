@@ -96,8 +96,12 @@ ShadowNode::ShadowNode(
 
   traits_.set(ShadowNodeTraits::Trait::ChildrenAreShared);
 
-  for (const auto& child : *children_) {
-    child->family_->setParent(family_);
+  if (!traits_.check(ShadowNodeTraits::Trait::AnonymousBox)) {
+    // Anonymous boxes lay out DOM children they do not own; the children's
+    // family parent stays their (real) shadow tree parent.
+    for (const auto& child : *children_) {
+      child->family_->setParent(family_);
+    }
   }
 
   propagateUncullableTraitsFromChildren();
@@ -126,8 +130,10 @@ ShadowNode::ShadowNode(
   traits_.set(ShadowNodeTraits::Trait::ChildrenAreShared);
 
   if (fragment.children) {
-    for (const auto& child : *children_) {
-      child->family_->setParent(family_);
+    if (!traits_.check(ShadowNodeTraits::Trait::AnonymousBox)) {
+      for (const auto& child : *children_) {
+        child->family_->setParent(family_);
+      }
     }
     propagateUncullableTraitsFromChildren();
   }

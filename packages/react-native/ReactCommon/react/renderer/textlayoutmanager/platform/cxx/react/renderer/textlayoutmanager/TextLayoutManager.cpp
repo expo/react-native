@@ -7,7 +7,106 @@
 
 #include "TextLayoutManager.h"
 
+#include <algorithm>
+#include <cmath>
+
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/attributedstring/TextAttributes.h>
+
 namespace facebook::react {
+
+namespace {
+
+// Deterministic monospace metrics for headless (e.g. Fantom) testing of
+// intrinsic text sizing: every character is 10pt wide, every line is 20pt
+// tall, and text wraps naively at the width constraint. Only active behind
+// `enableStringChildren` — the historical behavior of this stub is to
+// return `minimumSize`, which several test suites rely on.
+constexpr Float kDeterministicCharacterWidth = 10;
+
+Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
+  // Line height is layout-observable so text-attribute inheritance can be
+  // asserted headlessly. Contract: an explicit `lineHeight` wins verbatim;
+  // otherwise it tracks font size as `fontSize + 6` (default 14 -> 20, matching
+  // the earlier fixed metrics).
+  const auto& fragments = attributedStringBox.getValue().getFragments();
+  if (!fragments.empty() &&
+      !std::isnan(fragments[0].textAttributes.lineHeight)) {
+    return fragments[0].textAttributes.lineHeight;
+  }
+  auto fontSize = TextAttributes::defaultTextAttributes().fontSize;
+  if (!fragments.empty() && !std::isnan(fragments[0].textAttributes.fontSize)) {
+    fontSize = fragments[0].textAttributes.fontSize;
+  }
+  return fontSize + 6;
+}
+
+TextMeasurement measureDeterministically(
+    const AttributedStringBox& attributedStringBox,
+    const LayoutConstraints& layoutConstraints,
+    TextMeasurement::Attachments attachments) {
+  size_t characterCount = 0;
+  Float intrinsicWidth = 0;
+  Float maxAttachmentHeight = 0;
+  for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
+    if (fragment.isAttachment()) {
+      // Inline replaced element (the `<img>` tag): reserve its intrinsic box in
+      // the run — width adds to the line, height can grow the line box. The size
+      // is carried on the attachment fragment's layout metrics (set by
+      // `InlineContentShadowNode::sizeImageAttachments`). Contract extension
+      // documented in implicit-text-onboarding.md §4.
+      const auto& attachmentSize =
+          fragment.parentShadowView.layoutMetrics.frame.size;
+      intrinsicWidth += attachmentSize.width;
+      maxAttachmentHeight = std::max(maxAttachmentHeight, attachmentSize.height);
+      characterCount += 1;
+    } else {
+      characterCount += fragment.string.size();
+      // Per-character advance is layout-observable so inheritance of weight/
+      // style/letterSpacing can be asserted headlessly. Contract: base 10pt,
+      // +2pt when bold, +1pt when italic, plus `letterSpacing` verbatim.
+      const auto& ta = fragment.textAttributes;
+      Float perCharacter = kDeterministicCharacterWidth;
+      if (ta.fontWeight.has_value() && *ta.fontWeight == FontWeight::Bold) {
+        perCharacter += 2;
+      }
+      if (ta.fontStyle.has_value() && *ta.fontStyle == FontStyle::Italic) {
+        perCharacter += 1;
+      }
+      if (!std::isnan(ta.letterSpacing)) {
+        perCharacter += ta.letterSpacing;
+      }
+      intrinsicWidth += static_cast<Float>(fragment.string.size()) * perCharacter;
+    }
+  }
+
+  const auto lineHeight =
+      std::max(deterministicLineHeight(attributedStringBox), maxAttachmentHeight);
+
+  if (characterCount == 0) {
+    return TextMeasurement{
+        .size = layoutConstraints.clamp({0, 0}),
+        .attachments = std::move(attachments)};
+  }
+
+  auto maximumWidth = layoutConstraints.maximumSize.width;
+
+  Float width = intrinsicWidth;
+  Float lineCount = 1;
+  if (std::isfinite(maximumWidth) && intrinsicWidth > maximumWidth) {
+    auto charactersPerLine = std::max<Float>(
+        1, std::floor(maximumWidth / kDeterministicCharacterWidth));
+    lineCount =
+        std::ceil(static_cast<Float>(characterCount) / charactersPerLine);
+    width = charactersPerLine * kDeterministicCharacterWidth;
+  }
+
+  return TextMeasurement{
+      .size = layoutConstraints.clamp({width, lineHeight * lineCount}),
+      .attachments = std::move(attachments)};
+}
+
+} // namespace
 
 TextLayoutManager::TextLayoutManager(
     const std::shared_ptr<const ContextContainer>& /*contextContainer*/)
@@ -29,6 +128,12 @@ TextMeasurement TextLayoutManager::measure(
               .isClipped = false});
     }
   }
+
+  if (ReactNativeFeatureFlags::enableStringChildren()) {
+    return measureDeterministically(
+        attributedStringBox, layoutConstraints, std::move(attachments));
+  }
+
   return TextMeasurement{
       .size =
           {.width = layoutConstraints.minimumSize.width,

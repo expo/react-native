@@ -7,14 +7,20 @@
 
 #include "BaseTextShadowNode.h"
 
-#include <react/renderer/components/text/RawTextProps.h>
-#include <react/renderer/components/text/RawTextShadowNode.h>
 #include <react/renderer/components/text/TextEffectShadowNode.h>
+#include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/components/text/TextProps.h>
 #include <react/renderer/components/text/TextShadowNode.h>
 #include <react/renderer/mounting/ShadowView.h>
 
 namespace facebook::react {
+
+// The first-class text node's component name (implicit-text-plan.md §3.F);
+// DOM `nodeName`. Defined here (rather than a new TU) so it is available without
+// a CocoaPods header/source-map regeneration. Never registered as a
+// JS-resolvable component; constructed only via `UIManager::createTextNode`.
+// NOLINTNEXTLINE(modernize-avoid-c-arrays)
+const char TextNodeComponentName[] = "#text";
 
 inline ShadowView shadowViewFromShadowNode(const ShadowNode& shadowNode) {
   auto shadowView = ShadowView{shadowNode};
@@ -32,11 +38,10 @@ void BaseTextShadowNode::buildAttributedString(
     Attachments& outAttachments) {
   bool lastFragmentWasRawText = false;
   for (const auto& childNode : parentNode.getChildren()) {
-    // RawShadowNode
-    auto rawTextShadowNode =
-        dynamic_cast<const RawTextShadowNode*>(childNode.get());
-    if (rawTextShadowNode != nullptr) {
-      const auto& rawText = rawTextShadowNode->getConcreteProps().text;
+    // Character data: the first-class `#text` node (§3.F).
+    auto* textNode = dynamic_cast<const TextNodeShadowNode*>(childNode.get());
+    if (textNode != nullptr) {
+      const auto& rawText = textNode->getText();
       if (lastFragmentWasRawText) {
         outAttributedString.getFragments().back().string += rawText;
       } else {

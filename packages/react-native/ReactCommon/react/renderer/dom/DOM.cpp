@@ -6,7 +6,7 @@
  */
 
 #include "DOM.h"
-#include <react/renderer/components/text/RawTextShadowNode.h>
+#include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/graphics/Point.h>
 #include <react/renderer/graphics/Rect.h>
@@ -101,10 +101,9 @@ std::shared_ptr<const ShadowNode> getPositionedAncestorOfShadowNodeInRevision(
 void getTextContentInShadowNode(
     const ShadowNode& shadowNode,
     std::string& result) {
-  auto rawTextShadowNode = dynamic_cast<const RawTextShadowNode*>(&shadowNode);
-
-  if (rawTextShadowNode != nullptr) {
-    result.append(rawTextShadowNode->getConcreteProps().text);
+  // First-class `#text` node (§3.F).
+  if (auto* textNode = dynamic_cast<const TextNodeShadowNode*>(&shadowNode)) {
+    result.append(textNode->getText());
   }
 
   for (const auto& childNode : shadowNode.getChildren()) {

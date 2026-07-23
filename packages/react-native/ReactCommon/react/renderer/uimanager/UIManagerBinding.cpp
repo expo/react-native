@@ -259,6 +259,43 @@ jsi::Value UIManagerBinding::get(
         });
   }
 
+  // First-class text node creation (implicit-text-plan.md §3.F): the host-config
+  // `createTextInstance` counterpart. Args: (tag, text, surfaceId, instanceHandle).
+  if (methodName == "createTextNode") {
+    auto paramCount = 4;
+    return jsi::Function::createFromHostFunction(
+        runtime,
+        name,
+        paramCount,
+        [uiManager, methodName, paramCount](
+            jsi::Runtime& runtime,
+            const jsi::Value& /*thisValue*/,
+            const jsi::Value* arguments,
+            size_t count) -> jsi::Value {
+          try {
+            validateArgumentCount(runtime, methodName, paramCount, count);
+
+            auto instanceHandle =
+                instanceHandleFromValue(runtime, arguments[3], arguments[0]);
+            if (!instanceHandle) {
+              react_native_assert(false);
+              return jsi::Value::undefined();
+            }
+
+            return valueFromShadowNode(
+                runtime,
+                uiManager->createTextNode(
+                    tagFromValue(arguments[0]),
+                    stringFromValue(runtime, arguments[1]),
+                    surfaceIdFromValue(runtime, arguments[2]),
+                    std::move(instanceHandle)),
+                true);
+          } catch (const std::logic_error& ex) {
+            LOG(FATAL) << "logic_error in createTextNode: " << ex.what();
+          }
+        });
+  }
+
   if (methodName == "setIsJSResponder") {
     auto paramCount = 3;
     return jsi::Function::createFromHostFunction(
