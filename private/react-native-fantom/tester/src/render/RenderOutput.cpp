@@ -8,6 +8,7 @@
 #include "RenderOutput.h"
 #include <react/debug/react_native_assert.h>
 #include <react/renderer/components/text/ParagraphState.h>
+#include <react/renderer/components/view/ViewState.h>
 #include <react/renderer/core/ConcreteState.h>
 
 namespace facebook::react {
@@ -57,6 +58,19 @@ folly::dynamic RenderOutput::renderView(
         renderAttributedString(view.tag, state.getData().attributedString);
   } else {
     element["children"] = folly::dynamic::array;
+    // Anonymous text runs of a View (implicit text): rendered as string
+    // children, before any real view children.
+    if (view.state != nullptr) {
+      if (const auto* viewState =
+              dynamic_cast<const ConcreteState<ViewState>*>(view.state.get())) {
+        for (const auto& run : viewState->getData().textRuns) {
+          for (const auto& fragment :
+               renderAttributedString(view.tag, run.attributedString)) {
+            element["children"].push_back(fragment);
+          }
+        }
+      }
+    }
     for (const auto& child : view.children) {
       element["children"].push_back(renderView(*child, options));
     }

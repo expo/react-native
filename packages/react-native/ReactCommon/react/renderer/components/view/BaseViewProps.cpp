@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/components/view/BackgroundImagePropsConversions.h>
 #include <react/renderer/components/view/BoxShadowPropsConversions.h>
 #include <react/renderer/components/view/FilterPropsConversions.h>
@@ -70,6 +71,54 @@ BaseViewProps::BaseViewProps(
           rawProps,
           "backgroundColor",
           sourceProps.backgroundColor,
+          {})),
+      inheritedColor(convertRawProp(
+          context, rawProps, "color", sourceProps.inheritedColor, {})),
+      inheritedFontSize(convertRawProp(
+          context,
+          rawProps,
+          "fontSize",
+          sourceProps.inheritedFontSize,
+          std::numeric_limits<Float>::quiet_NaN())),
+      inheritedFontFamily(convertRawProp(
+          context,
+          rawProps,
+          "fontFamily",
+          sourceProps.inheritedFontFamily,
+          {})),
+      inheritedFontWeight(convertRawProp(
+          context,
+          rawProps,
+          "fontWeight",
+          sourceProps.inheritedFontWeight,
+          {})),
+      inheritedFontStyle(convertRawProp(
+          context, rawProps, "fontStyle", sourceProps.inheritedFontStyle, {})),
+      inheritedFontVariant(convertRawProp(
+          context,
+          rawProps,
+          "fontVariant",
+          sourceProps.inheritedFontVariant,
+          {})),
+      inheritedLetterSpacing(convertRawProp(
+          context,
+          rawProps,
+          "letterSpacing",
+          sourceProps.inheritedLetterSpacing,
+          std::numeric_limits<Float>::quiet_NaN())),
+      inheritedLineHeight(convertRawProp(
+          context,
+          rawProps,
+          "lineHeight",
+          sourceProps.inheritedLineHeight,
+          std::numeric_limits<Float>::quiet_NaN())),
+      inheritedTextAlign(convertRawProp(
+          context, rawProps, "textAlign", sourceProps.inheritedTextAlign, {})),
+      inheritedTextTransform(convertRawProp(
+          context,
+          rawProps,
+          "textTransform",
+          sourceProps.inheritedTextTransform,
           {})),
       borderRadii(convertRawProp(
           context,
@@ -336,6 +385,16 @@ void BaseViewProps::setProp(
   switch (hash) {
     RAW_SET_PROP_SWITCH_CASE_BASIC(opacity);
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundColor);
+    RAW_SET_PROP_SWITCH_CASE(inheritedColor, "color");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontSize, "fontSize");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontFamily, "fontFamily");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontWeight, "fontWeight");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontStyle, "fontStyle");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontVariant, "fontVariant");
+    RAW_SET_PROP_SWITCH_CASE(inheritedLetterSpacing, "letterSpacing");
+    RAW_SET_PROP_SWITCH_CASE(inheritedLineHeight, "lineHeight");
+    RAW_SET_PROP_SWITCH_CASE(inheritedTextAlign, "textAlign");
+    RAW_SET_PROP_SWITCH_CASE(inheritedTextTransform, "textTransform");
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundImage);
     RAW_SET_PROP_SWITCH_CASE(backgroundImage, "experimental_backgroundImage");
     RAW_SET_PROP_SWITCH_CASE(backgroundSize, "experimental_backgroundSize");

@@ -13,6 +13,7 @@
 #include <yoga/node/Node.h>
 
 #include <react/debug/react_native_assert.h>
+#include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/core/Sealable.h>
@@ -86,6 +87,48 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void layout(LayoutContext layoutContext) override;
 
   Rect getContentBounds() const;
+
+#pragma mark - Implicit text content (anonymous inline formatting contexts)
+
+  /*
+   * Factory producing an anonymous box (a Yoga-layoutable node establishing an
+   * inline formatting context) for a run of inline-level children (text nodes
+   * and inline text elements) of a block container. Implemented and installed
+   * by the text module (components/text) to keep the dependency direction
+   * intact; returns nullptr for runs that generate no box (e.g. whitespace-only
+   * anonymous items, per css-flexbox-1 §4). See implicit-text-plan.md §3.A.
+   */
+  using AnonymousTextContentFactory = std::shared_ptr<YogaLayoutableShadowNode> (*)(
+      std::vector<std::shared_ptr<const ShadowNode>> runChildren,
+      const ShadowNode &containerShadowNode);
+
+  static void setAnonymousTextContentFactory(AnonymousTextContentFactory factory);
+  static AnonymousTextContentFactory getAnonymousTextContentFactory();
+
+  const std::vector<std::shared_ptr<YogaLayoutableShadowNode>> &getAnonymousTextContentChildren() const
+  {
+    return anonymousTextContentChildren_;
+  }
+
+  /*
+   * Parallel to `getAnonymousTextContentChildren()`: for each anonymous run box,
+   * the number of block-level (mounted) React children that precede it in
+   * document order. Used to interleave per-run paint views with mounted children
+   * in authored order (implicit-text-plan.md §3.B).
+   */
+  const std::vector<int> &getAnonymousTextContentChildIndices() const
+  {
+    return anonymousTextContentChildIndices_;
+  }
+
+  /*
+   * Effective inherited text attributes for this node (element-tree cascade,
+   * implicit-text-plan.md §3.D). Propagated top-down in `configureYogaTree`.
+   */
+  const TextAttributes &getInheritedTextAttributes() const
+  {
+    return inheritedTextAttributes_;
+  }
 
  protected:
   /**
@@ -203,11 +246,55 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void ensureYogaChildrenAlignment() const;
   void ensureYogaChildrenLookFine() const;
 
+#pragma mark - Implicit text content helpers
+
+  /*
+   * True when `child` is inline-level content (a text node or an inline text
+   * element) that participates in anonymous box generation under this node.
+   */
+  static bool isInlineTextContent(const ShadowNode &child);
+
+  /*
+   * Appends an anonymous box produced by the factory for the given run into
+   * the Yoga children (it is never part of `children_` — box tree only).
+   */
+  void appendAnonymousTextContentChild(
+      std::vector<std::shared_ptr<const ShadowNode>> &&runChildren,
+      int precedingMountedChildCount);
+
 #pragma mark - Private member variables
   /*
    * List of children which derive from YogaLayoutableShadowNode
    */
   ListOfShared yogaLayoutableChildren_;
+
+  /*
+   * Anonymous boxes generated for runs of inline-level children. Owned
+   * exclusively by this shadow-node revision (rebuilt on clone); present in
+   * `yogaLayoutableChildren_` and the Yoga node, never in `children_`.
+   */
+  std::vector<std::shared_ptr<YogaLayoutableShadowNode>> anonymousTextContentChildren_;
+
+  /*
+   * Parallel to `anonymousTextContentChildren_`: preceding mounted-child count
+   * per run box (document-order interleaving, implicit-text-plan.md §3.B).
+   */
+  std::vector<int> anonymousTextContentChildIndices_;
+
+  /*
+   * Effective inherited text attributes (cascade input ⊕ own inheritable
+   * props), assigned by the parent during `configureYogaTree`.
+   */
+  TextAttributes inheritedTextAttributes_{TextAttributes::defaultTextAttributes()};
+
+  /*
+   * The cascade value handed down by the parent during `configureYogaTree`,
+   * before this node folds in its own inheritable props. Retained across
+   * revisions so a later pass can detect when an ancestor's inheritable prop
+   * changed and re-cascade into an otherwise unchanged subtree that the
+   * layout-context skip guard would skip (implicit-text-plan.md §3.D).
+   */
+  TextAttributes receivedTextAttributes_{TextAttributes::defaultTextAttributes()};
 
   /*
    * Whether the full Yoga subtree of this Node has been configured.

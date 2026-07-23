@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include <limits>
+
+#include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/components/view/primitives.h>
@@ -45,6 +48,21 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // Color
   Float opacity{1.0};
   SharedColor backgroundColor{};
+
+  // Inheritable text attributes (implicit-text-plan.md §3.D): cascade to
+  // descendant text content when enableStringChildren is on. Keys mirror
+  // the CSS inherited text-property set. Parsed here on every View (inert
+  // unless the flag is on); folded into the cascade in `configureYogaTree`.
+  SharedColor inheritedColor{};
+  Float inheritedFontSize{std::numeric_limits<Float>::quiet_NaN()};
+  std::string inheritedFontFamily{""};
+  std::optional<FontWeight> inheritedFontWeight{};
+  std::optional<FontStyle> inheritedFontStyle{};
+  std::optional<FontVariant> inheritedFontVariant{};
+  Float inheritedLetterSpacing{std::numeric_limits<Float>::quiet_NaN()};
+  Float inheritedLineHeight{std::numeric_limits<Float>::quiet_NaN()};
+  std::optional<TextAlignment> inheritedTextAlign{};
+  std::optional<TextTransform> inheritedTextTransform{};
 
   // Borders
   CascadedBorderRadii borderRadii{};
