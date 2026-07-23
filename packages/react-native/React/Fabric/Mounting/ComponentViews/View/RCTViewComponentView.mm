@@ -25,18 +25,135 @@
 #import <React/RCTRadialGradient.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/components/view/ViewComponentDescriptor.h>
+#import <react/renderer/components/view/ViewShadowNode.h>
+#import <react/renderer/components/view/ViewState.h>
+#import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
+#import <react/renderer/textlayoutmanager/TextLayoutManager.h>
+#import <react/utils/ManagedObjectWrapper.h>
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
 
-#ifdef RCT_DYNAMIC_FRAMEWORKS
+// The intrinsic `<div>` component view (RCTDivComponentView) self-registers with
+// the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
-#endif
+#import <react/renderer/components/view/DivShadowNode.h>
 
 using namespace facebook::react;
 
 const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
+
+/*
+ * Paints a View's anonymous inline-formatting-context text runs
+ * (implicit-text-plan.md §3.B). Installed as `contentView` only when runs
+ * exist.
+ */
+/*
+ * One lightweight paint view per anonymous text run (implicit-text-plan.md
+ * §3.B). Using one view per run (instead of a single content view drawing all
+ * runs on top) lets the mounting layer interleave runs with mounted child views
+ * in authored order — CSS painting order — via `layoutSubviews` z-ordering.
+ * These views are component-view-internal: they are never differ-driven and
+ * never appear in the React child indices.
+ */
+@interface RCTImplicitTextRunView : UIView
+// Resolves a touch (in the owning View's coordinate space) to an inline
+// fragment's emitter, or nullptr to fall through to the View. Shares the run's
+// `containerFrame` with painting — one geometry for both draw and touch.
+- (facebook::react::SharedTouchEventEmitter)touchEventEmitterAtContainerPoint:(CGPoint)point;
+@end
+
+@implementation RCTImplicitTextRunView {
+ @public
+  facebook::react::ViewState::TextRun _run;
+  std::weak_ptr<const facebook::react::TextLayoutManager> _layoutManager;
+}
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    self.backgroundColor = UIColor.clearColor;
+    self.opaque = NO;
+    self.userInteractionEnabled = NO;
+    self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+  }
+  return self;
+}
+
+// The single source of truth for this run's geometry, in the owning View's
+// coordinate space: the anonymous run box's Yoga layout frame. Both painting
+// (-drawRect:) and touch hit-testing (-touchEventEmitterAtContainerPoint:) go
+// through this one accessor, so the two can never drift into different
+// coordinate spaces. That drift is exactly what made tapped text jump on
+// relayout: paint used `run.frame - contentInset` while hit-testing used
+// `run.frame` directly, and the inset only became non-zero once layout metrics
+// were applied (i.e. after the first re-render).
+- (CGRect)containerFrame
+{
+  return RCTCGRectFromRect(_run.frame);
+}
+
+- (RCTTextLayoutManager *)nativeTextLayoutManager
+{
+  auto textLayoutManager = _layoutManager.lock();
+  if (!textLayoutManager) {
+    return nil;
+  }
+  return (RCTTextLayoutManager *)facebook::react::unwrapManagedObject(textLayoutManager->getNativeTextLayoutManager());
+}
+
+- (void)drawRect:(CGRect)rect
+{
+  RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
+  if (!nativeTextLayoutManager) {
+    return;
+  }
+  // Paint and hit-testing must share ONE geometry — the run's own Yoga frame.
+  // BUG 2 was paint drawing at `frame - contentInset` while hit-testing used
+  // `frame`, so tapped text jumped on relayout. Tripwire: fires the moment any
+  // inset/offset is reintroduced into this consumer.
+  CGRect frame = self.containerFrame;
+  RCTAssert(
+      CGRectEqualToRect(frame, RCTCGRectFromRect(_run.frame)),
+      @"implicit-text run paint geometry must equal the run's Yoga frame");
+  [nativeTextLayoutManager drawAttributedString:_run.attributedString
+                            paragraphAttributes:facebook::react::ParagraphAttributes{}
+                                          frame:frame
+                              drawHighlightPath:nil];
+}
+
+// Resolves a touch (in the owning View's coordinate space) to an inline
+// fragment's emitter — e.g. `<b onPress>` — or nullptr when the point misses
+// this run or lands on emitter-less bare text, so the tap falls through to the
+// View's own emitter. Uses the same `containerFrame` as painting, so a tap
+// always hits exactly where the glyphs were drawn.
+- (facebook::react::SharedTouchEventEmitter)touchEventEmitterAtContainerPoint:(CGPoint)point
+{
+  CGRect frame = self.containerFrame;
+  // Same one-geometry invariant as -drawRect: hit-testing must use the run's
+  // Yoga frame, or a tap lands where no glyph was drawn (BUG 2).
+  RCTAssert(
+      CGRectEqualToRect(frame, RCTCGRectFromRect(_run.frame)),
+      @"implicit-text run hit-test geometry must equal the run's Yoga frame");
+  if (!CGRectContainsPoint(frame, point)) {
+    return nullptr;
+  }
+  RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
+  if (!nativeTextLayoutManager) {
+    return nullptr;
+  }
+  // `getEventEmitterWithAttributeString:` lays the run out in a text container at
+  // the origin, so the query point must be local to the run's frame.
+  CGPoint localPoint = CGPointMake(point.x - frame.origin.x, point.y - frame.origin.y);
+  auto eventEmitter = [nativeTextLayoutManager getEventEmitterWithAttributeString:_run.attributedString
+                                                             paragraphAttributes:facebook::react::ParagraphAttributes{}
+                                                                           frame:frame
+                                                                         atPoint:localPoint];
+  return std::dynamic_pointer_cast<const facebook::react::TouchEventEmitter>(eventEmitter);
+}
+
+@end
 
 @implementation RCTViewComponentView {
   UIColor *_backgroundColor;
@@ -56,6 +173,9 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   NSMutableSet<NSString *> *_accessibilityOrderNativeIDs;
   RCTSwiftUIContainerViewWrapper *_swiftUIWrapper;
   BOOL _focusable;
+  // One paint view per anonymous text run, interleaved with mounted children in
+  // document order (implicit-text-plan.md §3.B). Internal, never differ-driven.
+  NSMutableArray<RCTImplicitTextRunView *> *_textRunViews;
 }
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -258,6 +378,92 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       // View is completely outside the clipRect, so unmount it
       [view removeFromSuperview];
     }
+  }
+}
+
+- (void)updateState:(const facebook::react::State::Shared &)state
+           oldState:(const facebook::react::State::Shared &)oldState
+{
+  const auto *viewState =
+      std::dynamic_pointer_cast<const facebook::react::ConcreteState<facebook::react::ViewState>>(state).get();
+  if (viewState == nullptr) {
+    return;
+  }
+
+  const auto &data = viewState->getData();
+
+  // Remove surplus run views when the run count shrinks (incl. to zero).
+  while (_textRunViews.count > data.textRuns.size()) {
+    [_textRunViews.lastObject removeFromSuperview];
+    [_textRunViews removeLastObject];
+  }
+  if (data.textRuns.empty()) {
+    return;
+  }
+
+  if (_textRunViews == nil) {
+    _textRunViews = [NSMutableArray new];
+  }
+  for (size_t i = 0; i < data.textRuns.size(); i++) {
+    RCTImplicitTextRunView *runView = nil;
+    if (i < _textRunViews.count) {
+      runView = _textRunViews[i];
+    } else {
+      runView = [[RCTImplicitTextRunView alloc] initWithFrame:self.currentContainerView.bounds];
+      [_textRunViews addObject:runView];
+      [self.currentContainerView addSubview:runView];
+    }
+    runView->_run = data.textRuns[i];
+    runView->_layoutManager = data.layoutManager;
+    runView.frame = self.currentContainerView.bounds;
+    [runView setNeedsDisplay];
+  }
+  // Re-establish authored paint order relative to mounted children.
+  [self setNeedsLayout];
+}
+
+// Interleaves the internal per-run paint views with mounted child views in
+// authored document order (CSS painting order, implicit-text-plan.md §3.B): a
+// run with `documentOrder == d` is placed just below the d-th mounted child, so
+// text authored before a child paints under it and text after paints over it.
+- (void)reorderImplicitTextRunViewsIfNeeded
+{
+  if (_textRunViews.count == 0) {
+    return;
+  }
+  UIView *container = self.currentContainerView;
+  NSMutableArray<UIView *> *mountedChildren = [NSMutableArray new];
+  for (UIView *subview in container.subviews) {
+    if (![subview isKindOfClass:[RCTImplicitTextRunView class]]) {
+      [mountedChildren addObject:subview];
+    }
+  }
+  for (NSUInteger i = 0; i < _textRunViews.count; i++) {
+    RCTImplicitTextRunView *runView = _textRunViews[i];
+    int documentOrder = runView->_run.documentOrder;
+    if (documentOrder >= (int)mountedChildren.count) {
+      // After all mounted children: on top.
+      [container bringSubviewToFront:runView];
+    } else {
+      // Just below the child it precedes in document order.
+      UIView *anchor = mountedChildren[documentOrder];
+      NSUInteger anchorIndex = [container.subviews indexOfObject:anchor];
+      if (anchorIndex != NSNotFound) {
+        [container insertSubview:runView belowSubview:anchor];
+        (void)anchorIndex;
+      }
+    }
+  }
+}
+
+- (void)layoutSubviews
+{
+  [super layoutSubviews];
+  if (_textRunViews.count > 0) {
+    for (RCTImplicitTextRunView *runView in _textRunViews) {
+      runView.frame = self.currentContainerView.bounds;
+    }
+    [self reorderImplicitTextRunViewsIfNeeded];
   }
 }
 
@@ -696,6 +902,15 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   }
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
     self.layer.opacity = (float)props.opacity;
+  }
+
+  // Clean up per-run text paint views (implicit-text-plan.md §3.B).
+  if (_textRunViews != nil) {
+    for (RCTImplicitTextRunView *runView in _textRunViews) {
+      [runView removeFromSuperview];
+    }
+    [_textRunViews removeAllObjects];
+    _textRunViews = nil;
   }
 
   // Clean up box shadow layers to prevent cross-component contamination
@@ -1672,6 +1887,21 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 
 - (SharedTouchEventEmitter)touchEventEmitterAtPoint:(CGPoint)point
 {
+  // Hit-testing on drawn implicit text (implicit-text-plan.md §3.G / next-steps
+  // T6): a tap that lands on an inline element with its own handler (e.g.
+  // <b onPress>) resolves to that element's fragment emitter; a tap on bare text
+  // resolves to null here (text-node fragments carry the emitter-less anonymous
+  // box) and falls through to the View's own emitter — matching web semantics,
+  // where text nodes are not event targets but the containing element is.
+  // Each run view owns its geometry and resolves the hit against the same
+  // `containerFrame` it paints with — so a tap can never land somewhere the
+  // glyphs are not drawn. Runs are non-overlapping (separated by block
+  // children), so the first containing run wins.
+  for (RCTImplicitTextRunView *runView in _textRunViews) {
+    if (auto touchEventEmitter = [runView touchEventEmitterAtContainerPoint:point]) {
+      return touchEventEmitter;
+    }
+  }
   return _eventEmitter;
 }
 
@@ -1848,6 +2078,41 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 }
 
 #endif
+
+@end
+
+/*
+ * Component view for the intrinsic `<div>` tag (implicit-text-plan.md §3.C): a
+ * block-level container that renders exactly like a `View` (its shadow node is a
+ * View with `displayBlock`), so it reuses `RCTViewComponentView` wholesale and
+ * only differs by component handle. Self-registered via `+load` since `<div>` is
+ * not part of the generated component provider.
+ */
+@interface RCTDivComponentView : RCTViewComponentView
+@end
+
+@implementation RCTDivComponentView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    // `RCTViewComponentView` requires each subclass to seed `_props` with a
+    // default of its own props type (here `DivProps`), so the first
+    // `updateProps:oldProps:` has a matching baseline to diff against.
+    _props = DivShadowNode::defaultSharedProps();
+  }
+  return self;
+}
+
++ (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
+{
+  return facebook::react::concreteComponentDescriptorProvider<facebook::react::DivComponentDescriptor>();
+}
+
++ (void)load
+{
+  [[RCTComponentViewFactory currentComponentViewFactory] registerComponentViewClass:self];
+}
 
 @end
 
