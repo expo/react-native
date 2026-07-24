@@ -12,7 +12,13 @@ import type {ColorValue} from 'react-native';
 
 import * as React from 'react';
 import {useState} from 'react';
-import {PlatformColor, ScrollView, Text, View} from 'react-native';
+import {Platform, PlatformColor, ScrollView, Text, View} from 'react-native';
+
+// iOS exposes UIKit semantic colors via PlatformColor; those names don't resolve
+// on Android, so fall back to matching light-theme hex there. Keeps the demo
+// rendering identically across platforms.
+const semanticColor = (iosName: string, androidHex: string): ColorValue =>
+  Platform.select({ios: PlatformColor(iosName), default: androidHex});
 
 import 'react-native/Libraries/DomElements';
 
@@ -41,10 +47,10 @@ type Theme = {
   muted: ColorValue,
 };
 const SYSTEM_THEME: Theme = {
-  bg: PlatformColor('systemBackgroundColor'),
-  fg: PlatformColor('labelColor'),
-  border: PlatformColor('separatorColor'),
-  muted: PlatformColor('secondaryLabelColor'),
+  bg: semanticColor('systemBackgroundColor', '#ffffff'),
+  fg: semanticColor('labelColor', '#000000'),
+  border: semanticColor('separatorColor', '#c6c6c8'),
+  muted: semanticColor('secondaryLabelColor', '#8e8e93'),
 };
 const ThemeContext: React.Context<Theme> = React.createContext(SYSTEM_THEME);
 
@@ -168,7 +174,7 @@ function Case({
         borderColor: theme.border,
         borderRadius: 10,
         overflow: 'hidden',
-        backgroundColor: PlatformColor('secondarySystemBackgroundColor'),
+        backgroundColor: semanticColor('secondarySystemBackgroundColor', '#f2f2f7'),
       }}>
       <Text
         style={{
@@ -220,7 +226,7 @@ function tappableAreaStyle(theme: Theme): {...} {
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 8,
-    backgroundColor: PlatformColor('secondarySystemBackgroundColor'),
+    backgroundColor: semanticColor('secondarySystemBackgroundColor', '#f2f2f7'),
     padding: 12,
     minHeight: 44,
   };

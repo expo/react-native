@@ -247,15 +247,11 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     // state to chain from).
     this->state_ = std::make_shared<const ConcreteState<ViewState>>(
         std::make_shared<const ViewState>(
-            ViewState{
-                .textRuns = std::move(textRuns),
-                .layoutManager = std::move(layoutManager)}),
+            ViewState(std::move(textRuns), std::move(layoutManager))),
         this->getFamilyShared());
   } else if (this->getStateData().textRuns != textRuns) {
     this->setStateData(
-        ViewState{
-            .textRuns = std::move(textRuns),
-            .layoutManager = std::move(layoutManager)});
+        ViewState(std::move(textRuns), std::move(layoutManager)));
   }
 }
 

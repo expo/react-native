@@ -13,6 +13,14 @@ internal object FabricNameComponentMapping {
       // TODO T97384889: unify component names between JS - Android - iOS - C++
       "View" to "RCTView",
       "Image" to "RCTImageView",
+      // Intrinsic DOM elements (expo-intrinsics). The inline text intrinsics
+      // (<b>/<i>/<span> + unknown) are absorbed into their container View's text
+      // runs and never mount as views, so they need no mapping. <div> is a block
+      // View. <img> reuses the block View for now (its Image-backed inline impl is
+      // being reworked); the Android RCTImageView expects a different `source`
+      // shape, so mount it as a plain view until img is revisited.
+      "div" to "RCTView",
+      "img" to "RCTView",
       "ScrollView" to "RCTScrollView",
       "Slider" to "RCTSlider",
       "ModalHostView" to "RCTModalHostView",

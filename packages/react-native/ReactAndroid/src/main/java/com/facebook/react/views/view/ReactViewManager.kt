@@ -7,7 +7,10 @@
 
 package com.facebook.react.views.view
 
+import android.graphics.Paint
 import android.graphics.Rect
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.view.View
 import com.facebook.common.logging.FLog
 import com.facebook.react.bridge.Dynamic
@@ -25,7 +28,9 @@ import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PointerEvents
 import com.facebook.react.uimanager.ReactAxOrderHelper
+import com.facebook.react.uimanager.ReactStylesDiffMap
 import com.facebook.react.uimanager.Spacing
+import com.facebook.react.uimanager.StateWrapper
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.ViewProps
@@ -38,6 +43,8 @@ import com.facebook.react.uimanager.style.BackgroundSize
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
+import com.facebook.react.views.text.TextLayoutManager
+import kotlin.math.ceil
 
 /** View manager for AndroidViews (plain React Views). */
 @ReactModule(name = ReactViewManager.REACT_CLASS)
@@ -429,6 +436,48 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
 
   public override fun createViewInstance(context: ThemedReactContext): ReactViewGroup =
       ReactViewGroup(context)
+
+  /**
+   * Text children (expo-intrinsics): paint the View's anonymous inline formatting context. The
+   * native [ViewState] carries the laid-out text runs as a MapBuffer (see ViewState.getMapBuffer);
+   * here each run's attributed string is turned into a [StaticLayout] positioned at the run's frame,
+   * and handed to the [ReactViewGroup] to draw. Empty for Views with no bare-text children.
+   */
+  override fun updateState(
+      view: ReactViewGroup,
+      props: ReactStylesDiffMap,
+      stateWrapper: StateWrapper,
+  ): Any? {
+    val state = stateWrapper.stateDataMapBuffer
+    // ViewState MapBuffer keys (mirror ViewState.getMapBuffer): 0 = list of runs; per run,
+    // 0 = attributed string, 1..3 = left/top/width (dips), 5 = document order.
+    if (state == null || !state.contains(0)) {
+      view.setTextRunLayouts(null)
+      return null
+    }
+    val runMapBuffers = state.getMapBufferList(0)
+    if (runMapBuffers.isEmpty()) {
+      view.setTextRunLayouts(null)
+      return null
+    }
+    val assets = view.context.assets
+    val runs = ArrayList<ReactViewGroup.TextRunLayout>(runMapBuffers.size)
+    for (runMb in runMapBuffers) {
+      val attributedString = runMb.getMapBuffer(0)
+      val left = runMb.getDouble(1).dpToPx()
+      val top = runMb.getDouble(2).dpToPx()
+      val width = runMb.getDouble(3).dpToPx()
+      val spannable = TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
+      val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+      val layout =
+          StaticLayout.Builder.obtain(
+                  spannable, 0, spannable.length, paint, ceil(width.toDouble()).toInt())
+              .build()
+      runs.add(ReactViewGroup.TextRunLayout(layout, left, top))
+    }
+    view.setTextRunLayouts(runs)
+    return null
+  }
 
   override fun getCommandsMap(): MutableMap<String, Int> =
       mutableMapOf(HOTSPOT_UPDATE_KEY to CMD_HOTSPOT_UPDATE, "setPressed" to CMD_SET_PRESSED)

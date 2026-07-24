@@ -18,6 +18,7 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.ReactPackage
+import com.facebook.react.config.ReactFeatureFlags
 import com.facebook.react.ViewManagerOnDemandReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
@@ -120,6 +121,10 @@ internal class RNTesterApplication : Application(), ReactApplication {
   override fun onCreate() {
     ReactFontManager.getInstance().addCustomFont(this, "Rubik", R.font.rubik)
     ReactFontManager.getInstance().addCustomFont(this, "FiraCode", R.font.firacode)
+    // Enable W3C pointer events so DOM-style click events (onClick + bubbling) on
+    // intrinsics fire like on the web — the Android analog of iOS's
+    // RCTSetDispatchW3CPointerEvents(YES) in AppDelegate (text-children demo).
+    ReactFeatureFlags.dispatchPointerEvents = true
     super.onCreate()
     loadReactNative(this)
   }

@@ -908,6 +908,36 @@ public open class ReactViewGroup public constructor(context: Context?) :
       clipToPaddingBox(this, canvas)
     }
     super.dispatchDraw(canvas)
+    drawTextRuns(canvas)
+  }
+
+  /**
+   * Text children (expo-intrinsics): the laid-out text runs of this View's anonymous inline
+   * formatting context, computed natively and delivered via [ViewState]/MapBuffer. Painted on top
+   * of the View's own drawing, mirroring iOS's RCTViewComponentView text-run painting.
+   */
+  private var textRunLayouts: List<TextRunLayout>? = null
+
+  /** A single laid-out text run: an Android [Layout] positioned at [left]/[top] in pixels. */
+  public class TextRunLayout(
+      @JvmField public val layout: android.text.Layout,
+      @JvmField public val left: Float,
+      @JvmField public val top: Float,
+  )
+
+  public fun setTextRunLayouts(runs: List<TextRunLayout>?) {
+    textRunLayouts = runs
+    invalidate()
+  }
+
+  private fun drawTextRuns(canvas: Canvas) {
+    val runs = textRunLayouts ?: return
+    for (run in runs) {
+      canvas.save()
+      canvas.translate(run.left, run.top)
+      run.layout.draw(canvas)
+      canvas.restore()
+    }
   }
 
   override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {
