@@ -56,6 +56,13 @@ class TextNodeShadowNode final : public ConcreteShadowNode<TextNodeComponentName
  public:
   using ConcreteShadowNode::ConcreteShadowNode;
 
+  static ShadowNodeTraits BaseTraits() {
+    auto traits = ConcreteShadowNode::BaseTraits();
+    // The #text node is inline text content: it forms part of a text run in a View's IFC.
+    traits.set(ShadowNodeTraits::Trait::InlineText);
+    return traits;
+  }
+
   const std::string &getText() const {
     return getConcreteProps().text;
   }

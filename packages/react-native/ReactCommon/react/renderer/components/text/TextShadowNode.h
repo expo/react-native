@@ -26,6 +26,9 @@ class TextShadowNode : public ConcreteShadowNode<TextComponentName, ShadowNode, 
   static ShadowNodeTraits BaseTraits()
   {
     auto traits = ConcreteShadowNode::BaseTraits();
+    // Text and all inline text elements (the intrinsics <b>/<i>/<span>/<u>/… and the unknown
+    // fallback are TextShadowNode subclasses) flow inline in a View's anonymous IFC.
+    traits.set(ShadowNodeTraits::Trait::InlineText);
 #ifdef ANDROID
     traits.set(ShadowNodeTraits::Trait::FormsView);
 #endif

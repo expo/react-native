@@ -30,6 +30,7 @@ extern const char UnknownElementComponentName[];
 extern const char BTagComponentName[];
 extern const char ITagComponentName[];
 extern const char SpanTagComponentName[];
+extern const char UTagComponentName[];
 
 class BTagProps final : public TextProps {
  public:
@@ -61,7 +62,32 @@ class ITagProps final : public TextProps {
   }
 };
 
+/*
+ * <u>: underline. A fresh intrinsic used to prove the lazy on-demand registration seam end-to-end —
+ * it is registered ONLY via OnDemandComponentDescriptorProviders (never eagerly), so if <u> renders
+ * underlined the lazy path works.
+ */
+class UTagProps final : public TextProps {
+ public:
+  UTagProps()
+  {
+    textAttributes.textDecorationLineType = TextDecorationLineType::Underline;
+  }
+  UTagProps(const PropsParserContext &context, const UTagProps &sourceProps, const RawProps &rawProps)
+      : TextProps(context, sourceProps, rawProps)
+  {
+    if (!textAttributes.textDecorationLineType.has_value()) {
+      textAttributes.textDecorationLineType = TextDecorationLineType::Underline;
+    }
+  }
+};
+
 class BTagShadowNode final : public ConcreteShadowNode<BTagComponentName, TextShadowNode, BTagProps, TextEventEmitter> {
+ public:
+  using ConcreteShadowNode::ConcreteShadowNode;
+};
+
+class UTagShadowNode final : public ConcreteShadowNode<UTagComponentName, TextShadowNode, UTagProps, TextEventEmitter> {
  public:
   using ConcreteShadowNode::ConcreteShadowNode;
 };
@@ -114,6 +140,7 @@ class UnknownElementShadowNode final
 };
 
 using UnknownElementComponentDescriptor = ConcreteComponentDescriptor<UnknownElementShadowNode>;
+using UTagComponentDescriptor = ConcreteComponentDescriptor<UTagShadowNode>;
 using BTagComponentDescriptor = ConcreteComponentDescriptor<BTagShadowNode>;
 using ITagComponentDescriptor = ConcreteComponentDescriptor<ITagShadowNode>;
 using SpanTagComponentDescriptor = ConcreteComponentDescriptor<SpanTagShadowNode>;

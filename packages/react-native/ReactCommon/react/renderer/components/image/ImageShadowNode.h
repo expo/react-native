@@ -85,6 +85,8 @@ class ImgTagShadowNode final
   static ShadowNodeTraits BaseTraits() {
     auto traits = ConcreteViewShadowNode::BaseTraits();
     traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
+    // The intrinsic <img> is an inline *replaced* element: it flows inline in a View's IFC.
+    traits.set(ShadowNodeTraits::Trait::InlineText);
     return traits;
   }
 

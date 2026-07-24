@@ -50,6 +50,9 @@ function registerInlineTag(name: string) {
 registerInlineTag('b');
 registerInlineTag('i');
 registerInlineTag('span');
+// <u> (underline) — a fresh intrinsic wired natively via the LAZY on-demand descriptor seam only,
+// to prove that path end-to-end (see OnDemandComponentDescriptorProviders / InlineTextTagShadowNodes).
+registerInlineTag('u');
 
 // The intrinsic <img> tag: an inline *replaced* element (implicit-text-plan.md
 // §3.C), distinct from the block-level RN <Image> component. It flows inside a

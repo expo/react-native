@@ -430,6 +430,16 @@ export default function ImplicitTextDemo(): React.Node {
         </Case>
 
         <Case
+          label="<u> — a fresh intrinsic wired via the LAZY on-demand descriptor seam only"
+          code={'<div>\n' + '  plain and <u>underlined</u> text\n' + '</div>'}>
+          {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+          <div>
+            plain and {/* $FlowExpectedError[not-a-component] intrinsic <u> tag (underline) */}
+            <u>underlined</u> text
+          </div>
+        </Case>
+
+        <Case
           label="inline <img> flows with the caption text"
           code={
             '<div>\n' +

@@ -549,10 +549,13 @@ YogaLayoutableShadowNode::getAnonymousTextContentFactory() {
 }
 
 bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
-  std::string_view componentName{child.getComponentName()};
-  return componentName == "#text" || componentName == "Text" || componentName == "b" || componentName == "i" ||
-      componentName == "span" || componentName == "unknown" ||
-      componentName == "img";
+  // Inline-level text content joins a text run rather than becoming its own block/flex
+  // item. Identified by the InlineText trait — set by #text, Text, every inline text
+  // intrinsic (<b>/<i>/<span>/<u>/… and the unknown fallback, all TextShadowNode
+  // subclasses), and the inline replaced <img>. Using the trait instead of a hardcoded
+  // component-name list means a new intrinsic flows inline with no change here, and keeps
+  // components/view free of a components/text include dependency.
+  return child.getTraits().check(ShadowNodeTraits::Trait::InlineText);
 }
 
 void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
