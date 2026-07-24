@@ -155,7 +155,7 @@ class UIManager final : public ShadowTreeDelegate {
 
   /*
    * Creates a first-class text node ("#text", DOM `Text`/CharacterData) holding
-   * `text` (implicit-text-plan.md §3.F). The host-config counterpart of
+   * `text` (text-children-plan.md §3.F). The host-config counterpart of
    * `createTextInstance`; the character data is set directly (no RawProps
    * parsing), and the node has a real family/`instanceHandle` for DOM traversal.
    */

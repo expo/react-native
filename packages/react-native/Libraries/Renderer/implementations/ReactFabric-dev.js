@@ -15900,7 +15900,7 @@ __DEV__ &&
       hostContext,
       internalInstanceHandle
     ) {
-      // implicit-text: bare strings are supported (implicit-text-plan.md §3.E).
+      // text-children: bare strings are supported (text-children-plan.md §3.E).
       // First-class text node via the createTextNode host-config path (§3.F):
       // character data is passed directly (no RawText fake-component packaging).
       hostContext = nextReactTag;

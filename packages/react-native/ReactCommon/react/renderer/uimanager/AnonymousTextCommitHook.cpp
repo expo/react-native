@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "ImplicitTextCommitHook.h"
+#include "AnonymousTextCommitHook.h"
 
 #include <string_view>
 
@@ -33,7 +33,7 @@ bool consumesOwnTextChildren(const ShadowNode& node) {
 
 } // namespace
 
-RootShadowNode::Unshared ImplicitTextCommitHook::shadowTreeWillCommit(
+RootShadowNode::Unshared AnonymousTextCommitHook::shadowTreeWillCommit(
     const ShadowTree& /*shadowTree*/,
     const RootShadowNode::Shared& /*oldRootShadowNode*/,
     const RootShadowNode::Unshared& newRootShadowNode,
@@ -46,7 +46,7 @@ RootShadowNode::Unshared ImplicitTextCommitHook::shadowTreeWillCommit(
       std::const_pointer_cast<ShadowNode>(transformed));
 }
 
-std::shared_ptr<const ShadowNode> ImplicitTextCommitHook::transform(
+std::shared_ptr<const ShadowNode> AnonymousTextCommitHook::transform(
     const ShadowNode& node) {
   if (consumesOwnTextChildren(node)) {
     return nullptr;
@@ -100,7 +100,7 @@ std::shared_ptr<const ShadowNode> ImplicitTextCommitHook::transform(
            std::move(newChildren))});
 }
 
-std::shared_ptr<const ShadowNode> ImplicitTextCommitHook::synthesizeParagraph(
+std::shared_ptr<const ShadowNode> AnonymousTextCommitHook::synthesizeParagraph(
     std::vector<std::shared_ptr<const ShadowNode>> run,
     SurfaceId surfaceId) {
   auto& descriptor = componentDescriptorRegistry_->at("Paragraph");

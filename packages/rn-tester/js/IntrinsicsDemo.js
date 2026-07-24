@@ -24,7 +24,7 @@ import 'react-native/Libraries/DomElements';
 
 // Canonical demo for text children & intrinsics, organized by CONTAINER × CHILD
 // TYPE so the layout model each section isolates is obvious, and matched 1:1 to
-// the web mirror (implicit-text-web-mirror.html) for side-by-side comparison:
+// the web mirror (string-children-web-mirror.html) for side-by-side comparison:
 //
 //   §1 <div>  — block container (one inline formatting context)
 //        div with strings   — bare text + <b>/<i>/<span>/<img> flow inline

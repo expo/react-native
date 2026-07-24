@@ -13,7 +13,7 @@
  * String children: the many ways a bare string reaches a <View>, and the
  * edge cases that must render (or render nothing) without error.
  *
- * Companion to ImplicitText-itest.js (the CSS/DOM behavior matrix); this file
+ * Companion to StringChildrenBehavior-itest.js (the CSS/DOM behavior matrix); this file
  * focuses on *sources* of string children (JSX shapes, transparent wrappers,
  * falsy guards, dynamics) rather than layout/inheritance semantics.
  *

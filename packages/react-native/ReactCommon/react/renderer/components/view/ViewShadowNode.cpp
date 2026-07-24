@@ -23,7 +23,7 @@ namespace facebook::react {
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char ViewComponentName[] = "View";
 
-// The intrinsic `<div>` tag (implicit-text-plan.md §3.C); see DivShadowNode.h.
+// The intrinsic `<div>` tag (text-children-plan.md §3.C); see DivShadowNode.h.
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char DivComponentName[] = "div";
 
@@ -70,7 +70,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
 
   if (!this->getAnonymousTextContentChildren().empty()) {
     // Text-bearing Views paint their runs and must not be flattened away
-    // (implicit-text-plan.md §3.B).
+    // (text-children-plan.md §3.B).
     formsView = true;
     formsStackingContext = true;
   }
@@ -117,7 +117,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
   // inline offset within the run. The run box resolves each attachment's frame
   // via the text layout; the image is placed at the box origin plus that frame,
   // so it sits between the surrounding glyphs and follows wrapping — like a
-  // replaced element in a web line box (implicit-text-plan.md §3.C).
+  // replaced element in a web line box (text-children-plan.md §3.C).
   auto* current = this;
   auto owning = std::shared_ptr<ShadowNode>{};
 
@@ -206,9 +206,9 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
 
   const auto& anonymousBoxes = this->getAnonymousTextContentChildren();
 
-  // Zero-cost hot path (implicit-text-plan.md §4.2 / next-steps T3): a View that
+  // Zero-cost hot path (text-children-plan.md §4.2 / next-steps T3): a View that
   // has never carried anonymous text runs keeps a null `ViewState`, exactly like
-  // a plain pre-implicit-text View. State is allocated lazily on the first runs
+  // a plain pre-text-children View. State is allocated lazily on the first runs
   // (the null -> non-null transition below); once allocated it persists —
   // possibly emptied when text is removed — for the node's life.
   if (anonymousBoxes.empty() &&

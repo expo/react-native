@@ -96,7 +96,7 @@ class ShadowNodeTraits {
     // inline formatting context wrapping bare text children of a View). Such
     // nodes exist only in the box tree: they never join the shadow tree's
     // children lists and must not claim family parentage of the DOM children
-    // they lay out (implicit-text-plan.md §3.A).
+    // they lay out (text-children-plan.md §3.A).
     AnonymousBox = 1 << 15,
 
     // The node is inline-level text content: it participates in a text run rather

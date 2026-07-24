@@ -54,7 +54,7 @@ TextMeasurement measureDeterministically(
       // the run — width adds to the line, height can grow the line box. The size
       // is carried on the attachment fragment's layout metrics (set by
       // `InlineContentShadowNode::sizeImageAttachments`). Contract extension
-      // documented in implicit-text-onboarding.md §4.
+      // documented in text-children-onboarding.md §4.
       const auto& attachmentSize =
           fragment.parentShadowView.layoutMetrics.frame.size;
       intrinsicWidth += attachmentSize.width;

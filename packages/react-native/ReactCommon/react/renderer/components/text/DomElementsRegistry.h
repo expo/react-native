@@ -20,7 +20,7 @@ namespace facebook::react::dom {
 
 /*
  * Registration entry point for the intrinsic DOM elements — the native half of
- * the DOM-elements catalog (implicit-text-plan.md §3.C). This is the single
+ * the DOM-elements catalog (text-children-plan.md §3.C). This is the single
  * place that names every element descriptor, so the platform component
  * registries (iOS Paragraph supplemental providers, Android
  * CoreComponentsRegistry, the Fantom stub registry) call these helpers instead

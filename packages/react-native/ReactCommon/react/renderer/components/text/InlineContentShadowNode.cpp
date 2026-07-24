@@ -28,7 +28,7 @@ namespace {
 
 // ASCII whitespace subject to CSS `white-space: normal` collapsing
 // (css-text-3 §3). Matches the whitespace-only-run predicate in
-// ImplicitTextContent.cpp.
+// AnonymousTextContent.cpp.
 bool isCollapsibleWhitespace(char character) {
   return character == ' ' || character == '\t' || character == '\n' ||
       character == '\r' || character == '\f';
@@ -41,8 +41,8 @@ bool isCollapsibleWhitespace(char character) {
 // or around an inline element, collapses to one — mirroring how the web
 // collapses across inline boxes. Attachment fragments (e.g. the replaced
 // `<img>`) are opaque, non-whitespace anchors. This runs only on anonymous
-// IFCs (this class is created solely for implicit-text runs); explicit `<Text>`
-// keeps RN's verbatim whitespace. See implicit-text-plan.md §3.A/§4.4 and the
+// IFCs (this class is created solely for text-children runs); explicit `<Text>`
+// keeps RN's verbatim whitespace. See text-children-plan.md §3.A/§4.4 and the
 // §7 decision (CSS-normal collapsing).
 void collapseWhitespace(AttributedString& attributedString) {
   auto& fragments = attributedString.getFragments();
@@ -100,7 +100,7 @@ void collapseWhitespace(AttributedString& attributedString) {
 // Reserves each inline replaced element's (`<img>`) intrinsic box in the run by
 // measuring the attachment shadow node and stamping its size onto the attachment
 // fragment, so the run measures with the image's box included
-// (implicit-text-plan.md §3.C). Mirrors
+// (text-children-plan.md §3.C). Mirrors
 // `ParagraphShadowNode::getContentWithMeasuredAttachments`. Runs before
 // whitespace collapsing so the attachment fragment indices are still valid.
 void measureImageAttachments(

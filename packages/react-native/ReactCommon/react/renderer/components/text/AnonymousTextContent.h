@@ -14,10 +14,10 @@ namespace facebook::react {
 /*
  * Installs the anonymous-box factory used by `YogaLayoutableShadowNode` to
  * wrap runs of inline-level children of block containers in
- * `InlineContentShadowNode`s (implicit-text-plan.md §3.A). Idempotent; called
+ * `InlineContentShadowNode`s (text-children-plan.md §3.A). Idempotent; called
  * from text component descriptor constructors so the factory is guaranteed to
  * be present whenever text nodes exist in a tree.
  */
-void ensureImplicitTextContentFactoryInstalled(const ComponentDescriptorParameters &parameters);
+void ensureAnonymousTextContentFactoryInstalled(const ComponentDescriptorParameters &parameters);
 
 } // namespace facebook::react

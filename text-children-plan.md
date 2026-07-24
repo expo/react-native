@@ -146,7 +146,7 @@ violate since this content was invisible. Explicit `<Text>` keeps RN's verbatim 
 `InlineContentShadowNode` (the anonymous-IFC box) only, spanning fragment boundaries so a
 space split across text nodes or around an inline element collapses to one; attachment
 fragments (`<img>`) are opaque anchors. Whitespace-only runs are still dropped upstream in
-`ImplicitTextContent.cpp` (flexbox rule).
+`AnonymousTextContent.cpp` (flexbox rule).
 
 **Implementation inside `YogaLayoutableShadowNode`/`ViewShadowNode`** (identical machinery
 for both display types — only the sequence-grouping predicate differs):
@@ -183,9 +183,9 @@ paint "a" and "b" in document position relative to the inner view, per CSS paint
 Hence per-run views: they are *component-view-internal* subviews (never differ-driven — the
 differ still only sees the View), and `layoutSubviews` re-establishes z-order after every
 mount/state change by interleaving React-mounted subviews and run views per the authored
-child order recorded in state. **Done (next-steps T5):** `RCTImplicitTextRunView` (one per
+child order recorded in state. **Done (next-steps T5):** `RCTAnonymousTextRunView` (one per
 run) + `ViewState::TextRun::documentOrder` (count of preceding mounted children, recorded in
-`YogaLayoutableShadowNode`) + `reorderImplicitTextRunViewsIfNeeded` in `layoutSubviews`.
+`YogaLayoutableShadowNode`) + `reorderAnonymousTextRunViewsIfNeeded` in `layoutSubviews`.
 Simulator-verified on iPhone 17 Pro: text authored before an overlapping child paints under
 it, text after paints over it. React child mounting stays index-based and untouched; run
 views are excluded from those indices (same pattern as the paragraph's content view today).
@@ -466,7 +466,7 @@ compat shims, when it lands).
    stage-3 emulation, so `<div>` is a true block container. Own sub-flag, own review;
    staged internally (block-inner layout + inline flow → anonymous block boxes → margin
    collapsing → floats/static position). This is the riskiest Yoga change and is sequenced
-   as its own workstream — it can land after the rest of implicit text ships.
+   as its own workstream — it can land after the rest of text children ships.
 
 ## 6. Verification performed
 
@@ -474,7 +474,7 @@ compat shims, when it lands).
 - **Fantom harness built and running locally** (macOS, `private/react-native-fantom`;
   required a `-Wdeprecated-literal-operator` patch to third-party nlohmann_json and Android
   cmdline-tools + NDK install).
-- **Baseline verified green** (`Libraries/Text/__tests__/ImplicitText-itest.js`):
+- **Baseline verified green** (`Libraries/Text/__tests__/StringChildrenBehavior-itest.js`):
   `<View><Text>hello</Text></View>` mounts `<rn-view><rn-paragraph>` as expected; bare
   strings and mixed strings mount nothing — confirming §2 exactly (including the dev warning
   being non-fatal and prop-less Views getting view-flattened).
@@ -508,7 +508,7 @@ compat shims, when it lands).
     floor**; margin collapsing and floats/static-position are later, separately-gated stages.
   - ~~Same flag or its own?~~ **Decided: its own sub-flag** (e.g. `enableYogaDisplayBlock`),
     separate from `enableImplicitTextChildren`. Native block modifies Yoga's core layout
-    algorithm — it can regress *any* app's layout, not just implicit-text surface — so it
+    algorithm — it can regress *any* app's layout, not just text-children surface — so it
     needs an independent kill-switch, rollout %, and emulation-vs-native parity testing. The
     block grouping predicate carries both paths (native when on, flex emulation when off)
     until the emulation is retired.
@@ -532,7 +532,7 @@ and `nullptr` instance handles (precedent: the surface root family, `ShadowTree.
 Idempotent by construction; `progressState` (`ShadowTree.cpp:60-179`) is the traversal/memo
 template; family caching keyed per (parent family, run) gives update stability.
 
-Status: implemented as `ReactCommon/react/renderer/uimanager/ImplicitTextCommitHook.{h,cpp}`
+Status: implemented as `ReactCommon/react/renderer/uimanager/AnonymousTextCommitHook.{h,cpp}`
 (~120 lines) + registration in `UIManager::setComponentDescriptorRegistry`; compiles; first
 run trips the single-parent assert (`ShadowNodeFamily::setParent`, `ShadowNodeFamily.cpp:37`)
 when adopting React-owned text children — resolvable (last-writer-wins or a scoped
@@ -561,8 +561,8 @@ implemented on this branch and verified: Fantom
 99, ReadOnlyText 30, ReactNativeElement 170), Safari web mirror 20/20 (+ img/div/native-block twins added), iPhone 17
 Pro (iOS 26.5) simulator screenshots (incl. paint-order interleaving, hit-test log, and a real
 inline `<img>` rendering), and live CDP layout reads
-(`packages/rn-tester/scripts/implicit-text-cdp-verify.js`). Demo:
-`packages/rn-tester/js/ImplicitTextDemo.js`. Next: mine Web Platform Tests
+(`packages/rn-tester/scripts/string-children-cdp-verify.js`). Demo:
+`packages/rn-tester/js/IntrinsicsDemo.js`. Next: mine Web Platform Tests
 (css/CSS2 normal-flow + visuren, css-flexbox anonymous items, css-display,
 css-text white-space, css-inline, dom/nodes, HTMLUnknownElement) for additional
 matrix cases; production hardening list in §4 unchanged.

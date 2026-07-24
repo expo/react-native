@@ -3,7 +3,7 @@
 This document assumes **no prior knowledge** of this project, React Native internals, or the
 CSS/DOM specs. Working through it should leave you able to (a) extend and maintain the test
 suite, and (b) implement the remaining behavior yourself. The companion design document is
-`implicit-text-plan.md` (same directory) — this file tells you how to *get to* the level where
+`text-children-plan.md` (same directory) — this file tells you how to *get to* the level where
 that document is fully legible, and what to do then.
 
 Repo: this branch of `expo/react-native` (fork of `react-native` main, 0.87-rc era).
@@ -151,16 +151,16 @@ between `root.render(<View>hi</View>)` and pixels.
 5. **Commit & mounting**: `ReactCommon/react/renderer/mounting/ShadowTree.cpp` (`tryCommit`),
    `Differentiator.h`, `React/Fabric/Mounting/RCTMountingManager.mm`, and our painting:
    `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm` (search
-   `RCTImplicitTextContentView`).
+   `RCTAnonymousTextContentView`).
 6. **The JS boundary**: `Libraries/Renderer/shims/ReactNativeViewConfigRegistry.js` (how JSX
    type strings resolve to native components; our unknown-element fallback),
    `Libraries/Text/TextNativeComponent.js` + `Libraries/Text/InlineTags.js` (tag
    registration), `Libraries/Renderer/implementations/ReactFabric-dev.js` around line 15890
    (`createTextInstance` — where bare strings become text nodes; we removed the dev warning).
-7. **Guided tour via git history**: `git log --oneline --grep="implicit-text"` — read the ~13
+7. **Guided tour via git history**: `git log --oneline --grep="text-children"` — read the ~13
    commits in order. Each message records what worked and what was known-broken at that
    point; the M1→M7 sequence is effectively a tutorial of the whole system. Read
-   `implicit-text-plan.md` fully once after this — including Appendix A, the rejected
+   `text-children-plan.md` fully once after this — including Appendix A, the rejected
    synthetic-node design, which teaches *why* the box-tree approach is right.
 
 **Katas** (do these before writing real code):
@@ -175,16 +175,16 @@ between `root.render(<View>hi</View>)` and pixels.
 
 ### What exists
 
-- **Matrix** (`packages/react-native/Libraries/Text/__tests__/ImplicitText-itest.js`): 28
+- **Matrix** (`packages/react-native/Libraries/Text/__tests__/StringChildrenBehavior-itest.js`): 28
   cases, milestone-organized (M1 layout → M7 DOM APIs + M5b unknown elements), run under
   Fantom (headless real C++ renderer) with the flag on via docblock pragma.
-- **Baseline guards** (`ImplicitTextBaseline-itest.js`): flag-off behavior + the explicit-
+- **Baseline guards** (`StringChildrenBaseline-itest.js`): flag-off behavior + the explicit-
   `<Text>` pixel-identity guarantee. These must stay green forever.
-- **Web mirror** (`__tests__/__fixtures__/implicit-text-web-mirror.html`): the same cases in
+- **Web mirror** (`__tests__/__fixtures__/string-children-web-mirror.html`): the same cases in
   real DOM/CSS, self-asserting (PASS/FAIL table + `window.__results`). This anchors our
   expectations to actual browser behavior — 12/12 in Safari today.
-- **Simulator demo** (`packages/rn-tester/js/ImplicitTextDemo.js`) + **CDP client**
-  (`packages/rn-tester/scripts/implicit-text-cdp-verify.js`) for on-device proof.
+- **Simulator demo** (`packages/rn-tester/js/IntrinsicsDemo.js`) + **CDP client**
+  (`packages/rn-tester/scripts/string-children-cdp-verify.js`) for on-device proof.
 
 ### The rules that keep it healthy
 
@@ -214,7 +214,7 @@ between `root.render(<View>hi</View>)` and pixels.
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 cmake --build private/react-native-fantom/build/tester -j10   # incremental C++ rebuild
-yarn fantom packages/react-native/Libraries/Text/__tests__/ImplicitText-itest.js
+yarn fantom packages/react-native/Libraries/Text/__tests__/StringChildrenBehavior-itest.js
 
 # Web mirror in Safari (headless-ish):
 sudo safaridriver --enable   # once
@@ -227,7 +227,7 @@ safaridriver -p 4444 &  # then WebDriver: create session, navigate to the file s
 # `xcrun simctl io <udid> screenshot`.
 
 # CDP layout proof (app running under Metro):
-node packages/rn-tester/scripts/implicit-text-cdp-verify.js
+node packages/rn-tester/scripts/string-children-cdp-verify.js
 ```
 
 ### The WPT mining workflow (your first project)
@@ -254,7 +254,7 @@ node packages/rn-tester/scripts/implicit-text-cdp-verify.js
 Each item lists the entry-point files and the verification expectation. The plan doc §3-§4
 has the full design for all of these.
 
-> **The actionable backlog is `implicit-text-next-steps.md`** — a standalone work queue that
+> **The actionable backlog is `text-children-next-steps.md`** — a standalone work queue that
 > gives every remaining task a Goal / Entry points / Approach / **Testing methodology** /
 > **Acceptance** breakdown, a shared build-test-DoD section, and a recommended order by track
 > (headless / native-Yoga / core-refactor / iOS-simulator / Android). Start there to pick up
@@ -265,7 +265,7 @@ has the full design for all of these.
    (or a shared preprocessing step in `BaseTextShadowNode`). Tests first; get sign-off on
    the §7 open question.
 2. **Paint order + per-run views on iOS** — ✅ **DONE (simulator-verified).**
-   `RCTImplicitTextRunView` (one per run) replaces the single content view; authored order is
+   `RCTAnonymousTextRunView` (one per run) replaces the single content view; authored order is
    threaded via `ViewState::TextRun::documentOrder` and `layoutSubviews` interleaves run views
    with mounted children. iPhone 17 Pro screenshot: text before an overlapping child paints
    under it, text after paints over. Plan §3.B / next-steps T5.
@@ -299,10 +299,10 @@ has the full design for all of these.
    compared in `inheritableTextPropsDiffer` for live updates; added to both View configs. The
    deterministic measurer now makes `fontStyle` (italic +1pt/char), `letterSpacing`, and
    `lineHeight` layout-observable; `fontFamily`/`textAlign` are asserted via the run's
-   rendered attributes. Tests: `ImplicitText-itest.js` M4b (5 cases) + web-mirror twin.
+   rendered attributes. Tests: `StringChildrenBehavior-itest.js` M4b (5 cases) + web-mirror twin.
    `fontVariant`/`textTransform` are plumbed and cascade through the same fold but are not
    independently observable headlessly (not size-affecting, not serialized to the mount).
-7. **Cascade correctness fix** — ✅ **DONE.** Two-part fix (implicit-text-plan.md §3.D):
+7. **Cascade correctness fix** — ✅ **DONE.** Two-part fix (text-children-plan.md §3.D):
    (a) inheritable text props touch no Yoga style, so a change to them alone never dirtied
    layout and no re-cascade ran — `YogaLayoutableShadowNode`'s clone ctor now compares the
    inheritable set (`inheritableTextPropsDiffer`) and `setDirty`s the node so a layout pass
@@ -310,13 +310,13 @@ has the full design for all of these.
    (b) `configureYogaTree`'s skip-optimization compares the cascade value it last handed each
    child (`receivedTextAttributes_`) and, when it changed, re-propagates and dirties the
    descendant anonymous IFC box so it re-measures and republishes state (covers colour-only
-   changes, which don't alter size). Tests: `ImplicitText-itest.js` M4 "updating a grandparent
+   changes, which don't alter size). Tests: `StringChildrenBehavior-itest.js` M4 "updating a grandparent
    color/fontSize re-cascades into an unchanged subtree" + web-mirror twins (Safari 14/14).
 8. **Native Yoga `display:block`** — ✅ **DONE (Stage 1).** First-class `YGDisplayBlock` behind
    the `enableYogaDisplayBlock` sub-flag (emulation is the flag-off fallback):
    `calculateBlockLayout` in `CalculateLayout.cpp` dispatched only for `Display::Block` (flex
    path untouched), children stacked with block sizing (flex-grow ignored, auto width fills a
-   definite container else shrink-wraps). `ImplicitTextNativeBlock-itest.js` (parity + native
+   definite container else shrink-wraps). `StringChildrenNativeBlock-itest.js` (parity + native
    fidelity) + web-mirror twins; full flexbox-regression sweep (View-itest 224) green. Later
    stages (margin collapsing, floats/static-position, RTL coverage) remain open. Original scope
    notes below.
@@ -356,8 +356,8 @@ has the full design for all of these.
 10. **`display:'block'` public types** — ✅ **DONE.** Added `'block'` to the public `display`
     union in Flow (`StyleSheetTypes.js`) and TS (`StyleSheetTypes.d.ts`) + doc comment;
     dropped the now-obsolete `display:'block'` Flow suppressions and corrected the
-    inherited-key suppression codes to Flow's actual `[incompatible-type]`. The implicit-text
-    JS files (`ImplicitText-itest.js`, `ImplicitTextBaseline-itest.js`, `ImplicitTextDemo.js`,
+    inherited-key suppression codes to Flow's actual `[incompatible-type]`. The text-children
+    JS files (`StringChildrenBehavior-itest.js`, `StringChildrenBaseline-itest.js`, `IntrinsicsDemo.js`,
     `StyleSheetTypes.js`) now pass `flow focus-check` clean (0 errors). Inherited text-style
     keys on `View` stay intentionally un-public-typed (flag-gated) — tests keep precise
     suppressions.
@@ -365,7 +365,7 @@ has the full design for all of these.
    plumbed through a `nodeName` prop so DOM APIs report `<foo>` (`tagName`/`nodeName` →
    `"RN:foo"`) instead of `unknown`. `UnknownElementProps : TextProps` carries it,
    `createInstance` injects `workInProgress.type` for the `"unknown"` view config, and
-   `getTagName` reads the prop. Tests: `ImplicitText-itest.js` M5b + web-mirror twin. Prod
+   `getTagName` reads the prop. Tests: `StringChildrenBehavior-itest.js` M5b + web-mirror twin. Prod
    bundle injection deferred (minified fork carry, like T11/§3.E).
    - **Design finding (2026-07-21).** The raw tag name is lost at the JS boundary:
      `ReactFabric` calls `createNode(tag, viewConfig.uiViewClassName, …)` and the unknown
@@ -411,4 +411,4 @@ has the full design for all of these.
    available); spec section cited in the test description.
 3. Explicit `<Text>` pixel-identity untouched (baseline guards prove it).
 4. Checkpoint commit whose message states known-working and known-broken.
-5. Behavior changes reflected in `implicit-text-plan.md` (it is the living spec).
+5. Behavior changes reflected in `text-children-plan.md` (it is the living spec).

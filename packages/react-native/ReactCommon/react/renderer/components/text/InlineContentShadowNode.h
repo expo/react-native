@@ -25,7 +25,7 @@ extern const char InlineContentComponentName[];
  * container. Box-tree only: instances live in the Yoga children of their
  * containing View but never in the shadow tree's `children_`, so they are
  * invisible to the differ, mounting, events, and DOM APIs.
- * See implicit-text-plan.md §3.A.
+ * See text-children-plan.md §3.A.
  */
 class InlineContentShadowNode final
     : public ConcreteShadowNode<InlineContentComponentName, YogaLayoutableShadowNode, ViewProps>,

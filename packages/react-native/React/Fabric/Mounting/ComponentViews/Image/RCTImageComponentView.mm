@@ -221,7 +221,7 @@ using namespace facebook::react;
 }
 
 // Self-register so the mounting layer maps the "img" component handle to this
-// view (implicit-text-plan.md §3.C). The intrinsic <img> tag is not part of the
+// view (text-children-plan.md §3.C). The intrinsic <img> tag is not part of the
 // generated component provider.
 + (void)load
 {

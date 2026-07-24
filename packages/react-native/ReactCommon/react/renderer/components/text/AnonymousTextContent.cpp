@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "ImplicitTextContent.h"
+#include "AnonymousTextContent.h"
 
 #include <atomic>
 #include <mutex>
@@ -22,14 +22,14 @@ namespace facebook::react {
 
 namespace {
 
-struct ImplicitTextContentState {
+struct AnonymousTextContentState {
   std::shared_ptr<const ContextContainer> contextContainer;
   std::shared_ptr<const ComponentDescriptor> componentDescriptor;
   std::shared_ptr<const TextLayoutManager> textLayoutManager;
 };
 
-ImplicitTextContentState& implicitTextContentState() {
-  static ImplicitTextContentState state;
+AnonymousTextContentState& anonymousTextContentState() {
+  static AnonymousTextContentState state;
   return state;
 }
 
@@ -42,7 +42,7 @@ class InlineContentComponentDescriptor final
   void adopt(ShadowNode& shadowNode) const override {
     ConcreteComponentDescriptor::adopt(shadowNode);
     static_cast<InlineContentShadowNode&>(shadowNode)
-        .setTextLayoutManager(implicitTextContentState().textLayoutManager);
+        .setTextLayoutManager(anonymousTextContentState().textLayoutManager);
   }
 };
 
@@ -74,7 +74,7 @@ bool isWhitespaceOnlyRun(
 std::shared_ptr<YogaLayoutableShadowNode> createAnonymousTextContent(
     std::vector<std::shared_ptr<const ShadowNode>> runChildren,
     const ShadowNode& containerShadowNode) {
-  auto& state = implicitTextContentState();
+  auto& state = anonymousTextContentState();
   if (state.componentDescriptor == nullptr || runChildren.empty()) {
     return nullptr;
   }
@@ -109,11 +109,11 @@ std::shared_ptr<YogaLayoutableShadowNode> createAnonymousTextContent(
 
 } // namespace
 
-void ensureImplicitTextContentFactoryInstalled(
+void ensureAnonymousTextContentFactoryInstalled(
     const ComponentDescriptorParameters& parameters) {
   static std::once_flag onceFlag;
   std::call_once(onceFlag, [&parameters]() {
-    auto& state = implicitTextContentState();
+    auto& state = anonymousTextContentState();
     state.contextContainer = parameters.contextContainer;
 
     auto contextContainer = parameters.contextContainer;

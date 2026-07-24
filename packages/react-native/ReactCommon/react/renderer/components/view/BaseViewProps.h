@@ -49,7 +49,7 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   Float opacity{1.0};
   SharedColor backgroundColor{};
 
-  // Inheritable text attributes (implicit-text-plan.md §3.D): cascade to
+  // Inheritable text attributes (text-children-plan.md §3.D): cascade to
   // descendant text content when enableStringChildren is on. Keys mirror
   // the CSS inherited text-property set. Parsed here on every View (inert
   // unless the flag is on); folded into the cascade in `configureYogaTree`.

@@ -21,8 +21,8 @@ using ViewShadowNodeProps = ViewProps;
 /*
  * Shared `ShadowNode` implementation for block-level view containers that host
  * an anonymous inline formatting context: `<View>` and the intrinsic `<div>`
- * (implicit-text-plan.md §3). Templated on the component name and props so both
- * share one copy of the implicit-text layout/paint machinery; the only
+ * (text-children-plan.md §3). Templated on the component name and props so both
+ * share one copy of the text-children layout/paint machinery; the only
  * difference is the concrete props default (`<div>` forces `displayBlock`).
  */
 template <const char *concreteComponentName, typename ViewPropsT = ViewProps>
@@ -51,13 +51,13 @@ class AbstractViewShadowNode
 
   /*
    * Publishes the laid-out anonymous text runs into `ViewState` so the
-   * mounting layer can paint them (implicit-text-plan.md §3.B).
+   * mounting layer can paint them (text-children-plan.md §3.B).
    */
   void updateTextRunStateIfNeeded();
 
   /*
    * Lays out and positions inline replaced `<img>` children within their run
-   * (implicit-text-plan.md §3.C), mirroring `ParagraphShadowNode`'s inline
+   * (text-children-plan.md §3.C), mirroring `ParagraphShadowNode`'s inline
    * attachment layout: each `<img>` is not a Yoga child, so its frame is set
    * here (from the run box it belongs to) by cloning it and stamping its
    * `layoutMetrics`, which the differ then mounts.

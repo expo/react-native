@@ -18,7 +18,7 @@ extern const char DivComponentName[];
 
 /*
  * The intrinsic `<div>` tag: a block-level container with block *inner* display
- * (implicit-text-plan.md §3.C) — the intrinsic analog of a `View` but
+ * (text-children-plan.md §3.C) — the intrinsic analog of a `View` but
  * `display:block` instead of `flex`. `DivProps` is a `ViewProps` with
  * `displayBlock` forced on, so `<div>` shares the View block path (native
  * `YGDisplayBlock` when `enableYogaDisplayBlock` is on, else the flex emulation)

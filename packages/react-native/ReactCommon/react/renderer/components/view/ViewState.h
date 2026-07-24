@@ -25,7 +25,7 @@ class TextLayoutManager;
 
 /*
  * State for the <View> component: the laid-out text runs of its anonymous
- * inline formatting contexts (implicit-text-plan.md §3.B). Empty for Views
+ * inline formatting contexts (text-children-plan.md §3.B). Empty for Views
  * with no bare text content.
  */
 class ViewState final {
@@ -38,7 +38,7 @@ class ViewState final {
      * Number of block-level (mounted) React children that precede this run in
      * document order. Lets the mounting layer interleave the per-run paint views
      * with mounted child views in authored order (CSS painting order), rather
-     * than drawing all text on top (implicit-text-plan.md §3.B).
+     * than drawing all text on top (text-children-plan.md §3.B).
      */
     int documentOrder{0};
 

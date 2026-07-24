@@ -19,9 +19,9 @@ namespace facebook::react {
  * string children render without an explicit <Text> wrapper ("anonymous box"
  * model).
  */
-class ImplicitTextCommitHook final : public UIManagerCommitHook {
+class AnonymousTextCommitHook final : public UIManagerCommitHook {
  public:
-  ImplicitTextCommitHook(
+  AnonymousTextCommitHook(
       SharedComponentDescriptorRegistry componentDescriptorRegistry,
       std::shared_ptr<const ContextContainer> contextContainer)
       : componentDescriptorRegistry_(std::move(componentDescriptorRegistry)),

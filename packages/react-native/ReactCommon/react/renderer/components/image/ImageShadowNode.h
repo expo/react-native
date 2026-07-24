@@ -65,7 +65,7 @@ class ImageShadowNode final
 extern const char ImgTagComponentName[];
 
 /*
- * The intrinsic `<img>` tag: an inline **replaced** element (implicit-text-plan.md
+ * The intrinsic `<img>` tag: an inline **replaced** element (text-children-plan.md
  * §3.C). It reuses the RN Image machinery (`ImageProps`/`ImageState`/`ImageManager`)
  * for loading and rendering, but has its own component name/handle ("img") so it
  * can be routed inline into a bare-text run (rather than laid out as a block Yoga

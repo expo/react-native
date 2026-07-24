@@ -1,9 +1,9 @@
 /**
- * Minimal CDP client: reads the implicit-text layout proof
- * (globalThis.__implicitTextVerify, set by ImplicitTextDemo.js) from the
+ * Minimal CDP client: reads the text-children layout proof
+ * (globalThis.__stringChildrenVerify, set by IntrinsicsDemo.js) from the
  * running Hermes instance via Metro's inspector proxy.
  *
- * Usage: node implicit-text-cdp-verify.js   (Metro on :8081, app running)
+ * Usage: node string-children-cdp-verify.js   (Metro on :8081, app running)
  * Deps:  npm i ws
  * Note:  the proxy 401s unless the websocket carries a same-origin
  *        Origin header (http://localhost:8081).
@@ -35,7 +35,7 @@ async function main() {
     send(1, 'Runtime.enable', {});
     send(2, 'Runtime.evaluate', {
       expression:
-        'JSON.stringify({verify: globalThis.__implicitTextVerify ?? null})',
+        'JSON.stringify({verify: globalThis.__stringChildrenVerify ?? null})',
       returnByValue: true,
     });
     setTimeout(() => reject(new Error('timeout')), 8000);

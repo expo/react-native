@@ -188,7 +188,7 @@ const directEventTypes = {
 };
 
 const validAttributesForNonEventProps = {
-  // Inheritable text attributes (implicit text, gated natively behind
+  // Inheritable text attributes (text children, gated natively behind
   // enableStringChildren; inert otherwise). Mirrors the CSS inherited
   // text-property set.
   color: colorAttribute,

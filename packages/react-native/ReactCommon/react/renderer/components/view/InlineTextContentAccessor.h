@@ -33,7 +33,7 @@ struct InlineAttachmentPlacement {
 /*
  * Implemented by anonymous inline-formatting-context boxes so their containing
  * View can read the flattened content for painting state without depending on
- * the text module (implicit-text-plan.md §3.B).
+ * the text module (text-children-plan.md §3.B).
  */
 class InlineTextContentAccessor {
  public:
@@ -45,7 +45,7 @@ class InlineTextContentAccessor {
 
   // Resolved inline frames of this run's replaced elements (`<img>`), so the
   // owning View can position each image at its exact inline offset within the
-  // run rather than at the box origin (implicit-text-plan.md §3.C).
+  // run rather than at the box origin (text-children-plan.md §3.C).
   virtual std::vector<InlineAttachmentPlacement> getInlineAttachmentPlacements(
       const LayoutContext &layoutContext) const = 0;
 };

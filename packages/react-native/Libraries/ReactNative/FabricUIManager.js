@@ -35,7 +35,7 @@ export interface Spec {
     props: NodeProps,
     instanceHandle: InternalInstanceHandle,
   ) => Node;
-  // First-class text node (DOM `Text`/`#text`), implicit-text-plan.md §3.F.
+  // First-class text node (DOM `Text`/`#text`), text-children-plan.md §3.F.
   readonly createTextNode: (
     reactTag: number,
     text: string,

@@ -12,7 +12,7 @@
  * DOM elements module — entry point.
  *
  * Side-effect import that registers the intrinsic HTML-like elements (<b>, <i>,
- * <span>, <img>, <div>) as host component view configs (implicit-text-plan.md
+ * <span>, <img>, <div>) as host component view configs (text-children-plan.md
  * §3.C). Lowercase JSX types resolve by name through ReactNativeViewConfigRegistry,
  * so registering these makes literal <b>/<i>/<span>/<img>/<div> usable with zero
  * reconciler changes. The attribute defaults (bold/italic) are baked into the
@@ -54,7 +54,7 @@ registerInlineTag('span');
 // to prove that path end-to-end (see OnDemandComponentDescriptorProviders / InlineTextTagShadowNodes).
 registerInlineTag('u');
 
-// The intrinsic <img> tag: an inline *replaced* element (implicit-text-plan.md
+// The intrinsic <img> tag: an inline *replaced* element (text-children-plan.md
 // §3.C), distinct from the block-level RN <Image> component. It flows inside a
 // bare-text IFC as an inline attachment, but reuses the RN Image machinery for
 // loading + rendering (ImageProps/ImageState). `source` takes the same shape as
@@ -81,7 +81,7 @@ createReactNativeComponentClass('img', () =>
 );
 
 // The intrinsic <div> tag: a block-level container with block *inner* display
-// (implicit-text-plan.md §3.C) — the intrinsic analog of a View but display:block.
+// (text-children-plan.md §3.C) — the intrinsic analog of a View but display:block.
 // Backed by the View block path (DivShadowNode forces displayBlock). Takes the
 // same style/layout attributes as a View.
 // createViewConfig already merges the base View validAttributes (style, layout,

@@ -60,7 +60,7 @@ type ____LayoutStyle_Internal = Readonly<{
    *
    *  It works similarly to `display` in CSS. 'flex' (the default) makes the
    *  element a flex container; 'block' makes it a CSS block container (a true
-   *  block formatting context under the implicit-text feature, otherwise
+   *  block formatting context under the text-children feature, otherwise
    *  emulated on flex); 'none' hides it; 'contents' removes the box itself.
    */
   display?: 'none' | 'flex' | 'block' | 'contents',

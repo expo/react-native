@@ -10,11 +10,11 @@
  */
 
 /**
- * Implicit text: CSS/DOM-behavior test matrix (implicit-text-plan.md).
+ * Text children: CSS/DOM-behavior test matrix (text-children-plan.md).
  *
  * Comprehensive but non-redundant: each case covers a unique combination of
  * arrangement/nesting × display type × styling × events × DOM APIs. Web
- * mirrors of these cases live in __fixtures__/implicit-text-web-mirror.html —
+ * mirrors of these cases live in __fixtures__/string-children-web-mirror.html —
  * the same snippets, expected to behave the same in a browser.
  *
  * Cases are gated by milestone so the suite doubles as the progress gauge.
@@ -718,7 +718,7 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
 
   // Regression: configureYogaTree's skip-optimization must not skip cascade
   // updates into an unchanged subtree when only an ancestor's inheritable prop
-  // changes (implicit-text-plan.md §5.7). The middle View below never changes,
+  // changes (text-children-plan.md §5.7). The middle View below never changes,
   // so the layout-context skip guard fires — the cascade still has to reach the
   // grandchild IFC.
   it('updating a grandparent color re-cascades into an unchanged subtree (non-size)', () => {
@@ -792,7 +792,7 @@ milestone(4, 'M4: style inheritance (element tree cascade)', () => {
 });
 
 // M4b: the full CSS inherited text-property set cascades into bare text
-// (implicit-text-plan.md §3.D / §5.6). Layout-observable keys are asserted via
+// (text-children-plan.md §3.D / §5.6). Layout-observable keys are asserted via
 // the deterministic measurer contract (§4.5); the rest via the run's rendered
 // attributes, each compared to an explicit-<Text> control carrying the same key.
 milestone(4, 'M4b: full inherited-property set', () => {
@@ -992,7 +992,7 @@ milestone(5, 'M5: intrinsic inline tags', () => {
   it('<img> is an inline replaced element: flows in the run, not blockified', () => {
     // Unlike an inline text *element* (<b>), which blockifies into its own item
     // in a flex container, the replaced <img> flows inside the run as an inline
-    // attachment (implicit-text-plan.md §3.C). Stage 1: classification only —
+    // attachment (text-children-plan.md §3.C). Stage 1: classification only —
     // the attachment is 0-size until iOS attachment layout + image rendering
     // land, so 'a<img/>b' measures like 'ab' on a single line.
     const imgRef = createRef<HostInstance>();
@@ -1035,7 +1035,7 @@ milestone(5, 'M5: intrinsic inline tags', () => {
   });
 
   it('<div> is a block container: inline children join one flow (not blockified)', () => {
-    // The intrinsic <div> is block-outer/block-inner (implicit-text-plan.md §3.C):
+    // The intrinsic <div> is block-outer/block-inner (text-children-plan.md §3.C):
     // like a View with display:'block'. Its inline children (text + <b>) join a
     // single inline flow on one line, unlike a default flex View where the inline
     // element blockifies into its own item.

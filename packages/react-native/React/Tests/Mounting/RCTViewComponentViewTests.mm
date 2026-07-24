@@ -191,7 +191,7 @@ static Props::Shared makeViewProps(bool removeClippedSubviews)
   XCTAssertNil([view hitTest:CGPointMake(50, 50) withEvent:nil]);
 }
 
-#pragma mark - implicit text run geometry (paint & hit-test single source of truth)
+#pragma mark - text children run geometry (paint & hit-test single source of truth)
 
 // `containerFrame` is the one geometry both painting (-drawRect:) and hit-testing
 // (-touchEventEmitterAtContainerPoint:) consume, read here via KVC (CGRect boxed
@@ -214,7 +214,7 @@ static Props::Shared makeViewProps(bool removeClippedSubviews)
 // and the drawn text jumped to the top-left. This drives the two updates in BOTH
 // orders and asserts the geometry is identical and equals the run frame — i.e.
 // relayout is idempotent and paint and touch share one coordinate space.
-- (void)testImplicitTextRunGeometryIsStableRegardlessOfUpdateOrder
+- (void)testAnonymousTextRunGeometryIsStableRegardlessOfUpdateOrder
 {
   std::shared_ptr<RootShadowNode> rootShadowNode;
   std::shared_ptr<ViewShadowNode> viewShadowNode;
@@ -244,7 +244,7 @@ static Props::Shared makeViewProps(bool removeClippedSubviews)
                     return sharedProps;
                   })
                   .children({
-                      // A bare string child → an anonymous implicit-text run.
+                      // A bare string child → an anonymous text-children run.
                       Element<TextNodeShadowNode>().props([] {
                         auto sharedProps = std::make_shared<TextNodeProps>("hello");
                         return sharedProps;
@@ -259,7 +259,7 @@ static Props::Shared makeViewProps(bool removeClippedSubviews)
   auto state = std::static_pointer_cast<const ViewShadowNode::ConcreteState>(viewShadowNode->getState());
   auto layoutMetrics = viewShadowNode->getLayoutMetrics();
 
-  // Implicit text must be active: exactly one anonymous run, laid out inside the
+  // Text children must be active: exactly one anonymous run, laid out inside the
   // padding (origin at the 6pt inset, not the border box).
   XCTAssertEqual(state->getData().textRuns.size(), 1u);
   CGRect runFrame = RCTCGRectFromRect(state->getData().textRuns[0].frame);

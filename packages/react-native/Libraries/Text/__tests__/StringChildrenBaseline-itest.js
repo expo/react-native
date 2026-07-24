@@ -10,13 +10,13 @@
  */
 
 /**
- * Baseline guards for the implicit-text project (implicit-text-plan.md).
+ * Baseline guards for the text-children project (text-children-plan.md).
  *
  * Runs WITHOUT enableStringChildren. Two jobs:
  * 1. Document today's behavior for bare strings (silently dropped).
  * 2. Pin the back-compat exception: explicit <Text> rendering must never
  *    change. These assertions must stay green with and without the flag —
- *    the flagged twin lives in ImplicitText-itest.js (§compat).
+ *    the flagged twin lives in StringChildrenBehavior-itest.js (§compat).
  */
 
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
@@ -30,7 +30,7 @@ import {createRef} from 'react';
 import {Text, View} from 'react-native';
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 
-describe('implicit text: baseline (flag off)', () => {
+describe('text children: baseline (flag off)', () => {
   it('explicit <Text> in a View renders a paragraph (control anchor)', () => {
     const root = Fantom.createRoot();
 

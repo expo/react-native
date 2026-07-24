@@ -7,14 +7,14 @@
 
 #pragma once
 
-#include <react/renderer/components/text/ImplicitTextContent.h>
+#include <react/renderer/components/text/AnonymousTextContent.h>
 #include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 
 namespace facebook::react {
 
 /*
- * Internal descriptor for the first-class text node (implicit-text-plan.md §3.F).
+ * Internal descriptor for the first-class text node (text-children-plan.md §3.F).
  * It is registered so `UIManager::createTextNode` can build the node with a real
  * `ShadowNodeFamily`, but is never resolved from JS by name. Like the old
  * `RawTextComponentDescriptor`, it is the reliable install point for the
@@ -25,7 +25,7 @@ class TextNodeComponentDescriptor : public ConcreteComponentDescriptor<TextNodeS
   explicit TextNodeComponentDescriptor(const ComponentDescriptorParameters &parameters)
       : ConcreteComponentDescriptor<TextNodeShadowNode>(parameters)
   {
-    ensureImplicitTextContentFactoryInstalled(parameters);
+    ensureAnonymousTextContentFactoryInstalled(parameters);
   }
 };
 

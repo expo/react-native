@@ -21,7 +21,7 @@ namespace facebook::react {
 
 /*
  * Intrinsic inline text tags (<b>, <i>, <span>): thin virtual text elements
- * with baked-in attribute defaults (implicit-text-plan.md §3.C). All are
+ * with baked-in attribute defaults (text-children-plan.md §3.C). All are
  * instances of the inline text element class (TextShadowNode); explicit
  * styles still override the defaults.
  */
@@ -108,7 +108,7 @@ class SpanTagShadowNode final
  * APIs can report it (HTMLUnknownElement keeps its tag). The raw tag is lost at
  * the JS boundary — every unknown tag shares the singleton "unknown" view
  * config — so `createInstance` injects it as the `nodeName` prop, the only
- * per-instance channel (implicit-text-plan.md §3.C; next-steps T2).
+ * per-instance channel (text-children-plan.md §3.C; next-steps T2).
  */
 class UnknownElementProps final : public TextProps, public NodeNameProvider {
  public:

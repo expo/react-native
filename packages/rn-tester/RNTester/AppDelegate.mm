@@ -53,8 +53,8 @@ static NSString *kBundlePath = @"js/RNTesterApp.ios";
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
   // Enable W3C Pointer Events so DOM-style pointer/click events (and the DOM
-  // event/target APIs) dispatch — required for implicit text's inline elements
-  // to handle click events like the web (implicit-text demo).
+  // event/target APIs) dispatch — required for text children's inline elements
+  // to handle click events like the web (text-children demo).
   RCTSetDispatchW3CPointerEvents(YES);
 
   self.reactNativeFactory = [[RCTReactNativeFactory alloc] initWithDelegate:self];

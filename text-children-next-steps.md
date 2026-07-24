@@ -1,8 +1,8 @@
 # Implicit Text: Remaining Work — an actionable backlog
 
-This is the **work queue** for the implicit-text feature. It assumes you have done the ramp-up
-in `implicit-text-onboarding.md` (spec + code tour) and have read the design in
-`implicit-text-plan.md` (the living spec). This document does not re-teach those; it tells you
+This is the **work queue** for the text-children feature. It assumes you have done the ramp-up
+in `text-children-onboarding.md` (spec + code tour) and have read the design in
+`text-children-plan.md` (the living spec). This document does not re-teach those; it tells you
 **exactly what is left, how to verify each item, and when it is done.**
 
 Every task below follows the same shape:
@@ -33,7 +33,7 @@ Everything else below is open.
 
 ## 1. The shared build / test loop (all tasks use this)
 
-Exact incantations (see `implicit-text-onboarding.md` §4 for detail, §6 for gotchas):
+Exact incantations (see `text-children-onboarding.md` §4 for detail, §6 for gotchas):
 
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17
@@ -43,7 +43,7 @@ export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 cmake --build private/react-native-fantom/build/tester -j10
 
 # Run a suite:
-yarn fantom packages/react-native/Libraries/Text/__tests__/ImplicitText-itest.js
+yarn fantom packages/react-native/Libraries/Text/__tests__/StringChildrenBehavior-itest.js
 ```
 
 **The deterministic measurer contract** (cxx `TextLayoutManager`, flag-gated) is how intrinsic
@@ -52,7 +52,7 @@ per char); **line height** = explicit `lineHeight` if set, else `fontSize + 6`; 
 the width constraint. Extend it deliberately (and document it) if a task needs a new observable
 dimension.
 
-**Web mirror** (`__tests__/__fixtures__/implicit-text-web-mirror.html`): every behavioral case
+**Web mirror** (`__tests__/__fixtures__/string-children-web-mirror.html`): every behavioral case
 gets a browser twin. Verify in Safari over http (safaridriver refuses `file://`):
 
 ```bash
@@ -71,12 +71,12 @@ the `engines` check rejects.
 ### Definition of Done (applies to every task, from onboarding §7)
 
 1. Matrix + baselines + regression suites green under Fantom
-   (`ImplicitText-itest.js`, `ImplicitTextBaseline-itest.js`, `Text-itest.js`,
+   (`StringChildrenBehavior-itest.js`, `StringChildrenBaseline-itest.js`, `Text-itest.js`,
    `ReadOnlyText-itest.js`, `ReactNativeElement-itest.js`).
 2. Web-mirror twin added/updated and passing in Safari; spec section cited in the test.
 3. Explicit `<Text>` pixel-identity untouched (the baseline guards prove it).
 4. Checkpoint commit whose message states known-working and known-broken.
-5. Behavior change reflected in `implicit-text-plan.md` (the living spec).
+5. Behavior change reflected in `text-children-plan.md` (the living spec).
 
 Tasks whose verification cannot be headless (simulator/device) say so and give the manual proof.
 
@@ -98,7 +98,7 @@ better starting point for Android"): brought the whole feature to correct on-dev
 the `#text` model. (a) `pod install` regenerated the header map so the T8 RawText deletion +
 `#text`/`createTextNode` path compiles/links/runs on iOS. (b) **`<div>` was rendering an empty
 box** — `DivShadowNode` extended `ConcreteViewShadowNode` directly and so never inherited
-`ViewShadowNode`'s implicit-text layout/paint machinery; fixed by templatizing the view shadow
+`ViewShadowNode`'s text-children layout/paint machinery; fixed by templatizing the view shadow
 node into `AbstractViewShadowNode<name, props>` (same non-type-param pattern the base
 `ConcreteViewShadowNode` uses) so `<View>` and `<div>` share one copy (View behavior byte-
 identical — same base types). (c) Registered `RCTDivComponentView` (seeds `_props` with a
@@ -136,8 +136,8 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
   only — explicit `<Text>` stays verbatim. Collapses runs of ASCII whitespace to a single
   space across fragment boundaries, trims the IFC's leading/trailing edges, drops emptied
   fragments; attachment fragments are opaque anchors; whitespace-only runs are still dropped
-  upstream in `ImplicitTextContent.cpp`. §7 decision (CSS-normal collapsing) recorded in the
-  plan. Tests: `ImplicitText-itest.js` M3 (3 cases) + web-mirror twins (Safari 17/17).
+  upstream in `AnonymousTextContent.cpp`. §7 decision (CSS-normal collapsing) recorded in the
+  plan. Tests: `StringChildrenBehavior-itest.js` M3 (3 cases) + web-mirror twins (Safari 17/17).
 - **Goal.** Bare-text runs collapse runs of whitespace and trim line edges per CSS
   `white-space: normal`, so `<View>{"  a   b  "}</View>` lays out like the web, while explicit
   `<Text>` keeps RN's verbatim behavior.
@@ -170,7 +170,7 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
   (`ReactFabric-dev.js`), and `nodeName` was added to the unknown config's `validAttributes`
   (`ReactNativeViewConfigRegistry.js`). (c) `getTagName` (`renderer/dom/DOM.cpp`) reads the
   prop when the component is `"unknown"`, so `tagName`/`nodeName` report `"RN:<tag>"`. Tests:
-  `ImplicitText-itest.js` M5b (per-instance `<foo>`/`<bar>`) + web-mirror twin (Safari 18/18).
+  `StringChildrenBehavior-itest.js` M5b (per-instance `<foo>`/`<bar>`) + web-mirror twin (Safari 18/18).
   **Prod follow-up:** the `ReactFabric-prod.js` injection is not done (minified-bundle edit —
   same fork-carry category as the §3.E dev-warning bundle edit); until then the prod path falls back to `unknown`.
 - **Goal.** `document`-style DOM APIs report `<foo>`'s tag as `foo` (e.g. `tagName === "RN:foo"`)
@@ -202,7 +202,7 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
 ### T3. Lazy View state — ✅ DONE
 
 - **Status (done).** `ViewComponentDescriptor::createInitialState` now returns `nullptr`, so a
-  View starts stateless (restoring the exact pre-implicit-text hot path — `ViewState` is a
+  View starts stateless (restoring the exact pre-text-children hot path — `ViewState` is a
   feature-only addition). `ViewShadowNode::updateTextRunStateIfNeeded` allocates the state
   lazily on the first runs via the family `ConcreteState` ctor (the null→non-null transition),
   and short-circuits to a null-safe early return when `state_ == nullptr` and there are no
@@ -258,7 +258,7 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
   3. `enableYogaDisplayBlock` common feature flag (config → regen under node 24); `updateYogaProps`
      maps RN `display:'block'` → `Display::Block` when on, keeping the emulation when off. The
      shared anonymous-box grouping predicate in `updateYogaChildren` already carries both paths.
-  Tests: `ImplicitTextNativeBlock-itest.js` — 4 parity cases (identical numbers to the M3
+  Tests: `StringChildrenNativeBlock-itest.js` — 4 parity cases (identical numbers to the M3
   emulation) + 3 native-only fidelity cases (a `flexGrow:1` block child does NOT grow; children
   stack at content size; a block child fills the content width). Web-mirror twins (Safari 20/20).
   **Full regression sweep green**: ImplicitText 39, baselines 4, Text 151, View-itest 224,
@@ -297,7 +297,7 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
   parity is the safety net). Add native-only cases that the emulation gets wrong (a block child
   with `flex:1` must NOT grow; block child width = containing block, not shrink-wrap). Web-mirror
   twins against a real `<div>`. **Crucially: a full flexbox-regression pass** — this modifies
-  core layout used by every RN view, so run the broad Yoga/layout suites, not just implicit-text.
+  core layout used by every RN view, so run the broad Yoga/layout suites, not just text-children.
 - **Acceptance.** DoD 1–5 **plus** a green flexbox-regression sweep; emulation-vs-native parity
   on the floor cases; native-only cases prove the fidelity gain; each stage separately gated and
   documented.
@@ -371,17 +371,17 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 `defaultValue`, `yarn featureflags --update` (node 24), `pod install` under `env -i` with a clean
 `PATH` whose `git` is `/usr/bin/git`, `xcodebuild` RNTester, launch, screenshot via
 `xcrun simctl io <udid> screenshot`. Live layout reads:
-`node packages/rn-tester/scripts/implicit-text-cdp-verify.js` (Metro's inspector proxy needs
-`Origin: http://localhost:8081`). Demo page: `packages/rn-tester/js/ImplicitTextDemo.js`.
+`node packages/rn-tester/scripts/string-children-cdp-verify.js` (Metro's inspector proxy needs
+`Origin: http://localhost:8081`). Demo page: `packages/rn-tester/js/IntrinsicsDemo.js`.
 
 ### T5. iOS paint order + per-run views — ✅ DONE (simulator-verified)
 
-- **Status (done).** Replaced the single `RCTImplicitTextContentView` (which drew every run on
-  top) with one lightweight `RCTImplicitTextRunView` per run (`RCTViewComponentView.mm`), each
+- **Status (done).** Replaced the single `RCTAnonymousTextContentView` (which drew every run on
+  top) with one lightweight `RCTAnonymousTextRunView` per run (`RCTViewComponentView.mm`), each
   drawing its single run via `RCTTextLayoutManager drawAttributedString:`. Authored document
   order is threaded through: `YogaLayoutableShadowNode` records, per anonymous box, the count of
   preceding mounted children (`anonymousTextContentChildIndices_`), `ViewShadowNode` copies it
-  into `ViewState::TextRun::documentOrder`, and iOS `reorderImplicitTextRunViewsIfNeeded`
+  into `ViewState::TextRun::documentOrder`, and iOS `reorderAnonymousTextRunViewsIfNeeded`
   (called from `layoutSubviews`) inserts each run view just below the child it precedes — so
   text authored before a child paints under it and text after paints over it. Run views are
   component-view-internal (never differ-driven), cleared in `prepareForRecycle`.
@@ -395,7 +395,7 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
   children in authored order (CSS painting order). Per-run views are component-view-internal
   (never differ-driven); `layoutSubviews` re-establishes z-order after every mount/state change.
 - **Entry points.** `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm` (search
-  `RCTImplicitTextContentView`); mirror `RCTParagraphComponentView`'s inner text view
+  `RCTAnonymousTextContentView`); mirror `RCTParagraphComponentView`'s inner text view
   (`RCTParagraphComponentView.mm:383-428`) drawing via `RCTTextLayoutManager drawAttributedString:`.
 - **Approach.** Replace the single content view with one run view per anonymous item; exclude run
   views from React child indices (same pattern as the paragraph content view); re-sort in
@@ -410,7 +410,7 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 
 - **Status (done).** `RCTViewComponentView touchEventEmitterAtPoint:` now, when text runs exist,
   finds the run whose frame contains the point and resolves the fragment emitter via
-  `getEventEmitterWithAttributeString:...atPoint:` (per-run `RCTImplicitTextRunView`), falling
+  `getEventEmitterWithAttributeString:...atPoint:` (per-run `RCTAnonymousTextRunView`), falling
   back to the View's own emitter — so a tap on an inline element with a handler targets that
   element, while a tap on bare text targets the View (text nodes are never targets).
   **Bug found & fixed during verification:** `getEventEmitterWithAttributeString:` lays the run
@@ -490,8 +490,8 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
   `ViewShadowNode.cpp`); registered in the Fantom stub registry; JS config in `InlineTags.js`
   (reuses the base View `validAttributes` via `createViewConfig`). Being block-level (not in
   `isInlineTextContent`), a parent treats `<div>` as a block child.
-  Verified headlessly: `ImplicitText-itest.js` M5 — `<div>a<b>b</b>c</div>` is one inline flow
-  (one line), vs a flex View blockifying to 3× height; `ImplicitTextNativeBlock-itest.js` — `<div>`
+  Verified headlessly: `StringChildrenBehavior-itest.js` M5 — `<div>a<b>b</b>c</div>` is one inline flow
+  (one line), vs a flex View blockifying to 3× height; `StringChildrenNativeBlock-itest.js` — `<div>`
   as a native block container (both flags on). Regressions green (baselines 4, Text 151,
   ReadOnlyText 30, View-itest 224). Web-mirror twin added (literal `<div>` is `display:block`);
   Safari re-run blocked by a persistent safaridriver launch failure this session (passed 20/20
@@ -543,7 +543,7 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 - iOS painting: `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`,
   `.../Text/RCTParagraphComponentView.mm`, `.../RCTTextLayoutManager.mm`.
 - Flags: `scripts/featureflags/ReactNativeFeatureFlags.config.js`.
-- Tests / proof: `Libraries/Text/__tests__/ImplicitText-itest.js`,
-  `ImplicitTextBaseline-itest.js`, `__fixtures__/implicit-text-web-mirror.html`,
-  `packages/rn-tester/js/ImplicitTextDemo.js`,
-  `packages/rn-tester/scripts/implicit-text-cdp-verify.js`.
+- Tests / proof: `Libraries/Text/__tests__/StringChildrenBehavior-itest.js`,
+  `StringChildrenBaseline-itest.js`, `__fixtures__/string-children-web-mirror.html`,
+  `packages/rn-tester/js/IntrinsicsDemo.js`,
+  `packages/rn-tester/scripts/string-children-cdp-verify.js`.

@@ -24,8 +24,8 @@ class ViewComponentDescriptor : public ConcreteComponentDescriptor<ViewShadowNod
    * Views start stateless. Although `ViewShadowNode` declares a `ViewState`
    * (to paint anonymous text runs), a plain View has no runs and needs no
    * state — so a `ViewState` is allocated lazily, on the first runs, rather
-   * than for every View at construction (implicit-text-plan.md §4.2 /
-   * next-steps T3). This keeps the pre-implicit-text hot path zero-cost: a
+   * than for every View at construction (text-children-plan.md §4.2 /
+   * next-steps T3). This keeps the pre-text-children hot path zero-cost: a
    * prop-less, textless View allocates no state object, exactly as before the
    * feature. `ViewShadowNode::updateTextRunStateIfNeeded` performs the
    * null -> non-null transition when runs appear.

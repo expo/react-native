@@ -23,7 +23,7 @@ extern const char TextNodeComponentName[];
  * Props for the first-class text node. The character data is a **direct field**
  * (`text`), not parsed out of `RawProps` — the `createTextNode` host-config path
  * sets it straight, and `commitTextUpdate` replaces it, avoiding RawProps parsing
- * on every text change (implicit-text-plan.md §3.F).
+ * on every text change (text-children-plan.md §3.F).
  */
 class TextNodeProps final : public Props {
  public:
@@ -46,7 +46,7 @@ class TextNodeProps final : public Props {
 /*
  * First-class DOM text node (`Text : CharacterData`, DOM `nodeName` "#text").
  * Replaces `RawTextShadowNode`'s fake-`RCTRawText`-component packaging
- * (implicit-text-plan.md §3.F): it keeps a real per-node `ShadowNodeFamily` for
+ * (text-children-plan.md §3.F): it keeps a real per-node `ShadowNodeFamily` for
  * identity/traversal (DOM `childNodes`/`parentNode` resolve through it) and the
  * `instanceHandle`, but drops the RawProps parsing (character data is a direct
  * field), has no state, and is constructed by one internal descriptor — never

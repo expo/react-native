@@ -15,7 +15,7 @@
 
 namespace facebook::react {
 
-// The first-class text node's component name (implicit-text-plan.md §3.F);
+// The first-class text node's component name (text-children-plan.md §3.F);
 // DOM `nodeName`. Defined here (rather than a new TU) so it is available without
 // a CocoaPods header/source-map regeneration. Never registered as a
 // JS-resolvable component; constructed only via `UIManager::createTextNode`.

@@ -58,7 +58,7 @@ folly::dynamic RenderOutput::renderView(
         renderAttributedString(view.tag, state.getData().attributedString);
   } else {
     element["children"] = folly::dynamic::array;
-    // Anonymous text runs of a View (implicit text): rendered as string
+    // Anonymous text runs of a View (text children): rendered as string
     // children, before any real view children.
     if (view.state != nullptr) {
       if (const auto* viewState =

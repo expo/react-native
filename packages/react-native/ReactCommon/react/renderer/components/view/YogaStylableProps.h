@@ -59,7 +59,7 @@ class YogaStylableProps : public Props {
 
   /*
    * True when style `display` is 'block' (CSS block container, emulated on
-   * Yoga flex primitives; implicit-text-plan.md §3.A).
+   * Yoga flex primitives; text-children-plan.md §3.A).
    */
   bool displayBlock{false};
 

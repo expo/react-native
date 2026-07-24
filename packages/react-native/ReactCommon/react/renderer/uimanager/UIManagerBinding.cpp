@@ -259,7 +259,7 @@ jsi::Value UIManagerBinding::get(
         });
   }
 
-  // First-class text node creation (implicit-text-plan.md §3.F): the host-config
+  // First-class text node creation (text-children-plan.md §3.F): the host-config
   // `createTextInstance` counterpart. Args: (tag, text, surfaceId, instanceHandle).
   if (methodName == "createTextNode") {
     auto paramCount = 4;

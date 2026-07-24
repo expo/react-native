@@ -46,25 +46,25 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
 
 /*
  * Paints a View's anonymous inline-formatting-context text runs
- * (implicit-text-plan.md §3.B). Installed as `contentView` only when runs
+ * (text-children-plan.md §3.B). Installed as `contentView` only when runs
  * exist.
  */
 /*
- * One lightweight paint view per anonymous text run (implicit-text-plan.md
+ * One lightweight paint view per anonymous text run (text-children-plan.md
  * §3.B). Using one view per run (instead of a single content view drawing all
  * runs on top) lets the mounting layer interleave runs with mounted child views
  * in authored order — CSS painting order — via `layoutSubviews` z-ordering.
  * These views are component-view-internal: they are never differ-driven and
  * never appear in the React child indices.
  */
-@interface RCTImplicitTextRunView : UIView
+@interface RCTAnonymousTextRunView : UIView
 // Resolves a touch (in the owning View's coordinate space) to an inline
 // fragment's emitter, or nullptr to fall through to the View. Shares the run's
 // `containerFrame` with painting — one geometry for both draw and touch.
 - (facebook::react::SharedTouchEventEmitter)touchEventEmitterAtContainerPoint:(CGPoint)point;
 @end
 
-@implementation RCTImplicitTextRunView {
+@implementation RCTAnonymousTextRunView {
  @public
   facebook::react::ViewState::TextRun _run;
   std::weak_ptr<const facebook::react::TextLayoutManager> _layoutManager;
@@ -116,7 +116,7 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   CGRect frame = self.containerFrame;
   RCTAssert(
       CGRectEqualToRect(frame, RCTCGRectFromRect(_run.frame)),
-      @"implicit-text run paint geometry must equal the run's Yoga frame");
+      @"text-children run paint geometry must equal the run's Yoga frame");
   [nativeTextLayoutManager drawAttributedString:_run.attributedString
                             paragraphAttributes:facebook::react::ParagraphAttributes{}
                                           frame:frame
@@ -135,7 +135,7 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   // Yoga frame, or a tap lands where no glyph was drawn (BUG 2).
   RCTAssert(
       CGRectEqualToRect(frame, RCTCGRectFromRect(_run.frame)),
-      @"implicit-text run hit-test geometry must equal the run's Yoga frame");
+      @"text-children run hit-test geometry must equal the run's Yoga frame");
   if (!CGRectContainsPoint(frame, point)) {
     return nullptr;
   }
@@ -174,8 +174,8 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   RCTSwiftUIContainerViewWrapper *_swiftUIWrapper;
   BOOL _focusable;
   // One paint view per anonymous text run, interleaved with mounted children in
-  // document order (implicit-text-plan.md §3.B). Internal, never differ-driven.
-  NSMutableArray<RCTImplicitTextRunView *> *_textRunViews;
+  // document order (text-children-plan.md §3.B). Internal, never differ-driven.
+  NSMutableArray<RCTAnonymousTextRunView *> *_textRunViews;
 }
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -405,11 +405,11 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     _textRunViews = [NSMutableArray new];
   }
   for (size_t i = 0; i < data.textRuns.size(); i++) {
-    RCTImplicitTextRunView *runView = nil;
+    RCTAnonymousTextRunView *runView = nil;
     if (i < _textRunViews.count) {
       runView = _textRunViews[i];
     } else {
-      runView = [[RCTImplicitTextRunView alloc] initWithFrame:self.currentContainerView.bounds];
+      runView = [[RCTAnonymousTextRunView alloc] initWithFrame:self.currentContainerView.bounds];
       [_textRunViews addObject:runView];
       [self.currentContainerView addSubview:runView];
     }
@@ -423,10 +423,10 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 }
 
 // Interleaves the internal per-run paint views with mounted child views in
-// authored document order (CSS painting order, implicit-text-plan.md §3.B): a
+// authored document order (CSS painting order, text-children-plan.md §3.B): a
 // run with `documentOrder == d` is placed just below the d-th mounted child, so
 // text authored before a child paints under it and text after paints over it.
-- (void)reorderImplicitTextRunViewsIfNeeded
+- (void)reorderAnonymousTextRunViewsIfNeeded
 {
   if (_textRunViews.count == 0) {
     return;
@@ -434,12 +434,12 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   UIView *container = self.currentContainerView;
   NSMutableArray<UIView *> *mountedChildren = [NSMutableArray new];
   for (UIView *subview in container.subviews) {
-    if (![subview isKindOfClass:[RCTImplicitTextRunView class]]) {
+    if (![subview isKindOfClass:[RCTAnonymousTextRunView class]]) {
       [mountedChildren addObject:subview];
     }
   }
   for (NSUInteger i = 0; i < _textRunViews.count; i++) {
-    RCTImplicitTextRunView *runView = _textRunViews[i];
+    RCTAnonymousTextRunView *runView = _textRunViews[i];
     int documentOrder = runView->_run.documentOrder;
     if (documentOrder >= (int)mountedChildren.count) {
       // After all mounted children: on top.
@@ -460,10 +460,10 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 {
   [super layoutSubviews];
   if (_textRunViews.count > 0) {
-    for (RCTImplicitTextRunView *runView in _textRunViews) {
+    for (RCTAnonymousTextRunView *runView in _textRunViews) {
       runView.frame = self.currentContainerView.bounds;
     }
-    [self reorderImplicitTextRunViewsIfNeeded];
+    [self reorderAnonymousTextRunViewsIfNeeded];
   }
 }
 
@@ -904,9 +904,9 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     self.layer.opacity = (float)props.opacity;
   }
 
-  // Clean up per-run text paint views (implicit-text-plan.md §3.B).
+  // Clean up per-run text paint views (text-children-plan.md §3.B).
   if (_textRunViews != nil) {
-    for (RCTImplicitTextRunView *runView in _textRunViews) {
+    for (RCTAnonymousTextRunView *runView in _textRunViews) {
       [runView removeFromSuperview];
     }
     [_textRunViews removeAllObjects];
@@ -1887,7 +1887,7 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 
 - (SharedTouchEventEmitter)touchEventEmitterAtPoint:(CGPoint)point
 {
-  // Hit-testing on drawn implicit text (implicit-text-plan.md §3.G / next-steps
+  // Hit-testing on drawn text children (text-children-plan.md §3.G / next-steps
   // T6): a tap that lands on an inline element with its own handler (e.g.
   // <b onPress>) resolves to that element's fragment emitter; a tap on bare text
   // resolves to null here (text-node fragments carry the emitter-less anonymous
@@ -1897,7 +1897,7 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
   // `containerFrame` it paints with — so a tap can never land somewhere the
   // glyphs are not drawn. Runs are non-overlapping (separated by block
   // children), so the first containing run wins.
-  for (RCTImplicitTextRunView *runView in _textRunViews) {
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
     if (auto touchEventEmitter = [runView touchEventEmitterAtContainerPoint:point]) {
       return touchEventEmitter;
     }
@@ -2082,7 +2082,7 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 @end
 
 /*
- * Component view for the intrinsic `<div>` tag (implicit-text-plan.md §3.C): a
+ * Component view for the intrinsic `<div>` tag (text-children-plan.md §3.C): a
  * block-level container that renders exactly like a `View` (its shadow node is a
  * View with `displayBlock`), so it reuses `RCTViewComponentView` wholesale and
  * only differs by component handle. Self-registered via `+load` since `<div>` is

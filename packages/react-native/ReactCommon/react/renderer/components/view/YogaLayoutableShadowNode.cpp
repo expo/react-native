@@ -30,7 +30,7 @@
 namespace facebook::react {
 
 // Whether the inheritable text props that feed the element-tree cascade
-// (implicit-text-plan.md §3.D) differ between two revisions of a View's props.
+// (text-children-plan.md §3.D) differ between two revisions of a View's props.
 // A change here must re-run the cascade into descendant IFCs even though none
 // of these keys is a Yoga layout style. Extend this as the inherited set grows
 // (§5.6).
@@ -184,7 +184,7 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
   // style, so a change to them alone would not dirty layout — yet descendant
   // anonymous IFC boxes must re-measure and re-cascade. Dirty this node so a
   // layout pass runs and `configureYogaTree` re-propagates the cascade
-  // (implicit-text-plan.md §3.D). The dirty flag is picked up by the parent's
+  // (text-children-plan.md §3.D). The dirty flag is picked up by the parent's
   // `updateYogaChildren` (which compares child dirtiness) and propagated to the
   // surface root, so `layoutIfNeeded` actually runs the pass.
   if (ReactNativeFeatureFlags::enableStringChildren() && fragment.props) {
@@ -203,7 +203,7 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
   } else if (!static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
                   .anonymousTextContentChildren_.empty()) {
     // Anonymous boxes are owned exclusively by one shadow-node revision
-    // (implicit-text-plan.md §4.1): rebuild rather than share the source's.
+    // (text-children-plan.md §4.1): rebuild rather than share the source's.
     updateYogaChildren();
     // The rebuilt boxes start with NO inherited text attributes. This happens
     // even on a props/children-unchanged clone (e.g. adoptYogaChild re-parenting
@@ -211,7 +211,7 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     // yogaTreeHasBeenConfigured_ from the source. Left set, configureYogaTree's
     // cascade skip-guard would prune this node and the fresh boxes would render
     // with default attributes (black, default size). Force a reconfigure so the
-    // cascade re-reaches the new boxes (implicit-text-plan.md §3.D).
+    // cascade re-reaches the new boxes (text-children-plan.md §3.D).
     yogaTreeHasBeenConfigured_ = false;
   }
 
@@ -436,7 +436,7 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
 
   ensureUnsealed();
 
-  const auto implicitTextEnabled =
+  const auto stringChildrenEnabled =
       ReactNativeFeatureFlags::enableStringChildren() &&
       getAnonymousTextContentFactory() != nullptr;
 
@@ -471,10 +471,10 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
   for (size_t i = 0; i < getChildren().size(); i++) {
     // The replaced `<img>` is layoutable (it reuses the Image machinery) but is
     // an *inline* replaced element: it flows inside the current run as an
-    // attachment, never as a block Yoga child (implicit-text-plan.md §3.C). It
+    // attachment, never as a block Yoga child (text-children-plan.md §3.C). It
     // still mounts (differ-driven) and is positioned by the owning View's
     // attachment-layout pass.
-    if (implicitTextEnabled &&
+    if (stringChildrenEnabled &&
         std::string_view{getChildren()[i]->getComponentName()} == "img") {
       inlineRun.push_back(getChildren()[i]);
       continue;
@@ -496,7 +496,7 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
         isClean = isClean && !newYogaChildNode.isDirty() &&
             (newYogaChildNode.style() == oldYogaChildNode.style());
       }
-    } else if (implicitTextEnabled && isInlineTextContent(*getChildren()[i])) {
+    } else if (stringChildrenEnabled && isInlineTextContent(*getChildren()[i])) {
       const auto& child = getChildren()[i];
       const auto isBlockContainer =
           static_cast<const YogaStylableProps&>(*props_).displayBlock;
@@ -505,7 +505,7 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
         // Text runs always join the current run; in block containers inline
         // *elements* join it too (single inline formatting context,
         // CSS2 §9.2.1.1). The replaced `<img>` always flows inside the run as
-        // an inline attachment, never blockified (implicit-text-plan.md §3.C).
+        // an inline attachment, never blockified (text-children-plan.md §3.C).
         inlineRun.push_back(child);
       } else {
         // Inline text *element* in a flex container: blockified into its own
@@ -520,7 +520,7 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
 
   if (!anonymousTextContentChildren_.empty()) {
     // Text-bearing containers paint their runs and must not be flattened
-    // away by view flattening (implicit-text-plan.md §3.B).
+    // away by view flattening (text-children-plan.md §3.B).
     traits_.set(ShadowNodeTraits::Trait::FormsView);
     traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
   }
@@ -610,7 +610,7 @@ void YogaLayoutableShadowNode::updateYogaProps() {
       props.displayBlock) {
     if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
       // Native block formatting context: a first-class Yoga display type
-      // (implicit-text-plan.md §3.A/§4.5). Block-level children stack in the
+      // (text-children-plan.md §3.A/§4.5). Block-level children stack in the
       // block direction with block sizing (not flex items); the block layout
       // algorithm lives in Yoga's CalculateLayout.
       styleResult.setDisplay(yoga::Display::Block);
@@ -737,7 +737,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
   yogaTreeHasBeenConfigured_ = true;
 
   // Element-tree cascade of inheritable text attributes
-  // (implicit-text-plan.md §3.D): fold this node's inheritable props into the
+  // (text-children-plan.md §3.D): fold this node's inheritable props into the
   // effective attributes assigned by our parent, then hand the result to
   // children below.
   if (ReactNativeFeatureFlags::enableStringChildren()) {
@@ -797,7 +797,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
     // otherwise unchanged (same props, same layout context), we must still
     // push the new cascade value down to its anonymous IFC boxes. Detect a
     // changed cascade by comparing against what we handed this child last time
-    // (implicit-text-plan.md §3.D).
+    // (text-children-plan.md §3.D).
     const bool cascadeChanged =
         ReactNativeFeatureFlags::enableStringChildren() &&
         !(child.receivedTextAttributes_ == inheritedTextAttributes_);

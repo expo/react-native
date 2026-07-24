@@ -88,7 +88,7 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   Rect getContentBounds() const;
 
-#pragma mark - Implicit text content (anonymous inline formatting contexts)
+#pragma mark - Text children content (anonymous inline formatting contexts)
 
   /*
    * Factory producing an anonymous box (a Yoga-layoutable node establishing an
@@ -96,7 +96,7 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * and inline text elements) of a block container. Implemented and installed
    * by the text module (components/text) to keep the dependency direction
    * intact; returns nullptr for runs that generate no box (e.g. whitespace-only
-   * anonymous items, per css-flexbox-1 §4). See implicit-text-plan.md §3.A.
+   * anonymous items, per css-flexbox-1 §4). See text-children-plan.md §3.A.
    */
   using AnonymousTextContentFactory = std::shared_ptr<YogaLayoutableShadowNode> (*)(
       std::vector<std::shared_ptr<const ShadowNode>> runChildren,
@@ -114,7 +114,7 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Parallel to `getAnonymousTextContentChildren()`: for each anonymous run box,
    * the number of block-level (mounted) React children that precede it in
    * document order. Used to interleave per-run paint views with mounted children
-   * in authored order (implicit-text-plan.md §3.B).
+   * in authored order (text-children-plan.md §3.B).
    */
   const std::vector<int> &getAnonymousTextContentChildIndices() const
   {
@@ -123,7 +123,7 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   /*
    * Effective inherited text attributes for this node (element-tree cascade,
-   * implicit-text-plan.md §3.D). Propagated top-down in `configureYogaTree`.
+   * text-children-plan.md §3.D). Propagated top-down in `configureYogaTree`.
    */
   const TextAttributes &getInheritedTextAttributes() const
   {
@@ -246,7 +246,7 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void ensureYogaChildrenAlignment() const;
   void ensureYogaChildrenLookFine() const;
 
-#pragma mark - Implicit text content helpers
+#pragma mark - Text children content helpers
 
   /*
    * True when `child` is inline-level content (a text node or an inline text
@@ -277,7 +277,7 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   /*
    * Parallel to `anonymousTextContentChildren_`: preceding mounted-child count
-   * per run box (document-order interleaving, implicit-text-plan.md §3.B).
+   * per run box (document-order interleaving, text-children-plan.md §3.B).
    */
   std::vector<int> anonymousTextContentChildIndices_;
 
@@ -292,7 +292,7 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * before this node folds in its own inheritable props. Retained across
    * revisions so a later pass can detect when an ancestor's inheritable prop
    * changed and re-cascade into an otherwise unchanged subtree that the
-   * layout-context skip guard would skip (implicit-text-plan.md §3.D).
+   * layout-context skip guard would skip (text-children-plan.md §3.D).
    */
   TextAttributes receivedTextAttributes_{TextAttributes::defaultTextAttributes()};
 

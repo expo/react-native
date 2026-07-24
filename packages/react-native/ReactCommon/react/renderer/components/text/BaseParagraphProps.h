@@ -49,7 +49,7 @@ class BaseParagraphProps : public ViewProps, public BaseTextProps {
 
   /*
    * Opt-in to inheriting ancestor Views' text attributes
-   * (implicit-text-plan.md §3.D compatibility split).
+   * (text-children-plan.md §3.D compatibility split).
    */
   bool inheritViewTextStyles{false};
 

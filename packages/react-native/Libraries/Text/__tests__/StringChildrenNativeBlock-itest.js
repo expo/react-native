@@ -10,13 +10,13 @@
  */
 
 /**
- * Native Yoga `display:block` (implicit-text-plan.md §3.A/§4.5; next-steps T4).
+ * Native Yoga `display:block` (text-children-plan.md §3.A/§4.5; next-steps T4).
  *
  * `display:'block'` is implemented as a first-class Yoga block formatting
  * context (YGDisplayBlock) instead of the flex column+stretch emulation. This
  * suite has two halves:
  *
- *  - PARITY: the same block-flow cases as ImplicitText-itest.js M3 (which run
+ *  - PARITY: the same block-flow cases as StringChildrenBehavior-itest.js M3 (which run
  *    under the emulation), asserting identical layout numbers — the native path
  *    must reproduce the emulation floor exactly.
  *  - FIDELITY: native-only cases the emulation gets wrong — flex item semantics

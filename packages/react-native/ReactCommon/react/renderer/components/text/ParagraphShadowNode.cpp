@@ -79,7 +79,7 @@ const Content& ParagraphShadowNode::getContent(
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       getConcreteProps().inheritViewTextStyles) {
     // Opt-in web-like inheritance from ancestor Views
-    // (implicit-text-plan.md §3.D).
+    // (text-children-plan.md §3.D).
     textAttributes = getInheritedTextAttributes();
   }
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;

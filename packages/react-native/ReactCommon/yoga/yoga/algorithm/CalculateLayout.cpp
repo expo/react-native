@@ -1692,7 +1692,7 @@ static void justifyMainAxis(
 //
 
 // Lays out a node whose display is `Display::Block` as a CSS block formatting
-// context (implicit-text-plan.md §3.A/§4.5): in-flow children stack in the
+// context (text-children-plan.md §3.A/§4.5): in-flow children stack in the
 // block (vertical) direction, each sized to the container's content width (not
 // distributed as flex items — a `flex:1` block child does not grow), and the
 // container's block size is the sum of the children's margin boxes plus
@@ -2099,7 +2099,7 @@ static void calculateLayoutImpl(
   cleanupContentsNodesRecursively(node, performLayout);
 
   // Block formatting context: `display: block` uses a dedicated block layout
-  // path rather than the flex algorithm below (implicit-text-plan.md §3.A/§4.5).
+  // path rather than the flex algorithm below (text-children-plan.md §3.A/§4.5).
   if (node->style().display() == Display::Block) {
     calculateBlockLayout(
         node,
