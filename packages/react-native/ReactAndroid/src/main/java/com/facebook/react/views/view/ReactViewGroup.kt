@@ -910,22 +910,35 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (_overflow != Overflow.VISIBLE || getTag(R.id.filter) != null) {
       clipToPaddingBox(this, canvas)
     }
+    // Interleave the text runs with the mounted child views by document order (CSS paint order): a
+    // run paints right after the block child it follows, so text before a box paints under it and
+    // text after paints over it. Runs before any child (documentOrder 0) paint first (under all
+    // children); drawChild paints the runs that follow each child as it is drawn.
+    drawnChildCount = 0
+    drawTextRunsWithDocumentOrder(canvas, 0)
     super.dispatchDraw(canvas)
-    drawTextRuns(canvas)
+    // Safety: any run whose document order exceeds the drawn child count paints above everything.
+    drawTextRunsAboveDocumentOrder(canvas, drawnChildCount)
   }
 
   /**
    * Text children (expo-intrinsics): the laid-out text runs of this View's anonymous inline
-   * formatting context, computed natively and delivered via [ViewState]/MapBuffer. Painted on top
-   * of the View's own drawing, mirroring iOS's RCTViewComponentView text-run painting.
+   * formatting context, computed natively and delivered via [ViewState]/MapBuffer. Interleaved with
+   * the View's child views by document order, mirroring iOS's RCTViewComponentView text-run painting.
    */
   private var textRunLayouts: List<TextRunLayout>? = null
+  private var drawnChildCount = 0
 
-  /** A single laid-out text run: an Android [Layout] positioned at [left]/[top] in pixels. */
+  /**
+   * A single laid-out text run: an Android [Layout] positioned at [left]/[top] in pixels.
+   * [documentOrder] is the number of mounted child views that precede the run, so it can be painted
+   * in the correct z-order relative to those children.
+   */
   public class TextRunLayout(
       @JvmField public val layout: android.text.Layout,
       @JvmField public val left: Float,
       @JvmField public val top: Float,
+      @JvmField public val documentOrder: Int,
   )
 
   public fun setTextRunLayouts(runs: List<TextRunLayout>?) {
@@ -933,13 +946,28 @@ public open class ReactViewGroup public constructor(context: Context?) :
     invalidate()
   }
 
-  private fun drawTextRuns(canvas: Canvas) {
+  private fun drawTextRun(canvas: Canvas, run: TextRunLayout) {
+    canvas.save()
+    canvas.translate(run.left, run.top)
+    run.layout.draw(canvas)
+    canvas.restore()
+  }
+
+  private fun drawTextRunsWithDocumentOrder(canvas: Canvas, documentOrder: Int) {
     val runs = textRunLayouts ?: return
     for (run in runs) {
-      canvas.save()
-      canvas.translate(run.left, run.top)
-      run.layout.draw(canvas)
-      canvas.restore()
+      if (run.documentOrder == documentOrder) {
+        drawTextRun(canvas, run)
+      }
+    }
+  }
+
+  private fun drawTextRunsAboveDocumentOrder(canvas: Canvas, documentOrder: Int) {
+    val runs = textRunLayouts ?: return
+    for (run in runs) {
+      if (run.documentOrder > documentOrder) {
+        drawTextRun(canvas, run)
+      }
     }
   }
 
@@ -1032,6 +1060,10 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (drawWithZ) {
       enableZ(canvas, false)
     }
+
+    // Paint the text runs that follow this child in document order (see dispatchDraw).
+    drawnChildCount++
+    drawTextRunsWithDocumentOrder(canvas, drawnChildCount)
     return result
   }
 

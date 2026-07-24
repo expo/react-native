@@ -467,13 +467,14 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       val left = runMb.getDouble(1).dpToPx()
       val top = runMb.getDouble(2).dpToPx()
       val width = runMb.getDouble(3).dpToPx()
+      val documentOrder = runMb.getInt(5)
       val spannable = TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
       val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
       val layout =
           StaticLayout.Builder.obtain(
                   spannable, 0, spannable.length, paint, ceil(width.toDouble()).toInt())
               .build()
-      runs.add(ReactViewGroup.TextRunLayout(layout, left, top))
+      runs.add(ReactViewGroup.TextRunLayout(layout, left, top, documentOrder))
     }
     view.setTextRunLayouts(runs)
     return null
