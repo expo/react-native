@@ -58,6 +58,8 @@ import com.facebook.react.uimanager.ReactAxOrderHelper
 import com.facebook.react.uimanager.ReactClippingProhibitedView
 import com.facebook.react.uimanager.ReactClippingViewGroup
 import com.facebook.react.uimanager.ReactClippingViewGroupHelper.calculateClippingRect
+import com.facebook.react.uimanager.ReactCompoundViewGroup
+import com.facebook.react.views.text.internal.span.ReactTagSpan
 import com.facebook.react.uimanager.ReactOverflowViewWithInset
 import com.facebook.react.uimanager.ReactPointerEventsView
 import com.facebook.react.uimanager.style.BorderRadiusProp
@@ -82,6 +84,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
     ReactClippingViewGroup,
     ReactPointerEventsView,
     ReactHitSlopView,
+    ReactCompoundViewGroup,
     ReactOverflowViewWithInset {
 
   public override val overflowInset: Rect = Rect()
@@ -939,6 +942,62 @@ public open class ReactViewGroup public constructor(context: Context?) :
       canvas.restore()
     }
   }
+
+  // ReactCompoundViewGroup: the painted text runs are not real child views, so touch targeting must
+  // resolve a point inside a run to the react tag of the inline element (or bare-text fragment) under
+  // it — the same ReactTagSpan lookup ReactTextView does. This is what lets a tap on an inline
+  // <b onClick> fire the <b>'s own handler (and bubble) rather than only hitting the container View.
+  private fun reactTagForTextRunTouch(touchX: Float, touchY: Float): Int? {
+    val runs = textRunLayouts ?: return null
+    for (run in runs) {
+      val layout = run.layout
+      val localX = touchX - run.left
+      val localY = touchY - run.top
+      if (localX < 0f || localY < 0f || localY > layout.height.toFloat()) {
+        continue
+      }
+      val text = layout.text
+      if (text !is android.text.Spanned) {
+        continue
+      }
+      val line = layout.getLineForVertical(localY.toInt())
+      if (localX < layout.getLineLeft(line) || localX > layout.getLineRight(line)) {
+        continue
+      }
+      val index =
+          try {
+            layout.getOffsetForHorizontal(line, localX)
+          } catch (e: ArrayIndexOutOfBoundsException) {
+            continue
+          }
+      // Most-inner (shortest) ReactTagSpan at the offset is the innermost react element. Skip
+      // non-positive tags: bare-text (#text) nodes carry no event emitter by design, so a click on
+      // bare text must resolve to the nearest real ancestor element (the container View, `id`) —
+      // matching the web/iOS, where bare text hits only its container while an inline <b>/<span>
+      // hits the element and bubbles.
+      var target = id
+      var targetLen = text.length
+      for (span in text.getSpans(index, index, ReactTagSpan::class.java)) {
+        if (span.reactTag <= 0) {
+          continue
+        }
+        val start = text.getSpanStart(span)
+        val end = text.getSpanEnd(span)
+        if (end >= index && (end - start) <= targetLen) {
+          target = span.reactTag
+          targetLen = end - start
+        }
+      }
+      return target
+    }
+    return null
+  }
+
+  override fun reactTagForTouch(touchX: Float, touchY: Float): Int =
+      reactTagForTextRunTouch(touchX, touchY) ?: id
+
+  override fun interceptsTouchEvent(touchX: Float, touchY: Float): Boolean =
+      reactTagForTextRunTouch(touchX, touchY) != null
 
   override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {
     val drawWithZ = child.elevation > 0
