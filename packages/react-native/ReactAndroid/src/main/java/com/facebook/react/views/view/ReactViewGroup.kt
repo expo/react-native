@@ -66,6 +66,7 @@ import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
+import com.facebook.react.views.text.internal.span.CanvasEffectSpan
 import com.facebook.react.views.view.CanvasUtil.enableZ
 import java.util.ArrayList
 import kotlin.concurrent.Volatile
@@ -949,7 +950,25 @@ public open class ReactViewGroup public constructor(context: Context?) :
   private fun drawTextRun(canvas: Canvas, run: TextRunLayout) {
     canvas.save()
     canvas.translate(run.left, run.top)
-    run.layout.draw(canvas)
+    val layout = run.layout
+    // Text-decoration (underline/strikethrough) and text shadow are CanvasEffectSpans: they are not
+    // drawn by Layout.draw but painted around it — onPreDraw before, onDraw after — exactly as
+    // PreparedLayoutTextView does for a normal <Text>. Without this pass a <u>/<s> in the anonymous
+    // IFC would flow inline but show no decoration.
+    val spanned = layout.text as? android.text.Spanned
+    val effectSpans =
+        spanned?.getSpans(0, spanned.length, CanvasEffectSpan::class.java) ?: emptyArray()
+    if (spanned != null) {
+      for (span in effectSpans) {
+        span.onPreDraw(spanned.getSpanStart(span), spanned.getSpanEnd(span), canvas, layout)
+      }
+    }
+    layout.draw(canvas)
+    if (spanned != null) {
+      for (span in effectSpans) {
+        span.onDraw(spanned.getSpanStart(span), spanned.getSpanEnd(span), canvas, layout)
+      }
+    }
     canvas.restore()
   }
 
