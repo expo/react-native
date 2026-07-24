@@ -14,7 +14,7 @@ import * as React from 'react';
 import {useState} from 'react';
 import {PlatformColor, ScrollView, Text, View} from 'react-native';
 
-import 'react-native/Libraries/Text/InlineTags';
+import 'react-native/Libraries/DomElements';
 
 // Canonical demo for the implicit-text feature, organized by CONTAINER × CHILD
 // TYPE so the layout model each section isolates is obvious, and matched 1:1 to

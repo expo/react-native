@@ -13,7 +13,7 @@
 #import <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #import <react/renderer/components/text/ParagraphProps.h>
 #import <react/renderer/components/text/ParagraphState.h>
-#import <react/renderer/components/text/InlineTextTagShadowNodes.h>
+#import <react/renderer/components/text/DomElementsRegistry.h>
 #import <react/renderer/components/text/TextNodeComponentDescriptor.h>
 #import <react/renderer/components/text/TextComponentDescriptor.h>
 #import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
@@ -110,13 +110,15 @@ using namespace facebook::react;
 
 + (std::vector<facebook::react::ComponentDescriptorProvider>)supplementalComponentDescriptorProviders
 {
-  return {
+  // Core text nodes first, then the inline-level DOM elements (<b>/<i>/<span> +
+  // unknown fallback) that resolve inside this paragraph's inline formatting
+  // context. Block-level <div>/<img> register elsewhere (not paragraph-supplemental).
+  std::vector<facebook::react::ComponentDescriptorProvider> providers = {
       concreteComponentDescriptorProvider<TextNodeComponentDescriptor>(),
-      concreteComponentDescriptorProvider<TextComponentDescriptor>(),
-      concreteComponentDescriptorProvider<BTagComponentDescriptor>(),
-      concreteComponentDescriptorProvider<ITagComponentDescriptor>(),
-      concreteComponentDescriptorProvider<SpanTagComponentDescriptor>(),
-      concreteComponentDescriptorProvider<UnknownElementComponentDescriptor>()};
+      concreteComponentDescriptorProvider<TextComponentDescriptor>()};
+  auto elements = facebook::react::dom::inlineTextElementProviders();
+  providers.insert(providers.end(), elements.begin(), elements.end());
+  return providers;
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps

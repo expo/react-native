@@ -31,7 +31,7 @@
  */
 
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
-import 'react-native/Libraries/Text/InlineTags';
+import 'react-native/Libraries/DomElements';
 
 import type {HostInstance} from 'react-native';
 

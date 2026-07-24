@@ -9,11 +9,20 @@
  */
 
 /**
- * Registers intrinsic inline text tags (<b>, <i>, <span>) as host component
- * view configs (implicit-text-plan.md §3.C). Lowercase JSX types resolve by
- * name through ReactNativeViewConfigRegistry, so registering these makes
- * literal <b>/<i>/<span> usable with zero reconciler changes. The attribute
- * defaults (bold/italic) are baked into the native shadow node classes.
+ * DOM elements module — entry point.
+ *
+ * Side-effect import that registers the intrinsic HTML-like elements (<b>, <i>,
+ * <span>, <img>, <div>) as host component view configs (implicit-text-plan.md
+ * §3.C). Lowercase JSX types resolve by name through ReactNativeViewConfigRegistry,
+ * so registering these makes literal <b>/<i>/<span>/<img>/<div> usable with zero
+ * reconciler changes. The attribute defaults (bold/italic) are baked into the
+ * native shadow node classes.
+ *
+ * This module is the JS half of the DOM-elements catalog; its native half is the
+ * element descriptors aggregated by
+ * ReactCommon/.../components/text/DomElementsRegistry.h. It is deliberately
+ * self-contained so it can one day live in its own package/repo — the string
+ * children / text-node engine it renders against stays in core.
  */
 
 import {createViewConfig} from '../NativeComponent/ViewConfig';
