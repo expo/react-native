@@ -68,6 +68,11 @@ export type ViewConfig = Readonly<{
   supportsRawText?: boolean,
   uiViewClassName: string,
   validAttributes: AttributeConfiguration,
+  // When set, the reconciler records the authored JSX type onto the instance as
+  // a `nodeName` prop. Generic seam for intrinsic components that must preserve
+  // their tag name for DOM APIs (e.g. HTMLUnknownElement), so the renderer names
+  // no specific component.
+  recordNodeName?: boolean,
 }>;
 
 export type PartialViewConfig = Readonly<{

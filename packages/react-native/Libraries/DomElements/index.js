@@ -27,6 +27,8 @@
 
 import {createViewConfig} from '../NativeComponent/ViewConfig';
 import createReactNativeComponentClass from '../Renderer/shims/createReactNativeComponentClass';
+import {type ViewConfig} from '../Renderer/shims/ReactNativeTypes';
+import {setFallbackViewConfigResolver} from '../Renderer/shims/ReactNativeViewConfigRegistry';
 
 const inlineTagViewConfig = {
   validAttributes: {
@@ -86,4 +88,25 @@ createReactNativeComponentClass('div', () =>
     validAttributes: {},
     uiViewClassName: 'div',
   }),
+);
+
+// HTMLUnknownElement: any unregistered lowercase JSX tag (e.g. <foo>) resolves
+// here — inline, unstyled, content renders — mirroring the web. This is the DOM
+// *policy*; the resolution *mechanism* is core's generic fallback hook, so RN
+// core stays agnostic. The element is backed by the native singleton "unknown"
+// inline component; because every unknown tag shares one view config, the
+// authored tag is otherwise lost, so `recordNodeName` has the reconciler stamp
+// the JSX type onto a `nodeName` prop the native side reports through DOM APIs.
+const unknownElementViewConfig: ViewConfig = {
+  uiViewClassName: 'unknown',
+  bubblingEventTypes: {},
+  directEventTypes: {},
+  validAttributes: {nodeName: true},
+  recordNodeName: true,
+};
+
+setFallbackViewConfigResolver(name =>
+  typeof name[0] === 'string' && /^[a-z]/.test(name)
+    ? unknownElementViewConfig
+    : null,
 );

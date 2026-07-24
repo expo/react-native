@@ -10052,11 +10052,11 @@ __DEV__ &&
               newProps,
               _type2.validAttributes
             );
-            // implicit-text: unknown elements keep their authored tag name so
-            // DOM APIs report it (HTMLUnknownElement). The raw tag is lost here
-            // (all unknown tags share the "unknown" view config), so inject it
-            // as the nodeName prop. See implicit-text-plan.md §3.C / T2.
-            if ("unknown" === _type2.uiViewClassName)
+            // Generic seam: a view config may opt into recording its authored
+            // JSX type as a `nodeName` prop (recordNodeName). Intrinsic-component
+            // modules use this so a tag preserves its name for DOM APIs (e.g.
+            // HTMLUnknownElement) without the renderer knowing any component.
+            if (_type2.recordNodeName)
               keepChildren = Object.assign({}, keepChildren, {
                 nodeName: workInProgress.type
               });

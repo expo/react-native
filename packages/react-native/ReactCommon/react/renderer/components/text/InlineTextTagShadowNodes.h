@@ -15,6 +15,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
 
@@ -83,7 +84,7 @@ class SpanTagShadowNode final
  * config — so `createInstance` injects it as the `nodeName` prop, the only
  * per-instance channel (implicit-text-plan.md §3.C; next-steps T2).
  */
-class UnknownElementProps final : public TextProps {
+class UnknownElementProps final : public TextProps, public NodeNameProvider {
  public:
   UnknownElementProps() = default;
   UnknownElementProps(
@@ -92,6 +93,11 @@ class UnknownElementProps final : public TextProps {
       const RawProps &rawProps)
       : TextProps(context, sourceProps, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})) {}
+
+  // NodeNameProvider: HTMLUnknownElement reports its authored lowercase tag.
+  std::string domNodeName() const override {
+    return nodeName;
+  }
 
   std::string nodeName{};
 };

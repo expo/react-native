@@ -6,8 +6,8 @@
  */
 
 #include "DOM.h"
-#include <react/renderer/components/text/InlineTextTagShadowNodes.h>
 #include <react/renderer/components/text/TextNodeShadowNode.h>
+#include <react/renderer/dom/NodeNameProvider.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/graphics/Point.h>
 #include <react/renderer/graphics/Rect.h>
@@ -481,14 +481,18 @@ std::string getTagName(const ShadowNode& shadowNode) {
     canonicalComponentName = "TextInput";
   } else if (canonicalComponentName == "AndroidSwitch") {
     canonicalComponentName = "Switch";
-  } else if (canonicalComponentName == "unknown") {
-    // HTMLUnknownElement keeps its authored tag name (implicit-text-plan.md
-    // §3.C; next-steps T2). Every unknown tag shares the "unknown" component,
-    // so the real name rides on the `nodeName` prop.
-    const auto* unknownProps =
-        dynamic_cast<const UnknownElementProps*>(shadowNode.getProps().get());
-    if (unknownProps != nullptr && !unknownProps->nodeName.empty()) {
-      canonicalComponentName = unknownProps->nodeName;
+  }
+
+  // Generic seam: a component may override the tag name it reports (e.g.
+  // HTMLUnknownElement keeps its authored tag). Core consults the
+  // NodeNameProvider interface without knowing about any specific intrinsic
+  // element — the implementation lives in the intrinsic-component module.
+  const auto* nodeNameProvider =
+      dynamic_cast<const NodeNameProvider*>(shadowNode.getProps().get());
+  if (nodeNameProvider != nullptr) {
+    auto overriddenName = nodeNameProvider->domNodeName();
+    if (!overriddenName.empty()) {
+      canonicalComponentName = std::move(overriddenName);
     }
   }
 
