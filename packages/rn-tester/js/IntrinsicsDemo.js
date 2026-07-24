@@ -22,7 +22,7 @@ const semanticColor = (iosName: string, androidHex: string): ColorValue =>
 
 import 'react-native/Libraries/DomElements';
 
-// Canonical demo for the implicit-text feature, organized by CONTAINER × CHILD
+// Canonical demo for text children & intrinsics, organized by CONTAINER × CHILD
 // TYPE so the layout model each section isolates is obvious, and matched 1:1 to
 // the web mirror (implicit-text-web-mirror.html) for side-by-side comparison:
 //
@@ -375,7 +375,7 @@ function ToggleStringChild(): React.Node {
   );
 }
 
-export default function ImplicitTextDemo(): React.Node {
+export default function IntrinsicsDemo(): React.Node {
   const theme = SYSTEM_THEME;
   return (
     <ThemeContext.Provider value={theme}>
@@ -389,7 +389,7 @@ export default function ImplicitTextDemo(): React.Node {
         contentContainerStyle={{paddingTop: 12, paddingBottom: 48}}
         contentInsetAdjustmentBehavior="automatic">
         <Text style={{fontWeight: '700', fontSize: 17, color: theme.fg}}>
-          Implicit text demo
+          Intrinsics & text children
         </Text>
         <Text style={{fontSize: 12, color: theme.muted}}>
           Grouped by container × child type; mirrors the web page. RN
