@@ -1,4 +1,4 @@
-# Implicit Text: Remaining Work — an actionable backlog
+# Text Children: Remaining Work — an actionable backlog
 
 This is the **work queue** for the text-children feature. It assumes you have done the ramp-up
 in `text-children-onboarding.md` (spec + code tour) and have read the design in
@@ -19,7 +19,7 @@ Every task below follows the same shape:
 
 ## 0. Where things stand (read first)
 
-Implemented and green behind the `enableImplicitTextChildren` flag (default off): bare strings
+Implemented and green behind the `enableStringChildren` flag (default off): bare strings
 under a View render as anonymous inline-formatting-context boxes (M1–M7), iOS painting, the
 `<b>`/`<i>`/`<span>` intrinsic tags, unknown-element HTML semantics, `display:'block'` (flex
 **emulation**), the full CSS **inherited text-property set** cascading into bare text with live
@@ -107,8 +107,8 @@ exact inline offset (text-layout attachment frame, exposed to the View through t
 `InlineTextContentAccessor` seam so the view module keeps no text-module dependency) and the
 painted run reserves the image's width (measure attachments on the paint path instead of reading
 the never-laid-out box child's zero metrics). **Verified:** RNTester on iPhone 17 Pro (iOS 26.5),
-all 11 demo cases render correctly; 54/54 Fantom itests (ImplicitText, ImplicitTextNativeBlock,
-ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChildren` flag default
+all 11 demo cases render correctly; 54/54 Fantom itests (StringChildrenBehavior, StringChildrenNativeBlock,
+StringChildrenBaseline) still pass. Remaining: revert the `enableStringChildren` flag default
 `true→false` before the checkpoint commit (flipped on for the demo), then T10 (Android).
 
 | # | Task | Track | Verifiable headlessly? | Size | Depends on | Status |
@@ -151,7 +151,7 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
 - **Approach.** After building the run's `AttributedString`, apply white-space normalization to
   the fragment strings for anonymous IFCs only: collapse internal runs of ASCII whitespace to a
   single space, trim leading/trailing whitespace at IFC edges, and preserve the existing
-  whitespace-only-item drop (flexbox rule). Gate everything on `enableImplicitTextChildren`.
+  whitespace-only-item drop (flexbox rule). Gate everything on `enableStringChildren`.
 - **Testing methodology.** Matrix cases: `{"  a   b  "}` measures the width of `"a b"` (3 chars
   = 30pt), leading/trailing spaces contribute nothing; a whitespace-only run stays zero-height
   (already covered — keep it green). Explicit-`<Text>` control with the same string keeps its
@@ -261,7 +261,7 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
   Tests: `StringChildrenNativeBlock-itest.js` — 4 parity cases (identical numbers to the M3
   emulation) + 3 native-only fidelity cases (a `flexGrow:1` block child does NOT grow; children
   stack at content size; a block child fills the content width). Web-mirror twins (Safari 20/20).
-  **Full regression sweep green**: ImplicitText 39, baselines 4, Text 151, View-itest 224,
+  **Full regression sweep green**: StringChildrenBehavior 39, baselines 4, Text 151, View-itest 224,
   View-flexBasisFitContent, yogaNodeOwnerAssertion, ReadOnlyText 30, ReactNativeElement 170.
   **Not done (later stages, documented):** margin collapsing (Stage 3), floats/static-position
   specifics (Stage 4); RTL block positioning is implemented via the inline-start edge but not yet
@@ -329,7 +329,7 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
     (RCTBridge, Android name mapping).
   - **Deleted:** `RawTextShadowNode.{h,cpp}`, `RawTextProps.{h,cpp}`, `RawTextComponentDescriptor.h`;
     test fixtures migrated to `TextNode*`.
-  - **Verified headlessly** (Fantom uses the dev bundle): ImplicitText 42/42, native-block 8/8,
+  - **Verified headlessly** (Fantom uses the dev bundle): StringChildrenBehavior 42/42, native-block 8/8,
     baselines 4, Text 151/151, ReadOnlyText 30/30, ReactNativeElement 170/170, View-itest 224,
     Image-itest 99 — the whole feature runs on `#text` with RawText gone.
   - **Platform tail / follow-ups:** the iOS build needs `pod install` to regenerate the
@@ -367,7 +367,7 @@ ImplicitTextBaseline) still pass. Remaining: revert the `enableImplicitTextChild
 
 These cannot be proven under Fantom. Verify on an iPhone simulator; capture the proof.
 
-**Simulator setup / proof tools** (onboarding §4/§6): flip `enableImplicitTextChildren`
+**Simulator setup / proof tools** (onboarding §4/§6): flip `enableStringChildren`
 `defaultValue`, `yarn featureflags --update` (node 24), `pod install` under `env -i` with a clean
 `PATH` whose `git` is `/usr/bin/git`, `xcodebuild` RNTester, launch, screenshot via
 `xcrun simctl io <udid> screenshot`. Live layout reads:
@@ -388,7 +388,7 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
   **Verified:** RNTester on iPhone 17 Pro (iOS 26.5) — demo case 8 shows bare text authored
   before an overlapping box hidden beneath it (left cell) and text authored after painted over
   it (right cell); cases 1–7 unregressed. Headless: shared-C++ `documentOrder` plumbing green
-  (ImplicitText 39, baselines 4, native-block 7, View-itest 224).
+  (StringChildrenBehavior 39, baselines 4, native-block 7, View-itest 224).
 - **Goal.** `<View>a<View/>b</View>` paints "a", the inner view, then "b" in document order —
   one lightweight run view per anonymous item, interleaved with React-mounted children.
 - **Why / context.** Plan §3.B. A single content view can't interleave text with mounted
@@ -454,7 +454,7 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
   clones + stamps each img's `layoutMetrics` (`ParagraphShadowNode` clone-and-position pattern)
   so the differ mounts it inline.
 - **Verified:** device (iPhone 17 Pro, iOS 26.5) — demo case 10 renders a real remote image
-  inline in a bare-text flow (leans on the Image pipeline for load/decode). Headless: ImplicitText
+  inline in a bare-text flow (leans on the Image pipeline for load/decode). Headless: StringChildrenBehavior
   42/42 (`a<img/>b` inline, `a<img 30x40/>b` reserves 50×40 via real attachment measurement),
   native-block 8/8, **Image-itest 99/99 (Image itself unaffected)**, baselines 4, Text 151,
   ReadOnlyText 30, View-itest 224.

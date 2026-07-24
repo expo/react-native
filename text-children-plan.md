@@ -370,7 +370,7 @@ in paragraphs today.
 handle → fiber; every target (View, inline element) is authored, so source attribution
 works without special cases.
 
-Everything ships behind a new common feature flag (`enableImplicitTextChildren`) in
+Everything ships behind a new common feature flag (`enableStringChildren`) in
 `scripts/featureflags/ReactNativeFeatureFlags.config.js` (same pipeline as
 `enablePreparedTextLayout`, line 467).
 
@@ -438,7 +438,7 @@ Everything ships behind a new common feature flag (`enableImplicitTextChildren`)
 
 ## 5. Rollout — staged behind one disabled flag
 
-All stages land behind the single `enableImplicitTextChildren` flag (default off); each has
+All stages land behind the single `enableStringChildren` flag (default off); each has
 Fantom acceptance tests as its exit criterion. The risky core representation change is
 sequenced *last* so the feature never blocks on it (it remains a direct replacement, no
 compat shims, when it lands).
@@ -507,13 +507,13 @@ compat shims, when it lands).
   - ~~First-release conformance floor?~~ **Decided: inline-flow + block-stacking is the
     floor**; margin collapsing and floats/static-position are later, separately-gated stages.
   - ~~Same flag or its own?~~ **Decided: its own sub-flag** (e.g. `enableYogaDisplayBlock`),
-    separate from `enableImplicitTextChildren`. Native block modifies Yoga's core layout
+    separate from `enableStringChildren`. Native block modifies Yoga's core layout
     algorithm — it can regress *any* app's layout, not just text-children surface — so it
     needs an independent kill-switch, rollout %, and emulation-vs-native parity testing. The
     block grouping predicate carries both paths (native when on, flex emulation when off)
     until the emulation is retired.
 - **North star: no flags — layout is determined by element type.** Feature flags
-  (`enableImplicitTextChildren`, `enableYogaDisplayBlock`) are *transitional rollout
+  (`enableStringChildren`, `enableYogaDisplayBlock`) are *transitional rollout
   scaffolding*, not the destination. The committed end-state is flag-free: an element's type
   alone determines its layout (`View` → block/flex, `<div>` → block/block, `<span>`/`<img>`
   → inline, `<Text>` → the `<p>` analog, bare strings → text runs). Each flag is removed once

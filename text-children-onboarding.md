@@ -1,4 +1,4 @@
-# Implicit Text: Contributor Onboarding — from zero context to owning the test suite and the behavior
+# Text Children: Contributor Onboarding — from zero context to owning the test suite and the behavior
 
 This document assumes **no prior knowledge** of this project, React Native internals, or the
 CSS/DOM specs. Working through it should leave you able to (a) extend and maintain the test
@@ -18,7 +18,7 @@ a `<View>` were silently dropped. This project makes `<View>hello</View>` render
 box semantics** (per-display-type layout), **DOM semantics** (node kinds, events, traversal
 APIs), web-like **style inheritance**, intrinsic tags (inline `<b>`, `<i>`, `<span>`, the
 replaced `<img>`; block `<div>`), and DOM-faithful handling of unknown tags — behind one
-feature flag (`enableImplicitTextChildren`).
+feature flag (`enableStringChildren`).
 The single back-compat rule: **apps using explicit `<Text>` render pixel-identically** with the
 flag on.
 
@@ -221,7 +221,7 @@ sudo safaridriver --enable   # once
 safaridriver -p 4444 &  # then WebDriver: create session, navigate to the file served
                         # over http://localhost (file:// is blocked), read window.__results
 
-# Simulator demo: flip enableImplicitTextChildren defaultValue in
+# Simulator demo: flip enableStringChildren defaultValue in
 # scripts/featureflags/ReactNativeFeatureFlags.config.js, `yarn featureflags --update`,
 # pod install + xcodebuild RNTester (see gotchas), launch, screenshot via
 # `xcrun simctl io <udid> screenshot`.
@@ -289,7 +289,7 @@ has the full design for all of these.
    plumbed through all three renderer bundles); character data is a direct field (no RawProps
    parsing). `RawText` is **deleted outright** — node/props/descriptor, every registry, the
    Paper `RCTRawTextViewManager`. Headless-verified (Fantom uses the dev bundle): ReadOnlyText
-   30/30 + ReactNativeElement 170/170 (DOM traversal over `#text`), ImplicitText 42/42, Text
+   30/30 + ReactNativeElement 170/170 (DOM traversal over `#text`), StringChildrenBehavior 42/42, Text
    151/151. iOS build needs a `pod install` (git-ignored header map); `commitTextUpdate`
    (identity-preserving edits) is a future optimization.
 6. **Full inherited-property set** — ✅ **DONE.** `BaseViewProps` gains `inheritedFontFamily`/
