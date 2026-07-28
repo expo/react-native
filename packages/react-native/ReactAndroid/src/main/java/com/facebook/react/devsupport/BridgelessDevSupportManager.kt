@@ -26,7 +26,7 @@ import com.facebook.react.packagerconnection.RequestHandler
  * @constructor The primary constructor mirrors the same constructor we had for
  *   `BridgeDevSupportManager` and is kept for backward compatibility.
  */
-public open class BridgelessDevSupportManager(
+internal class BridgelessDevSupportManager(
     applicationContext: Context,
     reactInstanceManagerHelper: ReactInstanceDevHelper,
     packagerPathForJSBundleName: String?,
@@ -53,7 +53,7 @@ public open class BridgelessDevSupportManager(
         pausedInDebuggerOverlayManager,
     ) {
 
-  public constructor(
+  constructor(
       context: Context,
       reactInstanceManagerHelper: ReactInstanceDevHelper,
       packagerPathForJSBundleName: String?,
@@ -81,7 +81,7 @@ public open class BridgelessDevSupportManager(
     reactInstanceDevHelper.reload("BridgelessDevSupportManager.handleReloadJS()")
   }
 
-  internal fun tracingState(): TracingState {
+  fun tracingState(): TracingState {
     return TracingState.ENABLED_IN_CDP_MODE
   }
 }
