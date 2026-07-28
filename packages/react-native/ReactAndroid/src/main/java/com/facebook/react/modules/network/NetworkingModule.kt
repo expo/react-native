@@ -86,7 +86,7 @@ public class NetworkingModule(
     @Throws(IOException::class) public fun toResponseData(data: ByteArray): WritableMap
   }
 
-  public val client: OkHttpClient
+  private val client: OkHttpClient
   private val cookieHandler = ForwardingCookieHandler()
   private val defaultUserAgent: String?
   private var cookieJarContainer: CookieJarContainer? = null
