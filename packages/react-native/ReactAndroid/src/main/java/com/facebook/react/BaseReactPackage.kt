@@ -49,7 +49,7 @@ public abstract class BaseReactPackage : ReactPackage {
    * @param reactContext [ReactApplicationContext]
    * @return
    */
-  public fun getNativeModuleIterator(
+  internal fun getNativeModuleIterator(
       reactContext: ReactApplicationContext
   ): Iterable<ModuleHolder> {
     val entrySet = getReactModuleInfoProvider().getReactModuleInfos().entries
