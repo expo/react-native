@@ -66,8 +66,6 @@ public open class ReleaseDevSupportManager : DevSupportManager {
 
   public override fun setFpsDebugEnabled(isFpsDebugEnabled: Boolean): Unit = Unit
 
-  public override fun setFloatingActionButtonEnabled(isFabEnabled: Boolean): Unit = Unit
-
   public override fun toggleElementInspector(): Unit = Unit
 
   public override var devSupportEnabled: Boolean
