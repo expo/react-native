@@ -202,7 +202,7 @@ internal constructor(
   public override val isRunning: Boolean
     get() = surfaceHandler.isRunning
 
-  public companion object {
+  internal companion object {
     @JvmStatic
     public fun createWithView(
         context: Context,
