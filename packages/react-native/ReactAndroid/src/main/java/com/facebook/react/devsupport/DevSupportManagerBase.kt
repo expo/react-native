@@ -47,6 +47,7 @@ import com.facebook.react.common.ReactConstants
 import com.facebook.react.common.ShakeDetector
 import com.facebook.react.common.SurfaceDelegate
 import com.facebook.react.common.SurfaceDelegateFactory
+import com.facebook.react.common.build.ReactBuildConfig
 import com.facebook.react.devsupport.DebugOverlayController.Companion.requestPermission
 import com.facebook.react.devsupport.DevServerHelper.PackagerCommandListener
 import com.facebook.react.devsupport.InspectorFlags.getFuseboxEnabled
@@ -518,10 +519,14 @@ public abstract class DevSupportManagerBase(
         }
         devSettings.isFpsDebugEnabled = !devSettings.isFpsDebugEnabled
       }
-      options[applicationContext.getString(R.string.catalyst_settings)] = DevOptionHandler {
-        val intent = Intent(applicationContext, DevSettingsActivity::class.java)
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        applicationContext.startActivity(intent)
+      // DevSettingsActivity is only declared in ReactAndroid's debug manifest, so offering this
+      // option in a release build that still has dev support would fail to resolve the activity.
+      if (ReactBuildConfig.DEBUG) {
+        options[applicationContext.getString(R.string.catalyst_settings)] = DevOptionHandler {
+          val intent = Intent(applicationContext, DevSettingsActivity::class.java)
+          intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          applicationContext.startActivity(intent)
+        }
       }
     }
 
@@ -936,13 +941,15 @@ public abstract class DevSupportManagerBase(
     isShakeDetectorStarted = false
   }
 
+  // NOTE(brentvatne): this is confusingly called the first time the app loads!
   private fun reload() {
     UiThreadUtil.assertOnUiThread()
 
     // reload settings, show/hide debug overlay if required & start/stop shake detector
     if (isDevSupportEnabled) {
       // update visibility of FPS debug overlay depending on the settings
-      debugOverlayController?.setFpsDebugViewVisible(devSettings.isFpsDebugEnabled)
+      // NOTE(lukmccall): We have our own performance monitor overlay, so we disable the default one.
+      debugOverlayController?.setFpsDebugViewVisible(false)
 
       // start shake gesture detector
       if (!isShakeDetectorStarted && shakeGestureEnabled) {
