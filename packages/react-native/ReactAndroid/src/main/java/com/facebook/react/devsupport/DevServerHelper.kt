@@ -18,10 +18,10 @@ import android.os.AsyncTask
 import android.provider.Settings.Secure
 import com.facebook.common.logging.FLog
 import com.facebook.react.bridge.ReactContext
-import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.devsupport.InspectorFlags.getFuseboxEnabled
 import com.facebook.react.devsupport.InspectorFlags.getIsProfilingBuild
+import com.facebook.react.devsupport.inspector.DevSupportHttpClient
 import com.facebook.react.devsupport.interfaces.DevBundleDownloadListener
 import com.facebook.react.devsupport.interfaces.PackagerStatusCallback
 import com.facebook.react.modules.debug.interfaces.DeveloperSettings
@@ -40,7 +40,6 @@ import java.io.UnsupportedEncodingException
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -80,27 +79,21 @@ public open class DevServerHelper(
   }
 
   public val websocketProxyURL: String
-    get() = "ws://${packagerConnectionSettings.debugServerHost}/debugger-proxy?role=client"
+    get() =
+        "${DevSupportHttpClient.wsScheme(packagerConnectionSettings.debugServerHost)}://${packagerConnectionSettings.debugServerHost}/debugger-proxy?role=client"
 
   private enum class BundleType(val typeID: String) {
     BUNDLE("bundle"),
     MAP("map"),
   }
 
-  private val client: OkHttpClient =
-      OkHttpClient.Builder()
-          .connectTimeout(HTTP_CONNECT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
-          .readTimeout(0, TimeUnit.MILLISECONDS)
-          .writeTimeout(0, TimeUnit.MILLISECONDS)
-          .build()
+  private val client: OkHttpClient = DevSupportHttpClient.httpClient
   private val bundleDownloader: BundleDownloader = BundleDownloader(client)
   private val packagerStatusCheck: PackagerStatusCheck = PackagerStatusCheck(client)
   private val packageName: String = applicationContext.packageName
 
-  private var packagerConnectionLock: Boolean = false;
+  private var packagerClient: JSPackagerClient? = null
   private var inspectorPackagerConnection: IInspectorPackagerConnection? = null
-
-  public var packagerClient: JSPackagerClient? = null
 
   /** Returns an opaque ID which is stable for the current combination of device and app, stable */
   private val inspectorDeviceId: String
@@ -132,7 +125,8 @@ public open class DevServerHelper(
     get() =
         String.format(
             Locale.US,
-            "http://%s/inspector/device?name=%s&app=%s&device=%s&profiling=%b",
+            "%s://%s/inspector/device?name=%s&app=%s&device=%s&profiling=%b",
+            DevSupportHttpClient.httpScheme(packagerConnectionSettings.debugServerHost),
             packagerConnectionSettings.debugServerHost,
             Uri.encode(getFriendlyDeviceName()),
             Uri.encode(packageName),
@@ -149,14 +143,13 @@ public open class DevServerHelper(
     get() = settings.isJSMinifyEnabled
 
   public fun openPackagerConnection(clientId: String?, commandListener: PackagerCommandListener) {
-    if (packagerClient != null || packagerConnectionLock) {
+    if (packagerClient != null) {
       FLog.w(ReactConstants.TAG, "Packager connection already open, nooping.")
       return
     }
-    packagerConnectionLock = true;
-    object : AsyncTask<Void, Void, JSPackagerClient>() {
+    object : AsyncTask<Void, Void, Void>() {
           @Deprecated("This needs to be rewritten to not use AsyncTasks")
-          override fun doInBackground(vararg backgroundParams: Void): JSPackagerClient? {
+          override fun doInBackground(vararg backgroundParams: Void): Void? {
             val handlers: MutableMap<String, RequestHandler> = mutableMapOf()
             handlers["reload"] =
                 object : NotificationOnlyHandler() {
@@ -194,45 +187,22 @@ public open class DevServerHelper(
                     )
                     .apply { init() }
 
-            return packagerClient
-          }
-
-          @Deprecated("This needs to be rewritten to not use AsyncTasks")
-          override fun onPostExecute(result: JSPackagerClient?) {
-            UiThreadUtil.assertOnUiThread()
-            packagerClient = result
-            packagerConnectionLock = false
+            return null
           }
         }
         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
   }
 
   public fun closePackagerConnection() {
-    if (packagerConnectionLock) {
-      FLog.w(ReactConstants.TAG, "Packager connection lock acquired, cannot close current connection.");
-      return;
-    }
-    packagerConnectionLock = true;
-
-    object : AsyncTask<JSPackagerClient, Void, Void>() {
-      @Deprecated("This class needs to be rewritten to don't use AsyncTasks")
-      override fun doInBackground(vararg params: JSPackagerClient): Void? {
-        if (params.isNotEmpty()) {
-          val packagerClient = params[0]
-          packagerClient.close()
+    object : AsyncTask<Void, Void, Void>() {
+          @Deprecated("This class needs to be rewritten to don't use AsyncTasks")
+          override fun doInBackground(vararg params: Void): Void? {
+            packagerClient?.close()
+            packagerClient = null
+            return null
+          }
         }
-        packagerClient = null
-        return null
-      }
-
-      @Deprecated("This class needs to be rewritten to don't use AsyncTasks")
-      override fun onPostExecute(result: Void?) {
-        UiThreadUtil.assertOnUiThread()
-        packagerClient = null
-        packagerConnectionLock = false
-      }
-    }
-    .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+        .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
   }
 
   public fun openInspectorConnection() {
@@ -303,28 +273,36 @@ public open class DevServerHelper(
       type: BundleType,
       host: String = packagerConnectionSettings.debugServerHost,
       modulesOnly: Boolean = false,
-      runModule: Boolean = true
+      runModule: Boolean = true,
   ): String {
-      try {
-          return Class.forName("host.exp.exponent.ReactNativeStaticHelpers")
-              .getMethod("getBundleUrlForActivityId",
-                  Int::class.javaPrimitiveType,
-                  String::class.java,
-                  String::class.java,
-                  String::class.java,
-                  Boolean::class.javaPrimitiveType,
-                  Boolean::class.javaPrimitiveType)
-              .invoke(null,
-                  settings.getExponentActivityId(),
-                  host,
-                  mainModuleID,
-                  type.typeID,
-                  devMode,
-                  jSMinifyMode) as String
-      } catch (expoHandleErrorException: Exception) {
-          expoHandleErrorException.printStackTrace()
-          return ""
+    val dev = devMode
+    val additionalOptionsBuilder = StringBuilder()
+    val packagerOptions =
+        packagerConnectionSettings.updatePackagerOptions(
+            packagerConnectionSettings.additionalOptionsForPackager
+        )
+    for ((key, value) in packagerOptions) {
+      if (value.isEmpty()) {
+        continue
       }
+      additionalOptionsBuilder.append("&" + key + "=" + Uri.encode(value))
+    }
+    return (String.format(
+        Locale.US,
+        "%s://%s/%s.%s?platform=android&dev=%s&lazy=%s&minify=%s&app=%s&modulesOnly=%s&runModule=%s",
+        DevSupportHttpClient.httpScheme(host),
+        host,
+        mainModuleID,
+        type.typeID,
+        dev, // dev
+        dev, // lazy
+        jSMinifyMode,
+        packageName,
+        if (modulesOnly) "true" else "false",
+        if (runModule) "true" else "false",
+    ) +
+        (if (getFuseboxEnabled()) "&excludeSource=true&sourcePaths=url-server" else "") +
+        additionalOptionsBuilder.toString())
   }
 
   public open fun getDevServerBundleURL(jsModulePath: String): String =
@@ -387,7 +365,8 @@ public open class DevServerHelper(
     requestUrlBuilder.append(
         String.format(
             Locale.US,
-            "http://%s/open-debugger?device=%s",
+            "%s://%s/open-debugger?device=%s",
+            DevSupportHttpClient.httpScheme(packagerConnectionSettings.debugServerHost),
             packagerConnectionSettings.debugServerHost,
             Uri.encode(inspectorDeviceId),
         )
@@ -417,7 +396,6 @@ public open class DevServerHelper(
   }
 
   private companion object {
-    private const val HTTP_CONNECT_TIMEOUT_MS = 5000
     private const val DEBUGGER_MSG_DISABLE = "{ \"id\":1,\"method\":\"Debugger.disable\" }"
 
     private fun getSHA256(string: String): String {
@@ -466,7 +444,13 @@ public open class DevServerHelper(
         FLog.w(ReactConstants.TAG, "Resource path should not begin with `/`, removing it.")
         resourcePath = resourcePath.substring(1)
       }
-      return String.format(Locale.US, "http://%s/%s", host, resourcePath)
+      return String.format(
+          Locale.US,
+          "%s://%s/%s",
+          DevSupportHttpClient.httpScheme(host),
+          host,
+          resourcePath,
+      )
     }
   }
 }

@@ -22,7 +22,7 @@ import com.facebook.react.packagerconnection.PackagerConnectionSettings
  * [com.facebook.react.devsupport]. For accessing some of the settings by external modules this
  * class implements an external interface [DeveloperSettings].
  */
-public class DevInternalSettings(applicationContext: Context, private val listener: Listener?) :
+internal class DevInternalSettings(applicationContext: Context, private val listener: Listener?) :
     DeveloperSettings, OnSharedPreferenceChangeListener {
   private val preferences: SharedPreferences =
       PreferenceManager.getDefaultSharedPreferences(applicationContext)
@@ -78,7 +78,7 @@ public class DevInternalSettings(applicationContext: Context, private val listen
   override var isDeviceDebugEnabled: Boolean = ReactBuildConfig.DEBUG
 
   // Not supported.
-  override fun addMenuItem(title: String): Unit = Unit
+  override fun addMenuItem(title: String) = Unit
 
   override var isHotModuleReplacementEnabled: Boolean
     get() = preferences.getBoolean(PREFS_HOT_MODULE_REPLACEMENT_KEY, true)
@@ -86,11 +86,11 @@ public class DevInternalSettings(applicationContext: Context, private val listen
       preferences.edit().putBoolean(PREFS_HOT_MODULE_REPLACEMENT_KEY, enabled).apply()
     }
 
-  public interface Listener {
-    public fun onInternalSettingsChanged()
+  interface Listener {
+    fun onInternalSettingsChanged()
   }
 
-  public companion object {
+  companion object {
     private const val PREFS_FPS_DEBUG_KEY = "fps_debug"
     private const val PREFS_JS_DEV_MODE_DEBUG_KEY = "js_dev_mode_debug"
     private const val PREFS_JS_MINIFY_DEBUG_KEY = "js_minify_debug"
@@ -98,14 +98,4 @@ public class DevInternalSettings(applicationContext: Context, private val listen
     private const val PREFS_INSPECTOR_DEBUG_KEY = "inspector_debug"
     private const val PREFS_HOT_MODULE_REPLACEMENT_KEY = "hot_module_replacement"
   }
-
-private var exponentActivityId: Int = -1
-
-public fun setExponentActivityId(value: Int) {
-    exponentActivityId = value
-}
-
-public override fun getExponentActivityId(): Int {
-    return exponentActivityId
-}
 }
