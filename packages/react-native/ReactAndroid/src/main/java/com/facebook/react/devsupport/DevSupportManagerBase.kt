@@ -352,37 +352,6 @@ public abstract class DevSupportManagerBase(
     }
   }
 
-  private fun getExponentActivityId(): Int {
-    val devInternalSettings = devSettings as? DevInternalSettings
-    return devInternalSettings?.getExponentActivityId() ?: -1
-}
-
-  override fun reloadExpoApp() {
-    try {
-      if (devServerHelper.packagerClient != null) {
-          // In Expo Go's multi-Activity structure, reloading means destroying the current Activity and creating a new one with a fresh React instance.
-          // To prevent reentrant `reloadExpoApp` from being triggered by a long press of the "r" key in the CLI, which could lead to an unexpected state,
-          // we must terminate the packager connection immediately. This is done without waiting a worker thread by using `mDevServerHelper.closePackagerConnection()`.
-          devServerHelper.packagerClient?.close();
-      }
-
-      val clazz = Class.forName("host.exp.exponent.ReactNativeStaticHelpers")
-      val method = clazz.getMethod("reloadFromManifest", Int::class.javaPrimitiveType)
-      method.invoke(null, getExponentActivityId())
-    } catch (expoHandleErrorException: Exception) {
-      expoHandleErrorException.printStackTrace()
-
-      // reloadExpoApp replaces handleReloadJS in some places
-      // where in Expo we would like to reload from manifest.
-      // If so, if anything goes wrong here, we can fall back
-      // to plain JS reload.
-
-      // NOTE(brentvatne): rather than reload just JS we need to reload the entire project from manifest
-      reloadExpoApp()
-    }
-  }
-
-
   override fun showDevOptionsDialog() {
     if (
         devOptionsDialog != null ||
@@ -1018,11 +987,7 @@ public abstract class DevSupportManagerBase(
                 // Disable debugger to resume the JsVM & avoid thread locks while reloading
                 devServerHelper.disableDebugger()
               }
-              UiThreadUtil.runOnUiThread {
-                // NOTE(brentvatne): rather than reload just JS we need to reload the entire project from manifest
-                // handleReloadJS();
-                reloadExpoApp();
-              }
+              UiThreadUtil.runOnUiThread { handleReloadJS() }
             }
 
             override fun onPackagerDevMenuCommand() {

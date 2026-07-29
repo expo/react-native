@@ -109,8 +109,6 @@ public open class ReleaseDevSupportManager : DevSupportManager {
 
   public override fun handleReloadJS(): Unit = Unit
 
-  override public fun reloadExpoApp(): Unit = Unit
-
   public override fun reloadJSFromServer(bundleURL: String, callback: BundleLoadCallback): Unit =
       Unit
 

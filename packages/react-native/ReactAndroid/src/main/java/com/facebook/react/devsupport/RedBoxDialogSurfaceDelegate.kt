@@ -97,7 +97,7 @@ internal class RedBoxDialogSurfaceDelegate(private val devSupportManager: DevSup
                     return true
                   }
                   if (doubleTapReloadRecognizer.didDoubleTapR(keyCode, currentFocus)) {
-                    devSupportManager.reloadExpoApp()
+                    devSupportManager.handleReloadJS()
                   }
                   return super.onKeyUp(keyCode, event)
                 }
