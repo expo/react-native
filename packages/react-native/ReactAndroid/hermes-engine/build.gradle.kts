@@ -401,8 +401,8 @@ android {
         cmake {
           arguments(
               "-DCMAKE_BUILD_TYPE=MinSizeRel",
-              // For Expo Go, we have to enable debugging even on release builds.
-              "-DHERMES_ENABLE_DEBUGGER=True"
+              // For release builds, we don't want to enable the Hermes Debugger.
+              "-DHERMES_ENABLE_DEBUGGER=False",
           )
         }
       }
