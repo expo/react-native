@@ -47,6 +47,7 @@ import com.facebook.react.common.ReactConstants
 import com.facebook.react.common.ShakeDetector
 import com.facebook.react.common.SurfaceDelegate
 import com.facebook.react.common.SurfaceDelegateFactory
+import com.facebook.react.common.build.ReactBuildConfig
 import com.facebook.react.devsupport.DebugOverlayController.Companion.requestPermission
 import com.facebook.react.devsupport.DevServerHelper.PackagerCommandListener
 import com.facebook.react.devsupport.InspectorFlags.getFuseboxEnabled
@@ -363,19 +364,18 @@ public abstract class DevSupportManagerBase(
     }
     val options = LinkedHashMap<String, DevOptionHandler>()
     val disabledItemKeys: MutableSet<String?> = HashSet() /* register standard options */
-    // NOTE(brentvatne): This option does not make sense for Expo
-    // options[applicationContext.getString(R.string.catalyst_reload)] = DevOptionHandler {
-    //   if (!devSettings.isJSDevModeEnabled && devSettings.isHotModuleReplacementEnabled) {
-    //     Toast.makeText(
-    //             applicationContext,
-    //             applicationContext.getString(R.string.catalyst_hot_reloading_auto_disable),
-    //             Toast.LENGTH_LONG,
-    //         )
-    //         .show()
-    //     devSettings.isHotModuleReplacementEnabled = false
-    //   }
-    //   handleReloadJS()
-    // }
+    options[applicationContext.getString(R.string.catalyst_reload)] = DevOptionHandler {
+      if (!devSettings.isJSDevModeEnabled && devSettings.isHotModuleReplacementEnabled) {
+        Toast.makeText(
+                applicationContext,
+                applicationContext.getString(R.string.catalyst_hot_reloading_auto_disable),
+                Toast.LENGTH_LONG,
+            )
+            .show()
+        devSettings.isHotModuleReplacementEnabled = false
+      }
+      handleReloadJS()
+    }
 
     if (devSettings.isDeviceDebugEnabled) {
       // On-device JS debugging (CDP). Render action to open debugger frontend.
@@ -489,17 +489,16 @@ public abstract class DevSupportManagerBase(
           reactContext.getJSModule(HMRClient::class.java)?.disable()
         }
       }
-      // NOTE(brentvatne): This option does not make sense for Expo
-      // if (nextEnabled && !devSettings.isJSDevModeEnabled) {
-      //   Toast.makeText(
-      //           applicationContext,
-      //           applicationContext.getString(R.string.catalyst_hot_reloading_auto_enable),
-      //           Toast.LENGTH_LONG,
-      //       )
-      //       .show()
-      //   devSettings.isJSDevModeEnabled = true
-      //   handleReloadJS()
-      // }
+      if (nextEnabled && !devSettings.isJSDevModeEnabled) {
+        Toast.makeText(
+                applicationContext,
+                applicationContext.getString(R.string.catalyst_hot_reloading_auto_enable),
+                Toast.LENGTH_LONG,
+            )
+            .show()
+        devSettings.isJSDevModeEnabled = true
+        handleReloadJS()
+      }
     }
 
     // Do not show legacy performance overlay if V2 is enabled
@@ -520,12 +519,15 @@ public abstract class DevSupportManagerBase(
         }
         devSettings.isFpsDebugEnabled = !devSettings.isFpsDebugEnabled
       }
-      // NOTE(brentvatne): This option does not make sense for Expo
-      // options[applicationContext.getString(R.string.catalyst_settings)] = DevOptionHandler {
-      //   val intent = Intent(applicationContext, DevSettingsActivity::class.java)
-      //   intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      //   applicationContext.startActivity(intent)
-      // }
+      // DevSettingsActivity is only declared in ReactAndroid's debug manifest, so offering this
+      // option in a release build that still has dev support would fail to resolve the activity.
+      if (ReactBuildConfig.DEBUG) {
+        options[applicationContext.getString(R.string.catalyst_settings)] = DevOptionHandler {
+          val intent = Intent(applicationContext, DevSettingsActivity::class.java)
+          intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          applicationContext.startActivity(intent)
+        }
+      }
     }
 
     if (customDevOptions.isNotEmpty()) {
