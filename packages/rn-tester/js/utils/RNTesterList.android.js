@@ -19,6 +19,12 @@ const Components: Array<RNTesterModuleInfo> = [
   // Pinned to the head of the list (see RNTesterModuleInfo.pinned) while
   // these are the features under active development. Mirrors the iOS list.
   {
+    key: 'AstryxExample',
+    module: require('../examples/Astryx/AstryxExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  {
     key: 'StringChildrenExample',
     module: require('../examples/TextChildren/StringChildrenExample').default,
     category: 'Basic',

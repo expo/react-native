@@ -17,6 +17,12 @@ const Components: Array<RNTesterModuleInfo> = [
   // Kept at the head of the list for quick access while these are the
   // features under active development.
   {
+    key: 'AstryxExample',
+    pinned: true,
+    module: require('../examples/Astryx/AstryxExample').default,
+    category: 'UI',
+  },
+  {
     key: 'StringChildrenExample',
     pinned: true,
     module: require('../examples/TextChildren/StringChildrenExample').default,
