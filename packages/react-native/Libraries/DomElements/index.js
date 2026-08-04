@@ -93,6 +93,55 @@ createReactNativeComponentClass('div', () =>
   }),
 );
 
+/**
+ * Elements whose rendering is identical to an already-registered intrinsic.
+ * They point at that intrinsic's native component through `uiViewClassName`,
+ * so they need no shadow node, descriptor or native code of their own — the
+ * same view-config aliasing that maps an intrinsic onto any existing RN
+ * component.
+ *
+ * The authored tag is preserved for DOM APIs: a view config is per-component,
+ * not per-tag, so `recordNodeName` has the reconciler stamp the JSX type onto a
+ * `nodeName` prop that the element reports through `NodeNameProvider`. Without
+ * it an aliased <strong> would identify as <b>.
+ */
+function registerInlineAlias(name: string, uiViewClassName: string) {
+  createReactNativeComponentClass(name, () =>
+    createViewConfig({
+      ...inlineTagViewConfig,
+      validAttributes: {
+        ...inlineTagViewConfig.validAttributes,
+        nodeName: true,
+      },
+      recordNodeName: true,
+      uiViewClassName,
+    }),
+  );
+}
+
+// Bold and italic by default, exactly like their presentational twins.
+registerInlineAlias('strong', 'b');
+registerInlineAlias('em', 'i');
+// Inline, unstyled, and clickable: DOM click events already dispatch to inline
+// elements (W3C pointer events), so <button> and <a> need no gesture handler
+// or Pressable to be interactive — an `onClick` on the element is enough.
+registerInlineAlias('button', 'span');
+registerInlineAlias('a', 'span');
+registerInlineAlias('label', 'span');
+
+// <p> is block-level. Aliasing it to <div> is what makes it lay out as a block
+// at all: an unregistered tag falls through to the *inline* unknown element,
+// so <p> previously flowed inline with its siblings.
+//
+// It does not carry the UA stylesheet's default block margins; nothing here
+// implements UA styles yet, and design systems reset them regardless.
+createReactNativeComponentClass('p', () =>
+  createViewConfig({
+    validAttributes: {},
+    uiViewClassName: 'div',
+  }),
+);
+
 // HTMLUnknownElement: any unregistered lowercase JSX tag (e.g. <foo>) resolves
 // here — inline, unstyled, content renders — mirroring the web. This is the DOM
 // *policy*; the resolution *mechanism* is core's generic fallback hook, so RN

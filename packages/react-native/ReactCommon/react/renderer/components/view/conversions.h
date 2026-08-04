@@ -489,12 +489,19 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     result = yoga::Display::Flex;
     return;
   }
-  if (stringValue == "inline") {
-    // display:'inline' never reaches Yoga: inline-ness is resolved at box
-    // generation (YogaStylableProps::displayInline). In a block container the
-    // element flows as an atomic inline box in the parent IFC; in a flex
+  if (stringValue == "inline" || stringValue == "inline-flex" ||
+      stringValue == "inline-block") {
+    // The inline-level displays never reach Yoga: inline-ness is resolved at
+    // box generation (YogaStylableProps::displayInline). In a block container
+    // the element flows as an inline box in the parent IFC; in a flex
     // container it is blockified into a regular flex item (css-display-3
     // §2.7), which is exactly Yoga's Flex default.
+    //
+    // Only the *outer* display differs between these three. The inner display
+    // — flow for `inline`, flex for `inline-flex`, flow-root for
+    // `inline-block` — is Yoga's flex box either way; what separates them is
+    // that `inline-flex`/`inline-block` establish a formatting context and so
+    // are always atomic, recorded as YogaStylableProps::displayInlineAtomic.
     result = yoga::Display::Flex;
     return;
   }

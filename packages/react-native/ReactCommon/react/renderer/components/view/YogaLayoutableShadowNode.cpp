@@ -629,6 +629,12 @@ bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
   }
   const auto& props =
       static_cast<const YogaStylableProps&>(*child.getProps());
+  // `inline-flex`/`inline-block` are inline-level but establish a formatting
+  // context, so they are atomic by definition: their contents are flex items /
+  // block boxes of their own and can never join the surrounding inline flow.
+  if (props.displayInlineAtomic) {
+    return false;
+  }
   if (!props.yogaStyle.dimension(yoga::Dimension::Width).isAuto() ||
       !props.yogaStyle.dimension(yoga::Dimension::Height).isAuto()) {
     return false;

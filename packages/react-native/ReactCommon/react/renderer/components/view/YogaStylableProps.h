@@ -71,6 +71,12 @@ class YogaStylableProps : public Props {
    * flex item (css-display-3 §2.7). See text-children-plan.md §3.A/§7.
    */
   bool displayInline{false};
+  /*
+   * `display:'inline-flex'`/`'inline-block'`: inline-level, but establishing a
+   * formatting context, so the box is always atomic and its contents never
+   * fold into the surrounding inline flow the way a span-like `inline` does.
+   */
+  bool displayInlineAtomic{false};
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 

@@ -32,14 +32,47 @@ extern const char ITagComponentName[];
 extern const char SpanTagComponentName[];
 extern const char UTagComponentName[];
 
-class BTagProps final : public TextProps {
+/*
+ * Base for the intrinsic inline text elements.
+ *
+ * Carries the authored tag so DOM APIs report it. This matters because several
+ * elements are *aliases*: <strong> and <em> render through <b>'s and <i>'s
+ * native components, since their rendering is identical. Without this they
+ * would report `tagName` as their target — a <strong> identifying as a <b> —
+ * which is wrong, and observable to anything doing DOM introspection.
+ *
+ * The tag is lost at the JS boundary (a view config is per-component, not
+ * per-tag), so the reconciler injects it as the `nodeName` prop for configs
+ * marked `recordNodeName`. Empty when the element is not an alias, in which
+ * case core falls back to the component name — see DOM.cpp's use of
+ * NodeNameProvider.
+ */
+class InlineTagProps : public TextProps, public NodeNameProvider {
+ public:
+  InlineTagProps() = default;
+  InlineTagProps(
+      const PropsParserContext &context,
+      const InlineTagProps &sourceProps,
+      const RawProps &rawProps)
+      : TextProps(context, sourceProps, rawProps),
+        nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})) {}
+
+  std::string domNodeName() const override
+  {
+    return nodeName;
+  }
+
+  std::string nodeName{};
+};
+
+class BTagProps final : public InlineTagProps {
  public:
   BTagProps()
   {
     textAttributes.fontWeight = FontWeight::Bold;
   }
   BTagProps(const PropsParserContext &context, const BTagProps &sourceProps, const RawProps &rawProps)
-      : TextProps(context, sourceProps, rawProps)
+      : InlineTagProps(context, sourceProps, rawProps)
   {
     if (!textAttributes.fontWeight.has_value()) {
       textAttributes.fontWeight = FontWeight::Bold;
@@ -47,14 +80,14 @@ class BTagProps final : public TextProps {
   }
 };
 
-class ITagProps final : public TextProps {
+class ITagProps final : public InlineTagProps {
  public:
   ITagProps()
   {
     textAttributes.fontStyle = FontStyle::Italic;
   }
   ITagProps(const PropsParserContext &context, const ITagProps &sourceProps, const RawProps &rawProps)
-      : TextProps(context, sourceProps, rawProps)
+      : InlineTagProps(context, sourceProps, rawProps)
   {
     if (!textAttributes.fontStyle.has_value()) {
       textAttributes.fontStyle = FontStyle::Italic;
@@ -67,14 +100,14 @@ class ITagProps final : public TextProps {
  * it is registered ONLY via OnDemandComponentDescriptorProviders (never eagerly), so if <u> renders
  * underlined the lazy path works.
  */
-class UTagProps final : public TextProps {
+class UTagProps final : public InlineTagProps {
  public:
   UTagProps()
   {
     textAttributes.textDecorationLineType = TextDecorationLineType::Underline;
   }
   UTagProps(const PropsParserContext &context, const UTagProps &sourceProps, const RawProps &rawProps)
-      : TextProps(context, sourceProps, rawProps)
+      : InlineTagProps(context, sourceProps, rawProps)
   {
     if (!textAttributes.textDecorationLineType.has_value()) {
       textAttributes.textDecorationLineType = TextDecorationLineType::Underline;
@@ -98,7 +131,7 @@ class ITagShadowNode final : public ConcreteShadowNode<ITagComponentName, TextSh
 };
 
 class SpanTagShadowNode final
-    : public ConcreteShadowNode<SpanTagComponentName, TextShadowNode, TextProps, TextEventEmitter> {
+    : public ConcreteShadowNode<SpanTagComponentName, TextShadowNode, InlineTagProps, TextEventEmitter> {
  public:
   using ConcreteShadowNode::ConcreteShadowNode;
 };
@@ -110,22 +143,9 @@ class SpanTagShadowNode final
  * config — so `createInstance` injects it as the `nodeName` prop, the only
  * per-instance channel (text-children-plan.md §3.C; next-steps T2).
  */
-class UnknownElementProps final : public TextProps, public NodeNameProvider {
+class UnknownElementProps final : public InlineTagProps {
  public:
-  UnknownElementProps() = default;
-  UnknownElementProps(
-      const PropsParserContext &context,
-      const UnknownElementProps &sourceProps,
-      const RawProps &rawProps)
-      : TextProps(context, sourceProps, rawProps),
-        nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})) {}
-
-  // NodeNameProvider: HTMLUnknownElement reports its authored lowercase tag.
-  std::string domNodeName() const override {
-    return nodeName;
-  }
-
-  std::string nodeName{};
+  using InlineTagProps::InlineTagProps;
 };
 
 /*

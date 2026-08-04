@@ -29,13 +29,17 @@ YogaStylableProps::YogaStylableProps(
 
   displayBlock = sourceProps.displayBlock;
   displayInline = sourceProps.displayInline;
+  displayInlineAtomic = sourceProps.displayInlineAtomic;
   if (const auto* rawDisplay = rawProps.at("display", nullptr, nullptr)) {
     const auto displayValue = rawDisplay->hasValue() &&
             rawDisplay->hasType<std::string>()
         ? (std::string)*rawDisplay
         : std::string{};
     displayBlock = displayValue == "block";
-    displayInline = displayValue == "inline";
+    displayInline = displayValue == "inline" ||
+        displayValue == "inline-flex" || displayValue == "inline-block";
+    displayInlineAtomic =
+        displayValue == "inline-flex" || displayValue == "inline-block";
   }
 };
 
@@ -140,7 +144,10 @@ void YogaStylableProps::setProp(
         ? (std::string)value
         : std::string{};
     displayBlock = displayValue == "block";
-    displayInline = displayValue == "inline";
+    displayInline = displayValue == "inline" ||
+        displayValue == "inline-flex" || displayValue == "inline-block";
+    displayInlineAtomic =
+        displayValue == "inline-flex" || displayValue == "inline-block";
   }
 
   // NOTE: this switch is the *per-prop update* path. It is NOT where `style`
