@@ -7584,6 +7584,12 @@ function completeWork(current, workInProgress, renderLanes) {
           applyUAStyle(newProps, type),
           type.validAttributes
         );
+        // See the note in ReactFabric-prod.js: `recordNodeName` must be in
+        // every renderer build, or a release build delivers no tag to C++.
+        if (type.recordNodeName)
+          updatePayload = Object.assign({}, updatePayload, {
+            nodeName: workInProgress.type
+          });
         current = {
           node: createNode(
             renderLanes,
