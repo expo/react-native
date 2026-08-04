@@ -335,3 +335,36 @@ describe('inline box decorations affect the advance', () => {
     expect(rectOf(containerRef).width).toBe(44);
   });
 });
+
+describe('an inline element keeps DOM metrics while mounting no box', () => {
+  // `TextShadowNode::getMountedLayoutMetrics` returns empty metrics so the view
+  // an inline element mounts on Android stays a handle rather than becoming a
+  // rectangle that paints and hit-tests the union of the element's line boxes.
+  // The metrics themselves must survive that: they are what the DOM reports.
+  it('getBoundingClientRect still reports the element box', () => {
+    const elementRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
+          {'a'}
+          {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+          <span ref={elementRef} style={{paddingLeft: 5, paddingRight: 7}}>
+            bc
+          </span>
+          {'d'}
+        </View>,
+      );
+    });
+
+    // 'bc' is 20 wide, and the inline padding occupies real advance on both
+    // edges, so the element's border box is 32. A zero here would mean the
+    // mounted-metrics change leaked into the shadow tree.
+    const rect = rectOf(elementRef);
+    expect(rect.width).toBe(32);
+    expect(rect.height).toBeGreaterThan(0);
+  });
+});

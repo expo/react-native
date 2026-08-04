@@ -68,6 +68,32 @@ class TextShadowNode
     return true;
   }
 
+  /*
+   * An inline element mounts a view on Android (see `FormsView` below), but
+   * that view is a handle — for refs and for the tag the mounting layer keys
+   * on — never a box. CSS gives an inline element one box per line it spans
+   * (CSS2 §9.2.2), so the single rectangle a view could take is wrong in both
+   * directions: it would paint a plain rectangle over the sliced box the
+   * inline formatting context paints, and it would hit-test the whole union
+   * including the parts of those lines belonging to other elements.
+   *
+   * Returning empty metrics here leaves painting to `InlineBoxDecorationSpan`
+   * and hit-testing to the text view's span lookup, both of which work per
+   * fragment. The hit-testing half is verified: Android resolves a touch
+   * inside text through `ReactCompoundView.reactTagForTouch(x, y)`
+   * (`TouchTargetHelper`, and `PreparedLayoutTextView` implements it), which
+   * maps the point to a span and returns that element's tag. It never consults
+   * the child views' bounds, so an inline element's tag is found whether its
+   * view is unsized, or flattened away entirely by view collapsing. It also restores upstream's shape, where this class is not
+   * layoutable at all and the mounted view is consequently 0x0; the stamped
+   * metrics this class holds exist for `getBoundingClientRect()`, which reads
+   * the shadow tree and is unaffected.
+   */
+  LayoutMetrics getMountedLayoutMetrics() const override
+  {
+    return EmptyLayoutMetrics;
+  }
+
 #ifdef ANDROID
   using BaseShadowNode =
       ConcreteShadowNode<TextComponentName, LayoutableShadowNode, TextProps, TextEventEmitter>;

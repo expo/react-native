@@ -111,6 +111,25 @@ class LayoutableShadowNode : public ShadowNode {
   LayoutMetrics getLayoutMetrics() const;
 
   /*
+   * The metrics the *mounted view* should take, which is not always the box the
+   * node occupies in the shadow tree.
+   *
+   * They differ for a node whose CSS box cannot be expressed as a single
+   * rectangle: an inline element generates one box per line it spans, so no
+   * rectangle describes it. Such a node still needs real metrics in the shadow
+   * tree — `getBoundingClientRect()` reports the union of its fragments, and
+   * the DOM walk in `computeRelativeLayoutMetrics` requires every node between
+   * the root and the target to be layoutable — but a platform view laid out to
+   * that union would paint and hit-test a rectangle the element does not
+   * occupy. Those nodes return empty metrics here and leave both painting and
+   * hit-testing to the formatting context that owns them.
+   *
+   * Defaults to `getLayoutMetrics()`, which is right for every node whose box
+   * really is a rectangle.
+   */
+  virtual LayoutMetrics getMountedLayoutMetrics() const;
+
+  /*
    * Returns a transform object that represents transformations that will/should
    * be applied on top of regular layout metrics by mounting layer.
    * The `transform` value modifies a coordinate space of a layout system.
