@@ -45,6 +45,7 @@ import com.facebook.react.uimanager.ReactAccessibilityDelegate
 import com.facebook.react.views.text.internal.span.CustomLetterSpacingSpan
 import com.facebook.react.views.text.internal.span.CustomLineHeightSpan
 import com.facebook.react.views.text.internal.span.CustomStyleSpan
+import com.facebook.react.views.text.internal.span.InlineBoxDecorationSpan
 import com.facebook.react.views.text.internal.span.InlineBoxSpacingSpan
 import com.facebook.react.views.text.internal.span.ReactAbsoluteSizeSpan
 import com.facebook.react.views.text.internal.span.ReactBackgroundColorSpan
@@ -96,9 +97,21 @@ internal object TextLayoutManager {
   const val IB_KEY_MARGIN_LEFT: Int = 0
   const val IB_KEY_MARGIN_RIGHT: Int = 1
   const val IB_KEY_PADDING_LEFT: Int = 2
+  const val IB_KEY_PADDING_TOP: Int = 3
   const val IB_KEY_PADDING_RIGHT: Int = 4
+  const val IB_KEY_PADDING_BOTTOM: Int = 5
   const val IB_KEY_BORDER_LEFT_WIDTH: Int = 6
+  const val IB_KEY_BORDER_TOP_WIDTH: Int = 7
   const val IB_KEY_BORDER_RIGHT_WIDTH: Int = 8
+  const val IB_KEY_BORDER_BOTTOM_WIDTH: Int = 9
+  const val IB_KEY_BORDER_LEFT_COLOR: Int = 10
+  const val IB_KEY_BORDER_TOP_COLOR: Int = 11
+  const val IB_KEY_BORDER_RIGHT_COLOR: Int = 12
+  const val IB_KEY_BORDER_BOTTOM_COLOR: Int = 13
+  const val IB_KEY_BORDER_RADIUS: Int = 14
+  const val IB_KEY_OUTLINE_COLOR: Int = 15
+  const val IB_KEY_OUTLINE_WIDTH: Int = 16
+  const val IB_KEY_OUTLINE_OFFSET: Int = 17
 
   // constants for ParagraphAttributes serialization
   const val PA_KEY_MAX_NUMBER_OF_LINES: Int = 0
@@ -251,6 +264,55 @@ internal object TextLayoutManager {
   }
 
   /**
+   * The element's box decorations, as a span that paints them
+   * (box-model-scope.md G4/G5). Null when the element has nothing to draw, so
+   * undecorated text pays nothing.
+   */
+  private fun inlineBoxDecorationSpan(fragment: MapBuffer): InlineBoxDecorationSpan? {
+    if (!fragment.contains(FR_KEY_INLINE_BOX)) {
+      return null
+    }
+    val box = fragment.getMapBuffer(FR_KEY_INLINE_BOX)
+    fun px(key: Int): Float =
+        if (box.contains(key)) PixelUtil.toPixelFromDIP(box.getDouble(key)) else 0f
+    fun color(key: Int): Int? = if (box.contains(key)) box.getInt(key) else null
+
+    val borderWidths =
+        listOf(
+            px(IB_KEY_BORDER_LEFT_WIDTH),
+            px(IB_KEY_BORDER_TOP_WIDTH),
+            px(IB_KEY_BORDER_RIGHT_WIDTH),
+            px(IB_KEY_BORDER_BOTTOM_WIDTH),
+        )
+    val outlineWidth = px(IB_KEY_OUTLINE_WIDTH)
+    if (borderWidths.all { it == 0f } && outlineWidth == 0f) {
+      // Padding and margin alone change the advance but draw nothing.
+      return null
+    }
+
+    return InlineBoxDecorationSpan(
+        paddingLeft = px(IB_KEY_PADDING_LEFT),
+        paddingTop = px(IB_KEY_PADDING_TOP),
+        paddingRight = px(IB_KEY_PADDING_RIGHT),
+        paddingBottom = px(IB_KEY_PADDING_BOTTOM),
+        borderLeftWidth = borderWidths[0],
+        borderTopWidth = borderWidths[1],
+        borderRightWidth = borderWidths[2],
+        borderBottomWidth = borderWidths[3],
+        borderLeftColor = color(IB_KEY_BORDER_LEFT_COLOR),
+        borderTopColor = color(IB_KEY_BORDER_TOP_COLOR),
+        borderRightColor = color(IB_KEY_BORDER_RIGHT_COLOR),
+        borderBottomColor = color(IB_KEY_BORDER_BOTTOM_COLOR),
+        borderRadius = px(IB_KEY_BORDER_RADIUS),
+        outlineColor = color(IB_KEY_OUTLINE_COLOR),
+        outlineWidth = outlineWidth,
+        outlineOffset = px(IB_KEY_OUTLINE_OFFSET),
+        marginLeft = px(IB_KEY_MARGIN_LEFT),
+        marginRight = px(IB_KEY_MARGIN_RIGHT),
+    )
+  }
+
+  /**
    * The inline-axis space an inline element reserves at its leading and trailing edges: margin +
    * border + padding (box-model-scope.md G3, CSS2 §10.6.1). Block-axis values deliberately do not
    * appear — they paint but never change line height.
@@ -314,6 +376,47 @@ internal object TextLayoutManager {
     if (trailing > 0f && end > start) {
       ops.add(SetSpanOperation(end - 1, end, InlineBoxSpacingSpan(trailing)))
     }
+
+  }
+
+  /**
+   * Emits the box-painting span for a whole inline element.
+   *
+   * The decorations are stamped on *every* fragment of an element, so adding a
+   * span per fragment paints one box per fragment — visibly, two overlapping
+   * boxes for an element that produced two fragments. The box belongs to the
+   * element, so it is emitted once, spanning from the fragment flagged as the
+   * element's start to the one flagged as its end. That is the same grouping
+   * the iOS painting pass does.
+   *
+   * Returns the still-open element's start offset, or -1 when none is open.
+   */
+  private fun applyInlineBoxDecoration(
+      fragment: MapBuffer,
+      start: Int,
+      end: Int,
+      pendingStart: Int,
+      ops: MutableList<SetSpanOperation>,
+  ): Int {
+    if (!fragment.contains(FR_KEY_INLINE_BOX)) {
+      return pendingStart
+    }
+    val isStart =
+        fragment.contains(FR_KEY_IS_INLINE_BOX_START) &&
+            fragment.getBoolean(FR_KEY_IS_INLINE_BOX_START)
+    val isEnd =
+        fragment.contains(FR_KEY_IS_INLINE_BOX_END) &&
+            fragment.getBoolean(FR_KEY_IS_INLINE_BOX_END)
+    val elementStart = if (isStart) start else pendingStart
+    if (!isEnd) {
+      return elementStart
+    }
+    if (elementStart >= 0 && end > elementStart) {
+      inlineBoxDecorationSpan(fragment)?.let {
+        ops.add(SetSpanOperation(elementStart, end, it))
+      }
+    }
+    return -1
   }
 
   @OptIn(UnstableReactNativeAPI::class)
@@ -330,6 +433,8 @@ internal object TextLayoutManager {
     // single spans, avoiding duplicate draws (e.g. multiple accent marks in HighlighterTextSpan).
     var pendingEffects: List<TextAttributeProps.TextEffectEntry> = emptyList()
     var pendingEffectStart = 0
+    // Start offset of the inline element whose box is still open, or -1.
+    var inlineBoxStart = -1
 
     for (i in 0 until fragments.count) {
       val fragment = fragments.getMapBuffer(i)
@@ -344,6 +449,7 @@ internal object TextLayoutManager {
 
       val end = sb.length
       applyInlineBoxSpacing(fragment, start, end, sb, ops)
+      inlineBoxStart = applyInlineBoxDecoration(fragment, start, end, inlineBoxStart, ops)
       val reactTag =
           if (fragment.contains(FR_KEY_REACT_TAG)) fragment.getInt(FR_KEY_REACT_TAG) else View.NO_ID
       if (fragment.contains(FR_KEY_IS_ATTACHMENT) && fragment.getBoolean(FR_KEY_IS_ATTACHMENT)) {

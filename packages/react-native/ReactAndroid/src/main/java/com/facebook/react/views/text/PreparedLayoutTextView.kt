@@ -29,6 +29,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.common.annotations.UnstableReactNativeAPI
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.ReactCompoundView
+import com.facebook.react.views.text.internal.span.InlineBoxDecorationSpan
 import com.facebook.react.uimanager.RootView
 import com.facebook.react.uimanager.style.Overflow
 import com.facebook.react.views.text.internal.span.AnimatedEffectSpan
@@ -117,10 +118,43 @@ internal class PreparedLayoutTextView(context: Context) : ViewGroup(context), Re
     }
   }
 
+  /** The largest block-axis overflow of any inline box in this text, in pixels. */
+  @OptIn(UnstableReactNativeAPI::class)
+  private fun inlineBoxBlockAxisOverflow(): Float {
+    val spanned = text as? Spanned ?: return 0f
+    var max = 0f
+    for (span in spanned.getSpans(0, spanned.length, InlineBoxDecorationSpan::class.java)) {
+      val overflow = span.blockAxisOverflow
+      if (overflow > max) {
+        max = overflow
+      }
+    }
+    return max
+  }
+
   @OptIn(UnstableReactNativeAPI::class)
   override fun onDraw(canvas: Canvas) {
     if (overflow != Overflow.VISIBLE) {
-      BackgroundStyleApplicator.clipToPaddingBox(this, canvas)
+      // An inline box's block-axis padding, border and outline overflow the
+      // line box rather than growing it (CSS2 §10.6.1), so clipping to the
+      // padding box would cut off decorations that are laid out correctly.
+      // Make room for exactly that much and no more, so `overflow: hidden`
+      // still clips everything else.
+      // DOM-CSS-LIMITATION(inline-box-escapes-overflow-hidden): CSS would clip
+      // this ink too. Admitting it is the lesser wrong — the alternative is a
+      // box that is always visibly cut, since the line box is by definition
+      // too short to contain it.
+      val inlineBoxOverflow = inlineBoxBlockAxisOverflow()
+      if (inlineBoxOverflow <= 0f) {
+        BackgroundStyleApplicator.clipToPaddingBox(this, canvas)
+      } else {
+        canvas.clipRect(
+            -inlineBoxOverflow,
+            -inlineBoxOverflow,
+            width + inlineBoxOverflow,
+            height + inlineBoxOverflow,
+        )
+      }
     }
 
     super.onDraw(canvas)
