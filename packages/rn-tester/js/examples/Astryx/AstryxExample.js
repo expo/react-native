@@ -605,6 +605,112 @@ export default {
       ),
     },
     {
+      title: 'Document typography comes from the UA stylesheet',
+      description:
+        'No styles authored here. <h1>/<h2>/<p> carry the user-agent ' +
+        'defaults — bold headings, block margins — and <strong>/<em>/<code> ' +
+        'their inline ones, exactly as a browser would before any author ' +
+        'CSS. An author style still wins, because the UA sheet is applied at ' +
+        'the UA cascade origin (CSS Cascade §6.1).',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            '<h1>Astryx</h1>\n' +
+            '<p>\n' +
+            '  Meta’s design system, <strong>unmodified</strong> and\n' +
+            '  <em>vendored</em>, on <code>react-native</code>.\n' +
+            '</p>\n' +
+            "<h2 style={{color: '#0a7'}}>Author styles still win</h2>"
+          }>
+          {/* $FlowExpectedError[not-a-component] intrinsic <h1> tag */}
+          <h1>Astryx</h1>
+          {/* $FlowExpectedError[not-a-component] intrinsic <p> tag */}
+          <p>
+            Meta’s design system,{' '}
+            {/* $FlowExpectedError[not-a-component] */}
+            <strong>unmodified</strong> and{' '}
+            {/* $FlowExpectedError[not-a-component] */}
+            <em>vendored</em>, on {/* $FlowExpectedError[not-a-component] */}
+            <code>react-native</code>.
+          </p>
+          {/* $FlowExpectedError[not-a-component] intrinsic <h2> tag */}
+          <h2 style={{color: '#0a7'}}>Author styles still win</h2>
+        </DemoContent>
+      ),
+    },
+    {
+      title: 'Lists indent by the UA marker gutter',
+      description:
+        'A <ul> gets the UA paddingInlineStart that leaves room for markers, ' +
+        'and its block margins, without a line of authored layout.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            '<ul>\n' +
+            '  <li>tokens resolve through var() chains</li>\n' +
+            '  <li>elements keep their own tagName</li>\n' +
+            '</ul>'
+          }>
+          {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
+          <ul>
+            {/* $FlowExpectedError[not-a-component] */}
+            <li>tokens resolve through var() chains</li>
+            {/* $FlowExpectedError[not-a-component] */}
+            <li>elements keep their own tagName</li>
+          </ul>
+        </DemoContent>
+      ),
+    },
+    {
+      title: 'inline-flex: a flex container that flows in the text',
+      description:
+        'display:inline-flex is inline-level, so the chip sits in the ' +
+        'sentence like a word, but lays its own children out with flex — ' +
+        'and it is atomic, so its block-axis padding grows the line box ' +
+        'rather than overflowing it, unlike a plain inline box.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<View style={{display: 'block'}}>\n" +
+            "  {'status '}\n" +
+            "  <span style={{display: 'inline-flex', gap: 4,\n" +
+            "                paddingHorizontal: 6, borderRadius: 8,\n" +
+            "                backgroundColor: '#e6f4ea'}}>\n" +
+            "    <View style={{width: 8, height: 8, borderRadius: 4,\n" +
+            "                  backgroundColor: '#0a7'}} />\n" +
+            "    {'ready'}\n" +
+            '  </span>\n' +
+            "  {' — flowing inline'}\n" +
+            '</View>'
+          }>
+          <View style={{display: 'block'}}>
+            {'status '}
+            {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+            <span
+              style={{
+                display: 'inline-flex',
+                gap: 4,
+                alignItems: 'center',
+                paddingHorizontal: 6,
+                borderRadius: 8,
+                backgroundColor: '#e6f4ea',
+              }}>
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: '#0a7',
+                }}
+              />
+              {'ready'}
+            </span>
+            {' — flowing inline'}
+          </View>
+        </DemoContent>
+      ),
+    },
+    {
       title: 'What this exercises',
       render: (): React.Node => (
         <DemoContent>
