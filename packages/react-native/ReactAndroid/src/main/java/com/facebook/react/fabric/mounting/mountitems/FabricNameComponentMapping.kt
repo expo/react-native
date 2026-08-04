@@ -18,6 +18,10 @@ internal object FabricNameComponentMapping {
       // reworked); the Android RCTImageView expects a different `source` shape,
       // so mount it as a plain view until img is revisited.
       "div" to "RCTView",
+      // The box-backed flavor an element is swapped onto when its display
+      // generates a box (ElementBoxShadowNode.h). A plain view: everything
+      // that distinguishes it is layout, not drawing.
+      "element-box" to "RCTView",
       "img" to "RCTView",
       // The inline text intrinsics. Their content is absorbed into the
       // container's text runs and the mounted view draws nothing — but Android

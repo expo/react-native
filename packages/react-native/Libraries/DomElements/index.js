@@ -42,7 +42,12 @@ function registerInlineTag(name: string) {
   createReactNativeComponentClass(name, () =>
     createViewConfig({
       ...inlineTagViewConfig,
+      validAttributes: {...inlineTagViewConfig.validAttributes, nodeName: true},
+      // The authored tag rides along so the element reports itself whichever
+      // component ends up backing it.
+      recordNodeName: true,
       uiViewClassName: name,
+      resolveUIViewClassName: resolveInlineElementComponent(name),
     }),
   );
 }
@@ -115,6 +120,7 @@ function registerInlineAlias(name: string, uiViewClassName: string) {
       },
       recordNodeName: true,
       uiViewClassName,
+      resolveUIViewClassName: resolveInlineElementComponent(uiViewClassName),
     }),
   );
 }
@@ -141,6 +147,52 @@ createReactNativeComponentClass('p', () =>
     uiViewClassName: 'div',
   }),
 );
+
+/**
+ * Displays whose box establishes a formatting context, so the element cannot
+ * fold into the surrounding inline flow and needs a real box of its own.
+ *
+ * `inline` is absent on purpose: it is precisely the display that folds.
+ */
+const BOX_DISPLAYS = new Set([
+  'flex',
+  'inline-flex',
+  'block',
+  'inline-block',
+  'grid',
+  'inline-grid',
+]);
+
+/**
+ * Picks the native component backing an inline element, from its resolved
+ * `display`.
+ *
+ * Box generation follows computed display, not the tag: a `<span>` is the
+ * cheap text-backed component while it folds into an inline formatting
+ * context, and the box-backed one when its display establishes one. Browsers
+ * make the same choice at the same point — `LayoutObject::CreateObject`
+ * constructs a different class per computed display.
+ *
+ * Cheap by construction: a set lookup on an already-flattened style, and only
+ * for elements that can be either flavor.
+ */
+function resolveInlineElementComponent(uiViewClassName: string) {
+  return (props: Object): string => {
+    const style = props?.style;
+    if (style == null) {
+      return uiViewClassName;
+    }
+    // Required lazily: importing StyleSheet at module scope pulls this module
+    // into a require cycle, which re-evaluates it and re-runs the element
+    // registrations ("tried to register two views with the same name").
+    const styleSheetModule = require('../StyleSheet/StyleSheet');
+    const flatten = styleSheetModule.default?.flatten ?? styleSheetModule.flatten;
+    const display = flatten(style)?.display;
+    return typeof display === 'string' && BOX_DISPLAYS.has(display)
+      ? 'element-box'
+      : uiViewClassName;
+  };
+}
 
 // HTMLUnknownElement: any unregistered lowercase JSX tag (e.g. <foo>) resolves
 // here — inline, unstyled, content renders — mirroring the web. This is the DOM

@@ -12,6 +12,7 @@
 #include <vector>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/DivShadowNode.h>
+#include <react/renderer/components/view/ElementBoxShadowNode.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
@@ -28,6 +29,9 @@ const char ViewComponentName[] = "View";
 // The intrinsic `<div>` tag (text-children-plan.md §3.C); see DivShadowNode.h.
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char DivComponentName[] = "div";
+// Not JSX-addressable: the renderer swaps an element onto this component when
+// its display generates a box (ElementBoxShadowNode.h).
+const char ElementBoxComponentName[] = "element-box";
 
 template <const char* concreteComponentName, typename ViewPropsT>
 void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
@@ -301,5 +305,6 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
 // units): `<View>` and the intrinsic `<div>`.
 template class AbstractViewShadowNode<ViewComponentName, ViewProps>;
 template class AbstractViewShadowNode<DivComponentName, DivProps>;
+template class AbstractViewShadowNode<ElementBoxComponentName, ElementBoxProps>;
 
 } // namespace facebook::react

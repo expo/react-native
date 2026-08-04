@@ -30,7 +30,9 @@ YogaStylableProps::YogaStylableProps(
   displayBlock = sourceProps.displayBlock;
   displayInline = sourceProps.displayInline;
   displayInlineAtomic = sourceProps.displayInlineAtomic;
+  displayAuthored = sourceProps.displayAuthored;
   if (const auto* rawDisplay = rawProps.at("display", nullptr, nullptr)) {
+    displayAuthored = true;
     const auto displayValue = rawDisplay->hasValue() &&
             rawDisplay->hasType<std::string>()
         ? (std::string)*rawDisplay
@@ -139,6 +141,7 @@ void YogaStylableProps::setProp(
   Props::setProp(context, hash, propName, value);
 
   if (hash == CONSTEXPR_RAW_PROPS_KEY_HASH("display")) {
+    displayAuthored = true;
     const auto displayValue =
         value.hasValue() && value.hasType<std::string>()
         ? (std::string)value

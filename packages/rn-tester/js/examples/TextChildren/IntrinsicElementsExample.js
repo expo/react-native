@@ -153,6 +153,7 @@ function InlineBoxAdvanceCase(): React.Node {
   const boldRef = useRef<React.ElementRef<typeof View> | null>(null);
   const plainSpanRef = useRef<React.ElementRef<typeof View> | null>(null);
   const axisSpanRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const flexSpanRef = useRef<React.ElementRef<typeof View> | null>(null);
   usePublishRects({
     intrinsicPlainRun: plainRef,
     intrinsicAxisRun: axisRef,
@@ -161,6 +162,7 @@ function InlineBoxAdvanceCase(): React.Node {
     intrinsicBold: boldRef,
     intrinsicPlainSpan: plainSpanRef,
     intrinsicAxisSpan: axisSpanRef,
+    intrinsicFlexSpan: flexSpanRef,
   });
   const p = INLINE_BOX_ADVANCE_PADDING;
   const block = {display: 'block', alignSelf: 'flex-start'} as const;
@@ -195,6 +197,17 @@ function InlineBoxAdvanceCase(): React.Node {
         {/* $FlowExpectedError[not-a-component] intrinsic <b> tag */}
         <b ref={boldRef}>BOLD</b>
         after
+      </View>
+      {/* A <span> whose display generates a box: it lays its own children out
+          with flex, which a text-backed span cannot do at all. */}
+      <View style={block}>
+        {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+        <span
+          ref={flexSpanRef}
+          style={{display: 'inline-flex', flexDirection: 'row'}}>
+          <View style={{width: 30, height: 12, backgroundColor: '#0a7'}} />
+          <View style={{width: 20, height: 12, backgroundColor: '#06c'}} />
+        </span>
       </View>
     </View>
   );

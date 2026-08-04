@@ -73,6 +73,18 @@ export type ViewConfig = Readonly<{
   // their tag name for DOM APIs (e.g. HTMLUnknownElement), so the renderer names
   // no specific component.
   recordNodeName?: boolean,
+  /**
+   * Resolves the native component to instantiate from the element's props,
+   * letting one JSX tag be backed by different native components. Box
+   * generation follows computed `display`, not the tag, so an intrinsic
+   * element uses a cheap text-backed component while it folds into an inline
+   * formatting context and a box-backed one when its display establishes one.
+   *
+   * Consulted at instance creation only, which is the same point at which a
+   * browser picks a layout object class. An element whose display later
+   * crosses that boundary keeps its original backing until it remounts.
+   */
+  resolveUIViewClassName?: (props: Object) => string,
 }>;
 
 export type PartialViewConfig = Readonly<{

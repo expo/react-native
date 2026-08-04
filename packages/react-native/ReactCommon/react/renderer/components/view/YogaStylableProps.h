@@ -77,6 +77,14 @@ class YogaStylableProps : public Props {
    * fold into the surrounding inline flow the way a span-like `inline` does.
    */
   bool displayInlineAtomic{false};
+  /*
+   * Whether the author wrote a `display` at all. An element whose UA display
+   * differs from the RN default (`<div>` is block) needs to apply that default
+   * *only* when the author did not ask for something else — the resolved flags
+   * cannot express it, since an authored `display:'flex'` leaves them in the
+   * same state as no display at all.
+   */
+  bool displayAuthored{false};
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 

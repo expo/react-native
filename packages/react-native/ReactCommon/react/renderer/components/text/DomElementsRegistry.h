@@ -15,6 +15,7 @@
 #include <react/renderer/components/image/ImageShadowNode.h>
 #include <react/renderer/components/text/InlineTextTagShadowNodes.h>
 #include <react/renderer/components/view/DivShadowNode.h>
+#include <react/renderer/components/view/ElementBoxShadowNode.h>
 
 namespace facebook::react::dom {
 
@@ -62,6 +63,10 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders() {
       concreteComponentDescriptorProvider<ImgTagComponentDescriptor>());
   providers.push_back(
       concreteComponentDescriptorProvider<DivComponentDescriptor>());
+  // The box-backed flavor an element is swapped onto when its `display`
+  // establishes a formatting context. Not JSX-addressable.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementBoxComponentDescriptor>());
   return providers;
 }
 

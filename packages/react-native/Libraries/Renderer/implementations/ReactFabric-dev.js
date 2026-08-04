@@ -10063,7 +10063,7 @@ __DEV__ &&
             current = {
               node: createNode(
                 renderLanes,
-                _type2.uiViewClassName,
+                (_type2.resolveUIViewClassName ? _type2.resolveUIViewClassName(newProps) : _type2.uiViewClassName),
                 current.containerTag,
                 keepChildren,
                 workInProgress

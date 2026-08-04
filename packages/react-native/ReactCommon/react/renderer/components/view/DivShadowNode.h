@@ -36,9 +36,12 @@ class DivProps final : public ViewProps {
       const DivProps &sourceProps,
       const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps) {
-    // `<div>` defaults to a block container; an explicit `display` style is a
-    // v1 deviation (divs stay block).
-    displayBlock = true;
+    // `<div>`'s *default* display is block, exactly as the UA stylesheet says
+    // — but a default is not a forced value. An authored `display` wins, so
+    // `<div style={{display:'flex'}}>` is a flex container like on the web.
+    if (!displayAuthored) {
+      displayBlock = true;
+    }
   }
 };
 

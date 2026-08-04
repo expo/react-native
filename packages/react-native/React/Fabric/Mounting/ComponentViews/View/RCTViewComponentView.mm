@@ -39,6 +39,7 @@
 // the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
 #import <react/renderer/components/view/DivShadowNode.h>
+#import <react/renderer/components/view/ElementBoxShadowNode.h>
 
 using namespace facebook::react;
 
@@ -2133,6 +2134,37 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 + (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
 {
   return facebook::react::concreteComponentDescriptorProvider<facebook::react::DivComponentDescriptor>();
+}
+
++ (void)load
+{
+  [[RCTComponentViewFactory currentComponentViewFactory] registerComponentViewClass:self];
+}
+
+@end
+
+/*
+ * The box-backed flavor of a DOM element (`element-box`): a plain view, since
+ * everything that distinguishes it lives in layout, not in drawing. The
+ * renderer swaps an element onto this component when its display generates a
+ * box — see ElementBoxShadowNode.h.
+ */
+@interface RCTElementBoxComponentView : RCTViewComponentView
+@end
+
+@implementation RCTElementBoxComponentView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    _props = ElementBoxShadowNode::defaultSharedProps();
+  }
+  return self;
+}
+
++ (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
+{
+  return facebook::react::concreteComponentDescriptorProvider<facebook::react::ElementBoxComponentDescriptor>();
 }
 
 + (void)load

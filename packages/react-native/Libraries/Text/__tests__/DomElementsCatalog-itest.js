@@ -251,3 +251,111 @@ describe('inline-level displays that establish a formatting context', () => {
     expect(rectOf(spanLikeRef).height).toBe(20);
   });
 });
+
+// A UA default is a default, not a forced value — the author wins, as in any
+// cascade. `display:'flex'` on a <div> is Astryx's single most common style.
+describe('<div> display is a default the author can override', () => {
+  it('defaults to block', () => {
+    const ref = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <div>
+            <View style={{width: 30, height: 10}} />
+            <View style={{width: 20, height: 10}} />
+          </div>
+        </View>,
+      );
+    });
+    // Block: children stack, so the box is as wide as the widest child.
+    expect(rectOf(ref).width).toBe(30);
+    expect(rectOf(ref).height).toBe(20);
+  });
+
+  it('honors an authored display:flex', () => {
+    const ref = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <div style={{display: 'flex', flexDirection: 'row'}}>
+            <View style={{width: 30, height: 10}} />
+            <View style={{width: 20, height: 10}} />
+          </div>
+        </View>,
+      );
+    });
+    // Flex row: children sit side by side and the box is 50 wide, 10 tall.
+    expect(rectOf(ref).width).toBe(50);
+    expect(rectOf(ref).height).toBe(10);
+  });
+});
+
+// Box generation follows computed `display`, not the tag: a <span> is the
+// cheap text-backed component while it folds into an inline formatting
+// context, and a real box when its display establishes one.
+describe('display selects an element\'s backing box', () => {
+  it('a <span> with display:inline-flex lays its children out with flex', () => {
+    const ref = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} ref={ref} style={{display: 'block', alignSelf: 'flex-start'}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <span style={{display: 'inline-flex', flexDirection: 'row'}}>
+            <View style={{width: 30, height: 10}} />
+            <View style={{width: 20, height: 10}} />
+          </span>
+        </View>,
+      );
+    });
+
+    // A text-backed <span> could not lay these out at all — it is not a Yoga
+    // node. 50 wide means it became a real flex box.
+    expect(rectOf(ref).width).toBe(50);
+  });
+
+  it('a plain <span> still folds into the surrounding text run', () => {
+    const ref = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} ref={ref} style={{display: 'block', alignSelf: 'flex-start'}}>
+          {'ab'}
+          {/* $FlowExpectedError[not-a-component] */}
+          <span>cd</span>
+          {'ef'}
+        </View>,
+      );
+    });
+
+    // One 6-character run on one line: still the cheap text flavor.
+    expect(rectOf(ref).width).toBe(60);
+    expect(rectOf(ref).height).toBe(20);
+  });
+
+  it('a box-flavored element still reports its own tagName', () => {
+    const ref = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} style={{display: 'block'}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <span ref={ref} style={{display: 'inline-flex'}}>
+            <View style={{width: 10, height: 10}} />
+          </span>
+        </View>,
+      );
+    });
+
+    // Backed by `element-box`, but it is still a <span>.
+    // $FlowFixMe[prop-missing] DOM tagName
+    expect(ref.current?.tagName).toBe('RN:span');
+  });
+});

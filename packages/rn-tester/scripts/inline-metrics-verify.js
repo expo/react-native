@@ -131,6 +131,7 @@ async function main() {
     'intrinsicPlainSpan',
     'intrinsicAxisSpan',
     'intrinsicBold',
+    'intrinsicFlexSpan',
   ];
   for (const key of required) {
     if (v[key] == null) {
@@ -179,6 +180,17 @@ async function main() {
   // The element's own box is its *border* box, so it includes both edges. The
   // leading edge is the one at risk: it rides on the preceding character, so
   // it falls outside the element's glyph range and has to be added back.
+  // A <span> whose display establishes a formatting context is backed by a
+  // real box, so it lays its own children out — 30 + 20 in a row. A
+  // text-backed span is not a Yoga node and could not do this at all.
+  const flexSpan = v.intrinsicFlexSpan;
+  ok =
+    check(
+      'a <span> with display:inline-flex lays out its children',
+      flexSpan != null && Math.abs(flexSpan.w - 50) <= TOLERANCE,
+      flexSpan != null ? `${flexSpan.w.toFixed(2)} ≈ 50` : 'not published',
+    ) && ok;
+
   const spanDelta = v.intrinsicAxisSpan.w - v.intrinsicPlainSpan.w;
   ok =
     check(

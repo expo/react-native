@@ -43,6 +43,7 @@ export function createViewConfig(
     // spreading, so anything not listed here is silently dropped. Opt-in flags
     // have to be carried through explicitly.
     recordNodeName: partialViewConfig.recordNodeName,
+    resolveUIViewClassName: partialViewConfig.resolveUIViewClassName,
   };
 }
 

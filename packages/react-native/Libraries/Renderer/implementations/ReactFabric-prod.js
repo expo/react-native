@@ -7103,7 +7103,7 @@ function completeWork(current, workInProgress, renderLanes) {
         current = {
           node: createNode(
             renderLanes,
-            type.uiViewClassName,
+            (type.resolveUIViewClassName ? type.resolveUIViewClassName(newProps) : type.uiViewClassName),
             current.containerTag,
             updatePayload,
             workInProgress
