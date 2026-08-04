@@ -29,6 +29,10 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'Basic',
   },
   {
+    key: 'ListsExample',
+    module: require('../examples/Lists/ListsExample').default,
+  },
+  {
     key: 'IntrinsicElementsExample',
     pinned: true,
     module: require('../examples/TextChildren/IntrinsicElementsExample')

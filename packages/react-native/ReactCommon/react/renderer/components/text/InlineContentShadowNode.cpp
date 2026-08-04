@@ -193,6 +193,39 @@ void InlineContentShadowNode::setTextLayoutManager(
   textLayoutManager_ = std::move(textLayoutManager);
 }
 
+InlineContentShadowNode::OutsideMarker
+InlineContentShadowNode::getOutsideMarker() const {
+  // Only `outside` markers are painted separately; an `inside` one is already
+  // part of the measured content.
+  if (listMarker_.text.empty() || !listMarker_.outside ||
+      textLayoutManager_ == nullptr) {
+    return {};
+  }
+
+  auto markerString = AttributedString{};
+  auto fragment = AttributedString::Fragment{};
+  // The trailing no-break space is the gap between the marker and the content.
+  // Measuring it as part of the marker is what sets the marker's start
+  // position once the caller right-aligns the whole thing to the content edge.
+  fragment.string =
+      listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
+  fragment.textAttributes = getInheritedTextAttributes();
+  markerString.appendFragment(std::move(fragment));
+
+  const auto measurement = textLayoutManager_->measure(
+      AttributedStringBox{markerString},
+      ParagraphAttributes{},
+      TextLayoutContext{
+          .pointScaleFactor = getLayoutMetrics().pointScaleFactor,
+          .surfaceId = getSurfaceId()},
+      LayoutConstraints{});
+
+  return OutsideMarker{
+      .attributedString = markerString,
+      .size = measurement.size,
+      .present = true};
+}
+
 AttributedString InlineContentShadowNode::getContentAttributedString() const {
   auto textAttributes = getInheritedTextAttributes();
   auto attributedString = AttributedString{};

@@ -44,6 +44,21 @@ class InlineTextContentAccessor {
 
   virtual std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const = 0;
 
+  /*
+   * An `outside` list marker, already measured (css-lists-3 §3.2).
+   *
+   * Measuring happens on this side of the interface because the view layer
+   * cannot include the text layout manager, and the caller only needs to know
+   * how wide the marker is so it can place it in the gutter to the
+   * inline-start side of the content box.
+   */
+  struct OutsideMarker {
+    AttributedString attributedString;
+    Size size;
+    bool present{false};
+  };
+  virtual OutsideMarker getOutsideMarker() const = 0;
+
   // Resolved inline frames of this run's replaced elements (`<img>`), so the
   // owning View can position each image at its exact inline offset within the
   // run rather than at the box origin (text-children-plan.md §3.C).

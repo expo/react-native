@@ -82,6 +82,8 @@ class InlineContentShadowNode final
 
   AttributedString getContentAttributedString() const override;
 
+  OutsideMarker getOutsideMarker() const override;
+
   std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const override
   {
     return textLayoutManager_;

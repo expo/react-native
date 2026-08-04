@@ -277,13 +277,35 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     if (layoutManager.expired()) {
       layoutManager = contentAccessor->getContentTextLayoutManager();
     }
+    const auto documentOrder =
+        i < childIndices.size() ? childIndices[i] : static_cast<int>(i);
+    const auto contentFrame = box->getLayoutMetrics().frame;
+    auto contentString = contentAccessor->getContentAttributedString();
+
+    // An `outside` list marker (css-lists-3 §3.2) is painted rather than
+    // measured with the content, which is what lets the content hang past it:
+    // it sits in the gutter the list's `padding-inline-start` reserves, to the
+    // inline-start side of the content box, so every line of the item —
+    // continuations included — starts at the content edge.
+    const auto marker = contentAccessor->getOutsideMarker();
+    if (marker.present) {
+      textRuns.push_back(
+          ViewState::TextRun{
+              .attributedString = marker.attributedString,
+              .frame =
+                  Rect{
+                      .origin =
+                          {contentFrame.origin.x - marker.size.width,
+                           contentFrame.origin.y},
+                      .size = marker.size},
+              .documentOrder = documentOrder});
+    }
+
     textRuns.push_back(
         ViewState::TextRun{
-            .attributedString = contentAccessor->getContentAttributedString(),
-            .frame = box->getLayoutMetrics().frame,
-            .documentOrder = i < childIndices.size()
-                ? childIndices[i]
-                : static_cast<int>(i)});
+            .attributedString = std::move(contentString),
+            .frame = contentFrame,
+            .documentOrder = documentOrder});
   }
 
   if (this->state_ == nullptr) {
