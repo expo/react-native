@@ -416,22 +416,30 @@ function AnchoredPopover(): React.Node {
         Open popover
       </AstryxButton>
       {open && position != null ? (
-        // $FlowFixMe[not-a-component] <dialog> element (non-modal popover)
-        <dialog
+        // `Dialog`, not a lowercase `<dialog>`: React resolves lowercase JSX
+        // to a host component by name, so the intrinsic spelling never reaches
+        // this composite and so never enters the top layer.
+        <Dialog
           open
           modal={false}
           onClose={() => setOpen(false)}
           {...stylex.props(overlayStyles.surface)}
-          style={{
-            position: 'absolute',
-            left: position.x,
-            top: position.y,
-            width: 220,
-          }}>
+          // The surface style has to be merged, not replaced: a bare `style`
+          // prop after the spread wins outright, which left the popover
+          // unstyled and see-through over the page.
+          style={[
+            stylex.props(overlayStyles.surface).style,
+            {
+              position: 'absolute',
+              left: position.x,
+              top: position.y,
+              width: 220,
+            },
+          ]}>
           Anchored with position-area{'\n'}
           {position.area}
           {'\n'}Tap outside to dismiss.
-        </dialog>
+        </Dialog>
       ) : null}
     </View>
   );
@@ -452,12 +460,10 @@ function ModalDialog(): React.Node {
         modal
         open={open}
         {...stylex.props(overlayStyles.surface)}
-        style={{
-          position: 'absolute',
-          left: 24,
-          right: 24,
-          top: 160,
-        }}>
+        style={[
+          stylex.props(overlayStyles.surface).style,
+          {position: 'absolute', left: 24, right: 24, top: 160},
+        ]}>
         A modal dialog in the top layer, with a backdrop.
         <View style={{marginTop: 12}}>
           <AstryxButton secondary onClick={() => setOpen(false)}>
@@ -595,7 +601,9 @@ export default {
             "  fallbacks: ['flip-block'],\n" +
             '  offset: 8, inset: 12,\n' +
             '});\n\n' +
-            '<dialog open modal={false} onClose={…}>…</dialog>'
+            '// `Dialog`, not `<dialog>`: lowercase JSX resolves to a host\n' +
+            '// component by name and never reaches the composite.\n' +
+            '<Dialog open modal={false} onClose={…}>…</Dialog>'
           }>
           <TopLayerHost>
             <View style={{gap: 10}}>

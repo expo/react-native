@@ -35,7 +35,7 @@
  */
 
 import * as React from 'react';
-import {useCallback, useContext, useEffect, useMemo, useState} from 'react';
+import {useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
 
 export type OverlayMode = 'modal' | 'auto' | 'manual';
@@ -68,9 +68,25 @@ export function allocateOverlayId(): number {
  */
 export function TopLayerHost({children}: {children: React.Node}): React.Node {
   const [entries, setEntries] = useState<ReadonlyArray<OverlayEntry>>([]);
+  const rootRef = useRef<React.ElementRef<typeof View> | null>(null);
+  // Where this host sits in the viewport, so the overlay layer below can undo
+  // it. The web's top layer is a sibling of the document, so overlays position
+  // against the viewport; here the host is an ordinary view somewhere down a
+  // scrolled page, and without this correction anything positioned from a
+  // viewport rect — an anchor's `getBoundingClientRect()`, say — lands that
+  // far off. That is what put the demo's popover below the fold.
+  const [hostOrigin, setHostOrigin] = useState<{x: number, y: number}>({
+    x: 0,
+    y: 0,
+  });
+  const measureHostRef = useRef<?() => void>(null);
 
   const present = useCallback(
     (id: number, mode: OverlayMode, content: React.Node) => {
+      // Measure now, not at layout: the page scrolls between mount and the
+      // moment an overlay opens, so a layout-time origin is stale by exactly
+      // the scroll distance — which put the popover far below the fold.
+      measureHostRef.current?.();
       setEntries(current => {
         const without = current.filter(entry => entry.id !== id);
         // Re-presenting raises the overlay to the top, as the platform does.
@@ -90,12 +106,35 @@ export function TopLayerHost({children}: {children: React.Node}): React.Node {
   const topMostAuto = [...entries].reverse().find(e => e.mode === 'auto');
   const hasModal = entries.some(entry => entry.mode === 'modal');
 
+  // Re-read on every presentation: the page may have scrolled since the last.
+  const measureHost = useCallback(() => {
+    const node = rootRef.current;
+    if (node == null) {
+      return;
+    }
+    const rect = (node as $FlowFixMe).getBoundingClientRect();
+    setHostOrigin(current =>
+      current.x === rect.x && current.y === rect.y
+        ? current
+        : {x: rect.x, y: rect.y},
+    );
+  }, []);
+
+  measureHostRef.current = measureHost;
+
   return (
     <TopLayerContext.Provider value={api}>
-      <View style={styles.root}>
+      <View ref={rootRef} style={styles.root} onLayout={measureHost}>
         {children}
         {entries.length > 0 ? (
-          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              // Shift the layer back to the viewport origin so overlays can be
+              // positioned in viewport coordinates, as on the web.
+              {left: -hostOrigin.x, top: -hostOrigin.y},
+            ]}
+            pointerEvents="box-none">
             {/* The backdrop: painted for modals (the ::backdrop analogue) and
                 used as the light-dismiss surface for auto popovers. */}
             {hasModal || topMostAuto != null ? (
@@ -159,7 +198,13 @@ export function useTopLayer(
 }
 
 const styles = StyleSheet.create({
-  root: {flex: 1},
+  // Sizes to its children rather than `flex: 1`. As a flex item inside a
+  // scrolling page this box measured zero height, so everything in it rendered
+  // *outside* its bounds — visible, because RN does not clip by default, but
+  // untouchable, because hit-testing does respect bounds. That is what made
+  // the demo's overlay buttons look dead while an identical button elsewhere
+  // on the same screen worked.
+  root: {alignSelf: 'stretch'},
   // The web's default ::backdrop for a modal dialog.
   modalBackdrop: {backgroundColor: 'rgba(0, 0, 0, 0.35)'},
 });
