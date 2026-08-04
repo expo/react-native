@@ -694,7 +694,7 @@ export function propsWithState(
   for (const key of Object.keys(merged)) {
     if (key.startsWith('--')) {
       if (declaredVars == null) {
-        declaredVars = ({}: {[string]: unknown});
+        declaredVars = {} as {[string]: unknown};
       }
       declaredVars[key] = merged[key];
     }

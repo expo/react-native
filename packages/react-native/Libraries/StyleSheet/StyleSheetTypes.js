@@ -66,7 +66,19 @@ type ____LayoutStyle_Internal = Readonly<{
    *  container it is blockified into a regular flex item, as on web);
    *  'none' hides it; 'contents' removes the box itself.
    */
-  display?: 'none' | 'flex' | 'block' | 'inline' | 'contents',
+  display?:
+    | 'none'
+    | 'flex'
+    | 'block'
+    | 'inline'
+    // Inline-level boxes that establish a formatting context of their own
+    // (css-display-3 §2): inline-outer with flex or flow-root inner. Both are
+    // atomic — they sit in a line like a word but lay their contents out
+    // themselves — and both are implemented natively; they were missing here,
+    // so authoring either was a type error even though it worked.
+    | 'inline-flex'
+    | 'inline-block'
+    | 'contents',
 
   /** `float` takes a box out of the normal flow and packs it against one side
    *  of its block container, per CSS2 §9.5. Honored inside `display:'block'`

@@ -14,7 +14,6 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 
 import Dialog from '../../astryx/elements/Dialog';
 import {resolveAnchorPosition} from '../../astryx/overlay/anchorPosition';
-import {TopLayerHost} from '../../astryx/overlay/TopLayer';
 import {useInteractionState} from '../../astryx/useInteractionState';
 // $FlowFixMe[cannot-resolve-module] vendored TypeScript (Metro transforms it)
 import {Card} from '../../astryx/vendor/Card/Card';
@@ -603,10 +602,6 @@ export default {
         'top layer with a backdrop, escaping surrounding clipping and ' +
         'stacking. Tap outside the popover to light-dismiss it.',
       render: (): React.Node => (
-        // The host wraps the whole case, code block included: the top layer
-        // must paint above everything, and hosting it inside the live content
-        // left the snippet drawing over the popover.
-        <TopLayerHost>
         <DemoContent
           code={
             'resolveAnchorPosition({\n' +
@@ -624,7 +619,6 @@ export default {
             <ModalDialog />
           </View>
         </DemoContent>
-        </TopLayerHost>
       ),
     },
     {

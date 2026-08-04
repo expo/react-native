@@ -29,10 +29,10 @@ describe('inline-flex chip (css-display-3 §2)', () => {
     // container to `column` where CSS defaults to `row` — worth knowing, and
     // not what this test is about.
     const style = {
-      display: 'inline-flex',
-      flexDirection: 'row',
+      display: 'inline-flex' as const,
+      flexDirection: 'row' as const,
       gap: 4,
-      alignItems: 'center',
+      alignItems: 'center' as const,
       paddingHorizontal: 6,
     };
 
@@ -52,7 +52,11 @@ describe('inline-flex chip (css-display-3 §2)', () => {
           <View
             ref={viewRef}
             collapsable={false}
-            style={{...style, display: 'flex', alignSelf: 'flex-start'}}>
+            style={{
+              ...style,
+              display: 'flex' as const,
+              alignSelf: 'flex-start' as const,
+            }}>
             <View
               ref={viewDotRef}
               style={{width: 8, height: 8}}
@@ -89,10 +93,10 @@ describe('inline-flex chip (css-display-3 §2)', () => {
     const textBox = createRef<HostInstance>();
     const root = Fantom.createRoot();
     const style = {
-      display: 'flex',
-      flexDirection: 'row',
-      alignItems: 'center',
-      alignSelf: 'flex-start',
+      display: 'flex' as const,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      alignSelf: 'flex-start' as const,
       paddingHorizontal: 6,
     };
 

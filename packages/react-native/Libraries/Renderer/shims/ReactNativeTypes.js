@@ -89,14 +89,14 @@ export type ViewConfig = Readonly<{
    * that needs a remount signal the reconciler does not have. Static display —
    * the overwhelming case — is correct.
    */
-  resolveUIViewClassName?: (props: Object) => string,
+  resolveUIViewClassName?: (props: {[string]: unknown}) => string,
   /**
    * The element's user-agent style, merged *beneath* the author's `style` so
    * an author declaration always wins — the cascade's user-agent origin, with
    * no per-property special-casing. Applied by the renderer, so author code
    * never sees it, the way a browser consults its own stylesheet.
    */
-  uaStyle?: Object,
+  uaStyle?: {[string]: unknown},
 }>;
 
 export type PartialViewConfig = Readonly<{
@@ -105,6 +105,12 @@ export type PartialViewConfig = Readonly<{
   supportsRawText?: boolean,
   uiViewClassName: string,
   validAttributes?: AttributeConfiguration,
+  // The seams intrinsic-component modules opt into. Declared here because
+  // `createViewConfig` reads them off a partial config, and their absence was
+  // a type hole around code that has shipped for a while.
+  recordNodeName?: ViewConfig['recordNodeName'],
+  resolveUIViewClassName?: ViewConfig['resolveUIViewClassName'],
+  uaStyle?: ViewConfig['uaStyle'],
 }>;
 
 type InspectorDataProps = Readonly<{

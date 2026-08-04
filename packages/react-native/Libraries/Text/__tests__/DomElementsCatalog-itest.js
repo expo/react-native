@@ -498,7 +498,11 @@ describe('list markers (css-lists-3 §3)', () => {
   // the item's width: the deterministic measurer bills 10pt per UTF-8 byte, and
   // every marker below is ASCII plus a 2-byte no-break space gap.
   function widthOfItems(
-    listProps: {...},
+    listProps: {
+      tag: string,
+      listStyleType?: string,
+      start?: number,
+    },
     items: Array<string>,
   ): Array<number> {
     const refs = items.map(() => createRef<HostInstance>());
@@ -546,7 +550,7 @@ describe('list markers (css-lists-3 §3)', () => {
   });
 
   it('the counter reaches two digits', () => {
-    const widths = widthOfItems({tag: 'ol'}, new Array(10).fill('x'));
+    const widths = widthOfItems({tag: 'ol'}, Array.from({length: 10}, () => 'x'));
     // ...until "10.", which is one byte wider than "9.".
     expect(widths[9] - widths[8]).toBe(10);
   });
@@ -563,7 +567,7 @@ describe('list markers (css-lists-3 §3)', () => {
   it('lower-alpha counts a, b, c and carries to aa', () => {
     const widths = widthOfItems(
       {tag: 'ol', listStyleType: 'lower-alpha'},
-      new Array(27).fill('x'),
+      Array.from({length: 27}, () => 'x'),
     );
     expect(widths[0]).toBe(TEXT + GAP + 20); // "a."
     expect(widths[25]).toBe(widths[0]); // "z."
@@ -573,7 +577,7 @@ describe('list markers (css-lists-3 §3)', () => {
   it('roman numerals use the subtractive pairs', () => {
     const widths = widthOfItems(
       {tag: 'ol', listStyleType: 'upper-roman'},
-      new Array(9).fill('x'),
+      Array.from({length: 9}, () => 'x'),
     );
     expect(widths[0]).toBe(TEXT + GAP + 20); // "I."
     expect(widths[2] - widths[0]).toBe(20); // "III." is two wider than "I."

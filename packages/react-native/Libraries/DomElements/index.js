@@ -25,6 +25,8 @@
  * children / text-node engine it renders against stays in core.
  */
 
+import type {UAStyle} from './uaStyles';
+
 import uaStyles from './uaStyles';
 import {createViewConfig} from '../NativeComponent/ViewConfig';
 import createReactNativeComponentClass from '../Renderer/shims/createReactNativeComponentClass';
@@ -253,8 +255,11 @@ const BOX_DISPLAYS = new Set([
  * Cheap by construction: a set lookup on an already-flattened style, and only
  * for elements that can be either flavor.
  */
-function resolveInlineElementComponent(uiViewClassName: string, uaStyle?: Object) {
-  return (props: Object): string => {
+function resolveInlineElementComponent(
+  uiViewClassName: string,
+  uaStyle?: UAStyle,
+): (props: {[string]: unknown}) => string {
+  return (props: {[string]: unknown}): string => {
     // The UA display counts too: `<button>`'s inline-block comes from the
     // stylesheet, and box selection has to see it or the element would resolve
     // as text-backed and its padding would have nowhere to apply.
@@ -268,7 +273,8 @@ function resolveInlineElementComponent(uiViewClassName: string, uaStyle?: Object
     // Required lazily: importing StyleSheet at module scope pulls this module
     // into a require cycle, which re-evaluates it and re-runs the element
     // registrations ("tried to register two views with the same name").
-    const styleSheetModule = require('../StyleSheet/StyleSheet');
+    // $FlowFixMe[unclear-type] a lazily-required module has no static type
+    const styleSheetModule: any = require('../StyleSheet/StyleSheet');
     const flatten = styleSheetModule.default?.flatten ?? styleSheetModule.flatten;
     const display = flatten(style)?.display ?? uaStyle?.display;
     return typeof display === 'string' && BOX_DISPLAYS.has(display)
@@ -288,10 +294,14 @@ function resolveInlineElementComponent(uiViewClassName: string, uaStyle?: Object
  * Mutates the entry rather than replacing it, because a view config captures
  * the style object by reference when it is first built. Call before rendering.
  */
-export function overrideUAStyle(tag: string, style: Object) {
+export function overrideUAStyle(tag: string, style: UAStyle) {
   const existing = uaStyles[tag];
   if (existing != null) {
-    Object.assign(existing, style);
+    // Mutated in place, not replaced: view configs captured this object by
+    // reference when the element was registered.
+    for (const key of Object.keys(style)) {
+      existing[key] = style[key];
+    }
   } else {
     uaStyles[tag] = {...style};
   }

@@ -27,6 +27,7 @@ import {
   getExamplesListWithRecentlyUsed,
   initialNavigationState,
 } from './utils/testerStateUtils';
+import {TopLayerHost} from './astryx/overlay/TopLayer';
 import * as React from 'react';
 import {useCallback, useEffect, useMemo, useReducer} from 'react';
 import {
@@ -285,6 +286,11 @@ const RNTesterApp = ({
 
   return (
     <RNTesterThemeContext.Provider value={theme}>
+      {/* The top layer is document-level on the web: an overlay paints above
+          everything and positions against the VIEWPORT, not against whatever
+          box happens to host it. Mounting it at the app root is what makes
+          `showModal()`'s centring mean the screen's centre. */}
+      <TopLayerHost>
       {Platform.OS === 'android' ? <StatusBar barStyle="dark-content" /> : null}
       {!shouldHideChrome && (
         <RNTTitleBar
@@ -322,7 +328,8 @@ const RNTesterApp = ({
           />
         </View>
       )}
-      <ReportFullyDrawnView />
+        <ReportFullyDrawnView />
+      </TopLayerHost>
     </RNTesterThemeContext.Provider>
   );
 };

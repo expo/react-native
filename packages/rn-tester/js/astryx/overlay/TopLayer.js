@@ -198,13 +198,13 @@ export function useTopLayer(
 }
 
 const styles = StyleSheet.create({
-  // Sizes to its children rather than `flex: 1`. As a flex item inside a
-  // scrolling page this box measured zero height, so everything in it rendered
-  // *outside* its bounds — visible, because RN does not clip by default, but
-  // untouchable, because hit-testing does respect bounds. That is what made
-  // the demo's overlay buttons look dead while an identical button elsewhere
-  // on the same screen worked.
-  root: {alignSelf: 'stretch'},
+  // Fills its parent, because this is mounted at the app root: the top layer
+  // is document-level on the web, so the box it positions overlays against has
+  // to be the screen. (Nested inside a scrolling page it measured zero height
+  // instead, and everything in it rendered outside its bounds — visible, since
+  // RN does not clip by default, but untouchable, since hit-testing respects
+  // bounds. Mounting at the root is what removes that hazard, not a style.)
+  root: {flex: 1},
   // The web's default ::backdrop for a modal dialog.
   modalBackdrop: {backgroundColor: 'rgba(0, 0, 0, 0.35)'},
 });

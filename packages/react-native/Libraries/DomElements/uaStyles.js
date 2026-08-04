@@ -38,7 +38,7 @@
  *    those depend on `:link`/`:visited`, which need history state we lack.
  */
 
-export type UAStyle = {[string]: mixed};
+export type UAStyle = {[string]: unknown};
 
 // Browsers compute their defaults against a 16px root font size. Values below
 // are that arithmetic done once, so `1em` reads as 16 and `0.67em` as 10.72.
