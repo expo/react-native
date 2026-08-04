@@ -52,6 +52,15 @@ class InlineTextContentAccessor {
    * how wide the marker is so it can place it in the gutter to the
    * inline-start side of the content box.
    */
+  /*
+   * BUILD HAZARD: adding a virtual to this interface changes its vtable, and
+   * an incremental Android build can leave `ReactAndroid/build/prefab-headers`
+   * stale — the app's own C++ then compiles against the old layout while
+   * linking the new library, which corrupts memory rather than failing to
+   * build. It presented as a SIGSEGV destroying a `TextEffectInfo` on the JS
+   * thread, on screens with no lists in them at all. Delete that directory and
+   * `rn-tester/android/app/build/intermediates/cxx` after changing this file.
+   */
   struct OutsideMarker {
     AttributedString attributedString;
     Size size;
