@@ -39,6 +39,68 @@ int countAttachments(const AttributedString& attributedString) {
   return count;
 }
 
+// Per-fragment rects from the Android text layout, so inline elements can
+// report a real box from `getBoundingClientRect()` (text-children-plan.md
+// §3.G). Returns 4 floats per fragment: x, y, width, height. Mirrors
+// `measureText` below — the call goes through FabricUIManager, which supplies
+// the AssetManager.
+std::vector<Rect> measureFragmentRects(
+    const std::shared_ptr<const ContextContainer>& contextContainer,
+    MapBuffer attributedString,
+    MapBuffer paragraphAttributes,
+    float minWidth,
+    float maxWidth,
+    float minHeight,
+    float maxHeight,
+    size_t fragmentCount) {
+  std::vector<Rect> rects;
+  if (fragmentCount == 0) {
+    return rects;
+  }
+
+  const jni::global_ref<jobject>& fabricUIManager =
+      contextContainer->at<jni::global_ref<jobject>>("FabricUIManager");
+
+  static auto measure =
+      jni::findClassStatic("com/facebook/react/fabric/FabricUIManager")
+          ->getMethod<jni::JArrayFloat::javaobject(
+              JReadableMapBuffer::javaobject,
+              JReadableMapBuffer::javaobject,
+              jfloat,
+              jfloat,
+              jfloat,
+              jfloat)>("measureFragmentRects");
+
+  auto attributedStringBuffer =
+      JReadableMapBuffer::createWithContents(std::move(attributedString));
+  auto paragraphAttributesBuffer =
+      JReadableMapBuffer::createWithContents(std::move(paragraphAttributes));
+
+  auto result = measure(
+      fabricUIManager,
+      attributedStringBuffer.get(),
+      paragraphAttributesBuffer.get(),
+      minWidth,
+      maxWidth,
+      minHeight,
+      maxHeight);
+  if (result == nullptr) {
+    return rects;
+  }
+
+  // `measure` already hands back a local_ref to the float[]; read it once.
+  const auto size = static_cast<size_t>(result->size());
+  auto values = result->getRegion(0, static_cast<jsize>(size));
+  rects.reserve(size / 4);
+  for (size_t i = 0; i + 3 < size; i += 4) {
+    rects.push_back(
+        Rect{
+            .origin = {.x = values[i], .y = values[i + 1]},
+            .size = {.width = values[i + 2], .height = values[i + 3]}});
+  }
+  return rects;
+}
+
 Size measureText(
     const std::shared_ptr<const ContextContainer>& contextContainer,
     MapBuffer attributedString,
@@ -100,6 +162,22 @@ TextMeasurement doMeasure(
   auto attributedStringMap = toMapBuffer(attributedString);
   auto paragraphAttributesMap = toMapBuffer(paragraphAttributes);
 
+  // Inline-element geometry (T14) needs a rect per fragment, but only a string
+  // with more than one fragment can contain an inline element — so plain text,
+  // the overwhelmingly common case, never pays for the extra layout pass.
+  auto fragmentRects = std::vector<Rect>{};
+  if (attributedString.getFragments().size() > 1) {
+    fragmentRects = measureFragmentRects(
+        contextContainer,
+        toMapBuffer(attributedString),
+        toMapBuffer(paragraphAttributes),
+        minimumSize.width,
+        maximumSize.width,
+        minimumSize.height,
+        maximumSize.height,
+        attributedString.getFragments().size());
+  }
+
   auto size = measureText(
       contextContainer,
       std::move(attributedStringMap),
@@ -145,7 +223,10 @@ TextMeasurement doMeasure(
       attachmentPositions, attachmentDataElements, JNI_ABORT);
   env->DeleteLocalRef(attachmentPositions);
 
-  return TextMeasurement{.size = size, .attachments = attachments};
+  return TextMeasurement{
+      .size = size,
+      .attachments = attachments,
+      .fragmentRects = std::move(fragmentRects)};
 }
 
 } // namespace

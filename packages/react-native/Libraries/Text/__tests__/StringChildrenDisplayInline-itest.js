@@ -150,6 +150,67 @@ describe("display:'inline' — atomic inline boxes in block containers", () => {
   });
 });
 
+describe("display:'inline' — the box model on an atomic inline", () => {
+  it('inline-axis margins add to the advance the box occupies', () => {
+    // CSS2 §10.8: the reserved box is the MARGIN box. 'a' (10) + margin 6 +
+    // box 30 + margin 6 + 'b' (10) = 62.
+    const containerRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
+          {'a'}
+          <View
+            style={{
+              display: 'inline',
+              width: 30,
+              height: 40,
+              marginLeft: 6,
+              marginRight: 6,
+            }}
+          />
+          {'b'}
+        </View>,
+      );
+    });
+
+    expect(rectOf(containerRef).width).toBe(62);
+  });
+
+  it('block-axis margins do not grow the line box', () => {
+    // On the web, vertical margins on an inline-level box do not affect line
+    // height — so the line stays as tall as the box itself.
+    const containerRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
+          {'a'}
+          <View
+            style={{
+              display: 'inline',
+              width: 30,
+              height: 40,
+              marginTop: 20,
+              marginBottom: 20,
+            }}
+          />
+        </View>,
+      );
+    });
+
+    expect(rectOf(containerRef).height).toBe(40);
+  });
+});
+
 describe("display:'inline' — span-like flow (un-sized, all-inline contents)", () => {
   it("an un-sized inline View's contents flow into the surrounding run", () => {
     // Safari-pinned: <div>a <div style="display:inline">x <b>y</b></div> b</div>

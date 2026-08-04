@@ -90,8 +90,8 @@ void addCoreComponents(
       concreteComponentDescriptorProvider<VirtualViewComponentDescriptor>());
   // Intrinsic DOM elements (<b>/<i>/<span>/<img>/<div> + unknown fallback).
   // Registers the element shadow-node descriptors so they resolve in the shadow
-  // tree; Android mounting (ViewManager / FabricNameComponentMapping) for these
-  // is still a follow-up.
+  // tree; the mounting half is FabricNameComponentMapping, which points the
+  // inline text elements at the same ViewManager as <Text>.
   dom::addAllElementDescriptors(*providerRegistry);
 }
 

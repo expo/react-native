@@ -182,6 +182,14 @@ inline bool areAttributedStringFragmentsEquivalentLayoutWise(
     const AttributedString::Fragment &rhs)
 {
   return lhs.string == rhs.string && areTextAttributesEquivalentLayoutWise(lhs.textAttributes, rhs.textAttributes) &&
+      // An inline element's inline-axis margin/border/padding is reserved as
+      // real advance (box-model-scope.md G3), so it changes the measured size
+      // and two runs differing only by it are NOT interchangeable. Only the
+      // inline axis is compared: block-axis padding and border overflow the
+      // line box rather than growing it (CSS2 §10.6.1), so they genuinely do
+      // not affect layout — comparing them would only cost cache misses.
+      lhs.leadingInlineSpace() == rhs.leadingInlineSpace() &&
+      lhs.trailingInlineSpace() == rhs.trailingInlineSpace() &&
       // LayoutMetrics of an attachment fragment affects the size of a measured
       // attributed string.
       (!lhs.isAttachment() || (lhs.parentShadowView.layoutMetrics == rhs.parentShadowView.layoutMetrics));
@@ -202,7 +210,14 @@ inline size_t attributedStringFragmentHashLayoutWise(const AttributedString::Fra
   // Here we are not taking `isAttachment` and `layoutMetrics` into account
   // because they are logically interdependent and this can break an invariant
   // between hash and equivalence functions (and cause cache misses).
-  return facebook::react::hash_combine(fragment.string, textAttributesHashLayoutWise(fragment.textAttributes));
+  // Must stay in sync with `areAttributedStringFragmentsEquivalentLayoutWise`:
+  // equal fragments have to hash equal, so the inline-axis spacing it compares
+  // is hashed here too.
+  return facebook::react::hash_combine(
+      fragment.string,
+      textAttributesHashLayoutWise(fragment.textAttributes),
+      fragment.leadingInlineSpace(),
+      fragment.trailingInlineSpace());
 }
 
 inline size_t attributedStringFragmentHashDisplayWise(const AttributedString::Fragment &fragment)

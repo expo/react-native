@@ -13,14 +13,28 @@ internal object FabricNameComponentMapping {
       // TODO T97384889: unify component names between JS - Android - iOS - C++
       "View" to "RCTView",
       "Image" to "RCTImageView",
-      // Intrinsic DOM elements (expo-intrinsics). The inline text intrinsics
-      // (<b>/<i>/<span> + unknown) are absorbed into their container View's text
-      // runs and never mount as views, so they need no mapping. <div> is a block
-      // View. <img> reuses the block View for now (its Image-backed inline impl is
-      // being reworked); the Android RCTImageView expects a different `source`
-      // shape, so mount it as a plain view until img is revisited.
+      // Intrinsic DOM elements (expo-intrinsics). <div> is a block View. <img>
+      // reuses the block View for now (its Image-backed inline impl is being
+      // reworked); the Android RCTImageView expects a different `source` shape,
+      // so mount it as a plain view until img is revisited.
       "div" to "RCTView",
       "img" to "RCTView",
+      // The inline text intrinsics. Their content is absorbed into the
+      // container's text runs and the mounted view draws nothing — but Android
+      // still needs one, because `TextShadowNode` sets `FormsView` under
+      // `#ifdef ANDROID` and every intrinsic is a `TextShadowNode` subclass, so
+      // they are preallocated exactly like a nested <Text>. Without a mapping
+      // that preallocation throws "Can't find ViewManager 'b'" and the whole
+      // surface red-boxes. They therefore map where "Text" maps.
+      //
+      // This list is closed even though any lowercase tag is valid JSX: every
+      // unregistered tag resolves to the single "unknown" component (see
+      // Libraries/DomElements), which is why one entry covers all of them.
+      "b" to "RCTText",
+      "i" to "RCTText",
+      "span" to "RCTText",
+      "u" to "RCTText",
+      "unknown" to "RCTText",
       "ScrollView" to "RCTScrollView",
       "Slider" to "RCTSlider",
       "ModalHostView" to "RCTModalHostView",

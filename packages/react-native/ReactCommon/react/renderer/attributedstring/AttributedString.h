@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <react/renderer/attributedstring/InlineBoxDecorations.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/core/Sealable.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
@@ -30,6 +31,32 @@ class AttributedString : public Sealable, public DebugStringConvertible {
     std::string string;
     TextAttributes textAttributes;
     ShadowView parentShadowView;
+
+    /*
+     * CSS box decorations of the inline element that contributed this
+     * fragment (box-model-scope.md G2–G5). Carried on *every* fragment of the
+     * element so painting can find its full extent, while `isInlineBoxStart` /
+     * `isInlineBoxEnd` mark the element's edges — which is where the
+     * inline-axis margin/border/padding occupy advance (CSS2 §10.6.1). A
+     * wrapped box therefore pays for its edges once, not per line.
+     *
+     * Empty for essentially all text; engines that cannot express it ignore it.
+     */
+    InlineBoxDecorations inlineBox{};
+    bool isInlineBoxStart{false};
+    bool isInlineBoxEnd{false};
+
+    /** Advance this fragment reserves before its glyphs. */
+    Float leadingInlineSpace() const
+    {
+      return isInlineBoxStart ? inlineBox.leadingInlineSpace() : 0;
+    }
+
+    /** Advance this fragment reserves after its glyphs. */
+    Float trailingInlineSpace() const
+    {
+      return isInlineBoxEnd ? inlineBox.trailingInlineSpace() : 0;
+    }
 
     /*
      * Returns true is the Fragment represents an attachment.
@@ -70,6 +97,17 @@ class AttributedString : public Sealable, public DebugStringConvertible {
    * Returns a read-only reference to a list of fragments.
    */
   const Fragments &getFragments() const;
+
+  /*
+   * The block-axis space that inline elements' decorations paint *outside* the
+   * line box: padding + border + outline, taking the largest of each edge.
+   *
+   * An inline box never grows the line box vertically (CSS2 §10.6.1) — it
+   * simply overflows it — so a platform view whose drawing surface is sized to
+   * the measured text will clip those decorations away entirely. Views make
+   * room with this without changing layout.
+   */
+  RectangleEdges<Float> inlineBoxBlockAxisOverflow() const;
 
   /*
    * Returns a reference to a list of fragments.

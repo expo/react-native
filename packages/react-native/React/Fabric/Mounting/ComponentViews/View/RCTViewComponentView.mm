@@ -94,6 +94,32 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   return RCTCGRectFromRect(_run.frame);
 }
 
+// Sizes this run's canvas to the owning View's content box, plus whatever its
+// inline elements' decorations paint *outside* the line box.
+//
+// An inline box's block-axis padding/border/outline overflow the line box
+// rather than growing it (CSS2 §10.6.1), so the View's bounds — which are
+// exactly the measured text — are by definition too small to draw them into,
+// and `-drawRect:` clips them away. A single-line run loses them entirely;
+// a wrapped run keeps the ones that happen to fall between its lines, which is
+// what made this look like a geometry bug rather than a clipping one.
+//
+// Only the canvas grows. The compensating `bounds.origin` keeps this view's
+// coordinate space identical to the owning View's, so `containerFrame` — the
+// one geometry shared by painting and hit-testing — is untouched, as is layout.
+- (void)setContainerBounds:(CGRect)containerBounds
+{
+  auto overflow = _run.attributedString.inlineBoxBlockAxisOverflow();
+  self.frame = CGRectMake(
+      containerBounds.origin.x,
+      containerBounds.origin.y - overflow.top,
+      containerBounds.size.width,
+      containerBounds.size.height + overflow.top + overflow.bottom);
+  CGRect bounds = self.bounds;
+  bounds.origin.y = -overflow.top;
+  self.bounds = bounds;
+}
+
 - (RCTTextLayoutManager *)nativeTextLayoutManager
 {
   auto textLayoutManager = _layoutManager.lock();
@@ -415,7 +441,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     }
     runView->_run = data.textRuns[i];
     runView->_layoutManager = data.layoutManager;
-    runView.frame = self.currentContainerView.bounds;
+    [runView setContainerBounds:self.currentContainerView.bounds];
     [runView setNeedsDisplay];
   }
   // Re-establish authored paint order relative to mounted children.
@@ -461,7 +487,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   [super layoutSubviews];
   if (_textRunViews.count > 0) {
     for (RCTAnonymousTextRunView *runView in _textRunViews) {
-      runView.frame = self.currentContainerView.bounds;
+      [runView setContainerBounds:self.currentContainerView.bounds];
     }
     [self reorderAnonymousTextRunViewsIfNeeded];
   }

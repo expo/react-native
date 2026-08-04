@@ -16,6 +16,7 @@
 #include <react/renderer/attributedstring/AttributedStringBox.h>
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/components/text/BaseTextShadowNode.h>
+#include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
@@ -119,8 +120,27 @@ void measureImageAttachments(
     if (layoutable == nullptr || attachment.fragmentIndex >= fragments.size()) {
       continue;
     }
+    auto size = layoutable->measure(layoutContext, constraints);
+
+    // An atomic inline box's inline-axis margins add to the advance it
+    // occupies on the line (CSS2 §10.8): the reserved box is the MARGIN box,
+    // not the border box `measure()` returns. Block-axis margins deliberately
+    // do not grow the line box — on the web they have no effect on line
+    // height for an inline-level box.
+    const auto& attachmentProps =
+        *attachment.shadowNode->getProps();
+    if (const auto* yogaProps =
+            dynamic_cast<const YogaStylableProps*>(&attachmentProps)) {
+      const auto& style = yogaProps->yogaStyle;
+      const auto inlineMargins =
+          style.computeMarginForAxis(yoga::FlexDirection::Row, 0.0f);
+      if (!std::isnan(inlineMargins)) {
+        size.width += inlineMargins;
+      }
+    }
+
     fragments[attachment.fragmentIndex].parentShadowView.layoutMetrics.frame.size =
-        layoutable->measure(layoutContext, constraints);
+        size;
   }
 }
 

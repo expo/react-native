@@ -445,6 +445,79 @@ static NSMutableAttributedString *RCTNSAttributedStringFragmentWithAttributesFro
   return nsAttributedStringFragment;
 }
 
+namespace {
+
+// Adds to any kerning already on that character (letterSpacing) rather than
+// replacing it.
+void RCTAddKern(NSMutableAttributedString *string, NSUInteger index, CGFloat amount)
+{
+  NSRange range = NSMakeRange(index, 1);
+  NSNumber *existing = [string attribute:NSKernAttributeName atIndex:index effectiveRange:nullptr];
+  [string addAttribute:NSKernAttributeName value:@(existing.doubleValue + amount) range:range];
+}
+
+} // namespace
+
+void RCTApplyInlineBoxSpacing(NSMutableAttributedString *string, const AttributedString &attributedString)
+{
+  // box-model-scope.md G3. An inline element's inline-axis margin/border/
+  // padding has to occupy real advance, but TextKit has no notion of "padding
+  // on a range".
+  //
+  // It is expressed as *kerning*, never as injected characters. A zero-width
+  // spacer character would be simpler, but the string built here is also what
+  // `RCTParagraphComponentView.attributedText` hands to copy/selection and to
+  // accessibility, so any character added for layout would leak into text the
+  // user reads and copies. Kerning also has the property we want regardless:
+  // it is part of a glyph's advance, so line breaking accounts for it and it
+  // cannot be collapsed away as whitespace.
+  //
+  // The leading space therefore hangs off the *preceding* character, which
+  // puts it outside the element's own glyph range — consumers computing an
+  // element's box have to add it back (see drawInlineBoxDecorations).
+  NSUInteger location = 0;
+  for (const auto &fragment : attributedString.getFragments()) {
+    NSUInteger length;
+    if (fragment.isAttachment()) {
+      length = 1;
+    } else {
+      NSString *text = [NSString stringWithUTF8String:fragment.string.c_str()];
+      length = text != nil ? text.length : 0;
+    }
+    if (length == 0 || location + length > string.length) {
+      location += length;
+      continue;
+    }
+
+    auto leading = fragment.leadingInlineSpace();
+    if (leading > 0) {
+      if (location > 0) {
+        RCTAddKern(string, location - 1, leading);
+      } else {
+        // Nothing precedes the element, so there is no glyph to hang the
+        // space on. The element necessarily starts the first line, which is
+        // exactly what `firstLineHeadIndent` indents — and it correctly leaves
+        // wrapped lines alone, since the leading edge applies only once.
+        NSMutableParagraphStyle *paragraphStyle =
+            [[string attribute:NSParagraphStyleAttributeName
+                       atIndex:0
+                effectiveRange:nullptr] ?: [NSParagraphStyle defaultParagraphStyle] mutableCopy];
+        paragraphStyle.firstLineHeadIndent += leading;
+        [string addAttribute:NSParagraphStyleAttributeName
+                       value:paragraphStyle
+                       range:NSMakeRange(0, string.length)];
+      }
+    }
+
+    auto trailing = fragment.trailingInlineSpace();
+    if (trailing > 0) {
+      RCTAddKern(string, location + length - 1, trailing);
+    }
+
+    location += length;
+  }
+}
+
 NSAttributedString *RCTNSAttributedStringFromAttributedString(const AttributedString &attributedString)
 {
   static UIImage *placeholderImage;
@@ -463,6 +536,7 @@ NSAttributedString *RCTNSAttributedStringFromAttributedString(const AttributedSt
 
     [nsAttributedString appendAttributedString:nsAttributedStringFragment];
   }
+  RCTApplyInlineBoxSpacing(nsAttributedString, attributedString);
   [nsAttributedString endEditing];
 
   return nsAttributedString;

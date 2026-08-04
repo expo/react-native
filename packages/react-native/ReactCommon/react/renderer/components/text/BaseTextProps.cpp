@@ -7,6 +7,8 @@
 
 #include "BaseTextProps.h"
 
+#include <react/renderer/components/text/InlineBoxProps.h>
+
 #include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/core/propsConversions.h>
@@ -233,8 +235,10 @@ BaseTextProps::BaseTextProps(
           context,
           rawProps,
           sourceProps.textAttributes,
-          TextAttributes{})) {};
-
+          TextAttributes{})),
+      // CSS box decorations for inline use (box-model-scope.md G2).
+      inlineBox(parseInlineBoxProps(context, sourceProps.inlineBox, rawProps)) {
+};
 void BaseTextProps::setProp(
     const PropsParserContext& context,
     RawPropsPropNameHash hash,

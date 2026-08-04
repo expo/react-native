@@ -70,11 +70,34 @@ void BaseTextShadowNode::buildAttributedString(
       auto localTextAttributes = baseTextAttributes;
       localTextAttributes.apply(
           textShadowNode->getConcreteProps().textAttributes);
+
+      // An inline element's inline-axis margin/border/padding add to the
+      // advance at its leading and trailing edges (box-model-scope.md G3,
+      // CSS2 §10.6.1). Record it on the element's first and last fragments so
+      // a wrapped box pays for its edges once rather than per line; block-axis
+      // values deliberately do not touch the line height.
+      const auto& inlineBox = textShadowNode->getConcreteProps().inlineBox;
+      const auto firstIndex = outAttributedString.getFragments().size();
+
       buildAttributedString(
           localTextAttributes,
           *textShadowNode,
           outAttributedString,
           outAttachments);
+
+      if (!inlineBox.isEmpty()) {
+        auto& fragments = outAttributedString.getFragments();
+        if (firstIndex < fragments.size()) {
+          // Every fragment of the element carries the decorations so painting
+          // can find the box's full extent; only the outer edges reserve
+          // advance.
+          for (auto i = firstIndex; i < fragments.size(); i++) {
+            fragments[i].inlineBox = inlineBox;
+          }
+          fragments[firstIndex].isInlineBoxStart = true;
+          fragments.back().isInlineBoxEnd = true;
+        }
+      }
       continue;
     }
 

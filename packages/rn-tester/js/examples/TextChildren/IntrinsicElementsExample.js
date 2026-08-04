@@ -12,9 +12,14 @@
 
 import type {RNTesterModule} from '../../types/RNTesterTypes';
 
-import {DEMO_THEME, DemoContent, tappableAreaStyle} from './TextChildrenShared';
+import {
+  DEMO_THEME,
+  DemoContent,
+  tappableAreaStyle,
+  usePublishRects,
+} from './TextChildrenShared';
 import * as React from 'react';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {Text, View} from 'react-native';
 
 import 'react-native/Libraries/DomElements';
@@ -132,6 +137,69 @@ function TargetCase(): React.Node {
   );
 }
 
+// The inline-axis advance (box-model-scope.md G3) made measurable on device:
+// two otherwise identical runs, one whose <span> carries horizontal padding.
+// Both blocks shrink to their content, so the width delta is exactly the space
+// the padding reserves — nothing else differs. The <b> publishes its own rect,
+// which is the platform per-fragment-rect path (T14). Read by
+// scripts/android-inline-metrics-verify.js.
+const INLINE_BOX_ADVANCE_PADDING = 10;
+
+function InlineBoxAdvanceCase(): React.Node {
+  const plainRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const axisRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const allRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const edgesRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const boldRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const plainSpanRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const axisSpanRef = useRef<React.ElementRef<typeof View> | null>(null);
+  usePublishRects({
+    intrinsicPlainRun: plainRef,
+    intrinsicAxisRun: axisRef,
+    intrinsicAllRun: allRef,
+    intrinsicEdgesRun: edgesRef,
+    intrinsicBold: boldRef,
+    intrinsicPlainSpan: plainSpanRef,
+    intrinsicAxisSpan: axisSpanRef,
+  });
+  const p = INLINE_BOX_ADVANCE_PADDING;
+  const block = {display: 'block', alignSelf: 'flex-start'} as const;
+  return (
+    <View style={{marginTop: 12}}>
+      <View ref={plainRef} style={block}>
+        before
+        {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+        <span ref={plainSpanRef}>SPAN</span>
+        after
+      </View>
+      <View ref={axisRef} style={block}>
+        before
+        {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+        <span ref={axisSpanRef} style={{paddingHorizontal: p}}>SPAN</span>
+        after
+      </View>
+      <View ref={allRef} style={block}>
+        before
+        {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+        <span style={{padding: p}}>SPAN</span>
+        after
+      </View>
+      <View ref={edgesRef} style={block}>
+        before
+        {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+        <span style={{paddingLeft: p, paddingRight: p}}>SPAN</span>
+        after
+      </View>
+      <View style={block}>
+        before
+        {/* $FlowExpectedError[not-a-component] intrinsic <b> tag */}
+        <b ref={boldRef}>BOLD</b>
+        after
+      </View>
+    </View>
+  );
+}
+
 export default {
   title: 'Intrinsic Elements',
   category: 'Basic',
@@ -198,6 +266,68 @@ export default {
             '<native-switch value={on} onChange={e => setOn(e.nativeEvent.value)} />'
           }>
           <NativeSwitchDemo />
+        </DemoContent>
+      ),
+    },
+    {
+      title: 'Inline box decorations (padding, border, outline)',
+      description:
+        'An inline element carries the CSS box model: inline-axis ' +
+        'margin/border/padding add to the advance, block-axis padding paints ' +
+        'without changing line height, and a wrapped box draws one fragment ' +
+        'per line with only the first/last getting the leading/trailing edge ' +
+        '(CSS2 §8.6 slice).',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<View style={{display: 'block'}}>\n" +
+            "  before{' '}\n" +
+            '  <span style={{paddingHorizontal: 6, paddingVertical: 2,\n' +
+            "                borderWidth: 1, borderColor: '#0a7',\n" +
+            "                outlineWidth: 1, outlineColor: '#f90',\n" +
+            '                outlineOffset: 2}}>\n' +
+            '    decorated inline\n' +
+            "  </span>{' '}after\n" +
+            '</View>'
+          }>
+          <View style={{display: 'block'}}>
+            before{' '}
+            {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+            <span
+              style={{
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderWidth: 1,
+                borderColor: '#00aa77',
+                outlineWidth: 1,
+                outlineColor: '#ff9900',
+                outlineOffset: 2,
+              }}>
+              decorated inline
+            </span>{' '}
+            after.
+          </View>
+          <InlineBoxAdvanceCase />
+          <View style={{display: 'block', marginTop: 12}}>
+            wrapped:{' '}
+            {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+            <span
+              style={{
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderWidth: 1,
+                borderColor: '#0077aa',
+                outlineWidth: 1,
+                outlineColor: '#ff9900',
+                outlineOffset: 2,
+              }}>
+              this decorated inline box is deliberately long enough that it
+              breaks across more than one line, so the leading edge should be
+              drawn only on the first fragment and the trailing edge only on the
+              last
+            </span>{' '}
+            done.
+          </View>
         </DemoContent>
       ),
     },

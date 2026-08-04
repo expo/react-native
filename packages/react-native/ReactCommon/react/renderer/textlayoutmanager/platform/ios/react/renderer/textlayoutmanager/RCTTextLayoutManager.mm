@@ -11,6 +11,8 @@
 
 #import "RCTAttributedTextUtils.h"
 
+#include <react/renderer/textlayoutmanager/RCTTextPrimitivesConversions.h>
+
 #import <React/NSTextStorage+FontScaling.h>
 #import <React/RCTUtils.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
@@ -102,7 +104,6 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
       NSString *fragmentText = [NSString stringWithUTF8String:fragment.string.c_str()];
       length = fragmentText != nil ? fragmentText.length : 0;
     }
-
     if (length == 0 || location + length > textStorage.length) {
       rects.push_back(facebook::react::Rect{});
       location += length;
@@ -114,6 +115,16 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
     // `boundingRectForGlyphRange:` already unions the pieces of a range that
     // wraps across lines, which is exactly the box the web reports.
     CGRect boundingRect = [layoutManager boundingRectForGlyphRange:glyphRange inTextContainer:textContainer];
+
+    // An element's box is its *border* box, so it includes the inline-axis
+    // space G3 reserved. The trailing space is kerning on the element's own
+    // last character and is already inside `boundingRect`; the leading space
+    // is kerning on the *preceding* character (no spacer character is ever
+    // injected — see RCTApplyInlineBoxSpacing), so it sits just outside and
+    // has to be added back here.
+    CGFloat leading = fragment.leadingInlineSpace();
+    boundingRect.origin.x -= leading;
+    boundingRect.size.width += leading;
 
     rects.push_back(facebook::react::Rect{
         .origin = {.x = (Float)boundingRect.origin.x, .y = (Float)boundingRect.origin.y},
@@ -183,6 +194,236 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
   return drawingFrame;
 }
 
+
+namespace {
+
+// SharedColor -> UIColor. Kept local: this module does not depend on
+// React/Fabric (where RCTUIColorFromSharedColor lives), and the conversion is
+// a single unwrap.
+UIColor *_Nullable inlineBoxColor(const facebook::react::SharedColor &sharedColor)
+{
+  return RCTUIColorFromSharedColor(sharedColor);
+}
+
+// Paints the CSS box decorations of inline elements: one box per line
+// fragment, with the leading edge's border drawn only on the first fragment
+// and the trailing edge's only on the last (CSS2 §8.6 `box-decoration-break:
+// slice`, the default). box-model-scope.md G4/G5.
+//
+// Vertical padding/border deliberately overflow the line box rather than
+// growing it, which is what the web does for inline boxes.
+void drawInlineBoxDecorations(
+    const AttributedString &attributedString,
+    NSTextStorage *textStorage,
+    NSLayoutManager *layoutManager,
+    NSTextContainer *textContainer,
+    CGPoint origin)
+{
+  const auto &fragments = attributedString.getFragments();
+  CGContextRef context = UIGraphicsGetCurrentContext();
+  if (context == nullptr) {
+    return;
+  }
+
+  // G3 expresses inline-axis spacing as kerning, never as extra characters, so
+  // fragments still tile the built string one-for-one.
+  auto builtLengthOfFragment = [](const AttributedString::Fragment &fragment) -> NSUInteger {
+    NSString *text = [NSString stringWithUTF8String:fragment.string.c_str()];
+    return fragment.isAttachment() ? 1 : (text != nil ? text.length : 0);
+  };
+
+  NSUInteger location = 0;
+  size_t index = 0;
+  while (index < fragments.size()) {
+    const auto &fragment = fragments[index];
+
+    if (fragment.inlineBox.isEmpty()) {
+      location += builtLengthOfFragment(fragment);
+      index++;
+      continue;
+    }
+
+    // Consume the whole element: consecutive fragments sharing these
+    // decorations, ending at the fragment flagged as the box's end.
+    const auto decorations = fragment.inlineBox;
+    NSUInteger elementStart = location;
+    NSUInteger elementLength = 0;
+    bool sawEnd = false;
+    while (index < fragments.size()) {
+      const auto &current = fragments[index];
+      NSUInteger currentLength = builtLengthOfFragment(current);
+      elementLength += currentLength;
+      location += currentLength;
+      index++;
+      if (current.isInlineBoxEnd) {
+        sawEnd = true;
+        break;
+      }
+    }
+    if (!sawEnd || elementLength == 0 || elementStart + elementLength > textStorage.length) {
+      continue;
+    }
+
+    const CGFloat borderTop = decorations.borderWidth.top;
+    const CGFloat borderBottom = decorations.borderWidth.bottom;
+    const CGFloat borderLeft = decorations.borderWidth.left;
+    const CGFloat borderRight = decorations.borderWidth.right;
+    const CGFloat padTop = decorations.padding.top;
+    const CGFloat padBottom = decorations.padding.bottom;
+
+    NSRange characterRange = NSMakeRange(elementStart, elementLength);
+    NSRange glyphRange = [layoutManager glyphRangeForCharacterRange:characterRange
+                                               actualCharacterRange:nullptr];
+
+    // One rect per line the element occupies, tight to *this element's* glyphs.
+    //
+    // Both of the obvious APIs are wrong here, and both fail in ways that look
+    // plausible on screen:
+    //  - `boundingRectForGlyphRange:` widens to the whole line fragment, and to
+    //    the container's full width once the range spans a line break.
+    //  - `enumerateEnclosingRectsForGlyphRange:` is built for selection
+    //    highlighting, so it *merges* contiguous full-width lines into a single
+    //    tall rect. Border edges then get painted across the middle of the run
+    //    instead of on each line.
+    // So the extents are derived from glyph positions directly, which is the
+    // only formulation that stays tight at both ends of every line.
+    NSMutableArray<NSValue *> *lineRects = [NSMutableArray array];
+    [layoutManager
+        enumerateLineFragmentsForGlyphRange:glyphRange
+                                 usingBlock:^(
+                                     CGRect lineRect,
+                                     CGRect usedRect,
+                                     NSTextContainer *__unused container,
+                                     NSRange lineGlyphRange,
+                                     BOOL *__unused stop) {
+                                   NSRange intersection =
+                                       NSIntersectionRange(lineGlyphRange, glyphRange);
+                                   if (intersection.length == 0) {
+                                     return;
+                                   }
+                                   // `locationForGlyphAtIndex:` is relative to
+                                   // the line fragment's origin.
+                                   CGFloat startX = lineRect.origin.x +
+                                       [layoutManager locationForGlyphAtIndex:intersection.location].x;
+                                   NSUInteger endGlyph = NSMaxRange(intersection);
+                                   CGFloat endX;
+                                   if (endGlyph < NSMaxRange(lineGlyphRange)) {
+                                     endX = lineRect.origin.x +
+                                         [layoutManager locationForGlyphAtIndex:endGlyph].x;
+                                   } else {
+                                     // The element runs to the end of this
+                                     // line; `usedRect` is where the line's
+                                     // content actually stops.
+                                     endX = CGRectGetMaxX(usedRect);
+                                   }
+                                   if (endX <= startX) {
+                                     return;
+                                   }
+                                   [lineRects
+                                       addObject:[NSValue
+                                                     valueWithCGRect:CGRectMake(
+                                                                         startX,
+                                                                         usedRect.origin.y,
+                                                                         endX - startX,
+                                                                         usedRect.size.height)]];
+                                 }];
+
+    for (NSUInteger i = 0; i < lineRects.count; i++) {
+      // CSS2 §8.6 `box-decoration-break: slice`: only the first fragment gets
+      // the leading edge and only the last gets the trailing one.
+      const bool isFirst = (i == 0);
+      const bool isLast = (i + 1 == lineRects.count);
+      const CGFloat leadBorder = isFirst ? borderLeft : 0;
+      const CGFloat trailBorder = isLast ? borderRight : 0;
+
+      // `run` is the element's own glyphs. G3's leading space is kerning on the
+      // *preceding* character, so it falls outside this rect and the padding
+      // and border have to be added back here; the trailing space is kerning
+      // on the element's last character, so it is inside `run` and comes off.
+      // The margin is not painted at all.
+      //
+      // Vertically nothing is reserved, and nothing should be — an inline
+      // box's block-axis padding and border overflow the line box instead of
+      // growing it (CSS2 §10.6.1) — so those grow the box outwards here.
+      CGRect run = [lineRects[i] CGRectValue];
+      CGFloat left = origin.x + run.origin.x - (isFirst ? decorations.padding.left + borderLeft : 0);
+      CGFloat right = origin.x + CGRectGetMaxX(run) -
+          (isLast ? decorations.trailingInlineSpace() - decorations.padding.right - borderRight : 0);
+      CGRect borderBox = CGRectMake(
+          left,
+          origin.y + run.origin.y - padTop - borderTop,
+          std::max((CGFloat)0, right - left),
+          run.size.height + padTop + padBottom + borderTop + borderBottom);
+
+      // Edges are filled as solid rects rather than stroked: a stroke centres
+      // on the path, so a degenerate (zero-height) rect straddles the edge and
+      // lands half a point off, and CoreGraphics' handling of zero-size rects
+      // is not worth relying on.
+      UIColor *topColor = inlineBoxColor(decorations.borderColor.top);
+      UIColor *bottomColor = inlineBoxColor(decorations.borderColor.bottom);
+      UIColor *leftColor = inlineBoxColor(decorations.borderColor.left);
+      UIColor *rightColor = inlineBoxColor(decorations.borderColor.right);
+
+      if (borderTop > 0 && topColor != nil) {
+        CGContextSetFillColorWithColor(context, topColor.CGColor);
+        CGContextFillRect(
+            context,
+            CGRectMake(borderBox.origin.x, borderBox.origin.y, borderBox.size.width, borderTop));
+      }
+      if (borderBottom > 0 && bottomColor != nil) {
+        CGContextSetFillColorWithColor(context, bottomColor.CGColor);
+        CGContextFillRect(
+            context,
+            CGRectMake(
+                borderBox.origin.x,
+                CGRectGetMaxY(borderBox) - borderBottom,
+                borderBox.size.width,
+                borderBottom));
+      }
+      if (leadBorder > 0 && leftColor != nil) {
+        CGContextSetFillColorWithColor(context, leftColor.CGColor);
+        CGContextFillRect(
+            context,
+            CGRectMake(borderBox.origin.x, borderBox.origin.y, leadBorder, borderBox.size.height));
+      }
+      if (trailBorder > 0 && rightColor != nil) {
+        CGContextSetFillColorWithColor(context, rightColor.CGColor);
+        CGContextFillRect(
+            context,
+            CGRectMake(
+                CGRectGetMaxX(borderBox) - trailBorder,
+                borderBox.origin.y,
+                trailBorder,
+                borderBox.size.height));
+      }
+
+      // G5: the outline is the border box pushed out by `outline-offset`.
+      // It is stroked (not sliced per edge) and never affects layout.
+      if (decorations.outlineWidth > 0) {
+        UIColor *outlineColor = inlineBoxColor(decorations.outlineColor);
+        if (outlineColor != nil) {
+          // Stroke centres on the path, so offset by half the width to keep
+          // the inner edge exactly `outlineOffset` away from the border box.
+          CGFloat inset = -(decorations.outlineOffset + decorations.outlineWidth / 2);
+          CGRect outlineRect = CGRectInset(borderBox, inset, inset);
+          CGContextSetStrokeColorWithColor(context, outlineColor.CGColor);
+          CGContextSetLineWidth(context, decorations.outlineWidth);
+          if (decorations.borderRadius > 0) {
+            UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:outlineRect
+                                                           cornerRadius:decorations.borderRadius];
+            CGContextAddPath(context, path.CGPath);
+            CGContextStrokePath(context);
+          } else {
+            CGContextStrokeRect(context, outlineRect);
+          }
+        }
+      }
+    }
+  }
+}
+
+} // namespace
+
 - (void)drawAttributedString:(AttributedString)attributedString
          paragraphAttributes:(ParagraphAttributes)paragraphAttributes
                        frame:(CGRect)frame
@@ -206,6 +447,9 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
   [self processTruncatedAttributedText:textStorage textContainer:textContainer layoutManager:layoutManager];
 
   [layoutManager drawBackgroundForGlyphRange:glyphRange atPoint:frame.origin];
+  // Inline box decorations paint beneath the glyphs, like a background.
+  drawInlineBoxDecorations(
+      attributedString, textStorage, layoutManager, textContainer, frame.origin);
   [layoutManager drawGlyphsForGlyphRange:glyphRange atPoint:frame.origin];
 
 #if TARGET_OS_MACCATALYST

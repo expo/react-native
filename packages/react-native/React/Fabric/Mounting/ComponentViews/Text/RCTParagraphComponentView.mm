@@ -189,6 +189,23 @@ using namespace facebook::react;
     }
   }
 
+  // Inline elements' block-axis padding/border/outline overflow the line box
+  // instead of growing it, so the measured text frame is too small to draw
+  // them into and `drawRect:` would clip them away. Widen only the drawing
+  // surface — the layout frame is deliberately untouched.
+  if (_textView.state) {
+    auto overflow = _textView.state->getData().attributedString.inlineBoxBlockAxisOverflow();
+    if (overflow.top > 0 || overflow.bottom > 0) {
+      textViewFrame = CGRectUnion(
+          textViewFrame,
+          CGRectMake(
+              drawingFrame.origin.x,
+              drawingFrame.origin.y - overflow.top,
+              drawingFrame.size.width,
+              drawingFrame.size.height + overflow.top + overflow.bottom));
+    }
+  }
+
   _textLayoutFrame = drawingFrame;
   _textView.frame = textViewFrame;
   _textView.drawingFrame = CGRectOffset(drawingFrame, -textViewFrame.origin.x, -textViewFrame.origin.y);

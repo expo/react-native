@@ -97,8 +97,11 @@ std::vector<Rect> measureFragmentRectsDeterministically(
       continue;
     }
 
+    // The leading edge is part of the element's box, so the pen advances
+    // before the glyphs and the rect starts at the box edge, not the text.
     const Float startLine = line;
     Float minX = penX;
+    penX += fragment.leadingInlineSpace();
     Float maxX = penX;
 
     for (size_t i = 0; i < characters; i++) {
@@ -118,6 +121,9 @@ std::vector<Rect> measureFragmentRectsDeterministically(
       maxX = std::max(maxX, penX);
     }
 
+    penX += fragment.trailingInlineSpace();
+    maxX = std::max(maxX, penX);
+
     rects.push_back(Rect{
         .origin = {minX, startLine * lineHeight},
         .size = {maxX - minX, (line - startLine + 1) * lineHeight}});
@@ -134,6 +140,10 @@ TextMeasurement measureDeterministically(
   Float intrinsicWidth = 0;
   Float maxAttachmentHeight = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
+    // An inline element's box edges (margin + border + padding) occupy advance
+    // on the line (box-model-scope.md G3).
+    intrinsicWidth +=
+        fragment.leadingInlineSpace() + fragment.trailingInlineSpace();
     if (fragment.isAttachment()) {
       // Inline replaced element (the `<img>` tag): reserve its intrinsic box in
       // the run — width adds to the line, height can grow the line box. The size

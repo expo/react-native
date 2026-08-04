@@ -8,6 +8,7 @@
 #pragma once
 
 #include <react/renderer/attributedstring/TextAttributes.h>
+#include <react/renderer/components/text/InlineBoxProps.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/graphics/Color.h>
@@ -29,6 +30,13 @@ class BaseTextProps {
 #pragma mark - Props
 
   TextAttributes textAttributes{};
+
+  /*
+   * CSS box decorations when this element is used *inline* (box-model-scope.md
+   * G2). Empty for the overwhelming majority of text, so consumers can take a
+   * zero-cost path via `isEmpty()`.
+   */
+  InlineBoxProps inlineBox{};
 
 #pragma mark - DebugStringConvertible (partially)
 

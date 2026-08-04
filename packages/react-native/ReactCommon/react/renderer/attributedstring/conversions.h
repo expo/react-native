@@ -1110,6 +1110,30 @@ constexpr static MapBuffer::Key FR_KEY_IS_ATTACHMENT = 2;
 constexpr static MapBuffer::Key FR_KEY_WIDTH = 3;
 constexpr static MapBuffer::Key FR_KEY_HEIGHT = 4;
 constexpr static MapBuffer::Key FR_KEY_TEXT_ATTRIBUTES = 5;
+// Inline box decorations (box-model-scope.md G2). Only present on fragments of
+// a decorated inline element, so undecorated text costs nothing.
+constexpr static MapBuffer::Key FR_KEY_INLINE_BOX = 6;
+constexpr static MapBuffer::Key FR_KEY_IS_INLINE_BOX_START = 7;
+constexpr static MapBuffer::Key FR_KEY_IS_INLINE_BOX_END = 8;
+
+constexpr static MapBuffer::Key IB_KEY_MARGIN_LEFT = 0;
+constexpr static MapBuffer::Key IB_KEY_MARGIN_RIGHT = 1;
+constexpr static MapBuffer::Key IB_KEY_PADDING_LEFT = 2;
+constexpr static MapBuffer::Key IB_KEY_PADDING_TOP = 3;
+constexpr static MapBuffer::Key IB_KEY_PADDING_RIGHT = 4;
+constexpr static MapBuffer::Key IB_KEY_PADDING_BOTTOM = 5;
+constexpr static MapBuffer::Key IB_KEY_BORDER_LEFT_WIDTH = 6;
+constexpr static MapBuffer::Key IB_KEY_BORDER_TOP_WIDTH = 7;
+constexpr static MapBuffer::Key IB_KEY_BORDER_RIGHT_WIDTH = 8;
+constexpr static MapBuffer::Key IB_KEY_BORDER_BOTTOM_WIDTH = 9;
+constexpr static MapBuffer::Key IB_KEY_BORDER_LEFT_COLOR = 10;
+constexpr static MapBuffer::Key IB_KEY_BORDER_TOP_COLOR = 11;
+constexpr static MapBuffer::Key IB_KEY_BORDER_RIGHT_COLOR = 12;
+constexpr static MapBuffer::Key IB_KEY_BORDER_BOTTOM_COLOR = 13;
+constexpr static MapBuffer::Key IB_KEY_BORDER_RADIUS = 14;
+constexpr static MapBuffer::Key IB_KEY_OUTLINE_COLOR = 15;
+constexpr static MapBuffer::Key IB_KEY_OUTLINE_WIDTH = 16;
+constexpr static MapBuffer::Key IB_KEY_OUTLINE_OFFSET = 17;
 
 // constants for Text Attributes serialization
 constexpr static MapBuffer::Key TA_KEY_FOREGROUND_COLOR = 0;
@@ -1363,6 +1387,42 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   return builder.build();
 }
 
+inline MapBuffer toMapBuffer(const InlineBoxDecorations &inlineBox)
+{
+  auto builder = MapBufferBuilder();
+
+  builder.putDouble(IB_KEY_MARGIN_LEFT, inlineBox.margin.left);
+  builder.putDouble(IB_KEY_MARGIN_RIGHT, inlineBox.margin.right);
+  builder.putDouble(IB_KEY_PADDING_LEFT, inlineBox.padding.left);
+  builder.putDouble(IB_KEY_PADDING_TOP, inlineBox.padding.top);
+  builder.putDouble(IB_KEY_PADDING_RIGHT, inlineBox.padding.right);
+  builder.putDouble(IB_KEY_PADDING_BOTTOM, inlineBox.padding.bottom);
+  builder.putDouble(IB_KEY_BORDER_LEFT_WIDTH, inlineBox.borderWidth.left);
+  builder.putDouble(IB_KEY_BORDER_TOP_WIDTH, inlineBox.borderWidth.top);
+  builder.putDouble(IB_KEY_BORDER_RIGHT_WIDTH, inlineBox.borderWidth.right);
+  builder.putDouble(IB_KEY_BORDER_BOTTOM_WIDTH, inlineBox.borderWidth.bottom);
+  if (inlineBox.borderColor.left) {
+    builder.putInt(IB_KEY_BORDER_LEFT_COLOR, toAndroidRepr(inlineBox.borderColor.left));
+  }
+  if (inlineBox.borderColor.top) {
+    builder.putInt(IB_KEY_BORDER_TOP_COLOR, toAndroidRepr(inlineBox.borderColor.top));
+  }
+  if (inlineBox.borderColor.right) {
+    builder.putInt(IB_KEY_BORDER_RIGHT_COLOR, toAndroidRepr(inlineBox.borderColor.right));
+  }
+  if (inlineBox.borderColor.bottom) {
+    builder.putInt(IB_KEY_BORDER_BOTTOM_COLOR, toAndroidRepr(inlineBox.borderColor.bottom));
+  }
+  builder.putDouble(IB_KEY_BORDER_RADIUS, inlineBox.borderRadius);
+  if (inlineBox.outlineColor) {
+    builder.putInt(IB_KEY_OUTLINE_COLOR, toAndroidRepr(inlineBox.outlineColor));
+  }
+  builder.putDouble(IB_KEY_OUTLINE_WIDTH, inlineBox.outlineWidth);
+  builder.putDouble(IB_KEY_OUTLINE_OFFSET, inlineBox.outlineOffset);
+
+  return builder.build();
+}
+
 inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
 {
   auto builder = MapBufferBuilder();
@@ -1378,6 +1438,12 @@ inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
   }
   auto textAttributesMap = toMapBuffer(fragment.textAttributes);
   builder.putMapBuffer(FR_KEY_TEXT_ATTRIBUTES, textAttributesMap);
+  if (!fragment.inlineBox.isEmpty()) {
+    auto inlineBoxMap = toMapBuffer(fragment.inlineBox);
+    builder.putMapBuffer(FR_KEY_INLINE_BOX, inlineBoxMap);
+    builder.putBool(FR_KEY_IS_INLINE_BOX_START, fragment.isInlineBoxStart);
+    builder.putBool(FR_KEY_IS_INLINE_BOX_END, fragment.isInlineBoxEnd);
+  }
 
   return builder.build();
 }
