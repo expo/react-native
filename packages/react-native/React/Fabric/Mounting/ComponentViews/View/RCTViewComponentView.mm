@@ -111,12 +111,23 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
 - (void)setContainerBounds:(CGRect)containerBounds
 {
   auto overflow = _run.attributedString.inlineBoxBlockAxisOverflow();
+  // A run can also start *before* the content box in the inline axis: an
+  // `outside` list marker (css-lists-3 §3.2) is positioned in the gutter to the
+  // inline-start side precisely so the content can hang past it, giving this
+  // run a negative origin. Without room on that side `-drawRect:` clips the
+  // marker away entirely — the list rendered with no bullets at all on iOS
+  // while Android, which does not clip the same way, showed them.
+  CGFloat leading = MAX(0, -RCTCGRectFromRect(_run.frame).origin.x);
   self.frame = CGRectMake(
-      containerBounds.origin.x,
+      containerBounds.origin.x - leading,
       containerBounds.origin.y - overflow.top,
-      containerBounds.size.width,
+      containerBounds.size.width + leading,
       containerBounds.size.height + overflow.top + overflow.bottom);
+  // The compensating origin keeps this view's coordinate space identical to
+  // the owning View's, in both axes, so `containerFrame` — the one geometry
+  // shared by painting and hit-testing — is untouched, as is layout.
   CGRect bounds = self.bounds;
+  bounds.origin.x = -leading;
   bounds.origin.y = -overflow.top;
   self.bounds = bounds;
 }
