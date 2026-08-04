@@ -154,6 +154,8 @@ function InlineBoxAdvanceCase(): React.Node {
   const plainSpanRef = useRef<React.ElementRef<typeof View> | null>(null);
   const axisSpanRef = useRef<React.ElementRef<typeof View> | null>(null);
   const flexSpanRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const headingRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const paraRef = useRef<React.ElementRef<typeof View> | null>(null);
   usePublishRects({
     intrinsicPlainRun: plainRef,
     intrinsicAxisRun: axisRef,
@@ -163,6 +165,8 @@ function InlineBoxAdvanceCase(): React.Node {
     intrinsicPlainSpan: plainSpanRef,
     intrinsicAxisSpan: axisSpanRef,
     intrinsicFlexSpan: flexSpanRef,
+    intrinsicHeading: headingRef,
+    intrinsicPara: paraRef,
   });
   const p = INLINE_BOX_ADVANCE_PADDING;
   const block = {display: 'block', alignSelf: 'flex-start'} as const;
@@ -197,6 +201,20 @@ function InlineBoxAdvanceCase(): React.Node {
         {/* $FlowExpectedError[not-a-component] intrinsic <b> tag */}
         <b ref={boldRef}>BOLD</b>
         after
+      </View>
+      {/* UA stylesheet on a real text engine: <h1>'s 2em font makes it
+          measurably wider than a <p> with identical text.
+          Both shrink to fit — a block box otherwise fills its container and
+          both would report the parent's width. */}
+      <View style={{alignSelf: 'flex-start'}}>
+        {/* $FlowExpectedError[not-a-component] intrinsic <h1> tag */}
+        <h1 ref={headingRef} style={{marginBlock: 0, alignSelf: 'flex-start'}}>
+          Size
+        </h1>
+        {/* $FlowExpectedError[not-a-component] intrinsic <p> tag */}
+        <p ref={paraRef} style={{marginBlock: 0, alignSelf: 'flex-start'}}>
+          Size
+        </p>
       </View>
       {/* A <span> whose display generates a box: it lays its own children out
           with flex, which a text-backed span cannot do at all. */}

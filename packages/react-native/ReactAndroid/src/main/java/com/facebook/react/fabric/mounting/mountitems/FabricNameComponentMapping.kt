@@ -13,10 +13,11 @@ internal object FabricNameComponentMapping {
       // TODO T97384889: unify component names between JS - Android - iOS - C++
       "View" to "RCTView",
       "Image" to "RCTImageView",
-      // Intrinsic DOM elements (expo-intrinsics). <div> is a block View. <img>
-      // reuses the block View for now (its Image-backed inline impl is being
-      // reworked); the Android RCTImageView expects a different `source` shape,
-      // so mount it as a plain view until img is revisited.
+      // Intrinsic DOM elements (expo-intrinsics). <div> is a block View.
+      // DOM-CSS-LIMITATION(android-img-is-a-plain-view): <img> mounts as a
+      // plain View on Android rather than RCTImageView, which expects a
+      // different `source` shape — so an <img> lays out but draws nothing
+      // there. iOS renders it through the Image machinery.
       "div" to "RCTView",
       // The box-backed flavor an element is swapped onto when its display
       // generates a box (ElementBoxShadowNode.h). A plain view: everything

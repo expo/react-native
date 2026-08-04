@@ -497,6 +497,10 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     // container it is blockified into a regular flex item (css-display-3
     // §2.7), which is exactly Yoga's Flex default.
     //
+    // DOM-CSS-LIMITATION(no-grid): `grid`/`inline-grid` are not handled here
+    // and fall through to the parse error below — Yoga has no grid engine, so
+    // this is a feature rather than a mapping.
+    //
     // Only the *outer* display differs between these three. The inner display
     // — flow for `inline`, flex for `inline-flex`, flow-root for
     // `inline-block` — is Yoga's flex box either way; what separates them is

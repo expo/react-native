@@ -7058,8 +7058,8 @@ function completeWork(current, workInProgress, renderLanes) {
         ) {
           b: {
             type = ReactNativePrivateInterface.diffAttributePayloads(
-              type,
-              newProps,
+              applyUAStyle(type, renderLanes.canonical.viewConfig),
+              applyUAStyle(newProps, renderLanes.canonical.viewConfig),
               renderLanes.canonical.viewConfig.validAttributes
             );
             renderLanes.canonical.currentProps = newProps;
@@ -7097,7 +7097,7 @@ function completeWork(current, workInProgress, renderLanes) {
         nextReactTag += 2;
         type = getViewConfigForType(type);
         var updatePayload = ReactNativePrivateInterface.createAttributePayload(
-          newProps,
+          applyUAStyle(newProps, type),
           type.validAttributes
         );
         current = {
@@ -10399,7 +10399,22 @@ function resolveUpdatePriority() {
 }
 var scheduleTimeout = setTimeout,
   cancelTimeout = clearTimeout;
-function cloneHiddenInstance(instance) {
+function applyUAStyle(props, viewConfig) {
+      // The user-agent origin of the cascade: the element's UA style sits
+      // *beneath* the author's, so an author declaration always wins simply by
+      // being later in the array. Applied here rather than in author code, the
+      // way a browser consults its own stylesheet.
+      //
+      // Applied on both sides of an update diff as well as at creation — a diff
+      // between two unmerged props objects would drop the UA value the moment
+      // an author removed the property that had been overriding it.
+      var uaStyle = viewConfig && viewConfig.uaStyle;
+      if (!uaStyle || props == null) return props;
+      var merged = Object.assign({}, props);
+      merged.style = props.style == null ? uaStyle : [uaStyle, props.style];
+      return merged;
+    }
+    function cloneHiddenInstance(instance) {
   var node = instance.node,
     updatePayload = ReactNativePrivateInterface.createAttributePayload(
       { style: { display: "none" } },

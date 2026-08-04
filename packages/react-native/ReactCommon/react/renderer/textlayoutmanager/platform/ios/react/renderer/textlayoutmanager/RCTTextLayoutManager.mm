@@ -331,6 +331,8 @@ void drawInlineBoxDecorations(
     for (NSUInteger i = 0; i < lineRects.count; i++) {
       // CSS2 §8.6 `box-decoration-break: slice`: only the first fragment gets
       // the leading edge and only the last gets the trailing one.
+      // DOM-CSS-LIMITATION(no-box-decoration-break-clone): only `slice` (the
+      // default) is implemented; `clone` would repeat both edges per fragment.
       const bool isFirst = (i == 0);
       const bool isLast = (i + 1 == lineRects.count);
       const CGFloat leadBorder = isFirst ? borderLeft : 0;

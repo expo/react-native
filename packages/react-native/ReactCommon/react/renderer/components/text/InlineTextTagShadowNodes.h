@@ -20,10 +20,14 @@
 namespace facebook::react {
 
 /*
- * Intrinsic inline text tags (<b>, <i>, <span>): thin virtual text elements
- * with baked-in attribute defaults (text-children-plan.md §3.C). All are
- * instances of the inline text element class (TextShadowNode); explicit
- * styles still override the defaults.
+ * Intrinsic inline text tags (<b>, <i>, <span>, <u>): thin virtual text
+ * elements, all instances of the inline text element class (TextShadowNode).
+ *
+ * They carry no attribute defaults of their own. <b>'s boldness and <i>'s
+ * italics are declarations in the user-agent stylesheet
+ * (Libraries/DomElements/uaStyles.js), applied beneath the author's style, so
+ * a default lives in one place and an author style still wins — the same
+ * cascade a browser gets from html.css.
  */
 
 extern const char UnknownElementComponentName[];
@@ -67,32 +71,12 @@ class InlineTagProps : public TextProps, public NodeNameProvider {
 
 class BTagProps final : public InlineTagProps {
  public:
-  BTagProps()
-  {
-    textAttributes.fontWeight = FontWeight::Bold;
-  }
-  BTagProps(const PropsParserContext &context, const BTagProps &sourceProps, const RawProps &rawProps)
-      : InlineTagProps(context, sourceProps, rawProps)
-  {
-    if (!textAttributes.fontWeight.has_value()) {
-      textAttributes.fontWeight = FontWeight::Bold;
-    }
-  }
+  using InlineTagProps::InlineTagProps;
 };
 
 class ITagProps final : public InlineTagProps {
  public:
-  ITagProps()
-  {
-    textAttributes.fontStyle = FontStyle::Italic;
-  }
-  ITagProps(const PropsParserContext &context, const ITagProps &sourceProps, const RawProps &rawProps)
-      : InlineTagProps(context, sourceProps, rawProps)
-  {
-    if (!textAttributes.fontStyle.has_value()) {
-      textAttributes.fontStyle = FontStyle::Italic;
-    }
-  }
+  using InlineTagProps::InlineTagProps;
 };
 
 /*
@@ -102,17 +86,7 @@ class ITagProps final : public InlineTagProps {
  */
 class UTagProps final : public InlineTagProps {
  public:
-  UTagProps()
-  {
-    textAttributes.textDecorationLineType = TextDecorationLineType::Underline;
-  }
-  UTagProps(const PropsParserContext &context, const UTagProps &sourceProps, const RawProps &rawProps)
-      : InlineTagProps(context, sourceProps, rawProps)
-  {
-    if (!textAttributes.textDecorationLineType.has_value()) {
-      textAttributes.textDecorationLineType = TextDecorationLineType::Underline;
-    }
-  }
+  using InlineTagProps::InlineTagProps;
 };
 
 class BTagShadowNode final : public ConcreteShadowNode<BTagComponentName, TextShadowNode, BTagProps, TextEventEmitter> {

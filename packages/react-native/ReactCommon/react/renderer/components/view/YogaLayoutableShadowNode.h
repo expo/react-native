@@ -148,6 +148,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Yoga node as `mutable` here to avoid `static_cast`ing the pointer to this
    * all the time.
    */
+  // DOM-CSS-LIMITATION(eager-yoga-node): held by value, so an element that
+  // generates *no* box — a span-like inline that folds into its parent's
+  // inline formatting context — still pays 744 bytes for a Yoga node it never
+  // uses. Making this lazy would make folding elements cheaper than they are
+  // now; it changes memory layout for every view, so it wants measuring
+  // against a real screen first. See element-model-design.md.
   mutable yoga::Node yogaNode_;
 
  private:

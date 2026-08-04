@@ -121,7 +121,30 @@ is worse than one that documents where it does not:
   on `:link`/`:visited`, which need history state we do not have. Astryx styles
   links explicitly.
 
-## 5. Staging
+## 5. Status — delivered
+
+Stages 1–3 are done: the `uaStyle` seam is in all three renderer bundles, the
+sheet is `Libraries/DomElements/uaStyles.js`, and ~50 elements read from it.
+
+Two things the implementation added that this plan did not anticipate:
+
+- The merge has to happen on **both sides of the update diff**, not only at
+  instance creation. `diffAttributePayloads` compares two props objects, and if
+  neither carries the UA style the value is dropped the moment an author
+  removes the property that had been overriding it.
+- `createViewConfig` rebuilds a config from a fixed key list, so `uaStyle` had
+  to be carried through explicitly — the same way `recordNodeName` had to be,
+  and for the same reason.
+
+Verified on device as well as headlessly, because Fantom's measurer is a fixed
+width per character and so cannot see a font-size change at all: on iOS `<h1>`
+measures 63.3 against `<p>`'s 29.0, and on Android 61.7 against 28.6.
+
+Stage 4 (deleting the C++ presentational defaults now that `<strong>`/`<em>`
+take theirs from the sheet) is the remaining cleanup; `<b>`/`<i>` still set
+theirs in `BTagProps`/`ITagProps`.
+
+## 6. Original staging
 
 1. **Seam** — `uaStyle` on the view config, merged beneath author style at
    `createInstance`, mirroring `recordNodeName`. Prove with one element (`<p>`
@@ -137,7 +160,7 @@ is worse than one that documents where it does not:
 Step 2 is the one that pays for the whole thing: it turns "add an element" from
 a C++ change into a one-line table entry.
 
-## 6. Note on the renderer seam
+## 7. Note on the renderer seam
 
 `recordNodeName` — the model for this — is currently implemented **only in
 `ReactFabric-dev.js`**; the prod and profiling bundles do not have it, so

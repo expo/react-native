@@ -191,6 +191,20 @@ async function main() {
       flexSpan != null ? `${flexSpan.w.toFixed(2)} ≈ 50` : 'not published',
     ) && ok;
 
+  // The UA stylesheet on a real text engine: <h1> is 2em, so identical text
+  // must measure wider than in a <p>. Fantom cannot check this — its measurer
+  // is a fixed width per character regardless of fontSize.
+  const heading = v.intrinsicHeading;
+  const para = v.intrinsicPara;
+  ok =
+    check(
+      'UA stylesheet: <h1> renders larger than <p>',
+      heading != null && para != null && heading.w > para.w * 1.5,
+      heading != null && para != null
+        ? `h1 ${heading.w.toFixed(1)} > 1.5x p ${para.w.toFixed(1)}`
+        : 'not published',
+    ) && ok;
+
   const spanDelta = v.intrinsicAxisSpan.w - v.intrinsicPlainSpan.w;
   ok =
     check(

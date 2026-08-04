@@ -83,7 +83,9 @@ struct EdgeNames {
  * `blockStart`/`blockEnd` are applied only when the physical edge is
  * undefined.
  *
- * LTR only, like the rest of the inline box work: `leading` means left.
+ * DOM-CSS-LIMITATION(inline-box-ltr-only): LTR only, like the rest of the
+ * inline box work — `leading` means left. RTL needs the resolved direction
+ * threaded to where the edges are consumed.
  */
 RectangleEdges<Float> edges(
     const PropsParserContext& context,

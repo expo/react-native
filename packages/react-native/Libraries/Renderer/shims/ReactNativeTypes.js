@@ -81,10 +81,22 @@ export type ViewConfig = Readonly<{
    * formatting context and a box-backed one when its display establishes one.
    *
    * Consulted at instance creation only, which is the same point at which a
-   * browser picks a layout object class. An element whose display later
-   * crosses that boundary keeps its original backing until it remounts.
+   * browser picks a layout object class.
+   *
+   * DOM-CSS-LIMITATION(display-change-needs-remount): an element whose display
+   * later crosses the box/no-box boundary keeps its original backing until it
+   * remounts. Browsers destroy and recreate the layout object there; matching
+   * that needs a remount signal the reconciler does not have. Static display —
+   * the overwhelming case — is correct.
    */
   resolveUIViewClassName?: (props: Object) => string,
+  /**
+   * The element's user-agent style, merged *beneath* the author's `style` so
+   * an author declaration always wins — the cascade's user-agent origin, with
+   * no per-property special-casing. Applied by the renderer, so author code
+   * never sees it, the way a browser consults its own stylesheet.
+   */
+  uaStyle?: Object,
 }>;
 
 export type PartialViewConfig = Readonly<{

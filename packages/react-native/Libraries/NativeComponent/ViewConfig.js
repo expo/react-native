@@ -44,6 +44,7 @@ export function createViewConfig(
     // have to be carried through explicitly.
     recordNodeName: partialViewConfig.recordNodeName,
     resolveUIViewClassName: partialViewConfig.resolveUIViewClassName,
+    uaStyle: partialViewConfig.uaStyle,
   };
 }
 

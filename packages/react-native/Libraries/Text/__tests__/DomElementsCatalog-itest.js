@@ -84,14 +84,16 @@ describe('intrinsic element catalog', () => {
       root.render(
         <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
           {/* $FlowExpectedError[not-a-component] */}
-          <p>ab</p>
+          <p style={{marginBlock: 0}}>ab</p>
           {/* $FlowExpectedError[not-a-component] */}
-          <p>cd</p>
+          <p style={{marginBlock: 0}}>cd</p>
         </View>,
       );
     });
 
     // Two block lines, not one inline run: 40 tall and only as wide as one.
+    // The UA block margins are zeroed so this measures block-ness alone; they
+    // have their own test below.
     expect(rectOf(ref).height).toBe(40);
     expect(rectOf(ref).width).toBe(20);
   });
@@ -357,5 +359,136 @@ describe('display selects an element\'s backing box', () => {
     // Backed by `element-box`, but it is still a <span>.
     // $FlowFixMe[prop-missing] DOM tagName
     expect(ref.current?.tagName).toBe('RN:span');
+  });
+});
+
+// The user-agent stylesheet: element defaults live in a table (uaStyles.js)
+// and are merged beneath the author's style, which is the cascade's UA origin.
+describe('user-agent styles', () => {
+  it('<p> carries the UA default block margins', () => {
+    const ref = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <p>ab</p>
+        </View>,
+      );
+    });
+
+    // One 20pt line plus 16pt of margin above and below.
+    expect(rectOf(ref).height).toBe(52);
+  });
+
+  it('an author style beats the UA default', () => {
+    const ref = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <p style={{marginBlock: 0}}>ab</p>
+        </View>,
+      );
+    });
+
+    // The author zeroed the margins, so the line is all that remains.
+    expect(rectOf(ref).height).toBe(20);
+  });
+});
+
+// The catalog: with the UA sheet in place, an element is a table row plus a
+// registration, so these assert the sheet is actually reaching each of them.
+describe('the wider element catalog', () => {
+  it('headings are bold and carry their UA margins', () => {
+    const h1 = createRef<HostInstance>();
+    const plain = createRef<HostInstance>();
+    const noMargin = createRef<HostInstance>();
+    const withMargin = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[not-a-component] */}
+          <h1 ref={h1} style={{alignSelf: 'flex-start', marginBlock: 0}}>ab</h1>
+          {/* $FlowExpectedError[not-a-component] */}
+          <div ref={plain} style={{alignSelf: 'flex-start'}}>{'ab'}</div>
+          {/* Margins are measured on the *parent*: an element's own rect is
+              its border box, which never includes them. */}
+          <View collapsable={false} ref={noMargin} style={{alignSelf: 'flex-start'}}>
+            {/* $FlowExpectedError[not-a-component] */}
+            <h1 style={{marginBlock: 0}}>ab</h1>
+          </View>
+          <View collapsable={false} ref={withMargin} style={{alignSelf: 'flex-start'}}>
+            {/* $FlowExpectedError[not-a-component] */}
+            <h1>ab</h1>
+          </View>
+        </>,
+      );
+    });
+
+    // Bold measures wider than the plain baseline. Heading *font sizes* are in
+    // the sheet but cannot be asserted here: the deterministic measurer is a
+    // fixed 10pt per character regardless of fontSize.
+    expect(rectOf(h1).width).toBeGreaterThan(rectOf(plain).width);
+    // h1's UA margin is 0.67em = 10.72 above and below. Compared loosely
+    // because layout rounds to the pixel grid.
+    expect(
+      rectOf(withMargin).height - rectOf(noMargin).height,
+    ).toBeCloseTo(21.44, 0);
+  });
+
+  it('a list indents by the UA marker gutter', () => {
+    const plain = createRef<HostInstance>();
+    const list = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[not-a-component] */}
+          <div ref={plain} style={{alignSelf: 'flex-start'}}>{'ab'}</div>
+          {/* $FlowExpectedError[not-a-component] */}
+          <ul ref={list} style={{alignSelf: 'flex-start'}}>{'ab'}</ul>
+        </>,
+      );
+    });
+
+    // Shrink-to-fit, or both blocks would fill the root and the padding would
+    // not show up in the outer width at all.
+    // 40pt of padding-inline-start, and the UA block margins above/below.
+    expect(rectOf(list).width - rectOf(plain).width).toBe(40);
+  });
+
+  it('inline elements take their UA styling and keep their tag', () => {
+    const code = createRef<HostInstance>();
+    const strong = createRef<HostInstance>();
+    const span = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} style={{display: 'block'}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <code ref={code}>ab</code>
+          {/* $FlowExpectedError[not-a-component] */}
+          <strong ref={strong}>ab</strong>
+          {/* $FlowExpectedError[not-a-component] */}
+          <span ref={span}>ab</span>
+        </View>,
+      );
+    });
+
+    // <strong>'s bold now comes from the UA sheet rather than from aliasing
+    // <b>, so it must still measure wider than an unstyled <span>.
+    expect(rectOf(strong).width).toBeGreaterThan(rectOf(span).width);
+    // $FlowFixMe[prop-missing] DOM tagName
+    expect(code.current?.tagName).toBe('RN:code');
+    // $FlowFixMe[prop-missing] DOM tagName
+    expect(strong.current?.tagName).toBe('RN:strong');
   });
 });
