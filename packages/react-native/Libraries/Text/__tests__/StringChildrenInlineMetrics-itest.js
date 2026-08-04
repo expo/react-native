@@ -178,3 +178,55 @@ describe('authored <Text> keeps its layout behavior', () => {
     expect(nested.y).toBe(20);
   });
 });
+
+describe('re-layout of an already-committed paragraph', () => {
+  // Stamping an inline element's metrics mutates a node of the committed tree.
+  // Layout runs again on subtrees that were NOT re-cloned — a state update
+  // anywhere in the surface re-lays out this paragraph while its inline
+  // children still belong to the previous, sealed generation — and the stamp
+  // would then trip `Sealable::ensureUnsealed`. That aborts the process in any
+  // build with assertions on, which is every debug Android build: tapping
+  // anything that caused a re-render killed the app.
+  it('does not mutate sealed children when something else re-renders', () => {
+    const inlineRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    function Case({extra}: {extra: number}) {
+      return (
+        <>
+          <View collapsable={false} style={{display: 'block'}}>
+            {'a'}
+            {/* $FlowExpectedError[not-a-component] intrinsic <b> tag */}
+            <b ref={inlineRef}>bc</b>
+            {'d'}
+          </View>
+          {/* An unrelated sibling whose change forces a new commit, and with
+              it a layout pass over the untouched paragraph above. */}
+          <View style={{width: extra, height: 10}} />
+        </>
+      );
+    }
+
+    Fantom.runTask(() => {
+      root.render(<Case extra={10} />);
+    });
+
+    const before = rectOf(inlineRef);
+    expect(before.width).toBeGreaterThan(0);
+
+    // Before the fix this aborted the tester rather than failing.
+    Fantom.runTask(() => {
+      root.render(<Case extra={20} />);
+    });
+    Fantom.runTask(() => {
+      root.render(<Case extra={30} />);
+    });
+
+    // The element still reports the same box it did on the first commit.
+    const after = rectOf(inlineRef);
+    expect(after.width).toBe(before.width);
+    expect(after.height).toBe(before.height);
+    expect(after.x).toBe(before.x);
+    expect(after.y).toBe(before.y);
+  });
+});

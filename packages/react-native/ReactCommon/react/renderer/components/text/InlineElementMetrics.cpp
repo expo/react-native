@@ -65,8 +65,18 @@ Rect stampSubtree(
     // Stamping metrics on a node of the committed tree is the same mutation
     // the owning View already performs for inline `<img>` attachments, and it
     // happens during the owner's layout pass.
-    const_cast<TextShadowNode*>(static_cast<const TextShadowNode*>(&node))
-        ->setLayoutMetrics(metrics);
+    //
+    // A sealed node is skipped rather than mutated. Layout runs again on
+    // subtrees that were not re-cloned — a state update anywhere in the
+    // surface re-lays out this paragraph while its children still belong to
+    // the previous, sealed generation — and `setLayoutMetrics` would then trip
+    // `ensureUnsealed`, aborting the process in any build with assertions on.
+    // That is not a lost stamp: a sealed node was stamped when it was last
+    // cloned, from the same content, so its metrics already hold.
+    if (!node.getSealed()) {
+      const_cast<TextShadowNode*>(static_cast<const TextShadowNode*>(&node))
+          ->setLayoutMetrics(metrics);
+    }
   }
 
   return box;
