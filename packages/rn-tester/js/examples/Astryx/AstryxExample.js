@@ -12,6 +12,7 @@
 
 import type {RNTesterModule} from '../../types/RNTesterTypes';
 
+import Dialog from '../../astryx/elements/Dialog';
 import {resolveAnchorPosition} from '../../astryx/overlay/anchorPosition';
 import {TopLayerHost} from '../../astryx/overlay/TopLayer';
 import {useInteractionState} from '../../astryx/useInteractionState';
@@ -379,22 +380,34 @@ function AnchoredPopover(): React.Node {
 
   const openPopover = () => {
     const node = anchorRef.current;
-    if (node == null) {
-      return;
-    }
-    node.measureInWindow((x, y, width, height) => {
-      const resolved = resolveAnchorPosition({
-        anchor: {x, y, width, height},
-        overlay: {width: 220, height: 92},
-        viewport: {width: viewportWidth, height: viewportHeight},
-        area: 'block-end span-inline-start',
-        fallbacks: ['flip-block'],
-        offset: 8,
-        inset: 12,
-      });
-      setPosition({x: resolved.x, y: resolved.y, area: resolved.area});
-      setOpen(true);
+    // Measure through the DOM box rather than `measureInWindow`. The rect is
+    // read synchronously, so opening never depends on a callback firing — the
+    // old code called `setOpen` *inside* `measureInWindow`, so any anchor
+    // whose callback did not fire left the button doing nothing at all, with
+    // no error to go on. An element whose box is not a rectangle also mounts
+    // an unsized view on purpose (see `TextShadowNode::getMountedLayoutMetrics`),
+    // and `getBoundingClientRect()` reports the real box in that case where a
+    // view measurement would report zero.
+    // $FlowFixMe[prop-missing] host instances expose the DOM box
+    const rect =
+      node != null ? (node as $FlowFixMe).getBoundingClientRect() : null;
+    const anchor =
+      rect != null && rect.width > 0
+        ? {x: rect.x, y: rect.y, width: rect.width, height: rect.height}
+        : // Last resort: open anchored to the viewport's top-start corner
+          // rather than silently not opening.
+          {x: 0, y: 0, width: 0, height: 0};
+    const resolved = resolveAnchorPosition({
+      anchor,
+      overlay: {width: 220, height: 92},
+      viewport: {width: viewportWidth, height: viewportHeight},
+      area: 'block-end span-inline-start',
+      fallbacks: ['flip-block'],
+      offset: 8,
+      inset: 12,
     });
+    setPosition({x: resolved.x, y: resolved.y, area: resolved.area});
+    setOpen(true);
   };
 
   return (
@@ -429,8 +442,14 @@ function ModalDialog(): React.Node {
   return (
     <View>
       <AstryxButton onClick={() => setOpen(true)}>Open modal</AstryxButton>
-      {/* $FlowFixMe[not-a-component] <dialog> element (modal) */}
-      <dialog
+      {/* The `Dialog` component, NOT a lowercase `<dialog>` intrinsic: React
+          resolves lowercase JSX to a host component by name, so `<dialog>`
+          fell through to the unknown-element path and never reached
+          `useTopLayer` — it painted its surface inline instead of being
+          promoted into the top layer, which is why its buttons could not be
+          tapped and only the backdrop looked right. */}
+      <Dialog
+        modal
         open={open}
         {...stylex.props(overlayStyles.surface)}
         style={{
@@ -445,7 +464,7 @@ function ModalDialog(): React.Node {
             Close
           </AstryxButton>
         </View>
-      </dialog>
+      </Dialog>
     </View>
   );
 }
