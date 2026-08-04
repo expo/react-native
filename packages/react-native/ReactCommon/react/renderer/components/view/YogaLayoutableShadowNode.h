@@ -8,6 +8,7 @@
 #pragma once
 
 #include <memory>
+#include <react/renderer/components/view/ListStyle.h>
 #include <vector>
 
 #include <yoga/node/Node.h>
@@ -104,6 +105,37 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   static void setAnonymousTextContentFactory(AnonymousTextContentFactory factory);
   static AnonymousTextContentFactory getAnonymousTextContentFactory();
+
+  /*
+   * The layoutable children, which includes anonymous boxes — those live here
+   * and never in `children_`.
+   */
+  const ListOfShared &getYogaLayoutableChildren() const
+  {
+    return yogaLayoutableChildren_;
+  }
+
+  /*
+   * List marker generation (css-lists-3 §3) runs on the list CONTAINER: a
+   * marker's text depends on the item's position among its siblings, and a
+   * shadow node has no parent pointer, so an item cannot count itself.
+   */
+  void prepareListContext(int depth);
+  void assignListMarkerIfNeeded(YogaLayoutableShadowNode &child);
+
+  struct ListContext {
+    bool isList{false};
+    ListStyleType type{ListStyleType::Disc};
+    ListStylePosition position{ListStylePosition::Outside};
+    int nextOrdinal{1};
+  };
+  ListContext listContext_{};
+
+  /*
+   * How many lists enclose this node, so an unordered list can take the UA
+   * bullet for its depth (disc, circle, square) without walking ancestors.
+   */
+  int listDepth_{0};
 
   const std::vector<std::shared_ptr<YogaLayoutableShadowNode>> &getAnonymousTextContentChildren() const
   {

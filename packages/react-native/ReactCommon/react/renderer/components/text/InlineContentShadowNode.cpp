@@ -166,18 +166,23 @@ void InlineContentShadowNode::appendListMarkerIfNeeded(
   //
   // DOM-CSS-LIMITATION(no-ordered-list-counters): `<ol>` items take the same
   // bullet; numbering needs a counter across an element's siblings.
-  if (listMarker_.empty()) {
+  // Only an `inside` marker is measured with the content. An `outside` one is
+  // painted in the gutter precisely so the content can hang past it, so
+  // including it here would defeat the hanging indent it exists to produce.
+  if (listMarker_.text.empty() || listMarker_.outside) {
     return;
   }
   auto marker = AttributedString::Fragment{};
-  marker.string = listMarker_;
+  // The gap after the marker is a no-break space, so it survives the
+  // white-space collapsing a plain space would not.
+  marker.string = listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
   marker.textAttributes = textAttributes;
   // No `parentShadowView`: the marker is not any element's content, so it is
   // treated as bare text and never stamped with an element box.
   attributedString.appendFragment(std::move(marker));
 }
 
-void InlineContentShadowNode::setListMarker(std::string listMarker) {
+void InlineContentShadowNode::setListMarker(ListMarker listMarker) {
   ensureUnsealed();
   listMarker_ = std::move(listMarker);
 }

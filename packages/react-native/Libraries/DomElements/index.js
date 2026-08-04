@@ -156,7 +156,15 @@ registerInlineAlias('label', 'span');
 function registerBlockElement(name: string) {
   createReactNativeComponentClass(name, () =>
     createViewConfig({
-      validAttributes: {nodeName: true},
+      // `listStyleType`/`listStylePosition` are style properties and `start` an
+      // HTML attribute, but all three are declared here because markers are
+      // generated in C++ by the list container, which needs them natively.
+      validAttributes: {
+        nodeName: true,
+        listStyleType: true,
+        listStylePosition: true,
+        start: true,
+      },
       recordNodeName: true,
       uiViewClassName: 'div',
       uaStyle: uaStyles[name],

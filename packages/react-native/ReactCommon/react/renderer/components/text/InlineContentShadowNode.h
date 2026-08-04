@@ -13,6 +13,7 @@
 
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/ViewProps.h>
+#include <react/renderer/components/view/ListStyle.h>
 #include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <react/renderer/core/ConcreteShadowNode.h>
 #include <react/renderer/textlayoutmanager/TextLayoutManager.h>
@@ -31,7 +32,8 @@ extern const char InlineContentComponentName[];
  */
 class InlineContentShadowNode final
     : public ConcreteShadowNode<InlineContentComponentName, YogaLayoutableShadowNode, ViewProps>,
-      public InlineTextContentAccessor {
+      public InlineTextContentAccessor,
+      public ListMarkerSink {
  public:
   using ConcreteShadowNode::ConcreteShadowNode;
 
@@ -56,7 +58,21 @@ class InlineContentShadowNode final
    * the box MEASURES, not something painted afterwards, or the marker would
    * overlap the first line instead of displacing it.
    */
-  void setListMarker(std::string listMarker);
+  void setListMarker(ListMarker listMarker) override;
+
+  bool listMarkerEquals(const ListMarker &other) const
+  {
+    return listMarker_ == other;
+  }
+
+  /*
+   * The marker to paint in the gutter, empty unless this box has an `outside`
+   * marker. Read by the owning View when it publishes its text runs.
+   */
+  const ListMarker &getListMarker() const override
+  {
+    return listMarker_;
+  }
 
 #pragma mark - LayoutableShadowNode
 
@@ -88,7 +104,7 @@ class InlineContentShadowNode final
       const TextAttributes &textAttributes) const;
 
   std::shared_ptr<const TextLayoutManager> textLayoutManager_;
-  std::string listMarker_;
+  ListMarker listMarker_{};
 };
 
 } // namespace facebook::react

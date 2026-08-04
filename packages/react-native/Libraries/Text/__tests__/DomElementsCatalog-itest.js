@@ -493,44 +493,112 @@ describe('the wider element catalog', () => {
   });
 });
 
-describe('list markers', () => {
-  it('a <li> renders a marker before its content', () => {
-    const liRef = createRef<HostInstance>();
-    const pRef = createRef<HostInstance>();
+describe('list markers (css-lists-3 §3)', () => {
+  // An `inside` marker is measured with the content, so its text is visible in
+  // the item's width: the deterministic measurer bills 10pt per UTF-8 byte, and
+  // every marker below is ASCII plus a 2-byte no-break space gap.
+  function widthOfItems(
+    listProps: {...},
+    items: Array<string>,
+  ): Array<number> {
+    const refs = items.map(() => createRef<HostInstance>());
     const root = Fantom.createRoot();
-
     Fantom.runTask(() => {
       root.render(
-        <>
-          {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
-          <ul style={{alignSelf: 'flex-start', paddingInlineStart: 0}}>
-            {/* $FlowExpectedError[not-a-component] */}
-            <li ref={liRef} style={{alignSelf: 'flex-start'}}>
-              abc
+        // $FlowExpectedError[not-a-component] intrinsic <ol>/<ul> tag
+        <listProps.tag
+          style={{
+            alignSelf: 'flex-start',
+            paddingInlineStart: 0,
+            listStyleType: listProps.listStyleType,
+            listStylePosition: 'inside',
+          }}
+          start={listProps.start}>
+          {items.map((text, i) => (
+            // $FlowExpectedError[not-a-component] intrinsic <li> tag
+            <li key={String(i)} ref={refs[i]} style={{alignSelf: 'flex-start'}}>
+              {text}
             </li>
-          </ul>
-          {/* The same text with no marker, as the control. */}
-          {/* $FlowExpectedError[not-a-component] intrinsic <p> tag */}
-          <p ref={pRef} style={{alignSelf: 'flex-start'}}>
-            abc
-          </p>
-        </>,
+          ))}
+        </listProps.tag>,
       );
     });
+    return refs.map(ref => rectOf(ref).width);
+  }
 
-    // The marker is MEASURED with the content, not painted over it: a marker
-    // that only painted would overlap the first line instead of displacing it.
-    // The exact advance is deliberately not asserted — the headless measurer
-    // bills per UTF-8 byte, so the bullet and no-break space cost 5 units here
-    // and 2 glyphs on a device.
-    expect(rectOf(liRef).width).toBeGreaterThan(rectOf(pRef).width);
+  // 'x' is 1 byte; the gap after a marker is a 2-byte no-break space.
+  const TEXT = 10;
+  const GAP = 20;
+
+  it('an unordered list marks every item with a bullet', () => {
+    const [a, b] = widthOfItems({tag: 'ul'}, ['x', 'x']);
+    // The bullet is a 3-byte glyph, so both items are the same width and wider
+    // than the bare text.
+    expect(a).toBe(b);
+    expect(a).toBeGreaterThan(TEXT + GAP);
+  });
+
+  it('an ordered list counts its items', () => {
+    const widths = widthOfItems({tag: 'ol'}, ['x', 'x', 'x']);
+    // "1." "2." "3." are all 2 bytes, so the widths match...
+    expect(widths[0]).toBe(widths[1]);
+    expect(widths[0]).toBe(TEXT + GAP + 20);
+  });
+
+  it('the counter reaches two digits', () => {
+    const widths = widthOfItems({tag: 'ol'}, new Array(10).fill('x'));
+    // ...until "10.", which is one byte wider than "9.".
+    expect(widths[9] - widths[8]).toBe(10);
+  });
+
+  it('<ol start> seeds the counter', () => {
+    const [first] = widthOfItems({tag: 'ol', start: 9}, ['x', 'x']);
+    const [plain] = widthOfItems({tag: 'ol'}, ['x', 'x']);
+    // "9." is the same width as "1."; the second item is "10." and wider.
+    expect(first).toBe(plain);
+    const [, second] = widthOfItems({tag: 'ol', start: 9}, ['x', 'x']);
+    expect(second - first).toBe(10);
+  });
+
+  it('lower-alpha counts a, b, c and carries to aa', () => {
+    const widths = widthOfItems(
+      {tag: 'ol', listStyleType: 'lower-alpha'},
+      new Array(27).fill('x'),
+    );
+    expect(widths[0]).toBe(TEXT + GAP + 20); // "a."
+    expect(widths[25]).toBe(widths[0]); // "z."
+    expect(widths[26] - widths[25]).toBe(10); // "aa."
+  });
+
+  it('roman numerals use the subtractive pairs', () => {
+    const widths = widthOfItems(
+      {tag: 'ol', listStyleType: 'upper-roman'},
+      new Array(9).fill('x'),
+    );
+    expect(widths[0]).toBe(TEXT + GAP + 20); // "I."
+    expect(widths[2] - widths[0]).toBe(20); // "III." is two wider than "I."
+    expect(widths[3]).toBe(widths[1]); // "IV." matches "II."
+    expect(widths[8]).toBe(widths[1]); // "IX." too
+  });
+
+  it('list-style-type: none suppresses the marker', () => {
+    const [withNone] = widthOfItems({tag: 'ul', listStyleType: 'none'}, ['x']);
+    expect(withNone).toBe(TEXT);
+  });
+
+  it('an unknown list-style-type falls back rather than breaking', () => {
+    const [unknown] = widthOfItems(
+      {tag: 'ol', listStyleType: 'cjk-earthly-branch'},
+      ['x'],
+    );
+    const [decimal] = widthOfItems({tag: 'ol'}, ['x']);
+    expect(unknown).toBe(decimal);
   });
 
   it('a non-list block gets no marker', () => {
     const divRef = createRef<HostInstance>();
     const pRef = createRef<HostInstance>();
     const root = Fantom.createRoot();
-
     Fantom.runTask(() => {
       root.render(
         <>
@@ -545,7 +613,41 @@ describe('list markers', () => {
         </>,
       );
     });
-
     expect(rectOf(divRef).width).toBe(rectOf(pRef).width);
+  });
+
+  it('an outside marker leaves the content box where it is', () => {
+    // The CSS initial value. It must NOT be measured, or the content could not
+    // hang past it — that is the whole point of `outside`.
+    const outsideRef = createRef<HostInstance>();
+    const insideRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
+          <ul style={{alignSelf: 'flex-start', paddingInlineStart: 0}}>
+            {/* $FlowExpectedError[not-a-component] */}
+            <li ref={outsideRef} style={{alignSelf: 'flex-start'}}>
+              x
+            </li>
+          </ul>
+          {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
+          <ul
+            style={{
+              alignSelf: 'flex-start',
+              paddingInlineStart: 0,
+              listStylePosition: 'inside',
+            }}>
+            {/* $FlowExpectedError[not-a-component] */}
+            <li ref={insideRef} style={{alignSelf: 'flex-start'}}>
+              x
+            </li>
+          </ul>
+        </>,
+      );
+    });
+    expect(rectOf(outsideRef).width).toBe(TEXT);
+    expect(rectOf(insideRef).width).toBeGreaterThan(TEXT);
   });
 });

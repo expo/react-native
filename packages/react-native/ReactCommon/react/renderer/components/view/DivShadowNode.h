@@ -41,7 +41,12 @@ class DivProps final : public ViewProps, public NodeNameProvider {
       const DivProps &sourceProps,
       const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
-        nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})) {
+        nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
+        listStyleTypeValue(
+            convertRawProp(context, rawProps, "listStyleType", sourceProps.listStyleTypeValue, std::string{})),
+        listStylePositionValue(
+            convertRawProp(context, rawProps, "listStylePosition", sourceProps.listStylePositionValue, std::string{})),
+        start(convertRawProp(context, rawProps, "start", sourceProps.start, 1)) {
     // `<div>`'s *default* display is block, exactly as the UA stylesheet says
     // — but a default is not a forced value. An authored `display` wins, so
     // `<div style={{display:'flex'}}>` is a flex container like on the web.
@@ -62,6 +67,20 @@ class DivProps final : public ViewProps, public NodeNameProvider {
   }
 
   std::string nodeName{};
+
+  /*
+   * `list-style-type` / `list-style-position` (css-lists-3 §3), and `<ol>`'s
+   * `start` attribute. Kept as the authored strings: they are resolved where
+   * markers are generated, which is the list container, since an item cannot
+   * see its own position among its siblings.
+   *
+   * Empty means "not authored", which is distinct from an explicit `none` —
+   * the former inherits the UA default for the list's nesting depth, the
+   * latter suppresses the marker.
+   */
+  std::string listStyleTypeValue{};
+  std::string listStylePositionValue{};
+  int start{1};
 };
 
 /*
