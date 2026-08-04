@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <react/renderer/attributedstring/AttributedString.h>
+#include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/graphics/Rect.h>
 
 namespace facebook::react {
@@ -48,6 +49,16 @@ class InlineTextContentAccessor {
   // run rather than at the box origin (text-children-plan.md §3.C).
   virtual std::vector<InlineAttachmentPlacement> getInlineAttachmentPlacements(
       const LayoutContext &layoutContext) const = 0;
+
+  // Stamps the run's inline elements (`<b>`, `<span>`, nested `<Text>`) with
+  // the box each occupies, so `getBoundingClientRect()` reports a real rect
+  // for them (text-children-plan.md §3.G). Purely additive: it does not feed
+  // back into measuring or painting. Lives behind this seam so the view module
+  // keeps no dependency on the text module.
+  virtual void stampInlineElementMetrics(
+      const LayoutContext &layoutContext,
+      Point contentOrigin,
+      const LayoutMetrics &ownerLayoutMetrics) const = 0;
 };
 
 } // namespace facebook::react

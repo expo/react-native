@@ -41,6 +41,91 @@ Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
   return fontSize + 6;
 }
 
+// Per-character advance, layout-observable so inheritance of weight/style/
+// letterSpacing can be asserted headlessly. Contract: base 10pt, +2pt when
+// bold, +1pt when italic, plus `letterSpacing` verbatim.
+Float perCharacterAdvance(const AttributedString::Fragment& fragment) {
+  const auto& ta = fragment.textAttributes;
+  Float perCharacter = kDeterministicCharacterWidth;
+  if (ta.fontWeight.has_value() && *ta.fontWeight == FontWeight::Bold) {
+    perCharacter += 2;
+  }
+  if (ta.fontStyle.has_value() && *ta.fontStyle == FontStyle::Italic) {
+    perCharacter += 1;
+  }
+  if (!std::isnan(ta.letterSpacing)) {
+    perCharacter += ta.letterSpacing;
+  }
+  return perCharacter;
+}
+
+// Lays the fragments out on the same deterministic grid `measureDeterministically`
+// uses (naive wrap at `charactersPerLine`) and returns one rect per fragment,
+// relative to the text frame. A fragment split across lines reports the union
+// of its pieces — the same thing `getBoundingClientRect()` reports for an
+// inline element that wraps.
+std::vector<Rect> measureFragmentRectsDeterministically(
+    const AttributedStringBox& attributedStringBox,
+    const LayoutConstraints& layoutConstraints,
+    Float lineHeight) {
+  const auto& fragments = attributedStringBox.getValue().getFragments();
+  std::vector<Rect> rects;
+  rects.reserve(fragments.size());
+
+  const auto maximumWidth = layoutConstraints.maximumSize.width;
+  // Wrapping is character-based on the fixed grid, matching the size pass.
+  const auto charactersPerLine = std::isfinite(maximumWidth)
+      ? std::max<Float>(
+            1, std::floor(maximumWidth / kDeterministicCharacterWidth))
+      : std::numeric_limits<Float>::infinity();
+
+  Float column = 0; // characters consumed on the current line
+  Float line = 0;
+  Float penX = 0; // pen position within the current line, in points
+
+  for (const auto& fragment : fragments) {
+    const auto characters = fragment.isAttachment()
+        ? static_cast<size_t>(1)
+        : fragment.string.size();
+    const auto advance = fragment.isAttachment()
+        ? fragment.parentShadowView.layoutMetrics.frame.size.width
+        : perCharacterAdvance(fragment);
+
+    if (characters == 0) {
+      rects.push_back(Rect{
+          .origin = {penX, line * lineHeight}, .size = {0, lineHeight}});
+      continue;
+    }
+
+    const Float startLine = line;
+    Float minX = penX;
+    Float maxX = penX;
+
+    for (size_t i = 0; i < characters; i++) {
+      if (column >= charactersPerLine) {
+        // Wrapping is character-based on the same grid the size pass uses.
+        column = 0;
+        line += 1;
+        penX = 0;
+        minX = 0; // the fragment now starts at the line's leading edge
+      }
+      // Advances are per-character (bold/italic/letterSpacing widen them), so
+      // the pen must accumulate them rather than sit on the wrap grid — that
+      // is what keeps an element's reported width equal to the width it
+      // contributes to its container.
+      penX += advance;
+      column += 1;
+      maxX = std::max(maxX, penX);
+    }
+
+    rects.push_back(Rect{
+        .origin = {minX, startLine * lineHeight},
+        .size = {maxX - minX, (line - startLine + 1) * lineHeight}});
+  }
+
+  return rects;
+}
+
 TextMeasurement measureDeterministically(
     const AttributedStringBox& attributedStringBox,
     const LayoutConstraints& layoutConstraints,
@@ -62,21 +147,8 @@ TextMeasurement measureDeterministically(
       characterCount += 1;
     } else {
       characterCount += fragment.string.size();
-      // Per-character advance is layout-observable so inheritance of weight/
-      // style/letterSpacing can be asserted headlessly. Contract: base 10pt,
-      // +2pt when bold, +1pt when italic, plus `letterSpacing` verbatim.
-      const auto& ta = fragment.textAttributes;
-      Float perCharacter = kDeterministicCharacterWidth;
-      if (ta.fontWeight.has_value() && *ta.fontWeight == FontWeight::Bold) {
-        perCharacter += 2;
-      }
-      if (ta.fontStyle.has_value() && *ta.fontStyle == FontStyle::Italic) {
-        perCharacter += 1;
-      }
-      if (!std::isnan(ta.letterSpacing)) {
-        perCharacter += ta.letterSpacing;
-      }
-      intrinsicWidth += static_cast<Float>(fragment.string.size()) * perCharacter;
+      intrinsicWidth +=
+          static_cast<Float>(fragment.string.size()) * perCharacterAdvance(fragment);
     }
   }
 
@@ -86,7 +158,9 @@ TextMeasurement measureDeterministically(
   if (characterCount == 0) {
     return TextMeasurement{
         .size = layoutConstraints.clamp({0, 0}),
-        .attachments = std::move(attachments)};
+        .attachments = std::move(attachments),
+        .fragmentRects = measureFragmentRectsDeterministically(
+            attributedStringBox, layoutConstraints, lineHeight)};
   }
 
   auto maximumWidth = layoutConstraints.maximumSize.width;
@@ -103,7 +177,9 @@ TextMeasurement measureDeterministically(
 
   return TextMeasurement{
       .size = layoutConstraints.clamp({width, lineHeight * lineCount}),
-      .attachments = std::move(attachments)};
+      .attachments = std::move(attachments),
+      .fragmentRects = measureFragmentRectsDeterministically(
+          attributedStringBox, layoutConstraints, lineHeight)};
 }
 
 } // namespace

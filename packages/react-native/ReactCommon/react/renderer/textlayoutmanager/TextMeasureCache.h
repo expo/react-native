@@ -56,6 +56,23 @@ class TextMeasurement final {
 
   Size size;
   Attachments attachments;
+
+  /*
+   * The laid-out rect of each fragment of the measured `AttributedString`,
+   * parallel to its fragment list and relative to the text frame's origin.
+   *
+   * This is what gives an *inline element* (`<b>`, `<span>`, a nested
+   * `<Text>`) a box to report from `getBoundingClientRect()`: fragments carry
+   * their owning element in `parentShadowView`, so the rects of the fragments
+   * belonging to one element union into that element's border box, which the
+   * containing Paragraph/View then stamps onto it (text-children-plan.md
+   * §3.G "Geometry APIs").
+   *
+   * Empty when the platform text engine has not implemented it — consumers
+   * must treat it as "unknown" and leave the element without metrics, which
+   * is the pre-existing behavior.
+   */
+  std::vector<Rect> fragmentRects;
 };
 
 // The Key type that is used for Text Measure Cache.

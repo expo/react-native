@@ -56,6 +56,17 @@ TextMeasurement TextLayoutManager::measure(
                                                             layoutContext:layoutContext
                                                         layoutConstraints:layoutConstraints];
 
+            // Per-fragment rects, so inline elements (`<b>`, `<span>`, a
+            // nested `<Text>`) can report a real box from
+            // `getBoundingClientRect()`. Laid out at the measured size, which
+            // is the size the text will actually occupy.
+            measurement.fragmentRects = [textLayoutManager
+                getFragmentRectsWithAttributedString:attributedString
+                                 paragraphAttributes:paragraphAttributes
+                                                size:CGSize{
+                                                         measurement.size.width,
+                                                         measurement.size.height}];
+
             // TODO(D63303709): We compensate for the placeholder character
             // being used to represent empty string. iOS TextLayoutManager
             // should instead measure using `baseTextAttributes` of the

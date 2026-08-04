@@ -639,9 +639,72 @@ end-to-end in RNTester with web-identical geometry.
   - 22 unit tests; sim-verified: the descendant escapes the inherited 20pt
     gutter to full-bleed, and the shadowed subtree reads `0px` rather than the
     inherited `20px` or its own `99px` fallback.
-- **Next (M4+):** `<input>` via TextInput (ExpoUI later, per direction), top
-  layer + anchor positioning, SVG/icons, and — when the JS layer stabilizes —
-  moving inheritance into the native cascade.
+- **M4 done — `<input>`, and overlays.** `<input>` maps onto TextInput
+  (js/astryx/elements/Input.js) via the JSX runtime's element registry;
+  @expo/ui remains the eventual native target and that module is the only
+  place that changes. Overlays land as the two things every Astryx overlay
+  needs: `overlay/anchorPosition.js` implements CSS anchor positioning as a
+  pure, unit-tested module (position-area, span-* edge alignment,
+  position-try-fallbacks incl. flip-block/flip-inline, least-overflow choice
+  and clamping), and `overlay/TopLayer.js` models the top layer as a
+  root-mounted host plus registry — RN has neither a top layer nor
+  createPortal for host components — preserving escape-from-ancestors,
+  insertion-order stacking, light dismiss for `auto`, and a modal backdrop.
+  `<dialog>` joins the element registry. NOT modelled, deliberately: focus
+  trapping and `@starting-style` entry animations.
+- **Next:** Android `fragmentRects` (iOS done — see T14), inline box
+  decorations, SVG/icons, ResizeObserver, and — when the JS layer stabilizes —
+  moving custom-property inheritance into the native cascade.
+
+---
+
+## T14. Inline-element layout metrics (`<b>`/`<span>` rects) — ✅ DONE
+
+- **Goal.** `getBoundingClientRect()` on an inline text element returns its
+  real rect, as on the web. Today it returns an empty rect, which also forces
+  test/demo code to wrap labels in a `<div>` just to measure them.
+- **The crux (verified by experiment).**
+  `LayoutableShadowNode::computeRelativeLayoutMetrics` walks the ancestor
+  chain and **bails unless every node in it is a `LayoutableShadowNode`**.
+  Inline text elements are not, so the walk returns `EmptyLayoutMetrics`
+  before any rect could be reported.
+- **Design.** Three parts, all required together:
+  1. `TextShadowNode` (and therefore every inline intrinsic) takes
+     `LayoutableShadowNode` as its `ConcreteShadowNode` base *purely to carry
+     metrics* — it is still never a Yoga node, so box generation is
+     unchanged. `layoutTree`/`layout`/`dirtyLayout`/`getIsLayoutClean` are
+     inert overrides (they are pure virtual on the base).
+     **Tried, compiles, and passes everything except the conflict below.**
+  2. A per-fragment-rect API on the text managers — the cxx deterministic
+     measurer can compute them exactly (same advances/wrapping it already
+     implements); iOS has `RCTTextLayoutManager`'s
+     `getRectWithAttributedString:…usingBlock:`; Android would come from the
+     `StaticLayout`. Fragments already carry their owning element in
+     `fragment.parentShadowView`, so rects group by element and union.
+  3. The owning View stamps those rects onto the inline elements after text
+     layout, exactly as `layoutInlineAttachments` already does for `<img>`
+     (clone-tree + `setLayoutMetrics`).
+- **Status: landed** (`StringChildrenInlineMetrics-itest`, 5/5; full sweep 903
+  passing). All three parts implemented; the cxx measurer computes the rects,
+  **iOS now supplies them too** (`RCTTextLayoutManager
+  getFragmentRectsWithAttributedString:…`, using `boundingRectForGlyphRange:`
+  — which already unions a range that wraps): device-verified, 14/14 CDP
+  checks, an inline `<b>` reporting x=89.4 w=41.4 inside a 126pt run.
+  **Android is the remaining piece** (rects from the `StaticLayout` it already
+  builds to paint), along with inline box decorations — a padded `<span>`
+  still reports its text box rather than its border box.
+- **The conflict, resolved.**
+  `ReactNativeElement-itest` asserts that a nested `<Text>` returns an
+  **all-zero** rect, commented "since it doesn't have its own independent
+  layout". Landing (1) alone makes it return a *position with no size* —
+  strictly worse — and landing (1)+(2)+(3) makes it return a real rect, which
+  is web-correct but **changes documented upstream behavior**. Decided (with
+  the project owner) to make the change: the test's comment — "doesn't have
+  its own independent layout" — remains true, since the paragraph is
+  unchanged; but an all-zero rect is not what the web reports, and the DOM API
+  should be faithful. The expectation now asserts the real box.
+- **Effort / risk.** M–L, cross-platform (three text managers). Headlessly
+  verifiable for the cxx path.
 
 ---
 

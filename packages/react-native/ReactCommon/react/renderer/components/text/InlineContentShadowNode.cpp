@@ -7,6 +7,8 @@
 
 #include "InlineContentShadowNode.h"
 
+#include <react/renderer/components/text/InlineElementMetrics.h>
+
 #include <algorithm>
 #include <limits>
 #include <string>
@@ -218,6 +220,47 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
          measurement.attachments[i].frame});
   }
   return placements;
+}
+
+void InlineContentShadowNode::stampInlineElementMetrics(
+    const LayoutContext& layoutContext,
+    Point contentOrigin,
+    const LayoutMetrics& ownerLayoutMetrics) const {
+  if (textLayoutManager_ == nullptr) {
+    return;
+  }
+
+  auto textAttributes = getInheritedTextAttributes();
+  textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
+
+  auto attributedString = AttributedString{};
+  auto attachments = BaseTextShadowNode::Attachments{};
+  BaseTextShadowNode::buildAttributedString(
+      textAttributes, *this, attributedString, attachments);
+  if (attributedString.isEmpty()) {
+    return;
+  }
+  attributedString.setBaseTextAttributes(textAttributes);
+
+  // Lay the run out at the size it was actually given, so the rects reflect
+  // the wrapping the user sees.
+  const auto boxSize = getLayoutMetrics().frame.size;
+  TextLayoutContext textLayoutContext{
+      .pointScaleFactor = layoutContext.pointScaleFactor,
+      .surfaceId = getSurfaceId(),
+  };
+  const auto measurement = textLayoutManager_->measure(
+      AttributedStringBox{attributedString},
+      ParagraphAttributes{},
+      textLayoutContext,
+      LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
+
+  facebook::react::stampInlineElementMetrics(
+      *this,
+      attributedString,
+      measurement.fragmentRects,
+      contentOrigin,
+      ownerLayoutMetrics);
 }
 
 Size InlineContentShadowNode::measureContent(

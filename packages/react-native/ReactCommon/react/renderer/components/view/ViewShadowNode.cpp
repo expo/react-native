@@ -138,6 +138,16 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     const auto boxFrame = box->getLayoutMetrics().frame;
     const auto* accessor =
         dynamic_cast<const InlineTextContentAccessor*>(box.get());
+
+    // Give the run's inline elements (<b>, <span>, …) a real box to report
+    // from getBoundingClientRect(). Purely additive — no effect on layout or
+    // paint; routed through the accessor seam so this module keeps no text
+    // dependency.
+    if (accessor != nullptr) {
+      accessor->stampInlineElementMetrics(
+          layoutContext, boxFrame.origin, this->getLayoutMetrics());
+    }
+
     const auto placements = accessor != nullptr
         ? accessor->getInlineAttachmentPlacements(layoutContext)
         : std::vector<InlineAttachmentPlacement>{};

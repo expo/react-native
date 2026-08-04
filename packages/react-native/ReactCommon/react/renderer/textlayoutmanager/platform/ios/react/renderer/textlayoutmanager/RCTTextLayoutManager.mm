@@ -68,6 +68,63 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
                        layoutConstraints:layoutConstraints];
 }
 
+- (std::vector<facebook::react::Rect>)
+    getFragmentRectsWithAttributedString:(AttributedString)attributedString
+                     paragraphAttributes:(ParagraphAttributes)paragraphAttributes
+                                    size:(CGSize)size
+{
+  std::vector<facebook::react::Rect> rects;
+  const auto &fragments = attributedString.getFragments();
+  if (fragments.empty()) {
+    return rects;
+  }
+
+  NSAttributedString *nsAttributedString = [self _nsAttributedStringFromAttributedString:attributedString];
+  NSTextStorage *textStorage = [self _textStorageAndLayoutManagerWithAttributesString:nsAttributedString
+                                                                 paragraphAttributes:paragraphAttributes
+                                                                                size:size];
+  NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
+  NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
+  [layoutManager ensureLayoutForTextContainer:textContainer];
+
+  rects.reserve(fragments.size());
+
+  // Fragments are appended to the attributed string in order, so their
+  // character ranges tile it. Lengths are counted in UTF-16 units (what
+  // NSAttributedString indexes by), and an attachment occupies exactly the
+  // one attachment character.
+  NSUInteger location = 0;
+  for (const auto &fragment : fragments) {
+    NSUInteger length;
+    if (fragment.isAttachment()) {
+      length = 1;
+    } else {
+      NSString *fragmentText = [NSString stringWithUTF8String:fragment.string.c_str()];
+      length = fragmentText != nil ? fragmentText.length : 0;
+    }
+
+    if (length == 0 || location + length > textStorage.length) {
+      rects.push_back(facebook::react::Rect{});
+      location += length;
+      continue;
+    }
+
+    NSRange characterRange = NSMakeRange(location, length);
+    NSRange glyphRange = [layoutManager glyphRangeForCharacterRange:characterRange actualCharacterRange:nullptr];
+    // `boundingRectForGlyphRange:` already unions the pieces of a range that
+    // wraps across lines, which is exactly the box the web reports.
+    CGRect boundingRect = [layoutManager boundingRectForGlyphRange:glyphRange inTextContainer:textContainer];
+
+    rects.push_back(facebook::react::Rect{
+        .origin = {.x = (Float)boundingRect.origin.x, .y = (Float)boundingRect.origin.y},
+        .size = {.width = (Float)boundingRect.size.width, .height = (Float)boundingRect.size.height}});
+
+    location += length;
+  }
+
+  return rects;
+}
+
 - (CGRect)drawingFrameForAttributedString:(AttributedString)attributedString
                       paragraphAttributes:(ParagraphAttributes)paragraphAttributes
                                     frame:(CGRect)frame

@@ -27,6 +27,22 @@ using RCTTextLayoutFragmentEnumerationBlock =
  */
 @interface RCTTextLayoutManager : NSObject
 
+/*
+ * Returns the laid-out rect of each fragment of `attributedString`, parallel
+ * to its fragment list and relative to the text frame's origin, for the given
+ * container size.
+ *
+ * This is what lets an inline element (`<b>`, `<span>`, a nested `<Text>`)
+ * report a real box from `getBoundingClientRect()`: the containing
+ * Paragraph/View unions the rects of the fragments belonging to an element
+ * and stamps the result onto it. A fragment that wraps reports the union of
+ * its line pieces, matching the web.
+ */
+- (std::vector<facebook::react::Rect>)
+    getFragmentRectsWithAttributedString:(facebook::react::AttributedString)attributedString
+                     paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
+                                    size:(CGSize)size;
+
 - (facebook::react::TextMeasurement)measureAttributedString:(facebook::react::AttributedString)attributedString
                                         paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
                                               layoutContext:(facebook::react::TextLayoutContext)layoutContext

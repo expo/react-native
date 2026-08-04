@@ -13,6 +13,9 @@
 #include <react/renderer/components/text/TextProps.h>
 #include <react/renderer/components/view/ViewEventEmitter.h>
 #include <react/renderer/core/ConcreteShadowNode.h>
+#include <react/renderer/core/LayoutConstraints.h>
+#include <react/renderer/core/LayoutContext.h>
+#include <react/renderer/core/LayoutableShadowNode.h>
 
 namespace facebook::react {
 
@@ -20,8 +23,23 @@ extern const char TextComponentName[];
 
 using TextEventEmitter = TouchEventEmitter;
 
-class TextShadowNode : public ConcreteShadowNode<TextComponentName, ShadowNode, TextProps, TextEventEmitter>,
-                       public BaseTextShadowNode {
+/**
+ * Inline text elements — authored `<Text>` and every intrinsic derived from it
+ * (`<b>`/`<i>`/`<span>`/`<u>`, the unknown-element fallback).
+ *
+ * The base is `LayoutableShadowNode` purely so these elements can CARRY layout
+ * metrics. They are still never laid out by Yoga — nothing casts them to
+ * `YogaLayoutableShadowNode`, so box generation and painting are byte-for-byte
+ * unchanged, and authored `<Text>` keeps its exact RN layout behavior. Their
+ * metrics are stamped from the text engine's per-fragment rects by the
+ * containing Paragraph/View (`stampInlineElementMetrics`), which is what lets
+ * `getBoundingClientRect()` report a real box for an inline element: the DOM
+ * walk in `LayoutableShadowNode::computeRelativeLayoutMetrics` bails unless
+ * every node between the root and the target is layoutable.
+ */
+class TextShadowNode
+    : public ConcreteShadowNode<TextComponentName, LayoutableShadowNode, TextProps, TextEventEmitter>,
+      public BaseTextShadowNode {
  public:
   static ShadowNodeTraits BaseTraits()
   {
@@ -37,8 +55,22 @@ class TextShadowNode : public ConcreteShadowNode<TextComponentName, ShadowNode, 
 
   using ConcreteShadowNode::ConcreteShadowNode;
 
+  // Inert: an inline text element never runs a layout pass of its own. See the
+  // class comment — the base exists only to hold stamped metrics.
+  void layoutTree(LayoutContext /*layoutContext*/, LayoutConstraints /*layoutConstraints*/) override {}
+
+  void layout(LayoutContext /*layoutContext*/) override {}
+
+  void dirtyLayout() override {}
+
+  bool getIsLayoutClean() const override
+  {
+    return true;
+  }
+
 #ifdef ANDROID
-  using BaseShadowNode = ConcreteShadowNode<TextComponentName, ShadowNode, TextProps, TextEventEmitter>;
+  using BaseShadowNode =
+      ConcreteShadowNode<TextComponentName, LayoutableShadowNode, TextProps, TextEventEmitter>;
 
   TextShadowNode(const ShadowNodeFragment &fragment, const ShadowNodeFamily::Shared &family, ShadowNodeTraits traits)
       : BaseShadowNode(fragment, family, traits), BaseTextShadowNode()

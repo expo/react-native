@@ -63,6 +63,11 @@ class InlineContentShadowNode final
   std::vector<InlineAttachmentPlacement> getInlineAttachmentPlacements(
       const LayoutContext &layoutContext) const override;
 
+  void stampInlineElementMetrics(
+      const LayoutContext &layoutContext,
+      Point contentOrigin,
+      const LayoutMetrics &ownerLayoutMetrics) const override;
+
  private:
   std::shared_ptr<const TextLayoutManager> textLayoutManager_;
 };

@@ -7,6 +7,8 @@
 
 #include "ParagraphShadowNode.h"
 
+#include <react/renderer/components/text/InlineElementMetrics.h>
+
 #include <cmath>
 
 #include <react/debug/react_native_assert.h>
@@ -318,6 +320,30 @@ void ParagraphShadowNode::layout(LayoutContext layoutContext) {
       .layoutDirection = layoutMetrics.layoutDirection};
   auto content =
       getContentWithMeasuredAttachments(layoutContext, layoutConstraints);
+
+  // Give nested inline elements (a nested `<Text>`, `<b>`, `<span>`) a real
+  // box to report from `getBoundingClientRect()`. Purely additive: nothing
+  // here feeds back into measuring or painting, so authored `<Text>` lays out
+  // exactly as before (text-children-plan.md §3.G).
+  {
+    TextLayoutContext inlineMetricsContext{
+        .pointScaleFactor = layoutContext.pointScaleFactor,
+        .surfaceId = getSurfaceId(),
+    };
+    auto measurement = textLayoutManager_->measure(
+        AttributedStringBox{content.attributedString},
+        content.paragraphAttributes,
+        inlineMetricsContext,
+        layoutConstraints);
+    stampInlineElementMetrics(
+        *this,
+        content.attributedString,
+        measurement.fragmentRects,
+        layoutMetrics.contentInsets.left != 0 || layoutMetrics.contentInsets.top != 0
+            ? Point{layoutMetrics.contentInsets.left, layoutMetrics.contentInsets.top}
+            : Point{0, 0},
+        layoutMetrics);
+  }
 
   auto measuredLayout = findUsableLayout();
 
