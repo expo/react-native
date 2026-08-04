@@ -132,8 +132,11 @@ function ButtonCase(): React.Node {
       <View
         // $FlowFixMe[incompatible-type] cascade to bare text
         style={{color: DEMO_THEME.muted, fontSize: 13}}>
-        clicks: {count} — press-and-hold to see the :active token; drag off to
-        cancel, exactly like the web.
+        clicks:{' '}
+        {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+        <span style={{fontVariant: ['tabular-nums']}}>{count}</span> —
+        press-and-hold to see the :active token; drag off to cancel, exactly
+        like the web.
       </View>
     </View>
   );
@@ -642,13 +645,18 @@ export default {
       title: 'Lists indent by the UA marker gutter',
       description:
         'A <ul> gets the UA paddingInlineStart that leaves room for markers, ' +
-        'and its block margins, without a line of authored layout.',
+        'and its block margins, without a line of authored layout. The ' +
+        'markers themselves are NOT drawn — we have no ::marker and no ' +
+        'generated content, see DOM-CSS-LIMITATION(no-list-markers) — so a ' +
+        'list indents without bullets. The wrapping item shows the part that ' +
+        'does work: continuation lines hang at the gutter.',
       render: (): React.Node => (
         <DemoContent
           code={
             '<ul>\n' +
             '  <li>tokens resolve through var() chains</li>\n' +
             '  <li>elements keep their own tagName</li>\n' +
+            '  <li>a deliberately long item, so it wraps: …</li>\n' +
             '</ul>'
           }>
           {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
@@ -657,6 +665,12 @@ export default {
             <li>tokens resolve through var() chains</li>
             {/* $FlowExpectedError[not-a-component] */}
             <li>elements keep their own tagName</li>
+            {/* $FlowExpectedError[not-a-component] */}
+            <li>
+              a deliberately long item, so it wraps: every continuation line
+              starts at the gutter rather than under the marker position, which
+              is the hanging indent a list is supposed to produce
+            </li>
           </ul>
         </DemoContent>
       ),
