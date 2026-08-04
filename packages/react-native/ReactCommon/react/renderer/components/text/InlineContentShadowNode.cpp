@@ -160,17 +160,6 @@ void InlineContentShadowNode::appendListMarkerIfNeeded(
   // fragment of this box's inline flow and inherits the element's font and
   // colour the way a real marker does.
   //
-  // DOM-CSS-LIMITATION(list-marker-is-inside): this is
-  // `list-style-position: inside`, not the web's default `outside` — the
-  // marker sits in the content box, so a wrapped line aligns under it rather
-  // than hanging past it. `outside` needs the marker painted into the gutter
-  // that `<ul>`'s `padding-inline-start` reserves.
-  //
-  // DOM-CSS-LIMITATION(no-ordered-list-counters): `<ol>` items take the same
-  // bullet; numbering needs a counter across an element's siblings.
-  // Only an `inside` marker is measured with the content. An `outside` one is
-  // painted in the gutter precisely so the content can hang past it, so
-  // including it here would defeat the hanging indent it exists to produce.
   if (listMarker_.text.empty() || listMarker_.outside) {
     return;
   }

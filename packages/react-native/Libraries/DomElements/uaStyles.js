@@ -62,9 +62,9 @@ const uaStyles: {[string]: UAStyle} = {
   h5: {fontSize: 0.83 * EM, fontWeight: 'bold', marginBlock: 1.67 * EM},
   h6: {fontSize: 0.67 * EM, fontWeight: 'bold', marginBlock: 2.33 * EM},
 
-  // Lists. The 40pt inline-start padding is the marker gutter.
-  // DOM-CSS-LIMITATION(no-list-markers): markers themselves are not drawn (no
-  // `::marker` and no generated content), so a list indents without bullets.
+  // Lists. The 40pt inline-start padding is the gutter an `outside` marker
+  // hangs in, which is where the list container generates them (css-lists-3
+  // §3); `<li>` needs no rule of its own here.
   ul: {marginBlock: EM, paddingInlineStart: 40},
   ol: {marginBlock: EM, paddingInlineStart: 40},
   dl: {marginBlock: EM},

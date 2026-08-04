@@ -720,6 +720,18 @@ void YogaLayoutableShadowNode::updateYogaProps() {
     }
   }
 
+  // An inline-level box is shrink-to-fit: its width is its content's, not its
+  // container's (CSS2 §10.3.9). Without this an `inline-block` or
+  // `inline-flex` box stretches on the cross axis like any other child and
+  // fills the line — it measured the full 300pt container against the 20pt of
+  // text it holds, so a chip stretched across the line instead of hugging its
+  // label. An authored `alignSelf` still wins.
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      props.displayInlineAtomic &&
+      styleResult.alignSelf() == yoga::Align::Auto) {
+    styleResult.setAlignSelf(yoga::Align::FlexStart);
+  }
+
   // Resetting `dirty` flag only if `yogaStyle` portion of `Props` was
   // changed.
   if (!YGNodeIsDirty(&yogaNode_) && (styleResult != yogaNode_.style())) {

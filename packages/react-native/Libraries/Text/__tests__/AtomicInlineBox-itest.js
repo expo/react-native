@@ -77,13 +77,9 @@ describe('inline-flex chip (css-display-3 §2)', () => {
     expect(spanDot.x - span.x).toBe(viewDot.x - view.x);
     expect(spanDot.y - span.y).toBe(viewDot.y - view.y);
 
-    // DOM-CSS-LIMITATION(inline-flex-does-not-shrink-to-fit): an inline-level
-    // box should size to its content, as the control does. Ours fills the
-    // containing block instead — measured 300 against the control's 62 — so a
-    // chip stretches across the line rather than hugging its label. Asserted
-    // as-is rather than skipped, so the day it is fixed this test fails and
-    // says why.
-    expect(span.width).toBeGreaterThan(view.width);
+    // An inline-level box is shrink-to-fit, so it matches the control exactly
+    // rather than stretching across the line.
+    expect(span.width).toBe(view.width);
   });
 
   it('bare text vs <Text> as a flex sibling', () => {
@@ -125,6 +121,32 @@ describe('inline-flex chip (css-display-3 §2)', () => {
         `text box w=${tb.width} h=${tb.height} dot@(${td.x - tb.x},${td.y - tb.y})`,
     );
     expect(bb.width).toBe(tb.width);
+  });
+
+  it('atomic inline boxes shrink to fit', () => {
+    const flexRef = createRef<HostInstance>();
+    const blockRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{display: 'block', width: 300}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <span ref={flexRef} style={{display: 'inline-flex'}}>
+            {'ab'}
+          </span>
+          {/* $FlowExpectedError[not-a-component] */}
+          <span ref={blockRef} style={{display: 'inline-block'}}>
+            {'ab'}
+          </span>
+        </View>,
+      );
+    });
+    // eslint-disable-next-line no-console
+    console.log(
+      `inline-flex w=${rectOf(flexRef).width} inline-block w=${rectOf(blockRef).width} (content is 20)`,
+    );
+    expect(rectOf(blockRef).width).toBe(20);
+    expect(rectOf(flexRef).width).toBe(20);
   });
 
   it('contains its children', () => {
