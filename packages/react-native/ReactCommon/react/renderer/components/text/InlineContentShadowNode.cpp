@@ -7,6 +7,8 @@
 
 #include "InlineContentShadowNode.h"
 
+#include <react/renderer/mounting/ShadowView.h>
+
 #include <react/renderer/components/text/InlineElementMetrics.h>
 
 #include <algorithm>
@@ -210,6 +212,9 @@ InlineContentShadowNode::getOutsideMarker() const {
   fragment.string =
       listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
   fragment.textAttributes = getInheritedTextAttributes();
+  // A fragment reaching the paint path needs a real `parentShadowView`: the
+  // text-effect machinery walks it, and a default-constructed one segfaults.
+  fragment.parentShadowView = ShadowView{*this};
   markerString.appendFragment(std::move(fragment));
 
   const auto measurement = textLayoutManager_->measure(
