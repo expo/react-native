@@ -48,6 +48,19 @@ const filterEmptySections = (examplesList: ExamplesList): any => {
   return filteredSections;
 };
 
+// Pinned examples lead the list (see RNTesterModuleInfo.pinned); the rest stay
+// alphabetical. Array.prototype.sort is stable, so pinned entries keep the
+// order they are declared in.
+const byPinnedThenTitle = (
+  a: RNTesterModuleInfo,
+  b: RNTesterModuleInfo,
+): number => {
+  if (a.pinned !== b.pinned) {
+    return a.pinned === true ? -1 : 1;
+  }
+  return a.module.title.localeCompare(b.module.title);
+};
+
 export const getExamplesListWithRecentlyUsed = ({
   recentlyUsed,
   testList,
@@ -98,9 +111,7 @@ export const getExamplesListWithRecentlyUsed = ({
       },
       {
         key: 'COMPONENTS',
-        data: components.sort((a, b) =>
-          a.module.title.localeCompare(b.module.title),
-        ),
+        data: components.sort(byPinnedThenTitle),
         title: 'Components',
       },
     ],
@@ -112,7 +123,7 @@ export const getExamplesListWithRecentlyUsed = ({
       },
       {
         key: 'APIS',
-        data: apis.sort((a, b) => a.module.title.localeCompare(b.module.title)),
+        data: apis.sort(byPinnedThenTitle),
         title: 'APIs',
       },
     ],

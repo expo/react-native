@@ -28,10 +28,14 @@ YogaStylableProps::YogaStylableProps(
   convertRawPropAliases(context, sourceProps, rawProps);
 
   displayBlock = sourceProps.displayBlock;
+  displayInline = sourceProps.displayInline;
   if (const auto* rawDisplay = rawProps.at("display", nullptr, nullptr)) {
-    displayBlock = rawDisplay->hasValue() &&
-        rawDisplay->hasType<std::string>() &&
-        (std::string)*rawDisplay == "block";
+    const auto displayValue = rawDisplay->hasValue() &&
+            rawDisplay->hasType<std::string>()
+        ? (std::string)*rawDisplay
+        : std::string{};
+    displayBlock = displayValue == "block";
+    displayInline = displayValue == "inline";
   }
 };
 
@@ -131,10 +135,20 @@ void YogaStylableProps::setProp(
   Props::setProp(context, hash, propName, value);
 
   if (hash == CONSTEXPR_RAW_PROPS_KEY_HASH("display")) {
-    displayBlock = value.hasValue() && value.hasType<std::string>() &&
-        (std::string)value == "block";
+    const auto displayValue =
+        value.hasValue() && value.hasType<std::string>()
+        ? (std::string)value
+        : std::string{};
+    displayBlock = displayValue == "block";
+    displayInline = displayValue == "inline";
   }
 
+  // NOTE: this switch is the *per-prop update* path. It is NOT where `style`
+  // is parsed when props are built from scratch — that is the
+  // `convertRawProp` list in propsConversions.h, which every Yoga style prop
+  // must ALSO appear in (plus the JS allowlist in
+  // ReactNativeStyleAttributes.js). See the comment there; a prop wired only
+  // here never reaches Yoga.
   switch (hash) {
     REBUILD_FIELD_SWITCH_CASE_YSP(direction, setDirection);
     REBUILD_FIELD_SWITCH_CASE_YSP(flexDirection, setFlexDirection);
@@ -145,6 +159,8 @@ void YogaStylableProps::setProp(
     REBUILD_FIELD_SWITCH_CASE_YSP(flexWrap, setFlexWrap);
     REBUILD_FIELD_SWITCH_CASE_YSP(overflow, setOverflow);
     REBUILD_FIELD_SWITCH_CASE_YSP(display, setDisplay);
+    REBUILD_FIELD_SWITCH_CASE2(floatSide, setFloatSide, "float");
+    REBUILD_FIELD_SWITCH_CASE_YSP(clear, setClear);
     REBUILD_FIELD_SWITCH_CASE_YSP(flex, setFlex);
     REBUILD_FIELD_SWITCH_CASE_YSP(flexGrow, setFlexGrow);
     REBUILD_FIELD_SWITCH_CASE_YSP(flexShrink, setFlexShrink);

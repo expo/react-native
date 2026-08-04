@@ -56,13 +56,14 @@ class AbstractViewShadowNode
   void updateTextRunStateIfNeeded();
 
   /*
-   * Lays out and positions inline replaced `<img>` children within their run
-   * (text-children-plan.md §3.C), mirroring `ParagraphShadowNode`'s inline
-   * attachment layout: each `<img>` is not a Yoga child, so its frame is set
+   * Lays out and positions inline attachment children within their run —
+   * the replaced `<img>` and atomic `display:'inline'` elements
+   * (text-children-plan.md §3.C/§7) — mirroring `ParagraphShadowNode`'s inline
+   * attachment layout: an attachment is not a Yoga child, so its frame is set
    * here (from the run box it belongs to) by cloning it and stamping its
    * `layoutMetrics`, which the differ then mounts.
    */
-  void layoutInlineImageAttachments(LayoutContext layoutContext);
+  void layoutInlineAttachments(LayoutContext layoutContext);
 };
 
 /*

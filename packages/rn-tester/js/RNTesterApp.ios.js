@@ -13,7 +13,7 @@ import type {Node} from 'react';
 
 import RNTesterModuleContainer from './components/RNTesterModuleContainer';
 import SnapshotViewIOS from './examples/Snapshot/SnapshotViewIOS.ios';
-import RNTesterApp from './IntrinsicsDemo'; // DEMO: text children + intrinsics (was ./RNTesterAppShared)
+import RNTesterApp from './RNTesterAppShared';
 import RNTesterList from './utils/RNTesterList';
 import * as React from 'react';
 import {AppRegistry} from 'react-native';

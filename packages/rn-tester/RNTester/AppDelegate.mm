@@ -38,7 +38,30 @@
 #import <React/RCTDevMenu.h>
 #endif
 
+#import <react/featureflags/ReactNativeFeatureFlags.h>
+#import <react/featureflags/ReactNativeFeatureFlagsOverridesOSSStable.h>
+
+#import <memory>
+
 static NSString *kBundlePath = @"js/RNTesterApp.ios";
+
+namespace {
+
+// RNTester runs the text-children/css-display demo with the native Yoga block
+// formatting context (YGDisplayBlock) instead of the flex emulation, so the
+// demo exercises real block layout: block-child stacking/sizing and CSS2
+// §8.3.1 margin collapsing (see text-children-plan.md §4.5). Subclasses the
+// OSS-Stable overrides (what `RCTReactNativeFactory` installs for this app)
+// so the standard stable flags are preserved.
+class RNTesterFeatureFlagsOverrides : public facebook::react::ReactNativeFeatureFlagsOverridesOSSStable {
+ public:
+  bool enableYogaDisplayBlock() override
+  {
+    return true;
+  }
+};
+
+} // namespace
 
 #if !TARGET_OS_TV
 @interface AppDelegate () <UNUserNotificationCenterDelegate>
@@ -58,6 +81,14 @@ static NSString *kBundlePath = @"js/RNTesterApp.ios";
   RCTSetDispatchW3CPointerEvents(YES);
 
   self.reactNativeFactory = [[RCTReactNativeFactory alloc] initWithDelegate:self];
+
+  // The factory just installed the OSS-Stable feature-flag provider (a plain
+  // `override` here — before or after — would throw on double-override), so
+  // replace it via the sanctioned escape hatch with our subclass that also
+  // enables the native Yoga block formatting context for the demo. Runs
+  // before startReactNative below, which is what starts reading flags.
+  facebook::react::ReactNativeFeatureFlags::dangerouslyForceOverride(
+      std::make_unique<RNTesterFeatureFlagsOverrides>());
 #if USE_OSS_CODEGEN
   self.dependencyProvider = [RCTAppDependencyProvider new];
 #endif

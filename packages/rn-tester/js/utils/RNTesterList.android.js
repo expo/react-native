@@ -15,6 +15,35 @@ import type {RNTesterModule, RNTesterModuleInfo} from '../types/RNTesterTypes';
 import * as RNTesterListFbInternal from './RNTesterListFbInternal';
 
 const Components: Array<RNTesterModuleInfo> = [
+  // ---- Fork work: text children / css-display / Astryx ----
+  // Pinned to the head of the list (see RNTesterModuleInfo.pinned) while
+  // these are the features under active development. Mirrors the iOS list.
+  {
+    key: 'StringChildrenExample',
+    module: require('../examples/TextChildren/StringChildrenExample').default,
+    category: 'Basic',
+    pinned: true,
+  },
+  {
+    key: 'IntrinsicElementsExample',
+    module: require('../examples/TextChildren/IntrinsicElementsExample')
+      .default,
+    category: 'Basic',
+    pinned: true,
+  },
+  {
+    key: 'DisplayBlockExample',
+    module: require('../examples/DisplayBlock/DisplayBlockExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  {
+    key: 'DisplayInlineExample',
+    module: require('../examples/DisplayInline/DisplayInlineExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  // ---- Upstream RNTester components ----
   {
     key: 'DrawerLayoutAndroid',
     category: 'UI',

@@ -59,12 +59,18 @@ type BackButton = ({onBack: () => void}) => React.Node;
 const RNTesterApp = ({
   testList,
   customBackButton,
+  exampleFromAppetizeParams,
 }: {
   testList?: {
     components?: Array<RNTesterModuleInfo>,
     apis?: Array<RNTesterModuleInfo>,
   },
   customBackButton?: BackButton,
+  // An rntester://example/<key> URL provided at launch (the iOS AppDelegate
+  // maps the `-route <Name>` launch argument / NSUserDefaults 'route' into
+  // this initial prop). Lets tooling open a screen headlessly without the
+  // URL-scheme confirmation dialog `simctl openurl` triggers.
+  exampleFromAppetizeParams?: ?string,
 }): React.Node => {
   const [state, dispatch] = useReducer(
     RNTesterNavigationReducer,
@@ -232,13 +238,16 @@ const RNTesterApp = ({
     [dispatch],
   );
   useEffect(() => {
-    // Initial deeplink
+    // Initial deeplink: the AppDelegate-provided launch route, or a real URL.
+    if (exampleFromAppetizeParams != null) {
+      handleOpenUrlRequest({url: exampleFromAppetizeParams});
+    }
     Linking.getInitialURL()
       .then(url => url != null && handleOpenUrlRequest({url: url}))
       .catch(_ => {});
     const subscription = Linking.addEventListener('url', handleOpenUrlRequest);
     return () => subscription.remove();
-  }, [handleOpenUrlRequest]);
+  }, [handleOpenUrlRequest, exampleFromAppetizeParams]);
 
   const theme = colorScheme === 'dark' ? themes.dark : themes.light;
 

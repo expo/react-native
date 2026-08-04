@@ -230,4 +230,121 @@ describe('native block — fidelity the emulation lacks', () => {
     // Auto-width block child fills the containing block's content width.
     expect(rectOf(childRef).width).toBe(120);
   });
+
+  it("a display:'inline' View joins the run under native block too", () => {
+    // Same numbers as the emulation case in
+    // StringChildrenDisplayInline-itest.js: 'a<View 30x40/>b' = 10 + 30 + 10 =
+    // 50pt wide, line height max(20, 40) = 40pt — the atomic inline box is a
+    // box-generation concern and must be identical across both block paths.
+    const blockRef = createRef<HostInstance>();
+    const inlineRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={blockRef}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
+          {'a'}
+          <View
+            ref={inlineRef}
+            style={{display: 'inline', width: 30, height: 40}}
+          />
+          {'b'}
+        </View>,
+      );
+    });
+
+    expect(rectOf(blockRef).width).toBe(50);
+    expect(rectOf(blockRef).height).toBe(40);
+    expect(rectOf(inlineRef).width).toBe(30);
+    expect(rectOf(inlineRef).height).toBe(40);
+  });
+
+  it("display:'none' and absolute children do not interrupt the IFC under native block", () => {
+    // Box-generation contiguity rules (Safari-verified, see
+    // StringChildrenMixedContent-itest.js) must hold identically when the
+    // container lays out via native YGDisplayBlock: a none child generates no
+    // box; an absolute child is out-of-flow (positioned by absolute layout,
+    // here at its insets) — 'a…b' stays one 20pt line either way.
+    const noneRef = createRef<HostInstance>();
+    const absContainerRef = createRef<HostInstance>();
+    const absRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View
+            collapsable={false}
+            ref={noneRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'a'}
+            <View style={{display: 'none', width: 30, height: 40}} />
+            {'b'}
+          </View>
+          <View
+            collapsable={false}
+            ref={absContainerRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'a'}
+            <View
+              ref={absRef}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: 30,
+                height: 40,
+              }}
+            />
+            {'b'}
+          </View>
+        </>,
+      );
+    });
+
+    expect(rectOf(noneRef).height).toBe(20);
+    expect(rectOf(noneRef).width).toBe(20);
+    expect(rectOf(absContainerRef).height).toBe(20);
+    expect(rectOf(absContainerRef).width).toBe(20);
+    expect(rectOf(absRef).width).toBe(30);
+    expect(rectOf(absRef).height).toBe(40);
+  });
+
+  it("a display:'inline' child does not stack as a native block child", () => {
+    // Contrast with the same tree minus the display prop: the plain View
+    // stacks as a block-level child (20 + 40 + 20 = 80pt), the inline View
+    // flows in one 40pt line.
+    const inlineContainerRef = createRef<HostInstance>();
+    const blockContainerRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          <View
+            collapsable={false}
+            ref={inlineContainerRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'a'}
+            <View style={{display: 'inline', width: 30, height: 40}} />
+            {'b'}
+          </View>
+          <View
+            collapsable={false}
+            ref={blockContainerRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'a'}
+            <View style={{width: 30, height: 40}} />
+            {'b'}
+          </View>
+        </>,
+      );
+    });
+
+    expect(rectOf(inlineContainerRef).height).toBe(40);
+    expect(rectOf(blockContainerRef).height).toBe(80);
+  });
 });

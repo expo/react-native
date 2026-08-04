@@ -623,6 +623,40 @@ bool BaseViewProps::getClipsContentToBounds() const {
   return yogaStyle.overflow() != yoga::Overflow::Visible;
 }
 
+void BaseViewProps::applyInheritedTextAttributes(
+    TextAttributes& textAttributes) const {
+  if (inheritedColor) {
+    textAttributes.foregroundColor = inheritedColor;
+  }
+  if (!std::isnan(inheritedFontSize)) {
+    textAttributes.fontSize = inheritedFontSize;
+  }
+  if (!inheritedFontFamily.empty()) {
+    textAttributes.fontFamily = inheritedFontFamily;
+  }
+  if (inheritedFontWeight) {
+    textAttributes.fontWeight = inheritedFontWeight;
+  }
+  if (inheritedFontStyle) {
+    textAttributes.fontStyle = inheritedFontStyle;
+  }
+  if (inheritedFontVariant) {
+    textAttributes.fontVariant = inheritedFontVariant;
+  }
+  if (!std::isnan(inheritedLetterSpacing)) {
+    textAttributes.letterSpacing = inheritedLetterSpacing;
+  }
+  if (!std::isnan(inheritedLineHeight)) {
+    textAttributes.lineHeight = inheritedLineHeight;
+  }
+  if (inheritedTextAlign) {
+    textAttributes.alignment = inheritedTextAlign;
+  }
+  if (inheritedTextTransform) {
+    textAttributes.textTransform = inheritedTextTransform;
+  }
+}
+
 #pragma mark - DebugStringConvertible
 
 #if RN_DEBUG_STRING_CONVERTIBLE

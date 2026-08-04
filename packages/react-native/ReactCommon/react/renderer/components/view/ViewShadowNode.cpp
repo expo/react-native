@@ -6,8 +6,10 @@
  */
 
 #include "ViewShadowNode.h"
+#include <functional>
 #include <limits>
 #include <string_view>
+#include <vector>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/DivShadowNode.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
@@ -75,6 +77,16 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     formsStackingContext = true;
   }
 
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      viewProps.displayInline) {
+    // Atomic `display:'inline'` boxes are positioned by their container's
+    // inline-attachment layout (stamped layout metrics); flattening one away
+    // would hoist its children out of the stamped frame, so it must own a
+    // host view.
+    formsView = true;
+    formsStackingContext = true;
+  }
+
   if (formsView) {
     this->traits_.set(ShadowNodeTraits::Trait::FormsView);
   } else {
@@ -98,13 +110,13 @@ template <const char* concreteComponentName, typename ViewPropsT>
 void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::layout(
     LayoutContext layoutContext) {
   YogaLayoutableShadowNode::layout(layoutContext);
-  layoutInlineImageAttachments(layoutContext);
+  layoutInlineAttachments(layoutContext);
   updateTextRunStateIfNeeded();
 }
 
 template <const char* concreteComponentName, typename ViewPropsT>
 void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
-    layoutInlineImageAttachments(LayoutContext layoutContext) {
+    layoutInlineAttachments(LayoutContext layoutContext) {
   if (!ReactNativeFeatureFlags::enableStringChildren()) {
     return;
   }
@@ -113,11 +125,12 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     return;
   }
 
-  // Clone-and-position each inline `<img>` (a non-Yoga child) at its exact
+  // Clone-and-position each inline attachment — the replaced `<img>` and
+  // atomic `display:'inline'` elements (non-Yoga children) — at its exact
   // inline offset within the run. The run box resolves each attachment's frame
-  // via the text layout; the image is placed at the box origin plus that frame,
-  // so it sits between the surrounding glyphs and follows wrapping — like a
-  // replaced element in a web line box (text-children-plan.md §3.C).
+  // via the text layout; the attachment is placed at the box origin plus that
+  // frame, so it sits between the surrounding glyphs and follows wrapping —
+  // like a replaced element in a web line box (text-children-plan.md §3.C).
   auto* current = this;
   auto owning = std::shared_ptr<ShadowNode>{};
 
@@ -129,8 +142,25 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
         ? accessor->getInlineAttachmentPlacements(layoutContext)
         : std::vector<InlineAttachmentPlacement>{};
 
-    for (const auto& runChild : box->getChildren()) {
-      if (std::string_view{runChild->getComponentName()} != "img") {
+    // Attachment candidates are the run's direct children plus descendants
+    // reached through span-like inline boxes (whose contents flow into this
+    // run rather than forming their own).
+    std::vector<std::shared_ptr<const ShadowNode>> attachmentCandidates;
+    const std::function<void(const ShadowNode&)> collectCandidates =
+        [&](const ShadowNode& parent) {
+          for (const auto& child : parent.getChildren()) {
+            if (YogaLayoutableShadowNode::isInlineFlowContent(*child)) {
+              collectCandidates(*child);
+            } else {
+              attachmentCandidates.push_back(child);
+            }
+          }
+        };
+    collectCandidates(*box);
+
+    for (const auto& runChild : attachmentCandidates) {
+      if (std::string_view{runChild->getComponentName()} != "img" &&
+          !YogaLayoutableShadowNode::isAtomicInline(*runChild)) {
         continue;
       }
       const auto* layoutable =
@@ -139,9 +169,9 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
         continue;
       }
 
-      // The text layout's frame for this image is authoritative for both offset
-      // and size; fall back to the box origin and a fresh measure only if the
-      // platform layout manager reported no attachment frame (e.g. the
+      // The text layout's frame for this attachment is authoritative for both
+      // offset and size; fall back to the box origin and a fresh measure only
+      // if the platform layout manager reported no attachment frame (e.g. the
       // deterministic test manager).
       const Rect* attachmentFrame = nullptr;
       for (const auto& placement : placements) {
@@ -151,13 +181,13 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
         }
       }
 
-      auto imageSize = attachmentFrame != nullptr &&
+      auto attachmentSize = attachmentFrame != nullptr &&
               (attachmentFrame->size.width != 0 ||
                attachmentFrame->size.height != 0)
           ? attachmentFrame->size
           : layoutable->getLayoutMetrics().frame.size;
-      if (imageSize.width == 0 && imageSize.height == 0) {
-        imageSize = layoutable->measure(
+      if (attachmentSize.width == 0 && attachmentSize.height == 0) {
+        attachmentSize = layoutable->measure(
             layoutContext,
             LayoutConstraints{
                 .minimumSize = {0, 0},
@@ -166,10 +196,10 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
                     std::numeric_limits<Float>::infinity()}});
       }
 
-      auto imageOrigin = boxFrame.origin;
+      auto attachmentOrigin = boxFrame.origin;
       if (attachmentFrame != nullptr) {
-        imageOrigin.x += attachmentFrame->origin.x;
-        imageOrigin.y += attachmentFrame->origin.y;
+        attachmentOrigin.x += attachmentFrame->origin.x;
+        attachmentOrigin.y += attachmentFrame->origin.y;
       }
 
       owning = current->cloneTree(
@@ -180,9 +210,10 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
             clonedLayoutable.layoutTree(
                 layoutContext,
                 LayoutConstraints{
-                    .minimumSize = imageSize, .maximumSize = imageSize});
+                    .minimumSize = attachmentSize,
+                    .maximumSize = attachmentSize});
             auto metrics = clonedLayoutable.getLayoutMetrics();
-            metrics.frame.origin = imageOrigin;
+            metrics.frame.origin = attachmentOrigin;
             clonedLayoutable.setLayoutMetrics(metrics);
             return cloned;
           });

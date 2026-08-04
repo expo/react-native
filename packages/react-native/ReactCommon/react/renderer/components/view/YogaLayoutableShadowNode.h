@@ -254,6 +254,28 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    */
   static bool isInlineTextContent(const ShadowNode &child);
 
+ public:
+  /*
+   * True when `child` is an atomic inline-level box: an otherwise block-level
+   * element (`View`, `Image`, …) opted inline via `display:'inline'` that is
+   * sized or has non-inline content. In a block container it joins the
+   * current run as an inline attachment (like the replaced `<img>`); in a
+   * flex container it is blockified into a regular flex item (css-display-3
+   * §2.7). Absolutely-positioned elements are never inline (CSS2 §9.7
+   * blockification).
+   */
+  static bool isAtomicInline(const ShadowNode &child);
+
+  /*
+   * True when `child` is a span-like inline box: `display:'inline'` with auto
+   * size and all-inline contents — its contents flow into the surrounding
+   * inline formatting context with its inheritable text props applied,
+   * exactly like a <span>. Mutually exclusive with `isAtomicInline`.
+   */
+  static bool isInlineFlowContent(const ShadowNode &child);
+
+ private:
+
   /*
    * Appends an anonymous box produced by the factory for the given run into
    * the Yoga children (it is never part of `children_` — box tree only).

@@ -48,7 +48,16 @@ export interface FlexStyle {
   borderWidth?: number | undefined;
   bottom?: DimensionValue | undefined;
   boxSizing?: 'border-box' | 'content-box' | undefined;
-  display?: 'none' | 'flex' | 'block' | 'contents' | undefined;
+  display?: 'none' | 'flex' | 'block' | 'inline' | 'contents' | undefined;
+  float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end' | undefined;
+  clear?:
+    | 'none'
+    | 'left'
+    | 'right'
+    | 'both'
+    | 'inline-start'
+    | 'inline-end'
+    | undefined;
   end?: DimensionValue | undefined;
   flex?: number | undefined;
   flexBasis?: DimensionValue | undefined;

@@ -8,7 +8,7 @@
  * @format
  */
 
-import RNTesterApp from './IntrinsicsDemo'; // DEMO: text children + intrinsics (was ./RNTesterAppShared)
+import RNTesterApp from './RNTesterAppShared';
 import {AppRegistry} from 'react-native';
 
 AppRegistry.registerComponent('RNTesterApp', () => RNTesterApp);

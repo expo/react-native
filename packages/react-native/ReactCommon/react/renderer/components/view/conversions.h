@@ -414,6 +414,54 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   react_native_expect(false);
 }
 
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::FloatSide &result)
+{
+  result = yoga::FloatSide::None;
+  react_native_expect(value.hasType<std::string>());
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  auto stringValue = (std::string)value;
+  if (stringValue == "none") {
+    return;
+  }
+  if (stringValue == "left" || stringValue == "inline-start") {
+    result = yoga::FloatSide::Left;
+    return;
+  }
+  if (stringValue == "right" || stringValue == "inline-end") {
+    result = yoga::FloatSide::Right;
+    return;
+  }
+  LOG(ERROR) << "Could not parse yoga::FloatSide: " << stringValue;
+}
+
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::Clear &result)
+{
+  result = yoga::Clear::None;
+  react_native_expect(value.hasType<std::string>());
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  auto stringValue = (std::string)value;
+  if (stringValue == "none") {
+    return;
+  }
+  if (stringValue == "left" || stringValue == "inline-start") {
+    result = yoga::Clear::Left;
+    return;
+  }
+  if (stringValue == "right" || stringValue == "inline-end") {
+    result = yoga::Clear::Right;
+    return;
+  }
+  if (stringValue == "both") {
+    result = yoga::Clear::Both;
+    return;
+  }
+  LOG(ERROR) << "Could not parse yoga::Clear: " << stringValue;
+}
+
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, yoga::Display &result)
 {
   result = yoga::Display::Flex;
@@ -438,6 +486,15 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     // display:'block' is emulated on Yoga flex primitives
     // (text-children-plan.md §3.A); Yoga sees Flex, blockness is recorded in
     // YogaStylableProps::displayBlock.
+    result = yoga::Display::Flex;
+    return;
+  }
+  if (stringValue == "inline") {
+    // display:'inline' never reaches Yoga: inline-ness is resolved at box
+    // generation (YogaStylableProps::displayInline). In a block container the
+    // element flows as an atomic inline box in the parent IFC; in a flex
+    // container it is blockified into a regular flex item (css-display-3
+    // §2.7), which is exactly Yoga's Flex default.
     result = yoga::Display::Flex;
     return;
   }

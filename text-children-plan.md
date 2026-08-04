@@ -421,7 +421,18 @@ Everything ships behind a new common feature flag (`enableStringChildren`) in
    passed StretchFit; auto width fills a definite container else shrink-wraps); anonymous
    block boxes for mixed content come from the shared IFC grouping. Emulation-vs-native parity
    + native-only fidelity tests green, full flexbox-regression sweep (View-itest 224 etc.)
-   green. Not yet: margin collapsing, floats/static-position, RTL test coverage.
+   green. **Stages 2–3 done (css-display branch):** mixed-content run contiguity
+   Safari-pinned (`display:'none'`/absolute children never split the IFC in block
+   containers; Display::None children zeroed like the flex algorithm), and CSS2 §8.3.1
+   margin collapsing — adjacent siblings (max positives + min negatives),
+   self-collapsing boxes collapse through, and margins escape through nested
+   block-in-block content edges (`foldEscapedMargins` post-layout walk), with
+   first/last margins contained at independent-FC roots (a flex-item/root block
+   container). Also fixed latent Stage-1 double-counted margins in child positions
+   (`Node::setPosition` already bakes the leading margin into the layout position).
+   Fantom: StringChildrenBlockMargins-itest (15 Safari-pinned cases),
+   StringChildrenMixedContent-itest (8). Not yet: floats/clearance, static-position
+   specifics, RTL test coverage.
 6. **Update path.** Text content changes arrive as RawText prop clones until stage 6, then
    as `commitTextUpdate` data updates on `Text` nodes (§3.F); either way the containing
    View's Yoga node must be dirtied and its anonymous item re-measured — Views don't
@@ -497,10 +508,27 @@ compat shims, when it lands).
   everywhere?~~ **Decided: CSS-normal collapsing** (§4.4), implemented in
   `InlineContentShadowNode` for anonymous IFCs only; explicit `<Text>` stays verbatim.
 - Should `textAlign`/`lineHeight` inherit in v1 (interaction with Yoga alignment)?
-- `display:'inline'` opt-in for the RN `View`/`Image` components in v1 or later? (Distinct
-  from the intrinsic `<img>` tag, which is inline by definition — this is about letting an
-  authored `View`/`Image` go inline. Attachment machinery is ready; classification is
-  trivial; API review is the work.)
+- ~~`display:'inline'` opt-in for the RN `View`/`Image` components in v1 or later?~~
+  **Decided and implemented (css-display branch).** `display:'inline'` is accepted on any
+  View-like element; inline-ness resolves at box generation (never reaches Yoga —
+  `YogaStylableProps::displayInline`, mirroring `displayBlock`). Two behaviors, mutually
+  exclusive (`isAtomicInline` / `isInlineFlowContent`):
+  - **Atomic inline** (sized, or non-inline content): joins the run as an inline
+    attachment via the `<img>` machinery. A *sized* inline View deliberately stays atomic
+    even though the web ignores width/height on non-replaced inlines — an RN View is an
+    opaque native box, closer to a replaced element (documented divergence).
+  - **Span-like flow** (auto size, all-inline contents): contents join the surrounding
+    IFC with the element's inheritable text props applied
+    (`BaseViewProps::applyInheritedTextAttributes`, shared with the cascade), exactly
+    like a `<span>` — Safari-pinned. Fragments carry the element as `parentShadowView`
+    so touches resolve to its emitter. Not yet: fragment-level box decorations,
+    flow-box layout metrics (same gap as `<b>`/`<span>`), block-in-inline splitting.
+  In flex containers `display:'inline'` blockifies into a regular flex item
+  (css-display-3 §2.7); `position:'absolute'` blockifies (CSS2 §9.7). Run-contiguity
+  rules are Safari-pinned: `display:'none'` children never split runs (block and flex);
+  absolute children don't interrupt the IFC in block containers but DO separate text-run
+  sequences in flex containers. Fantom: StringChildrenDisplayInline-itest,
+  StringChildrenMixedContent-itest.
 - **Native Yoga `display:block`: decided.** `<div>`/true block is implemented as a real
   `YGDisplayBlock` in Yoga (§3.A, §4.5), because a genuine `<div>` cannot be faked on flex
   column+stretch.
@@ -561,8 +589,10 @@ implemented on this branch and verified: Fantom
 99, ReadOnlyText 30, ReactNativeElement 170), Safari web mirror 20/20 (+ img/div/native-block twins added), iPhone 17
 Pro (iOS 26.5) simulator screenshots (incl. paint-order interleaving, hit-test log, and a real
 inline `<img>` rendering), and live CDP layout reads
-(`packages/rn-tester/scripts/string-children-cdp-verify.js`). Demo:
-`packages/rn-tester/js/IntrinsicsDemo.js`. Next: mine Web Platform Tests
+(now `packages/rn-tester/scripts/css-display-cdp-verify.js`). Demo: stock RNTester
+example screens under `packages/rn-tester/js/examples/` — String Children,
+Intrinsic Elements, Display: block, Display: inline (the earlier monolithic
+IntrinsicsDemo was split into these). Next: mine Web Platform Tests
 (css/CSS2 normal-flow + visuren, css-flexbox anonymous items, css-display,
 css-text white-space, css-inline, dom/nodes, HTMLUnknownElement) for additional
 matrix cases; production hardening list in §4 unchanged.

@@ -95,6 +95,13 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   bottom: true,
   direction: true,
   display: true,
+  // NOTE: a style key missing from this map is stripped during style diffing
+  // and never reaches native — silently, with no warning. Adding a Yoga style
+  // prop takes three edits: here, the `convertRawProp` list in
+  // ReactCommon/.../view/propsConversions.h, and the `setProp` switch in
+  // YogaStylableProps.cpp. See the long comment in propsConversions.h.
+  float: true,
+  clear: true,
   end: true,
   flex: true,
   flexBasis: true,

@@ -61,9 +61,23 @@ type ____LayoutStyle_Internal = Readonly<{
    *  It works similarly to `display` in CSS. 'flex' (the default) makes the
    *  element a flex container; 'block' makes it a CSS block container (a true
    *  block formatting context under the text-children feature, otherwise
-   *  emulated on flex); 'none' hides it; 'contents' removes the box itself.
+   *  emulated on flex); 'inline' makes it an atomic inline-level box that
+   *  flows in a block container's inline formatting context (in a flex
+   *  container it is blockified into a regular flex item, as on web);
+   *  'none' hides it; 'contents' removes the box itself.
    */
-  display?: 'none' | 'flex' | 'block' | 'contents',
+  display?: 'none' | 'flex' | 'block' | 'inline' | 'contents',
+
+  /** `float` takes a box out of the normal flow and packs it against one side
+   *  of its block container, per CSS2 §9.5. Honored inside `display:'block'`
+   *  containers only (flex containers ignore it, as on the web).
+   */
+  float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end',
+
+  /** `clear` places a box below any preceding floats on the given side(s)
+   *  (CSS2 §9.5.2). Honored inside `display:'block'` containers only.
+   */
+  clear?: 'none' | 'left' | 'right' | 'both' | 'inline-start' | 'inline-end',
 
   /** `width` sets the width of this component.
    *

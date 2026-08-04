@@ -29,6 +29,11 @@
 
 namespace facebook::react {
 
+// Whether `child` is an inline-level box (`display:'inline'`, not absolutely
+// positioned) — the union of atomic inline boxes and span-like inline flow
+// content. Defined with the other classification predicates below.
+static bool isInlineLevelBox(const ShadowNode& child);
+
 // Whether the inheritable text props that feed the element-tree cascade
 // (text-children-plan.md §3.D) differ between two revisions of a View's props.
 // A change here must re-run the cascade into descendant IFCs even though none
@@ -482,7 +487,40 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
     if (auto yogaLayoutableChild =
             std::dynamic_pointer_cast<const YogaLayoutableShadowNode>(
                 getChildren()[i])) {
-      flushInlineRun();
+      const auto isBlockContainer =
+          static_cast<const YogaStylableProps&>(*props_).displayBlock;
+      if (stringChildrenEnabled && isBlockContainer &&
+          isInlineLevelBox(*yogaLayoutableChild)) {
+        // `display:'inline'` element in a block container: an inline-level
+        // box that joins the current run, never a block-level Yoga child —
+        // either an *atomic* inline (an inline attachment like the replaced
+        // `<img>`) or, when un-sized with all-inline contents, a *span-like*
+        // inline box whose contents flow into the run
+        // (isInlineFlowContent). In flex containers it falls through below
+        // and is blockified into a regular flex item (css-display-3 §2.7).
+        inlineRun.push_back(getChildren()[i]);
+        continue;
+      }
+      // Box-generation rules for run contiguity (each verified against
+      // Safari): a `display:'none'` child generates NO box and never
+      // interrupts inline content — the surrounding text runs stay contiguous
+      // in both block and flex containers. An absolutely-positioned child is
+      // out-of-flow: in a block container it does not interrupt the IFC
+      // (CSS2 §9.2.1.1 anonymous boxes form around in-flow block-level boxes
+      // only), but in a flex container it DOES separate text-run sequences
+      // (css-flexbox-1 §4). Either way the child remains an ordinary Yoga
+      // child (Display::None is skipped by layout; absolute children are
+      // positioned by absolute layout), only the run flush is skipped.
+      const auto& childStyle =
+          static_cast<const YogaStylableProps&>(*yogaLayoutableChild->props_)
+              .yogaStyle;
+      const bool interruptsInlineContent = !stringChildrenEnabled ||
+          !(childStyle.display() == yoga::Display::None ||
+            (isBlockContainer &&
+             childStyle.positionType() == yoga::PositionType::Absolute));
+      if (interruptsInlineContent) {
+        flushInlineRun();
+      }
       appendYogaChild(yogaLayoutableChild);
       adoptYogaChild(i);
       mountedChildCount++;
@@ -556,6 +594,56 @@ bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   // component-name list means a new intrinsic flows inline with no change here, and keeps
   // components/view free of a components/text include dependency.
   return child.getTraits().check(ShadowNodeTraits::Trait::InlineText);
+}
+
+static bool isInlineLevelBox(const ShadowNode& child) {
+  // An otherwise block-level element opted inline via `display:'inline'`
+  // (YogaStylableProps::displayInline). Absolutely-positioned boxes blockify
+  // (CSS2 §9.7) and must stay ordinary Yoga children so absolute layout can
+  // position them.
+  const auto* props =
+      dynamic_cast<const YogaStylableProps*>(child.getProps().get());
+  return props != nullptr && props->displayInline &&
+      props->yogaStyle.positionType() != yoga::PositionType::Absolute;
+}
+
+bool YogaLayoutableShadowNode::isAtomicInline(const ShadowNode& child) {
+  return isInlineLevelBox(child) && !isInlineFlowContent(child);
+}
+
+bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
+  // A span-like inline box: `display:'inline'` on an otherwise block-level
+  // element whose size is auto and whose contents are all inline-level — its
+  // contents flow into the surrounding IFC with its inheritable text props
+  // applied, exactly like a <span> (Safari-pinned). A *sized* inline View
+  // stays an atomic inline box instead: an RN View is an opaque native box,
+  // closer to a replaced element, so the web's "non-replaced inline boxes
+  // ignore width/height" rule is deliberately not applied (documented
+  // divergence; see StyleSheetTypes.js). Fragment-level box decorations
+  // (background/border painted per line fragment) are not painted yet.
+  if (!isInlineLevelBox(child)) {
+    return false;
+  }
+  if (dynamic_cast<const YogaLayoutableShadowNode*>(&child) == nullptr) {
+    return false;
+  }
+  const auto& props =
+      static_cast<const YogaStylableProps&>(*child.getProps());
+  if (!props.yogaStyle.dimension(yoga::Dimension::Width).isAuto() ||
+      !props.yogaStyle.dimension(yoga::Dimension::Height).isAuto()) {
+    return false;
+  }
+  for (const auto& grandChild : child.getChildren()) {
+    // Inline-level content flows: text/inline elements (trait) and nested
+    // inline boxes — span-like flow or atomic (a span containing an <img>
+    // flows on web). Block-level content inside an inline box would require
+    // block-in-inline splitting (CSS2 §9.2.1.1); such boxes — and ones with
+    // absolutely-positioned children — fall back to atomic inline.
+    if (!isInlineTextContent(*grandChild) && !isInlineLevelBox(*grandChild)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
@@ -743,43 +831,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
   if (ReactNativeFeatureFlags::enableStringChildren()) {
     if (const auto* baseViewProps =
             dynamic_cast<const BaseViewProps*>(props_.get())) {
-      if (baseViewProps->inheritedColor) {
-        inheritedTextAttributes_.foregroundColor =
-            baseViewProps->inheritedColor;
-      }
-      if (!std::isnan(baseViewProps->inheritedFontSize)) {
-        inheritedTextAttributes_.fontSize = baseViewProps->inheritedFontSize;
-      }
-      if (!baseViewProps->inheritedFontFamily.empty()) {
-        inheritedTextAttributes_.fontFamily =
-            baseViewProps->inheritedFontFamily;
-      }
-      if (baseViewProps->inheritedFontWeight) {
-        inheritedTextAttributes_.fontWeight =
-            baseViewProps->inheritedFontWeight;
-      }
-      if (baseViewProps->inheritedFontStyle) {
-        inheritedTextAttributes_.fontStyle = baseViewProps->inheritedFontStyle;
-      }
-      if (baseViewProps->inheritedFontVariant) {
-        inheritedTextAttributes_.fontVariant =
-            baseViewProps->inheritedFontVariant;
-      }
-      if (!std::isnan(baseViewProps->inheritedLetterSpacing)) {
-        inheritedTextAttributes_.letterSpacing =
-            baseViewProps->inheritedLetterSpacing;
-      }
-      if (!std::isnan(baseViewProps->inheritedLineHeight)) {
-        inheritedTextAttributes_.lineHeight =
-            baseViewProps->inheritedLineHeight;
-      }
-      if (baseViewProps->inheritedTextAlign) {
-        inheritedTextAttributes_.alignment = baseViewProps->inheritedTextAlign;
-      }
-      if (baseViewProps->inheritedTextTransform) {
-        inheritedTextAttributes_.textTransform =
-            baseViewProps->inheritedTextTransform;
-      }
+      baseViewProps->applyInheritedTextAttributes(inheritedTextAttributes_);
     }
   }
 

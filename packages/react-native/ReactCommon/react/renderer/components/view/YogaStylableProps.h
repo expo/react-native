@@ -63,6 +63,15 @@ class YogaStylableProps : public Props {
    */
   bool displayBlock{false};
 
+  /*
+   * True when style `display` is 'inline' (CSS inline-level box). Inline-ness
+   * is resolved at box generation, never in Yoga: in a block container the
+   * element becomes an atomic inline-level box flowing in the parent's inline
+   * formatting context; in a flex container it is blockified into a regular
+   * flex item (css-display-3 §2.7). See text-children-plan.md §3.A/§7.
+   */
+  bool displayInline{false};
+
 #if RN_DEBUG_STRING_CONVERTIBLE
 
 #pragma mark - DebugStringConvertible (Partial)

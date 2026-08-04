@@ -11,6 +11,8 @@
 #include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/components/text/TextProps.h>
 #include <react/renderer/components/text/TextShadowNode.h>
+#include <react/renderer/components/view/BaseViewProps.h>
+#include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <react/renderer/mounting/ShadowView.h>
 
 namespace facebook::react {
@@ -89,6 +91,27 @@ void BaseTextShadowNode::buildAttributedString(
       buildAttributedString(
           localTextAttributes,
           *textEffectNode,
+          outAttributedString,
+          outAttachments);
+      continue;
+    }
+
+    // Span-like `display:'inline'` box (un-sized, all-inline contents): its
+    // children join the surrounding run with its inheritable text props
+    // applied, exactly like a <span> (css-display; Safari-pinned). Sized or
+    // non-inline-content inline boxes fall through to the atomic attachment
+    // branch below. Fragments created inside carry this element as their
+    // `parentShadowView`, so touches resolve to its emitter like
+    // <span onPress>.
+    if (YogaLayoutableShadowNode::isInlineFlowContent(*childNode)) {
+      auto localTextAttributes = baseTextAttributes;
+      if (const auto* baseViewProps = dynamic_cast<const BaseViewProps*>(
+              childNode->getProps().get())) {
+        baseViewProps->applyInheritedTextAttributes(localTextAttributes);
+      }
+      buildAttributedString(
+          localTextAttributes,
+          *childNode,
           outAttributedString,
           outAttachments);
       continue;

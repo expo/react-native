@@ -12,6 +12,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstring>
+#include <limits>
+#include <vector>
 
 #include <yoga/Yoga.h>
 
@@ -1691,13 +1693,167 @@ static void justifyMainAxis(
 //    measure mode of SizingMode::MaxContent in that dimension.
 //
 
+// Accumulator for a set of adjoining vertical margins (CSS2 §8.3.1): the
+// realized margin is max(positives) + min(negatives).
+struct CollapsedMargin {
+  float positive{0.0f};
+  float negative{0.0f};
+  void fold(float margin) {
+    if (margin >= 0.0f) {
+      positive = yoga::maxOrDefined(positive, margin);
+    } else {
+      negative = yoga::minOrDefined(negative, margin);
+    }
+  }
+  float realized() const {
+    return positive + negative;
+  }
+};
+
+static bool blockChildIsInFlow(const yoga::Node* child) {
+  return child->style().display() != Display::None &&
+      child->style().positionType() != PositionType::Absolute;
+}
+
+// Whether descendant margins collapse through `box`'s top (leading) or bottom
+// (trailing) edge into the surrounding block formatting context (CSS2 §8.3.1
+// "adjoining margins"): the box must be a block container participating in
+// the same BFC (Display::Block; an IFC leaf with a measure function never
+// collapses through) with no separating padding or border on that edge; for
+// the bottom edge its height must additionally be auto.
+static bool marginsCollapseThroughEdge(yoga::Node* box, bool leadingEdge) {
+  if (box->style().display() != Display::Block || box->hasMeasureFunc()) {
+    return false;
+  }
+  // Owner width only resolves percentage padding/border; the box's measured
+  // width is its containing block's stretch in the common case.
+  const float ownerWidthApprox =
+      box->getLayout().measuredDimension(Dimension::Width);
+  const float edgePaddingAndBorder = leadingEdge
+      ? box->style().computeFlexStartPaddingAndBorder(
+            FlexDirection::Column, Direction::LTR, ownerWidthApprox)
+      : box->style().computeFlexEndPaddingAndBorder(
+            FlexDirection::Column, Direction::LTR, ownerWidthApprox);
+  if (edgePaddingAndBorder != 0.0f) {
+    return false;
+  }
+  if (!leadingEdge && !box->style().dimension(Dimension::Height).isAuto()) {
+    return false;
+  }
+  return true;
+}
+
+// Folds into `accumulator` the descendant margins escaping (collapsing)
+// through `box`'s leading or trailing edge, walking the laid-out subtree
+// (heights are needed to detect self-collapsing boxes, so this runs after
+// `box` is laid out). Self-collapsing (zero-height) boxes chain the collapse
+// at their level; the walk then descends into the first (last) realized box.
+// Approximations, documented deliberately: descendants of self-collapsing
+// boxes are not walked, and percentage margins resolve against the measured
+// width of the box being walked (pathological nesting only).
+static void foldEscapedMargins(
+    yoga::Node* box,
+    bool leadingEdge,
+    CollapsedMargin& accumulator) {
+  auto* cur = box;
+  while (marginsCollapseThroughEdge(cur, leadingEdge)) {
+    const float marginOwnerWidth =
+        cur->getLayout().measuredDimension(Dimension::Width);
+    std::vector<yoga::Node*> inFlowChildren;
+    for (auto* candidate : cur->getLayoutChildren()) {
+      if (blockChildIsInFlow(candidate)) {
+        inFlowChildren.push_back(candidate);
+      }
+    }
+    if (!leadingEdge) {
+      std::reverse(inFlowChildren.begin(), inFlowChildren.end());
+    }
+    yoga::Node* descend = nullptr;
+    for (auto* candidate : inFlowChildren) {
+      const float edgeMargin = leadingEdge
+          ? candidate->style().computeFlexStartMargin(
+                FlexDirection::Column, Direction::LTR, marginOwnerWidth)
+          : candidate->style().computeFlexEndMargin(
+                FlexDirection::Column, Direction::LTR, marginOwnerWidth);
+      accumulator.fold(edgeMargin);
+      if (candidate->getLayout().measuredDimension(Dimension::Height) == 0.0f) {
+        // Self-collapsing: both of its margins adjoin; the chain continues
+        // with the next sibling at this level.
+        const float otherMargin = leadingEdge
+            ? candidate->style().computeFlexEndMargin(
+                  FlexDirection::Column, Direction::LTR, marginOwnerWidth)
+            : candidate->style().computeFlexStartMargin(
+                  FlexDirection::Column, Direction::LTR, marginOwnerWidth);
+        accumulator.fold(otherMargin);
+        continue;
+      }
+      descend = candidate;
+      break;
+    }
+    if (descend == nullptr) {
+      break;
+    }
+    cur = descend;
+  }
+}
+
+// A placed float: the band it occupies in the block direction and how far it
+// intrudes from its side (CSS2 §9.5). Coordinates are in the container's
+// content box.
+struct PlacedFloat {
+  float blockStart{0.0f};
+  float blockEnd{0.0f};
+  float inlineExtent{0.0f}; // distance intruded from the float's own side
+  FloatSide side{FloatSide::None};
+};
+
+// How far the left/right floats intrude at a given block-direction band.
+static float floatIntrusion(
+    const std::vector<PlacedFloat>& floats,
+    FloatSide side,
+    float bandStart,
+    float bandEnd) {
+  float intrusion = 0.0f;
+  for (const auto& placed : floats) {
+    if (placed.side != side) {
+      continue;
+    }
+    // Bands touching only at an edge do not overlap.
+    if (placed.blockEnd <= bandStart || placed.blockStart >= bandEnd) {
+      continue;
+    }
+    intrusion = yoga::maxOrDefined(intrusion, placed.inlineExtent);
+  }
+  return intrusion;
+}
+
+// The lowest edge of the floats a `clear` value must clear.
+static float clearanceEdge(
+    const std::vector<PlacedFloat>& floats,
+    Clear clear) {
+  if (clear == Clear::None) {
+    return 0.0f;
+  }
+  float edge = 0.0f;
+  for (const auto& placed : floats) {
+    const bool matches = clear == Clear::Both ||
+        (clear == Clear::Left && placed.side == FloatSide::Left) ||
+        (clear == Clear::Right && placed.side == FloatSide::Right);
+    if (matches) {
+      edge = yoga::maxOrDefined(edge, placed.blockEnd);
+    }
+  }
+  return edge;
+}
+
 // Lays out a node whose display is `Display::Block` as a CSS block formatting
 // context (text-children-plan.md §3.A/§4.5): in-flow children stack in the
 // block (vertical) direction, each sized to the container's content width (not
 // distributed as flex items — a `flex:1` block child does not grow), and the
 // container's block size is the sum of the children's margin boxes plus
-// padding/border. This is the first-release conformance floor (block-inner
-// layout + single inline flow); margin collapsing and floats are later stages.
+// padding/border. Vertical margins collapse per CSS2 §8.3.1 (adjacent
+// siblings, self-collapsing boxes, and escape through nested block edges —
+// Stage 3); floats and clearance are later stages.
 //
 // Reached only for `Display::Block`, which nothing produces unless
 // `enableYogaDisplayBlock` maps RN `display:'block'` onto it — so the flex
@@ -1757,11 +1913,55 @@ static void calculateBlockLayout(
   const PhysicalEdge inlineStartEdge =
       direction == Direction::RTL ? PhysicalEdge::Right : PhysicalEdge::Left;
 
-  float accumulatedBlockDim = 0.0f; // running sum of children margin-box heights
+  // Block-axis cursor and margin-collapsing accumulator (CSS2 §8.3.1, Stage
+  // 3): `accumulatedBlockDim` tracks the border edge of the last in-flow
+  // child; between border edges, adjoining vertical margins are folded into a
+  // pending set reduced to max(positives) + min(negatives). A self-collapsing
+  // child (zero border-box height) folds both of its margins into the pending
+  // set without realizing a border edge, so margins collapse through it.
+  //
+  // Edge containment vs escape (Stage 3b, Safari-verified): a block container
+  // that is itself a block-level child of another block container — same BFC —
+  // lets the margins adjoining its content edges collapse *through* those
+  // edges into the owner's flow (no top/bottom padding or border; bottom
+  // additionally needs auto height): the pending set before the first
+  // realized border edge (and after the last) realizes to zero here and is
+  // re-folded by the owner via `foldEscapedMargins`. Otherwise — flex-item or
+  // root block containers, i.e. independent formatting contexts on the web —
+  // first/last child margins realize against the container's content edges
+  // (contained).
+  float accumulatedBlockDim = 0.0f;
+  // Floats placed so far, and the lowest float edge — an RN block container is
+  // always a flex item or root, i.e. an independent formatting context, so it
+  // grows to contain its floats (Safari-verified) rather than letting them
+  // overflow as a plain web block would.
+  std::vector<PlacedFloat> placedFloats;
+  float lowestFloatEdge = 0.0f;
+  CollapsedMargin pendingMargin;
+  const auto* owner = node->getOwner();
+  const bool participatesInOwnerBfc = owner != nullptr &&
+      owner->style().display() == Display::Block &&
+      node->style().positionType() != PositionType::Absolute;
+  const bool escapeLeadingMargins =
+      participatesInOwnerBfc && leadingPaddingAndBorderColumn == 0.0f;
+  const bool escapeTrailingMargins = participatesInOwnerBfc &&
+      (paddingAndBorderAxisColumn - leadingPaddingAndBorderColumn) == 0.0f &&
+      node->style().dimension(Dimension::Height).isAuto();
+  bool hasRealizedBorderEdge = false;
   float maxChildInlineDim = 0.0f; // widest child margin box (for shrink-wrap)
 
   for (auto* child : node->getLayoutChildren()) {
     if (child->style().display() == Display::None) {
+      // Mirror the flex algorithm (see computeFlexBasisForChildren): zero the
+      // child's layout — but only during layout passes, so measure-only passes
+      // do not leak `hasNewLayout` flags into nodes the layout pass may never
+      // visit — and clear its dirtiness so the post-layout ownership assertion
+      // (`YogaLayoutableShadowNode::layout`) holds.
+      if (performLayout) {
+        zeroOutLayoutRecursively(child);
+        child->setHasNewLayout(true);
+        child->setDirty(false);
+      }
       continue;
     }
     child->processDimensions();
@@ -1779,14 +1979,139 @@ static void calculateBlockLayout(
       continue;
     }
 
+    // --- CSS floats (CSS2 §9.5) ---
+    // A floated child is taken out of the normal flow: it is placed at the
+    // current block position (after any clearance), packed against its side
+    // after existing floats in the same band, and wrapped to below them when
+    // it no longer fits. In-flow *block* boxes still overlap floats — only
+    // line boxes shorten, which is the not-yet-implemented Stage 4b.
+    const auto childFloat = child->style().floatSide();
+    const auto childClear = child->style().clear();
+    if (childFloat != FloatSide::None) {
+      const float floatMarginRow =
+          child->style().computeMarginForAxis(FlexDirection::Row, ownerWidth);
+      const float floatMarginColumn =
+          child->style().computeMarginForAxis(FlexDirection::Column, ownerWidth);
+
+      float floatWidth = YGUndefined;
+      SizingMode floatWidthMode = SizingMode::MaxContent;
+      if (child->hasDefiniteLength(Dimension::Width, availableInnerWidth)) {
+        floatWidth = child
+                         ->getResolvedDimension(
+                             direction,
+                             Dimension::Width,
+                             availableInnerWidth,
+                             ownerWidth)
+                         .unwrap() +
+            floatMarginRow;
+        floatWidthMode = SizingMode::StretchFit;
+      }
+      float floatHeight = YGUndefined;
+      SizingMode floatHeightMode = SizingMode::MaxContent;
+      if (child->hasDefiniteLength(Dimension::Height, availableInnerHeight)) {
+        floatHeight = child
+                          ->getResolvedDimension(
+                              direction,
+                              Dimension::Height,
+                              availableInnerHeight,
+                              ownerWidth)
+                          .unwrap() +
+            floatMarginColumn;
+        floatHeightMode = SizingMode::StretchFit;
+      }
+
+      calculateLayoutInternal(
+          child,
+          floatWidth,
+          floatHeight,
+          node->getLayout().direction(),
+          floatWidthMode,
+          floatHeightMode,
+          availableInnerWidth,
+          availableInnerHeight,
+          performLayout,
+          performLayout ? LayoutPassReason::kFlexLayout
+                        : LayoutPassReason::kFlexMeasure,
+          layoutMarkerData,
+          depth,
+          generationCount);
+
+      const float floatOuterWidth =
+          child->getLayout().measuredDimension(Dimension::Width) +
+          floatMarginRow;
+      const float floatOuterHeight =
+          child->getLayout().measuredDimension(Dimension::Height) +
+          floatMarginColumn;
+
+      // Start at the current flow position, pushed down by any clearance.
+      float floatTop = yoga::maxOrDefined(
+          accumulatedBlockDim + pendingMargin.realized(),
+          clearanceEdge(placedFloats, childClear));
+
+      // Pack against the side; if it does not fit beside what is already
+      // there, move below the shallowest blocking float and retry.
+      while (true) {
+        const float floatBottom = floatTop + floatOuterHeight;
+        const float leftIntrusion =
+            floatIntrusion(placedFloats, FloatSide::Left, floatTop, floatBottom);
+        const float rightIntrusion = floatIntrusion(
+            placedFloats, FloatSide::Right, floatTop, floatBottom);
+        const float availableForFloat =
+            availableInnerWidth - leftIntrusion - rightIntrusion;
+        if (floatOuterWidth <= availableForFloat ||
+            (leftIntrusion == 0.0f && rightIntrusion == 0.0f)) {
+          const float ownIntrusion =
+              (childFloat == FloatSide::Left ? leftIntrusion : rightIntrusion) +
+              floatOuterWidth;
+          if (performLayout) {
+            const float inlineOffset = childFloat == FloatSide::Left
+                ? leftIntrusion
+                : availableInnerWidth - rightIntrusion - floatOuterWidth;
+            child->setLayoutPosition(
+                leadingPaddingAndBorderColumn + floatTop, PhysicalEdge::Top);
+            child->setLayoutPosition(
+                leadingPaddingAndBorderRow + inlineOffset, inlineStartEdge);
+          }
+          placedFloats.push_back(PlacedFloat{
+              .blockStart = floatTop,
+              .blockEnd = floatBottom,
+              .inlineExtent = ownIntrusion,
+              .side = childFloat});
+          lowestFloatEdge = yoga::maxOrDefined(lowestFloatEdge, floatBottom);
+          break;
+        }
+        // Drop below the nearest float bottom that is still ahead of us.
+        float nextEdge = std::numeric_limits<float>::max();
+        for (const auto& placed : placedFloats) {
+          if (placed.blockEnd > floatTop) {
+            nextEdge = std::min(nextEdge, placed.blockEnd);
+          }
+        }
+        if (nextEdge == std::numeric_limits<float>::max()) {
+          break;
+        }
+        floatTop = nextEdge;
+      }
+      maxChildInlineDim =
+          yoga::maxOrDefined(maxChildInlineDim, floatOuterWidth);
+      continue;
+    }
+
+    // An in-flow box with `clear` starts below the floats it must clear.
+    if (childClear != Clear::None) {
+      const float edge = clearanceEdge(placedFloats, childClear);
+      if (edge > accumulatedBlockDim) {
+        accumulatedBlockDim = edge;
+        pendingMargin = {};
+      }
+    }
+
     const float childMarginRow =
         child->style().computeMarginForAxis(FlexDirection::Row, ownerWidth);
     const float childMarginColumn =
         child->style().computeMarginForAxis(FlexDirection::Column, ownerWidth);
     const float childLeadingMarginColumn = child->style().computeFlexStartMargin(
         FlexDirection::Column, direction, ownerWidth);
-    const float childLeadingMarginRow = child->style().computeInlineStartMargin(
-        FlexDirection::Row, direction, ownerWidth);
 
     // The available* values passed to calculateLayoutInternal are margin-box
     // sizes (the callee subtracts the child's own margins). A definite style
@@ -1870,19 +2195,50 @@ static void calculateBlockLayout(
     const float childMeasuredWidth =
         child->getLayout().measuredDimension(Dimension::Width);
 
+    // Collapse the child's top margin — and any descendant margins escaping
+    // through its top edge (Stage 3b) — with the pending adjoining margins,
+    // then realize the resulting gap as the child's border-edge position.
+    // Margins pending before the first realized border edge escape through
+    // this container's own top edge when it participates in the owner's BFC.
+    const float childTrailingMarginColumn =
+        childMarginColumn - childLeadingMarginColumn;
+    pendingMargin.fold(childLeadingMarginColumn);
+    foldEscapedMargins(child, /*leadingEdge*/ true, pendingMargin);
+    const float childBorderEdge = accumulatedBlockDim +
+        ((escapeLeadingMargins && !hasRealizedBorderEdge)
+             ? 0.0f
+             : pendingMargin.realized());
+
     if (performLayout) {
+      // `setPosition` above already stored `leading margin + relative offset`
+      // into the layout position; the collapsed `childBorderEdge` replaces
+      // the child's own top margin, so subtract it back out (and do not add
+      // the row leading margin again on the inline axis).
       child->setLayoutPosition(
-          child->getLayout().position(PhysicalEdge::Top) +
-              leadingPaddingAndBorderColumn + accumulatedBlockDim +
-              childLeadingMarginColumn,
+          child->getLayout().position(PhysicalEdge::Top) -
+              childLeadingMarginColumn + leadingPaddingAndBorderColumn +
+              childBorderEdge,
           PhysicalEdge::Top);
       child->setLayoutPosition(
           child->getLayout().position(inlineStartEdge) +
-              leadingPaddingAndBorderRow + childLeadingMarginRow,
+              leadingPaddingAndBorderRow,
           inlineStartEdge);
     }
 
-    accumulatedBlockDim += childMarginColumn + childMeasuredHeight;
+    if (childMeasuredHeight == 0.0f) {
+      // Self-collapsing box (zero border-box height, CSS2 §8.3.1): its top
+      // and bottom margins collapse with each other and with the neighbors'
+      // — fold the bottom margin into the still-pending set without
+      // advancing the cursor past a border edge. (Its escaped descendant
+      // margins were folded with the leading walk above.)
+      pendingMargin.fold(childTrailingMarginColumn);
+    } else {
+      accumulatedBlockDim = childBorderEdge + childMeasuredHeight;
+      hasRealizedBorderEdge = true;
+      pendingMargin = {};
+      pendingMargin.fold(childTrailingMarginColumn);
+      foldEscapedMargins(child, /*leadingEdge*/ false, pendingMargin);
+    }
     maxChildInlineDim =
         yoga::maxOrDefined(maxChildInlineDim, childMeasuredWidth + childMarginRow);
   }
@@ -1901,14 +2257,25 @@ static void calculateBlockLayout(
           node, FlexDirection::Row, direction, measuredWidth, ownerWidth, ownerWidth),
       Dimension::Width);
 
-  // Container block size: fill the available height when definite, otherwise the
-  // content height (sum of children margin boxes) plus padding/border.
+  // Container block size: fill the available height when definite, otherwise
+  // the content height — the last border edge plus the still-pending
+  // (collapsed) trailing margins — plus padding/border. Trailing pending
+  // margins that escape through this container's bottom edge (or through its
+  // top, when no border edge was ever realized) belong to the owner's flow
+  // and are excluded from the content height.
   float measuredHeight;
   if (heightSizingMode == SizingMode::StretchFit &&
       yoga::isDefined(availableHeight)) {
     measuredHeight = availableHeight - marginAxisColumn;
   } else {
-    measuredHeight = accumulatedBlockDim + paddingAndBorderAxisColumn;
+    const bool trailingMarginsEscape = escapeTrailingMargins ||
+        (escapeLeadingMargins && !hasRealizedBorderEdge);
+    measuredHeight = accumulatedBlockDim +
+        (trailingMarginsEscape ? 0.0f : pendingMargin.realized()) +
+        paddingAndBorderAxisColumn;
+    // Independent formatting context: grow to contain the floats.
+    measuredHeight = yoga::maxOrDefined(
+        measuredHeight, lowestFloatEdge + paddingAndBorderAxisColumn);
   }
   node->setLayoutMeasuredDimension(
       boundAxis(

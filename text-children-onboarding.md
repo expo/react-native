@@ -183,8 +183,10 @@ between `root.render(<View>hi</View>)` and pixels.
 - **Web mirror** (`__tests__/__fixtures__/string-children-web-mirror.html`): the same cases in
   real DOM/CSS, self-asserting (PASS/FAIL table + `window.__results`). This anchors our
   expectations to actual browser behavior — 12/12 in Safari today.
-- **Simulator demo** (`packages/rn-tester/js/IntrinsicsDemo.js`) + **CDP client**
-  (`packages/rn-tester/scripts/string-children-cdp-verify.js`) for on-device proof.
+- **Simulator demo** (RNTester example screens under
+  `packages/rn-tester/js/examples/TextChildren/`, `DisplayBlock/`, `DisplayInline/`) +
+  **CDP client** (`packages/rn-tester/scripts/css-display-cdp-verify.js`) for
+  on-device proof.
 
 ### The rules that keep it healthy
 
@@ -227,7 +229,7 @@ safaridriver -p 4444 &  # then WebDriver: create session, navigate to the file s
 # `xcrun simctl io <udid> screenshot`.
 
 # CDP layout proof (app running under Metro):
-node packages/rn-tester/scripts/string-children-cdp-verify.js
+node packages/rn-tester/scripts/css-display-cdp-verify.js
 ```
 
 ### The WPT mining workflow (your first project)
@@ -357,7 +359,7 @@ has the full design for all of these.
     union in Flow (`StyleSheetTypes.js`) and TS (`StyleSheetTypes.d.ts`) + doc comment;
     dropped the now-obsolete `display:'block'` Flow suppressions and corrected the
     inherited-key suppression codes to Flow's actual `[incompatible-type]`. The text-children
-    JS files (`StringChildrenBehavior-itest.js`, `StringChildrenBaseline-itest.js`, `IntrinsicsDemo.js`,
+    JS files (`StringChildrenBehavior-itest.js`, `StringChildrenBaseline-itest.js`, the RNTester example screens,
     `StyleSheetTypes.js`) now pass `flow focus-check` clean (0 errors). Inherited text-style
     keys on `View` stay intentionally un-public-typed (flag-gated) — tests keep precise
     suppressions.
@@ -383,6 +385,38 @@ has the full design for all of these.
     (TextViews, not a drawing pass). Currently flag-off everywhere by default.
 13. **Upstreaming** — the `createTextInstance` dev-warning removal belongs in the `react`
     repo host config; our vendored-bundle edit is a fork carry.
+
+## 6a. Debugging traps that have cost real time (read before you chase one)
+
+- **A Yoga style prop needs THREE edits.** `convertRawProp` in
+  `components/view/propsConversions.h` (the construction path — the one that
+  actually parses `style`), the `setProp` switch in `YogaStylableProps.cpp`
+  (the per-prop update path), and `ReactNativeStyleAttributes.js` (the JS
+  allowlist used by style diffing). Miss any one and the prop is dropped
+  **silently**. Adding only the `setProp` case is the easy mistake — that
+  switch never runs on the construction path.
+- **A passing test is not proof the feature is on.** While adding floats, the
+  `clear` cases passed while floats were entirely inert: with floats ignored,
+  in-flow layout produces the same numbers. Always include at least one case
+  whose expected value is *impossible* under the old behaviour.
+- **Caches will serve you stale code and stale truth.**
+  - Fantom does **not** rebuild the C++ tester: run the cmake build after every
+    C++ edit, or you are testing the previous binary (this is how the float
+    props "still" looked unwired after they were fixed).
+  - Metro caches transforms across babel-config changes — restart with
+    `--reset-cache`; a byte-identical bundle size is the tell.
+  - Fantom caches JS builds in `private/react-native-fantom/.out`.
+- **Check which Metro is serving :8081.** A packager left over from a
+  *different worktree* answers `/status` happily and serves that tree's
+  bundle, producing bewildering "unable to resolve module" errors and
+  unchanged behaviour. `lsof -ti:8081` and confirm the path.
+- **`fprintf` debugging in the Fantom tester is invisible** unless the test
+  fails — jest swallows the tester's stderr. Prefer asserting on observable
+  layout, or make the test fail on purpose to see the output.
+- **iOS deep links via `simctl openurl` trigger a SpringBoard confirmation
+  dialog** that silently blocks scripted navigation (and they stack). Use the
+  `-route <Name>` launch argument instead; `launchctl kickstart -k` on
+  SpringBoard clears a stuck dialog.
 
 ## 6. Environment gotchas (each cost real time; don't rediscover them)
 

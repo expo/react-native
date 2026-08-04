@@ -41,6 +41,28 @@ const config = {
     extraNodeModules: {
       'react-native': path.resolve(__dirname, '../react-native'),
     },
+    // The vendored Astryx sources (js/astryx/vendor) import '@stylexjs/stylex'
+    // verbatim; resolve it to the RN StyleX runtime so they run unmodified.
+    resolveRequest: (context, moduleName, platform) => {
+      if (moduleName === '@stylexjs/stylex') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/astryx/stylex-rn.js'),
+        };
+      }
+      // The astryx directory compiles JSX against this runtime (see .babelrc)
+      // so intrinsic elements can inherit CSS custom properties.
+      if (
+        moduleName === 'astryx-jsx/jsx-runtime' ||
+        moduleName === 'astryx-jsx/jsx-dev-runtime'
+      ) {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/astryx/jsx-runtime.js'),
+        };
+      }
+      return context.resolveRequest(context, moduleName, platform);
+    },
   },
 };
 

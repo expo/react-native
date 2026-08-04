@@ -371,8 +371,14 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 `defaultValue`, `yarn featureflags --update` (node 24), `pod install` under `env -i` with a clean
 `PATH` whose `git` is `/usr/bin/git`, `xcodebuild` RNTester, launch, screenshot via
 `xcrun simctl io <udid> screenshot`. Live layout reads:
-`node packages/rn-tester/scripts/string-children-cdp-verify.js` (Metro's inspector proxy needs
-`Origin: http://localhost:8081`). Demo page: `packages/rn-tester/js/IntrinsicsDemo.js`.
+`node packages/rn-tester/scripts/css-display-cdp-verify.js` (Metro's inspector proxy needs
+`Origin: http://localhost:8081`; it launches the app per screen with `-route <Name>`,
+which `RNTesterAppShared` consumes via the restored `exampleFromAppetizeParams`
+initial prop — no URL-scheme confirmation dialog). Demo screens (stock RNTester
+example modules): `packages/rn-tester/js/examples/TextChildren/StringChildrenExample.js`,
+`.../TextChildren/IntrinsicElementsExample.js`, `.../DisplayBlock/DisplayBlockExample.js`,
+`.../DisplayInline/DisplayInlineExample.js` (shared blocks in
+`.../TextChildren/TextChildrenShared.js`).
 
 ### T5. iOS paint order + per-run views — ✅ DONE (simulator-verified)
 
@@ -526,6 +532,119 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 
 ---
 
+## Track F — css-display branch (display:'inline', block Stages 2–3) — ✅ landed
+
+Work on the `css-display` branch (from frontier), each behavior pinned against real
+Safari fixtures before implementation:
+
+- **T11. `display:'inline'` (done).** Parsed like `displayBlock`
+  (`YogaStylableProps::displayInline`; never reaches Yoga). Atomic inline boxes ride the
+  `<img>` attachment machinery (`isAtomicInline`; `layoutInlineAttachments`, generalized
+  from img-only); span-like flow boxes (`isInlineFlowContent`: auto size + all-inline
+  contents) join the parent IFC with their inheritable text props applied via
+  `BaseViewProps::applyInheritedTextAttributes` (shared with the cascade). Blockifies in
+  flex containers; absolute blockifies. Sized inline Views stay atomic (documented
+  divergence from the web's ignore-size rule for non-replaced inlines). Deferred:
+  fragment-level box decorations, flow-box layout metrics, block-in-inline splitting.
+  Tests: `StringChildrenDisplayInline-itest` (10).
+- **T12. Block Stage 2 run contiguity (done).** `display:'none'` children never split
+  runs (block AND flex); absolute children don't interrupt the IFC in block containers
+  but DO separate text-run sequences in flex (Safari-pinned). Fixed native block leaving
+  `Display::None` children dirty (Debug assert). Tests:
+  `StringChildrenMixedContent-itest` (8).
+- **T13. Margin collapsing, Stages 3a+3b (done).** CSS2 §8.3.1 in
+  `calculateBlockLayout`: adjacent siblings (max positives + min negatives),
+  self-collapsing boxes collapse through, nested block-in-block margins escape through
+  content edges (`foldEscapedMargins` post-layout walk), containment at independent-FC
+  roots; fixed latent Stage-1 double-counted margins in child positions. Tests:
+  `StringChildrenBlockMargins-itest` (15).
+- **Remaining:** floats/clearance, static-position specifics, RTL coverage for block,
+  fragment-level inline box decorations, Android (T10).
+- **Demo/verify:** the display example screens (DisplayBlockExample /
+  DisplayInlineExample, registered in RNTesterList) publish rects to
+  `globalThis.__displayVerify`; assert with
+  `packages/rn-tester/scripts/css-display-cdp-verify.js` (launch-arg routed;
+  RNTester enables `enableYogaDisplayBlock` via an override in
+  `RNTester/AppDelegate.mm`).
+
+---
+
+## Track G — Astryx on RN (css-display branch) — M1 ✅ landed
+
+Meta's Astryx design system (React DOM + StyleX) running on the fork — see the
+feasibility analysis (element/CSS inventory, 5 hard dependencies, milestone
+ladder M1–M5). **M1 done:** the vendored, UNMODIFIED `Card` source renders
+end-to-end in RNTester with web-identical geometry.
+
+- **RN StyleX runtime** `packages/rn-tester/js/astryx/stylex-rn.js`
+  (Metro-aliased as `@stylexjs/stylex`): defineVars token table, recursive
+  `var()` fallback chains, element-local custom properties, `light-dark()`
+  per Appearance (live retheme), `calc()` px arithmetic, conditional-value
+  `default` branches, px→number conversion, unsupported-property drops with
+  dev warns. 10 unit tests (`js/astryx/__tests__/stylex-rn-test.js`).
+- **Elements** `js/astryx/dom.js`: `<p>` and `<button>` as view-config aliases
+  of `<div>` (block containers; button gets DOM onClick with NO
+  Pressable/gesture handlers, per direction). `nodeName` reports "div" for
+  now; per-tag shadow nodes can graft in via the lazy descriptor seam later.
+- **Vendored slice** `js/astryx/vendor/` (pristine; see its README):
+  Card + tokens.stylex + container/padding.stylex + mergeProps/themeProps +
+  BaseProps + naming.
+- **Screen + verify:** `examples/Astryx/AstryxExample.js` (registered in
+  RNTesterList; rects → `__displayVerify`), asserted by
+  `scripts/astryx-cdp-verify.js`: total content inset == padding token
+  (border + calc-reduced padding, 16 and 8), width 300 honored.
+- **M2 done — interaction states + `<button>` without Pressable.** The
+  runtime resolves CSS pseudo-classes from an `InteractionState`:
+  `stylex.propsWithState(state, …)` merges whole-block pseudo styles
+  (`{':active': {…}}`) in cascade order (`:active` beats `:hover`/`:focus`)
+  and resolves per-property conditional values against the same state;
+  Astryx's `@media (hover: hover)` / `(pointer: coarse)` capability guards
+  evaluate per platform, so hover branches stay inert on touch.
+  `useInteractionState()` (js/astryx/useInteractionState.js) sources that
+  state from **W3C pointer events on the element itself** — pointerenter/
+  leave/down/up/cancel + focus/blur — so an Astryx-shaped `<button>`
+  (a block-container intrinsic) gets `:active`/`:focus-visible` styling and
+  DOM `onClick` with **no Pressable, gesture responder, or JS gesture
+  recognizer**. Leaving the element cancels the press, matching the browser.
+  17 unit tests; sim-verified that the button's box comes purely from tokens
+  (label inset 18/10 = `--spacing-4`/`--spacing-2` + 2px border).
+  Note: the label is wrapped in a `<div>` because inline elements still have
+  no layout metrics (the `<b>`/`<span>` gap) — measurement only, not styling.
+- **M3 done — CSS custom-property inheritance across elements.** A property
+  set on an ancestor is now visible to every descendant and can be *shadowed*
+  for a subtree, which is what `Section`/`LayoutHeader`/`ClickableCard` rely
+  on (they read `--container-padding-*` set by `Card`, and `Section` resets it
+  to `0px` for its own children).
+  - Resolution is two-pass. `stylex.props()` still resolves eagerly, but
+    **defers** any `var()` whose name nothing local or global defines —
+    taking its fallback there would be wrong, since an ancestor may supply it
+    — and carries the element's own declarations on `__stylexVars`.
+    `resolveInherited(style, vars, scope)` finishes the value at the element
+    with the inherited scope in hand, and returns the scope to publish
+    downward (ancestor scope + own declarations layered on top, copied, never
+    mutated).
+  - The element hook is a **JSX runtime** (`js/astryx/jsx-runtime.js`):
+    lowercase intrinsics render through a wrapper that consumes the scope
+    context, finishes the style, strips `__stylexVars`, and provides its
+    merged scope; composite components pass through untouched, and only
+    elements that *declare* properties add a provider. Babel points the
+    Astryx directories at it (`.babelrc.js` override, absolute `test` paths —
+    a relative one silently never matches) and Metro resolves the
+    `astryx-jsx` module id.
+  - Alternatives weighed: a module-level scope stack (rejected — React's
+    render order can't be popped reliably), and native C++ inheritance via
+    the existing `configureYogaTree` cascade (the right long-term answer,
+    deferred as too large to land before anything renders; the JS layer stays
+    the authoring surface either way).
+  - 22 unit tests; sim-verified: the descendant escapes the inherited 20pt
+    gutter to full-bleed, and the shadowed subtree reads `0px` rather than the
+    inherited `20px` or its own `99px` fallback.
+- **Next (M4+):** `<input>` via TextInput (ExpoUI later, per direction), top
+  layer + anchor positioning, SVG/icons, and — when the JS layer stabilizes —
+  moving inheritance into the native cascade.
+
+---
+
 ## Appendix: file map (quick reference)
 
 - Layout / cascade: `ReactCommon/react/renderer/components/view/YogaLayoutableShadowNode.{h,cpp}`,
@@ -545,5 +664,5 @@ These cannot be proven under Fantom. Verify on an iPhone simulator; capture the 
 - Flags: `scripts/featureflags/ReactNativeFeatureFlags.config.js`.
 - Tests / proof: `Libraries/Text/__tests__/StringChildrenBehavior-itest.js`,
   `StringChildrenBaseline-itest.js`, `__fixtures__/string-children-web-mirror.html`,
-  `packages/rn-tester/js/IntrinsicsDemo.js`,
-  `packages/rn-tester/scripts/string-children-cdp-verify.js`.
+  `packages/rn-tester/js/examples/TextChildren/` (+ `DisplayBlock/`, `DisplayInline/`),
+  `packages/rn-tester/scripts/css-display-cdp-verify.js`.

@@ -9,6 +9,7 @@
 
 #include <limits>
 
+#include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
@@ -63,6 +64,15 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   Float inheritedLineHeight{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextAlignment> inheritedTextAlign{};
   std::optional<TextTransform> inheritedTextTransform{};
+
+  /*
+   * Folds the set inheritable text props above into `textAttributes`. Single
+   * source for the two consumers: the element-tree cascade
+   * (`YogaLayoutableShadowNode::configureYogaTree`, §3.D) and span-like
+   * `display:'inline'` boxes whose contents join a run with their props
+   * applied (`BaseTextShadowNode::buildAttributedString`).
+   */
+  void applyInheritedTextAttributes(TextAttributes &textAttributes) const;
 
   // Borders
   CascadedBorderRadii borderRadii{};
