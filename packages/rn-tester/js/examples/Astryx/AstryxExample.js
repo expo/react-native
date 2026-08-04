@@ -460,9 +460,19 @@ function ModalDialog(): React.Node {
         modal
         open={open}
         {...stylex.props(overlayStyles.surface)}
+        // Centred in the viewport, which is what `showModal()` does on the
+        // web — `margin: auto` in the UA stylesheet's `dialog:modal` rule. A
+        // fixed `top` looked arbitrary, and looked scroll-dependent even
+        // though the top layer is viewport-anchored.
         style={[
           stylex.props(overlayStyles.surface).style,
-          {position: 'absolute', left: 24, right: 24, top: 160},
+          {
+            position: 'absolute',
+            left: 24,
+            right: 24,
+            top: '50%',
+            transform: [{translateY: -80}],
+          },
         ]}>
         A modal dialog in the top layer, with a backdrop.
         <View style={{marginTop: 12}}>
@@ -593,6 +603,10 @@ export default {
         'top layer with a backdrop, escaping surrounding clipping and ' +
         'stacking. Tap outside the popover to light-dismiss it.',
       render: (): React.Node => (
+        // The host wraps the whole case, code block included: the top layer
+        // must paint above everything, and hosting it inside the live content
+        // left the snippet drawing over the popover.
+        <TopLayerHost>
         <DemoContent
           code={
             'resolveAnchorPosition({\n' +
@@ -605,13 +619,12 @@ export default {
             '// component by name and never reaches the composite.\n' +
             '<Dialog open modal={false} onClose={…}>…</Dialog>'
           }>
-          <TopLayerHost>
-            <View style={{gap: 10}}>
-              <AnchoredPopover />
-              <ModalDialog />
-            </View>
-          </TopLayerHost>
+          <View style={{gap: 10}}>
+            <AnchoredPopover />
+            <ModalDialog />
+          </View>
         </DemoContent>
+        </TopLayerHost>
       ),
     },
     {
@@ -672,23 +685,26 @@ export default {
       title: 'Lists indent by the UA marker gutter',
       description:
         'A <ul> gets the UA paddingInlineStart and block margins without a ' +
-        'line of authored layout, and each <li> renders a bullet. The marker ' +
-        'is measured with the content rather than painted over it, so the ' +
-        'first line starts after it. It is list-style-position: inside, not ' +
-        'the web default outside — see the wrapping item, whose continuation ' +
-        'aligns under the marker instead of hanging past it — and <ol> takes ' +
-        'the same bullet until counters exist.',
+        'line of authored layout, and each <li> renders a bullet. The border ' +
+        'is the <ul>’s own box, so the 40pt marker gutter it reserves is ' +
+        'visible: markers hang inside that gutter and the text starts after ' +
+        'it, which is list-style-position: outside — the CSS initial value. ' +
+        'Watch the wrapping item: its continuation lines start at the text ' +
+        'edge, hanging past the marker, exactly as on the web. The Lists ' +
+        'screen covers the counter styles and the inside variant.',
       render: (): React.Node => (
         <DemoContent
           code={
-            '<ul>\n' +
+            "<ul style={{borderWidth: 1, borderColor: '#c33'}}>\n" +
             '  <li>tokens resolve through var() chains</li>\n' +
             '  <li>elements keep their own tagName</li>\n' +
             '  <li>a deliberately long item, so it wraps: …</li>\n' +
             '</ul>'
           }>
+          {/* A border so the <ul>'s own box — and the gutter it reserves for
+              markers — is visible rather than inferred. */}
           {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
-          <ul>
+          <ul style={{borderWidth: 1, borderColor: '#c33'}}>
             {/* $FlowExpectedError[not-a-component] */}
             <li>tokens resolve through var() chains</li>
             {/* $FlowExpectedError[not-a-component] */}
@@ -696,8 +712,8 @@ export default {
             {/* $FlowExpectedError[not-a-component] */}
             <li>
               a deliberately long item, so it wraps: the continuation lines
-              align under the marker rather than hanging past it, because the
-              marker is inside the content box — the web would hang them
+              start at the text edge rather than under the marker, which is
+              the hanging indent outside positioning exists to produce
             </li>
           </ul>
         </DemoContent>
@@ -715,7 +731,8 @@ export default {
           code={
             "<View style={{display: 'block'}}>\n" +
             "  {'status '}\n" +
-            "  <span style={{display: 'inline-flex', gap: 4,\n" +
+            "  <span style={{display: 'inline-flex', flexDirection: 'row',\n" +
+            "                gap: 4,\n" +
             "                paddingHorizontal: 6, borderRadius: 8,\n" +
             "                backgroundColor: '#e6f4ea'}}>\n" +
             "    <View style={{width: 8, height: 8, borderRadius: 4,\n" +
@@ -731,6 +748,10 @@ export default {
             <span
               style={{
                 display: 'inline-flex',
+                // CSS defaults a flex container to `row`; React Native
+                // defaults to `column`, so leaving it out stacked the dot
+                // above the label instead of beside it.
+                flexDirection: 'row',
                 gap: 4,
                 alignItems: 'center',
                 paddingHorizontal: 6,
