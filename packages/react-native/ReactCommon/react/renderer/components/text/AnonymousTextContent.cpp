@@ -13,6 +13,7 @@
 
 #include <react/renderer/components/text/BaseParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/InlineContentShadowNode.h>
+#include <react/renderer/dom/NodeNameProvider.h>
 #include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -103,6 +104,19 @@ std::shared_ptr<YogaLayoutableShadowNode> createAnonymousTextContent(
               std::move(runChildren)),
       },
       family);
+
+  // A `display: list-item` container renders a marker before its content. Only
+  // here is the owning element in hand — the anonymous box's own props are
+  // plain `ViewProps` — so the marker is handed down at creation, in time to
+  // be measured with the rest of the line.
+  const auto* nodeNameProvider = dynamic_cast<const NodeNameProvider*>(
+      containerShadowNode.getProps().get());
+  if (nodeNameProvider != nullptr && nodeNameProvider->domNodeName() == "li") {
+    // U+2022 BULLET then U+00A0 NO-BREAK SPACE, so the gap survives the
+    // white-space collapsing a plain space would not.
+    static_cast<InlineContentShadowNode&>(*shadowNode)
+        .setListMarker(reinterpret_cast<const char*>(u8"\u2022\u00A0"));
+  }
 
   return std::static_pointer_cast<YogaLayoutableShadowNode>(shadowNode);
 }

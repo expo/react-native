@@ -492,3 +492,60 @@ describe('the wider element catalog', () => {
     expect(strong.current?.tagName).toBe('RN:strong');
   });
 });
+
+describe('list markers', () => {
+  it('a <li> renders a marker before its content', () => {
+    const liRef = createRef<HostInstance>();
+    const pRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
+          <ul style={{alignSelf: 'flex-start', paddingInlineStart: 0}}>
+            {/* $FlowExpectedError[not-a-component] */}
+            <li ref={liRef} style={{alignSelf: 'flex-start'}}>
+              abc
+            </li>
+          </ul>
+          {/* The same text with no marker, as the control. */}
+          {/* $FlowExpectedError[not-a-component] intrinsic <p> tag */}
+          <p ref={pRef} style={{alignSelf: 'flex-start'}}>
+            abc
+          </p>
+        </>,
+      );
+    });
+
+    // The marker is MEASURED with the content, not painted over it: a marker
+    // that only painted would overlap the first line instead of displacing it.
+    // The exact advance is deliberately not asserted — the headless measurer
+    // bills per UTF-8 byte, so the bullet and no-break space cost 5 units here
+    // and 2 glyphs on a device.
+    expect(rectOf(liRef).width).toBeGreaterThan(rectOf(pRef).width);
+  });
+
+  it('a non-list block gets no marker', () => {
+    const divRef = createRef<HostInstance>();
+    const pRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        <>
+          {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+          <div ref={divRef} style={{alignSelf: 'flex-start'}}>
+            abc
+          </div>
+          {/* $FlowExpectedError[not-a-component] intrinsic <p> tag */}
+          <p ref={pRef} style={{alignSelf: 'flex-start'}}>
+            abc
+          </p>
+        </>,
+      );
+    });
+
+    expect(rectOf(divRef).width).toBe(rectOf(pRef).width);
+  });
+});

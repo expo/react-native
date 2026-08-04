@@ -10,6 +10,11 @@
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/ViewShadowNode.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
+#include <react/renderer/core/PropsParserContext.h>
+#include <react/renderer/core/RawProps.h>
+#include <react/renderer/core/propsConversions.h>
+#include <react/renderer/dom/NodeNameProvider.h>
+#include <string>
 
 namespace facebook::react {
 
@@ -26,7 +31,7 @@ extern const char DivComponentName[];
  * text-run painting machinery as `<View>`. Block-level (never inline), so a
  * parent's `updateYogaChildren` treats it as a block child.
  */
-class DivProps final : public ViewProps {
+class DivProps final : public ViewProps, public NodeNameProvider {
  public:
   DivProps() : ViewProps() {
     displayBlock = true;
@@ -35,7 +40,8 @@ class DivProps final : public ViewProps {
       const PropsParserContext &context,
       const DivProps &sourceProps,
       const RawProps &rawProps)
-      : ViewProps(context, sourceProps, rawProps) {
+      : ViewProps(context, sourceProps, rawProps),
+        nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})) {
     // `<div>`'s *default* display is block, exactly as the UA stylesheet says
     // — but a default is not a forced value. An authored `display` wins, so
     // `<div style={{display:'flex'}}>` is a flex container like on the web.
@@ -43,6 +49,19 @@ class DivProps final : public ViewProps {
       displayBlock = true;
     }
   }
+
+  /*
+   * Every block-level intrinsic — `<p>`, `<h1>`, `<ul>`, `<li>` — aliases this
+   * component, so without this they would all report `div` to anything reading
+   * the tag in C++. Empty when rendered without an authored tag, in which case
+   * core falls back to the component name.
+   */
+  std::string domNodeName() const override
+  {
+    return nodeName;
+  }
+
+  std::string nodeName{};
 };
 
 /*

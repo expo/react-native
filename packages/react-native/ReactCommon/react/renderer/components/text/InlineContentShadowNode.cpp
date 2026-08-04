@@ -146,6 +146,42 @@ void measureImageAttachments(
 
 } // namespace
 
+void InlineContentShadowNode::appendListMarkerIfNeeded(
+    AttributedString& attributedString,
+    const TextAttributes& textAttributes) const {
+  // The marker leads the content, so it is MEASURED with it and the first line
+  // starts after it. Every builder in this file has to run it — measurement
+  // builds its own attributed string separately from painting, and a marker in
+  // only one of them would overlap the text instead of displacing it.
+  //
+  // We have neither `::marker` nor generated content, so it is an ordinary
+  // fragment of this box's inline flow and inherits the element's font and
+  // colour the way a real marker does.
+  //
+  // DOM-CSS-LIMITATION(list-marker-is-inside): this is
+  // `list-style-position: inside`, not the web's default `outside` — the
+  // marker sits in the content box, so a wrapped line aligns under it rather
+  // than hanging past it. `outside` needs the marker painted into the gutter
+  // that `<ul>`'s `padding-inline-start` reserves.
+  //
+  // DOM-CSS-LIMITATION(no-ordered-list-counters): `<ol>` items take the same
+  // bullet; numbering needs a counter across an element's siblings.
+  if (listMarker_.empty()) {
+    return;
+  }
+  auto marker = AttributedString::Fragment{};
+  marker.string = listMarker_;
+  marker.textAttributes = textAttributes;
+  // No `parentShadowView`: the marker is not any element's content, so it is
+  // treated as bare text and never stamped with an element box.
+  attributedString.appendFragment(std::move(marker));
+}
+
+void InlineContentShadowNode::setListMarker(std::string listMarker) {
+  ensureUnsealed();
+  listMarker_ = std::move(listMarker);
+}
+
 void InlineContentShadowNode::setTextLayoutManager(
     std::shared_ptr<const TextLayoutManager> textLayoutManager) {
   ensureUnsealed();
@@ -156,6 +192,8 @@ AttributedString InlineContentShadowNode::getContentAttributedString() const {
   auto textAttributes = getInheritedTextAttributes();
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
+
+  appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
       textAttributes, *this, attributedString, attachments);
   // Reserve each inline `<img>` box so the painted run offsets the surrounding
@@ -192,6 +230,7 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
 
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
+  appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
       textAttributes, *this, attributedString, attachments);
   if (attachments.empty()) {
@@ -255,6 +294,7 @@ void InlineContentShadowNode::stampInlineElementMetrics(
 
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
+  appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
       textAttributes, *this, attributedString, attachments);
   if (attributedString.isEmpty()) {
@@ -291,6 +331,7 @@ Size InlineContentShadowNode::measureContent(
 
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
+  appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
       textAttributes, *this, attributedString, attachments);
   measureImageAttachments(

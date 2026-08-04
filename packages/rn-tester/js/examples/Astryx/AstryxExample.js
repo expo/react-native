@@ -671,12 +671,13 @@ export default {
     {
       title: 'Lists indent by the UA marker gutter',
       description:
-        'A <ul> gets the UA paddingInlineStart that leaves room for markers, ' +
-        'and its block margins, without a line of authored layout. The ' +
-        'markers themselves are NOT drawn — we have no ::marker and no ' +
-        'generated content, see DOM-CSS-LIMITATION(no-list-markers) — so a ' +
-        'list indents without bullets. The wrapping item shows the part that ' +
-        'does work: continuation lines hang at the gutter.',
+        'A <ul> gets the UA paddingInlineStart and block margins without a ' +
+        'line of authored layout, and each <li> renders a bullet. The marker ' +
+        'is measured with the content rather than painted over it, so the ' +
+        'first line starts after it. It is list-style-position: inside, not ' +
+        'the web default outside — see the wrapping item, whose continuation ' +
+        'aligns under the marker instead of hanging past it — and <ol> takes ' +
+        'the same bullet until counters exist.',
       render: (): React.Node => (
         <DemoContent
           code={
@@ -694,9 +695,9 @@ export default {
             <li>elements keep their own tagName</li>
             {/* $FlowExpectedError[not-a-component] */}
             <li>
-              a deliberately long item, so it wraps: every continuation line
-              starts at the gutter rather than under the marker position, which
-              is the hanging indent a list is supposed to produce
+              a deliberately long item, so it wraps: the continuation lines
+              align under the marker rather than hanging past it, because the
+              marker is inside the content box — the web would hang them
             </li>
           </ul>
         </DemoContent>

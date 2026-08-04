@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <string>
+
 #include <vector>
 
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
@@ -44,6 +46,18 @@ class InlineContentShadowNode final
 
   void setTextLayoutManager(std::shared_ptr<const TextLayoutManager> textLayoutManager);
 
+  /*
+   * The marker text a `display: list-item` container renders before its
+   * content — `<li>`'s bullet.
+   *
+   * Set by whoever creates this anonymous box, because only they know the
+   * element it belongs to: this node's own props are plain `ViewProps`, so the
+   * owning tag is not visible from in here. It has to be part of the content
+   * the box MEASURES, not something painted afterwards, or the marker would
+   * overlap the first line instead of displacing it.
+   */
+  void setListMarker(std::string listMarker);
+
 #pragma mark - LayoutableShadowNode
 
   Size measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const override;
@@ -69,7 +83,12 @@ class InlineContentShadowNode final
       const LayoutMetrics &ownerLayoutMetrics) const override;
 
  private:
+  void appendListMarkerIfNeeded(
+      AttributedString &attributedString,
+      const TextAttributes &textAttributes) const;
+
   std::shared_ptr<const TextLayoutManager> textLayoutManager_;
+  std::string listMarker_;
 };
 
 } // namespace facebook::react
