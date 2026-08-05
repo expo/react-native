@@ -7,15 +7,18 @@ import 'react-native/Libraries/DomElements';
 
 import type {HostInstance} from 'react-native';
 
+import ensureInstance from '../../../src/private/__tests__/utilities/ensureInstance';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
 import {Text, View} from 'react-native';
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
-import ensureInstance from '../../../src/private/__tests__/utilities/ensureInstance';
 
 function rectOf(ref: {current: HostInstance | null}) {
-  return ensureInstance(ref.current, ReactNativeElement).getBoundingClientRect();
+  return ensureInstance(
+    ref.current,
+    ReactNativeElement,
+  ).getBoundingClientRect();
 }
 
 describe('inline-flex chip (css-display-3 §2)', () => {
@@ -72,7 +75,6 @@ describe('inline-flex chip (css-display-3 §2)', () => {
     const spanDot = rectOf(spanDotRef);
     const view = rectOf(viewRef);
     const viewDot = rectOf(viewDotRef);
-    // eslint-disable-next-line no-console
     console.log(
       `span w=${span.width} h=${span.height} dot@(${spanDot.x - span.x},${spanDot.y - span.y}) | ` +
         `view w=${view.width} h=${view.height} dot@(${viewDot.x - view.x},${viewDot.y - view.y})`,
@@ -104,11 +106,19 @@ describe('inline-flex chip (css-display-3 §2)', () => {
       root.render(
         <View style={{width: 300}}>
           <View ref={bareBox} collapsable={false} style={style}>
-            <View ref={bareDot} style={{width: 8, height: 8}} collapsable={false} />
+            <View
+              ref={bareDot}
+              style={{width: 8, height: 8}}
+              collapsable={false}
+            />
             {'ready'}
           </View>
           <View ref={textBox} collapsable={false} style={style}>
-            <View ref={textDot} style={{width: 8, height: 8}} collapsable={false} />
+            <View
+              ref={textDot}
+              style={{width: 8, height: 8}}
+              collapsable={false}
+            />
             <Text>ready</Text>
           </View>
         </View>,
@@ -119,7 +129,6 @@ describe('inline-flex chip (css-display-3 §2)', () => {
     const bd = rectOf(bareDot);
     const tb = rectOf(textBox);
     const td = rectOf(textDot);
-    // eslint-disable-next-line no-console
     console.log(
       `bare  box w=${bb.width} h=${bb.height} dot@(${bd.x - bb.x},${bd.y - bb.y}) | ` +
         `text box w=${tb.width} h=${tb.height} dot@(${td.x - tb.x},${td.y - tb.y})`,
@@ -145,7 +154,6 @@ describe('inline-flex chip (css-display-3 §2)', () => {
         </View>,
       );
     });
-    // eslint-disable-next-line no-console
     console.log(
       `inline-flex w=${rectOf(flexRef).width} inline-block w=${rectOf(blockRef).width} (content is 20)`,
     );
@@ -187,7 +195,6 @@ describe('inline-flex chip (css-display-3 §2)', () => {
 
     const chip = rectOf(chipRef);
     const dot = rectOf(dotRef);
-    // eslint-disable-next-line no-console
     console.log(
       `chip x=${chip.x} y=${chip.y} w=${chip.width} h=${chip.height} | ` +
         `dot x=${dot.x} y=${dot.y} w=${dot.width} h=${dot.height}`,

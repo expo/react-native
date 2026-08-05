@@ -15,7 +15,10 @@ import {View} from 'react-native';
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 
 function rectOf(ref: {current: HostInstance | null}) {
-  return ensureInstance(ref.current, ReactNativeElement).getBoundingClientRect();
+  return ensureInstance(
+    ref.current,
+    ReactNativeElement,
+  ).getBoundingClientRect();
 }
 
 describe('cascade into an atomic inline', () => {

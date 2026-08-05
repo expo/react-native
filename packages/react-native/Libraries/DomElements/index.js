@@ -27,11 +27,11 @@
 
 import type {UAStyle} from './uaStyles';
 
-import uaStyles from './uaStyles';
 import {createViewConfig} from '../NativeComponent/ViewConfig';
 import createReactNativeComponentClass from '../Renderer/shims/createReactNativeComponentClass';
 import {type ViewConfig} from '../Renderer/shims/ReactNativeTypes';
 import {setFallbackViewConfigResolver} from '../Renderer/shims/ReactNativeViewConfigRegistry';
+import uaStyles from './uaStyles';
 
 const inlineTagViewConfig = {
   validAttributes: {
@@ -50,7 +50,10 @@ function registerInlineTag(name: string) {
       // component ends up backing it.
       recordNodeName: true,
       uiViewClassName: name,
-      resolveUIViewClassName: resolveInlineElementComponent(name, uaStyles[name]),
+      resolveUIViewClassName: resolveInlineElementComponent(
+        name,
+        uaStyles[name],
+      ),
       // <b>'s bold and <i>'s italics live in the UA sheet, not in their C++
       // props classes.
       uaStyle: uaStyles[name],
@@ -126,7 +129,10 @@ function registerInlineAlias(name: string, uiViewClassName: string) {
       },
       recordNodeName: true,
       uiViewClassName,
-      resolveUIViewClassName: resolveInlineElementComponent(uiViewClassName, uaStyles[name]),
+      resolveUIViewClassName: resolveInlineElementComponent(
+        uiViewClassName,
+        uaStyles[name],
+      ),
       uaStyle: uaStyles[name],
     }),
   );
@@ -275,7 +281,8 @@ function resolveInlineElementComponent(
     // registrations ("tried to register two views with the same name").
     // $FlowFixMe[unclear-type] a lazily-required module has no static type
     const styleSheetModule: any = require('../StyleSheet/StyleSheet');
-    const flatten = styleSheetModule.default?.flatten ?? styleSheetModule.flatten;
+    const flatten =
+      styleSheetModule.default?.flatten ?? styleSheetModule.flatten;
     const display = flatten(style)?.display ?? uaStyle?.display;
     return typeof display === 'string' && BOX_DISPLAYS.has(display)
       ? 'element-box'

@@ -15,7 +15,10 @@ import {View} from 'react-native';
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 
 function rectOf(ref: {current: HostInstance | null}) {
-  return ensureInstance(ref.current, ReactNativeElement).getBoundingClientRect();
+  return ensureInstance(
+    ref.current,
+    ReactNativeElement,
+  ).getBoundingClientRect();
 }
 
 describe('atomic inline vertical alignment', () => {
@@ -40,7 +43,6 @@ describe('atomic inline vertical alignment', () => {
     });
     const line = rectOf(lineRef);
     const chip = rectOf(chipRef);
-    // eslint-disable-next-line no-console
     console.log(
       `tall chip: line h=${line.height} | chip top=${chip.y - line.y} ` +
         `h=${chip.height} bottom=${chip.y - line.y + chip.height}`,
@@ -86,7 +88,6 @@ describe('atomic inline vertical alignment', () => {
     const line = rectOf(lineRef);
     const chip = rectOf(chipRef);
     const dot = rectOf(dotRef);
-    // eslint-disable-next-line no-console
     console.log(
       `line h=${line.height} | chip top=${chip.y - line.y} h=${chip.height} ` +
         `bottom=${chip.y - line.y + chip.height} | dot top=${dot.y - line.y} h=${dot.height}`,

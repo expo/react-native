@@ -143,6 +143,10 @@ export default {
                 tallest thing on its line, so its top coincides with the line
                 fragment's top and several different formulas would agree by
                 accident. Here the text sets the line's ascent instead. */}
+            {/* $FlowExpectedError[incompatible-type] `fontSize` on a View is
+                honoured at runtime — text attributes cascade to text children —
+                but ViewStyle does not model inherited text properties yet.
+                DOM-CSS-LIMITATION(view-style-text-inheritance) */}
             <View style={{display: 'block', fontSize: 40}}>
               {'xxx '}
               {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
@@ -159,6 +163,10 @@ export default {
             {/* Both at once: shorter than the line AND a non-zero baseline
                 offset. The two cases above each vary only one of those, so
                 each still leaves one term of the placement untested. */}
+            {/* $FlowExpectedError[incompatible-type] `fontSize` on a View is
+                honoured at runtime — text attributes cascade to text children —
+                but ViewStyle does not model inherited text properties yet.
+                DOM-CSS-LIMITATION(view-style-text-inheritance) */}
             <View style={{display: 'block', fontSize: 40}}>
               {'xxx '}
               {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}

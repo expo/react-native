@@ -11,6 +11,7 @@
 import type {RNTesterModuleInfo, ScreenTypes} from './types/RNTesterTypes';
 
 import ReportFullyDrawnView from '../ReportFullyDrawnView/ReportFullyDrawnView';
+import {TopLayerHost} from './astryx/overlay/TopLayer';
 import RNTesterModuleContainer from './components/RNTesterModuleContainer';
 import RNTesterModuleList from './components/RNTesterModuleList';
 import RNTesterNavBar, {navBarHeight} from './components/RNTesterNavbar';
@@ -27,7 +28,6 @@ import {
   getExamplesListWithRecentlyUsed,
   initialNavigationState,
 } from './utils/testerStateUtils';
-import {TopLayerHost} from './astryx/overlay/TopLayer';
 import * as React from 'react';
 import {useCallback, useEffect, useMemo, useReducer} from 'react';
 import {
@@ -291,43 +291,45 @@ const RNTesterApp = ({
           box happens to host it. Mounting it at the app root is what makes
           `showModal()`'s centring mean the screen's centre. */}
       <TopLayerHost>
-      {Platform.OS === 'android' ? <StatusBar barStyle="dark-content" /> : null}
-      {!shouldHideChrome && (
-        <RNTTitleBar
-          title={title}
-          theme={theme}
-          documentationURL={activeModule?.documentationURL}>
-          {activeModule && BackButtonComponent ? (
-            <BackButtonComponent onBack={handleBackPress} />
-          ) : undefined}
-        </RNTTitleBar>
-      )}
-      <View
-        style={StyleSheet.compose(styles.container, {
-          backgroundColor: theme.GroupedBackgroundColor,
-        })}>
-        {activeModule != null ? (
-          <RNTesterModuleContainer
-            module={activeModule}
-            example={activeModuleExample}
-            onExampleCardPress={handleModuleExampleCardPress}
-          />
-        ) : (
-          <RNTesterModuleList
-            sections={activeExampleList}
-            handleModuleCardPress={handleModuleCardPress}
-          />
+        {Platform.OS === 'android' ? (
+          <StatusBar barStyle="dark-content" />
+        ) : null}
+        {!shouldHideChrome && (
+          <RNTTitleBar
+            title={title}
+            theme={theme}
+            documentationURL={activeModule?.documentationURL}>
+            {activeModule && BackButtonComponent ? (
+              <BackButtonComponent onBack={handleBackPress} />
+            ) : undefined}
+          </RNTTitleBar>
         )}
-      </View>
-      {!shouldHideChrome && (
-        <View style={styles.bottomNavbar}>
-          <RNTesterNavBar
-            screen={screen || Screens.COMPONENTS}
-            isExamplePageOpen={!!activeModule}
-            handleNavBarPress={handleNavBarPress}
-          />
+        <View
+          style={StyleSheet.compose(styles.container, {
+            backgroundColor: theme.GroupedBackgroundColor,
+          })}>
+          {activeModule != null ? (
+            <RNTesterModuleContainer
+              module={activeModule}
+              example={activeModuleExample}
+              onExampleCardPress={handleModuleExampleCardPress}
+            />
+          ) : (
+            <RNTesterModuleList
+              sections={activeExampleList}
+              handleModuleCardPress={handleModuleCardPress}
+            />
+          )}
         </View>
-      )}
+        {!shouldHideChrome && (
+          <View style={styles.bottomNavbar}>
+            <RNTesterNavBar
+              screen={screen || Screens.COMPONENTS}
+              isExamplePageOpen={!!activeModule}
+              handleNavBarPress={handleNavBarPress}
+            />
+          </View>
+        )}
         <ReportFullyDrawnView />
       </TopLayerHost>
     </RNTesterThemeContext.Provider>

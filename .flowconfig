@@ -11,6 +11,13 @@
 ; Ignore "BUCK" generated dirs
 <PROJECT_ROOT>/\.buckd/
 
+; Ignore git's own metadata. A branch name ending in ".json" — upstream has
+; one, `@chrfalch/prebuild-fix-missing-script-file-in-package.json` — becomes a
+; reflog file of that name under .git/logs/refs, which Flow then tries to parse
+; as JSON and fails the whole check on. Fetching a branch should not be able to
+; break typechecking.
+<PROJECT_ROOT>/\.git/.*
+
 ; Ignore other platform suffixes
 .*\.macos\.js$
 .*\.windows\.js$

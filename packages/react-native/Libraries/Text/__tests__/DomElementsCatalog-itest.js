@@ -49,19 +49,31 @@ describe('intrinsic element catalog', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          <View collapsable={false} ref={strongRef} style={{display: 'block', alignSelf: 'flex-start'}}>
+          <View
+            collapsable={false}
+            ref={strongRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
             {/* $FlowExpectedError[not-a-component] */}
             <strong>abcd</strong>
           </View>
-          <View collapsable={false} ref={bRef} style={{display: 'block', alignSelf: 'flex-start'}}>
+          <View
+            collapsable={false}
+            ref={bRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
             {/* $FlowExpectedError[not-a-component] */}
             <b>abcd</b>
           </View>
-          <View collapsable={false} ref={emRef} style={{display: 'block', alignSelf: 'flex-start'}}>
+          <View
+            collapsable={false}
+            ref={emRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
             {/* $FlowExpectedError[not-a-component] */}
             <em>abcd</em>
           </View>
-          <View collapsable={false} ref={spanRef} style={{display: 'block', alignSelf: 'flex-start'}}>
+          <View
+            collapsable={false}
+            ref={spanRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
             {/* $FlowExpectedError[not-a-component] */}
             <span>abcd</span>
           </View>
@@ -104,7 +116,10 @@ describe('intrinsic element catalog', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{display: 'block', alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
           {/* $FlowExpectedError[not-a-component] */}
           <button>ab</button>
           {/* $FlowExpectedError[not-a-component] */}
@@ -126,7 +141,10 @@ describe('intrinsic element catalog', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{display: 'block', alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
           {/* $FlowExpectedError[not-a-component] */}
           <button style={{paddingInline: 6}}>ab</button>
         </View>,
@@ -186,7 +204,10 @@ describe('inline-level displays that establish a formatting context', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{display: 'block', alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
           {'ab'}
           <View style={{display: 'inline-flex'}}>
             <View style={{width: 30, height: 10}} />
@@ -208,7 +229,10 @@ describe('inline-level displays that establish a formatting context', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{display: 'block', alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
           <View style={{display: 'inline-flex', flexDirection: 'row'}}>
             <View style={{width: 30, height: 10}} />
             <View style={{width: 20, height: 10}} />
@@ -232,11 +256,19 @@ describe('inline-level displays that establish a formatting context', () => {
     Fantom.runTask(() => {
       root.render(
         <>
-          <View collapsable={false} ref={atomicRef} style={{display: 'block', alignSelf: 'flex-start'}}>
+          <View
+            collapsable={false}
+            ref={atomicRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
             {'ab'}
-            <View style={{display: 'inline-flex', paddingBlock: 10}}>{'cd'}</View>
+            <View style={{display: 'inline-flex', paddingBlock: 10}}>
+              {'cd'}
+            </View>
           </View>
-          <View collapsable={false} ref={spanLikeRef} style={{display: 'block', alignSelf: 'flex-start'}}>
+          <View
+            collapsable={false}
+            ref={spanLikeRef}
+            style={{display: 'block', alignSelf: 'flex-start'}}>
             {'ab'}
             <View style={{display: 'inline', paddingBlock: 10}}>{'cd'}</View>
           </View>
@@ -299,14 +331,17 @@ describe('<div> display is a default the author can override', () => {
 // Box generation follows computed `display`, not the tag: a <span> is the
 // cheap text-backed component while it folds into an inline formatting
 // context, and a real box when its display establishes one.
-describe('display selects an element\'s backing box', () => {
+describe("display selects an element's backing box", () => {
   it('a <span> with display:inline-flex lays its children out with flex', () => {
     const ref = createRef<HostInstance>();
     const root = Fantom.createRoot();
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{display: 'block', alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
           {/* $FlowExpectedError[not-a-component] */}
           <span style={{display: 'inline-flex', flexDirection: 'row'}}>
             <View style={{width: 30, height: 10}} />
@@ -327,7 +362,10 @@ describe('display selects an element\'s backing box', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{display: 'block', alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{display: 'block', alignSelf: 'flex-start'}}>
           {'ab'}
           {/* $FlowExpectedError[not-a-component] */}
           <span>cd</span>
@@ -414,16 +452,26 @@ describe('the wider element catalog', () => {
       root.render(
         <>
           {/* $FlowExpectedError[not-a-component] */}
-          <h1 ref={h1} style={{alignSelf: 'flex-start', marginBlock: 0}}>ab</h1>
+          <h1 ref={h1} style={{alignSelf: 'flex-start', marginBlock: 0}}>
+            ab
+          </h1>
           {/* $FlowExpectedError[not-a-component] */}
-          <div ref={plain} style={{alignSelf: 'flex-start'}}>{'ab'}</div>
+          <div ref={plain} style={{alignSelf: 'flex-start'}}>
+            {'ab'}
+          </div>
           {/* Margins are measured on the *parent*: an element's own rect is
               its border box, which never includes them. */}
-          <View collapsable={false} ref={noMargin} style={{alignSelf: 'flex-start'}}>
+          <View
+            collapsable={false}
+            ref={noMargin}
+            style={{alignSelf: 'flex-start'}}>
             {/* $FlowExpectedError[not-a-component] */}
             <h1 style={{marginBlock: 0}}>ab</h1>
           </View>
-          <View collapsable={false} ref={withMargin} style={{alignSelf: 'flex-start'}}>
+          <View
+            collapsable={false}
+            ref={withMargin}
+            style={{alignSelf: 'flex-start'}}>
             {/* $FlowExpectedError[not-a-component] */}
             <h1>ab</h1>
           </View>
@@ -437,9 +485,10 @@ describe('the wider element catalog', () => {
     expect(rectOf(h1).width).toBeGreaterThan(rectOf(plain).width);
     // h1's UA margin is 0.67em = 10.72 above and below. Compared loosely
     // because layout rounds to the pixel grid.
-    expect(
-      rectOf(withMargin).height - rectOf(noMargin).height,
-    ).toBeCloseTo(21.44, 0);
+    expect(rectOf(withMargin).height - rectOf(noMargin).height).toBeCloseTo(
+      21.44,
+      0,
+    );
   });
 
   it('a list indents by the UA marker gutter', () => {
@@ -451,9 +500,13 @@ describe('the wider element catalog', () => {
       root.render(
         <>
           {/* $FlowExpectedError[not-a-component] */}
-          <div ref={plain} style={{alignSelf: 'flex-start'}}>{'ab'}</div>
+          <div ref={plain} style={{alignSelf: 'flex-start'}}>
+            {'ab'}
+          </div>
           {/* $FlowExpectedError[not-a-component] */}
-          <ul ref={list} style={{alignSelf: 'flex-start'}}>{'ab'}</ul>
+          <ul ref={list} style={{alignSelf: 'flex-start'}}>
+            {'ab'}
+          </ul>
         </>,
       );
     });
@@ -550,7 +603,10 @@ describe('list markers (css-lists-3 §3)', () => {
   });
 
   it('the counter reaches two digits', () => {
-    const widths = widthOfItems({tag: 'ol'}, Array.from({length: 10}, () => 'x'));
+    const widths = widthOfItems(
+      {tag: 'ol'},
+      Array.from({length: 10}, () => 'x'),
+    );
     // ...until "10.", which is one byte wider than "9.".
     expect(widths[9] - widths[8]).toBe(10);
   });
