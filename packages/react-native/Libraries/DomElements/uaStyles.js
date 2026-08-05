@@ -94,4 +94,47 @@ const uaStyles: {[string]: UAStyle} = {
   mark: {backgroundColor: '#ffff00', color: '#000000'},
 };
 
+/**
+ * CSS initial values that differ from React Native's defaults.
+ *
+ * The web applies these to every element before any stylesheet runs, so they
+ * belong to the elements rather than to the components backing them — which is
+ * exactly why they live here and not in `View`. An RN `<View>` or
+ * `<ScrollView>` keeps RN's own defaults; only registered HTML intrinsics get
+ * these.
+ */
+const INITIAL_VALUES: {[string]: unknown} = {
+  // `flex-direction`'s initial value is `row` (css-flexbox-1 §5.1); React
+  // Native defaults to `column`. On the web this only takes effect on a flex
+  // container, and the same holds here: a block container lays out through
+  // Yoga's block display, which ignores it.
+  flexDirection: 'row',
+};
+
+/**
+ * The UA style for `tag`, including the initial values above.
+ *
+ * Returns the SAME object each time and seeds it in place rather than building
+ * a merged copy, because view configs capture this object by reference when
+ * the element is registered — `overrideUAStyle` depends on that, and a fresh
+ * object here would silently stop later overrides from being seen.
+ *
+ * A per-tag declaration wins: the table below is a more specific origin than
+ * an initial value, so `in` rather than a blind assignment.
+ */
+export function uaStyleFor(tag: string): UAStyle {
+  let style: UAStyle = uaStyles[tag];
+  if (style == null) {
+    const created: UAStyle = {};
+    uaStyles[tag] = created;
+    style = created;
+  }
+  for (const key of Object.keys(INITIAL_VALUES)) {
+    if (!(key in style)) {
+      style[key] = INITIAL_VALUES[key];
+    }
+  }
+  return style;
+}
+
 export default uaStyles;

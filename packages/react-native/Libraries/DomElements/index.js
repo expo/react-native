@@ -31,7 +31,7 @@ import {createViewConfig} from '../NativeComponent/ViewConfig';
 import createReactNativeComponentClass from '../Renderer/shims/createReactNativeComponentClass';
 import {type ViewConfig} from '../Renderer/shims/ReactNativeTypes';
 import {setFallbackViewConfigResolver} from '../Renderer/shims/ReactNativeViewConfigRegistry';
-import uaStyles from './uaStyles';
+import uaStyles, {uaStyleFor} from './uaStyles';
 
 const inlineTagViewConfig = {
   validAttributes: {
@@ -52,11 +52,11 @@ function registerInlineTag(name: string) {
       uiViewClassName: name,
       resolveUIViewClassName: resolveInlineElementComponent(
         name,
-        uaStyles[name],
+        uaStyleFor(name),
       ),
       // <b>'s bold and <i>'s italics live in the UA sheet, not in their C++
       // props classes.
-      uaStyle: uaStyles[name],
+      uaStyle: uaStyleFor(name),
     }),
   );
 }
@@ -104,6 +104,11 @@ createReactNativeComponentClass('div', () =>
   createViewConfig({
     validAttributes: {},
     uiViewClassName: 'div',
+    // <div> is registered on its own rather than through one of the helpers
+    // above, so it needs the UA sheet wired up explicitly — without this it is
+    // the one intrinsic that silently misses the initial values, including
+    // `flex-direction: row`.
+    uaStyle: uaStyleFor('div'),
   }),
 );
 
@@ -131,9 +136,9 @@ function registerInlineAlias(name: string, uiViewClassName: string) {
       uiViewClassName,
       resolveUIViewClassName: resolveInlineElementComponent(
         uiViewClassName,
-        uaStyles[name],
+        uaStyleFor(name),
       ),
-      uaStyle: uaStyles[name],
+      uaStyle: uaStyleFor(name),
     }),
   );
 }
@@ -175,7 +180,7 @@ function registerBlockElement(name: string) {
       },
       recordNodeName: true,
       uiViewClassName: 'div',
-      uaStyle: uaStyles[name],
+      uaStyle: uaStyleFor(name),
     }),
   );
 }

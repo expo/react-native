@@ -37,7 +37,15 @@ YogaStylableProps::YogaStylableProps(
             rawDisplay->hasType<std::string>()
         ? (std::string)*rawDisplay
         : std::string{};
-    displayBlock = displayValue == "block";
+    // `display` sets an OUTER and an INNER display (css-display-3 §2).
+    // `inline-block` is `inline flow-root`: inline on the outside, but BLOCK
+    // on the inside, so its children stack as block boxes exactly like a
+    // `<div>`'s. `inline-flex` is `inline flex` and keeps a flex inner
+    // display. Recording the inner display is what makes that difference real
+    // rather than incidental — until now both were left as Yoga's flex box,
+    // and an inline-block only stacked its children because React Native's
+    // flex direction happens to default to column.
+    displayBlock = displayValue == "block" || displayValue == "inline-block";
     displayInline = displayValue == "inline" ||
         displayValue == "inline-flex" || displayValue == "inline-block";
     displayInlineAtomic =
@@ -146,7 +154,15 @@ void YogaStylableProps::setProp(
         value.hasValue() && value.hasType<std::string>()
         ? (std::string)value
         : std::string{};
-    displayBlock = displayValue == "block";
+    // `display` sets an OUTER and an INNER display (css-display-3 §2).
+    // `inline-block` is `inline flow-root`: inline on the outside, but BLOCK
+    // on the inside, so its children stack as block boxes exactly like a
+    // `<div>`'s. `inline-flex` is `inline flex` and keeps a flex inner
+    // display. Recording the inner display is what makes that difference real
+    // rather than incidental — until now both were left as Yoga's flex box,
+    // and an inline-block only stacked its children because React Native's
+    // flex direction happens to default to column.
+    displayBlock = displayValue == "block" || displayValue == "inline-block";
     displayInline = displayValue == "inline" ||
         displayValue == "inline-flex" || displayValue == "inline-block";
     displayInlineAtomic =
