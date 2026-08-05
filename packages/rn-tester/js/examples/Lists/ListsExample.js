@@ -182,6 +182,45 @@ export default {
               </span>
               {' xxx'}
             </View>
+            {/* overflow other than `visible` is the rule's second escape hatch
+                (CSS2 §10.8.1): the box aligns by its bottom edge whatever its
+                content, because a clipped line box is not something you can
+                sensibly align a line to. This pink box has the SAME content and
+                padding as the one above it, so the only thing that may move it
+                is the overflow. Its bottom should sit on the baseline. */}
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  paddingHorizontal: 4,
+                  paddingBottom: 24,
+                  overflow: 'hidden',
+                  backgroundColor: '#f80',
+                }}>
+                {'xxx'}
+              </span>
+              {' xxx'}
+            </View>
+            {/* A replaced element. CSS2 §10.8.1 gives an inline replaced box
+                the same treatment as a box with no line boxes: its baseline is
+                its bottom margin edge, so the image's bottom should sit on the
+                text baseline exactly as the empty red box does. A data URI so
+                the probe never depends on the network. */}
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <img> tag */}
+              <img
+                source={{
+                  uri:
+                    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB' +
+                    'CAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+                }}
+                style={{width: 30, height: 30, backgroundColor: '#333'}}
+              />
+              {' xxx'}
+            </View>
           </View>
         </DemoContent>
       ),
