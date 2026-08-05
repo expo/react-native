@@ -363,6 +363,103 @@ export default {
       ),
     },
     {
+      title: 'list-style-position: outside vs inside',
+      description:
+        'Identical markup to the web reference page. outside is the CSS ' +
+        'initial value: the marker is not part of the content box, so a ' +
+        'wrapped line hangs past it. inside makes the marker part of the ' +
+        'content, so the wrapped line aligns under it. The border is each ' +
+        'list\u2019s own box, so the gutter is visible either way.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<ul style={{listStylePosition: 'outside'}}>  // the default\n" +
+            "<ul style={{listStylePosition: 'inside'}}>"
+          }>
+          <View style={{gap: 12}}>
+            {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
+            <ul style={{borderWidth: 1, borderColor: '#c33'}}>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>
+                outside — a long item that wraps so the hanging indent is
+                visible
+              </li>
+            </ul>
+            {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
+            <ul
+              style={{
+                borderWidth: 1,
+                borderColor: '#39c',
+                listStylePosition: 'inside',
+              }}>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>
+                inside — a long item that wraps so the difference is visible
+              </li>
+            </ul>
+          </View>
+        </DemoContent>
+      ),
+    },
+    {
+      title: 'Counter styles',
+      description:
+        'Every style implemented, in the same order as the web reference ' +
+        'page: the three bullets, decimal, <ol start>, the alphabetic carry ' +
+        'from z to aa, the Roman subtractive pairs, and none.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            '<ol start={9}>…</ol>\n' +
+            "<ol style={{listStyleType: 'lower-alpha'}} start={25}>…</ol>\n" +
+            "<ol style={{listStyleType: 'upper-roman'}}>…</ol>\n" +
+            "<ul style={{listStyleType: 'none'}}>…</ul>"
+          }>
+          <View style={{gap: 10}}>
+            {/* $FlowExpectedError[not-a-component] intrinsic <ol> tag */}
+            <ol>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>decimal</li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>decimal</li>
+            </ol>
+            {/* $FlowExpectedError[not-a-component] intrinsic <ol> tag */}
+            <ol start={9}>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>start=9</li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>ten</li>
+            </ol>
+            {/* $FlowExpectedError[not-a-component] intrinsic <ol> tag */}
+            <ol style={{listStyleType: 'lower-alpha'}} start={25}>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>y</li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>z</li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>aa — the carry</li>
+            </ol>
+            {/* $FlowExpectedError[not-a-component] intrinsic <ol> tag */}
+            <ol style={{listStyleType: 'upper-roman'}}>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>I</li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>II</li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>III</li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>IV — subtractive</li>
+            </ol>
+            {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
+            <ul style={{listStyleType: 'none'}}>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>none — indented, no marker</li>
+            </ul>
+          </View>
+        </DemoContent>
+      ),
+    },
+    {
       title: 'Nested lists step through the UA bullets',
       description:
         'Identical markup to the web reference page, so the two can be ' +

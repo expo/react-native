@@ -726,7 +726,7 @@ export default {
             "<View style={{display: 'block'}}>\n" +
             "  {'status '}\n" +
             "  <span style={{display: 'inline-flex', flexDirection: 'row',\n" +
-            "                gap: 4,\n" +
+            "                gap: 4, alignItems: 'center',\n" +
             "                paddingHorizontal: 6, borderRadius: 8,\n" +
             "                backgroundColor: '#e6f4ea'}}>\n" +
             "    <View style={{width: 8, height: 8, borderRadius: 4,\n" +
