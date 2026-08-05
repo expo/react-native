@@ -30,10 +30,14 @@
  *    the top-most auto overlay. `manual` overlays and modal dialogs ignore it.
  *  - **A modal renders a backdrop** (`::backdrop`); non-modal popovers do not.
  *
- * Not modelled: focus trapping and `@starting-style` entry animations. Both
- * are listed as follow-ups rather than faked — see the Astryx notes.
+ *  - **A modal traps focus**: the app content behind it leaves the
+ *    accessibility tree, so a screen reader cannot swipe out of the dialog
+ *    into the page behind it. See `focusTrap.js`.
+ *
+ * Not modelled: `@starting-style` entry animations.
  */
 
+import {INERT_PROPS, NOT_INERT_PROPS, modalContainerProps} from './focusTrap';
 import * as React from 'react';
 import {useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
@@ -92,7 +96,15 @@ export function TopLayerHost({children}: {children: React.Node}): React.Node {
   return (
     <TopLayerContext.Provider value={api}>
       <View style={styles.root}>
-        {children}
+        {/* While a modal is open the page behind it is inert to assistive
+            technology — the containment half of a focus trap, and the escape
+            route that actually matters on a touch platform. Non-modal
+            popovers leave it alone, exactly as `popover="auto"` does. */}
+        <View
+          style={styles.root}
+          {...(hasModal ? INERT_PROPS : NOT_INERT_PROPS)}>
+          {children}
+        </View>
         {/* Mounted at the app root, the layer below IS the viewport, so an
             overlay positions in viewport coordinates directly — the same frame
             `getBoundingClientRect()` reports an anchor in. An earlier version
@@ -126,7 +138,8 @@ export function TopLayerHost({children}: {children: React.Node}): React.Node {
               <View
                 key={entry.id}
                 style={StyleSheet.absoluteFill}
-                pointerEvents="box-none">
+                pointerEvents="box-none"
+                {...modalContainerProps(entry.mode === 'modal')}>
                 {entry.content}
               </View>
             ))}

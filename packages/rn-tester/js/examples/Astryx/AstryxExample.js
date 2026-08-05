@@ -593,6 +593,7 @@ export default {
       ),
     },
     {
+      name: 'overlays',
       title: 'Overlays — top layer + anchor positioning',
       description:
         'The two things every Astryx overlay needs. The popover measures its ' +
