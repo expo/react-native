@@ -30,7 +30,9 @@ namespace facebook::react {
  * against: adding, removing or reordering a virtual method, or changing the
  * fields of a struct that crosses the boundary.
  */
-constexpr uint32_t kRendererAbiVersion = 1;
+// 2: `AttributedString::Fragment` gained `atomicInlineBaseline`, changing the
+//    layout of a type an app's own C++ compiles against.
+constexpr uint32_t kRendererAbiVersion = 2;
 
 /*
  * Returns the value the renderer LIBRARY was compiled with, as opposed to the

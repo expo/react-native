@@ -93,6 +93,8 @@ internal object TextLayoutManager {
   const val FR_KEY_INLINE_BOX: Int = 6
   const val FR_KEY_IS_INLINE_BOX_START: Int = 7
   const val FR_KEY_IS_INLINE_BOX_END: Int = 8
+  // The attachment's own baseline, from the box's top (CSS2 §10.8.1).
+  const val FR_KEY_ATOMIC_INLINE_BASELINE: Int = 9
 
   const val IB_KEY_MARGIN_LEFT: Int = 0
   const val IB_KEY_MARGIN_RIGHT: Int = 1
@@ -455,11 +457,20 @@ internal object TextLayoutManager {
       if (fragment.contains(FR_KEY_IS_ATTACHMENT) && fragment.getBoolean(FR_KEY_IS_ATTACHMENT)) {
         val width = PixelUtil.toPixelFromSP(fragment.getDouble(FR_KEY_WIDTH))
         val height = PixelUtil.toPixelFromSP(fragment.getDouble(FR_KEY_HEIGHT))
+        val baselineFromTop =
+            if (fragment.contains(FR_KEY_ATOMIC_INLINE_BASELINE))
+                PixelUtil.toPixelFromSP(fragment.getDouble(FR_KEY_ATOMIC_INLINE_BASELINE))
+            else height
         ops.add(
             SetSpanOperation(
                 sb.length - 1,
                 sb.length,
-                TextInlineViewPlaceholderSpan(reactTag, width.toInt(), height.toInt()),
+                TextInlineViewPlaceholderSpan(
+                    reactTag,
+                    width.toInt(),
+                    height.toInt(),
+                    baselineFromTop.toInt(),
+                ),
             )
         )
       } else if (end >= start) {
@@ -611,6 +622,8 @@ internal object TextLayoutManager {
       val isAttachment: Boolean,
       val width: Double,
       val height: Double,
+      // The box's own baseline, from its top, in the same units as `height`.
+      val atomicInlineBaseline: Double,
       // box-model-scope.md G3, in px.
       val leadingInlineSpace: Float,
       val trailingInlineSpace: Float,
@@ -653,6 +666,15 @@ internal object TextLayoutManager {
                   },
               height =
                   if (fragment.contains(FR_KEY_HEIGHT)) {
+                    fragment.getDouble(FR_KEY_HEIGHT)
+                  } else {
+                    Double.NaN
+                  },
+              atomicInlineBaseline =
+                  if (fragment.contains(FR_KEY_ATOMIC_INLINE_BASELINE)) {
+                    fragment.getDouble(FR_KEY_ATOMIC_INLINE_BASELINE)
+                  } else if (fragment.contains(FR_KEY_HEIGHT)) {
+                    // No baseline of its own: the bottom edge is the baseline.
                     fragment.getDouble(FR_KEY_HEIGHT)
                   } else {
                     Double.NaN
@@ -709,6 +731,7 @@ internal object TextLayoutManager {
                 fragment.reactTag,
                 PixelUtil.toPixelFromSP(fragment.width).toInt(),
                 PixelUtil.toPixelFromSP(fragment.height).toInt(),
+                PixelUtil.toPixelFromSP(fragment.atomicInlineBaseline).toInt(),
             ),
             start,
             end,
@@ -1874,7 +1897,13 @@ internal object TextLayoutManager {
       }
 
       // Vertically align the inline view to the baseline of the line of text.
-      val placeholderTopPosition = layout.getLineBaseline(line) - placeholderHeight
+      // The box's OWN baseline goes on the line's (CSS2 §10.8.1). Subtracting
+      // the full height instead put its bottom edge there, which is only right
+      // for a box with no line boxes of its own — for one containing text it
+      // floated the whole box up by its descent, so its text sat above the
+      // text around it.
+      val placeholderTopPosition =
+          layout.getLineBaseline(line) - placeholder.baselineFromTop.toFloat()
 
       // The attachment array returns the positions of each of the attachments as
       metrics.top = placeholderTopPosition

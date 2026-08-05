@@ -1115,6 +1115,10 @@ constexpr static MapBuffer::Key FR_KEY_TEXT_ATTRIBUTES = 5;
 constexpr static MapBuffer::Key FR_KEY_INLINE_BOX = 6;
 constexpr static MapBuffer::Key FR_KEY_IS_INLINE_BOX_START = 7;
 constexpr static MapBuffer::Key FR_KEY_IS_INLINE_BOX_END = 8;
+// An attachment's own baseline, measured from the box's top (CSS2 §10.8.1), so
+// the platform can sit that baseline on the line's instead of dropping the
+// box's bottom onto it.
+constexpr static MapBuffer::Key FR_KEY_ATOMIC_INLINE_BASELINE = 9;
 
 constexpr static MapBuffer::Key IB_KEY_MARGIN_LEFT = 0;
 constexpr static MapBuffer::Key IB_KEY_MARGIN_RIGHT = 1;
@@ -1443,6 +1447,9 @@ inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
     builder.putMapBuffer(FR_KEY_INLINE_BOX, inlineBoxMap);
     builder.putBool(FR_KEY_IS_INLINE_BOX_START, fragment.isInlineBoxStart);
     builder.putBool(FR_KEY_IS_INLINE_BOX_END, fragment.isInlineBoxEnd);
+  }
+  if (fragment.isAttachment()) {
+    builder.putDouble(FR_KEY_ATOMIC_INLINE_BASELINE, fragment.atomicInlineBaseline);
   }
 
   return builder.build();

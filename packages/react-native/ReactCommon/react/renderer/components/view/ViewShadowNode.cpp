@@ -243,6 +243,50 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
 }
 
 template <const char* concreteComponentName, typename ViewPropsT>
+Float AbstractViewShadowNode<concreteComponentName, ViewPropsT>::baseline(
+    const LayoutContext& layoutContext,
+    Size size) const {
+  // CSS2 §10.8.1: an inline-block's baseline is the baseline of its last
+  // in-flow line box; with no line boxes it is the bottom margin edge. The
+  // line boxes live in the anonymous IFC box this View wraps its inline
+  // content in, so the baseline is that box's own baseline plus wherever the
+  // box sits inside this one (padding, borders, preceding blocks).
+  //
+  // Laid out on a clone at the given size first, exactly as
+  // `ParagraphShadowNode::baseline` does. This is asked DURING the parent's
+  // measure pass, when this node's own children still carry stale metrics —
+  // reading them directly returned a baseline of zero, which pushed the box a
+  // full descent below the line instead of onto it.
+  auto clonedShadowNode = this->clone({});
+  auto& laidOut = static_cast<YogaLayoutableShadowNode&>(*clonedShadowNode);
+  auto localLayoutContext = layoutContext;
+  localLayoutContext.affectedNodes = nullptr;
+  laidOut.layoutTree(
+      localLayoutContext,
+      LayoutConstraints{
+          .minimumSize = size,
+          .maximumSize = size,
+          .layoutDirection = this->getLayoutMetrics().layoutDirection});
+
+  const auto& children = laidOut.getYogaLayoutableChildren();
+  for (auto it = children.rbegin(); it != children.rend(); ++it) {
+    const auto& child = *it;
+    if (!child->getTraits().check(ShadowNodeTraits::Trait::AnonymousBox)) {
+      continue;
+    }
+    const auto* layoutableChild =
+        dynamic_cast<const LayoutableShadowNode*>(child.get());
+    if (layoutableChild == nullptr) {
+      continue;
+    }
+    const auto childFrame = layoutableChild->getLayoutMetrics().frame;
+    return childFrame.origin.y +
+        layoutableChild->baseline(layoutContext, childFrame.size);
+  }
+  return size.height;
+}
+
+template <const char* concreteComponentName, typename ViewPropsT>
 void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     updateTextRunStateIfNeeded() {
   if (!ReactNativeFeatureFlags::enableStringChildren()) {

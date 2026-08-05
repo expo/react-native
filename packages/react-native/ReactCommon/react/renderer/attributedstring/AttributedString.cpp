@@ -51,13 +51,22 @@ bool Fragment::operator==(const Fragment& rhs) const {
 bool Fragment::isContentEqual(const Fragment& rhs) const {
   // Inline box spacing changes the measured advance, so it is part of the
   // content for measure-cache purposes.
-  return std::tie(string, textAttributes, inlineBox, isInlineBoxStart, isInlineBoxEnd) ==
+  // `atomicInlineBaseline` changes where the box sits on the line, so it is
+  // part of the content for measure-cache purposes.
+  return std::tie(
+             string,
+             textAttributes,
+             inlineBox,
+             isInlineBoxStart,
+             isInlineBoxEnd,
+             atomicInlineBaseline) ==
       std::tie(
           rhs.string,
           rhs.textAttributes,
           rhs.inlineBox,
           rhs.isInlineBoxStart,
-          rhs.isInlineBoxEnd);
+          rhs.isInlineBoxEnd,
+          rhs.atomicInlineBaseline);
 }
 
 #pragma mark - AttributedString

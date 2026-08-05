@@ -16,6 +16,7 @@
 #include <string>
 
 #include <react/renderer/attributedstring/AttributedStringBox.h>
+#include <react/renderer/textlayoutmanager/TextLayoutManagerExtended.h>
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/components/text/BaseTextShadowNode.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
@@ -123,6 +124,10 @@ void measureImageAttachments(
       continue;
     }
     auto size = layoutable->measure(layoutContext, constraints);
+    // Where this box's baseline sits, so the text engine can put that baseline
+    // on the line's rather than dropping the box's bottom onto it.
+    fragments[attachment.fragmentIndex].atomicInlineBaseline =
+        layoutable->baseline(layoutContext, size);
 
     // An atomic inline box's inline-axis margins add to the advance it
     // occupies on the line (CSS2 §10.8): the reserved box is the MARGIN box,
@@ -220,44 +225,6 @@ InlineContentShadowNode::getOutsideMarker() const {
       .present = true};
 }
 
-/*
- * DOM-CSS-LIMITATION(atomic-inline-not-baseline-aligned): an atomic inline box
- * — `inline-block`, `inline-flex`, an `<img>` — is placed with its BOTTOM on
- * the line's bottom rather than its baseline on the line's baseline, which is
- * what `vertical-align: baseline` (the initial value) calls for.
- *
- * Measured: a 40pt-tall chip in a line of 20pt text gives a 40pt line with the
- * chip occupying 0..40. The web gives a taller line — the chip's synthesized
- * baseline is its bottom border edge (css-flexbox-1 §8.5, since with
- * `align-items: center` no item is baseline-aligned), so the text's descender
- * still has to fit BELOW that edge. The chip therefore sits roughly a descent
- * lower than the browser puts it, which is visible when comparing the demo
- * against the web reference page.
- *
- * Fixing it means teaching the line-height computation to reserve descent
- * below an atomic inline's baseline, and making both platform text engines
- * agree on the offset — iOS already treats an attachment's `bounds.origin.y`
- * as a baseline offset, Android does not.
- */
-/*
- * DOM-CSS-LIMITATION(atomic-inline-not-baseline-aligned): an atomic inline box
- * — `inline-block`, `inline-flex`, an `<img>` — is placed with its BOTTOM on
- * the line's bottom rather than its baseline on the line's baseline, which is
- * what `vertical-align: baseline` (the initial value) calls for.
- *
- * Measured: a 40pt-tall chip in a line of 20pt text gives a 40pt line with the
- * chip occupying 0..40. The web gives a TALLER line — the chip's synthesized
- * baseline is its bottom border edge (css-flexbox-1 §8.5, since with
- * `align-items: center` no item is baseline-aligned), so the text's descender
- * still has to fit below that edge. The chip therefore sits about a descent
- * lower against the text than the browser puts it, which is what shows when
- * comparing the demo with the web reference page.
- *
- * Fixing it means reserving descent below an atomic inline's baseline in the
- * line-height computation, and getting both text engines to agree on the
- * offset — iOS already treats an attachment's `bounds.origin.y` as a baseline
- * offset, Android does not.
- */
 AttributedString InlineContentShadowNode::getContentAttributedString() const {
   auto textAttributes = getInheritedTextAttributes();
   auto attributedString = AttributedString{};

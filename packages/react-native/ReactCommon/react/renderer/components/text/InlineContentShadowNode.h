@@ -84,6 +84,13 @@ class InlineContentShadowNode final
 
   OutsideMarker getOutsideMarker() const override;
 
+  /*
+   * The distance from this box's top to the baseline of its FIRST line, which
+   * is what an atomic inline containing it exposes to the line it sits in
+   * (CSS2 §10.8.1).
+   */
+  Float baseline(const LayoutContext &layoutContext, Size size) const override;
+
   std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const override
   {
     return textLayoutManager_;

@@ -70,6 +70,60 @@ export default {
     'both list-style-position values, <ol start>, and nesting.',
   examples: [
     {
+      title: 'Baseline alignment of an atomic inline',
+      description:
+        'An atomic inline box — inline-block, inline-flex, an <img> — is ' +
+        'baseline-aligned by default. Its baseline here is its bottom border ' +
+        'edge, so that edge should sit ON the text baseline, and the line has ' +
+        'to stay tall enough for the text’s descender BELOW it. The text is ' +
+        'all x-height characters, so the bottom of the glyphs is the ' +
+        'baseline; the box bottom should line up with it exactly.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<View style={{display: 'block'}}>\n" +
+            "  {'xxx '}\n" +
+            "  <span style={{display: 'inline-block', width: 24, height: 40,\n" +
+            "                backgroundColor: '#c33'}} />\n" +
+            "  {' xxx'}\n" +
+            '</View>'
+          }>
+          <View style={{gap: 10}}>
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 24,
+                  height: 40,
+                  backgroundColor: '#c33',
+                }}
+              />
+              {' xxx'}
+            </View>
+            {/* With in-flow text the baseline is that text's, not the bottom
+                edge (CSS2 §10.8.1): the inner glyphs must sit on the SAME
+                baseline as the outer ones. */}
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  paddingHorizontal: 4,
+                  paddingTop: 16,
+                  backgroundColor: '#39c',
+                }}>
+                {'xxx'}
+              </span>
+              {' xxx'}
+            </View>
+          </View>
+        </DemoContent>
+      ),
+    },
+    {
       title: 'Unordered: the UA bullet, and what nesting does to it',
       description:
         'An unauthored <ul> takes the bullet for its depth — disc, then ' +

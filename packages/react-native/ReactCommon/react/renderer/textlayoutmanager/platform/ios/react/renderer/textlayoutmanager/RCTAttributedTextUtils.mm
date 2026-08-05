@@ -403,8 +403,14 @@ static NSMutableAttributedString *RCTNSAttributedStringFragmentFromFragment(
 {
   if (fragment.isAttachment()) {
     auto layoutMetrics = fragment.parentShadowView.layoutMetrics;
+    // TextKit reads `bounds.origin.y` as the attachment's offset from the
+    // BASELINE: 0 drops the box's bottom onto it. That is only right for a box
+    // with no line boxes of its own. CSS2 §10.8.1 puts an atomic inline's own
+    // baseline on the line's, so a box whose baseline sits above its bottom
+    // edge has to hang the difference below the line's baseline.
+    CGFloat descentBelowBaseline = layoutMetrics.frame.size.height - fragment.atomicInlineBaseline;
     CGRect bounds = {
-        .origin = {.x = layoutMetrics.frame.origin.x, .y = layoutMetrics.frame.origin.y},
+        .origin = {.x = layoutMetrics.frame.origin.x, .y = -descentBelowBaseline},
         .size = {.width = layoutMetrics.frame.size.width, .height = layoutMetrics.frame.size.height}};
 
     NSTextAttachment *attachment = [NSTextAttachment new];
