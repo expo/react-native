@@ -205,6 +205,29 @@ internal object TextLayoutManager {
     return null
   }
 
+  /**
+   * Whether the run is `white-space: pre`, which does not wrap (css-text-3 §3): a line ends only
+   * where the source has a newline, and a long line overflows its container rather than folding.
+   *
+   * Read off the first fragment because `white-space` is inherited and applies to the whole run,
+   * the same way [getTextAlignmentAttr] reads `textAlign`.
+   */
+  @JvmStatic
+  public fun isPreformatted(attributedString: MapBuffer): Boolean {
+    if (!attributedString.contains(AS_KEY_FRAGMENTS)) {
+      return false
+    }
+
+    val fragments = attributedString.getMapBuffer(AS_KEY_FRAGMENTS)
+    if (fragments.count == 0) {
+      return false
+    }
+
+    val textAttributes = fragments.getMapBuffer(0).getMapBuffer(FR_KEY_TEXT_ATTRIBUTES)
+    return textAttributes.contains(TextAttributeProps.TA_KEY_WHITE_SPACE) &&
+        textAttributes.getString(TextAttributeProps.TA_KEY_WHITE_SPACE) == "pre"
+  }
+
   private fun getTextJustificationMode(alignmentAttr: String?): Int {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
       return -1
@@ -1318,12 +1341,21 @@ internal object TextLayoutManager {
       )
     }
 
+    // `white-space: pre` lays out as though there were no available width at all, so the only
+    // line breaks are the ones in the text. The container still clips it — the text overflows
+    // rather than reflowing, which is what the web does.
+    // `white-space: pre` lays out as though there were no available width at all, so the only
+    // line breaks are the ones in the text. The container still clips it — the text overflows
+    // rather than reflowing, which is what the web does.
+    val layoutWidthMode =
+        if (isPreformatted(attributedString)) YogaMeasureMode.UNDEFINED else widthYogaMeasureMode
+
     return CreateLayoutResult(
         createLayout(
             text,
             boring,
             width,
-            widthYogaMeasureMode,
+            layoutWidthMode,
             includeFontPadding,
             textBreakStrategy,
             hyphenationFrequency,

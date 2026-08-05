@@ -304,28 +304,47 @@ TextMeasurement measureDeterministically(
 
   auto maximumWidth = layoutConstraints.maximumSize.width;
 
-  // Mandatory breaks (`\n`, which only `<br>` can produce once whitespace
-  // collapsing has run) split the run into segments that each wrap on their
-  // own, so counting characters across the whole string would undercount.
+  // Mandatory breaks (`\n`, from `<br>` or from preserved `white-space: pre`
+  // text) split the run into segments that each wrap on their own, so counting
+  // characters across the whole string would undercount the lines.
+  //
+  // Their WIDTHS are tracked too, because a run's intrinsic width is its
+  // longest line and not the sum of them. That only becomes visible when the
+  // width is unbounded — as it is for `pre`, which does not wrap — and it
+  // otherwise reads as a correct-looking total.
   std::vector<size_t> segmentLengths;
+  std::vector<Float> segmentWidths;
   size_t segmentLength = 0;
+  Float segmentWidth = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
+    segmentWidth += fragment.leadingInlineSpace() + fragment.trailingInlineSpace();
     if (fragment.isAttachment()) {
       segmentLength += 1;
+      segmentWidth += fragment.parentShadowView.layoutMetrics.frame.size.width;
       continue;
     }
+    const auto advance = perCharacterAdvance(fragment);
     for (char character : fragment.string) {
       if (character == '\n') {
         segmentLengths.push_back(segmentLength);
+        segmentWidths.push_back(segmentWidth);
         segmentLength = 0;
+        segmentWidth = 0;
       } else {
         segmentLength += 1;
+        segmentWidth += advance;
       }
     }
   }
   segmentLengths.push_back(segmentLength);
+  segmentWidths.push_back(segmentWidth);
 
-  Float width = intrinsicWidth;
+  Float longestSegment = 0;
+  for (auto candidate : segmentWidths) {
+    longestSegment = std::max(longestSegment, candidate);
+  }
+
+  Float width = longestSegment;
   Float lineCount = 0;
   const auto charactersPerLine = std::isfinite(maximumWidth)
       ? std::max<Float>(1, std::floor(maximumWidth / kDeterministicCharacterWidth))

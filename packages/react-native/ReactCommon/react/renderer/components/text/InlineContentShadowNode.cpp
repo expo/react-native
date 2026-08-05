@@ -420,6 +420,27 @@ void InlineContentShadowNode::stampInlineElementMetrics(
       ownerLayoutMetrics);
 }
 
+/*
+ * The constraints text is laid out under, given its `white-space`.
+ *
+ * `pre` and `nowrap` do not wrap (css-text-3 §3), so the line breaker must be
+ * given unbounded width — otherwise a long line silently folds and the
+ * preserved whitespace is the only half of `pre` that works. The resulting box
+ * is wider than its container, which is exactly what the web does: a `<pre>`
+ * overflows rather than reflows.
+ */
+static LayoutConstraints constraintsForWhiteSpace(
+    const TextAttributes& textAttributes,
+    const LayoutConstraints& layoutConstraints) {
+  if (!textAttributes.whiteSpace.has_value() ||
+      *textAttributes.whiteSpace != WhiteSpace::Pre) {
+    return layoutConstraints;
+  }
+  auto unwrapped = layoutConstraints;
+  unwrapped.maximumSize.width = std::numeric_limits<Float>::infinity();
+  return unwrapped;
+}
+
 Size InlineContentShadowNode::measureContent(
     const LayoutContext& layoutContext,
     const LayoutConstraints& layoutConstraints) const {
@@ -450,7 +471,7 @@ Size InlineContentShadowNode::measureContent(
           AttributedStringBox{attributedString},
           ParagraphAttributes{},
           textLayoutContext,
-          layoutConstraints)
+          constraintsForWhiteSpace(textAttributes, layoutConstraints))
       .size;
 }
 

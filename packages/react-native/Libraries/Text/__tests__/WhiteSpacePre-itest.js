@@ -119,3 +119,44 @@ describe('white-space: pre preserves what normal collapses', () => {
     expect(preserved.width).toBe(50);
   });
 });
+
+describe('white-space: pre does not wrap', () => {
+  // The other half of `pre`. Preserving whitespace but still folding long
+  // lines gets the characters right and the layout wrong — and it is the half
+  // that is invisible unless a line is long enough to wrap.
+  it('keeps a long line on one line where normal text wraps', () => {
+    const long = 'aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj';
+    const wrapped = boxOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <div> tag
+      <div ref={ref} style={SHRINK}>
+        {long}
+      </div>
+    ));
+    // Shrink-to-fit so the reading is the CONTENT's width. A block-level <pre>
+    // is as wide as its container and its content overflows — which is what
+    // the web does, and why the box alone cannot show whether it wrapped.
+    const unwrapped = boxOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <pre> tag
+      <pre ref={ref} style={SHRINK}>
+        {long}
+      </pre>
+    ));
+    // 49 characters at 10pt each is 490 — well past the 400 container.
+    expect(wrapped.height).toBeGreaterThan(20);
+    expect(unwrapped.height).toBe(20);
+    expect(unwrapped.width).toBe(490);
+  });
+
+  it('still breaks where the author wrote a newline', () => {
+    // No wrapping does not mean no breaks: an explicit newline is preserved
+    // content and still ends the line.
+    const box = boxOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <pre> tag
+      <pre ref={ref} style={SHRINK}>
+        {'aaaaaaaa\nbb'}
+      </pre>
+    ));
+    expect(box.height).toBe(40);
+    expect(box.width).toBe(80);
+  });
+});

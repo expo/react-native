@@ -537,7 +537,8 @@ function ElementGapsCases(): React.Node {
           line below survive exactly as written — and copy that way too. */}
       {/* $FlowFixMe[not-a-component] intrinsic <pre> tag */}
       <pre style={{backgroundColor: '#f4f4f6', padding: 8, borderRadius: 6}}>
-        {'function greet(name) {\n    return `hi ${name}`;\n}'}
+        {'function greet(name) {\n    return `hi ${name}`;\n}\n' +
+          '// a deliberately long line that would wrap in normal text but must not here'}
       </pre>
       {/* $FlowFixMe[not-a-component] intrinsic <textarea> tag */}
       <textarea
