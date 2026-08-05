@@ -134,12 +134,26 @@ internal class AstryxVectorShapeView(context: Context) : View(context) {
     if (path.isEmpty) {
       return
     }
+
+    // The geometry arrives in density-independent pixels, because that is what
+    // React Native layout is measured in and what the JS side scaled the
+    // viewBox into. `Canvas` draws in real pixels, so without this an icon
+    // renders at 1/density of its size — on a 420dpi device a 28dp icon came
+    // out 11px across instead of 73.
+    //
+    // iOS needs no equivalent: a CAShapeLayer's path and its bounds are both
+    // in points, so the two already agree there.
+    val density = resources.displayMetrics.density
+    val saved = canvas.save()
+    canvas.scale(density, density)
     if (hasFill) {
       canvas.drawPath(path, fillPaint)
     }
     // Stroke after fill, as SVG paints it (§11.3): the outline sits on top.
+    // Its width is in dp too, and scales with the canvas rather than separately.
     if (hasStroke && strokePaint.strokeWidth > 0f) {
       canvas.drawPath(path, strokePaint)
     }
+    canvas.restoreToCount(saved)
   }
 }
