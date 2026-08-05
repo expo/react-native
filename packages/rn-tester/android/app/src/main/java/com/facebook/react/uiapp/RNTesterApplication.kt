@@ -10,6 +10,7 @@
 package com.facebook.react.uiapp
 
 import android.app.Application
+import android.util.Log
 import com.facebook.fbreact.specs.SampleLegacyModule
 import com.facebook.fbreact.specs.SampleTurboModule
 import com.facebook.react.BaseReactPackage
@@ -19,6 +20,8 @@ import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.ReactPackage
 import com.facebook.react.config.ReactFeatureFlags
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlagsDefaults
 import com.facebook.react.ViewManagerOnDemandReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
@@ -131,5 +134,29 @@ internal class RNTesterApplication : Application(), ReactApplication {
     ReactFeatureFlags.dispatchPointerEvents = true
     super.onCreate()
     loadReactNative(this)
+    // The shared C++ animation backend, which drives prop updates from the
+    // Choreographer WITHOUT going through React's JavaScript pipeline. Both
+    // flags are needed: the backend itself, and the C++ Animated implementation
+    // that owns it. Upstream has these default-off with an expected release
+    // value of true.
+    //
+    // After `loadReactNative`, not before: that installs the OSS-Stable
+    // provider, and a second plain `override` — on either side — throws. So
+    // this replaces it through the sanctioned escape hatch, which is what the
+    // iOS counterpart in AppDelegate.mm does for the same reason. The React
+    // host is created lazily by the activity, so the new values are in place
+    // before anything renders. Any flag read before this point is reported
+    // back, and is worth knowing about rather than swallowing.
+    val accessedEarly =
+        ReactNativeFeatureFlags.dangerouslyForceOverride(
+            object : ReactNativeFeatureFlagsDefaults() {
+              override fun useSharedAnimatedBackend(): Boolean = true
+
+              override fun cxxNativeAnimatedEnabled(): Boolean = true
+            }
+        )
+    if (accessedEarly != null) {
+      Log.w("RNTester", "Feature flags read before the override: " + accessedEarly)
+    }
   }
 }

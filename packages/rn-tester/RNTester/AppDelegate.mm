@@ -59,6 +59,20 @@ class RNTesterFeatureFlagsOverrides : public facebook::react::ReactNativeFeature
   {
     return true;
   }
+
+  // The shared C++ animation backend, which drives prop updates from a display
+  // link WITHOUT going through React's JavaScript pipeline. Both flags are
+  // needed: the backend itself, and the C++ Animated implementation that owns
+  // it. Upstream has these default-off with `expectedReleaseValue: true`.
+  bool useSharedAnimatedBackend() override
+  {
+    return true;
+  }
+
+  bool cxxNativeAnimatedEnabled() override
+  {
+    return true;
+  }
 };
 
 } // namespace
