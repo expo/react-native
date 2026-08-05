@@ -252,6 +252,23 @@ Float AbstractViewShadowNode<concreteComponentName, ViewPropsT>::baseline(
   // content in, so the baseline is that box's own baseline plus wherever the
   // box sits inside this one (padding, borders, preceding blocks).
   //
+  // The same rule has a second escape hatch: a box whose `overflow` is not
+  // `visible` also aligns by its bottom edge, whatever its content. Clipping
+  // makes the last line box a meaningless thing to align to — it can be
+  // scrolled or cropped out of sight entirely, which would drag the whole line
+  // with it. `getClipsContentToBounds()` is exactly `overflow != visible`.
+  //
+  // The spec says bottom *margin* edge; this returns the bottom border edge,
+  // which is the same thing here because an atomic inline is measured and
+  // mounted as its border box — margin sits outside the frame the attachment
+  // uses, so adding it would offset the baseline from the box actually drawn.
+  // The no-line-boxes fallback below returns the same edge for the same reason.
+  const auto& viewProps =
+      static_cast<const ViewPropsT&>(*this->getProps().get());
+  if (viewProps.getClipsContentToBounds()) {
+    return size.height;
+  }
+  //
   // Laid out on a clone at the given size first, exactly as
   // `ParagraphShadowNode::baseline` does. This is asked DURING the parent's
   // measure pass, when this node's own children still carry stale metrics —
