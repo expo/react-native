@@ -53,7 +53,7 @@ function IconGrid({size, color}: {size: number, color: string}): React.Node {
 
 export default {
   title: 'Astryx icons',
-  category: 'Basic',
+  category: 'UI',
   description:
     "Astryx's own icon set rendering through the <svg>/<path>/<circle>/" +
     '<rect> intrinsics — the vendored source, unmodified.',
