@@ -128,6 +128,17 @@ export function mixColors(
 ): ?Rgba {
   // §3.2: an omitted percentage is whatever the other leaves; both omitted is
   // an even mix.
+  // css-color-5 §3.1 types these as <percentage [0,100]>. Out of range makes
+  // the whole function invalid — NOT something to normalise. Verified against
+  // Safari: `color-mix(in srgb, red 150%, blue 50%)` drops the declaration
+  // entirely, while an in-range pair summing above 100 (60% + 60%) IS
+  // normalised to an even mix. An earlier version here normalised both, and a
+  // test asserted that as correct.
+  const outOfRange = (p: ?number) => p != null && (p < 0 || p > 100);
+  if (outOfRange(p1) || outOfRange(p2)) {
+    return null;
+  }
+
   const neitherStated = p1 == null && p2 == null;
   const w1: number = neitherStated ? 50 : p1 != null ? p1 : 100 - (p2 ?? 0);
   const w2: number = neitherStated ? 50 : p2 != null ? p2 : 100 - (p1 ?? 0);

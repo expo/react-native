@@ -92,13 +92,23 @@ describe('color-mix in srgb', () => {
     });
   });
 
-  it('normalises percentages summing above 100', () => {
-    expect(mix('in srgb, red 150%, blue 50%')).toEqual({
-      r: 191,
+  // Verified against Safari: an IN-RANGE pair summing above 100 normalises...
+  it('normalises in-range percentages summing above 100', () => {
+    expect(mix('in srgb, red 60%, blue 60%')).toEqual({
+      r: 128,
       g: 0,
-      b: 64,
+      b: 128,
       a: 1,
     });
+  });
+
+  // ...but a percentage outside [0,100] is not a value to normalise, it makes
+  // the whole function invalid (css-color-5 §3.1). Safari drops the
+  // declaration. An earlier version of this file asserted 150% normalised,
+  // which was wrong in both the code and the test.
+  it('rejects a percentage outside 0-100 rather than normalising it', () => {
+    expect(resolveColorMixArgs('in srgb, red 150%, blue 50%')).toBeNull();
+    expect(resolveColorMixArgs('in srgb, red -10%, blue 50%')).toBeNull();
   });
 
   it('accepts a leading percentage', () => {
