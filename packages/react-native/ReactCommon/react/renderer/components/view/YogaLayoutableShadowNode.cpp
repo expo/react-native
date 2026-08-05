@@ -1034,6 +1034,27 @@ void YogaLayoutableShadowNode::configureYogaTree(
   // anonymous box a marker attaches to is created during the child's own
   // configuration, and the loop above deliberately skips children whose
   // configuration is unchanged — which would drop items out of the count.
+  // An anonymous IFC box is a Yoga LEAF: the inline content it wraps —
+  // including atomic inlines like `inline-block` and `<img>` — hangs off it as
+  // SHADOW children, never as Yoga children. The loop above walks
+  // `yogaLayoutableChildren_`, so without this the cascade stopped dead at the
+  // anonymous box and an atomic inline's text fell back to the default font,
+  // rendering visibly smaller than the text around it.
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      getTraits().check(ShadowNodeTraits::Trait::AnonymousBox)) {
+    for (const auto& child : getChildren()) {
+      auto* layoutableChild =
+          dynamic_cast<const YogaLayoutableShadowNode*>(child.get());
+      if (layoutableChild == nullptr) {
+        continue;
+      }
+      auto& mutableChild =
+          const_cast<YogaLayoutableShadowNode&>(*layoutableChild);
+      mutableChild.receivedTextAttributes_ = inheritedTextAttributes_;
+      mutableChild.inheritedTextAttributes_ = inheritedTextAttributes_;
+    }
+  }
+
   // Markers are assigned in their own pass, once every child is configured:
   // the anonymous box a marker attaches to is created during the child's own
   // configuration, and the loop above deliberately skips children whose
