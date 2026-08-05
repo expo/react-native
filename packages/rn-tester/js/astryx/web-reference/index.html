@@ -1,0 +1,174 @@
+<!doctype html>
+<!--
+  Web reference for the RNTester demos.
+
+  Deliberately plain HTML and CSS with NO stylesheet of our own beyond the
+  cosmetic frame: every list, marker, chip and dialog below is styled only by
+  the browser's user-agent stylesheet plus the exact declarations the RNTester
+  demo authors. That is the point — anything that differs between this page and
+  the app is a fidelity gap in our implementation, not a difference in what was
+  asked for.
+
+  The rulers are drawn from the same measurements the app is checked against,
+  so "is the indent right?" can be answered by looking rather than arguing.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Astryx demos — web reference</title>
+    <style>
+      body {
+        font: 15px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 16px;
+        background: #f2f2f7;
+        color: #000;
+      }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .note { color: #6b6b70; font-size: 13px; margin: 0 0 16px; }
+      .case {
+        background: #fff;
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin: 0 0 14px;
+      }
+      .case > h2 { font-size: 15px; margin: 0 0 2px; }
+      .case > .why { color: #6b6b70; font-size: 13px; margin: 0 0 10px; }
+      /* The measurement callout: what the app should match, in numbers. */
+      .measured {
+        font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #1e1e24;
+        color: #d8d8e0;
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-top: 10px;
+        white-space: pre-wrap;
+      }
+      /* A red frame on the <ul> itself, exactly as the RNTester demo draws it,
+         so the marker gutter the UA reserves is visible rather than inferred. */
+      ul.framed, ol.framed { border: 1px solid #c33; }
+    </style>
+  </head>
+  <body>
+    <h1>Astryx demos — web reference</h1>
+    <p class="note">
+      Browser defaults only. Open the same screens in RNTester and compare.
+    </p>
+
+    <section class="case">
+      <h2>Does &lt;ul&gt; have padding?</h2>
+      <p class="why">
+        Yes — every desktop browser's UA stylesheet sets
+        <code>padding-inline-start: 40px</code> on <code>ul</code> and
+        <code>ol</code>, and that gutter is what an <code>outside</code> marker
+        hangs in. The red frame is the list's own box: the bullets sit inside
+        it, the text starts 40px in.
+      </p>
+      <ul class="framed">
+        <li>tokens resolve through var() chains</li>
+        <li>elements keep their own tagName</li>
+        <li>
+          a deliberately long item, so it wraps: the continuation lines start at
+          the text edge rather than under the marker, which is the hanging
+          indent outside positioning exists to produce
+        </li>
+      </ul>
+      <div class="measured" id="m-ul"></div>
+    </section>
+
+    <section class="case">
+      <h2>list-style-position</h2>
+      <p class="why">
+        <code>outside</code> is the initial value: the marker is not part of the
+        content box, so wrapped lines hang past it. <code>inside</code> makes it
+        part of the content, so they align under it.
+      </p>
+      <ul class="framed" style="list-style-position: outside">
+        <li>outside — a long item that wraps so the hanging indent is visible</li>
+      </ul>
+      <ul class="framed" style="list-style-position: inside">
+        <li>inside — a long item that wraps so the difference is visible</li>
+      </ul>
+    </section>
+
+    <section class="case">
+      <h2>Counter styles</h2>
+      <p class="why">Every style the app implements, in the same order.</p>
+      <ul><li>disc<ul><li>circle<ul><li>square</li></ul></li></ul></li></ul>
+      <ol><li>decimal</li><li>decimal</li></ol>
+      <ol start="9"><li>start=9</li><li>ten</li></ol>
+      <ol style="list-style-type: lower-alpha" start="25">
+        <li>y</li><li>z</li><li>aa — the carry</li>
+      </ol>
+      <ol style="list-style-type: upper-roman">
+        <li>I</li><li>II</li><li>III</li><li>IV — subtractive</li>
+      </ol>
+      <ul style="list-style-type: none"><li>none — indented, no marker</li></ul>
+    </section>
+
+    <section class="case">
+      <h2>inline-flex chip</h2>
+      <p class="why">
+        The chip flows in the sentence like a word while laying its children out
+        with flex, and it shrinks to fit its content rather than filling the
+        line.
+      </p>
+      <div>
+        status
+        <span
+          style="
+            display: inline-flex;
+            flex-direction: row;
+            gap: 4px;
+            align-items: center;
+            padding: 0 6px;
+            border-radius: 8px;
+            background: #e6f4ea;
+          "
+          id="chip"
+        >
+          <span style="width: 8px; height: 8px; border-radius: 4px; background: #0a7"></span>
+          ready
+        </span>
+        — flowing inline
+      </div>
+      <div class="measured" id="m-chip"></div>
+    </section>
+
+    <section class="case">
+      <h2>Modal dialog</h2>
+      <p class="why">
+        <code>showModal()</code> puts the dialog in the top layer: centred in the
+        VIEWPORT, above everything, with a backdrop — and it does not move when
+        the page behind it is scrolled.
+      </p>
+      <button onclick="document.getElementById('dlg').showModal()">Open modal</button>
+      <dialog id="dlg">
+        A modal dialog in the top layer, with a backdrop.
+        <div style="margin-top: 12px">
+          <button onclick="document.getElementById('dlg').close()">Close</button>
+        </div>
+      </dialog>
+    </section>
+
+    <script>
+      // Print the numbers the app is measured against, so the comparison is not
+      // a matter of eyeballing two screenshots.
+      const ul = document.querySelector('ul.framed');
+      const li = ul.querySelector('li');
+      const ulBox = ul.getBoundingClientRect();
+      const liBox = li.getBoundingClientRect();
+      document.getElementById('m-ul').textContent =
+        `ul padding-inline-start: ${getComputedStyle(ul).paddingInlineStart}\n` +
+        `ul content starts at x=${Math.round(liBox.left - ulBox.left)} inside its own box\n` +
+        `marker hangs in that gutter, text begins after it`;
+
+      const chip = document.getElementById('chip');
+      const chipBox = chip.getBoundingClientRect();
+      document.getElementById('m-chip').textContent =
+        `chip width: ${Math.round(chipBox.width)}px (shrink-to-fit)\n` +
+        `container width: ${Math.round(chip.parentElement.getBoundingClientRect().width)}px`;
+    </script>
+  </body>
+</html>
