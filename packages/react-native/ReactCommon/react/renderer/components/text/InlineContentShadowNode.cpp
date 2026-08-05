@@ -12,6 +12,7 @@
 #include <react/renderer/components/text/InlineElementMetrics.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <string>
 
@@ -223,6 +224,43 @@ InlineContentShadowNode::getOutsideMarker() const {
       .attributedString = markerString,
       .size = measurement.size,
       .present = true};
+}
+
+Float InlineContentShadowNode::baseline(
+    const LayoutContext& /*layoutContext*/,
+    Size size) const {
+  if (textLayoutManager_ == nullptr) {
+    return 0;
+  }
+  auto attributedString = AttributedString{};
+  auto attachments = BaseTextShadowNode::Attachments{};
+  appendListMarkerIfNeeded(attributedString, getInheritedTextAttributes());
+  BaseTextShadowNode::buildAttributedString(
+      getInheritedTextAttributes(), *this, attributedString, attachments);
+  if (attributedString.isEmpty()) {
+    return 0;
+  }
+
+  if constexpr (TextLayoutManagerExtended::supportsLineMeasurement()) {
+    auto lines = TextLayoutManagerExtended(*textLayoutManager_)
+                     .measureLines(
+                         AttributedStringBox{attributedString},
+                         ParagraphAttributes{},
+                         size);
+    if (lines.empty()) {
+      return 0;
+    }
+    // Derived from the line's BOTTOM rather than its ascender: the ascender is
+    // a font metric and overshoots the real distance from the content's top to
+    // the baseline whenever the line box is not exactly ascent+descent tall,
+    // which put an inline-block's text a couple of points above the text
+    // around it on iOS. The bottom minus the descender is where the glyphs
+    // actually sit.
+    const auto& line = lines[0];
+    return line.frame.origin.y + line.frame.size.height -
+        std::abs(line.descender);
+  }
+  return 0;
 }
 
 AttributedString InlineContentShadowNode::getContentAttributedString() const {
