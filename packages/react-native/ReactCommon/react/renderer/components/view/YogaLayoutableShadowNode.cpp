@@ -146,7 +146,17 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
       yogaConfig_(FabricDefaultYogaLog),
       yogaNode_(
           static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
-              .yogaNode_) {
+              .yogaNode_),
+      // The cascade has to survive cloning. `measure()` lays out a CLONE, so
+      // without this an atomic inline measured its own text with default
+      // attributes — a 15pt cascade came out at the 14pt default, which is
+      // both the wrong glyph size and the wrong baseline to align by.
+      inheritedTextAttributes_(
+          static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
+              .inheritedTextAttributes_),
+      receivedTextAttributes_(
+          static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
+              .receivedTextAttributes_) {
   // Note, cloned `yoga::Node` instance (copied using copy-constructor)
   // inherits dirty flag, measure function, and other properties being set
   // originally in the `YogaLayoutableShadowNode` constructor above.
