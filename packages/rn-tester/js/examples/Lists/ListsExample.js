@@ -119,6 +119,61 @@ export default {
               </span>
               {' xxx'}
             </View>
+            {/* A third offset, deliberately unlike the other two: padding
+                BELOW the text pushes the box's baseline well above its bottom
+                edge. Two probes cannot tell a correct formula from a wrong one
+                when one of them has a zero offset — the empty box's baseline IS
+                its bottom edge, so every candidate agrees on it. */}
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  paddingHorizontal: 4,
+                  paddingBottom: 24,
+                  backgroundColor: '#7a3',
+                }}>
+                {'xxx'}
+              </span>
+              {' xxx'}
+            </View>
+            {/* The case that actually stresses the placement: a box SHORTER
+                than the text beside it. In the probes above the box is the
+                tallest thing on its line, so its top coincides with the line
+                fragment's top and several different formulas would agree by
+                accident. Here the text sets the line's ascent instead. */}
+            <View style={{display: 'block', fontSize: 40}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 10,
+                  height: 10,
+                  backgroundColor: '#93c',
+                }}
+              />
+              {' xxx'}
+            </View>
+            {/* Both at once: shorter than the line AND a non-zero baseline
+                offset. The two cases above each vary only one of those, so
+                each still leaves one term of the placement untested. */}
+            <View style={{display: 'block', fontSize: 40}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  fontSize: 10,
+                  paddingHorizontal: 4,
+                  paddingBottom: 6,
+                  backgroundColor: '#c39',
+                }}>
+                {'xxx'}
+              </span>
+              {' xxx'}
+            </View>
           </View>
         </DemoContent>
       ),
@@ -170,8 +225,7 @@ export default {
         'disc, circle, square and none. An unknown keyword falls back the ' +
         'way a UA does with a value it has not implemented.',
       render: (): React.Node => (
-        <DemoContent
-          code={"<ul style={{listStyleType: 'square'}}>…</ul>"}>
+        <DemoContent code={"<ul style={{listStyleType: 'square'}}>…</ul>"}>
           <View style={{gap: 8}}>
             <List items={['disc (the default)']} />
             <List listStyleType="circle" items={['circle']} />
@@ -203,14 +257,9 @@ export default {
         'the Roman styles use the subtractive pairs, so 4 is IV rather than ' +
         'IIII.',
       render: (): React.Node => (
-        <DemoContent
-          code={"<ol style={{listStyleType: 'upper-roman'}}>…</ol>"}>
+        <DemoContent code={"<ol style={{listStyleType: 'upper-roman'}}>…</ol>"}>
           <View style={{gap: 8}}>
-            <List
-              ordered
-              listStyleType="lower-alpha"
-              items={['a', 'b', 'c']}
-            />
+            <List ordered listStyleType="lower-alpha" items={['a', 'b', 'c']} />
             <List
               ordered
               listStyleType="lower-alpha"
@@ -253,8 +302,7 @@ export default {
         'A marker is generated content of the item, so it inherits the ' +
         'item’s font and colour rather than being drawn in some fixed style.',
       render: (): React.Node => (
-        <DemoContent
-          code={"<li style={{color: '#0a7', fontSize: 20}}>…</li>"}>
+        <DemoContent code={"<li style={{color: '#0a7', fontSize: 20}}>…</li>"}>
           {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
           <ul>
             {/* $FlowExpectedError[not-a-component] */}

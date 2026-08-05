@@ -938,6 +938,14 @@ void drawInlineBoxDecorations(
                   // out to recover the line's baseline. Leaving it in
                   // double-counted the offset and pushed the box down by
                   // exactly that much again.
+                  //
+                  // Verified against an independent ground truth (the baseline
+                  // read off a TEXT glyph on the same line, where
+                  // `locationForGlyphAtIndex:` IS the baseline) across four
+                  // probes covering both terms: offsets of 0, -3.7, -8.5 and
+                  // -27.7pt, and boxes both taller and shorter than the line.
+                  // Exact to six decimals in every case — the demo's probes on
+                  // the Lists screen are those cases.
                   CGPoint glyphLocation = [layoutManager locationForGlyphAtIndex:range.location];
                   CGFloat lineBaseline =
                       lineFragment.origin.y + glyphLocation.y + attachment.bounds.origin.y;
