@@ -206,14 +206,18 @@ internal object TextLayoutManager {
   }
 
   /**
-   * Whether the run is `white-space: pre`, which does not wrap (css-text-3 §3): a line ends only
-   * where the source has a newline, and a long line overflows its container rather than folding.
+   * Whether the run's `white-space` forbids wrapping (css-text-3 §3) — `pre` or `nowrap`. A line
+   * then ends only where the source has a segment break, and a long one overflows its container
+   * rather than folding onto the next line.
+   *
+   * The other four values all wrap; they differ from each other in which whitespace survives, which
+   * is settled before this point, in the collapsing pass.
    *
    * Read off the first fragment because `white-space` is inherited and applies to the whole run,
    * the same way [getTextAlignmentAttr] reads `textAlign`.
    */
   @JvmStatic
-  public fun isPreformatted(attributedString: MapBuffer): Boolean {
+  public fun forbidsWrapping(attributedString: MapBuffer): Boolean {
     if (!attributedString.contains(AS_KEY_FRAGMENTS)) {
       return false
     }
@@ -224,8 +228,14 @@ internal object TextLayoutManager {
     }
 
     val textAttributes = fragments.getMapBuffer(0).getMapBuffer(FR_KEY_TEXT_ATTRIBUTES)
-    return textAttributes.contains(TextAttributeProps.TA_KEY_WHITE_SPACE) &&
-        textAttributes.getString(TextAttributeProps.TA_KEY_WHITE_SPACE) == "pre"
+    if (!textAttributes.contains(TextAttributeProps.TA_KEY_WHITE_SPACE)) {
+      return false
+    }
+    return when (textAttributes.getString(TextAttributeProps.TA_KEY_WHITE_SPACE)) {
+      "pre",
+      "nowrap" -> true
+      else -> false
+    }
   }
 
   private fun getTextJustificationMode(alignmentAttr: String?): Int {
@@ -1341,14 +1351,12 @@ internal object TextLayoutManager {
       )
     }
 
-    // `white-space: pre` lays out as though there were no available width at all, so the only
-    // line breaks are the ones in the text. The container still clips it — the text overflows
-    // rather than reflowing, which is what the web does.
-    // `white-space: pre` lays out as though there were no available width at all, so the only
-    // line breaks are the ones in the text. The container still clips it — the text overflows
-    // rather than reflowing, which is what the web does.
+    // A `white-space` that forbids wrapping lays out as though there were no available width at
+    // all, so the only line breaks are the ones in the text. The container still clips it — the
+    // text overflows rather than reflowing, which is what the web does. Only elements carry the
+    // attribute; a `<Text>` never does (see ____TextStyle_InternalBase.whiteSpace).
     val layoutWidthMode =
-        if (isPreformatted(attributedString)) YogaMeasureMode.UNDEFINED else widthYogaMeasureMode
+        if (forbidsWrapping(attributedString)) YogaMeasureMode.UNDEFINED else widthYogaMeasureMode
 
     return CreateLayoutResult(
         createLayout(

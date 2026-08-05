@@ -165,9 +165,6 @@ public constructor(
             TextEffectRegistry.current,
         )
     view.setSpanned(spanned)
-    // A TextView lays the text out again at its own width when it draws, which would fold a long
-    // `white-space: pre` line back onto a second line even though the measured layout did not.
-    view.setPreformatted(TextLayoutManager.isPreformatted(attributedString))
 
     val minimumFontSize: Float =
         paragraphAttributes.getDouble(TextLayoutManager.PA_KEY_MINIMUM_FONT_SIZE).toFloat()

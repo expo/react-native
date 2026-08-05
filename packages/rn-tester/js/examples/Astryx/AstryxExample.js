@@ -520,6 +520,23 @@ function ModalDialog(): React.Node {
 /**
  * `<br>` and `<textarea>`: the last two element gaps.
  */
+// One string that exercises all three `white-space` axes at once: a run of
+// spaces, a segment break, and a line too long for the container. What each
+// value does to it is what tells them apart.
+const WHITE_SPACE_SAMPLE =
+  'spaced   out\nafter a newline, then a line long enough that it has to wrap somewhere';
+
+const WHITE_SPACE_CASES = [
+  // Collapses the spaces and the newline, yet still refuses to wrap — so this
+  // is one long line running off the edge. Was treated as plain `normal`.
+  {value: 'nowrap', why: 'one line, overflowing'},
+  // Keeps the newline but collapses the run of spaces, and wraps. The value a
+  // two-value model cannot express at all.
+  {value: 'pre-line', why: 'break kept, spaces collapsed'},
+  // Keeps everything and still wraps — `pre` without the overflow.
+  {value: 'pre-wrap', why: 'all kept, still wraps'},
+];
+
 function ElementGapsCases(): React.Node {
   const [text, setText] = useState('Two lines,\nedited here.');
   return (
@@ -540,6 +557,28 @@ function ElementGapsCases(): React.Node {
         {'function greet(name) {\n    return `hi ${name}`;\n}\n' +
           '// a deliberately long line that would wrap in normal text but must not here'}
       </pre>
+      {/* The three `white-space` axes, one case each — the values that a
+          two-value model gets wrong. Same string every time, so the only
+          thing varying is the property. */}
+      {WHITE_SPACE_CASES.map(({value, why}) => (
+        <View key={value} style={{gap: 2}}>
+          <View
+            // $FlowFixMe[incompatible-type] cascade to bare text
+            style={{color: DEMO_THEME.muted, fontSize: 12}}>
+            {`white-space: ${value} — ${why}`}
+          </View>
+          {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
+          <div
+            style={{
+              whiteSpace: value,
+              backgroundColor: '#f4f4f6',
+              padding: 6,
+              borderRadius: 6,
+            }}>
+            {WHITE_SPACE_SAMPLE}
+          </div>
+        </View>
+      ))}
       {/* $FlowFixMe[not-a-component] intrinsic <textarea> tag */}
       <textarea
         rows={3}

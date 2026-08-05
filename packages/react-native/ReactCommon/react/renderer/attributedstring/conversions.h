@@ -578,24 +578,35 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
   react_native_expect(value.hasType<std::string>());
   if (value.hasType<std::string>()) {
     auto string = (std::string)value;
-    if (string == "pre") {
-      result = WhiteSpace::Pre;
-      return;
-    }
     if (string == "normal") {
       result = WhiteSpace::Normal;
       return;
     }
-    // `nowrap`, `pre-wrap`, `pre-line`, `break-spaces` differ from these only
-    // in wrapping, which this pass does not control. Treating them as their
-    // nearest collapsing behaviour keeps the text correct even where the
-    // wrapping is not. DOM-CSS-LIMITATION(white-space-subset)
-    if (string == "pre-wrap" || string == "break-spaces") {
+    if (string == "pre") {
       result = WhiteSpace::Pre;
       return;
     }
-    if (string == "nowrap" || string == "pre-line") {
-      result = WhiteSpace::Normal;
+    if (string == "nowrap") {
+      result = WhiteSpace::NoWrap;
+      return;
+    }
+    if (string == "pre-wrap") {
+      result = WhiteSpace::PreWrap;
+      return;
+    }
+    if (string == "pre-line") {
+      result = WhiteSpace::PreLine;
+      return;
+    }
+    // `break-spaces` differs from `pre-wrap` only in what happens to a run of
+    // preserved spaces sitting at a wrap point: `pre-wrap` lets it hang past
+    // the edge, `break-spaces` measures it so it wraps like any other
+    // character. Hanging is what both platform text engines do and neither
+    // exposes a knob for it, so this behaves as `pre-wrap` — identical unless
+    // a space run is long enough to outrun the line.
+    // DOM-CSS-LIMITATION(white-space-break-spaces-hangs)
+    if (string == "break-spaces") {
+      result = WhiteSpace::BreakSpaces;
       return;
     }
   }
@@ -820,6 +831,28 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   LOG(ERROR) << "Unsupported LineBreakStrategy type";
   // sane default for prod
   result = LineBreakStrategy::None;
+}
+
+inline std::string toString(const WhiteSpace &whiteSpace)
+{
+  switch (whiteSpace) {
+    case WhiteSpace::Normal:
+      return "normal";
+    case WhiteSpace::Pre:
+      return "pre";
+    case WhiteSpace::NoWrap:
+      return "nowrap";
+    case WhiteSpace::PreWrap:
+      return "pre-wrap";
+    case WhiteSpace::PreLine:
+      return "pre-line";
+    case WhiteSpace::BreakSpaces:
+      return "break-spaces";
+  }
+
+  LOG(ERROR) << "Unsupported WhiteSpace value";
+  // sane default for prod
+  return "normal";
 }
 
 inline std::string toString(const LineBreakStrategy &lineBreakStrategy)
@@ -1372,9 +1405,7 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
     builder.putString(TA_KEY_LINE_BREAK_STRATEGY, toString(*textAttributes.lineBreakStrategy));
   }
   if (textAttributes.whiteSpace.has_value()) {
-    builder.putString(
-        TA_KEY_WHITE_SPACE,
-        *textAttributes.whiteSpace == WhiteSpace::Pre ? "pre" : "normal");
+    builder.putString(TA_KEY_WHITE_SPACE, toString(*textAttributes.whiteSpace));
   }
   if (textAttributes.textTransform.has_value()) {
     builder.putString(TA_KEY_TEXT_TRANSFORM, toString(*textAttributes.textTransform));

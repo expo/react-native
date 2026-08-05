@@ -99,12 +99,6 @@ static TextAttributes convertRawProp(
       "textTransform",
       sourceTextAttributes.textTransform,
       defaultTextAttributes.textTransform);
-  textAttributes.whiteSpace = convertRawProp(
-      context,
-      rawProps,
-      "whiteSpace",
-      sourceTextAttributes.whiteSpace,
-      defaultTextAttributes.whiteSpace);
 
   // Paragraph
   textAttributes.lineHeight = convertRawProp(

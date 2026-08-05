@@ -1057,10 +1057,31 @@ type ____TextStyle_InternalBase = Readonly<{
   textDecorationColor?: ____ColorValue_Internal,
   textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase',
   /**
-   * `white-space` (css-text-3 §3). `pre` preserves runs of spaces and
-   * newlines; `normal` collapses each run to a single space and trims a
-   * block's edges. The wrapping-only values are accepted and mapped onto the
-   * nearer of the two.
+   * `white-space` (css-text-3 §3). A shorthand over three independent
+   * behaviours — whether segment breaks survive, whether runs of spaces and
+   * tabs survive, and whether a line that does not fit wraps:
+   *
+   *     value          newlines    spaces/tabs   wraps
+   *     normal         collapse    collapse      yes
+   *     pre            preserve    preserve      no
+   *     nowrap         collapse    collapse      no
+   *     pre-wrap       preserve    preserve      yes
+   *     pre-line       preserve    collapse      yes
+   *     break-spaces   preserve    preserve      yes
+   *
+   * `break-spaces` behaves as `pre-wrap`; they differ only in whether a run of
+   * preserved spaces at a wrap point hangs past the edge or wraps, and hanging
+   * is what both platform text engines do.
+   *
+   *
+   * Applies to elements — `<pre>`, `<div>` and the rest — and to the text
+   * inside them, which is the whitespace model this property comes from. It
+   * has NO effect on `<Text>`, on either platform: `<Text>` predates the DOM
+   * work, already preserves whitespace and newlines as authored, and never had
+   * a collapsing pass for `pre` to turn off. Only the no-wrapping half would
+   * mean anything there, and it is not implemented rather than implemented on
+   * one platform. Accepted on a `<Text>` style only because a TextStyle is a
+   * ViewStyle; it is ignored.
    */
   whiteSpace?:
     'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',

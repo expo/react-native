@@ -471,11 +471,12 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       val documentOrder = runMb.getInt(5)
       val spannable = TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
       val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-      // `white-space: pre` does not wrap (css-text-3 §3): the only line breaks are the ones in the
-      // text, and a long line overflows the container rather than folding onto the next line. Laid
-      // out at its own desired width so nothing wraps; the View clips it, as the web does.
+      // `white-space: pre` and `nowrap` do not wrap (css-text-3 §3): the only line breaks are the
+      // ones in the text, and a long line overflows the container rather than folding onto the next
+      // line. Laid out at its own desired width so nothing wraps; the View clips it, as the web
+      // does.
       val layoutWidth =
-          if (TextLayoutManager.isPreformatted(attributedString))
+          if (TextLayoutManager.forbidsWrapping(attributedString))
               ceil(Layout.getDesiredWidth(spannable, paint).toDouble()).toInt()
           else ceil(width.toDouble()).toInt()
       val layout =

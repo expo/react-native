@@ -45,6 +45,13 @@ bool isCollapsibleWhitespace(char character) {
       character == '\r' || character == '\f';
 }
 
+// A segment break (css-text-3 §4.1): whitespace that ends a line where
+// `white-space` preserves newlines, as opposed to a space or tab, which the
+// same value may still collapse.
+bool isSegmentBreak(char character) {
+  return character == '\n' || character == '\r';
+}
+
 // Applies CSS `white-space: normal` processing to an anonymous IFC's attributed
 // string (css-text-3 §3): collapse each run of collapsible whitespace to a
 // single space and trim whitespace at the IFC's leading and trailing edges.
@@ -69,13 +76,14 @@ void collapseWhitespace(AttributedString& attributedString) {
       pendingCollapse = false;
       continue;
     }
-    if (fragment.textAttributes.whiteSpace.has_value() &&
-        *fragment.textAttributes.whiteSpace == WhiteSpace::Pre) {
-      // `white-space: pre` (css-text-3 §3): runs of spaces and newlines are
-      // preserved verbatim, in what is rendered AND in what a copy puts on the
-      // clipboard. Nothing here touches them, and `pendingCollapse` is cleared
-      // so a following normal-whitespace run does not treat the preserved text
-      // as if it had ended in a collapsed space.
+    auto whiteSpace =
+        fragment.textAttributes.whiteSpace.value_or(WhiteSpace::Normal);
+    if (preservesSpaces(whiteSpace) && preservesNewlines(whiteSpace)) {
+      // `pre`, `pre-wrap`, `break-spaces` (css-text-3 §3): runs of spaces and
+      // newlines are preserved verbatim, in what is rendered AND in what a copy
+      // puts on the clipboard. Nothing here touches them, and `pendingCollapse`
+      // is cleared so a following normal-whitespace run does not treat the
+      // preserved text as if it had ended in a collapsed space.
       pendingCollapse = false;
       continue;
     }
@@ -90,6 +98,19 @@ void collapseWhitespace(AttributedString& attributedString) {
     std::string collapsed;
     collapsed.reserve(fragment.string.size());
     for (char character : fragment.string) {
+      // `pre-line` is the one value that splits the two axes: a segment break
+      // is content that ends the line, while spaces and tabs around it still
+      // collapse. The space before the break is dropped (it would sit at the
+      // end of a line) and `pendingCollapse` stays set afterwards so the ones
+      // after it are dropped too (they would lead the next line).
+      if (isSegmentBreak(character) && preservesNewlines(whiteSpace)) {
+        if (!collapsed.empty() && collapsed.back() == ' ') {
+          collapsed.pop_back();
+        }
+        collapsed.push_back('\n');
+        pendingCollapse = true;
+        continue;
+      }
       if (isCollapsibleWhitespace(character)) {
         if (!pendingCollapse) {
           collapsed.push_back(' ');
@@ -432,8 +453,7 @@ void InlineContentShadowNode::stampInlineElementMetrics(
 static LayoutConstraints constraintsForWhiteSpace(
     const TextAttributes& textAttributes,
     const LayoutConstraints& layoutConstraints) {
-  if (!textAttributes.whiteSpace.has_value() ||
-      *textAttributes.whiteSpace != WhiteSpace::Pre) {
+  if (wrapsText(textAttributes.whiteSpace.value_or(WhiteSpace::Normal))) {
     return layoutConstraints;
   }
   auto unwrapped = layoutConstraints;

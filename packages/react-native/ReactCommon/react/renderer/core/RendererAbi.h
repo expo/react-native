@@ -35,7 +35,9 @@ namespace facebook::react {
 // 3: `AttributedString::Fragment` gained `forcedBreak`, for `<br>`.
 // 4: `TextAttributes` gained `whiteSpace`, and `BaseViewProps` gained
 //    `inheritedWhiteSpace` — both cross the boundary.
-constexpr uint32_t kRendererAbiVersion = 4;
+// 5: `WhiteSpace` went from two values to the CSS six, changing the meaning of
+//    the enum an app's `TextAttributes` compiles against.
+constexpr uint32_t kRendererAbiVersion = 5;
 
 /*
  * Returns the value the renderer LIBRARY was compiled with, as opposed to the

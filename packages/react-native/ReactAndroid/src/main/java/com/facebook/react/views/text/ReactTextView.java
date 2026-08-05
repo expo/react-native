@@ -72,7 +72,6 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
   private Overflow mOverflow = Overflow.VISIBLE;
 
   private @Nullable Spannable mSpanned;
-  private boolean mPreformatted = false;
   private @Nullable PreparedLayout mPreparedLayout;
 
   public ReactTextView(Context context) {
@@ -98,7 +97,6 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
     mOverflow = Overflow.VISIBLE;
     mSpanned = null;
     mPreparedLayout = null;
-    mPreformatted = false;
   }
 
   /* package */ void recycleView() {
@@ -585,27 +583,6 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
   public void setSpanned(Spannable spanned) {
     mSpanned = spanned;
     mShouldAdjustSpannableFontSize = true;
-  }
-
-  /**
-   * Whether this run is {@code white-space: pre}, which does not wrap (css-text-3 §3).
-   *
-   * <p>The layout {@link TextLayoutManager} measures with is already unwrapped, but a TextView
-   * builds its own layout at its own width when it draws, which would fold the line back. Scrolling
-   * horizontally is how a TextView is told to lay out wider than it is: the text then overflows and
-   * is clipped by the view, which is what the web does with a long line in a {@code <pre>}.
-   *
-   * <p>This covers a {@code <Text>} that sets the style directly. The {@code <pre>} element itself
-   * is a block container whose text is painted by {@code ReactViewManager}, not by this view. iOS
-   * has no counterpart for the {@code <Text>} case — its paragraphs are drawn into an NSTextContainer
-   * sized to the view — so {@code white-space: pre} suppresses wrapping there only for elements.
-   * DOM-CSS-LIMITATION(white-space-pre-rn-text-ios)
-   */
-  public void setPreformatted(boolean preformatted) {
-    if (preformatted != mPreformatted) {
-      mPreformatted = preformatted;
-      setHorizontallyScrolling(preformatted);
-    }
   }
 
   public @Nullable Spannable getSpanned() {
