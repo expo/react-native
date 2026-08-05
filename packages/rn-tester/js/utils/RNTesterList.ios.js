@@ -23,6 +23,12 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'UI',
   },
   {
+    key: 'IconsExample',
+    pinned: true,
+    module: require('../examples/Astryx/IconsExample').default,
+    category: 'UI',
+  },
+  {
     key: 'StringChildrenExample',
     pinned: true,
     module: require('../examples/TextChildren/StringChildrenExample').default,

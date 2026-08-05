@@ -49,6 +49,9 @@
       "components": {
         "RNTMyNativeView": {
           "className": "RNTMyNativeViewComponentView"
+        },
+        "AstryxVectorShape": {
+          "className": "AstryxVectorShapeComponentView"
         }
       }
     }

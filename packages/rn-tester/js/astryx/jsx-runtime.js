@@ -32,6 +32,7 @@ import type {VarScope} from './stylex-rn';
 import Dialog from './elements/Dialog';
 import Input from './elements/Input';
 import {resolveInherited} from './stylex-rn';
+import {Svg, SvgCircle, SvgLine, SvgPath, SvgRect} from './svg/Svg';
 import * as React from 'react';
 import {
   Fragment as ReactFragment,
@@ -72,9 +73,19 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
       ? {...rest, style: resolvedStyle, children}
       : {...rest, children};
   if (mapped != null) {
-    // Behavior-mapped element (e.g. <input> → TextInput). Children are not
-    // meaningful for these; drop them rather than passing them through.
-    const {children: _ignored, ...componentProps} = hostProps;
+    // Behavior-mapped element (e.g. <input> → TextInput). For most of these
+    // children are noise — a TextInput renders any it is given as text — so
+    // they are dropped. For the ones whose children ARE their content they
+    // must be kept, which `<svg>` made unavoidable: its children are the
+    // shapes. `<dialog>` was in the same position and had the same bug, it
+    // simply never showed because the demo imports the component directly
+    // rather than writing the element.
+    // $FlowFixMe[incompatible-type] props flow through untyped by design here
+    let componentProps: $FlowFixMe = hostProps;
+    if (!ELEMENT_COMPONENTS_KEEPING_CHILDREN.has(__astryxTag)) {
+      const {children: _ignored, ...withoutChildren} = hostProps;
+      componentProps = withoutChildren;
+    }
     const mappedElement = reactJsx(mapped, componentProps);
     return scope === inheritedScope ? (
       mappedElement
@@ -109,7 +120,24 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
 const ELEMENT_COMPONENTS: {[string]: React.ComponentType<any>} = {
   input: Input,
   dialog: Dialog,
+  // The SVG subset. These are lowercase intrinsics like any other element —
+  // authors write <svg><path d="…"/></svg>, not <Svg><Path/></Svg> — but they
+  // need behavioural translation because their geometry is parsed in JS and
+  // handed to a drawing view. See svg/Svg.js for what the subset covers.
+  svg: Svg,
+  path: SvgPath,
+  circle: SvgCircle,
+  rect: SvgRect,
+  line: SvgLine,
 };
+
+/**
+ * Behaviour-mapped elements whose children are their content.
+ */
+const ELEMENT_COMPONENTS_KEEPING_CHILDREN: Set<string> = new Set([
+  'svg',
+  'dialog',
+]);
 
 function wrap(type: unknown, props: unknown): [unknown, unknown] {
   if (typeof type !== 'string') {

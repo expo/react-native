@@ -25,6 +25,12 @@ const Components: Array<RNTesterModuleInfo> = [
     pinned: true,
   },
   {
+    key: 'IconsExample',
+    module: require('../examples/Astryx/IconsExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  {
     key: 'StringChildrenExample',
     module: require('../examples/TextChildren/StringChildrenExample').default,
     category: 'Basic',
