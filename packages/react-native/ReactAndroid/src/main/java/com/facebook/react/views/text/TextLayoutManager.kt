@@ -333,6 +333,30 @@ internal object TextLayoutManager {
     )
   }
 
+  /**
+   * How far a fragment's border box extends above and below the line box, in
+   * pixels. The mirror of `AttributedString::Fragment::blockAxisBoxEdges`.
+   *
+   * Unlike the inline-axis edges this is NOT gated on the element's first or
+   * last fragment: a wrapped inline is one box per line and
+   * `box-decoration-break: slice` (CSS §8.6, the initial value) draws the
+   * block-axis padding and border on every one of them.
+   *
+   * Margin is excluded — this is the border box.
+   */
+  private fun blockAxisBoxEdges(fragment: MapBuffer): Pair<Float, Float> {
+    if (!fragment.contains(FR_KEY_INLINE_BOX)) {
+      return 0f to 0f
+    }
+    val box = fragment.getMapBuffer(FR_KEY_INLINE_BOX)
+    return PixelUtil.toPixelFromDIP(
+        box.getDouble(IB_KEY_PADDING_TOP) + box.getDouble(IB_KEY_BORDER_TOP_WIDTH)
+    ) to
+        PixelUtil.toPixelFromDIP(
+            box.getDouble(IB_KEY_PADDING_BOTTOM) + box.getDouble(IB_KEY_BORDER_BOTTOM_WIDTH)
+        )
+  }
+
   private fun trailingInlineSpace(fragment: MapBuffer): Float {
     if (!fragment.contains(FR_KEY_INLINE_BOX) ||
         !(fragment.contains(FR_KEY_IS_INLINE_BOX_END) &&
@@ -1625,8 +1649,12 @@ internal object TextLayoutManager {
       // sits just outside and has to be added back.
       left -= leadingInlineSpace(fragment.mapBufferValue)
 
-      val top = layout.getLineTop(firstLine).toFloat()
-      val bottom = layout.getLineBottom(lastLine).toFloat()
+      // Block-axis padding and borders belong to the border box the element
+      // reports, even though CSS2 §10.6.1 has them overflow the line box
+      // instead of growing it — so they are never inside the line extents.
+      val (blockTop, blockBottom) = blockAxisBoxEdges(fragment.mapBufferValue)
+      val top = layout.getLineTop(firstLine).toFloat() - blockTop
+      val bottom = layout.getLineBottom(lastLine).toFloat() + blockBottom
 
       // `Layout` works in pixels; the C++ side consumes these as points, like
       // the attachment positions right below.

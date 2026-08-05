@@ -126,6 +126,14 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
     boundingRect.origin.x -= leading;
     boundingRect.size.width += leading;
 
+    // Block-axis padding and borders are part of the border box too. They
+    // deliberately do NOT grow the line box (CSS2 §10.6.1 — they overflow it),
+    // so the glyph bounds TextKit returns never include them, but the element
+    // still reports them as its own box.
+    const auto blockAxis = fragment.blockAxisBoxEdges();
+    boundingRect.origin.y -= blockAxis.top;
+    boundingRect.size.height += blockAxis.top + blockAxis.bottom;
+
     rects.push_back(facebook::react::Rect{
         .origin = {.x = (Float)boundingRect.origin.x, .y = (Float)boundingRect.origin.y},
         .size = {.width = (Float)boundingRect.size.width, .height = (Float)boundingRect.size.height}});

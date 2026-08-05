@@ -66,6 +66,25 @@ class AttributedString : public Sealable, public DebugStringConvertible {
       return isInlineBoxEnd ? inlineBox.trailingInlineSpace() : 0;
     }
 
+    /**
+     * How far this fragment's border box extends above and below the line box,
+     * which is what `getBoundingClientRect()` has to include.
+     *
+     * Unlike the inline-axis edges, these apply to EVERY fragment of the
+     * element rather than only its first and last: a wrapped inline is one box
+     * per line, and `box-decoration-break: slice` (CSS §8.6, the initial value)
+     * draws the block-axis padding and border on each of them.
+     *
+     * Margin is excluded — this is the border box, and margin is outside it.
+     */
+    RectangleEdges<Float> blockAxisBoxEdges() const
+    {
+      return {
+          .top = inlineBox.padding.top + inlineBox.borderWidth.top,
+          .bottom = inlineBox.padding.bottom + inlineBox.borderWidth.bottom,
+      };
+    }
+
     /*
      * Returns true is the Fragment represents an attachment.
      * Equivalent to `string == AttachmentCharacter()`.

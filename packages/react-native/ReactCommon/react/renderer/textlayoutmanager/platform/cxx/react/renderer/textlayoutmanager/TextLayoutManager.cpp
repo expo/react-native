@@ -124,9 +124,18 @@ std::vector<Rect> measureFragmentRectsDeterministically(
     penX += fragment.trailingInlineSpace();
     maxX = std::max(maxX, penX);
 
+    // An element reports its BORDER box, and block-axis padding and borders are
+    // part of it. They do not grow the line box — CSS2 §10.6.1 has them
+    // overflow it instead, which is why the line's height is untouched here —
+    // but they are still inside the box the element reports.
+    const auto blockAxis = fragment.blockAxisBoxEdges();
+
     rects.push_back(Rect{
-        .origin = {minX, startLine * lineHeight},
-        .size = {maxX - minX, (line - startLine + 1) * lineHeight}});
+        .origin = {minX, startLine * lineHeight - blockAxis.top},
+        .size = {
+            maxX - minX,
+            (line - startLine + 1) * lineHeight + blockAxis.top +
+                blockAxis.bottom}});
   }
 
   return rects;
