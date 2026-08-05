@@ -655,3 +655,42 @@ describe('list markers (css-lists-3 §3)', () => {
     expect(rectOf(insideRef).width).toBeGreaterThan(TEXT);
   });
 });
+
+describe('nested lists', () => {
+  it('each level indents by its own gutter and steps the bullet', () => {
+    const l1 = createRef<HostInstance>();
+    const l2 = createRef<HostInstance>();
+    const l3 = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        // The same shape as the intrinsics demo and the web reference page.
+        // $FlowExpectedError[not-a-component] intrinsic <ul> tag
+        <ul>
+          {/* $FlowExpectedError[not-a-component] */}
+          <li ref={l1}>x</li>
+          {/* $FlowExpectedError[not-a-component] */}
+          <ul>
+            {/* $FlowExpectedError[not-a-component] */}
+            <li ref={l2}>x</li>
+            {/* $FlowExpectedError[not-a-component] */}
+            <ul>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li ref={l3}>x</li>
+            </ul>
+          </ul>
+        </ul>,
+      );
+    });
+
+    // Each `<ul>` contributes the UA's 40pt marker gutter, so an item's text
+    // starts 40 further in at every level — the same staircase the browser
+    // draws, and the number to compare the web reference against.
+    const a = rectOf(l1).x;
+    const b = rectOf(l2).x;
+    const c = rectOf(l3).x;
+    expect(b - a).toBe(40);
+    expect(c - b).toBe(40);
+  });
+});

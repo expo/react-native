@@ -93,6 +93,30 @@
     </section>
 
     <section class="case">
+      <h2>Nested lists step through the UA bullets</h2>
+      <p class="why">
+        The same markup as the RNTester intrinsics demo, so the two compare
+        directly. Each level indents by the gutter its own
+        <code>ul</code> reserves, and the bullet steps disc → circle → square.
+        The borders are the lists' own boxes.
+      </p>
+      <ul style="border: 1px solid #c33">
+        <li>level 1 — disc</li>
+        <ul style="border: 1px solid #39c">
+          <li>level 2 — circle</li>
+          <li>
+            a long item at level 2 so it wraps, showing the hanging indent still
+            holds this far down
+          </li>
+          <ul style="border: 1px solid #7a3">
+            <li>level 3 — square</li>
+          </ul>
+        </ul>
+      </ul>
+      <div class="measured" id="m-nest"></div>
+    </section>
+
+    <section class="case">
       <h2>Counter styles</h2>
       <p class="why">Every style the app implements, in the same order.</p>
       <ul><li>disc<ul><li>circle<ul><li>square</li></ul></li></ul></li></ul>
@@ -163,6 +187,22 @@
         `ul padding-inline-start: ${getComputedStyle(ul).paddingInlineStart}\n` +
         `ul content starts at x=${Math.round(liBox.left - ulBox.left)} inside its own box\n` +
         `marker hangs in that gutter, text begins after it`;
+
+      // Where each nesting level's text begins, in the page's own coordinates
+      // — the number to compare against the app.
+      const levels = [...document.querySelectorAll('#m-nest')].length
+        ? [...document.querySelectorAll('section.case')]
+            .find(sec => sec.querySelector('#m-nest'))
+            .querySelectorAll('li')
+        : [];
+      document.getElementById('m-nest').textContent = [...levels]
+        .slice(0, 4)
+        .map((el, i) => {
+          const r = el.getBoundingClientRect();
+          const marker = getComputedStyle(el, '::marker');
+          return `li ${i + 1}: text starts at x=${Math.round(r.left)}`;
+        })
+        .join('\n');
 
       const chip = document.getElementById('chip');
       const chipBox = chip.getBoundingClientRect();

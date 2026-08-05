@@ -363,6 +363,51 @@ export default {
       ),
     },
     {
+      title: 'Nested lists step through the UA bullets',
+      description:
+        'Identical markup to the web reference page, so the two can be ' +
+        'compared directly: an unauthored <ul> takes the bullet for its depth ' +
+        '— disc, then circle, then square — and each level indents by the UA ' +
+        'gutter its own <ul> reserves. The borders are the lists\u2019 own ' +
+        'boxes. The wrapping item shows the hanging indent holding at depth: ' +
+        'its continuation starts at the text edge, not under the marker.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            '<ul>\n' +
+            '  <li>level 1 — disc</li>\n' +
+            '  <ul>\n' +
+            '    <li>level 2 — circle</li>\n' +
+            '    <ul>\n' +
+            '      <li>level 3 — square</li>\n' +
+            '    </ul>\n' +
+            '  </ul>\n' +
+            '</ul>'
+          }>
+          {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
+          <ul style={{borderWidth: 1, borderColor: '#c33'}}>
+            {/* $FlowExpectedError[not-a-component] */}
+            <li>level 1 — disc</li>
+            {/* $FlowExpectedError[not-a-component] */}
+            <ul style={{borderWidth: 1, borderColor: '#39c'}}>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>level 2 — circle</li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <li>
+                a long item at level 2 so it wraps, showing the hanging indent
+                still holds this far down
+              </li>
+              {/* $FlowExpectedError[not-a-component] */}
+              <ul style={{borderWidth: 1, borderColor: '#7a3'}}>
+                {/* $FlowExpectedError[not-a-component] */}
+                <li>level 3 — square</li>
+              </ul>
+            </ul>
+          </ul>
+        </DemoContent>
+      ),
+    },
+    {
       title: 'Unknown tags behave like HTMLUnknownElement',
       description:
         'An unregistered lowercase tag renders inline and unstyled; its content joins the flow (nodeName reports the authored tag).',
