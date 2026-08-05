@@ -517,6 +517,39 @@ function ModalDialog(): React.Node {
  * `@starting-style` entry animations. Remounting the subtree replays them,
  * which is the only way to see a first-render animation more than once.
  */
+/**
+ * `<br>` and `<textarea>`: the last two element gaps.
+ */
+function ElementGapsCases(): React.Node {
+  const [text, setText] = useState('Two lines,\nedited here.');
+  return (
+    <View style={{gap: 12}}>
+      {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
+      <div style={{display: 'block'}}>
+        {'A forced break splits this run'}
+        {/* $FlowFixMe[not-a-component] intrinsic <br> tag */}
+        <br />
+        {'onto a second line, while a literal'}
+        {'\n'}
+        {'newline in the source collapses to a space.'}
+      </div>
+      {/* $FlowFixMe[not-a-component] intrinsic <textarea> tag */}
+      <textarea
+        rows={3}
+        value={text}
+        onChange={(e: $FlowFixMe) => setText(e.target.value)}
+        style={{
+          borderWidth: 1,
+          borderColor: '#c9ccd1',
+          borderRadius: 6,
+          padding: 8,
+        }}
+      />
+      <View style={{opacity: 0.6}}>{`${text.length} characters`}</View>
+    </View>
+  );
+}
+
 function StartingStyleCases(): React.Node {
   const [generation, setGeneration] = useState(0);
   const entry = stylex.create({
@@ -694,6 +727,29 @@ export default {
     '(defineVars tokens, var() fallback chains, calc(), light-dark()) and ' +
     'the intrinsic element/text-children machinery (<div>, <p>, bare text).',
   examples: [
+    {
+      name: 'elementGaps',
+      title: '<br> and <textarea>',
+      description:
+        'A <br> is a forced line break that survives CSS whitespace ' +
+        'collapsing — an ordinary newline in the source becomes a space ' +
+        '(css-text-3 §3), which is the difference the first block shows. ' +
+        '<textarea> is a behavioural element on RN’s multiline TextInput, ' +
+        'sized in rows as on the web.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            '<div>\n' +
+            "  {'A forced break splits this run'}<br />\n" +
+            "  {'onto a second line, while a literal'}{'\\n'}\n" +
+            "  {'newline collapses to a space.'}\n" +
+            '</div>\n' +
+            '<textarea rows={3} value={text} onChange={…} />'
+          }>
+          <ElementGapsCases />
+        </DemoContent>
+      ),
+    },
     {
       name: 'startingStyle',
       title: '@starting-style — entry animations',

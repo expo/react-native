@@ -31,6 +31,7 @@ import type {VarScope} from './stylex-rn';
 
 import Dialog from './elements/Dialog';
 import Input from './elements/Input';
+import TextArea from './elements/TextArea';
 import {useEntryTransition} from './startingStyle';
 import {resolveInherited} from './stylex-rn';
 import {Svg, SvgCircle, SvgLine, SvgPath, SvgRect} from './svg/Svg';
@@ -144,6 +145,7 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
  */
 const ELEMENT_COMPONENTS: {[string]: React.ComponentType<any>} = {
   input: Input,
+  textarea: TextArea,
   dialog: Dialog,
   // The SVG subset. These are lowercase intrinsics like any other element —
   // authors write <svg><path d="…"/></svg>, not <Svg><Path/></Svg> — but they

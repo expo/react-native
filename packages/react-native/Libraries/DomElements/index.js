@@ -146,6 +146,11 @@ function registerInlineAlias(name: string, uiViewClassName: string) {
 // Their bold/italic now comes from the UA sheet, so they alias the unstyled
 // <span> — one source of truth for the default, and no dependence on <b>/<i>
 // happening to carry it.
+// A forced line break. Registered as an inline element so it takes part in the
+// inline formatting context; the break itself is emitted by
+// `BaseTextShadowNode`, which gives it a newline that survives whitespace
+// collapsing (css-text-3 §3 collapses ordinary newlines to a space).
+registerInlineAlias('br', 'span');
 registerInlineAlias('strong', 'span');
 registerInlineAlias('em', 'span');
 // Inline, unstyled, and clickable: DOM click events already dispatch to inline

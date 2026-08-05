@@ -50,6 +50,18 @@ class AttributedString : public Sealable, public DebugStringConvertible {
      */
     Float atomicInlineBaseline{0};
 
+    /*
+     * A forced line break from `<br>` (HTML §4.5.28).
+     *
+     * Marked explicitly rather than inferred from the fragment's element,
+     * because whitespace collapsing has to tell this newline — which is
+     * content — from an ordinary one in source text, which css-text-3 §3
+     * collapses to a space. Deriving it from the parent view does not work:
+     * `<br>` is a view-config alias of `<span>`, so that is the name it
+     * carries.
+     */
+    bool forcedBreak{false};
+
     InlineBoxDecorations inlineBox{};
     bool isInlineBoxStart{false};
     bool isInlineBoxEnd{false};

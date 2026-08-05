@@ -7,6 +7,10 @@
 
 #include "BaseTextShadowNode.h"
 
+#include <string_view>
+
+#include <react/renderer/dom/NodeNameProvider.h>
+
 #include <react/renderer/components/text/TextEffectShadowNode.h>
 #include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/components/text/TextProps.h>
@@ -63,6 +67,30 @@ void BaseTextShadowNode::buildAttributedString(
     }
 
     lastFragmentWasRawText = false;
+
+    // `<br>`: a forced line break (HTML §4.5.28). It carries no text of its
+    // own, so it contributes a newline the text engines already break on —
+    // both `NSAttributedString` and Android's `Layout` treat one as mandatory.
+    //
+    // The fragment records the `<br>` itself as its parent so whitespace
+    // collapsing can recognise it: an ordinary newline in source text is
+    // collapsible and becomes a space (css-text-3 §3), and this one must not.
+    // `<br>` is a view-config ALIAS of `<span>`, so its component name is
+    // "span" — the authored tag lives in the `nodeName` prop, which is exactly
+    // what `NodeNameProvider` exposes. Checking the component name found
+    // nothing at all.
+    const auto* nodeNameProvider =
+        dynamic_cast<const NodeNameProvider*>(childNode->getProps().get());
+    if (nodeNameProvider != nullptr &&
+        nodeNameProvider->domNodeName() == "br") {
+      auto breakFragment = AttributedString::Fragment{};
+      breakFragment.string = "\n";
+      breakFragment.forcedBreak = true;
+      breakFragment.textAttributes = baseTextAttributes;
+      breakFragment.parentShadowView = shadowViewFromShadowNode(*childNode);
+      outAttributedString.appendFragment(std::move(breakFragment));
+      continue;
+    }
 
     // TextShadowNode
     auto textShadowNode = dynamic_cast<const TextShadowNode*>(childNode.get());

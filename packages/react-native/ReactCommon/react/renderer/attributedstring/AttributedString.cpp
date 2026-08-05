@@ -59,14 +59,16 @@ bool Fragment::isContentEqual(const Fragment& rhs) const {
              inlineBox,
              isInlineBoxStart,
              isInlineBoxEnd,
-             atomicInlineBaseline) ==
+             atomicInlineBaseline,
+             forcedBreak) ==
       std::tie(
           rhs.string,
           rhs.textAttributes,
           rhs.inlineBox,
           rhs.isInlineBoxStart,
           rhs.isInlineBoxEnd,
-          rhs.atomicInlineBaseline);
+          rhs.atomicInlineBaseline,
+          rhs.forcedBreak);
 }
 
 #pragma mark - AttributedString

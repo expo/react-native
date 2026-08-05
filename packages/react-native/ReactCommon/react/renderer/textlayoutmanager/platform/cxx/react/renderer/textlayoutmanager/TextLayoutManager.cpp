@@ -168,6 +168,16 @@ std::vector<Rect> measureFragmentRectsDeterministically(
     Float maxX = penX;
 
     for (size_t i = 0; i < characters; i++) {
+      if (!fragment.isAttachment() && fragment.string[i] == '\n') {
+        // A mandatory break — from `<br>`, which survives whitespace
+        // collapsing. Every real engine breaks here, so the deterministic
+        // measurer must too or `<br>` is invisible to a headless test.
+        column = 0;
+        line += 1;
+        penX = 0;
+        minX = 0;
+        continue;
+      }
       if (column >= charactersPerLine) {
         // Wrapping is character-based on the same grid the size pass uses.
         column = 0;
@@ -294,13 +304,40 @@ TextMeasurement measureDeterministically(
 
   auto maximumWidth = layoutConstraints.maximumSize.width;
 
+  // Mandatory breaks (`\n`, which only `<br>` can produce once whitespace
+  // collapsing has run) split the run into segments that each wrap on their
+  // own, so counting characters across the whole string would undercount.
+  std::vector<size_t> segmentLengths;
+  size_t segmentLength = 0;
+  for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
+    if (fragment.isAttachment()) {
+      segmentLength += 1;
+      continue;
+    }
+    for (char character : fragment.string) {
+      if (character == '\n') {
+        segmentLengths.push_back(segmentLength);
+        segmentLength = 0;
+      } else {
+        segmentLength += 1;
+      }
+    }
+  }
+  segmentLengths.push_back(segmentLength);
+
   Float width = intrinsicWidth;
-  Float lineCount = 1;
+  Float lineCount = 0;
+  const auto charactersPerLine = std::isfinite(maximumWidth)
+      ? std::max<Float>(1, std::floor(maximumWidth / kDeterministicCharacterWidth))
+      : std::numeric_limits<Float>::infinity();
+  for (auto length : segmentLengths) {
+    // An empty segment is still a line: two consecutive breaks leave a blank
+    // one, exactly as they do on the web.
+    lineCount += std::isfinite(charactersPerLine)
+        ? std::max<Float>(1, std::ceil(static_cast<Float>(length) / charactersPerLine))
+        : 1;
+  }
   if (std::isfinite(maximumWidth) && intrinsicWidth > maximumWidth) {
-    auto charactersPerLine = std::max<Float>(
-        1, std::floor(maximumWidth / kDeterministicCharacterWidth));
-    lineCount =
-        std::ceil(static_cast<Float>(characterCount) / charactersPerLine);
     width = charactersPerLine * kDeterministicCharacterWidth;
   }
 
