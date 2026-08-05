@@ -181,7 +181,9 @@ function InlineBoxAdvanceCase(): React.Node {
       <View ref={axisRef} style={block}>
         before
         {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
-        <span ref={axisSpanRef} style={{paddingHorizontal: p}}>SPAN</span>
+        <span ref={axisSpanRef} style={{paddingHorizontal: p}}>
+          SPAN
+        </span>
         after
       </View>
       <View ref={allRef} style={block}>

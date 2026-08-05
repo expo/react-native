@@ -80,13 +80,17 @@ const IOS_BUNDLE_ID = 'dev.expo.rntester';
 async function readScreen(route) {
   if (PLATFORM === 'ios') {
     execSync(`${ADB} shell am force-stop ${PACKAGE} 2>/dev/null || true`);
-    execSync(`xcrun simctl terminate booted ${IOS_BUNDLE_ID} 2>/dev/null || true`);
+    execSync(
+      `xcrun simctl terminate booted ${IOS_BUNDLE_ID} 2>/dev/null || true`,
+    );
     await sleep(1000);
     execSync(`xcrun simctl launch booted ${IOS_BUNDLE_ID} -route ${route}`, {
       stdio: 'ignore',
     });
   } else {
-    execSync(`xcrun simctl terminate booted ${IOS_BUNDLE_ID} 2>/dev/null || true`);
+    execSync(
+      `xcrun simctl terminate booted ${IOS_BUNDLE_ID} 2>/dev/null || true`,
+    );
     execSync(`${ADB} shell am force-stop ${PACKAGE}`);
     await sleep(1000);
     execSync(
@@ -109,7 +113,9 @@ async function readScreen(route) {
 }
 
 function check(name, pass, detail) {
-  console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}${detail ? ': ' + detail : ''}`);
+  console.log(
+    `${pass ? 'PASS' : 'FAIL'}  ${name}${detail ? ': ' + detail : ''}`,
+  );
   return pass;
 }
 

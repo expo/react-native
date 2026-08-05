@@ -132,8 +132,7 @@ function ButtonCase(): React.Node {
       <View
         // $FlowFixMe[incompatible-type] cascade to bare text
         style={{color: DEMO_THEME.muted, fontSize: 13}}>
-        clicks:{' '}
-        {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+        clicks: {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
         <span style={{fontVariant: ['tabular-nums']}}>{count}</span> —
         press-and-hold to see the :active token; drag off to cancel, exactly
         like the web.
@@ -663,8 +662,7 @@ export default {
           <h1>Astryx</h1>
           {/* $FlowExpectedError[not-a-component] intrinsic <p> tag */}
           <p>
-            Meta’s design system,{' '}
-            {/* $FlowExpectedError[not-a-component] */}
+            Meta’s design system, {/* $FlowExpectedError[not-a-component] */}
             <strong>unmodified</strong> and{' '}
             {/* $FlowExpectedError[not-a-component] */}
             <em>vendored</em>, on {/* $FlowExpectedError[not-a-component] */}
@@ -706,8 +704,8 @@ export default {
             {/* $FlowExpectedError[not-a-component] */}
             <li>
               a deliberately long item, so it wraps: the continuation lines
-              start at the text edge rather than under the marker, which is
-              the hanging indent outside positioning exists to produce
+              start at the text edge rather than under the marker, which is the
+              hanging indent outside positioning exists to produce
             </li>
           </ul>
         </DemoContent>
@@ -727,9 +725,9 @@ export default {
             "  {'status '}\n" +
             "  <span style={{display: 'inline-flex', flexDirection: 'row',\n" +
             "                gap: 4, alignItems: 'center',\n" +
-            "                paddingHorizontal: 6, borderRadius: 8,\n" +
+            '                paddingHorizontal: 6, borderRadius: 8,\n' +
             "                backgroundColor: '#e6f4ea'}}>\n" +
-            "    <View style={{width: 8, height: 8, borderRadius: 4,\n" +
+            '    <View style={{width: 8, height: 8, borderRadius: 4,\n' +
             "                  backgroundColor: '#0a7'}} />\n" +
             "    {'ready'}\n" +
             '  </span>\n' +
