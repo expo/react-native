@@ -15,6 +15,8 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 import Dialog from '../../astryx/elements/Dialog';
 import {resolveAnchorPosition} from '../../astryx/overlay/anchorPosition';
 import {useInteractionState} from '../../astryx/useInteractionState';
+// $FlowFixMe[cannot-resolve-module]
+import {AspectRatio} from '../../astryx/vendor/AspectRatio/AspectRatio';
 // A second vendored slice: components whose whole dependency closure is
 // already supported, copied from Astryx UNMODIFIED like Card.
 // $FlowFixMe[cannot-resolve-module]
@@ -30,7 +32,11 @@ import {HStack} from '../../astryx/vendor/HStack/HStack';
 // $FlowFixMe[cannot-resolve-module]
 import {Kbd} from '../../astryx/vendor/Kbd/Kbd';
 // $FlowFixMe[cannot-resolve-module]
+import {ProgressBar} from '../../astryx/vendor/ProgressBar/ProgressBar';
+// $FlowFixMe[cannot-resolve-module]
 import {Skeleton} from '../../astryx/vendor/Skeleton/Skeleton';
+// $FlowFixMe[cannot-resolve-module]
+import {StatusDot} from '../../astryx/vendor/StatusDot/StatusDot';
 // $FlowFixMe[cannot-resolve-module]
 import {VStack} from '../../astryx/vendor/VStack/VStack';
 import {
@@ -592,6 +598,25 @@ function PortedComponents(): React.Node {
       <Divider />
       {/* Skeleton's surface is a color-mix() of two design tokens, so these
           bars render at all only because the runtime resolves it. */}
+      <Divider />
+      {/* The second batch: components whose whole closure is now portable. */}
+      <VStack gap={2}>
+        {/* `variant`, not `status` — and Section takes only children. Third
+            time a demo of mine has guessed a prop name: these components state
+            their API in TypeScript that Metro strips, so a wrong prop renders
+            nothing rather than failing. */}
+        <HStack gap={2}>
+          <StatusDot variant="success" />
+          <StatusDot variant="warning" />
+          <StatusDot variant="error" />
+          <StatusDot variant="accent" />
+        </HStack>
+        <ProgressBar value={60} />
+        <AspectRatio ratio={16 / 9}>
+          <View style={{backgroundColor: '#e6f4ea', flex: 1}} />
+        </AspectRatio>
+      </VStack>
+      <Divider />
       <VStack gap={1}>
         <Skeleton width={220} height={12} />
         <Skeleton width={180} height={12} />

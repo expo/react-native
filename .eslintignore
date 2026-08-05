@@ -10,6 +10,11 @@ packages/react-native/ReactAndroid/hermes-engine/build/
 private/react-native-fantom/build/
 packages/react-native/Libraries/Renderer/*
 packages/react-native/Libraries/vendor/**/*
+# Vendored Astryx sources, kept byte-identical to upstream on purpose. They
+# carry their own eslint-disable comments for rules this repo does not define,
+# which ESLint reports as errors — and "fixing" them would mean editing files
+# whose whole value is being unmodified.
+packages/rn-tester/js/astryx/vendor/**/*
 node_modules/
 packages/*/node_modules
 packages/*/dist
