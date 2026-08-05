@@ -712,6 +712,9 @@ export default {
       ),
     },
     {
+      // Named so it can be deep-linked directly:
+      //   rntester://example/AstryxExample/inlineFlex
+      name: 'inlineFlex',
       title: 'inline-flex: a flex container that flows in the text',
       description:
         'display:inline-flex is inline-level, so the chip sits in the ' +
