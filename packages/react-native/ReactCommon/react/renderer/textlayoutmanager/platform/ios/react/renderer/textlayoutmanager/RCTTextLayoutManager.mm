@@ -919,13 +919,28 @@ void drawInlineBoxDecorations(
                   CGRect glyphRect = [layoutManager boundingRectForGlyphRange:range inTextContainer:textContainer];
 
                   CGRect frame;
-                  UIFont *font = [[textStorage attributedSubstringFromRange:range] attribute:NSFontAttributeName
-                                                                                     atIndex:0
-                                                                              effectiveRange:nil];
-                  // The line's baseline, in the container's coordinates:
-                  // `descender` is negative, so this walks up from the line's
-                  // bottom.
-                  CGFloat lineBaseline = glyphRect.origin.y + glyphRect.size.height + font.descender;
+                  // The line's baseline, asked of TextKit rather than derived.
+                  //
+                  // Deriving it as `lineBottom + font.descender` used the
+                  // TEXT's descender, but the line's descent is whatever the
+                  // tallest thing on it needs — an attachment hanging below the
+                  // baseline makes it larger. On the probe line the box hung
+                  // 3.72pt below while the font's descender is 2.76, so the
+                  // baseline came out 0.96pt low and every attachment on that
+                  // line was placed a point off. `locationForGlyphAtIndex:`
+                  // returns the glyph's position within its line fragment, and
+                  // its y IS the baseline.
+                  CGRect lineFragment = [layoutManager lineFragmentRectForGlyphAtIndex:range.location
+                                                                        effectiveRange:NULL];
+                  // `locationForGlyphAtIndex:` already has the attachment's own
+                  // `bounds.origin.y` baked in — that offset is how the glyph
+                  // was positioned in the first place — so it has to be backed
+                  // out to recover the line's baseline. Leaving it in
+                  // double-counted the offset and pushed the box down by
+                  // exactly that much again.
+                  CGPoint glyphLocation = [layoutManager locationForGlyphAtIndex:range.location];
+                  CGFloat lineBaseline =
+                      lineFragment.origin.y + glyphLocation.y + attachment.bounds.origin.y;
                   // The box's OWN baseline goes on the line's (CSS2 §10.8.1).
                   // `bounds.origin.y` is how far the box hangs below the
                   // baseline (negative), so the box's baseline sits
