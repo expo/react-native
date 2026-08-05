@@ -820,10 +820,10 @@ export default {
             <span
               style={{
                 display: 'inline-flex',
-                // CSS defaults a flex container to `row`; React Native
-                // defaults to `column`, so leaving it out stacked the dot
-                // above the label instead of beside it.
-                flexDirection: 'row',
+                // No `flexDirection` here on purpose: `row` is the CSS initial
+                // value and the UA stylesheet now supplies it to intrinsics,
+                // so this reads as it would on the web. It used to need
+                // spelling out or the dot stacked above the label.
                 gap: 4,
                 alignItems: 'center',
                 paddingHorizontal: 6,

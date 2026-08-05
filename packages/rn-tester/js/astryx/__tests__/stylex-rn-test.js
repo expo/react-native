@@ -347,28 +347,3 @@ describe('unitless line-height', () => {
     expect(style).toMatchObject({lineHeight: 20});
   });
 });
-
-describe('flex container direction', () => {
-  // CSS defaults to row, RN defaults to column. Astryx rarely writes the
-  // direction out when it wants a row.
-  it('defaults display:flex to row', () => {
-    const {style} = stylex.props({display: 'flex'});
-    expect(style).toMatchObject({flexDirection: 'row'});
-  });
-
-  it('defaults inline-flex to row too', () => {
-    const {style} = stylex.props({display: 'inline-flex'});
-    expect(style).toMatchObject({flexDirection: 'row'});
-  });
-
-  it('never overrides an explicit direction', () => {
-    const {style} = stylex.props({display: 'flex', flexDirection: 'column'});
-    expect(style).toMatchObject({flexDirection: 'column'});
-  });
-
-  // A plain RN view that never mentions display must keep RN's own default.
-  it('leaves styles without display alone', () => {
-    const {style} = stylex.props({padding: '4px'});
-    expect(style).not.toHaveProperty('flexDirection');
-  });
-});

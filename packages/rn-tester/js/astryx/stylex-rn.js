@@ -651,22 +651,6 @@ function resolveDeclarations(
     }
   }
 
-  // CSS defaults a flex container to `flex-direction: row`; React Native
-  // defaults to `column`. Astryx is flex-dominant and almost never writes the
-  // direction out when it wants a row, so without this its components lay out
-  // rotated 90 degrees — Kbd stacks "Ctrl" above "K", toolbars become columns.
-  //
-  // Only fills in what the author omitted: an explicit `flexDirection` always
-  // wins, and a style that never mentions `display` is left alone so ordinary
-  // RN views keep RN's default.
-  const display = out.display;
-  if (
-    (display === 'flex' || display === 'inline-flex') &&
-    out.flexDirection == null
-  ) {
-    out.flexDirection = 'row';
-  }
-
   return out;
 }
 
