@@ -320,9 +320,31 @@ describe('rem units', () => {
     }
   });
 
-  it('leaves px and unitless values alone', () => {
-    const {style} = stylex.props({fontSize: '13px', lineHeight: '1.6667'});
-    expect(style).toMatchObject({fontSize: 13, lineHeight: 1.6667});
+  it('leaves px values alone', () => {
+    const {style} = stylex.props({fontSize: '13px'});
+    expect(style).toMatchObject({fontSize: 13});
+  });
+});
+
+describe('unitless line-height', () => {
+  // CSS treats a unitless line-height as a MULTIPLIER of the font size; RN's
+  // lineHeight is absolute points. Passing the ratio through told RN the line
+  // was 1.6667pt tall, collapsing the line box — which, with `alignItems:
+  // center`, pushed text to the top of its container. Astryx writes every
+  // line-height this way.
+  it('resolves against the font size in the same block', () => {
+    const {style} = stylex.props({fontSize: '0.75rem', lineHeight: '1.6667'});
+    expect(style).toMatchObject({fontSize: 12, lineHeight: 20.0004});
+  });
+
+  it('does not touch a line-height that already has units', () => {
+    const {style} = stylex.props({fontSize: '12px', lineHeight: '20px'});
+    expect(style).toMatchObject({fontSize: 12, lineHeight: 20});
+  });
+
+  it('resolves regardless of declaration order', () => {
+    const {style} = stylex.props({lineHeight: '2', fontSize: '10px'});
+    expect(style).toMatchObject({lineHeight: 20});
   });
 });
 

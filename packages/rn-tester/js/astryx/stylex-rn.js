@@ -375,6 +375,10 @@ function isDroppedProperty(prop: string): boolean {
 // The CSS initial root font size, which `rem` is relative to.
 const ROOT_FONT_SIZE = 16;
 
+// A bare number with no unit — for `line-height`, a multiplier of the font
+// size rather than a length.
+const UNITLESS_NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)$/;
+
 // Keyword/value fixups per property.
 function convertValue(prop: string, value: string): unknown {
   if (prop === 'overflow') {
@@ -567,6 +571,9 @@ function resolveDeclarations(
   }
 
   const out: {[string]: unknown} = {};
+  // Held back until the whole block is resolved: a unitless line-height needs
+  // the font size, which may be declared after it.
+  let unitlessLineHeight: ?number = null;
   for (const prop of Object.keys(merged)) {
     if (prop.startsWith('--')) {
       continue; // consumed via `scope`
@@ -611,7 +618,37 @@ function resolveDeclarations(
     if (resolved === '') {
       continue;
     }
+    if (prop === 'lineHeight' && UNITLESS_NUMBER.test(resolved)) {
+      // Remember it as a RATIO rather than converting now — resolving it needs
+      // the font size, which may appear later in this same loop.
+      unitlessLineHeight = parseFloat(resolved);
+      continue;
+    }
     out[prop] = convertValue(prop, resolved);
+  }
+
+  // A unitless `line-height` is a MULTIPLIER of the font size in CSS
+  // (`line-height: 1.6667` on 12px text means 20px). React Native's
+  // `lineHeight` is absolute points, so passing the ratio straight through
+  // told RN the line was 1.6667pt tall — collapsing the line box, which with
+  // `alignItems: center` pushed the text to the top of its container. Astryx
+  // writes every line-height this way, so it affected all of its text.
+  if (unitlessLineHeight != null) {
+    const fontSize = out.fontSize;
+    if (typeof fontSize === 'number') {
+      out.lineHeight = unitlessLineHeight * fontSize;
+    } else {
+      // The font size is inherited rather than declared here, and RN gives no
+      // way to resolve it at this point. Emitting the bare ratio would be
+      // actively wrong, so leave `lineHeight` unset and let RN use its own —
+      // wrong spacing beats a collapsed line box.
+      // DOM-CSS-LIMITATION(unitless-line-height-needs-local-font-size)
+      warnOnce(
+        'unitless-line-height',
+        `Dropping unitless line-height ${unitlessLineHeight}: no fontSize in ` +
+          'the same style to resolve it against.',
+      );
+    }
   }
 
   // CSS defaults a flex container to `flex-direction: row`; React Native
