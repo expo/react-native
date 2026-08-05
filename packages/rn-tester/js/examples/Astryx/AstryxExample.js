@@ -513,6 +513,65 @@ function ModalDialog(): React.Node {
  * color-mix() resolved by the runtime, shown as swatches so the result is
  * checkable by eye as well as by test.
  */
+/**
+ * `@starting-style` entry animations. Remounting the subtree replays them,
+ * which is the only way to see a first-render animation more than once.
+ */
+function StartingStyleCases(): React.Node {
+  const [generation, setGeneration] = useState(0);
+  const entry = stylex.create({
+    fade: {
+      opacity: 1,
+      transitionProperty: 'opacity',
+      transitionDuration: '600ms',
+      transitionTimingFunction: 'ease-out',
+      '@starting-style': {opacity: 0},
+    },
+    rise: {
+      opacity: 1,
+      transitionProperty: 'opacity, transform',
+      transitionDuration: '600ms',
+      transitionTimingFunction: 'ease-out',
+      '@starting-style': {opacity: 0, transform: 'translateY(24px)'},
+    },
+    slide: {
+      opacity: 1,
+      transitionProperty: 'transform',
+      transitionDuration: '600ms',
+      transitionTimingFunction: 'cubic-bezier(0.2, 0, 0, 1)',
+      '@starting-style': {transform: 'translateX(-40px)'},
+    },
+  });
+  const box = {height: 34, borderRadius: 6, justifyContent: 'center'};
+  return (
+    <View style={{gap: 10}}>
+      <AstryxButton onClick={() => setGeneration(g => g + 1)}>
+        Replay entry animations
+      </AstryxButton>
+      <View key={generation} style={{gap: 8}}>
+        {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
+        <div
+          {...stylex.props(entry.fade)}
+          style={[box, {backgroundColor: '#cfe3f7'}]}>
+          fade in
+        </div>
+        {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
+        <div
+          {...stylex.props(entry.rise)}
+          style={[box, {backgroundColor: '#d7f0dd'}]}>
+          rise and fade
+        </div>
+        {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
+        <div
+          {...stylex.props(entry.slide)}
+          style={[box, {backgroundColor: '#f6ddd0'}]}>
+          slide from the left
+        </div>
+      </View>
+    </View>
+  );
+}
+
 function ColorMixCases(): React.Node {
   const ramp = [0, 25, 50, 75, 100];
   const swatch = {width: 56, height: 40, borderRadius: 6};
@@ -635,6 +694,26 @@ export default {
     '(defineVars tokens, var() fallback chains, calc(), light-dark()) and ' +
     'the intrinsic element/text-children machinery (<div>, <p>, bare text).',
   examples: [
+    {
+      name: 'startingStyle',
+      title: '@starting-style — entry animations',
+      description:
+        'The values an element animates FROM on its first render ' +
+        '(css-transitions-2 §3). React Native has no CSS transitions, so the ' +
+        'runtime turns the block into an animation on mount, driven natively. ' +
+        'Press to remount and replay.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            'opacity: 1,\n' +
+            "transitionDuration: '600ms',\n" +
+            "transitionTimingFunction: 'ease-out',\n" +
+            "'@starting-style': {opacity: 0, transform: 'translateY(24px)'}"
+          }>
+          <StartingStyleCases />
+        </DemoContent>
+      ),
+    },
     {
       name: 'colorMix',
       title: 'color-mix() — srgb, alpha and oklab',
