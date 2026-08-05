@@ -41,6 +41,7 @@
  * keyframes. Unsupported declarations are dropped with a one-time dev warn.
  */
 
+import {resolveColorMixArgs} from './colorMix';
 import {Appearance, Platform} from 'react-native';
 
 type RawStyle = {readonly [string]: unknown};
@@ -222,6 +223,36 @@ function substituteLightDark(value: string, dark: boolean): string {
   return result;
 }
 
+/**
+ * Substitutes every `color-mix(...)`.
+ *
+ * Runs after `var()` and `light-dark()` so its arguments are already concrete
+ * colours. Innermost-first, because Astryx nests them — a hover tint over a
+ * token that is itself a mix.
+ *
+ * An unresolvable mix is left in place rather than replaced: the declaration is
+ * then dropped downstream with a warning, which is far easier to diagnose than
+ * a silently wrong colour.
+ */
+function substituteColorMix(value: string): string {
+  let result = value;
+  let guard = 0;
+  while (guard++ < 32) {
+    const call = findCall(result, 'color-mix', 0);
+    if (call == null) {
+      break;
+    }
+    const args = result.slice(call.open + 1, call.close);
+    const resolved = resolveColorMixArgs(args);
+    if (resolved == null) {
+      break;
+    }
+    result =
+      result.slice(0, call.start) + resolved + result.slice(call.close + 1);
+  }
+  return result;
+}
+
 // --- calc() ---
 // Small recursive-descent evaluator over px/unitless arithmetic. Returns the
 // resolved px number as a string, or null when it hits anything it cannot
@@ -327,6 +358,8 @@ function resolveString(
   }
   let result = substituteVars(value, scope, depth, final);
   result = substituteLightDark(result, currentSchemeIsDark());
+  // After both, so a mix's arguments are concrete colours by the time it runs.
+  result = substituteColorMix(result);
   return result;
 }
 

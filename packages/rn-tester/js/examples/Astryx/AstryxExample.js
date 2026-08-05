@@ -30,6 +30,8 @@ import {HStack} from '../../astryx/vendor/HStack/HStack';
 // $FlowFixMe[cannot-resolve-module]
 import {Kbd} from '../../astryx/vendor/Kbd/Kbd';
 // $FlowFixMe[cannot-resolve-module]
+import {Skeleton} from '../../astryx/vendor/Skeleton/Skeleton';
+// $FlowFixMe[cannot-resolve-module]
 import {VStack} from '../../astryx/vendor/VStack/VStack';
 import {
   DEMO_THEME,
@@ -501,6 +503,63 @@ function ModalDialog(): React.Node {
  * The second vendored slice, rendered for real. Every component here is
  * byte-identical Astryx source; if any of it misbehaves the fault is ours.
  */
+/**
+ * color-mix() resolved by the runtime, shown as swatches so the result is
+ * checkable by eye as well as by test.
+ */
+function ColorMixCases(): React.Node {
+  const ramp = [0, 25, 50, 75, 100];
+  const swatch = {width: 56, height: 40, borderRadius: 6};
+  return (
+    <View style={{gap: 12}}>
+      <View style={{flexDirection: 'row', gap: 6}}>
+        {ramp.map(p => (
+          <View
+            key={`mix-${p}`}
+            style={[
+              swatch,
+              // A ramp between two hex colours: the ends must match the inputs
+              // exactly, and the middle must be an even blend.
+              stylex.props({
+                backgroundColor: `color-mix(in srgb, #2980b9 ${100 - p}%, #e67e22 ${p}%)`,
+              }).style,
+            ]}
+          />
+        ))}
+      </View>
+      <View style={{flexDirection: 'row', gap: 6}}>
+        {ramp.map(p => (
+          <View
+            key={`fade-${p}`}
+            style={[
+              swatch,
+              // Fading toward `transparent`. These must stay RED and only lose
+              // alpha — if the mix is not premultiplied they darken toward
+              // black instead, which is the bug this guards.
+              stylex.props({
+                backgroundColor: `color-mix(in srgb, #c0392b ${p}%, transparent)`,
+              }).style,
+            ]}
+          />
+        ))}
+      </View>
+      <View style={{flexDirection: 'row', gap: 6}}>
+        {ramp.map(p => (
+          <View
+            key={`oklab-${p}`}
+            style={[
+              swatch,
+              stylex.props({
+                backgroundColor: `color-mix(in oklab, black ${100 - p}%, white ${p}%)`,
+              }).style,
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function PortedComponents(): React.Node {
   return (
     <VStack gap={3}>
@@ -530,6 +589,14 @@ function PortedComponents(): React.Node {
         <Badge label="stacked" variant="green" />
         <Badge label="vertically" variant="green" />
       </VStack>
+      <Divider />
+      {/* Skeleton's surface is a color-mix() of two design tokens, so these
+          bars render at all only because the runtime resolves it. */}
+      <VStack gap={1}>
+        <Skeleton width={220} height={12} />
+        <Skeleton width={180} height={12} />
+        <Skeleton width={120} height={12} />
+      </VStack>
     </VStack>
   );
 }
@@ -543,6 +610,26 @@ export default {
     '(defineVars tokens, var() fallback chains, calc(), light-dark()) and ' +
     'the intrinsic element/text-children machinery (<div>, <p>, bare text).',
   examples: [
+    {
+      name: 'colorMix',
+      title: 'color-mix() — srgb, alpha and oklab',
+      description:
+        'Top: a ramp between two colours. Middle: the same colour fading to ' +
+        'transparent — these must stay red and only lose alpha, because the ' +
+        'mix is premultiplied; without that they darken toward black. ' +
+        'Bottom: black to white mixed in oklab, whose midpoint sits darker ' +
+        'than sRGB’s because sRGB’s gamma overshoots the perceptual middle.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "backgroundColor: 'color-mix(in srgb, #2980b9 50%, #e67e22 50%)'\n" +
+            "backgroundColor: 'color-mix(in srgb, #c0392b 50%, transparent)'\n" +
+            "backgroundColor: 'color-mix(in oklab, black, white)'"
+          }>
+          <ColorMixCases />
+        </DemoContent>
+      ),
+    },
     {
       name: 'ported',
       title: 'Ported components — a second vendored slice',
