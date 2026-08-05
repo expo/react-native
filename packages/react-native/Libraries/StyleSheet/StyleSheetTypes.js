@@ -1056,6 +1056,14 @@ type ____TextStyle_InternalBase = Readonly<{
   textDecorationStyle?: 'solid' | 'double' | 'dotted' | 'dashed' | 'wavy',
   textDecorationColor?: ____ColorValue_Internal,
   textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase',
+  /**
+   * `white-space` (css-text-3 §3). `pre` preserves runs of spaces and
+   * newlines; `normal` collapses each run to a single space and trims a
+   * block's edges. The wrapping-only values are accepted and mapped onto the
+   * nearer of the two.
+   */
+  whiteSpace?:
+    'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',
   userSelect?: 'auto' | 'text' | 'none' | 'contain' | 'all',
   verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
   writingDirection?: 'auto' | 'ltr' | 'rtl',

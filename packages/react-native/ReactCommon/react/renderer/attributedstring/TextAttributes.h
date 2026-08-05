@@ -63,6 +63,8 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<DynamicTypeRamp> dynamicTypeRamp{};
   Float letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextTransform> textTransform{};
+  // `white-space`. Inherited, so a `<pre>` passes it to every run inside it.
+  std::optional<WhiteSpace> whiteSpace{};
 
   // Paragraph Styles
   Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
@@ -146,6 +148,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.allowFontScaling,
         textAttributes.letterSpacing,
         textAttributes.textTransform,
+        textAttributes.whiteSpace,
         textAttributes.lineHeight,
         textAttributes.alignment,
         textAttributes.baseWritingDirection,

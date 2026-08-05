@@ -50,7 +50,10 @@ const uaStyles: {[string]: UAStyle} = {
   p: {marginBlock: EM},
   blockquote: {marginBlock: EM, marginInline: 40},
   figure: {marginBlock: EM, marginInline: 40},
-  pre: {marginBlock: EM, fontFamily: 'monospace'},
+  // `white-space: pre` is the whole point of <pre>: browsers set it in
+  // html.css, and it is what preserves the newlines and space runs an author
+  // wrote — in the rendering and on the clipboard alike.
+  pre: {marginBlock: EM, fontFamily: 'monospace', whiteSpace: 'pre'},
   hr: {marginBlock: 8, borderTopWidth: 1, borderColor: '#0000001f'},
 
   // Headings: bold, with sizes and margins that shrink together down the

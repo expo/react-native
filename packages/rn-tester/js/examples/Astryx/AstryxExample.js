@@ -533,6 +533,12 @@ function ElementGapsCases(): React.Node {
         {'\n'}
         {'newline in the source collapses to a space.'}
       </div>
+      {/* <pre>: white-space is preserved, so the indentation and the blank
+          line below survive exactly as written — and copy that way too. */}
+      {/* $FlowFixMe[not-a-component] intrinsic <pre> tag */}
+      <pre style={{backgroundColor: '#f4f4f6', padding: 8, borderRadius: 6}}>
+        {'function greet(name) {\n    return `hi ${name}`;\n}'}
+      </pre>
       {/* $FlowFixMe[not-a-component] intrinsic <textarea> tag */}
       <textarea
         rows={3}

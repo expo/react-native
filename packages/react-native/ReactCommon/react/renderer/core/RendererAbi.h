@@ -33,7 +33,9 @@ namespace facebook::react {
 // 2: `AttributedString::Fragment` gained `atomicInlineBaseline`, changing the
 //    layout of a type an app's own C++ compiles against.
 // 3: `AttributedString::Fragment` gained `forcedBreak`, for `<br>`.
-constexpr uint32_t kRendererAbiVersion = 3;
+// 4: `TextAttributes` gained `whiteSpace`, and `BaseViewProps` gained
+//    `inheritedWhiteSpace` — both cross the boundary.
+constexpr uint32_t kRendererAbiVersion = 4;
 
 /*
  * Returns the value the renderer LIBRARY was compiled with, as opposed to the

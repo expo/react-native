@@ -573,6 +573,35 @@ inline std::string toString(const FontVariant &fontVariant)
   return result;
 }
 
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, WhiteSpace &result)
+{
+  react_native_expect(value.hasType<std::string>());
+  if (value.hasType<std::string>()) {
+    auto string = (std::string)value;
+    if (string == "pre") {
+      result = WhiteSpace::Pre;
+      return;
+    }
+    if (string == "normal") {
+      result = WhiteSpace::Normal;
+      return;
+    }
+    // `nowrap`, `pre-wrap`, `pre-line`, `break-spaces` differ from these only
+    // in wrapping, which this pass does not control. Treating them as their
+    // nearest collapsing behaviour keeps the text correct even where the
+    // wrapping is not. DOM-CSS-LIMITATION(white-space-subset)
+    if (string == "pre-wrap" || string == "break-spaces") {
+      result = WhiteSpace::Pre;
+      return;
+    }
+    if (string == "nowrap" || string == "pre-line") {
+      result = WhiteSpace::Normal;
+      return;
+    }
+  }
+  LOG(ERROR) << "Could not parse WhiteSpace: " << (std::string)value;
+}
+
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, TextTransform &result)
 {
   react_native_expect(value.hasType<std::string>());
@@ -1170,6 +1199,9 @@ constexpr static MapBuffer::Key TA_KEY_TEXT_TRANSFORM = 27;
 constexpr static MapBuffer::Key TA_KEY_ALIGNMENT_VERTICAL = 28;
 constexpr static MapBuffer::Key TA_KEY_MAX_FONT_SIZE_MULTIPLIER = 29;
 constexpr static MapBuffer::Key TA_KEY_TEXT_EFFECTS = 30;
+// `white-space`, so Android's text layout sees the same value the C++
+// collapsing pass used.
+constexpr static MapBuffer::Key TA_KEY_WHITE_SPACE = 31;
 
 // Keys within each text effect entry MapBuffer
 constexpr static MapBuffer::Key TE_KEY_NAME = 0;
@@ -1338,6 +1370,11 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   }
   if (textAttributes.lineBreakStrategy.has_value()) {
     builder.putString(TA_KEY_LINE_BREAK_STRATEGY, toString(*textAttributes.lineBreakStrategy));
+  }
+  if (textAttributes.whiteSpace.has_value()) {
+    builder.putString(
+        TA_KEY_WHITE_SPACE,
+        *textAttributes.whiteSpace == WhiteSpace::Pre ? "pre" : "normal");
   }
   if (textAttributes.textTransform.has_value()) {
     builder.putString(TA_KEY_TEXT_TRANSFORM, toString(*textAttributes.textTransform));

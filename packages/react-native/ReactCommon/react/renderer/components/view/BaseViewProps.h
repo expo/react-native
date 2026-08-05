@@ -64,6 +64,9 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   Float inheritedLineHeight{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextAlignment> inheritedTextAlign{};
   std::optional<TextTransform> inheritedTextTransform{};
+  // `white-space`, inherited like the rest of these: a `<pre>` sets it and
+  // every run inside keeps it.
+  std::optional<WhiteSpace> inheritedWhiteSpace{};
 
   /*
    * Folds the set inheritable text props above into `textAttributes`. Single

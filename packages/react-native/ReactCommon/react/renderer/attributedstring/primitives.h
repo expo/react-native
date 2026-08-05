@@ -146,6 +146,23 @@ enum class TextTransform {
   Unset,
 };
 
+/*
+ * `white-space` (css-text-3 §3), restricted to the two values that differ in
+ * whether whitespace survives.
+ *
+ * `Normal` collapses each run of whitespace to a single space and trims the
+ * edges of a block; `Pre` preserves both the runs and the newlines, in what is
+ * rendered AND in what a copy puts on the clipboard.
+ *
+ * DOM-CSS-LIMITATION(white-space-subset): `nowrap`, `pre-wrap`, `pre-line` and
+ * `break-spaces` are not modelled. They differ from these two only in wrapping
+ * behaviour, which needs the platform line breaker rather than this pass.
+ */
+enum class WhiteSpace {
+  Normal,
+  Pre,
+};
+
 enum class HyphenationFrequency {
   None, // No hyphenation.
   Normal, // Less frequent hyphenation.

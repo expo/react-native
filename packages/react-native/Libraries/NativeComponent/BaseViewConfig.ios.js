@@ -201,6 +201,9 @@ const validAttributesForNonEventProps = {
   lineHeight: true,
   textAlign: true,
   textTransform: true,
+  // `white-space`: inherited like the rest of this group, and the reason a
+  // <pre> keeps its newlines and space runs.
+  whiteSpace: true,
 
   // View Props
   accessible: true,

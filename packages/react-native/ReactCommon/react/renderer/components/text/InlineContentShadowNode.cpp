@@ -69,6 +69,16 @@ void collapseWhitespace(AttributedString& attributedString) {
       pendingCollapse = false;
       continue;
     }
+    if (fragment.textAttributes.whiteSpace.has_value() &&
+        *fragment.textAttributes.whiteSpace == WhiteSpace::Pre) {
+      // `white-space: pre` (css-text-3 §3): runs of spaces and newlines are
+      // preserved verbatim, in what is rendered AND in what a copy puts on the
+      // clipboard. Nothing here touches them, and `pendingCollapse` is cleared
+      // so a following normal-whitespace run does not treat the preserved text
+      // as if it had ended in a collapsed space.
+      pendingCollapse = false;
+      continue;
+    }
     if (fragment.forcedBreak) {
       // A forced break from `<br>`. Its newline is content, not collapsible
       // whitespace, so it survives untouched — but whitespace FOLLOWING it

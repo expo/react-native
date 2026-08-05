@@ -120,6 +120,12 @@ BaseViewProps::BaseViewProps(
           "textTransform",
           sourceProps.inheritedTextTransform,
           {})),
+      inheritedWhiteSpace(convertRawProp(
+          context,
+          rawProps,
+          "whiteSpace",
+          sourceProps.inheritedWhiteSpace,
+          {})),
       borderRadii(convertRawProp(
           context,
           rawProps,
@@ -395,6 +401,7 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE(inheritedLineHeight, "lineHeight");
     RAW_SET_PROP_SWITCH_CASE(inheritedTextAlign, "textAlign");
     RAW_SET_PROP_SWITCH_CASE(inheritedTextTransform, "textTransform");
+    RAW_SET_PROP_SWITCH_CASE(inheritedWhiteSpace, "whiteSpace");
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundImage);
     RAW_SET_PROP_SWITCH_CASE(backgroundImage, "experimental_backgroundImage");
     RAW_SET_PROP_SWITCH_CASE(backgroundSize, "experimental_backgroundSize");
@@ -654,6 +661,9 @@ void BaseViewProps::applyInheritedTextAttributes(
   }
   if (inheritedTextTransform) {
     textAttributes.textTransform = inheritedTextTransform;
+  }
+  if (inheritedWhiteSpace) {
+    textAttributes.whiteSpace = inheritedWhiteSpace;
   }
 }
 
