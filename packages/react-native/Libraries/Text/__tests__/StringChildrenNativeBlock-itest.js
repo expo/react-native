@@ -257,7 +257,11 @@ describe('native block — fidelity the emulation lacks', () => {
     });
 
     expect(rectOf(blockRef).width).toBe(50);
-    expect(rectOf(blockRef).height).toBe(40);
+    // 44, not 40: the box is baseline-aligned, so its BOTTOM sits on the text
+    // baseline and the text's descender still hangs below it. The line box has
+    // to cover both. (A line with no text on it stays exactly the box's
+    // height — see the lone-inline case.)
+    expect(rectOf(blockRef).height).toBe(44);
     expect(rectOf(inlineRef).width).toBe(30);
     expect(rectOf(inlineRef).height).toBe(40);
   });
@@ -344,7 +348,11 @@ describe('native block — fidelity the emulation lacks', () => {
       );
     });
 
-    expect(rectOf(inlineContainerRef).height).toBe(40);
+    // 44, not 40: the box is baseline-aligned, so its BOTTOM sits on the text
+    // baseline and the text's descender still hangs below it. The line box has
+    // to cover both. (A line with no text on it stays exactly the box's
+    // height — see the lone-inline case.)
+    expect(rectOf(inlineContainerRef).height).toBe(44);
     expect(rectOf(blockContainerRef).height).toBe(80);
   });
 });

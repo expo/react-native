@@ -24,6 +24,12 @@ namespace {
 // return `minimumSize`, which several test suites rely on.
 constexpr Float kDeterministicCharacterWidth = 10;
 
+// How far text descends below its baseline, as a fraction of the line height.
+// Deterministic like everything else here, and non-zero so that "aligned to
+// the baseline" and "aligned to the bottom edge" are distinguishable — with a
+// zero descent every baseline rule looks identical and nothing can be tested.
+constexpr Float kDeterministicDescentRatio = 0.2;
+
 Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
   // Line height is layout-observable so text-attribute inheritance can be
   // asserted headlessly. Contract: an explicit `lineHeight` wins verbatim;
@@ -57,6 +63,63 @@ Float perCharacterAdvance(const AttributedString::Fragment& fragment) {
     perCharacter += ta.letterSpacing;
   }
   return perCharacter;
+}
+
+/**
+ * A line box: where its baseline sits, and how far anything on it descends
+ * below that baseline.
+ *
+ * CSS builds a line box from the ascents and descents of what is on it — the
+ * baseline sits at the greatest ascent, and the line runs from there down to
+ * the greatest descent. That is not the same as "the tallest item's height",
+ * which is what this measurer used to return: a 40pt box baseline-aligned on a
+ * 20pt text line makes a 44pt line, because the box's bottom sits on the
+ * baseline and the text's descender still hangs below it.
+ */
+struct DeterministicLineBox {
+  Float ascent{0};
+  Float descent{0};
+
+  Float height() const
+  {
+    return ascent + descent;
+  }
+};
+
+DeterministicLineBox deterministicLineBox(const AttributedStringBox &attributedStringBox)
+{
+  const auto textHeight = deterministicLineHeight(attributedStringBox);
+  const auto textDescent = textHeight * kDeterministicDescentRatio;
+
+  auto box = DeterministicLineBox{};
+  bool hasText = false;
+
+  for (const auto &fragment : attributedStringBox.getValue().getFragments()) {
+    if (fragment.isAttachment()) {
+      // An atomic inline contributes its own baseline as ascent, and whatever
+      // hangs below that baseline as descent. `atomicInlineBaseline` is how far
+      // its baseline sits from its top, which the shadow node computed per
+      // CSS2 §10.8.1.
+      const auto height = fragment.parentShadowView.layoutMetrics.frame.size.height;
+      const auto baseline = fragment.atomicInlineBaseline;
+      box.ascent = std::max(box.ascent, baseline);
+      box.descent = std::max(box.descent, height - baseline);
+    } else if (!fragment.string.empty()) {
+      hasText = true;
+    }
+  }
+
+  if (hasText) {
+    box.ascent = std::max(box.ascent, textHeight - textDescent);
+    box.descent = std::max(box.descent, textDescent);
+  }
+
+  if (box.height() == 0) {
+    box.ascent = textHeight - textDescent;
+    box.descent = textDescent;
+  }
+
+  return box;
 }
 
 // Lays the fragments out on the same deterministic grid `measureDeterministically`
@@ -141,6 +204,51 @@ std::vector<Rect> measureFragmentRectsDeterministically(
   return rects;
 }
 
+/**
+ * Positions each attachment's frame, baseline-aligned within its line.
+ *
+ * These frames are what actually place an atomic inline's host view (via
+ * `InlineContentShadowNode::getInlineAttachmentPlacements`). They used to be
+ * left at zero, which meant every inline box in a headless test sat at the
+ * run's origin — so no baseline behaviour was observable from JS at all, and a
+ * test written against it would pass no matter what the baseline logic did.
+ *
+ * The x and the line come from the fragment rects, which already walk the same
+ * grid and handle wrapping; only the y is baseline work.
+ */
+void placeAttachments(
+    const AttributedStringBox &attributedStringBox,
+    const std::vector<Rect> &fragmentRects,
+    const DeterministicLineBox &lineBox,
+    TextMeasurement::Attachments &attachments)
+{
+  const auto &fragments = attributedStringBox.getValue().getFragments();
+  size_t attachmentIndex = 0;
+
+  for (size_t i = 0; i < fragments.size() && i < fragmentRects.size(); i++) {
+    const auto &fragment = fragments[i];
+    if (!fragment.isAttachment()) {
+      continue;
+    }
+    if (attachmentIndex >= attachments.size()) {
+      break;
+    }
+
+    const auto size = fragment.parentShadowView.layoutMetrics.frame.size;
+    const auto &rect = fragmentRects[i];
+    // The fragment rect spans the whole line box; the baseline sits at the
+    // line's ascent below its top, and the box hangs from there by its own
+    // baseline (CSS2 §10.8.1).
+    const auto lineTop = rect.origin.y;
+    const auto baselineY = lineTop + lineBox.ascent;
+
+    attachments[attachmentIndex].frame = Rect{
+        .origin = {rect.origin.x, baselineY - fragment.atomicInlineBaseline},
+        .size = size};
+    attachmentIndex++;
+  }
+}
+
 TextMeasurement measureDeterministically(
     const AttributedStringBox& attributedStringBox,
     const LayoutConstraints& layoutConstraints,
@@ -171,15 +279,17 @@ TextMeasurement measureDeterministically(
     }
   }
 
-  const auto lineHeight =
-      std::max(deterministicLineHeight(attributedStringBox), maxAttachmentHeight);
+  const auto lineBox = deterministicLineBox(attributedStringBox);
+  const auto lineHeight = lineBox.height();
 
   if (characterCount == 0) {
+    auto emptyRects = measureFragmentRectsDeterministically(
+        attributedStringBox, layoutConstraints, lineHeight);
+    placeAttachments(attributedStringBox, emptyRects, lineBox, attachments);
     return TextMeasurement{
         .size = layoutConstraints.clamp({0, 0}),
         .attachments = std::move(attachments),
-        .fragmentRects = measureFragmentRectsDeterministically(
-            attributedStringBox, layoutConstraints, lineHeight)};
+        .fragmentRects = std::move(emptyRects)};
   }
 
   auto maximumWidth = layoutConstraints.maximumSize.width;
@@ -194,11 +304,14 @@ TextMeasurement measureDeterministically(
     width = charactersPerLine * kDeterministicCharacterWidth;
   }
 
+  auto rects = measureFragmentRectsDeterministically(
+      attributedStringBox, layoutConstraints, lineHeight);
+  placeAttachments(attributedStringBox, rects, lineBox, attachments);
+
   return TextMeasurement{
       .size = layoutConstraints.clamp({width, lineHeight * lineCount}),
       .attachments = std::move(attachments),
-      .fragmentRects = measureFragmentRectsDeterministically(
-          attributedStringBox, layoutConstraints, lineHeight)};
+      .fragmentRects = std::move(rects)};
 }
 
 } // namespace
@@ -234,6 +347,50 @@ TextMeasurement TextLayoutManager::measure(
           {.width = layoutConstraints.minimumSize.width,
            .height = layoutConstraints.minimumSize.height},
       .attachments = attachments};
+}
+
+
+LinesMeasurements TextLayoutManager::measureLines(
+    const AttributedStringBox &attributedStringBox,
+    const ParagraphAttributes &paragraphAttributes,
+    const Size &size) const
+{
+  if (!ReactNativeFeatureFlags::enableStringChildren()) {
+    return {};
+  }
+
+  auto measurement = measureDeterministically(
+      attributedStringBox,
+      LayoutConstraints{.minimumSize = {0, 0}, .maximumSize = size},
+      TextMeasurement::Attachments{});
+
+  const auto lineBox = deterministicLineBox(attributedStringBox);
+  const auto lineHeight = lineBox.height();
+  if (lineHeight <= 0) {
+    return {};
+  }
+
+  // The grid wraps by character count, so the line count follows from the
+  // measured height rather than needing a second walk.
+  const auto lineCount =
+      std::max<size_t>(1, static_cast<size_t>(std::round(measurement.size.height / lineHeight)));
+
+  auto lines = LinesMeasurements{};
+  lines.reserve(lineCount);
+  for (size_t i = 0; i < lineCount; i++) {
+    lines.emplace_back(
+        attributedStringBox.getValue().getString(),
+        Rect{
+            .origin = {0, static_cast<Float>(i) * lineHeight},
+            .size = {measurement.size.width, lineHeight}},
+        // `descender` is reported as a negative offset from the baseline, the
+        // same sign convention the platform engines use.
+        -lineBox.descent,
+        lineBox.ascent,
+        lineBox.ascent,
+        lineBox.ascent);
+  }
+  return lines;
 }
 
 } // namespace facebook::react

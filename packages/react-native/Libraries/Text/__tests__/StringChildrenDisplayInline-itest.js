@@ -71,7 +71,11 @@ describe("display:'inline' — atomic inline boxes in block containers", () => {
     });
 
     expect(rectOf(blockRef).width).toBe(50);
-    expect(rectOf(blockRef).height).toBe(40);
+    // 44, not 40: the box is baseline-aligned, so its BOTTOM sits on the text
+    // baseline and the text's descender still hangs below it. The line box has
+    // to cover both. (A line with no text on it stays exactly the box's
+    // height — see the lone-inline case.)
+    expect(rectOf(blockRef).height).toBe(44);
     // The atomic box keeps its own size (laid out at the attachment frame).
     expect(rectOf(inlineRef).width).toBe(30);
     expect(rectOf(inlineRef).height).toBe(40);
@@ -127,7 +131,11 @@ describe("display:'inline' — atomic inline boxes in block containers", () => {
     // apply inside the box even though it flows inline outside.
     expect(rectOf(innerRef).height).toBe(40);
     expect(rectOf(innerRef).width).toBe(15);
-    expect(rectOf(blockRef).height).toBe(40);
+    // 44, not 40: the box is baseline-aligned, so its BOTTOM sits on the text
+    // baseline and the text's descender still hangs below it. The line box has
+    // to cover both. (A line with no text on it stays exactly the box's
+    // height — see the lone-inline case.)
+    expect(rectOf(blockRef).height).toBe(44);
   });
 
   it('inline Views flow inside the intrinsic <div> too', () => {
@@ -146,7 +154,11 @@ describe("display:'inline' — atomic inline boxes in block containers", () => {
     });
 
     expect(rectOf(divRef).width).toBe(50);
-    expect(rectOf(divRef).height).toBe(40);
+    // 44, not 40: the box is baseline-aligned, so its BOTTOM sits on the text
+    // baseline and the text's descender still hangs below it. The line box has
+    // to cover both. (A line with no text on it stays exactly the box's
+    // height — see the lone-inline case.)
+    expect(rectOf(divRef).height).toBe(44);
   });
 });
 
@@ -207,7 +219,11 @@ describe("display:'inline' — the box model on an atomic inline", () => {
       );
     });
 
-    expect(rectOf(containerRef).height).toBe(40);
+    // 44, not 40: the box is baseline-aligned, so its BOTTOM sits on the text
+    // baseline and the text's descender still hangs below it. The line box has
+    // to cover both. (A line with no text on it stays exactly the box's
+    // height — see the lone-inline case.)
+    expect(rectOf(containerRef).height).toBe(44);
   });
 });
 
@@ -312,7 +328,11 @@ describe("display:'inline' — span-like flow (un-sized, all-inline contents)", 
 
     // 'a' + 'x' + 30pt box + 'b' = 10+10+30+10 = 60 wide; line = max(20, 40).
     expect(rectOf(containerRef).width).toBe(60);
-    expect(rectOf(containerRef).height).toBe(40);
+    // 44, not 40: the box is baseline-aligned, so its BOTTOM sits on the text
+    // baseline and the text's descender still hangs below it. The line box has
+    // to cover both. (A line with no text on it stays exactly the box's
+    // height — see the lone-inline case.)
+    expect(rectOf(containerRef).height).toBe(44);
     expect(rectOf(atomicRef).width).toBe(30);
     expect(rectOf(atomicRef).height).toBe(40);
   });

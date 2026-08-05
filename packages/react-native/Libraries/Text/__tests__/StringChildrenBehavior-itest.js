@@ -1090,7 +1090,11 @@ milestone(5, 'M5: intrinsic inline tags', () => {
     });
 
     expect(rectOf(sizedRef).width).toBe(50);
-    expect(rectOf(sizedRef).height).toBe(40);
+    // 44, not 40: the box is baseline-aligned, so its BOTTOM sits on the text
+    // baseline and the text's descender still hangs below it. The line box has
+    // to cover both. (A line with no text on it stays exactly the box's
+    // height — see the lone-inline case.)
+    expect(rectOf(sizedRef).height).toBe(44);
   });
 });
 
