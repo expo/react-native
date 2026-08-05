@@ -15,8 +15,22 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 import Dialog from '../../astryx/elements/Dialog';
 import {resolveAnchorPosition} from '../../astryx/overlay/anchorPosition';
 import {useInteractionState} from '../../astryx/useInteractionState';
+// A second vendored slice: components whose whole dependency closure is
+// already supported, copied from Astryx UNMODIFIED like Card.
+// $FlowFixMe[cannot-resolve-module]
+import {Badge} from '../../astryx/vendor/Badge/Badge';
 // $FlowFixMe[cannot-resolve-module] vendored TypeScript (Metro transforms it)
 import {Card} from '../../astryx/vendor/Card/Card';
+// $FlowFixMe[cannot-resolve-module]
+import {Code} from '../../astryx/vendor/Code/Code';
+// $FlowFixMe[cannot-resolve-module]
+import {Divider} from '../../astryx/vendor/Divider/Divider';
+// $FlowFixMe[cannot-resolve-module]
+import {HStack} from '../../astryx/vendor/HStack/HStack';
+// $FlowFixMe[cannot-resolve-module]
+import {Kbd} from '../../astryx/vendor/Kbd/Kbd';
+// $FlowFixMe[cannot-resolve-module]
+import {VStack} from '../../astryx/vendor/VStack/VStack';
 import {
   DEMO_THEME,
   DemoContent,
@@ -483,6 +497,43 @@ function ModalDialog(): React.Node {
   );
 }
 
+/**
+ * The second vendored slice, rendered for real. Every component here is
+ * byte-identical Astryx source; if any of it misbehaves the fault is ours.
+ */
+function PortedComponents(): React.Node {
+  return (
+    <VStack gap={3}>
+      {/* Badge takes a `label` prop, not children — as does Kbd's `keys`.
+          Worth stating because it is the kind of thing a port gets wrong
+          silently: rendering children on a component that ignores them
+          produces an empty box rather than an error. */}
+      <HStack gap={2}>
+        <Badge label="neutral" />
+        <Badge label="info" variant="info" />
+        <Badge label="success" variant="success" />
+        <Badge label="error" variant="error" />
+      </HStack>
+      <Divider />
+      <HStack gap={2}>
+        <Badge label="blue" variant="blue" />
+        <Badge label="teal" variant="teal" />
+        <Badge label="purple" variant="purple" />
+      </HStack>
+      <Divider />
+      <HStack gap={2}>
+        <Code>npm install</Code>
+        <Kbd keys="mod+k" />
+      </HStack>
+      <Divider variant="strong" />
+      <VStack gap={1}>
+        <Badge label="stacked" variant="green" />
+        <Badge label="vertically" variant="green" />
+      </VStack>
+    </VStack>
+  );
+}
+
 export default {
   title: 'Astryx',
   category: 'UI',
@@ -492,6 +543,31 @@ export default {
     '(defineVars tokens, var() fallback chains, calc(), light-dark()) and ' +
     'the intrinsic element/text-children machinery (<div>, <p>, bare text).',
   examples: [
+    {
+      name: 'ported',
+      title: 'Ported components — a second vendored slice',
+      description:
+        'Nine more Astryx components whose entire dependency closure is ' +
+        'already supported, vendored UNMODIFIED: the Stack layout ' +
+        'primitives plus Badge, Code, Kbd, Divider, Center and ' +
+        'VisuallyHidden. Static analysis says they should work; this screen ' +
+        'is what actually decides it.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            'import {VStack, HStack, Badge, Code, Kbd, Divider}\n' +
+            "  from '@astryxdesign/core'; // vendored, unmodified\n" +
+            '\n' +
+            '<VStack gap={3}>\n' +
+            '  <HStack gap={2}><Badge>new</Badge><Badge>beta</Badge></HStack>\n' +
+            '  <Divider />\n' +
+            '  <HStack gap={2}><Code>npm i</Code><Kbd>⌘K</Kbd></HStack>\n' +
+            '</VStack>'
+          }>
+          <PortedComponents />
+        </DemoContent>
+      ),
+    },
     {
       title: 'Card — vendored source, end to end',
       description:

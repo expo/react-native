@@ -372,6 +372,9 @@ function isDroppedProperty(prop: string): boolean {
   return DROPPED_PREFIXES.some(prefix => prop.startsWith(prefix));
 }
 
+// The CSS initial root font size, which `rem` is relative to.
+const ROOT_FONT_SIZE = 16;
+
 // Keyword/value fixups per property.
 function convertValue(prop: string, value: string): unknown {
   if (prop === 'overflow') {
@@ -387,6 +390,20 @@ function convertValue(prop: string, value: string): unknown {
   const px = /^[+-]?(\d+\.?\d*|\.\d+)px$/.exec(value);
   if (px != null) {
     return parseFloat(value);
+  }
+  // `rem` against the CSS initial root font size. Astryx's whole type scale is
+  // authored in rem (`--font-size-base: 0.875rem` = 14px), so without this
+  // every font size reaches RN as a string and is rejected outright —
+  // "Error while converting prop 'fontSize': Value is a string, expected a
+  // number", once per text element.
+  //
+  // 16 is the root size the tokens are written against, and their own comments
+  // confirm it: 0.875 × 16 = 14, 0.75 × 16 = 12. RN has no document root to
+  // read a user-adjusted value from, so this is a constant rather than a
+  // lookup. DOM-CSS-LIMITATION(rem-fixed-root)
+  const rem = /^[+-]?(\d+\.?\d*|\.\d+)rem$/.exec(value);
+  if (rem != null) {
+    return parseFloat(value) * ROOT_FONT_SIZE;
   }
   const num = /^[+-]?(\d+\.?\d*|\.\d+)$/.exec(value);
   if (num != null && prop !== 'fontFamily') {
@@ -596,6 +613,23 @@ function resolveDeclarations(
     }
     out[prop] = convertValue(prop, resolved);
   }
+
+  // CSS defaults a flex container to `flex-direction: row`; React Native
+  // defaults to `column`. Astryx is flex-dominant and almost never writes the
+  // direction out when it wants a row, so without this its components lay out
+  // rotated 90 degrees — Kbd stacks "Ctrl" above "K", toolbars become columns.
+  //
+  // Only fills in what the author omitted: an explicit `flexDirection` always
+  // wins, and a style that never mentions `display` is left alone so ordinary
+  // RN views keep RN's default.
+  const display = out.display;
+  if (
+    (display === 'flex' || display === 'inline-flex') &&
+    out.flexDirection == null
+  ) {
+    out.flexDirection = 'row';
+  }
+
   return out;
 }
 

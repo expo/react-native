@@ -298,3 +298,55 @@ describe('stylex-rn custom-property inheritance (M3)', () => {
     expect(s2?.get('--container-padding-inline-start')).toBe('24px');
   });
 });
+
+describe('rem units', () => {
+  // Astryx's whole type scale is authored in rem, so without this every font
+  // size reaches RN as a string and is rejected.
+  it('resolves rem against a 16px root', () => {
+    const {style} = stylex.props({fontSize: '0.875rem'});
+    expect(style).toMatchObject({fontSize: 14});
+  });
+
+  it('handles the whole scale the tokens use', () => {
+    const cases = [
+      ['0.375rem', 6],
+      ['0.75rem', 12],
+      ['1rem', 16],
+      ['1.25rem', 20],
+    ];
+    for (const [input, expected] of cases) {
+      const {style} = stylex.props({fontSize: input});
+      expect(style).toMatchObject({fontSize: expected});
+    }
+  });
+
+  it('leaves px and unitless values alone', () => {
+    const {style} = stylex.props({fontSize: '13px', lineHeight: '1.6667'});
+    expect(style).toMatchObject({fontSize: 13, lineHeight: 1.6667});
+  });
+});
+
+describe('flex container direction', () => {
+  // CSS defaults to row, RN defaults to column. Astryx rarely writes the
+  // direction out when it wants a row.
+  it('defaults display:flex to row', () => {
+    const {style} = stylex.props({display: 'flex'});
+    expect(style).toMatchObject({flexDirection: 'row'});
+  });
+
+  it('defaults inline-flex to row too', () => {
+    const {style} = stylex.props({display: 'inline-flex'});
+    expect(style).toMatchObject({flexDirection: 'row'});
+  });
+
+  it('never overrides an explicit direction', () => {
+    const {style} = stylex.props({display: 'flex', flexDirection: 'column'});
+    expect(style).toMatchObject({flexDirection: 'column'});
+  });
+
+  // A plain RN view that never mentions display must keep RN's own default.
+  it('leaves styles without display alone', () => {
+    const {style} = stylex.props({padding: '4px'});
+    expect(style).not.toHaveProperty('flexDirection');
+  });
+});
