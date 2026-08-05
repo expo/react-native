@@ -411,13 +411,6 @@ static NSMutableAttributedString *RCTNSAttributedStringFragmentFromFragment(
     // How far the box hangs below the line's baseline, so its OWN baseline
     // lands on the line's (CSS2 §10.8.1).
     //
-    // KNOWN GAP (measured, not guessed): for a box containing text this still
-    // renders ~2.7pt high. The inputs are right — an empty 40pt box reports
-    // baseline=40, descent=0 and lands exactly; a 33pt box with 16pt of top
-    // padding reports baseline=29.33, descent=3.67, which is padding plus a
-    // 13.3pt ascent. Yet the glyphs inside it sit 2.7pt above the surrounding
-    // text, so TextKit is not consuming `bounds.origin.y` as a pure
-    // baseline-relative offset here. Android, fed the same number, is exact.
     CGFloat descentBelowBaseline = layoutMetrics.frame.size.height - fragment.atomicInlineBaseline;
     CGRect bounds = {
         .origin = {.x = layoutMetrics.frame.origin.x, .y = -descentBelowBaseline},

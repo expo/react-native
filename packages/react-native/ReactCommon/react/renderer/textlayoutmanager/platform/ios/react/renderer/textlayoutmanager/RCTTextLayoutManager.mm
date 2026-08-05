@@ -922,10 +922,24 @@ void drawInlineBoxDecorations(
                   UIFont *font = [[textStorage attributedSubstringFromRange:range] attribute:NSFontAttributeName
                                                                                      atIndex:0
                                                                               effectiveRange:nil];
+                  // The line's baseline, in the container's coordinates:
+                  // `descender` is negative, so this walks up from the line's
+                  // bottom.
+                  CGFloat lineBaseline = glyphRect.origin.y + glyphRect.size.height + font.descender;
+                  // The box's OWN baseline goes on the line's (CSS2 §10.8.1).
+                  // `bounds.origin.y` is how far the box hangs below the
+                  // baseline (negative), so the box's baseline sits
+                  // `height + origin.y` down from its top.
+                  //
+                  // This is the SECOND placement path an attachment goes
+                  // through: the bounds offset positions the glyph TextKit
+                  // lays out, while this positions the child view that
+                  // actually draws the box. Setting the bounds alone moved the
+                  // placeholder and left the view behind, which is why an
+                  // inline-block's text still sat above the line around it.
+                  CGFloat baselineFromTop = attachmentSize.height + attachment.bounds.origin.y;
                   frame = {
-                      .origin =
-                          {glyphRect.origin.x,
-                           glyphRect.origin.y + glyphRect.size.height - attachmentSize.height + font.descender},
+                      .origin = {glyphRect.origin.x, lineBaseline - baselineFromTop},
                       .size = attachmentSize};
 
                   auto rect = facebook::react::Rect{

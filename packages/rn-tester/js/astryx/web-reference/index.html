@@ -57,6 +57,29 @@
     </p>
 
     <section class="case">
+      <h2>Baseline alignment of an atomic inline</h2>
+      <p class="why">
+        The same two probes as the RNTester Lists screen. An atomic inline is
+        baseline-aligned: an EMPTY box has no line boxes of its own, so its
+        baseline is its bottom edge and that edge sits on the text baseline. A
+        box WITH text uses that text's baseline (CSS2 §10.8.1), so the glyphs
+        inside it sit on exactly the same line as the glyphs around it. The
+        text is all x-height characters, so the bottom of the glyphs IS the
+        baseline.
+      </p>
+      <div>
+        xxx
+        <span style="display: inline-block; width: 24px; height: 40px; background: #c33"></span>
+        xxx
+      </div>
+      <div style="margin-top: 10px">
+        xxx
+        <span style="display: inline-block; padding: 16px 4px 0; background: #39c">xxx</span>
+        xxx
+      </div>
+    </section>
+
+    <section class="case">
       <h2>Does &lt;ul&gt; have padding?</h2>
       <p class="why">
         Yes — every desktop browser's UA stylesheet sets
