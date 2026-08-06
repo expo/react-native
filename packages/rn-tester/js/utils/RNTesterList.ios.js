@@ -218,6 +218,12 @@ const APIs: Array<RNTesterModuleInfo> = (
       category: 'iOS',
     },
     {
+      key: 'CSSTransitionsExample',
+      module: require('../examples/CSSTransitions/CSSTransitionsExample')
+        .default,
+      category: 'UI',
+    },
+    {
       key: 'AlertExample',
       module: require('../examples/Alert/AlertExample').default,
       category: 'UI',

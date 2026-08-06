@@ -287,6 +287,13 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   // inheritable text properties reach native as top-level props, and a key
   // missing from this table is dropped before it ever gets there.
   whiteSpace: true,
+  // `transition` (css-transitions-1). Delivered as the four longhands and
+  // zipped in the renderer, which is also where the animation runs — these
+  // never reach JavaScript again once set.
+  transitionProperty: true,
+  transitionDuration: true,
+  transitionDelay: true,
+  transitionTimingFunction: true,
   userSelect: true,
   verticalAlign: true,
   writingDirection: true,

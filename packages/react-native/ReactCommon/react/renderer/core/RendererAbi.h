@@ -37,7 +37,10 @@ namespace facebook::react {
 //    `inheritedWhiteSpace` — both cross the boundary.
 // 5: `WhiteSpace` went from two values to the CSS six, changing the meaning of
 //    the enum an app's `TextAttributes` compiles against.
-constexpr uint32_t kRendererAbiVersion = 5;
+// 6: `BaseViewProps` gained `transitions` and the four raw `transition-*`
+//    longhands, changing the layout of a type an app's own C++ compiles
+//    against.
+constexpr uint32_t kRendererAbiVersion = 6;
 
 /*
  * Returns the value the renderer LIBRARY was compiled with, as opposed to the

@@ -211,6 +211,12 @@ const APIs: Array<RNTesterModuleInfo> = (
       module: require('../examples/Accessibility/AccessibilityAndroidExample'),
     },
     {
+      key: 'CSSTransitionsExample',
+      module: require('../examples/CSSTransitions/CSSTransitionsExample')
+        .default,
+      category: 'UI',
+    },
+    {
       key: 'AlertExample',
       category: 'UI',
       module: require('../examples/Alert/AlertExample').default,

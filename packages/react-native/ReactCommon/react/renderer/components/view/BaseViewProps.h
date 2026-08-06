@@ -13,6 +13,7 @@
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
+#include <react/renderer/components/view/TransitionPrimitives.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/Props.h>
@@ -67,6 +68,23 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // `white-space`, inherited like the rest of these: a `<pre>` sets it and
   // every run inside keeps it.
   std::optional<WhiteSpace> inheritedWhiteSpace{};
+
+  /*
+   * `transition` (css-transitions-1). Which properties animate when their
+   * value changes, and along what curve. Zipped from the four longhands at
+   * parse time so the renderer never re-parses strings while a frame is being
+   * interpolated. Empty for the overwhelming majority of views, which is what
+   * makes checking for one cheap.
+   */
+  // The four longhands as authored. Kept because a props clone only carries
+  // the keys that CHANGED: without somewhere to fall back to, an update would
+  // re-parse from nothing and silently drop the transitions of every view that
+  // did not restate them — which is every view, every time.
+  std::string transitionPropertyRaw{};
+  std::string transitionDurationRaw{};
+  std::string transitionDelayRaw{};
+  std::string transitionTimingFunctionRaw{};
+  Transitions transitions{};
 
   /*
    * Folds the set inheritable text props above into `textAttributes`. Single

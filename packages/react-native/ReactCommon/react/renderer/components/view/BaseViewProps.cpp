@@ -7,6 +7,8 @@
 
 #include "BaseViewProps.h"
 
+#include <react/renderer/components/view/TransitionConversions.h>
+
 #include <algorithm>
 
 #include <react/renderer/attributedstring/conversions.h>
@@ -126,6 +128,37 @@ BaseViewProps::BaseViewProps(
           "whiteSpace",
           sourceProps.inheritedWhiteSpace,
           {})),
+      transitionPropertyRaw(convertRawProp(
+          context,
+          rawProps,
+          "transitionProperty",
+          sourceProps.transitionPropertyRaw,
+          {})),
+      transitionDurationRaw(convertRawProp(
+          context,
+          rawProps,
+          "transitionDuration",
+          sourceProps.transitionDurationRaw,
+          {})),
+      transitionDelayRaw(convertRawProp(
+          context,
+          rawProps,
+          "transitionDelay",
+          sourceProps.transitionDelayRaw,
+          {})),
+      transitionTimingFunctionRaw(convertRawProp(
+          context,
+          rawProps,
+          "transitionTimingFunction",
+          sourceProps.transitionTimingFunctionRaw,
+          {})),
+      // Zipped once here rather than re-parsed per frame. Reads the fields
+      // above, which are initialised first because they are declared first.
+      transitions(buildTransitions(
+          transitionPropertyRaw,
+          transitionDurationRaw,
+          transitionDelayRaw,
+          transitionTimingFunctionRaw)),
       borderRadii(convertRawProp(
           context,
           rawProps,

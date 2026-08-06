@@ -14,6 +14,7 @@
 #include <react/debug/react_native_assert.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/animationbackend/AnimationBackend.h>
+#include <react/renderer/animationbackend/CSSTransitions.h>
 #include <react/renderer/componentregistry/ComponentDescriptorRegistry.h>
 #include <react/renderer/core/EventQueueProcessor.h>
 #include <react/renderer/core/LayoutContext.h>
@@ -59,6 +60,13 @@ Scheduler::Scheduler(
       std::make_shared<UIManager>(runtimeExecutor_, contextContainer_);
 
   if (ReactNativeFeatureFlags::useSharedAnimatedBackend()) {
+    // CSS transitions ride the shared backend, which is what makes them run
+    // off the JavaScript thread. Constructed BEFORE the backend so its commit
+    // hook registers first: hooks run in registration order, and the diff has
+    // to see the tree as React committed it, before the backend's hook
+    // overlays mid-flight animated values (see CSSTransitions.h).
+    cssTransitions_ = std::make_unique<CSSTransitions>(*uiManager);
+
     auto animationBackend = std::make_shared<AnimationBackend>(
         schedulerToolbox.animationChoreographer, uiManager);
 
@@ -66,6 +74,8 @@ Scheduler::Scheduler(
         animationBackend);
 
     uiManager->unstable_setAnimationBackend(animationBackend);
+
+    cssTransitions_->setAnimationBackend(animationBackend);
   }
 
   auto eventOwnerBox = std::make_shared<EventBeat::OwnerBox>();

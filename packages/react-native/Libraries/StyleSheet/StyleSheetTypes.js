@@ -860,6 +860,21 @@ type ____BlendMode_Internal =
 
 export type ____ViewStyle_InternalBase = Readonly<{
   backfaceVisibility?: 'visible' | 'hidden',
+  /**
+   * `transition` (css-transitions-1), as the four longhands. When a declared
+   * property's value changes, the renderer animates from the previous value —
+   * off the JavaScript thread, driven by the platform display link, gated
+   * behind `useSharedAnimatedBackend`. Comma-separated lists zip by index, and
+   * shorter lists repeat, exactly as on the web.
+   *
+   * Transitionable so far: `opacity`, `background-color`, `border-color`,
+   * `transform` (and `all`, meaning that set). Other property names are
+   * accepted and ignored: the value still applies, immediately.
+   */
+  transitionProperty?: string,
+  transitionDuration?: string | number,
+  transitionDelay?: string | number,
+  transitionTimingFunction?: string,
   backgroundColor?: ____ColorValue_Internal,
   borderColor?: ____ColorValue_Internal,
   /**
