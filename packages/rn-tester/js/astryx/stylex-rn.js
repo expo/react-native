@@ -42,7 +42,12 @@
  */
 
 import {resolveColorMixArgs} from './colorMix';
-import {Appearance, Platform} from 'react-native';
+import {
+  AccessibilityInfo,
+  Appearance,
+  Platform,
+  processColor,
+} from 'react-native';
 
 type RawStyle = {readonly [string]: unknown};
 
@@ -86,9 +91,57 @@ export function create<T extends {readonly [string]: unknown}>(
 }
 
 let keyframesCounter = 0;
-export function keyframes(_frames: RawStyle): string {
-  warnOnce('keyframes', 'stylex.keyframes() is not supported on RN yet');
-  return `__rn_keyframes_${keyframesCounter++}`;
+// `stylex.keyframes()` returns an opaque animation name, exactly as on the
+// web; the frames live here until a style references the name, at which point
+// resolution serializes them for the renderer's native animation engine.
+const keyframesRegistry: Map<string, RawStyle> = new Map();
+export function keyframes(frames: RawStyle): string {
+  const name = `__rn_keyframes_${keyframesCounter++}`;
+  keyframesRegistry.set(name, frames);
+  return name;
+}
+
+/**
+ * Resolves a registered keyframes name into the renderer's wire format: an
+ * array of stops sorted by offset, each stop's declarations resolved through
+ * the SAME pipeline as ordinary styles (tokens, var() fallbacks, calc()) —
+ * resolved as FINAL, since the stops are consumed by the native engine and
+ * no ancestor can supply a custom property later.
+ */
+function resolveKeyframes(
+  name: string,
+  state: InteractionState,
+): ?ReadonlyArray<{[string]: unknown, offset: number}> {
+  const frames = keyframesRegistry.get(name);
+  if (frames == null) {
+    return null;
+  }
+  const stops: Array<{[string]: unknown, offset: number}> = [];
+  for (const key of Object.keys(frames)) {
+    // 'from'/'to' are aliases for 0%/100% (css-animations-1 §4.2).
+    const offset =
+      key === 'from' ? 0 : key === 'to' ? 1 : parseFloat(key) / 100;
+    if (Number.isNaN(offset)) {
+      continue;
+    }
+    const resolved = resolveDeclarations(
+      {...(frames[key] as $FlowFixMe)},
+      state,
+      null,
+      true,
+    );
+    // Color values in ordinary styles are converted by the view config's
+    // processColor; these stops bypass that path, so normalize here — the
+    // native parser receives platform color ints.
+    for (const colorProp of ['backgroundColor', 'borderColor', 'color']) {
+      if (resolved[colorProp] != null) {
+        resolved[colorProp] = processColor(resolved[colorProp] as $FlowFixMe);
+      }
+    }
+    stops.push({...resolved, offset});
+  }
+  stops.sort((a, b) => Number(a.offset) - Number(b.offset));
+  return stops.length > 0 ? stops : null;
 }
 
 export function firstThatWorks(...values: Array<unknown>): unknown {
@@ -386,6 +439,15 @@ const PASSED_THROUGH_TRANSITIONS = new Set([
   'transitionDuration',
   'transitionDelay',
   'transitionTimingFunction',
+  // The animation longhands ride the same path: CSS strings, delivered to the
+  // renderer's native engine as-is. `animationName` is NOT here — it resolves
+  // through the keyframes registry into `animationKeyframes` below.
+  'animationDuration',
+  'animationDelay',
+  'animationTimingFunction',
+  'animationIterationCount',
+  'animationDirection',
+  'animationFillMode',
 ]);
 
 // Properties that have no RN analog (yet); dropped silently by prefix.
@@ -430,7 +492,7 @@ function convertValue(prop: string, value: string): unknown {
   // The `transition-*` longhands reach the native parser as the CSS strings
   // they are. A bare-numeric delay ('0') must not become a number here: the
   // native side reads these props as strings, comma lists and units included.
-  if (prop.startsWith('transition')) {
+  if (prop.startsWith('transition') || prop.startsWith('animation')) {
     return value;
   }
   if (prop === 'overflow') {
@@ -510,6 +572,23 @@ const PSEUDO_ORDER: ReadonlyArray<[string, (InteractionState) => boolean]> = [
   [':disabled', s => s.disabled === true],
 ];
 
+// The OS accessibility setting behind `prefers-reduced-motion`, cached so the
+// synchronous style-resolution path can read it. Seeded and kept fresh by
+// AccessibilityInfo; until the first async answer arrives, motion is allowed
+// (the web default).
+let reduceMotionEnabled = false;
+if (AccessibilityInfo != null) {
+  AccessibilityInfo.isReduceMotionEnabled?.()?.then?.(
+    (enabled: boolean) => {
+      reduceMotionEnabled = enabled === true;
+    },
+    () => {},
+  );
+  AccessibilityInfo.addEventListener?.('reduceMotionChanged', enabled => {
+    reduceMotionEnabled = enabled === true;
+  });
+}
+
 // `@media (hover: hover)` / `(pointer: coarse)` are the capability guards
 // Astryx wraps every :hover in; resolve them against the platform rather than
 // dropping the branch (touch → no hover, coarse pointer).
@@ -528,8 +607,12 @@ function mediaQueryApplies(query: string): boolean {
     return Platform.OS !== 'ios' && Platform.OS !== 'android';
   }
   if (q.includes('prefers-reduced-motion')) {
-    // Motion is dropped wholesale today; treat as reduced.
-    return q.includes('reduce');
+    // Tracks the OS "Reduce Motion" setting (cached below; style resolution
+    // is synchronous). Before animations existed this branch hard-coded
+    // `reduce` as matching so every vendored `animationName: 'none'` fallback
+    // won — with the renderer running animations for real, that guard had
+    // become the thing disabling them.
+    return q.includes('reduce') === reduceMotionEnabled;
   }
   // Width/feature queries we cannot evaluate: keep the default branch.
   return false;
@@ -636,6 +719,35 @@ function resolveDeclarations(
     }
     if (prop.startsWith(':') || prop.startsWith('@')) {
       continue; // whole-block pseudo/at-rules are applied by the caller below
+    }
+    if (prop === 'animationName') {
+      let nameValue = merged[prop];
+      if (
+        nameValue != null &&
+        typeof nameValue === 'object' &&
+        !Array.isArray(nameValue)
+      ) {
+        nameValue = pickConditionalValue(nameValue, state);
+      }
+      if (typeof nameValue === 'string' && nameValue !== 'none') {
+        if (nameValue.includes(',')) {
+          warnOnce(
+            'animation-list',
+            'Multiple animations per element are not supported yet; using none',
+          );
+        } else {
+          const stops = resolveKeyframes(nameValue, state);
+          if (stops != null) {
+            out.animationKeyframes = JSON.stringify(stops);
+          } else {
+            warnOnce(
+              `keyframes:${nameValue}`,
+              `animationName "${nameValue}" is not a stylex.keyframes() value`,
+            );
+          }
+        }
+      }
+      continue;
     }
     if (isDroppedProperty(prop) && !PASSED_THROUGH_TRANSITIONS.has(prop)) {
       // `transition-behavior` and the rest of the drop list. The warning stays

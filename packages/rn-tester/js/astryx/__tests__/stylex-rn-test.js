@@ -199,6 +199,72 @@ describe('stylex-rn', () => {
     expect(props.__startingStyle).toBeUndefined();
   });
 
+  it('resolves stylex.keyframes into serialized stops', () => {
+    const spin = stylex.keyframes({
+      '0%': {transform: 'rotate(0deg)'},
+      '100%': {transform: 'rotate(360deg)'},
+    });
+    const {style} = stylex.props({
+      animationName: spin,
+      animationDuration: '1s',
+      animationIterationCount: 'infinite',
+      animationTimingFunction: 'linear',
+      opacity: 1,
+    });
+    expect(JSON.parse(String(style?.animationKeyframes))).toEqual([
+      {offset: 0, transform: 'rotate(0deg)'},
+      {offset: 1, transform: 'rotate(360deg)'},
+    ]);
+    // The longhands ride through as CSS strings for the native parser.
+    expect(style?.animationDuration).toBe('1s');
+    expect(style?.animationIterationCount).toBe('infinite');
+    expect(style?.animationTimingFunction).toBe('linear');
+    // The name itself never reaches native; it resolved into the stops.
+    expect(style?.animationName).toBeUndefined();
+  });
+
+  it('resolves tokens inside keyframe stops, sorts from/to, and honors none', () => {
+    const fade = stylex.keyframes({
+      to: {opacity: 1},
+      from: {opacity: 0, transform: 'translateY(var(--nope, 6px))'},
+    });
+    const props = stylex.props({animationName: fade});
+    expect(JSON.parse(String(props.style?.animationKeyframes))).toEqual([
+      {offset: 0, opacity: 0, transform: 'translateY(6px)'},
+      {offset: 1, opacity: 1},
+    ]);
+    const none = stylex.props({animationName: 'none', opacity: 1});
+    expect(none.style?.animationKeyframes).toBeUndefined();
+  });
+
+  it('keeps the animation when animationName guards reduced-motion', () => {
+    // Every vendored component writes its pulse exactly this way: the default
+    // branch names the keyframes, a `prefers-reduced-motion: reduce` branch
+    // turns it off. Before the renderer ran animations, mediaQueryApplies
+    // hard-coded `reduce` as matching ("motion is dropped wholesale") — so
+    // this shape, the ONLY shape Astryx uses, silently resolved to none while
+    // a bare animationName worked. Guards the resolver against that ever
+    // coming back.
+    const pulse = stylex.keyframes({
+      '0%': {opacity: 1},
+      '50%': {opacity: 0.5},
+      '100%': {opacity: 1},
+    });
+    const {style} = stylex.props({
+      animationName: {
+        default: pulse,
+        '@media (prefers-reduced-motion: reduce)': 'none',
+      },
+      animationDuration: '2s',
+    });
+    expect(JSON.parse(String(style?.animationKeyframes))).toEqual([
+      {offset: 0, opacity: 1},
+      {offset: 0.5, opacity: 0.5},
+      {offset: 1, opacity: 1},
+    ]);
+    expect(style?.animationDuration).toBe('2s');
+  });
+
   it('still drops transition-behavior, quietly', () => {
     // `allow-discrete` has no native counterpart. It is dropped without a
     // warning: warning on a transition-* member would fire on exactly the
