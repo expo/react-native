@@ -27,6 +27,17 @@ namespace facebook::react {
  */
 class CSSTransitionsTrace {
  public:
+  /*
+   * The process-wide instance. The engine logs through it, and so can any
+   * other layer under investigation — the point of the trace is one timeline,
+   * and a paint-side event is only useful when it can be read against the
+   * commit that caused it.
+   */
+  static std::shared_ptr<CSSTransitionsTrace>& shared() {
+    static auto instance = std::make_shared<CSSTransitionsTrace>();
+    return instance;
+  }
+
   void log(std::string line) {
     std::scoped_lock lock(mutex_);
     // Milliseconds, monotonic, truncated to the hour so the numbers stay

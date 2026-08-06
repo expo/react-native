@@ -24,6 +24,7 @@
 #import <React/RCTLog.h>
 #import <React/RCTRadialGradient.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
+#import <react/renderer/animationbackend/CSSTransitionsTrace.h>
 #import <react/renderer/components/view/ViewComponentDescriptor.h>
 #import <react/renderer/components/view/ViewShadowNode.h>
 #import <react/renderer/components/view/ViewState.h>
@@ -145,6 +146,10 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
 {
   RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
   if (!nativeTextLayoutManager) {
+    // A silent blank: the run's layout manager is gone, so NOTHING paints
+    // this frame. If the reported flicker is text blinking out, this line is
+    // the whole story.
+    facebook::react::CSSTransitionsTrace::shared()->log("paint-nil-mgr");
     return;
   }
   // Paint and hit-testing must share ONE geometry — the run's own Yoga frame.

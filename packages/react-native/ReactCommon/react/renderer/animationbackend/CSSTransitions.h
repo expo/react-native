@@ -161,8 +161,7 @@ class CSSTransitions final : public UIManagerCommitHook {
 
   // Touched by the commit hook (any thread that commits) and by the frame
   // callback (the UI thread), so every access is guarded.
-  std::shared_ptr<CSSTransitionsTrace> trace_{
-      std::make_shared<CSSTransitionsTrace>()};
+  std::shared_ptr<CSSTransitionsTrace> trace_{CSSTransitionsTrace::shared()};
 
   std::mutex mutex_;
   std::unordered_map<Tag, ViewTransitions> transitions_;

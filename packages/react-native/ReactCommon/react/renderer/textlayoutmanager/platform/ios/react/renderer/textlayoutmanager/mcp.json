@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "github": {
+      "args": [
+        "mcp"
+      ],
+      "command": "/Users/ideagent/Applications/Tuft.app/Contents/MacOS/tuft",
+      "env": {
+        "TUFT_CHANNEL_SOURCE": "github",
+        "TUFT_DAEMON_SOCKET": "/Users/ideagent/.config/tuft/state/daemon.sock",
+        "TUFT_MCP_CHANNEL_ONLY": "1",
+        "TUFT_MCP_SERVER": "github",
+        "TUFT_PROJECT_DIR": "/Users/ideagent/Developer/tuft",
+        "TUFT_SESSION_ID": "1901165b-fb9a-47b8-b3e5-daf6b7ab5d0d"
+      }
+    },
+    "imessage": {
+      "args": [
+        "mcp"
+      ],
+      "command": "/Users/ideagent/Applications/Tuft.app/Contents/MacOS/tuft",
+      "env": {
+        "TUFT_CHANNEL_SOURCE": "imessage",
+        "TUFT_DAEMON_SOCKET": "/Users/ideagent/.config/tuft/state/daemon.sock",
+        "TUFT_MCP_SERVER": "imessage",
+        "TUFT_PROJECT_DIR": "/Users/ideagent/Developer/tuft",
+        "TUFT_SESSION_ID": "1901165b-fb9a-47b8-b3e5-daf6b7ab5d0d"
+      }
+    },
+    "kite": {
+      "headers": {
+        "Authorization": "Bearer Q7OZeb_RDN0TmrxfddKmhfB8-zKT9xaysm5z8oRLC1o",
+        "X-Kite-Project": "tuft-abb7552f"
+      },
+      "type": "http",
+      "url": "http://127.0.0.1:7303/mcp"
+    },
+    "linear": {
+      "headers": {
+        "Authorization": "Bearer J_Z1t9-u6SP9BHLQSEzgsUlQD3aPJxgr_ZkBnWTw-Dc"
+      },
+      "type": "http",
+      "url": "https://router.tuft.dev/api/mcp/proxy/linear"
+    },
+    "tuft": {
+      "args": [
+        "mcp"
+      ],
+      "command": "/Users/ideagent/Applications/Tuft.app/Contents/MacOS/tuft",
+      "env": {
+        "TUFT_PROJECT_DIR": "/Users/ideagent/Developer/tuft",
+        "TUFT_SESSION_ID": "1901165b-fb9a-47b8-b3e5-daf6b7ab5d0d"
+      }
+    }
+  }
+}
