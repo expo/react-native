@@ -875,6 +875,20 @@ export type ____ViewStyle_InternalBase = Readonly<{
   transitionDuration?: string | number,
   transitionDelay?: string | number,
   transitionTimingFunction?: string,
+  /**
+   * `animation` (css-animations-1), run by the same renderer engine as
+   * transitions. `animationKeyframes` is a JSON string of pre-resolved stops
+   * (`[{offset, opacity?, backgroundColor?, borderColor?, transform?}, ...]`)
+   * — a style layer such as Astryx serializes its `@keyframes` rules into it.
+   * Animatable properties match the transitionable set.
+   */
+  animationKeyframes?: string,
+  animationDuration?: string | number,
+  animationDelay?: string | number,
+  animationTimingFunction?: string,
+  animationIterationCount?: string | number,
+  animationDirection?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse',
+  animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both',
   backgroundColor?: ____ColorValue_Internal,
   borderColor?: ____ColorValue_Internal,
   /**

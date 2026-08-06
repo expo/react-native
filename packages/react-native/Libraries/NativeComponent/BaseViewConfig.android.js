@@ -230,6 +230,15 @@ const validAttributesForNonEventProps = {
   transitionDuration: true,
   transitionDelay: true,
   transitionTimingFunction: true,
+  // `animation` (css-animations-1). Keyframes arrive pre-resolved as a JSON
+  // string; the longhands ride alongside. Run by the same renderer engine.
+  animationKeyframes: true,
+  animationDuration: true,
+  animationDelay: true,
+  animationTimingFunction: true,
+  animationIterationCount: true,
+  animationDirection: true,
+  animationFillMode: true,
 
   // @ReactProps from BaseViewManager
   backgroundColor: colorAttribute,

@@ -294,6 +294,15 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   transitionDuration: true,
   transitionDelay: true,
   transitionTimingFunction: true,
+  // `animation` (css-animations-1). Same engine; keyframes are serialized to
+  // a JSON string of pre-resolved stops before they reach native.
+  animationKeyframes: true,
+  animationDuration: true,
+  animationDelay: true,
+  animationTimingFunction: true,
+  animationIterationCount: true,
+  animationDirection: true,
+  animationFillMode: true,
   userSelect: true,
   verticalAlign: true,
   writingDirection: true,
