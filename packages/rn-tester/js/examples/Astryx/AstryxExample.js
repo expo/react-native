@@ -45,7 +45,6 @@ import {
   semanticColor,
   usePublishRects,
 } from '../TextChildren/TextChildrenShared';
-import {BUILD_STAMP} from './BuildStamp';
 // Resolved to js/astryx/stylex-rn.js by the Metro alias — same module the
 // vendored sources get, so consumer xstyle overrides use the identical API.
 // $FlowFixMe[cannot-resolve-module]
@@ -808,6 +807,7 @@ const selectableStyles = stylex.create({
     paddingBlock: 'var(--spacing-3, 12px)',
     transitionProperty: 'border-color, background-color, transform',
     transitionDuration: 'var(--duration-fast, 150ms)',
+
     transitionTimingFunction: 'var(--ease-standard, ease)',
     ':active': {transform: 'scale(0.97)'},
   },
@@ -869,11 +869,6 @@ function NativeTransitionsCases(): React.Node {
         style={{color: DEMO_THEME.muted, fontSize: 13}}>
         Nothing here calls an animation API. The styles are static states; the
         renderer fills in every frame between them, off the JS thread.
-      </View>
-      <View
-        // $FlowFixMe[incompatible-type] cascade to bare text
-        style={{color: DEMO_THEME.muted, fontSize: 11}}>
-        {`build: ${BUILD_STAMP}`}
       </View>
     </VStack>
   );

@@ -200,6 +200,21 @@ void CSSTransitions::diffNode(
             return running.property == property;
           });
 
+      if (existing != entry.running.end() && existing->settling) {
+        // Settling means the value has arrived. A new target re-aims from the
+        // settled final value exactly like a fresh start.
+        if (!valuesEqual(existing->to, target, property)) {
+          existing->from = existing->to;
+          existing->to = target;
+          existing->settling = false;
+          existing->settleFramesLeft = 0;
+          existing->awaitingFirstFrame = true;
+          existing->delay = declared->delay;
+          existing->duration = declared->duration;
+          existing->timingFunction = declared->timingFunction;
+        }
+        continue;
+      }
       if (existing != entry.running.end()) {
         // Already animating this property. If it is heading somewhere new,
         // re-aim it FROM WHERE IT IS — a transition interrupted mid-flight
@@ -308,6 +323,37 @@ AnimationMutations CSSTransitions::mutationsForFrame(double nowMs) {
 
     for (auto running = entry.running.begin();
          running != entry.running.end();) {
+      if (running->settling) {
+        // Re-assert the final value (see RunningTransition::settling).
+        TransitionValue finalValue = running->to;
+        switch (running->property) {
+          case TransitionProperty::Opacity:
+            builder.setOpacity(finalValue.number);
+            break;
+          case TransitionProperty::BackgroundColor:
+            builder.setBackgroundColor(finalValue.color);
+            break;
+          case TransitionProperty::BorderColor: {
+            CascadedBorderColors borderColors;
+            borderColors.all = finalValue.color;
+            builder.setBorderColor(borderColors);
+            break;
+          }
+          case TransitionProperty::Transform:
+            builder.setTransform(finalValue.transform);
+            break;
+          case TransitionProperty::All:
+            break;
+        }
+        entry.lastWritten[running->property] = finalValue;
+        wroteAnything = true;
+        if (--running->settleFramesLeft <= 0) {
+          running = entry.running.erase(running);
+        } else {
+          ++running;
+        }
+        continue;
+      }
       if (running->awaitingFirstFrame) {
         running->awaitingFirstFrame = false;
         running->startTime = nowMs + running->delay;
@@ -367,10 +413,12 @@ AnimationMutations CSSTransitions::mutationsForFrame(double nowMs) {
       wroteAnything = true;
 
       if (rawProgress >= 1.0f) {
-        running = entry.running.erase(running);
-      } else {
-        ++running;
+        // ~250ms at 60fps: longer than any commit→mount latency, bounded so a
+        // finished transition does not write forever.
+        running->settling = true;
+        running->settleFramesLeft = 16;
       }
+      ++running;
     }
 
     if (wroteAnything) {

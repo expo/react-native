@@ -53,6 +53,20 @@ struct RunningTransition {
   double delay{0.0};
   double duration{0.0};
   TransitionTimingFunction timingFunction{};
+  /*
+   * A completed transition SETTLES before it is dropped: it keeps writing its
+   * final value for a bounded run of frames. The value is done animating, but
+   * a React commit that was in flight while the last real frames ran has the
+   * animated-props overlay BAKED IN from hook time — values that are a frame
+   * or two stale — and its mount can land after the final write, silently
+   * reverting the view to a mid-flight value. Nothing corrects that revert:
+   * the transition is finished, and the overlay re-bakes the same stale
+   * snapshot into every later commit, which is exactly the "stuck mid-fade
+   * until some unrelated press repaints it" symptom. Settle frames make the
+   * final value the last word for longer than any commit→mount latency.
+   */
+  bool settling{false};
+  int settleFramesLeft{0};
 };
 
 /*
