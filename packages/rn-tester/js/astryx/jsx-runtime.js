@@ -32,11 +32,9 @@ import type {VarScope} from './stylex-rn';
 import Dialog from './elements/Dialog';
 import Input from './elements/Input';
 import TextArea from './elements/TextArea';
-import {useEntryTransition} from './startingStyle';
 import {resolveInherited} from './stylex-rn';
 import {Svg, SvgCircle, SvgLine, SvgPath, SvgRect} from './svg/Svg';
 import * as React from 'react';
-import {Animated} from 'react-native';
 import {
   Fragment as ReactFragment,
   jsx as reactJsx,
@@ -62,22 +60,26 @@ type IntrinsicProps = {
  */
 function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   const inheritedScope = React.useContext(VarScopeContext);
-  const {
-    style,
-    __stylexVars,
-    __startingStyle,
-    __entryTransition,
-    children,
-    ...rest
-  } = props;
+  const {style, __stylexVars, __startingStyle, children, ...rest} = props;
 
-  // `@starting-style`: animate from the starting values on mount. The hook is
-  // called unconditionally — it returns null when there is nothing to animate
-  // — because React requires a stable hook order.
-  const entryStyle = useEntryTransition(
-    __startingStyle as $FlowFixMe,
-    __entryTransition as $FlowFixMe,
-  );
+  // `@starting-style` (css-transitions-2 §3), the way the web runs it: the
+  // element's first commit renders the starting values, the effect below
+  // drops them, and the renderer's native CSS transitions — declared in this
+  // same style — animate to the real values off the JS thread. Two commits,
+  // no animation code. The hook order is stable: the hooks run
+  // unconditionally and only their values depend on the block's presence.
+  const [entered, setEntered] = React.useState(false);
+  React.useEffect(() => {
+    if (__startingStyle != null) {
+      setEntered(true);
+    }
+    // Mount-only by design: `@starting-style` is about first appearance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const entryStyle =
+    __startingStyle != null && !entered
+      ? (__startingStyle as $FlowFixMe)
+      : null;
 
   const {style: resolvedStyle, scope} = resolveInherited(
     style,
@@ -118,14 +120,14 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   // Build the host element through React's runtime directly — going back
   // through this module's `jsx` would re-enter the wrapper forever.
   //
-  // An element mid-entry-animation renders through an animated version of the
-  // SAME tag rather than inside an `Animated.View`: a wrapper would add a box
-  // to the tree, and for the absolutely-positioned overlays that use
-  // `@starting-style` it would change their containing block.
-  const hostType = entryStyle != null ? animatedTag(__astryxTag) : __astryxTag;
+  // The SAME host type on every commit, including the entry ones: the old
+  // Animated entry path swapped in an animated tag while animating, and with
+  // the two-commit `@starting-style` that swap would REMOUNT the element
+  // between the starting commit and the final one — a fresh native view has
+  // no previous value, so the native transition would never run.
   const element = Array.isArray(children)
-    ? reactJsxs(hostType, hostProps)
-    : reactJsx(hostType, hostProps);
+    ? reactJsxs(__astryxTag, hostProps)
+    : reactJsx(__astryxTag, hostProps);
 
   // Only elements that declare custom properties open a new scope; everything
   // else reuses the ancestor's provider, so the common case adds no provider.
@@ -165,25 +167,6 @@ const ELEMENT_COMPONENTS_KEEPING_CHILDREN: Set<string> = new Set([
   'svg',
   'dialog',
 ]);
-
-/**
- * The animated counterpart of a host tag, made once per tag.
- *
- * `Animated.createAnimatedComponent` accepts a host tag directly, so this
- * needs no wrapper element — the same `<div>` simply becomes able to read an
- * `Animated.Value` from its style.
- */
-const animatedTags: {[string]: React.ComponentType<any>} = {};
-function animatedTag(tag: string): React.ComponentType<any> {
-  let animated = animatedTags[tag];
-  if (animated == null) {
-    // A host tag IS a valid component to React; Flow's signature only admits
-    // ComponentType. Verified at runtime before relying on it.
-    animated = Animated.createAnimatedComponent(tag as $FlowFixMe);
-    animatedTags[tag] = animated;
-  }
-  return animated;
-}
 
 function wrap(type: unknown, props: unknown): [unknown, unknown] {
   if (typeof type !== 'string') {

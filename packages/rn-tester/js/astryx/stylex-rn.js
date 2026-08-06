@@ -42,7 +42,6 @@
  */
 
 import {resolveColorMixArgs} from './colorMix';
-import {parseDurationMs, toStartingStyle} from './startingStyle';
 import {Appearance, Platform} from 'react-native';
 
 type RawStyle = {readonly [string]: unknown};
@@ -483,14 +482,10 @@ function convertValue(prop: string, value: string): unknown {
 export type StyleXProps = {
   style?: {[string]: unknown},
   __stylexVars?: {[string]: unknown},
-  // The `@starting-style` values and the transition that carries the element
-  // away from them, for the element to animate on mount.
-  __startingStyle?: {
-    opacity?: number,
-    translateY?: number,
-    translateX?: number,
-  },
-  __entryTransition?: {durationMs: number, easing: string},
+  // The resolved `@starting-style` block: style overrides for the element's
+  // FIRST commit only. The element drops them after mount and the renderer's
+  // native transitions animate to the real values.
+  __startingStyle?: {[string]: unknown},
 };
 
 export type InteractionState = {
@@ -830,49 +825,31 @@ export function propsWithState(
     result.__stylexVars = declaredVars;
   }
 
-  // `@starting-style` (css-transitions-2 §3): the values the element animates
-  // FROM on first render. Resolved through the same pipeline as everything
-  // else — its declarations reference the same tokens — then carried on the
-  // props for the element to animate, since React Native has no transitions of
-  // its own for it to fall out of.
+  // `@starting-style` (css-transitions-2 §3): the values the element renders
+  // with on its FIRST commit. The element drops them after mount, and the
+  // renderer's native CSS transitions — the same `transition-*` declarations
+  // this style already carries — animate from them to the real values, off
+  // the JS thread. That is the web's own model: paint the starting values,
+  // then transition. Nothing here is an animation; it is only the first
+  // frame's worth of style. Any transitionable property works, not a
+  // hand-picked subset — the old Animated-on-mount path supported exactly
+  // opacity and translate, and existed only because the renderer had no
+  // transitions to fall out of. It does now.
   const startingBlock = merged['@starting-style'];
   if (startingBlock != null && typeof startingBlock === 'object') {
     // Resolved as FINAL. Everywhere else an unknown `var()` is deferred so an
-    // ancestor can still supply it at the element; these values are consumed
-    // here and now to build an animation, so there is no later chance —
-    // deferring one leaves a raw `var()` in the transform and the animation
-    // silently loses that axis. Final resolution applies the fallback instead.
+    // ancestor can still supply it at the element; these values are the first
+    // committed frame, so there is no later chance — deferring one would
+    // commit a raw `var()` string as a style value. Final resolution applies
+    // the fallback instead.
     const resolvedStarting = resolveDeclarations(
       {...(startingBlock as $FlowFixMe)},
       state,
       null,
       true,
     );
-    const starting = toStartingStyle(resolvedStarting);
-    if (starting != null) {
-      result.__startingStyle = starting;
-      // Read from the RAW declarations, not the resolved style: RN has no CSS
-      // transitions so these are dropped during resolution, and looking for
-      // them afterwards always found nothing.
-      // Resolved under a neutral key: anything starting with `transition` is
-      // on the drop list, so the obvious name silently discarded the value.
-      const rawDuration = resolveDeclarations(
-        {astryxEntryDuration: merged.transitionDuration},
-        state,
-        null,
-        false,
-      ).astryxEntryDuration;
-      result.__entryTransition = {
-        durationMs: parseDurationMs(
-          typeof rawDuration === 'string' || typeof rawDuration === 'number'
-            ? String(rawDuration)
-            : null,
-        ),
-        easing:
-          typeof merged.transitionTimingFunction === 'string'
-            ? merged.transitionTimingFunction
-            : 'ease',
-      };
+    if (Object.keys(resolvedStarting).length > 0) {
+      result.__startingStyle = resolvedStarting;
     }
   }
   return result;

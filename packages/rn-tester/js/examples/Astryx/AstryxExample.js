@@ -521,8 +521,10 @@ function ModalDialog(): React.Node {
  * checkable by eye as well as by test.
  */
 /**
- * `@starting-style` entry animations. Remounting the subtree replays them,
- * which is the only way to see a first-render animation more than once.
+ * `@starting-style` entry animations, riding the renderer's native CSS
+ * transitions: first commit renders the block's values, the next drops them.
+ * Remounting the subtree replays them, which is the only way to see a
+ * first-render animation more than once.
  */
 /**
  * `<br>` and `<textarea>`: the last two element gaps.
@@ -605,30 +607,41 @@ function ElementGapsCases(): React.Node {
 
 function StartingStyleCases(): React.Node {
   const [generation, setGeneration] = useState(0);
+  // Everything lives in the stylex blocks — a literal `style=` attribute after
+  // the spread would REPLACE the resolved style, and with `@starting-style`
+  // riding native transitions the transition declarations are part of that
+  // style. (The old Animated path smuggled the entry values on separate props,
+  // which is why the collision never showed before.) Box colors are tokens,
+  // light-dark() pairs, so the section rethemes.
   const entry = stylex.create({
-    fade: {
-      opacity: 1,
-      transitionProperty: 'opacity',
+    box: {
+      height: 34,
+      borderRadius: 6,
+      justifyContent: 'center',
+      paddingInline: 10,
+      color: 'var(--color-text-primary)',
       transitionDuration: '600ms',
       transitionTimingFunction: 'ease-out',
+    },
+    fade: {
+      opacity: 1,
+      backgroundColor: 'var(--color-background-blue)',
+      transitionProperty: 'opacity',
       '@starting-style': {opacity: 0},
     },
     rise: {
       opacity: 1,
+      backgroundColor: 'var(--color-background-green)',
       transitionProperty: 'opacity, transform',
-      transitionDuration: '600ms',
-      transitionTimingFunction: 'ease-out',
       '@starting-style': {opacity: 0, transform: 'translateY(24px)'},
     },
     slide: {
-      opacity: 1,
+      backgroundColor: 'var(--color-background-orange)',
       transitionProperty: 'transform',
-      transitionDuration: '600ms',
       transitionTimingFunction: 'cubic-bezier(0.2, 0, 0, 1)',
       '@starting-style': {transform: 'translateX(-40px)'},
     },
   });
-  const box = {height: 34, borderRadius: 6, justifyContent: 'center'};
   return (
     <View style={{gap: 10}}>
       <AstryxButton onClick={() => setGeneration(g => g + 1)}>
@@ -636,23 +649,11 @@ function StartingStyleCases(): React.Node {
       </AstryxButton>
       <View key={generation} style={{gap: 8}}>
         {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
-        <div
-          {...stylex.props(entry.fade)}
-          style={[box, {backgroundColor: '#cfe3f7'}]}>
-          fade in
-        </div>
+        <div {...stylex.props(entry.box, entry.fade)}>fade in</div>
         {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
-        <div
-          {...stylex.props(entry.rise)}
-          style={[box, {backgroundColor: '#d7f0dd'}]}>
-          rise and fade
-        </div>
+        <div {...stylex.props(entry.box, entry.rise)}>rise and fade</div>
         {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
-        <div
-          {...stylex.props(entry.slide)}
-          style={[box, {backgroundColor: '#f6ddd0'}]}>
-          slide from the left
-        </div>
+        <div {...stylex.props(entry.box, entry.slide)}>slide from the left</div>
       </View>
     </View>
   );
@@ -779,8 +780,12 @@ function PortedComponents(): React.Node {
 const selectableStyles = stylex.create({
   card: {
     borderWidth: 2,
-    borderColor: 'var(--color-border, #d0d5dd)',
-    backgroundColor: 'var(--color-background, #ffffff)',
+    // Real Astryx tokens, every one a light-dark() pair — an invented token
+    // name silently takes its light-only fallback and turns the card white in
+    // dark mode, which is exactly the bug this replaced.
+    borderColor: 'var(--color-border-emphasized)',
+    backgroundColor: 'var(--color-background-card)',
+    color: 'var(--color-text-primary)',
     borderRadius: 'var(--radius-element, 8px)',
     paddingInline: 'var(--spacing-4, 16px)',
     paddingBlock: 'var(--spacing-3, 12px)',
@@ -790,8 +795,8 @@ const selectableStyles = stylex.create({
     ':active': {transform: 'scale(0.97)'},
   },
   selected: {
-    borderColor: 'var(--color-accent, #1570ef)',
-    backgroundColor: 'var(--color-background-selected, #eff8ff)',
+    borderColor: 'var(--color-accent)',
+    backgroundColor: 'var(--color-background-blue)',
   },
 });
 
@@ -822,6 +827,8 @@ function SelectableCardDemo({
 
 function NativeTransitionsCases(): React.Node {
   const [selected, setSelected] = useState(0);
+  // light-dark() resolves at render time; re-render on scheme change.
+  useColorScheme();
   return (
     <VStack gap={3}>
       {/* The press fade: the same AstryxButton as the button demo, whose
@@ -906,10 +913,11 @@ export default {
       name: 'startingStyle',
       title: '@starting-style — entry animations',
       description:
-        'The values an element animates FROM on its first render ' +
-        '(css-transitions-2 §3). React Native has no CSS transitions, so the ' +
-        'runtime turns the block into an animation on mount, driven natively. ' +
-        'Press to remount and replay.',
+        'The values an element renders with on its FIRST commit ' +
+        '(css-transitions-2 §3); the renderer\u2019s native CSS transitions ' +
+        'then animate to the real values, exactly as a browser does — the ' +
+        'block is one frame of style, not an animation API. Press to ' +
+        'remount and replay.',
       render: (): React.Node => (
         <DemoContent
           code={

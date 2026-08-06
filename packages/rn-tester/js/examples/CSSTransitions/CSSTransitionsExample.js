@@ -14,7 +14,7 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 
 import * as React from 'react';
 import {useEffect, useRef, useState} from 'react';
-import {Button, Text, View} from 'react-native';
+import {Button, ScrollView, Text, View, useColorScheme} from 'react-native';
 
 /**
  * CSS transitions (css-transitions-1), run entirely in the renderer.
@@ -27,8 +27,15 @@ import {Button, Text, View} from 'react-native';
  */
 
 /**
- * Flips state on an interval so the transitions can be observed — and sampled
- * by a test harness — without anyone pressing anything.
+ * Auto-plays on an interval until the user takes over: the first press of a
+ * section's Toggle stops the auto-play for that section and every press —
+ * including the first — toggles immediately. Toggling mid-flight is allowed
+ * and interesting: the transition re-targets from wherever it is.
+ *
+ * There is deliberately no pause. A transition, once started, runs in the
+ * renderer — that is the feature — and CSS itself has no way to freeze one
+ * (`animation-play-state` belongs to animations). Interrupt it by toggling;
+ * the interruption section is built entirely out of doing exactly that.
  */
 function useAutoToggle(periodMs: number): [boolean, () => void] {
   const [on, setOn] = useState(false);
@@ -43,7 +50,8 @@ function useAutoToggle(periodMs: number): [boolean, () => void] {
   return [
     on,
     () => {
-      setAuto(a => !a);
+      setAuto(false);
+      setOn(v => !v);
     },
   ];
 }
@@ -57,10 +65,23 @@ function Section({
   description: string,
   children: React.Node,
 }): React.Node {
+  const dark = useColorScheme() === 'dark';
   return (
     <View style={{marginBottom: 28}}>
-      <Text style={{fontWeight: '600', marginBottom: 2}}>{title}</Text>
-      <Text style={{color: '#6b6b70', fontSize: 13, marginBottom: 10}}>
+      <Text
+        style={{
+          fontWeight: '600',
+          marginBottom: 2,
+          color: dark ? '#f2f2f7' : '#101828',
+        }}>
+        {title}
+      </Text>
+      <Text
+        style={{
+          color: dark ? '#98989f' : '#6b6b70',
+          fontSize: 13,
+          marginBottom: 10,
+        }}>
         {description}
       </Text>
       {children}
@@ -120,7 +141,7 @@ function PropertiesCase(): React.Node {
           </Text>
         </View>
       ))}
-      <Button title="Pause/resume" onPress={toggleAuto} />
+      <Button title="Toggle" onPress={toggleAuto} />
     </Section>
   );
 }
@@ -177,7 +198,7 @@ function TimingCase(): React.Node {
           </Text>
         </View>
       ))}
-      <Button title="Pause/resume" onPress={toggleAuto} />
+      <Button title="Toggle" onPress={toggleAuto} />
     </Section>
   );
 }
@@ -204,7 +225,7 @@ function ListsCase(): React.Node {
           transitionTimingFunction: 'ease-in-out',
         }}
       />
-      <Button title="Pause/resume" onPress={toggleAuto} />
+      <Button title="Toggle" onPress={toggleAuto} />
     </Section>
   );
 }
@@ -238,7 +259,7 @@ function DelayCase(): React.Node {
         ))}
       </View>
       <View style={{height: 44}} />
-      <Button title="Pause/resume" onPress={toggleAuto} />
+      <Button title="Toggle" onPress={toggleAuto} />
     </Section>
   );
 }
@@ -269,7 +290,7 @@ function InterruptionCase(): React.Node {
           transitionTimingFunction: 'ease-in-out',
         }}
       />
-      <Button title="Pause/resume" onPress={toggleAuto} />
+      <Button title="Toggle" onPress={toggleAuto} />
     </Section>
   );
 }
@@ -304,7 +325,7 @@ function IgnoredCase(): React.Node {
           }}
         />
       </View>
-      <Button title="Pause/resume" onPress={toggleAuto} />
+      <Button title="Toggle" onPress={toggleAuto} />
     </Section>
   );
 }
@@ -346,22 +367,27 @@ function BlockedJsCase(): React.Node {
           transitionTimingFunction: 'linear',
         }}
       />
-      <Button title="Pause/resume" onPress={toggleAuto} />
+      <Button title="Toggle" onPress={toggleAuto} />
     </Section>
   );
 }
 
 function CSSTransitionsExample(): React.Node {
   return (
-    <View style={{padding: 16}}>
-      <PropertiesCase />
-      <TimingCase />
-      <ListsCase />
-      <DelayCase />
-      <InterruptionCase />
-      <IgnoredCase />
-      <BlockedJsCase />
-    </View>
+    // Its own scroll container: the example page does not provide one, and
+    // this screen is several viewports tall. Insets handled in the native
+    // layout pass (no SafeAreaView round-trip; see the TextChildren demo).
+    <ScrollView contentInsetAdjustmentBehavior="automatic">
+      <View style={{padding: 16}}>
+        <PropertiesCase />
+        <TimingCase />
+        <ListsCase />
+        <DelayCase />
+        <InterruptionCase />
+        <IgnoredCase />
+        <BlockedJsCase />
+      </View>
+    </ScrollView>
   );
 }
 

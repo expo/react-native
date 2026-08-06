@@ -165,6 +165,40 @@ describe('stylex-rn', () => {
     });
   });
 
+  it('resolves @starting-style into first-commit overrides', () => {
+    // The block rides native transitions now: it resolves to a plain style
+    // object the element renders with on its first commit only. Any
+    // property, not a hand-picked subset — width was impossible under the
+    // old Animated path.
+    const props = stylex.props({
+      opacity: 1,
+      transitionProperty: 'opacity, transform',
+      transitionDuration: '600ms',
+      '@starting-style': {opacity: 0, transform: 'translateY(24px)', width: 10},
+    });
+    expect(props.__startingStyle).toEqual({
+      opacity: 0,
+      transform: 'translateY(24px)',
+      width: 10,
+    });
+    // The transitions stay in the style itself; nothing extra is extracted.
+    expect(props.style?.transitionDuration).toBe('600ms');
+  });
+
+  it('resolves var() inside the starting block as final', () => {
+    // These values are the first committed frame — there is no later chance
+    // for an ancestor to supply the token, so the fallback applies now.
+    const props = stylex.props({
+      '@starting-style': {transform: 'translateY(var(--nope, 6px))'},
+    });
+    expect(props.__startingStyle).toEqual({transform: 'translateY(6px)'});
+  });
+
+  it('says nothing when there is no starting block', () => {
+    const props = stylex.props({opacity: 1});
+    expect(props.__startingStyle).toBeUndefined();
+  });
+
   it('still drops transition-behavior, quietly', () => {
     // `allow-discrete` has no native counterpart. It is dropped without a
     // warning: warning on a transition-* member would fire on exactly the

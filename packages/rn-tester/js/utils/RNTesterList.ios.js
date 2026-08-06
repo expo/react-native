@@ -203,6 +203,22 @@ const Components: Array<RNTesterModuleInfo> = [
 
 const APIs: Array<RNTesterModuleInfo> = (
   [
+    // ---- Fork work, pinned for quick access (same pattern as Components):
+    // the renderer's CSS transitions and display: contents coverage.
+    {
+      key: 'CSSTransitionsExample',
+      pinned: true,
+      module: require('../examples/CSSTransitions/CSSTransitionsExample')
+        .default,
+      category: 'UI',
+    },
+    {
+      key: 'DisplayContentsExample',
+      pinned: true,
+      category: 'UI',
+      module: require('../examples/DisplayContents/DisplayContentsExample')
+        .default,
+    },
     {
       key: 'AccessibilityExample',
       module: require('../examples/Accessibility/AccessibilityExample'),
@@ -216,12 +232,6 @@ const APIs: Array<RNTesterModuleInfo> = (
       key: 'ActionSheetIOSExample',
       module: require('../examples/ActionSheetIOS/ActionSheetIOSExample'),
       category: 'iOS',
-    },
-    {
-      key: 'CSSTransitionsExample',
-      module: require('../examples/CSSTransitions/CSSTransitionsExample')
-        .default,
-      category: 'UI',
     },
     {
       key: 'AlertExample',
@@ -277,12 +287,6 @@ const APIs: Array<RNTesterModuleInfo> = (
     {
       key: 'Dimensions',
       module: require('../examples/Dimensions/DimensionsExample'),
-    },
-    {
-      key: 'DisplayContentsExample',
-      category: 'UI',
-      module: require('../examples/DisplayContents/DisplayContentsExample')
-        .default,
     },
     {
       key: 'InvalidPropsExample',

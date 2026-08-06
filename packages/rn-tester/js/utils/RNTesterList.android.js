@@ -200,6 +200,22 @@ const Components: Array<RNTesterModuleInfo> = [
 
 const APIs: Array<RNTesterModuleInfo> = (
   [
+    // ---- Fork work, pinned for quick access (same pattern as Components):
+    // the renderer's CSS transitions and display: contents coverage.
+    {
+      key: 'CSSTransitionsExample',
+      pinned: true,
+      module: require('../examples/CSSTransitions/CSSTransitionsExample')
+        .default,
+      category: 'UI',
+    },
+    {
+      key: 'DisplayContentsExample',
+      pinned: true,
+      category: 'UI',
+      module: require('../examples/DisplayContents/DisplayContentsExample')
+        .default,
+    },
     {
       key: 'AccessibilityExample',
       category: 'Basic',
@@ -209,12 +225,6 @@ const APIs: Array<RNTesterModuleInfo> = (
       key: 'AccessibilityAndroidExample',
       category: 'Android',
       module: require('../examples/Accessibility/AccessibilityAndroidExample'),
-    },
-    {
-      key: 'CSSTransitionsExample',
-      module: require('../examples/CSSTransitions/CSSTransitionsExample')
-        .default,
-      category: 'UI',
     },
     {
       key: 'AlertExample',
@@ -276,12 +286,6 @@ const APIs: Array<RNTesterModuleInfo> = (
       key: 'Dimensions',
       category: 'UI',
       module: require('../examples/Dimensions/DimensionsExample'),
-    },
-    {
-      key: 'DisplayContentsExample',
-      category: 'UI',
-      module: require('../examples/DisplayContents/DisplayContentsExample')
-        .default,
     },
     {
       key: 'FocusEventsExample',
