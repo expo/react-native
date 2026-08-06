@@ -1008,19 +1008,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
         ReactNativeFeatureFlags::enableStringChildren() &&
         !(child.receivedTextAttributes_ == inheritedTextAttributes_);
 
-    // A dirty child is NEVER pruned. The guard's own flags cannot be trusted
-    // through a skipped subtree: a fragment-clone that rebuilt its anonymous
-    // boxes marks ITSELF unconfigured, but that flag sits on the descendant —
-    // if this loop prunes an intermediate ancestor, nothing ever reaches it,
-    // while the layout pass (which walks by dirt, not by this guard) still
-    // runs and publishes the fresh boxes' DEFAULT attributes. That was the
-    // whole-screen "text lost its font styling" bug: rebuilt boxes under a
-    // pruned ancestor, published unstyled, and — because the clone copied
-    // received == inherited — no later cascade change ever fired to repair
-    // them. Yoga dirt propagates to ancestors, which is exactly the
-    // transitive reachability this guard otherwise lacks.
     if (child.yogaTreeHasBeenConfigured_ && !cascadeChanged &&
-        !YGNodeIsDirty(&child.yogaNode_) &&
         childLayoutMetrics.pointScaleFactor == pointScaleFactor &&
         floatEquality(
             childLayoutMetrics.fontSizeMultiplier, fontSizeMultiplier) &&
