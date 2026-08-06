@@ -543,6 +543,9 @@ function convertValue(prop: string, value: string): unknown {
  */
 export type StyleXProps = {
   style?: {[string]: unknown},
+  // `style` again, under a key a naked `style` attribute cannot clobber (see
+  // props()); consumed and stripped by the JSX runtime.
+  __stylexStyle?: {[string]: unknown},
   __stylexVars?: {[string]: unknown},
   // The resolved `@starting-style` block: style overrides for the element's
   // FIRST commit only. The element drops them after mount and the renderer's
@@ -932,6 +935,14 @@ export function propsWithState(
   const result: StyleXProps = {};
   if (Object.keys(style).length > 0) {
     result.style = style;
+    // The same object under a stable duplicate key, so the web idiom
+    // `{...stylex.props(...)} style={{width}}` survives: on the web those are
+    // separate channels (className + inline style), but here both are
+    // `style`, and the later attribute clobbers the spread. The JSX runtime
+    // sees the duplicate and layers the inline override ON TOP of the
+    // resolved styles instead — inline wins per property, exactly as an
+    // inline style beats a class.
+    result.__stylexStyle = style;
   }
   if (declaredVars != null) {
     result.__stylexVars = declaredVars;

@@ -48,6 +48,7 @@ const VarScopeContext: React.Context<?VarScope> = React.createContext(null);
 type IntrinsicProps = {
   __astryxTag: string,
   style?: {[string]: unknown},
+  __stylexStyle?: {[string]: unknown},
   __stylexVars?: {[string]: unknown},
   children?: React.Node,
   [string]: unknown,
@@ -60,7 +61,27 @@ type IntrinsicProps = {
  */
 function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   const inheritedScope = React.useContext(VarScopeContext);
-  const {style, __stylexVars, __startingStyle, children, ...rest} = props;
+  const {
+    style: styleProp,
+    __stylexStyle,
+    __stylexVars,
+    __startingStyle,
+    children,
+    ...rest
+  } = props;
+  // A naked `style` attribute written after a stylex spread clobbers the
+  // spread's `style` — on the web they are separate channels (className +
+  // inline style), so vendored sources write exactly that. props() plants the
+  // resolved styles under `__stylexStyle` too; when the two diverge, the
+  // inline override layers on top, per-property, as it would on the web.
+  const style =
+    __stylexStyle != null &&
+    styleProp != null &&
+    styleProp !== __stylexStyle &&
+    typeof styleProp === 'object' &&
+    !Array.isArray(styleProp)
+      ? {...__stylexStyle, ...styleProp}
+      : (styleProp ?? __stylexStyle);
 
   // `@starting-style` (css-transitions-2 §3), the way the web runs it: the
   // element's first commit renders the starting values, the effect below

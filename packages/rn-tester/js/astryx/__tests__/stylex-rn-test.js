@@ -265,6 +265,18 @@ describe('stylex-rn', () => {
     expect(style?.animationDuration).toBe('2s');
   });
 
+  it('plants __stylexStyle so a naked style attribute cannot clobber it', () => {
+    // The web idiom `{...stylex.props(...)} style={{width}}` merges channels
+    // on the web (className + inline style) but here both are `style`, and
+    // the object spread lets the later attribute wipe the resolved styles —
+    // ProgressBar's determinate fill lost its height and color exactly this
+    // way. props() must expose the same resolved object under a key the
+    // attribute cannot collide with; the JSX runtime layers the override.
+    const resolved = stylex.props({height: '8px', backgroundColor: '#1570ef'});
+    expect(resolved.__stylexStyle).toBe(resolved.style);
+    expect(resolved.__stylexStyle).toMatchObject({height: 8});
+  });
+
   it('still drops transition-behavior, quietly', () => {
     // `allow-discrete` has no native counterpart. It is dropped without a
     // warning: warning on a transition-* member would fire on exactly the
