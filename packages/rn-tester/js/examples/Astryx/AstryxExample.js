@@ -615,10 +615,14 @@ function StartingStyleCases(): React.Node {
   // light-dark() pairs, so the section rethemes.
   const entry = stylex.create({
     box: {
-      height: 34,
+      // Content-sized, centered by construction. The earlier fixed height
+      // plus justifyContent top-aligned the text — correctly: these are
+      // block containers, and justify-content is inert in CSS block flow
+      // (a browser renders the same markup the same way). The fix is not to
+      // force flex behavior but to stop needing vertical centering at all.
       borderRadius: 6,
-      justifyContent: 'center',
       paddingInline: 10,
+      paddingBlock: 7,
       color: 'var(--color-text-primary)',
       transitionDuration: '600ms',
       transitionTimingFunction: 'ease-out',
