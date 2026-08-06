@@ -224,13 +224,32 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     // Anonymous boxes are owned exclusively by one shadow-node revision
     // (text-children-plan.md §4.1): rebuild rather than share the source's.
     updateYogaChildren();
-    // The rebuilt boxes start with NO inherited text attributes. This happens
-    // even on a props/children-unchanged clone (e.g. adoptYogaChild re-parenting
-    // a shared child when a sibling re-renders), where the block above preserved
-    // yogaTreeHasBeenConfigured_ from the source. Left set, configureYogaTree's
-    // cascade skip-guard would prune this node and the fresh boxes would render
-    // with default attributes (black, default size). Force a reconfigure so the
-    // cascade re-reaches the new boxes (text-children-plan.md §3.D).
+    // The rebuilt boxes start with NO inherited text attributes, and waiting
+    // for the next configure pass to stamp them is NOT enough: this clone can
+    // be created DURING the layout walk itself — the walk clones nodes to
+    // write layout metrics — which runs after the pass's configure already
+    // finished, and `updateTextRunStateIfNeeded` then publishes the fresh
+    // boxes' DEFAULT attributes in that same pass. On screen: whole runs of
+    // text drop to 14pt black system font until some later pass happens to
+    // repair them — the "text loses its font styling on re-render" bug.
+    // The cascade this node received is right here (the constructor copied
+    // it), so stamp the rebuilt boxes with it NOW, exactly as
+    // configureYogaTree's anonymous-box pass would.
+    if (ReactNativeFeatureFlags::enableStringChildren()) {
+      for (const auto& box : anonymousTextContentChildren_) {
+        auto* layoutableBox =
+            dynamic_cast<const YogaLayoutableShadowNode*>(box.get());
+        if (layoutableBox == nullptr) {
+          continue;
+        }
+        auto& mutableBox =
+            const_cast<YogaLayoutableShadowNode&>(*layoutableBox);
+        mutableBox.receivedTextAttributes_ = inheritedTextAttributes_;
+        mutableBox.inheritedTextAttributes_ = inheritedTextAttributes_;
+      }
+    }
+    // Belt and braces: still force a reconfigure so the next pass re-runs the
+    // full cascade over the rebuilt boxes (markers, list depth).
     yogaTreeHasBeenConfigured_ = false;
   }
 
@@ -989,7 +1008,19 @@ void YogaLayoutableShadowNode::configureYogaTree(
         ReactNativeFeatureFlags::enableStringChildren() &&
         !(child.receivedTextAttributes_ == inheritedTextAttributes_);
 
+    // A dirty child is NEVER pruned. The guard's own flags cannot be trusted
+    // through a skipped subtree: a fragment-clone that rebuilt its anonymous
+    // boxes marks ITSELF unconfigured, but that flag sits on the descendant —
+    // if this loop prunes an intermediate ancestor, nothing ever reaches it,
+    // while the layout pass (which walks by dirt, not by this guard) still
+    // runs and publishes the fresh boxes' DEFAULT attributes. That was the
+    // whole-screen "text lost its font styling" bug: rebuilt boxes under a
+    // pruned ancestor, published unstyled, and — because the clone copied
+    // received == inherited — no later cascade change ever fired to repair
+    // them. Yoga dirt propagates to ancestors, which is exactly the
+    // transitive reachability this guard otherwise lacks.
     if (child.yogaTreeHasBeenConfigured_ && !cascadeChanged &&
+        !YGNodeIsDirty(&child.yogaNode_) &&
         childLayoutMetrics.pointScaleFactor == pointScaleFactor &&
         floatEquality(
             childLayoutMetrics.fontSizeMultiplier, fontSizeMultiplier) &&

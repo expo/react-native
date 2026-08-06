@@ -162,6 +162,15 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
     return inheritedTextAttributes_;
   }
 
+ public:
+  /*
+   * Debug visibility for the cascade tripwire in run publication: whether the
+   * configure pass has reached this subtree. Read-only, diagnostics only.
+   */
+  bool debugYogaTreeConfigured() const {
+    return yogaTreeHasBeenConfigured_;
+  }
+
  protected:
   /**
    * Subclasses which provide MeasurableYogaNode may override to signal that a

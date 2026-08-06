@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "expo": {
+      "headers": {
+        "Authorization": "Bearer 63n8ew0_xL1B93uSyUBzM1hFn9YbHt0q3g1mhDuAAMo"
+      },
+      "type": "http",
+      "url": "https://router.tuft.dev/api/mcp/proxy/expo"
+    },
     "github": {
       "args": [
         "mcp"
@@ -37,7 +44,7 @@
     },
     "linear": {
       "headers": {
-        "Authorization": "Bearer J_Z1t9-u6SP9BHLQSEzgsUlQD3aPJxgr_ZkBnWTw-Dc"
+        "Authorization": "Bearer Nepp3BOom4J7WT3B-s0JGilpFSPdJuvtHI7d-SS6cdo"
       },
       "type": "http",
       "url": "https://router.tuft.dev/api/mcp/proxy/linear"

@@ -6,6 +6,8 @@
  */
 
 #include "ViewShadowNode.h"
+
+#include <react/renderer/animationbackend/CSSTransitionsTrace.h>
 #include <functional>
 #include <limits>
 #include <string_view>
@@ -362,6 +364,29 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
               .documentOrder = documentOrder});
     }
 
+    // Publication tripwire: a run built from DEFAULT text attributes while
+    // its box sits under a styled cascade is the "text lost its styling" bug
+    // being born. Log enough state to name the reachability gap.
+    if (!contentString.getFragments().empty()) {
+      const auto& firstAttrs = contentString.getFragments()[0].textAttributes;
+      // The DEFAULT attributes carry fontSize 14 (not NaN), black, no
+      // family, no weight — match that signature, since it is exactly what
+      // unstyled paints report.
+      const bool looksDefault = firstAttrs.fontSize == 14.0 &&
+          !firstAttrs.fontWeight.has_value() && firstAttrs.fontFamily.empty();
+      if (looksDefault && contentString.getString().size() > 2) {
+        const auto* yogaBox =
+            dynamic_cast<const YogaLayoutableShadowNode*>(box.get());
+        CSSTransitionsTrace::shared()->log(
+            "unstyled-pub t=" + std::to_string(this->getTag()) +
+            " cfg=" + std::to_string(this->debugYogaTreeConfigured() ? 1 : 0) +
+            " boxCfg=" +
+            (yogaBox != nullptr
+                 ? std::to_string(yogaBox->debugYogaTreeConfigured() ? 1 : 0)
+                 : std::string("?")) +
+            " '" + contentString.getString().substr(0, 10) + "'");
+      }
+    }
     textRuns.push_back(
         ViewState::TextRun{
             .attributedString = std::move(contentString),
