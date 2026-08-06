@@ -76,6 +76,34 @@ Scheduler::Scheduler(
     uiManager->unstable_setAnimationBackend(animationBackend);
 
     cssTransitions_->setAnimationBackend(animationBackend);
+
+    // The engine's debug trace, drained from JavaScript as
+    // `globalThis.__cssTransitionsTrace()` → Array<string>. Installed so the
+    // engine can be observed on a device, where nothing else can see it. The
+    // host function captures the shared buffer, not the engine.
+    auto trace = cssTransitions_->trace();
+    runtimeExecutor_([trace](jsi::Runtime& runtime) {
+      runtime.global().setProperty(
+          runtime,
+          "__cssTransitionsTrace",
+          jsi::Function::createFromHostFunction(
+              runtime,
+              jsi::PropNameID::forAscii(runtime, "__cssTransitionsTrace"),
+              0,
+              [trace](
+                  jsi::Runtime& rt,
+                  const jsi::Value& /*thisValue*/,
+                  const jsi::Value* /*arguments*/,
+                  size_t /*count*/) -> jsi::Value {
+                auto lines = trace->drain();
+                auto array = jsi::Array(rt, lines.size());
+                for (size_t i = 0; i < lines.size(); i++) {
+                  array.setValueAtIndex(
+                      rt, i, jsi::String::createFromUtf8(rt, lines[i]));
+                }
+                return array;
+              }));
+    });
   }
 
   auto eventOwnerBox = std::make_shared<EventBeat::OwnerBox>();

@@ -22,6 +22,7 @@
 
 #include "AnimatedProps.h"
 #include "AnimationBackend.h"
+#include "CSSTransitionsTrace.h"
 
 namespace facebook::react {
 
@@ -125,6 +126,13 @@ class CSSTransitions final : public UIManagerCommitHook {
   void setAnimationBackend(
       std::weak_ptr<UIManagerAnimationBackend> animationBackend);
 
+  /*
+   * The debug trace, shared so a JSI host function can outlive this object.
+   */
+  std::shared_ptr<CSSTransitionsTrace> trace() const {
+    return trace_;
+  }
+
   void commitHookWasRegistered(const UIManager& uiManager) noexcept override {}
   void commitHookWasUnregistered(const UIManager& uiManager) noexcept override {}
 
@@ -153,6 +161,9 @@ class CSSTransitions final : public UIManagerCommitHook {
 
   // Touched by the commit hook (any thread that commits) and by the frame
   // callback (the UI thread), so every access is guarded.
+  std::shared_ptr<CSSTransitionsTrace> trace_{
+      std::make_shared<CSSTransitionsTrace>()};
+
   std::mutex mutex_;
   std::unordered_map<Tag, ViewTransitions> transitions_;
   // The last timestamp the frame callback was given, so the commit hook can

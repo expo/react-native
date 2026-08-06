@@ -11,6 +11,7 @@
 #include <react/renderer/mounting/ShadowTree.h>
 
 #include <algorithm>
+#include <string>
 
 namespace facebook::react {
 
@@ -101,6 +102,54 @@ SharedColor interpolateColor(
       static_cast<float>(alpha)});
 }
 
+/*
+ * A compact rendering of a transition value for the trace: enough to see
+ * WHICH value it is, not to reconstruct it.
+ */
+std::string describeValue(const TransitionValue& value, TransitionProperty property) {
+  switch (property) {
+    case TransitionProperty::Opacity:
+      return std::to_string(value.number).substr(0, 5);
+    case TransitionProperty::BackgroundColor:
+    case TransitionProperty::BorderColor:
+      return std::to_string(static_cast<int32_t>(*value.color));
+    case TransitionProperty::Transform: {
+      // Matrix corners identify an interpolated transform; an AUTHORED one
+      // keeps an identity matrix and lives in its operations, so those are
+      // shown too — without them scale(0.97) is indistinguishable from
+      // identity in the trace.
+      const auto& m = value.transform.matrix;
+      auto out = std::to_string(m[0]).substr(0, 5) + "/" +
+          std::to_string(m[12]).substr(0, 6) + " ops" +
+          std::to_string(value.transform.operations.size());
+      for (const auto& op : value.transform.operations) {
+        out += "," + std::to_string(static_cast<int>(op.type)) + ":" +
+            std::to_string(op.x.value).substr(0, 5);
+      }
+      return out;
+    }
+    case TransitionProperty::All:
+      return "all";
+  }
+  return "?";
+}
+
+const char* propName(TransitionProperty property) {
+  switch (property) {
+    case TransitionProperty::Opacity:
+      return "op";
+    case TransitionProperty::BackgroundColor:
+      return "bg";
+    case TransitionProperty::BorderColor:
+      return "bd";
+    case TransitionProperty::Transform:
+      return "tf";
+    case TransitionProperty::All:
+      return "all";
+  }
+  return "?";
+}
+
 } // namespace
 
 CSSTransitions::CSSTransitions(UIManager& uiManager) : uiManager_(uiManager) {
@@ -144,6 +193,7 @@ RootShadowNode::Unshared CSSTransitions::shadowTreeWillCommit(
     nowMs = lastFrameTime_;
   }
 
+  trace_->log("commit");
   diffNode(*oldRootShadowNode, *newRootShadowNode, nowMs);
 
   {
@@ -204,6 +254,10 @@ void CSSTransitions::diffNode(
         // Settling means the value has arrived. A new target re-aims from the
         // settled final value exactly like a fresh start.
         if (!valuesEqual(existing->to, target, property)) {
+          trace_->log(
+              "reaim-settled t=" + std::to_string(tag) + " " +
+              propName(property) + " " + describeValue(existing->to, property) +
+              "->" + describeValue(target, property));
           existing->from = existing->to;
           existing->to = target;
           existing->settling = false;
@@ -221,6 +275,9 @@ void CSSTransitions::diffNode(
         // continues from its current value rather than snapping back to where
         // the last one started (css-transitions-1 §3).
         if (!valuesEqual(existing->to, target, property)) {
+          trace_->log(
+              "reaim t=" + std::to_string(tag) + " " + propName(property) +
+              " ->" + describeValue(target, property));
           const auto elapsed = nowMs - existing->startTime;
           const auto progress = existing->duration <= 0.0
               ? 1.0f
@@ -269,6 +326,11 @@ void CSSTransitions::diffNode(
         continue;
       }
 
+      trace_->log(
+          "start t=" + std::to_string(tag) + " " + propName(property) + " " +
+          describeValue(previous, property) + "->" +
+          describeValue(target, property) +
+          (lastWritten != entry.lastWritten.end() ? " (lw)" : " (tree)"));
       RunningTransition transition;
       transition.property = property;
       transition.from = previous;
@@ -413,6 +475,10 @@ AnimationMutations CSSTransitions::mutationsForFrame(double nowMs) {
       wroteAnything = true;
 
       if (rawProgress >= 1.0f) {
+        trace_->log(
+            "done t=" + std::to_string(entry.tag) + " " +
+            propName(running->property) + " =" +
+            describeValue(running->to, running->property));
         // ~250ms at 60fps: longer than any commit→mount latency, bounded so a
         // finished transition does not write forever.
         running->settling = true;

@@ -50,7 +50,7 @@ import {
 // $FlowFixMe[cannot-resolve-module]
 import * as stylex from '@stylexjs/stylex';
 import * as React from 'react';
-import {useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {View, useColorScheme, useWindowDimensions} from 'react-native';
 
 // Registers the extra intrinsics Astryx needs (<p>, <button> as div aliases).
@@ -827,11 +827,39 @@ function SelectableCardDemo({
   onSelect: () => void,
 }): React.Node {
   const {state, handlers} = useInteractionState();
+  // The same handlers, with each JS-side event recorded into the trace.
+  const traced = {
+    onPointerEnter: () => {
+      traceLog(`enter ${label}`);
+      handlers.onPointerEnter();
+    },
+    onPointerLeave: () => {
+      traceLog(`leave ${label}`);
+      handlers.onPointerLeave();
+    },
+    onPointerDown: () => {
+      traceLog(`down ${label}`);
+      handlers.onPointerDown();
+    },
+    onPointerUp: () => {
+      traceLog(`up ${label}`);
+      handlers.onPointerUp();
+    },
+    onPointerCancel: () => {
+      traceLog(`cancel ${label}`);
+      handlers.onPointerCancel();
+    },
+    onFocus: handlers.onFocus,
+    onBlur: handlers.onBlur,
+  };
   return (
     // $FlowFixMe[not-a-component] intrinsic <button> tag
     <button
-      {...handlers}
-      onClick={onSelect}
+      {...traced}
+      onClick={() => {
+        traceLog(`click ${label}`);
+        onSelect();
+      }}
       {...stylex.propsWithState(
         state,
         selectableStyles.card,
@@ -842,8 +870,51 @@ function SelectableCardDemo({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Engine trace, for debugging transitions ON A DEVICE. Drains the renderer's
+// ring buffer (a JSI global the scheduler installs), shows the tail on
+// screen, and streams every line to a sink so the interleaving can be read
+// off the phone in real time. JS-side pointer/click events are logged into
+// the same stream: the bug under investigation is about which side stops
+// telling the truth, so both sides' stories have to line up in one timeline.
+// ---------------------------------------------------------------------------
+
+const TRACE_SINK = 'https://rntrace.tuft.host';
+const traceQueue: Array<string> = [];
+
+function traceLog(line: string) {
+  traceQueue.push(line);
+}
+
+function useEngineTrace(): Array<string> {
+  const [tail, setTail] = useState<Array<string>>([]);
+  useEffect(() => {
+    const id = setInterval(() => {
+      const drain: $FlowFixMe = (globalThis as $FlowFixMe)
+        .__cssTransitionsTrace;
+      const engineLines: Array<string> =
+        typeof drain === 'function' ? drain() : [];
+      const jsLines = traceQueue.splice(0, traceQueue.length);
+      const merged = [
+        ...engineLines.map(l => `E ${l}`),
+        ...jsLines.map(l => `J ${l}`),
+      ];
+      if (merged.length === 0) {
+        return;
+      }
+      setTail(prev => [...prev, ...merged].slice(-14));
+      fetch(TRACE_SINK, {method: 'POST', body: JSON.stringify(merged)}).catch(
+        () => {},
+      );
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
+  return tail;
+}
+
 function NativeTransitionsCases(): React.Node {
   const [selected, setSelected] = useState(0);
+  const trace = useEngineTrace();
   // light-dark() resolves at render time; re-render on scheme change.
   useColorScheme();
   return (
@@ -869,6 +940,15 @@ function NativeTransitionsCases(): React.Node {
         style={{color: DEMO_THEME.muted, fontSize: 13}}>
         Nothing here calls an animation API. The styles are static states; the
         renderer fills in every frame between them, off the JS thread.
+      </View>
+      <View
+        // $FlowFixMe[incompatible-type] cascade to bare text
+        style={{
+          color: DEMO_THEME.muted,
+          fontSize: 9,
+          fontFamily: 'Menlo',
+        }}>
+        {trace.length === 0 ? 'trace: idle' : trace.join('\n')}
       </View>
     </VStack>
   );
