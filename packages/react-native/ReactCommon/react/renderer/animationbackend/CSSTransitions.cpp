@@ -268,16 +268,31 @@ void CSSTransitions::diffNode(
 
   }
 
-  // Recurse pairwise by index. A structural change (an insert or a remove)
-  // makes the pairing meaningless, and a node that just appeared has no
-  // previous value to transition from anyway — CSS agrees: there is no
-  // transition on first render, which is what `@starting-style` exists to
-  // provide.
+  // Recurse over pairs that are THE SAME VIEW — the same ShadowNodeFamily —
+  // never merely the same position. Pairing by index looks right until a
+  // re-render shifts a list, at which point old[i] and new[i] are different
+  // views and the diff manufactures a transition on one view FROM another
+  // view's values: pressing one element visibly re-colored an unrelated
+  // sibling that also declared transitions. The common case is still cheap —
+  // same index, same family, one pointer comparison — and only a structural
+  // change pays for a lookup. A node with no old counterpart is newly
+  // mounted, and CSS runs no transition on first render (that is what
+  // `@starting-style` is for).
   const auto& oldChildren = oldNode.getChildren();
   const auto& newChildren = newNode.getChildren();
-  const auto count = std::min(oldChildren.size(), newChildren.size());
-  for (size_t i = 0; i < count; i++) {
-    diffNode(*oldChildren[i], *newChildren[i], nowMs);
+  for (size_t i = 0; i < newChildren.size(); i++) {
+    const auto& newChild = newChildren[i];
+    if (i < oldChildren.size() &&
+        &oldChildren[i]->getFamily() == &newChild->getFamily()) {
+      diffNode(*oldChildren[i], *newChild, nowMs);
+      continue;
+    }
+    for (const auto& oldChild : oldChildren) {
+      if (&oldChild->getFamily() == &newChild->getFamily()) {
+        diffNode(*oldChild, *newChild, nowMs);
+        break;
+      }
+    }
   }
 }
 
