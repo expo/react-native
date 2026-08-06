@@ -18,9 +18,13 @@ namespace facebook::react {
 
 namespace {
 
-/*
- * The current value of a transitionable property, read off a view's props.
- */
+constexpr TransitionProperty kInterpolatedProperties[] = {
+    TransitionProperty::Opacity,
+    TransitionProperty::BackgroundColor,
+    TransitionProperty::BorderColor,
+    TransitionProperty::Transform,
+};
+
 TransitionValue currentValue(
     const ViewProps& props,
     TransitionProperty property) {
@@ -64,6 +68,22 @@ bool valuesEqual(
   return true;
 }
 
+/*
+ * Whether any op resolves against the element's own size. `translateX(-70%)`
+ * is how the web positions a progress fill, and it means nothing without a
+ * size to resolve against.
+ */
+bool hasPercentOps(const Transform& transform) {
+  for (const auto& operation : transform.operations) {
+    if (operation.x.unit == UnitType::Percent ||
+        operation.y.unit == UnitType::Percent ||
+        operation.z.unit == UnitType::Percent) {
+      return true;
+    }
+  }
+  return false;
+}
+
 Float interpolateFloat(Float from, Float to, Float progress) {
   return from + (to - from) * progress;
 }
@@ -71,9 +91,7 @@ Float interpolateFloat(Float from, Float to, Float progress) {
 /*
  * Colours interpolate channel-wise in premultiplied sRGB, which is what a
  * browser does for a plain `background-color` transition. Premultiplied so a
- * fade to transparent does not travel through the wrong hue: a straight
- * interpolation of a transparent colour's RGB drags the visible channels
- * toward whatever the invisible endpoint happened to store.
+ * fade to transparent does not travel through the wrong hue.
  */
 SharedColor interpolateColor(
     const SharedColor& from,
@@ -87,15 +105,11 @@ SharedColor interpolateColor(
   const auto alpha = interpolateFloat(fromAlpha, toAlpha, progress);
 
   auto channel = [&](Float fromChannel, Float toChannel) {
-    const auto premultiplied = interpolateFloat(
-        fromChannel * fromAlpha, toChannel * toAlpha, progress);
-    // Back to straight alpha. At zero there is nothing visible to divide out.
+    const auto premultiplied =
+        interpolateFloat(fromChannel * fromAlpha, toChannel * toAlpha, progress);
     return alpha == 0.0f ? 0.0f : premultiplied / alpha;
   };
 
-  // `Float` is double on iOS and float on Android, while ColorComponents is
-  // always float — so these are narrowed explicitly rather than relying on an
-  // implicit conversion that only compiles on one platform.
   return colorFromComponents(ColorComponents{
       static_cast<float>(channel(fromComponents.red, toComponents.red)),
       static_cast<float>(channel(fromComponents.green, toComponents.green)),
@@ -103,11 +117,67 @@ SharedColor interpolateColor(
       static_cast<float>(alpha)});
 }
 
+TransitionValue interpolateValue(
+    const RunningTransition& transition,
+    Float eased,
+    const Size& size) {
+  TransitionValue value;
+  switch (transition.property) {
+    case TransitionProperty::Opacity:
+      value.number =
+          interpolateFloat(transition.from.number, transition.to.number, eased);
+      break;
+    case TransitionProperty::BackgroundColor:
+    case TransitionProperty::BorderColor:
+      value.color =
+          interpolateColor(transition.from.color, transition.to.color, eased);
+      break;
+    case TransitionProperty::Transform:
+      value.transform = Transform::Interpolate(
+          eased, transition.from.transform, transition.to.transform, size);
+      break;
+    case TransitionProperty::All:
+      break;
+  }
+  return value;
+}
+
+void buildValue(
+    AnimatedPropsBuilder& builder,
+    TransitionProperty property,
+    const TransitionValue& value) {
+  switch (property) {
+    case TransitionProperty::Opacity:
+      builder.setOpacity(value.number);
+      break;
+    case TransitionProperty::BackgroundColor: {
+      auto color = value.color;
+      builder.setBackgroundColor(color);
+      break;
+    }
+    case TransitionProperty::BorderColor: {
+      CascadedBorderColors borderColors;
+      borderColors.all = value.color;
+      builder.setBorderColor(borderColors);
+      break;
+    }
+    case TransitionProperty::Transform: {
+      auto transform = value.transform;
+      builder.setTransform(transform);
+      break;
+    }
+    case TransitionProperty::All:
+      break;
+  }
+}
+
 /*
- * A compact rendering of a transition value for the trace: enough to see
- * WHICH value it is, not to reconstruct it.
+ * A compact rendering of a value for the trace: enough to see WHICH value it
+ * is, not to reconstruct it.
  */
-std::string describeValue(const TransitionValue& value, TransitionProperty property) {
+std::string describeValue(
+    const TransitionValue& value,
+    TransitionProperty property) {
   switch (property) {
     case TransitionProperty::Opacity:
       return std::to_string(value.number).substr(0, 5);
@@ -115,10 +185,9 @@ std::string describeValue(const TransitionValue& value, TransitionProperty prope
     case TransitionProperty::BorderColor:
       return std::to_string(static_cast<int32_t>(*value.color));
     case TransitionProperty::Transform: {
-      // Matrix corners identify an interpolated transform; an AUTHORED one
-      // keeps an identity matrix and lives in its operations, so those are
-      // shown too — without them scale(0.97) is indistinguishable from
-      // identity in the trace.
+      // Matrix corners identify an interpolated transform; an authored one
+      // keeps an identity matrix and lives in its operations, so those show
+      // too.
       const auto& m = value.transform.matrix;
       auto out = std::to_string(m[0]).substr(0, 5) + "/" +
           std::to_string(m[12]).substr(0, 6) + " ops" +
@@ -157,11 +226,6 @@ CSSTransitions::CSSTransitions(UIManager& uiManager) : uiManager_(uiManager) {
   uiManager_.registerCommitHook(*this);
 }
 
-void CSSTransitions::setAnimationBackend(
-    std::weak_ptr<UIManagerAnimationBackend> animationBackend) {
-  animationBackend_ = std::move(animationBackend);
-}
-
 CSSTransitions::~CSSTransitions() noexcept {
   uiManager_.unregisterCommitHook(*this);
   if (started_) {
@@ -169,6 +233,11 @@ CSSTransitions::~CSSTransitions() noexcept {
       backend->stop(callbackId_);
     }
   }
+}
+
+void CSSTransitions::setAnimationBackend(
+    std::weak_ptr<UIManagerAnimationBackend> animationBackend) {
+  animationBackend_ = std::move(animationBackend);
 }
 
 RootShadowNode::Unshared CSSTransitions::shadowTreeWillCommit(
@@ -185,24 +254,20 @@ RootShadowNode::Unshared CSSTransitions::shadowTreeWillCommit(
     return newRootShadowNode;
   }
 
-  // The most recent frame timestamp, which is the only clock this class ever
-  // measures in. Zero until the first frame, which simply means nothing is
-  // part-way through yet.
-  double nowMs;
-  {
-    std::scoped_lock lock(mutex_);
-    nowMs = lastFrameTime_;
-  }
-
-  trace_->log("commit");
-  diffNode(*oldRootShadowNode, *newRootShadowNode, nowMs);
+  diffNode(*oldRootShadowNode, *newRootShadowNode);
 
   {
     std::scoped_lock lock(mutex_);
-    if (!transitions_.empty() && !started_) {
+    if ((!transitions_.empty() || sawTransitionableContent_) && !started_) {
       started_ = true;
+      trace_->log("backend-start");
       callbackId_ = backend->start([this](AnimationTimestamp timestamp) {
-        return mutationsForFrame(timestamp.count());
+        frame(timestamp.count());
+        // Frames apply themselves through UIManager; the backend gets nothing
+        // to route, and — deliberately — nothing to remember. Its registry's
+        // commit hook re-bakes remembered values into future trees, which is
+        // how interpolated values once leaked back in as author targets.
+        return AnimationMutations{};
       });
     }
   }
@@ -212,11 +277,9 @@ RootShadowNode::Unshared CSSTransitions::shadowTreeWillCommit(
 
 void CSSTransitions::diffNode(
     const ShadowNode& oldNode,
-    const ShadowNode& newNode,
-    double nowMs) {
-  // React's tree is persistent, so an untouched subtree is literally the same
-  // node. That makes this walk proportional to what CHANGED rather than to the
-  // size of the tree — without it, every commit would pay for the whole app.
+    const ShadowNode& newNode) {
+  // A persistent tree: an untouched subtree is literally the same node, so
+  // the walk is proportional to what changed.
   if (&oldNode == &newNode) {
     return;
   }
@@ -226,103 +289,68 @@ void CSSTransitions::diffNode(
   const auto* oldViewProps =
       dynamic_cast<const ViewProps*>(oldNode.getProps().get());
 
+  noteTransitionableContent(newViewProps);
+
   if (newViewProps != nullptr && oldViewProps != nullptr &&
       !newViewProps->transitions.empty()) {
     const auto tag = newNode.getTag();
     std::scoped_lock lock(mutex_);
-    auto& entry = transitions_[tag];
-    entry.tag = tag;
-    entry.family = newNode.getFamilyShared();
 
-    for (auto property :
-         {TransitionProperty::Opacity,
-          TransitionProperty::BackgroundColor,
-          TransitionProperty::BorderColor,
-          TransitionProperty::Transform}) {
-      const auto* declared =
-          findTransition(newViewProps->transitions, property);
+    for (auto property : kInterpolatedProperties) {
+      const auto* declared = findTransition(newViewProps->transitions, property);
       if (declared == nullptr) {
         continue;
       }
 
       const auto target = currentValue(*newViewProps, property);
-      auto existing = std::find_if(
-          entry.running.begin(), entry.running.end(), [&](const auto& running) {
-            return running.property == property;
-          });
 
-      if (existing != entry.running.end() && existing->settling) {
-        // Settling means the value has arrived. A new target re-aims from the
-        // settled final value exactly like a fresh start.
-        if (!valuesEqual(existing->to, target, property)) {
-          trace_->log(
-              "reaim-settled t=" + std::to_string(tag) + " " +
-              propName(property) + " " + describeValue(existing->to, property) +
-              "->" + describeValue(target, property));
-          existing->from = existing->to;
-          existing->to = target;
-          existing->settling = false;
-          existing->settleFramesLeft = 0;
-          existing->awaitingFirstFrame = true;
-          existing->delay = declared->delay;
-          existing->duration = declared->duration;
-          existing->timingFunction = declared->timingFunction;
+      auto entryIt = transitions_.find(tag);
+      auto* existing = static_cast<RunningTransition*>(nullptr);
+      if (entryIt != transitions_.end()) {
+        auto found = std::find_if(
+            entryIt->second.running.begin(),
+            entryIt->second.running.end(),
+            [&](const auto& running) { return running.property == property; });
+        if (found != entryIt->second.running.end()) {
+          existing = &*found;
         }
-        continue;
       }
-      if (existing != entry.running.end()) {
-        // Already animating this property. If it is heading somewhere new,
-        // re-aim it FROM WHERE IT IS — a transition interrupted mid-flight
-        // continues from its current value rather than snapping back to where
-        // the last one started (css-transitions-1 §3).
-        if (!valuesEqual(existing->to, target, property)) {
-          trace_->log(
-              "reaim t=" + std::to_string(tag) + " " + propName(property) +
-              " ->" + describeValue(target, property));
-          const auto elapsed = nowMs - existing->startTime;
-          const auto progress = existing->duration <= 0.0
-              ? 1.0f
-              : std::clamp(
-                    static_cast<Float>(elapsed / existing->duration),
-                    static_cast<Float>(0),
-                    static_cast<Float>(1));
-          const auto eased = existing->timingFunction.evaluate(progress);
-          TransitionValue current;
-          switch (property) {
-            case TransitionProperty::Opacity:
-              current.number = interpolateFloat(
-                  existing->from.number, existing->to.number, eased);
-              break;
-            case TransitionProperty::BackgroundColor:
-            case TransitionProperty::BorderColor:
-              current.color = interpolateColor(
-                  existing->from.color, existing->to.color, eased);
-              break;
-            case TransitionProperty::Transform:
-              current.transform = Transform::Interpolate(
-                  eased, existing->from.transform, existing->to.transform, {});
-              break;
-            case TransitionProperty::All:
-              break;
-          }
-          existing->from = current;
-          existing->to = target;
-          existing->awaitingFirstFrame = true;
-          existing->duration = declared->duration;
-          existing->timingFunction = declared->timingFunction;
+
+      if (existing != nullptr) {
+        // Mid-flight and the author changed the target: continue from the
+        // CURRENT value (css-transitions-1 §3), never snap to an endpoint.
+        if (valuesEqual(existing->to, target, property)) {
+          continue;
         }
+        const auto elapsed = lastFrameTime_ - existing->startTime;
+        const auto progress =
+            existing->awaitingFirstFrame || existing->duration <= 0.0
+            ? static_cast<Float>(0)
+            : std::clamp(
+                  static_cast<Float>(elapsed / existing->duration),
+                  static_cast<Float>(0),
+                  static_cast<Float>(1));
+        const auto eased = existing->timingFunction.evaluate(progress);
+        trace_->log(
+            "reaim t=" + std::to_string(tag) + " " + propName(property) +
+            " ->" + describeValue(target, property));
+        if (property == TransitionProperty::Transform &&
+            hasPercentOps(target.transform)) {
+          entryIt->second.needsSize = true;
+        }
+        existing->from =
+            interpolateValue(*existing, eased, sizeFor(entryIt->second));
+        existing->to = target;
+        existing->awaitingFirstFrame = true;
+        existing->delay = declared->delay;
+        existing->duration = declared->duration;
+        existing->timingFunction = declared->timingFunction;
         continue;
       }
 
-      // Not running: a transition starts only when the value actually
-      // changes. "Changes" is judged against what is ON SCREEN — the value
-      // this class last wrote if it has ever animated this property — rather
-      // than against the old shadow tree, which the backend's overlay hook
-      // rewrites with stale registry values (see ViewTransitions).
-      const auto lastWritten = entry.lastWritten.find(property);
-      const auto previous = lastWritten != entry.lastWritten.end()
-          ? lastWritten->second
-          : currentValue(*oldViewProps, property);
+      // Not running: start only on an actual change. Both sides come from
+      // committed trees, which carry only author values.
+      const auto previous = currentValue(*oldViewProps, property);
       if (valuesEqual(previous, target, property)) {
         continue;
       }
@@ -330,189 +358,150 @@ void CSSTransitions::diffNode(
       trace_->log(
           "start t=" + std::to_string(tag) + " " + propName(property) + " " +
           describeValue(previous, property) + "->" +
-          describeValue(target, property) +
-          (lastWritten != entry.lastWritten.end() ? " (lw)" : " (tree)"));
+          describeValue(target, property));
+
+      auto& entry = transitions_[tag];
+      entry.tag = tag;
+      entry.family = newNode.getFamilyShared();
+      if (property == TransitionProperty::Transform &&
+          (hasPercentOps(previous.transform) || hasPercentOps(target.transform))) {
+        entry.needsSize = true;
+      }
+
       RunningTransition transition;
       transition.property = property;
       transition.from = previous;
       transition.to = target;
-      transition.awaitingFirstFrame = true;
       transition.delay = declared->delay;
       transition.duration = declared->duration;
       transition.timingFunction = declared->timingFunction;
       entry.running.push_back(transition);
     }
-
-
   }
 
-  // Recurse over pairs that are THE SAME VIEW — the same ShadowNodeFamily —
-  // never merely the same position. Pairing by index looks right until a
-  // re-render shifts a list, at which point old[i] and new[i] are different
-  // views and the diff manufactures a transition on one view FROM another
-  // view's values: pressing one element visibly re-colored an unrelated
-  // sibling that also declared transitions. The common case is still cheap —
-  // same index, same family, one pointer comparison — and only a structural
-  // change pays for a lookup. A node with no old counterpart is newly
-  // mounted, and CSS runs no transition on first render (that is what
-  // `@starting-style` is for).
+  // Recurse over pairs that are THE SAME VIEW — the same family — never
+  // merely the same position: index-pairing across a shifted list once
+  // manufactured a transition on one view from another view's values.
   const auto& oldChildren = oldNode.getChildren();
   const auto& newChildren = newNode.getChildren();
   for (size_t i = 0; i < newChildren.size(); i++) {
     const auto& newChild = newChildren[i];
     if (i < oldChildren.size() &&
         &oldChildren[i]->getFamily() == &newChild->getFamily()) {
-      diffNode(*oldChildren[i], *newChild, nowMs);
+      diffNode(*oldChildren[i], *newChild);
       continue;
     }
     for (const auto& oldChild : oldChildren) {
       if (&oldChild->getFamily() == &newChild->getFamily()) {
-        diffNode(*oldChild, *newChild, nowMs);
+        diffNode(*oldChild, *newChild);
         break;
       }
     }
   }
 }
 
-AnimationMutations CSSTransitions::mutationsForFrame(double nowMs) {
-  AnimationMutations mutations;
+void CSSTransitions::noteTransitionableContent(const ViewProps* viewProps) {
+  if (viewProps == nullptr || viewProps->transitions.empty()) {
+    return;
+  }
+  std::scoped_lock lock(mutex_);
+  sawTransitionableContent_ = true;
+}
 
+/*
+ * The view's laid-out size, read from the committed tree. Percent-valued
+ * transform ops (`translateX(-70%)`) resolve against it, and resolving them
+ * against zero — which is what an empty Size does — collapses every one of
+ * them to no movement at all: a progress bar positioned that way reads 100%
+ * and stays there, because even the final frame lands on zero.
+ *
+ * Only transitions and animations that actually use percent units pay for
+ * the lookup, and only until layout has produced a size.
+ */
+Size CSSTransitions::sizeFor(ViewTransitions& entry) {
+  if (entry.needsSize && entry.size.width == 0 && entry.size.height == 0 &&
+      entry.family != nullptr) {
+    entry.size = resolveViewSize(*entry.family);
+  }
+  return entry.size;
+}
+
+Size CSSTransitions::resolveViewSize(const ShadowNodeFamily& family) {
+  Size size{};
+  uiManager_.getShadowTreeRegistry().visit(
+      family.getSurfaceId(), [&](const ShadowTree& shadowTree) {
+        auto root = shadowTree.getCurrentRevision().rootShadowNode;
+        if (root == nullptr) {
+          return;
+        }
+        auto ancestors = family.getAncestors(*root);
+        if (ancestors.empty()) {
+          return;
+        }
+        const auto& [parent, index] = ancestors.back();
+        const auto& node = *parent.get().getChildren().at(index);
+        if (const auto* layoutable =
+                dynamic_cast<const LayoutableShadowNode*>(&node)) {
+          size = layoutable->getLayoutMetrics().frame.size;
+        }
+      });
+  return size;
+}
+
+void CSSTransitions::frame(double nowMs) {
   std::scoped_lock lock(mutex_);
   lastFrameTime_ = nowMs;
+
   for (auto it = transitions_.begin(); it != transitions_.end();) {
     auto& entry = it->second;
     AnimatedPropsBuilder builder;
-    bool wroteAnything = false;
+
 
     for (auto running = entry.running.begin();
          running != entry.running.end();) {
-      if (running->settling) {
-        // Re-assert the final value (see RunningTransition::settling).
-        TransitionValue finalValue = running->to;
-        switch (running->property) {
-          case TransitionProperty::Opacity:
-            builder.setOpacity(finalValue.number);
-            break;
-          case TransitionProperty::BackgroundColor:
-            builder.setBackgroundColor(finalValue.color);
-            break;
-          case TransitionProperty::BorderColor: {
-            CascadedBorderColors borderColors;
-            borderColors.all = finalValue.color;
-            builder.setBorderColor(borderColors);
-            break;
-          }
-          case TransitionProperty::Transform:
-            builder.setTransform(finalValue.transform);
-            break;
-          case TransitionProperty::All:
-            break;
-        }
-        entry.lastWritten[running->property] = finalValue;
-        wroteAnything = true;
-        if (--running->settleFramesLeft <= 0) {
-          running = entry.running.erase(running);
-        } else {
-          ++running;
-        }
-        continue;
-      }
       if (running->awaitingFirstFrame) {
         running->awaitingFirstFrame = false;
         running->startTime = nowMs + running->delay;
       }
-      const auto elapsed = nowMs - running->startTime;
-      // Still inside its `transition-delay`: the property holds its old value
-      // rather than jumping, so write the start value and wait.
       const auto rawProgress = running->duration <= 0.0
-          ? 1.0f
-          : static_cast<Float>(elapsed / running->duration);
+          ? static_cast<Float>(1)
+          : static_cast<Float>(
+                (nowMs - running->startTime) / running->duration);
       const auto progress =
           std::clamp(rawProgress, static_cast<Float>(0), static_cast<Float>(1));
       const auto eased = running->timingFunction.evaluate(progress);
 
-      TransitionValue written;
-      switch (running->property) {
-        case TransitionProperty::Opacity:
-          written.number =
-              interpolateFloat(running->from.number, running->to.number, eased);
-          builder.setOpacity(written.number);
-          break;
-        case TransitionProperty::BackgroundColor: {
-          written.color = interpolateColor(
-              running->from.color, running->to.color, eased);
-          builder.setBackgroundColor(written.color);
-          break;
-        }
-        case TransitionProperty::BorderColor: {
-          written.color = interpolateColor(
-              running->from.color, running->to.color, eased);
-          CascadedBorderColors borderColors;
-          borderColors.all = written.color;
-          builder.setBorderColor(borderColors);
-          break;
-        }
-        case TransitionProperty::Transform: {
-          written.transform = Transform::Interpolate(
-              eased, running->from.transform, running->to.transform, {});
-          builder.setTransform(written.transform);
-          break;
-        }
-        case TransitionProperty::All:
-          break;
-      }
-      // On the final frame the value written is exactly the target: progress
-      // clamps to 1 and every easing curve ends at 1, so the record equals
-      // what React committed and the next diff sees no phantom change.
-      // For a completed TRANSFORM the record is the AUTHORED target rather
-      // than the interpolation's reconstruction of it: the two describe the
-      // same geometry but do not compare equal, and the record exists
-      // precisely to make that comparison honest.
-      if (rawProgress >= 1.0f &&
-          running->property == TransitionProperty::Transform) {
-        written.transform = running->to.transform;
-      }
-      entry.lastWritten[running->property] = written;
-      wroteAnything = true;
+      buildValue(
+          builder,
+          running->property,
+          interpolateValue(*running, eased, sizeFor(entry)));
 
       if (rawProgress >= 1.0f) {
+        // The value just written IS the target (progress clamps to 1 and
+        // every curve ends at 1), which is also what the committed tree
+        // holds: nothing needs remembering, so nothing is.
         trace_->log(
             "done t=" + std::to_string(entry.tag) + " " +
             propName(running->property) + " =" +
             describeValue(running->to, running->property));
-        // ~250ms at 60fps: longer than any commit→mount latency, bounded so a
-        // finished transition does not write forever.
-        running->settling = true;
-        running->settleFramesLeft = 16;
+        running = entry.running.erase(running);
+      } else {
+        ++running;
       }
-      ++running;
     }
 
-    if (wroteAnything) {
-      // Applied DIRECTLY through UIManager rather than returned to the
-      // backend. The backend's path also records every value in the
-      // animated-props registry, whose commit hook bakes the registry into
-      // every committing tree — and React's revision merge then inherits
-      // those interpolated values into its NEXT tree, where this engine's
-      // own diff reads them as author targets. The device trace showed
-      // transitions completing at scale 0.971 and half-blended colors:
-      // the engine chasing its own reflection. Writing straight to the
-      // mounted view keeps interpolated values out of every tree. The cost
-      // is that a commit mounting mid-flight briefly shows the target until
-      // the next frame write corrects it — one frame, versus corrupted
-      // committed state.
+    if (!builder.props.empty()) {
       auto props = builder.get();
       auto dyn = animationbackend::packAnimatedProps(props);
       uiManager_.synchronouslyUpdateViewOnUIThread(entry.tag, dyn);
     }
 
-    // The entry survives with an empty `running`: `lastWritten` is the record
-    // the next commit diffs against, and erasing it would resurrect the stale
-    // old-tree problem on the very next toggle.
-    ++it;
+    if (entry.running.empty()) {
+      it = transitions_.erase(it);
+    } else {
+      ++it;
+    }
   }
-
-  return mutations;
 }
 
 } // namespace facebook::react

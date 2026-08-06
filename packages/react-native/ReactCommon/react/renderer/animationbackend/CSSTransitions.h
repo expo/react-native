@@ -20,16 +20,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "AnimatedProps.h"
 #include "AnimationBackend.h"
 #include "CSSTransitionsTrace.h"
 
 namespace facebook::react {
 
 /*
- * The value a transition moves between. A variant over exactly the property
- * types that can be interpolated, so a running transition does not have to
- * re-derive what it is animating on every frame.
+ * The value a transition moves between: exactly one of these is meaningful,
+ * chosen by the property.
  */
 struct TransitionValue {
   Float number{0.0f};
@@ -38,76 +36,60 @@ struct TransitionValue {
 };
 
 /*
- * One property of one view, mid-flight.
+ * One property of one view, mid-flight. Exists only while animating: created
+ * when a commit changes a declared property, erased on the frame that writes
+ * the final value. There is deliberately NO memory beyond the flight itself —
+ * every past defense that remembered values across transitions (a last-written
+ * record, settle frames re-asserting finals, echo detection) existed to
+ * survive interpolated values leaking into committed trees, and since frames
+ * stopped going through the animated-props registry no such values exist
+ * outside this struct. State that outlives its need does not just cost memory:
+ * the map is keyed by tag, tags are reused across reloads, and a remembered
+ * value from a dead view is a wrong `from` for whatever unrelated element
+ * inherits its tag.
  */
 struct RunningTransition {
   TransitionProperty property{TransitionProperty::Opacity};
   TransitionValue from{};
   TransitionValue to{};
-  // Milliseconds on the ANIMATION clock — the one the frame callback is handed
-  // — not on any clock read at commit time. A commit and a display link do not
-  // necessarily share an epoch, and assuming they do makes every transition
-  // pin at its first frame. So a new transition is stamped by the first frame
-  // that sees it rather than by the commit that created it.
+  // Stamped by the first frame that sees it: a commit's clock and the frame
+  // clock do not share an epoch.
   bool awaitingFirstFrame{true};
   double startTime{0.0};
   double delay{0.0};
   double duration{0.0};
   TransitionTimingFunction timingFunction{};
-  /*
-   * A completed transition SETTLES before it is dropped: it keeps writing its
-   * final value for a bounded run of frames. The value is done animating, but
-   * a React commit that was in flight while the last real frames ran has the
-   * animated-props overlay BAKED IN from hook time — values that are a frame
-   * or two stale — and its mount can land after the final write, silently
-   * reverting the view to a mid-flight value. Nothing corrects that revert:
-   * the transition is finished, and the overlay re-bakes the same stale
-   * snapshot into every later commit, which is exactly the "stuck mid-fade
-   * until some unrelated press repaints it" symptom. Settle frames make the
-   * final value the last word for longer than any commit→mount latency.
-   */
-  bool settling{false};
-  int settleFramesLeft{0};
 };
 
-/*
- * Everything known about a single view's transitions: what is mid-flight, and
- * the value this class last put on screen for each property.
- *
- * `lastWritten` is the ground truth for where a new transition starts, NOT the
- * old shadow tree. The old tree cannot be trusted for that: the backend's
- * commit hook rewrites committed trees with whatever the animated-props
- * registry held at commit time, which is both stale (a frame or a whole leg
- * behind the screen) and representationally different (an interpolated
- * transform does not compare equal to the authored one even at the same
- * geometry). Diffing against it makes a transition start from — or spuriously
- * re-aim at — a value nothing is showing. What this class last wrote IS what
- * the screen shows, which is also exactly the value css-transitions-1 §3 says
- * an interrupted transition continues from.
- */
 struct ViewTransitions {
   Tag tag{};
   std::shared_ptr<const ShadowNodeFamily> family;
   std::vector<RunningTransition> running;
-  std::unordered_map<TransitionProperty, TransitionValue> lastWritten;
+  // Percent-valued transform ops resolve against the view's own laid-out
+  // size, which only the tree knows. Looked up lazily, and only by the
+  // transitions that actually use percents.
+  bool needsSize{false};
+  Size size{};
 };
 
 /*
  * CSS transitions (css-transitions-1), run in the renderer.
  *
- * The point of putting this here rather than in a JavaScript hook is that the
- * frames come from the shared animation backend, which is driven by a display
- * link on iOS and the Choreographer on Android. A transition therefore keeps
- * running while the JavaScript thread is busy — which is the behaviour CSS
- * describes and the reason the property exists.
+ * The frames come from the shared animation backend's tick — a display link
+ * on iOS, the Choreographer on Android — so a transition keeps running while
+ * the JavaScript thread is busy, which is the reason the property exists.
  *
- * Two halves:
+ * Two halves, and no more than two:
  *
- *   - a commit hook, which sees every React commit and compares the properties
- *     each view declares as transitionable against their previous values. That
- *     is where a transition is born, and where an in-flight one is re-aimed.
- *   - a backend callback, which is handed a timestamp each frame and returns
- *     the interpolated props for everything still running.
+ *   - a commit hook diffs each transitioning view's old props against its new
+ *     ones, starting or re-aiming transitions. Committed trees carry ONLY
+ *     author values (frames are applied straight to mounted views and touch
+ *     no tree), so the old tree is a trustworthy `from` and the new tree is a
+ *     trustworthy target.
+ *   - a frame callback interpolates every running transition and writes the
+ *     results directly through UIManager. The completion frame writes the
+ *     exact target — the same value the committed tree already holds, so a
+ *     racing mount and the final write agree by construction.
  */
 class CSSTransitions final : public UIManagerCommitHook {
  public:
@@ -115,26 +97,16 @@ class CSSTransitions final : public UIManagerCommitHook {
   ~CSSTransitions() noexcept override;
 
   /*
-   * Set after construction. The construction order is deliberate: this class
-   * has to REGISTER ITS COMMIT HOOK BEFORE the AnimationBackend registers its
-   * own, because hooks run in registration order and the backend's hook
-   * overlays mid-flight animated values onto every committed tree. A diff that
-   * runs after the overlay reads those as the author's targets — and then a
-   * transition re-aims at its own previous frame on every commit and never
-   * converges. Diffing before the overlay sees only what React committed.
+   * Set after construction: this class must register its commit hook BEFORE
+   * the AnimationBackend registers its own, because hooks run in registration
+   * order and the backend's hook rewrites trees for the views Animated owns.
    */
   void setAnimationBackend(
       std::weak_ptr<UIManagerAnimationBackend> animationBackend);
 
-  /*
-   * The debug trace, shared so a JSI host function can outlive this object.
-   */
-  std::shared_ptr<CSSTransitionsTrace> trace() const {
-    return trace_;
-  }
-
   void commitHookWasRegistered(const UIManager& uiManager) noexcept override {}
-  void commitHookWasUnregistered(const UIManager& uiManager) noexcept override {}
+  void commitHookWasUnregistered(
+      const UIManager& uiManager) noexcept override {}
 
   RootShadowNode::Unshared shadowTreeWillCommit(
       const ShadowTree& shadowTree,
@@ -143,30 +115,45 @@ class CSSTransitions final : public UIManagerCommitHook {
       const ShadowTreeCommitOptions& commitOptions) noexcept override;
 
   /*
-   * The per-frame step. Public so it can be driven by a test clock rather than
-   * only by a display link.
+   * The per-frame step: interpolate, write, erase what finished. Public so a
+   * test can drive it with its own clock.
    */
-  AnimationMutations mutationsForFrame(double nowMs);
+  void frame(double nowMs);
+
+  std::shared_ptr<CSSTransitionsTrace> trace() const {
+    return trace_;
+  }
 
  private:
-  void diffNode(
-      const ShadowNode& oldNode,
-      const ShadowNode& newNode,
-      double nowMs);
+  void diffNode(const ShadowNode& oldNode, const ShadowNode& newNode);
+  // Latches sawTransitionableContent_ when props declare a transition.
+  void noteTransitionableContent(const ViewProps* viewProps);
+  // The laid-out size of a view, for resolving percent transforms.
+  Size resolveViewSize(const ShadowNodeFamily& family);
+  // The entry's size, resolved from the tree the first time something asks.
+  Size sizeFor(ViewTransitions& entry);
 
   UIManager& uiManager_;
   std::weak_ptr<UIManagerAnimationBackend> animationBackend_;
   CallbackId callbackId_{0};
   bool started_{false};
+  // Whether a committed tree has ever carried a `transition-*` declaration.
+  // Registering the frame callback resumes the choreographer, and a paused
+  // display link does not deliver until the next vsync — so a callback
+  // registered at the moment the FIRST transition starts arrives one frame
+  // after the commit that started it, and the mounting layer has already put
+  // the committed target on screen. That frame is the difference between a
+  // switch that slides and one that snaps on, snaps back, and then slides.
+  // Registering as soon as transitionable content exists pays the resume
+  // before anything is waiting on it.
+  bool sawTransitionableContent_{false};
 
-  // Touched by the commit hook (any thread that commits) and by the frame
-  // callback (the UI thread), so every access is guarded.
   std::shared_ptr<CSSTransitionsTrace> trace_{CSSTransitionsTrace::shared()};
 
+  // Touched by the commit hook (whatever thread commits) and the frame
+  // callback (the UI thread); every access is guarded.
   std::mutex mutex_;
   std::unordered_map<Tag, ViewTransitions> transitions_;
-  // The last timestamp the frame callback was given, so the commit hook can
-  // ask "how far along is this?" in the animation clock's own units.
   double lastFrameTime_{0.0};
 };
 
