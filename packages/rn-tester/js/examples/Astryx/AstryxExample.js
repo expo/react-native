@@ -42,8 +42,10 @@ import {VStack} from '../../astryx/vendor/VStack/VStack';
 import {
   DEMO_THEME,
   DemoContent,
+  semanticColor,
   usePublishRects,
 } from '../TextChildren/TextChildrenShared';
+import {BUILD_STAMP} from './BuildStamp';
 // Resolved to js/astryx/stylex-rn.js by the Metro alias — same module the
 // vendored sources get, so consumer xstyle overrides use the identical API.
 // $FlowFixMe[cannot-resolve-module]
@@ -546,6 +548,11 @@ const WHITE_SPACE_CASES = [
   {value: 'pre-wrap', why: 'all kept, still wraps'},
 ];
 
+// The tinted surface behind <pre> and the white-space samples. A semantic
+// color, so it darkens with the scheme — the hardcoded near-white it replaces
+// left dark-mode text (which follows labelColor) illegible on a light box.
+const CODE_SURFACE = semanticColor('secondarySystemBackgroundColor', '#f4f4f6');
+
 function ElementGapsCases(): React.Node {
   const [text, setText] = useState('Two lines,\nedited here.');
   return (
@@ -562,7 +569,12 @@ function ElementGapsCases(): React.Node {
       {/* <pre>: white-space is preserved, so the indentation and the blank
           line below survive exactly as written — and copy that way too. */}
       {/* $FlowFixMe[not-a-component] intrinsic <pre> tag */}
-      <pre style={{backgroundColor: '#f4f4f6', padding: 8, borderRadius: 6}}>
+      <pre
+        style={{
+          backgroundColor: CODE_SURFACE,
+          padding: 8,
+          borderRadius: 6,
+        }}>
         {'function greet(name) {\n    return `hi ${name}`;\n}\n' +
           '// a deliberately long line that would wrap in normal text but must not here'}
       </pre>
@@ -580,7 +592,7 @@ function ElementGapsCases(): React.Node {
           <div
             style={{
               whiteSpace: value,
-              backgroundColor: '#f4f4f6',
+              backgroundColor: CODE_SURFACE,
               padding: 6,
               borderRadius: 6,
             }}>
@@ -595,7 +607,8 @@ function ElementGapsCases(): React.Node {
         onChange={(e: $FlowFixMe) => setText(e.target.value)}
         style={{
           borderWidth: 1,
-          borderColor: '#c9ccd1',
+          borderColor: DEMO_THEME.border,
+          color: DEMO_THEME.fg,
           borderRadius: 6,
           padding: 8,
         }}
@@ -856,6 +869,11 @@ function NativeTransitionsCases(): React.Node {
         style={{color: DEMO_THEME.muted, fontSize: 13}}>
         Nothing here calls an animation API. The styles are static states; the
         renderer fills in every frame between them, off the JS thread.
+      </View>
+      <View
+        // $FlowFixMe[incompatible-type] cascade to bare text
+        style={{color: DEMO_THEME.muted, fontSize: 11}}>
+        {`build: ${BUILD_STAMP}`}
       </View>
     </VStack>
   );
