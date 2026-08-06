@@ -133,6 +133,25 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   self.bounds = bounds;
 }
 
+// The content of -drawRect: resolves DYNAMIC colors (a semantic label color
+// cascading into a run resolves against the trait collection current at draw
+// time), and UIKit has no way to know that: it re-invalidates layer-backed
+// PROPERTIES on appearance changes, never custom-drawn content. Without this
+// override the first appearance-flipped render pass — most reliably iOS's
+// app-switcher snapshotting, which re-renders the hierarchy under BOTH styles
+// — bakes wrong-appearance text into the layer, and it STAYS baked after the
+// app foregrounds: black label text on a dark background, exactly the
+// "dark mode got lost for some text" report. Later commits invalidated some
+// runs back to correct, making a half-flipped, flickering screen out of what
+// is really one missing invalidation.
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection
+{
+  [super traitCollectionDidChange:previousTraitCollection];
+  if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+    [self setNeedsDisplay];
+  }
+}
+
 - (RCTTextLayoutManager *)nativeTextLayoutManager
 {
   auto textLayoutManager = _layoutManager.lock();
