@@ -336,6 +336,33 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   return concreteComponentDescriptorProvider<ViewComponentDescriptor>();
 }
 
+// Anonymous text run views are the container's own paint layers (plain
+// UIViews, tag 0), interleaved BETWEEN mounted children to honor CSS painting
+// order. Mounting instructions know nothing about them: a mutation's index
+// counts only Fabric children. With run views present, that logical index and
+// the UIKit subview index diverge — using one as the other mounts children at
+// the wrong z-position and trips the unmount assertions on perfectly valid
+// removals. This maps a mutation's index to the UIKit position of that slot,
+// counting only non-run subviews.
+- (NSInteger)_containerIndexForMountIndex:(NSInteger)index
+{
+  if (_textRunViews.count == 0) {
+    return index;
+  }
+  NSArray<UIView *> *subviews = self.currentContainerView.subviews;
+  NSInteger mountedSeen = 0;
+  for (NSUInteger position = 0; position < subviews.count; position++) {
+    if ([subviews[position] isKindOfClass:[RCTAnonymousTextRunView class]]) {
+      continue;
+    }
+    if (mountedSeen == index) {
+      return (NSInteger)position;
+    }
+    mountedSeen++;
+  }
+  return (NSInteger)subviews.count;
+}
+
 - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index
 {
   RCTAssert(
@@ -349,7 +376,8 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   if (_removeClippedSubviews) {
     [_reactSubviews insertObject:childComponentView atIndex:index];
   } else {
-    [self.currentContainerView insertSubview:childComponentView atIndex:index];
+    [self.currentContainerView insertSubview:childComponentView
+                                     atIndex:[self _containerIndexForMountIndex:index]];
   }
 }
 
@@ -371,15 +399,16 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
         childComponentView,
         @(index),
         @([childComponentView.superview tag]));
+    NSInteger containerIndex = [self _containerIndexForMountIndex:index];
     RCTAssert(
-        (self.currentContainerView.subviews.count > index) &&
-            [self.currentContainerView.subviews objectAtIndex:index] == childComponentView,
+        (self.currentContainerView.subviews.count > containerIndex) &&
+            [self.currentContainerView.subviews objectAtIndex:containerIndex] == childComponentView,
         @"Attempt to unmount a view which has a different index. (parent: %@, child: %@, index: %@, actual index: %@, tag at index: %@)",
         self,
         childComponentView,
         @(index),
         @([self.currentContainerView.subviews indexOfObject:childComponentView]),
-        @([[self.currentContainerView.subviews objectAtIndex:index] tag]));
+        @([[self.currentContainerView.subviews objectAtIndex:containerIndex] tag]));
   }
 
   [childComponentView removeFromSuperview];
@@ -396,7 +425,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
         self,
         @(_reactSubviews.count));
     if (self.currentContainerView.subviews.count > 0) {
-      _reactSubviews = [NSMutableArray arrayWithArray:self.currentContainerView.subviews];
+      _reactSubviews = [NSMutableArray new];
+      for (UIView *subview in self.currentContainerView.subviews) {
+        // The container's own text-run paint layers are not React children.
+        if (![subview isKindOfClass:[RCTAnonymousTextRunView class]]) {
+          [_reactSubviews addObject:subview];
+        }
+      }
     }
   } else {
     // Toggled OFF: re-mount all children in the correct order, then clear the tracking array.
