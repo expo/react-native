@@ -376,6 +376,19 @@ function warnOnce(key: string, message: string) {
   }
 }
 
+// The `transition-*` longhands React Native's renderer now runs natively
+// (css-transitions-1: property/duration/delay/timing-function, off the JS
+// thread). Passed through as-is: the native parser reads the same CSS strings
+// Astryx writes, kebab-case property names and comma lists included.
+// `transition-behavior` is not among them — `allow-discrete` has no native
+// counterpart — so it still falls to the drop list below.
+const PASSED_THROUGH_TRANSITIONS = new Set([
+  'transitionProperty',
+  'transitionDuration',
+  'transitionDelay',
+  'transitionTimingFunction',
+]);
+
 // Properties that have no RN analog (yet); dropped silently by prefix.
 const DROPPED_PREFIXES = [
   'transition',
@@ -415,6 +428,12 @@ const UNITLESS_NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)$/;
 
 // Keyword/value fixups per property.
 function convertValue(prop: string, value: string): unknown {
+  // The `transition-*` longhands reach the native parser as the CSS strings
+  // they are. A bare-numeric delay ('0') must not become a number here: the
+  // native side reads these props as strings, comma lists and units included.
+  if (prop.startsWith('transition')) {
+    return value;
+  }
   if (prop === 'overflow') {
     if (value === 'clip') {
       return 'hidden';
@@ -623,11 +642,10 @@ function resolveDeclarations(
     if (prop.startsWith(':') || prop.startsWith('@')) {
       continue; // whole-block pseudo/at-rules are applied by the caller below
     }
-    if (isDroppedProperty(prop)) {
-      // `transition-*` is dropped from the style — React Native has no
-      // continuous CSS transitions — but it is not unsupported: the duration
-      // and timing function drive `@starting-style` entry animations. Warning
-      // about them would fire on exactly the components that now work.
+    if (isDroppedProperty(prop) && !PASSED_THROUGH_TRANSITIONS.has(prop)) {
+      // `transition-behavior` and the rest of the drop list. The warning stays
+      // quiet for transition-* so it does not fire on the one member of the
+      // family that genuinely has no analog.
       if (!prop.startsWith('transition')) {
         warnOnce(`drop:${prop}`, `Dropping unsupported property "${prop}"`);
       }

@@ -135,7 +135,6 @@ describe('stylex-rn', () => {
     // warn-is-error jest guard for this intentional case.
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const {style} = stylex.props({
-      transitionProperty: 'opacity',
       cursor: 'pointer',
       anchorName: '--x',
       width: '50%',
@@ -143,6 +142,38 @@ describe('stylex-rn', () => {
     expect(style).toEqual({width: '50%'});
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+
+  it('passes the transition longhands through to the renderer as strings', () => {
+    // The renderer runs these natively now (css-transitions-1, off the JS
+    // thread); the runtime's job is to deliver the CSS strings untouched —
+    // comma lists, units, kebab-case property names, and a bare-numeric delay
+    // that must NOT be converted to a number.
+    const {style} = stylex.props({
+      transitionProperty: 'opacity, background-color',
+      transitionDuration: '150ms, 0.3s',
+      transitionDelay: '0',
+      transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+      opacity: 1,
+    });
+    expect(style).toEqual({
+      transitionProperty: 'opacity, background-color',
+      transitionDuration: '150ms, 0.3s',
+      transitionDelay: '0',
+      transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+      opacity: 1,
+    });
+  });
+
+  it('still drops transition-behavior, quietly', () => {
+    // `allow-discrete` has no native counterpart. It is dropped without a
+    // warning: warning on a transition-* member would fire on exactly the
+    // components whose transitions now work.
+    const {style} = stylex.props({
+      transitionBehavior: 'allow-discrete',
+      opacity: 1,
+    });
+    expect(style).toEqual({opacity: 1});
   });
 });
 

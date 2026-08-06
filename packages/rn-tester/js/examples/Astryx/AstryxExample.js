@@ -86,6 +86,13 @@ const buttonStyles = stylex.create({
     fontWeight: '600',
     borderWidth: 2,
     borderColor: 'transparent',
+    // The declarations Astryx's own Button writes (background-image aside).
+    // They pass through the runtime to the renderer, so the :active swap
+    // below ANIMATES natively — press and hold to see the fade in, release
+    // for the fade back, all off the JS thread.
+    transitionProperty: 'background-color, color, opacity, transform',
+    transitionDuration: 'var(--duration-fast, 150ms)',
+    transitionTimingFunction: 'var(--ease-standard, ease)',
     // Interaction states — the browser's pseudo-classes, resolved from the
     // element's own pointer events.
     ':active': {backgroundColor: 'var(--color-text-blue)'},
@@ -764,6 +771,85 @@ function PortedComponents(): React.Node {
   );
 }
 
+// Astryx's selection pattern (ClickableCard / SelectableCard / TabList):
+// border-color and background-color transitions declared at the BASE level,
+// so any state that changes them animates. The declarations are the vendored
+// sources' own — token duration, token easing — passing through the runtime
+// to the renderer, which interpolates off the JS thread.
+const selectableStyles = stylex.create({
+  card: {
+    borderWidth: 2,
+    borderColor: 'var(--color-border, #d0d5dd)',
+    backgroundColor: 'var(--color-background, #ffffff)',
+    borderRadius: 'var(--radius-element, 8px)',
+    paddingInline: 'var(--spacing-4, 16px)',
+    paddingBlock: 'var(--spacing-3, 12px)',
+    transitionProperty: 'border-color, background-color, transform',
+    transitionDuration: 'var(--duration-fast, 150ms)',
+    transitionTimingFunction: 'var(--ease-standard, ease)',
+    ':active': {transform: 'scale(0.97)'},
+  },
+  selected: {
+    borderColor: 'var(--color-accent, #1570ef)',
+    backgroundColor: 'var(--color-background-selected, #eff8ff)',
+  },
+});
+
+function SelectableCardDemo({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string,
+  selected: boolean,
+  onSelect: () => void,
+}): React.Node {
+  const {state, handlers} = useInteractionState();
+  return (
+    // $FlowFixMe[not-a-component] intrinsic <button> tag
+    <button
+      {...handlers}
+      onClick={onSelect}
+      {...stylex.propsWithState(
+        state,
+        selectableStyles.card,
+        selected && selectableStyles.selected,
+      )}>
+      {label}
+    </button>
+  );
+}
+
+function NativeTransitionsCases(): React.Node {
+  const [selected, setSelected] = useState(0);
+  return (
+    <VStack gap={3}>
+      {/* The press fade: the same AstryxButton as the button demo, whose
+          :active background swap now animates because its stylex declarations
+          include the transition longhands. Press and HOLD. */}
+      <AstryxButton onClick={() => {}}>Press and hold me</AstryxButton>
+      {/* The selection pattern: tapping re-resolves each card's style in one
+          commit; the renderer animates border, fill, and the pressed-scale. */}
+      <HStack gap={2}>
+        {['One', 'Two', 'Three'].map((label, index) => (
+          <SelectableCardDemo
+            key={label}
+            label={label}
+            selected={selected === index}
+            onSelect={() => setSelected(index)}
+          />
+        ))}
+      </HStack>
+      <View
+        // $FlowFixMe[incompatible-type] cascade to bare text
+        style={{color: DEMO_THEME.muted, fontSize: 13}}>
+        Nothing here calls an animation API. The styles are static states; the
+        renderer fills in every frame between them, off the JS thread.
+      </View>
+    </VStack>
+  );
+}
+
 export default {
   title: 'Astryx',
   category: 'UI',
@@ -793,6 +879,26 @@ export default {
             '<textarea rows={3} value={text} onChange={…} />'
           }>
           <ElementGapsCases />
+        </DemoContent>
+      ),
+    },
+    {
+      name: 'nativeTransitions',
+      title: 'CSS transitions — native interaction states',
+      description:
+        'Astryx declares transition-property/duration/timing-function on ' +
+        'its interactive components; those longhands now pass through the ' +
+        'StyleX runtime to the renderer, which animates state changes off ' +
+        'the JS thread. Press-and-hold the button; tap the cards.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "transitionProperty: 'background-color, color, opacity, transform',\n" +
+            "transitionDuration: 'var(--duration-fast)',\n" +
+            "transitionTimingFunction: 'var(--ease-standard)',\n" +
+            "':active': {backgroundColor: 'var(--color-text-blue)'}"
+          }>
+          <NativeTransitionsCases />
         </DemoContent>
       ),
     },
