@@ -8,6 +8,7 @@
 #include "CSSTransitions.h"
 
 #include <react/renderer/animationbackend/AnimatedPropsBuilder.h>
+#include <react/renderer/animationbackend/AnimatedPropsSerializer.h>
 #include <react/renderer/mounting/ShadowTree.h>
 
 #include <algorithm>
@@ -488,14 +489,21 @@ AnimationMutations CSSTransitions::mutationsForFrame(double nowMs) {
     }
 
     if (wroteAnything) {
-      AnimationMutation mutation;
-      mutation.tag = entry.tag;
-      mutation.family = entry.family;
-      mutation.props = builder.get();
-      // None of the four properties affect layout, so these take the backend's
-      // synchronous path instead of forcing a commit each frame.
-      mutation.hasLayoutUpdates = false;
-      mutations.batch.push_back(std::move(mutation));
+      // Applied DIRECTLY through UIManager rather than returned to the
+      // backend. The backend's path also records every value in the
+      // animated-props registry, whose commit hook bakes the registry into
+      // every committing tree — and React's revision merge then inherits
+      // those interpolated values into its NEXT tree, where this engine's
+      // own diff reads them as author targets. The device trace showed
+      // transitions completing at scale 0.971 and half-blended colors:
+      // the engine chasing its own reflection. Writing straight to the
+      // mounted view keeps interpolated values out of every tree. The cost
+      // is that a commit mounting mid-flight briefly shows the target until
+      // the next frame write corrects it — one frame, versus corrupted
+      // committed state.
+      auto props = builder.get();
+      auto dyn = animationbackend::packAnimatedProps(props);
+      uiManager_.synchronouslyUpdateViewOnUIThread(entry.tag, dyn);
     }
 
     // The entry survives with an empty `running`: `lastWritten` is the record
