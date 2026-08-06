@@ -12,6 +12,7 @@
 #include <react/renderer/graphics/Float.h>
 #include <react/renderer/graphics/Transform.h>
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -30,11 +31,13 @@ struct TransitionTimingFunction {
   Float y1{0.1f};
   Float x2{0.25f};
   Float y2{1.0f};
-  // `step-start` and `step-end` are not Béziers; they jump. Stored as a flag
-  // plus the position of the jump rather than approximated by a steep curve,
-  // which would be wrong at exactly 0 and 1 — the only places they differ.
+  // `step-start`, `step-end` and `steps(n, pos)` are not Béziers; they jump.
+  // Stored as a flag, the jump position, and the interval count rather than
+  // approximated by a steep curve, which would be wrong at exactly 0 and 1 —
+  // the only places a single step differs — and everywhere for n > 1.
   bool isStep{false};
   bool stepAtStart{false};
+  int32_t stepCount{1};
 
   bool operator==(const TransitionTimingFunction& other) const = default;
 
@@ -50,8 +53,20 @@ struct TransitionTimingFunction {
    */
   Float evaluate(Float linearProgress) const {
     if (isStep) {
-      return stepAtStart ? (linearProgress > 0.0f ? 1.0f : 0.0f)
-                         : (linearProgress >= 1.0f ? 1.0f : 0.0f);
+      // css-easing-1 §2.3: divide [0,1] into stepCount intervals; `start`
+      // (jump-start) rises at the beginning of each, `end` (jump-end) at the
+      // end. step-start/step-end are the n == 1 cases.
+      if (linearProgress >= 1.0f) {
+        return 1.0f;
+      }
+      if (linearProgress <= 0.0f) {
+        return 0.0f;
+      }
+      const auto intervals = static_cast<Float>(std::max(stepCount, 1));
+      const auto stepped = static_cast<Float>(
+          stepAtStart ? std::ceil(linearProgress * intervals)
+                      : std::floor(linearProgress * intervals));
+      return std::min(static_cast<Float>(1), stepped / intervals);
     }
     if (linearProgress <= 0.0f) {
       return 0.0f;

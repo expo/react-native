@@ -107,10 +107,34 @@ inline TransitionTimingFunction parseTransitionTimingFunction(
     return {0.42f, 0.0f, 0.58f, 1.0f};
   }
   if (value == "step-start") {
-    return {0.0f, 0.0f, 0.0f, 0.0f, true, true};
+    return {0.0f, 0.0f, 0.0f, 0.0f, true, true, 1};
   }
   if (value == "step-end") {
-    return {0.0f, 0.0f, 0.0f, 0.0f, true, false};
+    return {0.0f, 0.0f, 0.0f, 0.0f, true, false, 1};
+  }
+  if (value.rfind("steps", 0) == 0) {
+    const auto open = value.find('(');
+    const auto close = value.find(')');
+    if (open != std::string::npos && close != std::string::npos &&
+        close > open) {
+      const auto args =
+          splitTransitionList(value.substr(open + 1, close - open - 1));
+      if (!args.empty()) {
+        int32_t count = 1;
+        try {
+          count = std::max(1, std::stoi(args[0]));
+        } catch (...) {
+          return {};
+        }
+        // css-easing-1: `start`/`jump-start` jump at each interval's
+        // beginning; `end`/`jump-end` (the default) at its end. jump-none and
+        // jump-both are not supported and take the default.
+        const bool atStart = args.size() > 1 &&
+            (args[1] == "start" || args[1] == "jump-start");
+        return {0.0f, 0.0f, 0.0f, 0.0f, true, atStart, count};
+      }
+    }
+    return {};
   }
   if (value.rfind("cubic-bezier", 0) == 0) {
     const auto open = value.find('(');

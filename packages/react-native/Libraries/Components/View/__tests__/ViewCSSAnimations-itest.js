@@ -206,6 +206,37 @@ test('background-color keyframes complete exactly on the final keyframe', () => 
   expect(backgroundColor).toBe(processColor('red'));
 });
 
+test('steps() easing quantizes to exact interval values', () => {
+  const root = Fantom.createRoot();
+  const viewRef = createRef<HostInstance>();
+
+  Fantom.runTask(() => {
+    root.render(
+      <View
+        ref={viewRef}
+        style={{
+          width: 100,
+          height: 100,
+          animationKeyframes: fadeKeyframes,
+          animationDuration: '1000ms',
+          animationTimingFunction: 'steps(4, end)',
+          animationFillMode: 'forwards',
+        }}
+      />,
+    );
+  });
+
+  // Mid-flight, a stepped opacity can ONLY be a quarter value. A smooth
+  // fallback (what steps() used to silently become) fails this: at ~500ms
+  // ease produces ~0.8, not a multiple of 0.25.
+  Fantom.unstable_produceFramesForDuration(430);
+  const stepped = opacityOf(viewRef);
+  expect(stepped * 4).toBe(Math.round(stepped * 4));
+
+  Fantom.unstable_produceFramesForDuration(1000);
+  expect(opacityOf(viewRef)).toBe(1);
+});
+
 test('infinite iterations keep writing frames', () => {
   const root = Fantom.createRoot();
   const viewRef = createRef<HostInstance>();
