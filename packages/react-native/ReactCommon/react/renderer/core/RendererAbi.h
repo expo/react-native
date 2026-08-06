@@ -40,7 +40,8 @@ namespace facebook::react {
 // 6: `BaseViewProps` gained `transitions` and the four raw `transition-*`
 //    longhands, changing the layout of a type an app's own C++ compiles
 //    against.
-constexpr uint32_t kRendererAbiVersion = 6;
+// 7: `BaseViewProps` gained the animation fields.
+constexpr uint32_t kRendererAbiVersion = 7;
 
 /*
  * Returns the value the renderer LIBRARY was compiled with, as opposed to the

@@ -87,6 +87,21 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   Transitions transitions{};
 
   /*
+   * `animation` (css-animations-1), parsed once at prop-parse time like
+   * `transitions` above: keyframes arrive as a JSON wire string (see
+   * stylex-rn's keyframes registry) beside the CSS longhands, and the raw
+   * strings are kept because a props clone only carries changed keys.
+   */
+  std::string animationKeyframesRaw{};
+  std::string animationDurationRaw{};
+  std::string animationDelayRaw{};
+  std::string animationTimingFunctionRaw{};
+  std::string animationIterationCountRaw{};
+  std::string animationDirectionRaw{};
+  std::string animationFillModeRaw{};
+  std::optional<CSSAnimation> animation{};
+
+  /*
    * Folds the set inheritable text props above into `textAttributes`. Single
    * source for the two consumers: the element-tree cascade
    * (`YogaLayoutableShadowNode::configureYogaTree`, §3.D) and span-like

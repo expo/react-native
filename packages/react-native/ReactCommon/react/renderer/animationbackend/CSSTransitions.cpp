@@ -12,6 +12,7 @@
 #include <react/renderer/mounting/ShadowTree.h>
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 
 namespace facebook::react {
@@ -82,6 +83,10 @@ bool hasPercentOps(const Transform& transform) {
     }
   }
   return false;
+}
+
+SharedColor colorFromRGBA(int32_t color) {
+  return colorFromComponents(colorComponentsFromColor(SharedColor(color)));
 }
 
 Float interpolateFloat(Float from, Float to, Float progress) {
@@ -257,8 +262,26 @@ RootShadowNode::Unshared CSSTransitions::shadowTreeWillCommit(
   diffNode(*oldRootShadowNode, *newRootShadowNode);
 
   {
+    // Animations whose node no longer exists in the committed tree are
+    // cancelled; the next frame writes their base values once and drops them.
+    // Entries are few (whatever is animating on screen), and an ancestor walk
+    // is proportional to depth, so this stays cheap.
     std::scoped_lock lock(mutex_);
-    if ((!transitions_.empty() || sawTransitionableContent_) && !started_) {
+    for (auto& [tag, animation] : animations_) {
+      if (!animation.cancelled &&
+          animation.family->getAncestors(*newRootShadowNode).empty() &&
+          newRootShadowNode->getFamilyShared() != animation.family) {
+        animation.cancelled = true;
+        trace_->log("anim-unmount t=" + std::to_string(tag));
+      }
+    }
+  }
+
+  {
+    std::scoped_lock lock(mutex_);
+    if ((!transitions_.empty() || !animations_.empty() ||
+         sawTransitionableContent_) &&
+        !started_) {
       started_ = true;
       trace_->log("backend-start");
       callbackId_ = backend->start([this](AnimationTimestamp timestamp) {
@@ -288,6 +311,10 @@ void CSSTransitions::diffNode(
       dynamic_cast<const ViewProps*>(newNode.getProps().get());
   const auto* oldViewProps =
       dynamic_cast<const ViewProps*>(oldNode.getProps().get());
+
+  if (newViewProps != nullptr) {
+    syncAnimation(newNode);
+  }
 
   noteTransitionableContent(newViewProps);
 
@@ -391,11 +418,16 @@ void CSSTransitions::diffNode(
       diffNode(*oldChildren[i], *newChild);
       continue;
     }
+    bool matched = false;
     for (const auto& oldChild : oldChildren) {
       if (&oldChild->getFamily() == &newChild->getFamily()) {
         diffNode(*oldChild, *newChild);
+        matched = true;
         break;
       }
+    }
+    if (!matched) {
+      visitFreshNode(*newChild);
     }
   }
 }
@@ -406,6 +438,99 @@ void CSSTransitions::noteTransitionableContent(const ViewProps* viewProps) {
   }
   std::scoped_lock lock(mutex_);
   sawTransitionableContent_ = true;
+}
+
+void CSSTransitions::visitFreshNode(const ShadowNode& node) {
+  const auto* viewProps = dynamic_cast<const ViewProps*>(node.getProps().get());
+  if (viewProps != nullptr) {
+    syncAnimation(node);
+  }
+  noteTransitionableContent(viewProps);
+  for (const auto& child : node.getChildren()) {
+    visitFreshNode(*child);
+  }
+}
+
+void CSSTransitions::syncAnimation(const ShadowNode& node) {
+  const auto* viewProps =
+      dynamic_cast<const ViewProps*>(node.getProps().get());
+  const auto tag = node.getTag();
+
+  std::scoped_lock lock(mutex_);
+  auto it = animations_.find(tag);
+
+  if (viewProps == nullptr || !viewProps->animation.has_value()) {
+    if (it != animations_.end() && !it->second.cancelled) {
+      it->second.cancelled = true;
+      trace_->log("anim-cancel t=" + std::to_string(tag));
+    }
+    return;
+  }
+
+  const auto& spec = *viewProps->animation;
+  if (it != animations_.end()) {
+    if (it->second.spec == spec) {
+      // Same animation, still running (or filling): nothing to do. This is
+      // the common case for every commit that merely re-renders the node.
+      it->second.cancelled = false;
+      return;
+    }
+    // The animation itself changed: css-animations restarts it.
+    animations_.erase(it);
+  }
+
+  RunningAnimation animation;
+  animation.tag = tag;
+  animation.family = node.getFamilyShared();
+  animation.spec = spec;
+  // What the committed props say WITHOUT the animation, per animated
+  // property: `fill-mode: none` ends by reverting to these, and so does
+  // cancellation.
+  bool touchesOpacity = false, touchesBg = false, touchesBd = false,
+       touchesTf = false;
+  for (const auto& keyframe : spec.keyframes) {
+    touchesOpacity |= keyframe.opacity.has_value();
+    touchesBg |= keyframe.backgroundColor.has_value();
+    touchesBd |= keyframe.borderColor.has_value();
+    touchesTf |= keyframe.transform.has_value();
+  }
+  if (touchesOpacity) {
+    animation.baseValues.emplace_back(
+        TransitionProperty::Opacity,
+        currentValue(*viewProps, TransitionProperty::Opacity));
+  }
+  if (touchesBg) {
+    animation.baseValues.emplace_back(
+        TransitionProperty::BackgroundColor,
+        currentValue(*viewProps, TransitionProperty::BackgroundColor));
+  }
+  if (touchesBd) {
+    animation.baseValues.emplace_back(
+        TransitionProperty::BorderColor,
+        currentValue(*viewProps, TransitionProperty::BorderColor));
+  }
+  if (touchesTf) {
+    animation.baseValues.emplace_back(
+        TransitionProperty::Transform,
+        currentValue(*viewProps, TransitionProperty::Transform));
+  }
+  for (const auto& keyframe : spec.keyframes) {
+    if (keyframe.transform.has_value()) {
+      for (const auto& operation : keyframe.transform->operations) {
+        if (operation.x.unit == UnitType::Percent ||
+            operation.y.unit == UnitType::Percent ||
+            operation.z.unit == UnitType::Percent) {
+          animation.needsSize = true;
+        }
+      }
+    }
+  }
+  trace_->log(
+      "anim-start t=" + std::to_string(tag) + " stops=" +
+      std::to_string(spec.keyframes.size()) +
+      " dur=" + std::to_string(static_cast<int>(spec.duration)) +
+      (spec.iterations < 0 ? " inf" : ""));
+  animations_.emplace(tag, std::move(animation));
 }
 
 /*
@@ -501,6 +626,209 @@ void CSSTransitions::frame(double nowMs) {
     } else {
       ++it;
     }
+  }
+
+  for (auto it = animations_.begin(); it != animations_.end();) {
+    auto& animation = it->second;
+    if (animation.cancelled) {
+      // Revert to the committed values and drop.
+      AnimatedPropsBuilder builder;
+      for (const auto& [property, value] : animation.baseValues) {
+        buildValue(builder, property, value);
+      }
+      if (!builder.props.empty()) {
+        auto props = builder.get();
+        auto dyn = animationbackend::packAnimatedProps(props);
+        uiManager_.synchronouslyUpdateViewOnUIThread(animation.tag, dyn);
+      }
+      it = animations_.erase(it);
+      continue;
+    }
+    if (animation.awaitingFirstFrame) {
+      animation.awaitingFirstFrame = false;
+      animation.startTime = nowMs + animation.spec.delay;
+    }
+    writeAnimationFrame(animation, nowMs);
+    // writeAnimationFrame flags completion through `cancelled` reuse is NOT
+    // done — it erases via this check instead:
+    if (animation.spec.iterations >= 0 &&
+        nowMs - animation.startTime >=
+            animation.spec.duration * animation.spec.iterations) {
+      trace_->log("anim-done t=" + std::to_string(animation.tag));
+      it = animations_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void CSSTransitions::writeAnimationFrame(
+    RunningAnimation& animation,
+    double nowMs) {
+  const auto& spec = animation.spec;
+  const auto elapsed = nowMs - animation.startTime;
+
+  AnimatedPropsBuilder builder;
+
+  if (animation.needsSize &&
+      (animation.size.width == 0 && animation.size.height == 0)) {
+    animation.size = resolveViewSize(*animation.family);
+  }
+
+  // Before the delay has elapsed: `backwards`/`both` fill from the first
+  // keyframe; otherwise the committed values stand and nothing is written.
+  if (elapsed < 0) {
+    if (spec.fillMode == AnimationFillMode::Backwards ||
+        spec.fillMode == AnimationFillMode::Both) {
+      const auto& first = spec.keyframes.front();
+      if (first.opacity.has_value()) {
+        builder.setOpacity(*first.opacity);
+      }
+      if (first.backgroundColor.has_value()) {
+        auto color = colorFromRGBA(*first.backgroundColor);
+        builder.setBackgroundColor(color);
+      }
+      if (first.borderColor.has_value()) {
+        CascadedBorderColors borderColors;
+        borderColors.all = colorFromRGBA(*first.borderColor);
+        builder.setBorderColor(borderColors);
+      }
+      if (first.transform.has_value()) {
+        // Interpolating the keyframe with itself resolves any percent units
+        // against the view's size, same as the running case below.
+        builder.setTransform(Transform::Interpolate(
+            0.0f, *first.transform, *first.transform, animation.size));
+      }
+    }
+    if (!builder.props.empty()) {
+      auto props = builder.get();
+      auto dyn = animationbackend::packAnimatedProps(props);
+      uiManager_.synchronouslyUpdateViewOnUIThread(animation.tag, dyn);
+    }
+    return;
+  }
+
+  // Which iteration, and where inside it. The final frame of a finite
+  // animation clamps to its very end so the last write is exact.
+  auto totalProgress = elapsed / spec.duration;
+  const bool finite = spec.iterations >= 0;
+  bool atEnd = false;
+  if (finite && totalProgress >= spec.iterations) {
+    totalProgress = spec.iterations;
+    atEnd = true;
+  }
+  auto iteration = std::floor(totalProgress);
+  auto local = static_cast<Float>(totalProgress - iteration);
+  if (atEnd) {
+    // e.g. 3 iterations: totalProgress 3.0 is the END of iteration 2.
+    iteration -= 1;
+    local = 1.0f;
+  }
+
+  // Direction (css-animations-1 §4.4): which way this iteration plays.
+  bool reversed = false;
+  switch (spec.direction) {
+    case AnimationDirection::Normal:
+      break;
+    case AnimationDirection::Reverse:
+      reversed = true;
+      break;
+    case AnimationDirection::Alternate:
+      reversed = std::fmod(iteration, 2.0) >= 1.0;
+      break;
+    case AnimationDirection::AlternateReverse:
+      reversed = std::fmod(iteration, 2.0) < 1.0;
+      break;
+  }
+  if (reversed) {
+    local = 1.0f - local;
+  }
+
+  // The end state of a finished animation: `forwards`/`both` hold the final
+  // keyframe; `none`/`backwards` revert to the committed values.
+  if (atEnd &&
+      spec.fillMode != AnimationFillMode::Forwards &&
+      spec.fillMode != AnimationFillMode::Both) {
+    for (const auto& [property, value] : animation.baseValues) {
+      buildValue(builder, property, value);
+    }
+    if (!builder.props.empty()) {
+      auto props = builder.get();
+      auto dyn = animationbackend::packAnimatedProps(props);
+      uiManager_.synchronouslyUpdateViewOnUIThread(animation.tag, dyn);
+    }
+    return;
+  }
+
+  // Interpolate each property between the stops that DECLARE it, with the
+  // timing function applied per segment (css-animations-1 §4.1: easing runs
+  // between keyframes, not across the whole animation).
+  auto interpolateProperty = [&](auto getter, auto emit) {
+    const AnimationKeyframe* before = nullptr;
+    const AnimationKeyframe* after = nullptr;
+    for (const auto& keyframe : spec.keyframes) {
+      if (!getter(keyframe)) {
+        continue;
+      }
+      if (keyframe.offset <= local) {
+        before = &keyframe;
+      }
+      if (keyframe.offset >= local && after == nullptr) {
+        after = &keyframe;
+      }
+    }
+    if (before == nullptr && after == nullptr) {
+      return;
+    }
+    if (before == nullptr) {
+      before = after;
+    }
+    if (after == nullptr) {
+      after = before;
+    }
+    Float eased = 0.0f;
+    if (after->offset > before->offset) {
+      const auto segment =
+          (local - before->offset) / (after->offset - before->offset);
+      eased = spec.timingFunction.evaluate(segment);
+    }
+    emit(*before, *after, eased);
+  };
+
+  interpolateProperty(
+      [](const AnimationKeyframe& k) { return k.opacity.has_value(); },
+      [&](const AnimationKeyframe& a, const AnimationKeyframe& b, Float t) {
+        builder.setOpacity(interpolateFloat(*a.opacity, *b.opacity, t));
+      });
+  interpolateProperty(
+      [](const AnimationKeyframe& k) { return k.backgroundColor.has_value(); },
+      [&](const AnimationKeyframe& a, const AnimationKeyframe& b, Float t) {
+        auto color = interpolateColor(
+            colorFromRGBA(*a.backgroundColor),
+            colorFromRGBA(*b.backgroundColor),
+            t);
+        builder.setBackgroundColor(color);
+      });
+  interpolateProperty(
+      [](const AnimationKeyframe& k) { return k.borderColor.has_value(); },
+      [&](const AnimationKeyframe& a, const AnimationKeyframe& b, Float t) {
+        CascadedBorderColors borderColors;
+        borderColors.all = interpolateColor(
+            colorFromRGBA(*a.borderColor), colorFromRGBA(*b.borderColor), t);
+        builder.setBorderColor(borderColors);
+      });
+  interpolateProperty(
+      [](const AnimationKeyframe& k) { return k.transform.has_value(); },
+      [&](const AnimationKeyframe& a, const AnimationKeyframe& b, Float t) {
+        auto transform = Transform::Interpolate(
+            t, *a.transform, *b.transform, animation.size);
+        builder.setTransform(transform);
+      });
+
+  if (!builder.props.empty()) {
+    auto props = builder.get();
+    auto dyn = animationbackend::packAnimatedProps(props);
+    uiManager_.synchronouslyUpdateViewOnUIThread(animation.tag, dyn);
   }
 }
 

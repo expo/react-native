@@ -8,8 +8,12 @@
 #pragma once
 
 #include <react/renderer/components/view/TransitionPrimitives.h>
+#include <react/renderer/components/view/conversions.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawValue.h>
+
+#include <folly/dynamic.h>
+#include <folly/json.h>
 
 #include <optional>
 #include <string>
@@ -181,6 +185,98 @@ inline Transitions buildTransitions(
     }
   }
   return transitions;
+}
+
+/*
+ * Building a CSS animation from the wire format: `animationKeyframes` is a
+ * JSON array of stops (offset + resolved declarations, colors already ints,
+ * transforms as CSS strings), and the longhands are the same CSS strings the
+ * transition parser reads.
+ */
+inline std::optional<CSSAnimation> buildAnimation(
+    const std::string& keyframesJson,
+    const std::string& duration,
+    const std::string& delay,
+    const std::string& timingFunction,
+    const std::string& iterationCount,
+    const std::string& direction,
+    const std::string& fillMode) {
+  if (keyframesJson.empty()) {
+    return std::nullopt;
+  }
+  folly::dynamic parsed;
+  try {
+    parsed = folly::parseJson(keyframesJson);
+  } catch (...) {
+    return std::nullopt;
+  }
+  if (!parsed.isArray() || parsed.empty()) {
+    return std::nullopt;
+  }
+
+  CSSAnimation animation;
+  for (const auto& stop : parsed) {
+    if (!stop.isObject() || stop.find("offset") == stop.items().end()) {
+      continue;
+    }
+    AnimationKeyframe keyframe;
+    keyframe.offset = static_cast<Float>(stop["offset"].asDouble());
+    if (auto* v = stop.get_ptr("opacity"); v != nullptr && v->isNumber()) {
+      keyframe.opacity = static_cast<Float>(v->asDouble());
+    }
+    if (auto* v = stop.get_ptr("backgroundColor");
+        v != nullptr && v->isNumber()) {
+      keyframe.backgroundColor = static_cast<int32_t>(v->asInt());
+    }
+    if (auto* v = stop.get_ptr("borderColor"); v != nullptr && v->isNumber()) {
+      keyframe.borderColor = static_cast<int32_t>(v->asInt());
+    }
+    if (auto* v = stop.get_ptr("transform"); v != nullptr && v->isString()) {
+      Transform transform;
+      parseUnprocessedTransformString(v->getString(), transform);
+      keyframe.transform = transform;
+    }
+    animation.keyframes.push_back(std::move(keyframe));
+  }
+  if (animation.keyframes.size() < 2) {
+    // A single stop animates nothing; css-animations needs somewhere to go.
+    return std::nullopt;
+  }
+
+  animation.duration = parseTransitionTime(duration);
+  if (animation.duration <= 0.0f) {
+    return std::nullopt;
+  }
+  animation.delay = parseTransitionTime(delay);
+  animation.timingFunction = parseTransitionTimingFunction(timingFunction);
+
+  if (iterationCount == "infinite") {
+    animation.iterations = -1.0f;
+  } else if (!iterationCount.empty()) {
+    try {
+      animation.iterations = std::stof(iterationCount);
+    } catch (...) {
+      animation.iterations = 1.0f;
+    }
+  }
+
+  if (direction == "reverse") {
+    animation.direction = AnimationDirection::Reverse;
+  } else if (direction == "alternate") {
+    animation.direction = AnimationDirection::Alternate;
+  } else if (direction == "alternate-reverse") {
+    animation.direction = AnimationDirection::AlternateReverse;
+  }
+
+  if (fillMode == "forwards") {
+    animation.fillMode = AnimationFillMode::Forwards;
+  } else if (fillMode == "backwards") {
+    animation.fillMode = AnimationFillMode::Backwards;
+  } else if (fillMode == "both") {
+    animation.fillMode = AnimationFillMode::Both;
+  }
+
+  return animation;
 }
 
 } // namespace facebook::react

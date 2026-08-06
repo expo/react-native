@@ -73,6 +73,32 @@ struct ViewTransitions {
 };
 
 /*
+ * One CSS animation on one view (css-animations-1). Unlike a transition, an
+ * animation is not a diff: it starts when a committed node carries it and
+ * stops when the node stops carrying it (or its iterations run out). The only
+ * state beyond the parsed spec is the base values — what the committed props
+ * say without the animation's influence — because `animation-fill-mode: none`
+ * ends by reverting to them, and cancellation does the same.
+ */
+struct RunningAnimation {
+  Tag tag{};
+  std::shared_ptr<const ShadowNodeFamily> family;
+  CSSAnimation spec{};
+  // Committed values for every property the keyframes touch.
+  std::vector<std::pair<TransitionProperty, TransitionValue>> baseValues{};
+  bool awaitingFirstFrame{true};
+  double startTime{0.0};
+  // Percent-valued transform ops (`translateX(-100%)`) resolve against the
+  // view's own size, which is only known once layout has run — looked up
+  // lazily from the committed tree and cached.
+  bool needsSize{false};
+  Size size{};
+  // Set when the node stopped carrying the animation: the next frame writes
+  // the base values once and erases the entry.
+  bool cancelled{false};
+};
+
+/*
  * CSS transitions (css-transitions-1), run in the renderer.
  *
  * The frames come from the shared animation backend's tick — a display link
@@ -126,8 +152,14 @@ class CSSTransitions final : public UIManagerCommitHook {
 
  private:
   void diffNode(const ShadowNode& oldNode, const ShadowNode& newNode);
+  // A subtree with no old counterpart: freshly mounted. Transitions do not
+  // start here (no previous value exists — that is what @starting-style is
+  // for) but ANIMATIONS do: an animation runs because the node carries it.
+  void visitFreshNode(const ShadowNode& node);
   // Latches sawTransitionableContent_ when props declare a transition.
   void noteTransitionableContent(const ViewProps* viewProps);
+  void syncAnimation(const ShadowNode& node);
+  void writeAnimationFrame(RunningAnimation& animation, double nowMs);
   // The laid-out size of a view, for resolving percent transforms.
   Size resolveViewSize(const ShadowNodeFamily& family);
   // The entry's size, resolved from the tree the first time something asks.
@@ -154,6 +186,7 @@ class CSSTransitions final : public UIManagerCommitHook {
   // callback (the UI thread); every access is guarded.
   std::mutex mutex_;
   std::unordered_map<Tag, ViewTransitions> transitions_;
+  std::unordered_map<Tag, RunningAnimation> animations_;
   double lastFrameTime_{0.0};
 };
 

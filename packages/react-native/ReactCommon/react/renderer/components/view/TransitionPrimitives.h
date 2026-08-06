@@ -10,6 +10,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawValue.h>
 #include <react/renderer/graphics/Float.h>
+#include <react/renderer/graphics/Transform.h>
 
 #include <cmath>
 #include <string>
@@ -162,6 +163,52 @@ struct Transition {
 };
 
 using Transitions = std::vector<Transition>;
+
+/*
+ * One keyframe stop of a CSS animation (css-animations-1 §4): where in the
+ * animation it sits, and the values it pins there. Only the properties the
+ * engine can interpolate are represented; anything else in the authored
+ * keyframe was dropped at resolution.
+ */
+struct AnimationKeyframe {
+  Float offset{0.0f};
+  std::optional<Float> opacity{};
+  std::optional<int32_t> backgroundColor{};
+  std::optional<int32_t> borderColor{};
+  std::optional<Transform> transform{};
+
+  bool operator==(const AnimationKeyframe& other) const = default;
+};
+
+enum class AnimationDirection {
+  Normal,
+  Reverse,
+  Alternate,
+  AlternateReverse,
+};
+
+enum class AnimationFillMode {
+  None,
+  Forwards,
+  Backwards,
+  Both,
+};
+
+/*
+ * A parsed CSS animation: the stops plus the parameters that schedule them.
+ * `iterations < 0` encodes `infinite`.
+ */
+struct CSSAnimation {
+  std::vector<AnimationKeyframe> keyframes{};
+  Float duration{0.0f};
+  Float delay{0.0f};
+  Float iterations{1.0f};
+  AnimationDirection direction{AnimationDirection::Normal};
+  AnimationFillMode fillMode{AnimationFillMode::None};
+  TransitionTimingFunction timingFunction{};
+
+  bool operator==(const CSSAnimation& other) const = default;
+};
 
 /*
  * Whether this set of transitions has anything to say about `property`, and if
