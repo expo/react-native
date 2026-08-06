@@ -772,8 +772,14 @@ function PortedComponents(): React.Node {
           <StatusDot variant="warning" />
           <StatusDot variant="error" />
           <StatusDot variant="accent" />
+          {/* The pulse and the indeterminate slide below are CSS animations:
+              stylex.keyframes in the vendored sources, run by the renderer
+              off the JS thread. Until the engine ran animations these
+              rendered static. */}
+          <StatusDot variant="success" label="Live" isPulsing />
         </HStack>
         <ProgressBar value={60} />
+        <ProgressBar isIndeterminate label="Loading" isLabelHidden />
         <AspectRatio ratio={16 / 9}>
           <View style={{backgroundColor: '#e6f4ea', flex: 1}} />
         </AspectRatio>

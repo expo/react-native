@@ -203,6 +203,12 @@ const APIs: Array<RNTesterModuleInfo> = (
     // ---- Fork work, pinned for quick access (same pattern as Components):
     // the renderer's CSS transitions and display: contents coverage.
     {
+      key: 'CSSAnimationsExample',
+      pinned: true,
+      module: require('../examples/CSSAnimations/CSSAnimationsExample').default,
+      category: 'UI',
+    },
+    {
       key: 'CSSTransitionsExample',
       pinned: true,
       module: require('../examples/CSSTransitions/CSSTransitionsExample')
