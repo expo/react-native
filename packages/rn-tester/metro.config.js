@@ -50,6 +50,24 @@ const config = {
     // The vendored Astryx sources (js/astryx/vendor) import '@stylexjs/stylex'
     // verbatim; resolve it to the RN StyleX runtime so they run unmodified.
     resolveRequest: (context, moduleName, platform) => {
+      // The Radix shim layer: vendored shadcn sources import
+      // '@radix-ui/react-*' verbatim; each id resolves to the shim
+      // implementing that package's public surface over the fork's machinery
+      // (js/astryx/radix).
+      if (moduleName.startsWith('@radix-ui/')) {
+        const radixName = moduleName.slice('@radix-ui/'.length);
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(
+            __dirname,
+            'js',
+            'astryx',
+            'radix',
+            'pkg',
+            radixName + '.js',
+          ),
+        };
+      }
       if (moduleName === '@stylexjs/stylex') {
         return {
           type: 'sourceFile',
