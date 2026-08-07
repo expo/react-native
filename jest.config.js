@@ -23,6 +23,7 @@ module.exports = {
   transform: {
     '^.+\\.(bmp|gif|jpg|jpeg|mp4|png|psd|svg|webp)$':
       '<rootDir>/packages/jest-preset/jest/assetFileTransformer.js',
+    '\\.(css)$': '<rootDir>/packages/jest-preset/jest/cssFileTransformer.js',
     '.*': './jest/preprocessor.js',
   },
   resolver: './packages/jest-preset/jest/resolver.js',

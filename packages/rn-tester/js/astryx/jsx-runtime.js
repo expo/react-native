@@ -27,13 +27,22 @@
  * intrinsics are wrapped, and only they pay for the extra component.
  */
 
+import type {ElementDescriptor} from './css';
 import type {VarScope} from './stylex-rn';
 
+import {
+  cssVersion,
+  hasStylesheets,
+  resolveCssForElement,
+  rootVariables,
+  subscribeCss,
+} from './css';
 import Dialog from './elements/Dialog';
 import Input from './elements/Input';
 import TextArea from './elements/TextArea';
 import {resolveInherited} from './stylex-rn';
 import {Svg, SvgCircle, SvgLine, SvgPath, SvgRect} from './svg/Svg';
+import {useInteractionState} from './useInteractionState';
 import * as React from 'react';
 import {
   Fragment as ReactFragment,
@@ -45,8 +54,35 @@ import {
 // (only global design tokens apply).
 const VarScopeContext: React.Context<?VarScope> = React.createContext(null);
 
+// The ancestor chain for stylesheet selector matching (`.card .title`,
+// `.dark` theming). Ancestor descriptors carry structure — tag, classes,
+// attributes — not live interaction state; ancestor-state selectors
+// (`.group:hover .x`) are a documented gap until states broadcast.
+// DOM-CSS-LIMITATION(ancestor-state-selectors)
+const ElementDescriptorContext: React.Context<ElementDescriptor | null> =
+  React.createContext(null);
+
+// Attributes that participate in selector matching, beyond data-*.
+const MATCHABLE_ATTRIBUTES = ['id', 'disabled', 'type', 'role', 'dir'];
+
+function buildAttributes(props: {[string]: unknown}): {[string]: unknown} {
+  const attributes: {[string]: unknown} = {};
+  for (const key of Object.keys(props)) {
+    if (key.startsWith('data-') || key.startsWith('aria-')) {
+      attributes[key] = props[key];
+    }
+  }
+  for (const key of MATCHABLE_ATTRIBUTES) {
+    if (props[key] != null) {
+      attributes[key] = props[key];
+    }
+  }
+  return attributes;
+}
+
 type IntrinsicProps = {
   __astryxTag: string,
+  className?: string,
   style?: {[string]: unknown},
   __stylexStyle?: {[string]: unknown},
   __stylexVars?: {[string]: unknown},
@@ -61,20 +97,52 @@ type IntrinsicProps = {
  */
 function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   const inheritedScope = React.useContext(VarScopeContext);
+  const parentDescriptor = React.useContext(ElementDescriptorContext);
+  // Any change to the stylesheet environment — installation, appearance,
+  // window size — re-renders every intrinsic so matches recompute.
+  React.useSyncExternalStore(subscribeCss, cssVersion);
   const {
     style: styleProp,
     __stylexStyle,
     __stylexVars,
     __startingStyle,
+    className,
     children,
     ...rest
   } = props;
+
+  // Interaction tracking for stylesheet pseudo-classes. The hook always
+  // runs (hook-order stability); its handlers attach only when some
+  // candidate rule actually gates on state.
+  const {state: interaction, handlers: interactionHandlers} =
+    useInteractionState({disabled: rest.disabled === true});
+
+  const descriptor: ElementDescriptor = {
+    tag: typeof __astryxTag === 'string' ? __astryxTag.toLowerCase() : null,
+    classes:
+      typeof className === 'string' && className !== ''
+        ? className.split(/\s+/).filter(Boolean)
+        : [],
+    attributes: buildAttributes(rest),
+    states: {},
+    parent: parentDescriptor,
+  };
+
+  const css = hasStylesheets()
+    ? resolveCssForElement(descriptor, {
+        hovered: interaction.hovered === true,
+        pressed: interaction.pressed === true,
+        focused: interaction.focused === true,
+        focusVisible: interaction.focused === true,
+        disabled: rest.disabled === true,
+      })
+    : {style: null, vars: null, dependsOnStates: false};
   // A naked `style` attribute written after a stylex spread clobbers the
   // spread's `style` — on the web they are separate channels (className +
   // inline style), so vendored sources write exactly that. props() plants the
   // resolved styles under `__stylexStyle` too; when the two diverge, the
   // inline override layers on top, per-property, as it would on the web.
-  const style =
+  const authorStyle =
     __stylexStyle != null &&
     styleProp != null &&
     styleProp !== __stylexStyle &&
@@ -82,6 +150,46 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
     !Array.isArray(styleProp)
       ? {...__stylexStyle, ...styleProp}
       : (styleProp ?? __stylexStyle);
+  // Stylesheet declarations sit UNDER stylex/inline styles: an inline style
+  // beats a matched rule, per the cascade.
+  let style = authorStyle;
+  if (css.style != null) {
+    if (
+      authorStyle != null &&
+      typeof authorStyle === 'object' &&
+      !Array.isArray(authorStyle)
+    ) {
+      style = {...css.style, ...authorStyle};
+    } else if (authorStyle == null) {
+      style = css.style;
+    }
+  }
+
+  // Custom properties: stylesheet-matched vars underlie stylex-declared ones.
+  const mergedVars =
+    css.vars != null
+      ? __stylexVars != null
+        ? {...css.vars, ...__stylexVars}
+        : css.vars
+      : __stylexVars;
+
+  // With no ancestor scope, stylesheet :root variables (scheme-aware) form
+  // the base the inheritance pass resolves against.
+  const baseScope = React.useMemo(() => {
+    if (inheritedScope != null || !hasStylesheets()) {
+      return inheritedScope;
+    }
+    const rootVars = rootVariables();
+    if (rootVars == null) {
+      return inheritedScope;
+    }
+    const scope = new Map<string, unknown>();
+    for (const key of Object.keys(rootVars)) {
+      scope.set(key, rootVars[key]);
+    }
+    return scope;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inheritedScope, cssVersion()]);
 
   // `@starting-style` (css-transitions-2 §3), the way the web runs it: the
   // element's first commit renders the starting values, the effect below
@@ -104,17 +212,23 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
 
   const {style: resolvedStyle, scope} = resolveInherited(
     style,
-    __stylexVars,
-    inheritedScope,
+    mergedVars,
+    baseScope,
   );
 
   const mapped = ELEMENT_COMPONENTS[__astryxTag];
   const mergedStyle =
     entryStyle != null ? [resolvedStyle, entryStyle] : resolvedStyle;
+  // Interaction handlers attach only when a candidate rule gates on state,
+  // composing WITH any handlers the author passed rather than replacing
+  // them.
+  const stateProps = css.dependsOnStates
+    ? composeInteractionHandlers(rest, interactionHandlers)
+    : rest;
   const hostProps =
     mergedStyle != null
-      ? {...rest, style: mergedStyle, children}
-      : {...rest, children};
+      ? {...stateProps, style: mergedStyle, children}
+      : {...stateProps, children};
   if (mapped != null) {
     // Behavior-mapped element (e.g. <input> → TextInput). For most of these
     // children are noise — a TextInput renders any it is given as text — so
@@ -129,8 +243,15 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
       const {children: _ignored, ...withoutChildren} = hostProps;
       componentProps = withoutChildren;
     }
-    const mappedElement = reactJsx(mapped, componentProps);
-    return scope === inheritedScope ? (
+    let mappedElement = reactJsx(mapped, componentProps);
+    if (hasStylesheets()) {
+      mappedElement = (
+        <ElementDescriptorContext.Provider value={descriptor}>
+          {mappedElement}
+        </ElementDescriptorContext.Provider>
+      );
+    }
+    return scope === baseScope ? (
       mappedElement
     ) : (
       <VarScopeContext.Provider value={scope}>
@@ -146,18 +267,51 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   // the two-commit `@starting-style` that swap would REMOUNT the element
   // between the starting commit and the final one — a fresh native view has
   // no previous value, so the native transition would never run.
-  const element = Array.isArray(children)
+  let element = Array.isArray(children)
     ? reactJsxs(__astryxTag, hostProps)
     : reactJsx(__astryxTag, hostProps);
 
+  // With stylesheets installed, descendants match ancestor compounds
+  // (`.card .title`) against this chain. No sheets, no provider.
+  if (hasStylesheets()) {
+    element = (
+      <ElementDescriptorContext.Provider value={descriptor}>
+        {element}
+      </ElementDescriptorContext.Provider>
+    );
+  }
+
   // Only elements that declare custom properties open a new scope; everything
   // else reuses the ancestor's provider, so the common case adds no provider.
-  if (scope === inheritedScope) {
+  if (scope === baseScope) {
     return element;
   }
   return (
     <VarScopeContext.Provider value={scope}>{element}</VarScopeContext.Provider>
   );
+}
+
+/**
+ * Merges the runtime's interaction handlers with author-passed ones: both
+ * run, author's first.
+ */
+function composeInteractionHandlers(
+  rest: {[string]: unknown},
+  handlers: {[string]: (e: $FlowFixMe) => void},
+): {[string]: unknown} {
+  const out: {[string]: unknown} = {...rest};
+  for (const name of Object.keys(handlers)) {
+    const authored = rest[name];
+    const own = handlers[name];
+    out[name] =
+      typeof authored === 'function'
+        ? (event: $FlowFixMe) => {
+            (authored as $FlowFixMe)(event);
+            own(event);
+          }
+        : own;
+  }
+  return out;
 }
 
 /**

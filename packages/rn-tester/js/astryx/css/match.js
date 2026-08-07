@@ -22,7 +22,7 @@
  * whole sheet.
  */
 
-import type {Compound, ComplexSelector, StyleRule, Stylesheet} from './parse';
+import type {ComplexSelector, Compound, StyleRule, Stylesheet} from './parse';
 
 export type InteractionStates = {
   readonly hovered?: boolean,
@@ -88,7 +88,10 @@ export function mediaConditionApplies(
 }
 
 function mediaTermApplies(term: string, ctx: MatchContext): boolean {
-  const inner = term.replace(/^\(|\)$/g, '').trim().toLowerCase();
+  const inner = term
+    .replace(/^\(|\)$/g, '')
+    .trim()
+    .toLowerCase();
   if (inner === 'screen' || inner === 'all') {
     return true;
   }
@@ -116,9 +119,7 @@ function mediaTermApplies(term: string, ctx: MatchContext): boolean {
     case 'pointer':
       return (value === 'coarse') === ctx.touch;
     case 'orientation':
-      return (
-        (value === 'landscape') === (ctx.windowWidth > ctx.windowHeight)
-      );
+      return (value === 'landscape') === ctx.windowWidth > ctx.windowHeight;
     default:
       return false;
   }
@@ -141,10 +142,7 @@ function attributeValue(el: ElementDescriptor, name: string): unknown {
   return el.attributes[name];
 }
 
-function compoundMatches(
-  compound: Compound,
-  el: ElementDescriptor,
-): boolean {
+function compoundMatches(compound: Compound, el: ElementDescriptor): boolean {
   if (compound.tag != null && compound.tag !== el.tag) {
     return false;
   }
@@ -326,7 +324,9 @@ type IndexedRule = {
 
 export type Matcher = {
   matchDeclarations: (el: ElementDescriptor, ctx: MatchContext) => MatchResult,
-  keyframes: (name: string) => Array<{offset: number, declarations: {[string]: string}}> | null,
+  keyframes: (
+    name: string,
+  ) => Array<{offset: number, declarations: {[string]: string}}> | null,
   // A sheet with no interactive selectors lets every element skip state
   // tracking wholesale.
   anyStateDependent: boolean,

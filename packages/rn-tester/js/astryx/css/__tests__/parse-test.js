@@ -222,10 +222,7 @@ describe('parseStylesheet', () => {
 
   it('threads source order across sheets', () => {
     const first = parseStylesheet('.a { color: red }', 0);
-    const second = parseStylesheet(
-      '.a { color: blue }',
-      first.rules.length,
-    );
+    const second = parseStylesheet('.a { color: blue }', first.rules.length);
     expect(second.rules[0].order).toBeGreaterThan(first.rules[0].order);
   });
 

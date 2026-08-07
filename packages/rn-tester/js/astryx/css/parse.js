@@ -335,7 +335,11 @@ function parseCompound(raw: string): CompoundResult {
       // Modeled as an attribute match on `id`; counts as an id for
       // specificity (selectors-4 §17).
       const [ident, next] = scanSelectorIdent(sel, i + 1);
-      compound.attributes.push({name: 'id', op: '=', value: unescapeIdent(ident)});
+      compound.attributes.push({
+        name: 'id',
+        op: '=',
+        value: unescapeIdent(ident),
+      });
       a++;
       i = next;
       continue;
@@ -479,7 +483,10 @@ export function compileSelector(raw: string): ComplexSelector {
         tokens.push({compoundText: current, combinatorBefore: pending});
         current = '';
         pending = nextPending;
-      } else if (nextPending != null && (pending == null || nextPending !== ' ')) {
+      } else if (
+        nextPending != null &&
+        (pending == null || nextPending !== ' ')
+      ) {
         // `a > b`: the first space set a descendant pending; the `>` then
         // upgrades it, and the space AFTER `>` must not downgrade it back.
         pending = nextPending;
@@ -605,7 +612,10 @@ type ParseContext = {
  * across multiple sheets so a later sheet's rules win ties against an
  * earlier one's, exactly like two <link> tags.
  */
-export function parseStylesheet(css: string, startOrder: number = 0): Stylesheet {
+export function parseStylesheet(
+  css: string,
+  startOrder: number = 0,
+): Stylesheet {
   const sheet: Stylesheet = {rules: [], keyframes: [], layerOrder: []};
   parseBlockContents(stripComments(css), {
     media: [],
@@ -705,7 +715,11 @@ function parseAtRule(css: string, at: number, ctx: ParseContext): number {
   if (prelude.startsWith('@keyframes')) {
     const name = prelude.slice('@keyframes'.length).trim();
     if (name !== '') {
-      ctx.sheet.keyframes.push({type: 'keyframes', name, stops: parseKeyframesBody(body)});
+      ctx.sheet.keyframes.push({
+        type: 'keyframes',
+        name,
+        stops: parseKeyframesBody(body),
+      });
     }
     return after;
   }

@@ -36,8 +36,14 @@ const config = {
     path.resolve(__dirname, '../react-native-test-library/apple'),
     path.resolve(__dirname, '../react-native-test-library/common'),
   ],
+  transformer: {
+    // `.css` imports load as raw text for the stylesheet engine
+    // (js/astryx/css); see css-transformer.js.
+    babelTransformerPath: path.resolve(__dirname, 'css-transformer.js'),
+  },
   resolver: {
     blockList: [/..\/react-native\/sdks\/hermes/],
+    sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'css'],
     extraNodeModules: {
       'react-native': path.resolve(__dirname, '../react-native'),
     },

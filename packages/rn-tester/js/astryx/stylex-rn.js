@@ -95,6 +95,15 @@ let keyframesCounter = 0;
 // web; the frames live here until a style references the name, at which point
 // resolution serializes them for the renderer's native animation engine.
 const keyframesRegistry: Map<string, RawStyle> = new Map();
+/**
+ * Registers keyframes under an AUTHORED name — the CSS engine's @keyframes
+ * land here so `animation-name: spin` resolves through the same registry and
+ * interception as stylex.keyframes().
+ */
+export function registerNamedKeyframes(name: string, frames: RawStyle): void {
+  keyframesRegistry.set(name, frames);
+}
+
 export function keyframes(frames: RawStyle): string {
   const name = `__rn_keyframes_${keyframesCounter++}`;
   keyframesRegistry.set(name, frames);
@@ -108,7 +117,7 @@ export function keyframes(frames: RawStyle): string {
  * resolved as FINAL, since the stops are consumed by the native engine and
  * no ancestor can supply a custom property later.
  */
-function resolveKeyframes(
+export function resolveKeyframes(
   name: string,
   state: InteractionState,
 ): ?ReadonlyArray<{[string]: unknown, offset: number}> {
@@ -697,7 +706,7 @@ function pickConditionalValue(
   return picked;
 }
 
-function resolveDeclarations(
+export function resolveDeclarations(
   merged: {[string]: unknown},
   state: InteractionState,
   inheritedScope: ?VarScope,
