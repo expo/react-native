@@ -35,7 +35,7 @@ type PopperContextValue = {
   setAnchorRect: Rect => void,
 };
 
-const PopperContext: React.Context<PopperContextValue | null> =
+export const PopperContext: React.Context<PopperContextValue | null> =
   React.createContext<PopperContextValue | null>(null);
 
 export function PopperRoot({children}: {children: React.Node}): React.Node {

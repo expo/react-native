@@ -20,7 +20,7 @@
 
 import {dataState, useControllableState} from './internals';
 import {Portal as LayerPortal} from './portal';
-import {PopperAnchor, PopperContent, PopperRoot} from './popper';
+import {PopperAnchor, PopperContent, PopperContext, PopperRoot} from './popper';
 import {Presence} from './presence';
 import {Slot} from './slot';
 import * as React from 'react';
@@ -132,10 +132,18 @@ export function Trigger(props: $FlowFixMe): React.Node {
 
 export function Portal(props: $FlowFixMe): React.Node {
   const {children} = props;
-  const {open} = React.useContext(TooltipContext);
+  const context = React.useContext(TooltipContext);
+  const popper = React.useContext(PopperContext);
+  // Context does not flow into top-layer content; re-provide (see dialog).
   return (
-    <Presence present={open}>
-      <LayerPortal>{children}</LayerPortal>
+    <Presence present={context.open}>
+      <LayerPortal>
+        <TooltipContext.Provider value={context}>
+          <PopperContext.Provider value={popper}>
+            {children}
+          </PopperContext.Provider>
+        </TooltipContext.Provider>
+      </LayerPortal>
     </Presence>
   );
 }
@@ -145,6 +153,7 @@ export function Content(props: $FlowFixMe): React.Node {
   const {open} = React.useContext(TooltipContext);
   // Tooltip content renders through its own Portal part in shadcn markup;
   // when authored WITHOUT one (older shadcn), portal it here.
+  const popper = React.useContext(PopperContext);
   const content = (
     <PopperContent
       side={side}
@@ -158,7 +167,11 @@ export function Content(props: $FlowFixMe): React.Node {
   );
   return (
     <Presence present={open}>
-      <LayerPortal>{content}</LayerPortal>
+      <LayerPortal>
+        <PopperContext.Provider value={popper}>
+          {content}
+        </PopperContext.Provider>
+      </LayerPortal>
     </Presence>
   );
 }

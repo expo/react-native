@@ -203,6 +203,12 @@ const APIs: Array<RNTesterModuleInfo> = (
     // ---- Fork work, pinned for quick access (same pattern as Components):
     // the renderer's CSS transitions and display: contents coverage.
     {
+      key: 'RadixExample',
+      pinned: true,
+      module: require('../examples/Astryx/RadixExample').default,
+      category: 'UI',
+    },
+    {
       key: 'CSSStylesheetsExample',
       pinned: true,
       module: require('../examples/Astryx/CSSStylesheetsExample').default,

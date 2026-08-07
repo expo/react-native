@@ -1,0 +1,113 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * Styling for the Radix demo, entirely through data attributes — the way
+ * shadcn styles Radix. Nothing in the demo JS sets colors.
+ */
+
+:root {
+  --rx-surface: rgb(255, 255, 255);
+  --rx-panel: rgb(242, 244, 247);
+  --rx-ink: rgb(16, 24, 40);
+  --rx-accent: rgb(21, 112, 239);
+  --rx-accent-ink: rgb(255, 255, 255);
+  --rx-ok: rgb(18, 183, 106);
+}
+
+.dark {
+  --rx-surface: rgb(16, 18, 27);
+  --rx-panel: rgb(30, 34, 45);
+  --rx-ink: rgb(242, 242, 247);
+  --rx-accent: rgb(84, 158, 255);
+  --rx-accent-ink: rgb(10, 14, 20);
+}
+
+.rx-page {
+  padding: 16px;
+  background-color: var(--rx-surface);
+}
+
+.rx-row {
+  margin-bottom: 12px;
+}
+
+.rx-title {
+  font-weight: 700;
+  color: var(--rx-ink);
+}
+
+.rx-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background-color: var(--rx-accent);
+  color: var(--rx-accent-ink);
+  font-weight: 600;
+}
+
+.rx-btn[data-state="open"] {
+  opacity: 0.75;
+}
+
+.rx-panel {
+  padding: 14px;
+  border-radius: 10px;
+  background-color: var(--rx-panel);
+}
+
+.rx-overlay {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.rx-toggle {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background-color: var(--rx-panel);
+  color: var(--rx-ink);
+}
+
+.rx-toggle[data-state="on"],
+.rx-toggle[data-state="checked"],
+.rx-toggle[data-state="active"] {
+  background-color: var(--rx-accent);
+  color: var(--rx-accent-ink);
+}
+
+.rx-switch {
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  padding: 2px;
+  background-color: var(--rx-panel);
+}
+
+.rx-switch[data-state="checked"] {
+  background-color: var(--rx-ok);
+}
+
+.rx-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background-color: var(--rx-surface);
+}
+
+.rx-thumb[data-state="checked"] {
+  margin-left: 18px;
+}
+
+.rx-item {
+  padding: 8px 12px;
+  color: var(--rx-ink);
+}
+
+.rx-item:active {
+  background-color: var(--rx-accent);
+}
+
+.rx-tabpanel {
+  padding: 10px;
+  color: var(--rx-ink);
+}

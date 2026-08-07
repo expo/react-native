@@ -81,10 +81,17 @@ export function Trigger(props: $FlowFixMe): React.Node {
 
 export function Portal(props: $FlowFixMe): React.Node {
   const {children} = props;
-  const {open} = React.useContext(DialogContext);
+  const context = React.useContext(DialogContext);
+  // The top layer renders presented content under the HOST's tree position,
+  // so callsite context does not flow (unlike a DOM portal). Every Portal
+  // re-provides its own context across the boundary.
   return (
-    <Presence present={open}>
-      <LayerPortal>{children}</LayerPortal>
+    <Presence present={context.open}>
+      <LayerPortal>
+        <DialogContext.Provider value={context}>
+          {children}
+        </DialogContext.Provider>
+      </LayerPortal>
     </Presence>
   );
 }

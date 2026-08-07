@@ -20,7 +20,7 @@
 import {DismissableLayer} from './dismissable-layer';
 import {dataState, useControllableState} from './internals';
 import {Portal as LayerPortal} from './portal';
-import {PopperAnchor, PopperContent, PopperRoot} from './popper';
+import {PopperAnchor, PopperContent, PopperContext, PopperRoot} from './popper';
 import {Presence} from './presence';
 import {Slot} from './slot';
 import * as React from 'react';
@@ -80,10 +80,18 @@ export function Trigger(props: $FlowFixMe): React.Node {
 
 export function Portal(props: $FlowFixMe): React.Node {
   const {children} = props;
-  const {open} = React.useContext(PopoverContext);
+  const context = React.useContext(PopoverContext);
+  const popper = React.useContext(PopperContext);
+  // Context does not flow into top-layer content; re-provide (see dialog).
   return (
-    <Presence present={open}>
-      <LayerPortal>{children}</LayerPortal>
+    <Presence present={context.open}>
+      <LayerPortal>
+        <PopoverContext.Provider value={context}>
+          <PopperContext.Provider value={popper}>
+            {children}
+          </PopperContext.Provider>
+        </PopoverContext.Provider>
+      </LayerPortal>
     </Presence>
   );
 }

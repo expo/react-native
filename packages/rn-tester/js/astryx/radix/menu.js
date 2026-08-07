@@ -22,7 +22,7 @@
 import {DismissableLayer} from './dismissable-layer';
 import {dataState, useControllableState} from './internals';
 import {Portal as LayerPortal} from './portal';
-import {PopperAnchor, PopperContent, PopperRoot} from './popper';
+import {PopperAnchor, PopperContent, PopperContext, PopperRoot} from './popper';
 import {Presence} from './presence';
 import {Slot} from './slot';
 import * as React from 'react';
@@ -113,10 +113,21 @@ export const ContextTrigger: (props: $FlowFixMe) => React.Node =
 
 export function Portal(props: $FlowFixMe): React.Node {
   const {children} = props;
-  const {open} = React.useContext(MenuContext);
+  const context = React.useContext(MenuContext);
+  const closeRoot = React.useContext(RootCloseContext);
+  const popper = React.useContext(PopperContext);
+  // Context does not flow into top-layer content; re-provide (see dialog).
   return (
-    <Presence present={open}>
-      <LayerPortal>{children}</LayerPortal>
+    <Presence present={context.open}>
+      <LayerPortal>
+        <MenuContext.Provider value={context}>
+          <RootCloseContext.Provider value={closeRoot}>
+            <PopperContext.Provider value={popper}>
+              {children}
+            </PopperContext.Provider>
+          </RootCloseContext.Provider>
+        </MenuContext.Provider>
+      </LayerPortal>
     </Presence>
   );
 }
@@ -314,21 +325,30 @@ export function SubTrigger(props: $FlowFixMe): React.Node {
 
 export function SubContent(props: $FlowFixMe): React.Node {
   const {children, sideOffset = 2, ...rest} = props;
-  const {open, setOpen} = React.useContext(MenuContext);
+  const context = React.useContext(MenuContext);
+  const closeRoot = React.useContext(RootCloseContext);
+  const popper = React.useContext(PopperContext);
+  const {open, setOpen} = context;
   return (
     <Presence present={open}>
       <LayerPortal>
-        <DismissableLayer onDismiss={() => setOpen(false)}>
-          <PopperContent
-            side="right"
-            align="start"
-            sideOffset={sideOffset}
-            role="menu"
-            {...rest}
-            data-state={dataState(open)}>
-            {children}
-          </PopperContent>
-        </DismissableLayer>
+        <MenuContext.Provider value={context}>
+          <RootCloseContext.Provider value={closeRoot}>
+            <PopperContext.Provider value={popper}>
+              <DismissableLayer onDismiss={() => setOpen(false)}>
+                <PopperContent
+                  side="right"
+                  align="start"
+                  sideOffset={sideOffset}
+                  role="menu"
+                  {...rest}
+                  data-state={dataState(open)}>
+                  {children}
+                </PopperContent>
+              </DismissableLayer>
+            </PopperContext.Provider>
+          </RootCloseContext.Provider>
+        </MenuContext.Provider>
       </LayerPortal>
     </Presence>
   );
