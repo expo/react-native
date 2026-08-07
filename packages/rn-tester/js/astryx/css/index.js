@@ -262,6 +262,21 @@ export type CssResolution = {
   dependsOnStates: boolean,
 };
 
+const QUIET_WEB_ONLY: Set<string> = new Set([
+  'cursor',
+  'outline',
+  'outlineOffset',
+  'outlineStyle',
+  'outlineWidth',
+  'outlineColor',
+  'appearance',
+  'clip',
+  'willChange',
+  'transitionBehavior',
+  'animationPlayState',
+  'transformOrigin',
+]);
+
 const EMPTY: CssResolution = {style: null, vars: null, dependsOnStates: false};
 
 /**
@@ -312,7 +327,14 @@ export function resolveCssForElement(
       }
       continue;
     }
-    merged[camelize(property)] = value;
+    const camel = camelize(property);
+    if (QUIET_WEB_ONLY.has(camel)) {
+      // Every real-world sheet carries these (Tailwind emits cursor and
+      // outline resets constantly); dropping them is correct and not worth a
+      // warning per element.
+      continue;
+    }
+    merged[camel] = value;
   }
 
   const style = resolveDeclarations(

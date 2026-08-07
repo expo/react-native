@@ -69,11 +69,36 @@ export function DismissableLayer(props: $FlowFixMe): React.Node {
     }
   };
 
-  const contentProps: $FlowFixMe = rest;
+  const contentProps: $FlowFixMe = {
+    ...rest,
+    // Same viewport-filling pass-through as FocusScope: absolutely
+    // positioned children (dialog panels, popper content) position against
+    // the top-layer entry through this box.
+    style: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      pointerEvents: 'box-none',
+      // Above sibling overlays (shadcn's carries z-50): the layer's content
+      // and backdrop must win hit-testing over a decorative overlay that
+      // renders before them.
+      zIndex: 10000,
+      ...rest.style,
+    },
+  };
   return (
     <>
       <div
-        style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0}}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 9999,
+        }}
         onPointerDown={outsidePress}
       />
       <div {...contentProps}>{children}</div>

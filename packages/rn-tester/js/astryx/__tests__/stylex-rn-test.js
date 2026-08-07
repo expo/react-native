@@ -178,7 +178,7 @@ describe('stylex-rn', () => {
     });
     expect(props.__startingStyle).toEqual({
       opacity: 0,
-      transform: 'translateY(24px)',
+      transform: [{translateY: 24}],
       width: 10,
     });
     // The transitions stay in the style itself; nothing extra is extracted.
@@ -191,7 +191,7 @@ describe('stylex-rn', () => {
     const props = stylex.props({
       '@starting-style': {transform: 'translateY(var(--nope, 6px))'},
     });
-    expect(props.__startingStyle).toEqual({transform: 'translateY(6px)'});
+    expect(props.__startingStyle).toEqual({transform: [{translateY: 6}]});
   });
 
   it('says nothing when there is no starting block', () => {

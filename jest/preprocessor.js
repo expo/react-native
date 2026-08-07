@@ -85,7 +85,9 @@ module.exports = {
     // must NOT self-compile against its own jsx module (a module cycle jest
     // cannot lazily break the way Metro does); astryx-layer tests exercise
     // the runtime through direct jsx() calls instead.
-    const usesAstryxJsx = /packages\/rn-tester\/js\/shadcn\//.test(file);
+    const usesAstryxJsx =
+      /packages\/rn-tester\/js\/shadcn\//.test(file) ||
+      /packages\/rn-tester\/js\/astryx\/radix\//.test(file);
     if (usesAstryxJsx) {
       const prePass = babelTransformSync(src, {
         filename: file,

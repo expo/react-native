@@ -32,6 +32,18 @@ export function FocusScope(props: $FlowFixMe): React.Node {
   const containerProps: $FlowFixMe = {
     ...rest,
     ...modalContainerProps(true),
+    // A viewport-filling pass-through box: web `position: fixed` content
+    // (mapped to absolute here) must position against the top-layer entry,
+    // not against this wrapper's static zero-height box. box-none keeps the
+    // wrapper transparent to touches while its children stay targetable.
+    style: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      pointerEvents: 'box-none',
+    },
   };
   return (
     <div ref={containerRef} {...containerProps}>

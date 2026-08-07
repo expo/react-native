@@ -133,12 +133,18 @@ export function resolveKeyframes(
     if (Number.isNaN(offset)) {
       continue;
     }
-    const resolved = resolveDeclarations(
-      {...(frames[key] as $FlowFixMe)},
-      state,
-      null,
-      true,
-    );
+    keepTransformStrings = true;
+    let resolved;
+    try {
+      resolved = resolveDeclarations(
+        {...(frames[key] as $FlowFixMe)},
+        state,
+        null,
+        true,
+      );
+    } finally {
+      keepTransformStrings = false;
+    }
     // Color values in ordinary styles are converted by the view config's
     // processColor; these stops bypass that path, so normalize here — the
     // native parser receives platform color ints.
@@ -540,6 +546,83 @@ const ROOT_FONT_SIZE = 16;
 // size rather than a length.
 const UNITLESS_NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)$/;
 
+// Set while resolving keyframe stops (single-threaded): their transforms
+// stay CSS strings for the native animation parser.
+let keepTransformStrings = false;
+
+/**
+ * A CSS transform string → RN's transform array. RN's own string handling is
+ * uneven across arch/flag combinations; emitting the array removes the
+ * dependency. Percent translates stay strings (supported); unknown functions
+ * abort to the raw string.
+ */
+function parseTransformString(
+  value: string,
+): Array<{[string]: string | number}> | null {
+  const out: Array<{[string]: string | number}> = [];
+  const re = /([a-zA-Z0-9]+)\(([^)]*)\)/g;
+  let matched = false;
+  for (let m = re.exec(value); m != null; m = re.exec(value)) {
+    matched = true;
+    const fn = m[1];
+    const args = m[2].split(',').map(a => a.trim());
+    const num = (a: string): string | number => {
+      if (a.endsWith('%')) {
+        return a;
+      }
+      if (/deg|rad$/.test(a)) {
+        return a;
+      }
+      const n = parseFloat(a);
+      return Number.isNaN(n)
+        ? a
+        : a.endsWith('rem') || a.endsWith('em')
+          ? n * 16
+          : n;
+    };
+    switch (fn) {
+      case 'translate':
+      case 'translate3d':
+        if (args[0] != null && args[0] !== '') {
+          out.push({translateX: num(args[0])});
+        }
+        if (args[1] != null && args[1] !== '') {
+          out.push({translateY: num(args[1])});
+        }
+        break;
+      case 'translateX':
+        out.push({translateX: num(args[0])});
+        break;
+      case 'translateY':
+        out.push({translateY: num(args[0])});
+        break;
+      case 'scale':
+      case 'scale3d':
+        out.push({scale: num(args[0]) as $FlowFixMe});
+        break;
+      case 'scaleX':
+        out.push({scaleX: num(args[0]) as $FlowFixMe});
+        break;
+      case 'scaleY':
+        out.push({scaleY: num(args[0]) as $FlowFixMe});
+        break;
+      case 'rotate':
+      case 'rotateZ':
+        out.push({rotate: args[0]});
+        break;
+      case 'skewX':
+        out.push({skewX: args[0]});
+        break;
+      case 'skewY':
+        out.push({skewY: args[0]});
+        break;
+      default:
+        return null; // unknown function: hand the string through untouched
+    }
+  }
+  return matched ? out : null;
+}
+
 // Keyword/value fixups per property.
 function convertValue(prop: string, value: string): unknown {
   // The `transition-*` longhands reach the native parser as the CSS strings
@@ -547,6 +630,30 @@ function convertValue(prop: string, value: string): unknown {
   // native side reads these props as strings, comma lists and units included.
   if (prop.startsWith('transition') || prop.startsWith('animation')) {
     return value;
+  }
+  if (prop === 'transform') {
+    // Keyframe stops keep the CSS string — the native animation parser reads
+    // it (parseUnprocessedTransformString); element styles take RN arrays.
+    if (keepTransformStrings) {
+      return value;
+    }
+    const parsed = parseTransformString(value);
+    return parsed ?? value;
+  }
+  if (prop === 'display' && value === 'grid') {
+    // No grid layout in the renderer (yet — upstream has it in flight); a
+    // single-column flex column is the closest degradation for the
+    // grid-as-stack usage shadcn's panels make of it.
+    // DOM-CSS-LIMITATION(display-grid-as-flex)
+    return 'flex';
+  }
+  if (prop === 'position' && value === 'fixed') {
+    // RN has no fixed positioning. Inside a top-layer entry — where every
+    // fixed element that matters (dialogs, sheets) actually renders — the
+    // entry wrapper IS the viewport, so absolute is exactly fixed semantics.
+    // For in-page fixed elements this degrades to absolute-in-container.
+    // DOM-CSS-LIMITATION(position-fixed-as-absolute)
+    return 'absolute';
   }
   if (prop === 'overflow') {
     if (value === 'clip') {

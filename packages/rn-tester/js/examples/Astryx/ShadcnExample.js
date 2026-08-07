@@ -16,13 +16,9 @@ import {installStylesheet} from '../../astryx/css';
 // Vendored shadcn/ui sources, UNMODIFIED, running on: the stylesheet engine
 // (their Tailwind build), the Radix shims (their primitives), the intrinsics
 // runtime (their markup). $FlowFixMe on each: Metro resolves, Flow cannot.
+// prettier-ignore
 // $FlowFixMe[cannot-resolve-module]
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '../../shadcn/ui/accordion';
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from '../../shadcn/ui/accordion';
 // $FlowFixMe[cannot-resolve-module]
 import {Alert, AlertDescription, AlertTitle} from '../../shadcn/ui/alert';
 // $FlowFixMe[cannot-resolve-module]
