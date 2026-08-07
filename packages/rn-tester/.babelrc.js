@@ -26,6 +26,7 @@ module.exports = {
       test: [
         path.join(__dirname, 'js', 'astryx'),
         path.join(__dirname, 'js', 'examples', 'Astryx'),
+        path.join(__dirname, 'js', 'shadcn'),
       ],
       plugins: [
         [

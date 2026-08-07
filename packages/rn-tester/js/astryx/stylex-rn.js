@@ -340,12 +340,16 @@ function calcParsePrimary(p: CalcParser): ?number {
     p.pos++;
     return v;
   }
-  const m = /^[+-]?(\d+\.?\d*|\.\d+)(px)?/.exec(p.src.slice(p.pos));
+  const m = /^[+-]?(\d+\.?\d*|\.\d+)(px|rem|em)?/.exec(p.src.slice(p.pos));
   if (m == null) {
     return null;
   }
   p.pos += m[0].length;
-  return parseFloat(m[0]);
+  const n = parseFloat(m[0]);
+  // rem/em normalize to the same fixed 16px root the rest of the runtime
+  // uses, so mixed-unit calcs (Tailwind's `calc(0.5rem - 2px)` radii)
+  // evaluate instead of dropping.
+  return m[2] === 'rem' || m[2] === 'em' ? n * 16 : n;
 }
 
 function calcParseProduct(p: CalcParser): ?number {
@@ -422,6 +426,47 @@ function resolveString(
   result = substituteLightDark(result, currentSchemeIsDark());
   // After both, so a mix's arguments are concrete colours by the time it runs.
   result = substituteColorMix(result);
+  result = substituteModernHsl(result);
+  return result;
+}
+
+/**
+ * css-color-4 slash-alpha hsl — `hsl(222.2 47.4% 11.2% / 0.9)`, the form
+ * Tailwind emits for `bg-primary/90` — normalized to the comma form RN's
+ * color parser accepts. Space-only (no alpha) already parses; only the
+ * slash needs rewriting.
+ */
+function substituteModernHsl(value: string): string {
+  if (!value.includes('hsl(') || !value.includes('/')) {
+    return value;
+  }
+  let result = value;
+  let cursor = 0;
+  while (true) {
+    const call = findCall(result, 'hsl', cursor);
+    if (call == null) {
+      break;
+    }
+    const inner = result.slice(call.open + 1, call.close);
+    const slash = inner.indexOf('/');
+    if (slash === -1) {
+      cursor = call.close + 1;
+      continue;
+    }
+    const channels = inner
+      .slice(0, slash)
+      .trim()
+      .split(/[\s,]+/);
+    const alpha = inner.slice(slash + 1).trim();
+    if (channels.length !== 3 || alpha === '') {
+      cursor = call.close + 1;
+      continue;
+    }
+    const rewritten = `hsla(${channels.join(', ')}, ${alpha})`;
+    result =
+      result.slice(0, call.start) + rewritten + result.slice(call.close + 1);
+    cursor = call.start + rewritten.length;
+  }
   return result;
 }
 
@@ -482,7 +527,6 @@ const DROPPED_PREFIXES = [
   'clipPath',
   'mask',
   'content',
-  'whiteSpace',
 ];
 
 function isDroppedProperty(prop: string): boolean {

@@ -54,6 +54,39 @@ const config = {
       // '@radix-ui/react-*' verbatim; each id resolves to the shim
       // implementing that package's public surface over the fork's machinery
       // (js/astryx/radix).
+      // The vendored shadcn sources (js/shadcn/ui) import their world by the
+      // upstream names; each resolves to the fork's implementation.
+      if (moduleName === '@/lib/utils') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js', 'shadcn', 'lib', 'utils.js'),
+        };
+      }
+      if (moduleName.startsWith('@/registry/default/ui/')) {
+        const component = moduleName.slice('@/registry/default/ui/'.length);
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(
+            __dirname,
+            'js',
+            'shadcn',
+            'ui',
+            component + '.tsx',
+          ),
+        };
+      }
+      if (moduleName === 'class-variance-authority') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js', 'shadcn', 'lib', 'cva.js'),
+        };
+      }
+      if (moduleName === 'lucide-react') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js', 'shadcn', 'lib', 'lucide.js'),
+        };
+      }
       if (moduleName.startsWith('@radix-ui/')) {
         const radixName = moduleName.slice('@radix-ui/'.length);
         return {
