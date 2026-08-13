@@ -137,6 +137,10 @@ file(GLOB SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/render/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/oss/*.cpp
+    # Native code from a provider outside react-native, linked like an app would
+    # link it. Empty today — elements built on the generic backings need none —
+    # and here for the ones that will, such as an <img> backed by expo-image.
+    ${REACT_ANDROID_DIR}/../../expo-intrinsics/cpp/*.cpp
 )
 add_executable(fantom_tester ${SOURCES})
 

@@ -58,6 +58,8 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   textTransform = textAttributes.textTransform.has_value()
       ? textAttributes.textTransform
       : textTransform;
+  whiteSpace = textAttributes.whiteSpace.has_value() ? textAttributes.whiteSpace
+                                                     : whiteSpace;
 
   // Paragraph Styles
   lineHeight = !std::isnan(textAttributes.lineHeight)
@@ -144,6 +146,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              accessibilityRole,
              role,
              textTransform,
+             whiteSpace,
              textEffects) ==
       std::tie(
              rhs.foregroundColor,
@@ -168,6 +171,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              rhs.accessibilityRole,
              rhs.role,
              rhs.textTransform,
+             rhs.whiteSpace,
              rhs.textEffects) &&
       floatEquality(maxFontSizeMultiplier, rhs.maxFontSizeMultiplier) &&
       floatEquality(opacity, rhs.opacity) &&
@@ -178,13 +182,43 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
       floatEquality(textShadowRadius, rhs.textShadowRadius);
 }
 
+/*
+ * The default body text size — the size text renders at when nothing sets one.
+ *
+ * React Native's historical default is 14, which is neither the web's 16px root
+ * nor what either platform uses for body copy: iOS sets body text at 17pt
+ * (`UIFont.systemFontSize`, and what `preferredFont(forTextStyle: .body)`
+ * returns at the default content size), and Material's `bodyLarge` is 16sp.
+ * Prose left at 14 reads noticeably small next to any other app on the phone.
+ *
+ * Native wins over the web here deliberately, and the deviation from 16px is
+ * stated in the user-agent stylesheet's `ROOT_FONT_SIZE`, which must stay in
+ * step with this.
+ *
+ * ## Why this is here and not in the element cascade
+ *
+ * It was tried there first, on the reasoning that only *documents* should get
+ * the native size and a plain `<Text>` should keep 14. That split is
+ * inconsistent, and a test named the invariant it breaks:
+ * `<View>{'hi'}</View>` must measure the same as `<View><Text>hi</Text></View>`
+ * — the premise string children rests on. Seeding only the cascade gave the
+ * bare string 17pt and the `<Text>` 20pt of line box at 14, because a
+ * paragraph takes its base attributes from HERE rather than from the cascade.
+ * One default in one place is the only version of this that holds together.
+ */
+#if defined(__APPLE__)
+static constexpr Float kDefaultFontSize = 17.0;
+#else
+static constexpr Float kDefaultFontSize = 16.0;
+#endif
+
 TextAttributes TextAttributes::defaultTextAttributes() {
   static auto textAttributes = [] {
     auto defaultAttrs = TextAttributes{};
     // Non-obvious (can be different among platforms) default text attributes.
     defaultAttrs.foregroundColor = blackColor();
     defaultAttrs.backgroundColor = clearColor();
-    defaultAttrs.fontSize = 14.0;
+    defaultAttrs.fontSize = kDefaultFontSize;
     defaultAttrs.fontSizeMultiplier = 1.0;
     return defaultAttrs;
   }();

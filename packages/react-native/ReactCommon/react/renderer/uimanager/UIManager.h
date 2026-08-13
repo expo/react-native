@@ -153,6 +153,15 @@ class UIManager final : public ShadowTreeDelegate {
       RawProps props,
       InstanceHandle::Shared instanceHandle) const;
 
+  /*
+   * Creates a first-class text node ("#text", DOM `Text`/CharacterData) holding
+   * `text` (text-children-plan.md §3.F). The host-config counterpart of
+   * `createTextInstance`; the character data is set directly (no RawProps
+   * parsing), and the node has a real family/`instanceHandle` for DOM traversal.
+   */
+  std::shared_ptr<ShadowNode> createTextNode(Tag tag, const std::string &text, SurfaceId surfaceId, InstanceHandle::Shared instanceHandle)
+      const;
+
   std::shared_ptr<ShadowNode> cloneNode(
       const ShadowNode &shadowNode,
       const std::shared_ptr<const std::vector<std::shared_ptr<const ShadowNode>>> &children,

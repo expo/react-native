@@ -7,6 +7,8 @@
 
 #include "BaseParagraphProps.h"
 
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+
 #include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/core/propsConversions.h>
@@ -20,8 +22,13 @@ BaseParagraphProps::BaseParagraphProps(
     const PropsParserContext& context,
     const BaseParagraphProps& sourceProps,
     const RawProps& rawProps)
-    : ViewProps(context, sourceProps, rawProps),
-      BaseTextProps(context, sourceProps, rawProps),
+    : ViewProps(
+          context,
+          sourceProps,
+          rawProps,
+          nullptr,
+          /*parseInheritedTextProps*/ false),
+      BaseTextProps(context, sourceProps, rawProps, /*parseInlineBox*/ false),
       paragraphAttributes(convertRawProp(
           context,
           rawProps,
@@ -39,6 +46,29 @@ BaseParagraphProps::BaseParagraphProps(
           "onTextLayout",
           sourceProps.onTextLayout,
           {})) {
+  if (ReactNativeFeatureFlags::enableStringChildren()) {
+    // The inheritable text fields for the element cascade (a paragraph can be
+    // a cascade SOURCE for real children — inline attachments and their
+    // subtrees). BaseTextProps already probed these exact style keys into
+    // `textAttributes`; copy the parsed values instead of probing rawProps a
+    // second time — the double parse measured +33% on <Text>-heavy mounts.
+    // `whiteSpace` is the one key TextAttributes does not carry (it is
+    // cascade-only), so it keeps its probe.
+    inheritedColor = textAttributes.foregroundColor;
+    inheritedFontSize = textAttributes.fontSize;
+    inheritedFontFamily = textAttributes.fontFamily;
+    inheritedFontWeight = textAttributes.fontWeight;
+    inheritedFontStyle = textAttributes.fontStyle;
+    inheritedFontVariant = textAttributes.fontVariant;
+    inheritedLetterSpacing = textAttributes.letterSpacing;
+    inheritedLineHeight = textAttributes.lineHeight;
+    inheritedTextAlign = textAttributes.alignment;
+    inheritedTextTransform = textAttributes.textTransform;
+    inheritedWhiteSpace = convertRawProp(
+        context, rawProps, "whiteSpace", sourceProps.inheritedWhiteSpace, {});
+    hasInheritedTextProps = computeHasInheritedTextProps();
+  }
+
   /*
    * These props are applied to `View`, therefore they must not be a part of
    * base text attributes.

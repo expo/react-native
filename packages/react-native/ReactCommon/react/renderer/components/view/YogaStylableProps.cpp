@@ -26,6 +26,31 @@ YogaStylableProps::YogaStylableProps(
     : Props(context, sourceProps, rawProps, filterObjectKeys),
       yogaStyle(convertRawProp(context, rawProps, sourceProps.yogaStyle)) {
   convertRawPropAliases(context, sourceProps, rawProps);
+
+  displayBlock = sourceProps.displayBlock;
+  displayInline = sourceProps.displayInline;
+  displayInlineAtomic = sourceProps.displayInlineAtomic;
+  displayAuthored = sourceProps.displayAuthored;
+  if (const auto* rawDisplay = rawProps.at("display", nullptr, nullptr)) {
+    displayAuthored = true;
+    const auto displayValue = rawDisplay->hasValue() &&
+            rawDisplay->hasType<std::string>()
+        ? (std::string)*rawDisplay
+        : std::string{};
+    // `display` sets an OUTER and an INNER display (css-display-3 §2).
+    // `inline-block` is `inline flow-root`: inline on the outside, but BLOCK
+    // on the inside, so its children stack as block boxes exactly like a
+    // `<div>`'s. `inline-flex` is `inline flex` and keeps a flex inner
+    // display. Recording the inner display is what makes that difference real
+    // rather than incidental — until now both were left as Yoga's flex box,
+    // and an inline-block only stacked its children because React Native's
+    // flex direction happens to default to column.
+    displayBlock = displayValue == "block" || displayValue == "inline-block";
+    displayInline = displayValue == "inline" ||
+        displayValue == "inline-flex" || displayValue == "inline-block";
+    displayInlineAtomic =
+        displayValue == "inline-flex" || displayValue == "inline-block";
+  }
 };
 
 template <typename T>
@@ -123,6 +148,33 @@ void YogaStylableProps::setProp(
 
   Props::setProp(context, hash, propName, value);
 
+  if (hash == CONSTEXPR_RAW_PROPS_KEY_HASH("display")) {
+    displayAuthored = true;
+    const auto displayValue =
+        value.hasValue() && value.hasType<std::string>()
+        ? (std::string)value
+        : std::string{};
+    // `display` sets an OUTER and an INNER display (css-display-3 §2).
+    // `inline-block` is `inline flow-root`: inline on the outside, but BLOCK
+    // on the inside, so its children stack as block boxes exactly like a
+    // `<div>`'s. `inline-flex` is `inline flex` and keeps a flex inner
+    // display. Recording the inner display is what makes that difference real
+    // rather than incidental — until now both were left as Yoga's flex box,
+    // and an inline-block only stacked its children because React Native's
+    // flex direction happens to default to column.
+    displayBlock = displayValue == "block" || displayValue == "inline-block";
+    displayInline = displayValue == "inline" ||
+        displayValue == "inline-flex" || displayValue == "inline-block";
+    displayInlineAtomic =
+        displayValue == "inline-flex" || displayValue == "inline-block";
+  }
+
+  // NOTE: this switch is the *per-prop update* path. It is NOT where `style`
+  // is parsed when props are built from scratch — that is the
+  // `convertRawProp` list in propsConversions.h, which every Yoga style prop
+  // must ALSO appear in (plus the JS allowlist in
+  // ReactNativeStyleAttributes.js). See the comment there; a prop wired only
+  // here never reaches Yoga.
   switch (hash) {
     REBUILD_FIELD_SWITCH_CASE_YSP(direction, setDirection);
     REBUILD_FIELD_SWITCH_CASE_YSP(flexDirection, setFlexDirection);
@@ -133,6 +185,8 @@ void YogaStylableProps::setProp(
     REBUILD_FIELD_SWITCH_CASE_YSP(flexWrap, setFlexWrap);
     REBUILD_FIELD_SWITCH_CASE_YSP(overflow, setOverflow);
     REBUILD_FIELD_SWITCH_CASE_YSP(display, setDisplay);
+    REBUILD_FIELD_SWITCH_CASE2(floatSide, setFloatSide, "float");
+    REBUILD_FIELD_SWITCH_CASE_YSP(clear, setClear);
     REBUILD_FIELD_SWITCH_CASE_YSP(flex, setFlex);
     REBUILD_FIELD_SWITCH_CASE_YSP(flexGrow, setFlexGrow);
     REBUILD_FIELD_SWITCH_CASE_YSP(flexShrink, setFlexShrink);
