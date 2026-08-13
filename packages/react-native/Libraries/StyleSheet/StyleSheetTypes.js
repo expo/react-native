@@ -58,10 +58,38 @@ export type CursorValue = 'auto' | 'pointer';
 type ____LayoutStyle_Internal = Readonly<{
   /** `display` sets the display type of this component.
    *
-   *  It works similarly to `display` in CSS, but only support 'flex' and 'none'.
-   *  'flex' is the default.
+   *  It works similarly to `display` in CSS. 'flex' (the default) makes the
+   *  element a flex container; 'block' makes it a CSS block container (a true
+   *  block formatting context under the text-children feature, otherwise
+   *  emulated on flex); 'inline' makes it an atomic inline-level box that
+   *  flows in a block container's inline formatting context (in a flex
+   *  container it is blockified into a regular flex item, as on web);
+   *  'none' hides it; 'contents' removes the box itself.
    */
-  display?: 'none' | 'flex' | 'contents',
+  display?:
+    | 'none'
+    | 'flex'
+    | 'block'
+    | 'inline'
+    // Inline-level boxes that establish a formatting context of their own
+    // (css-display-3 §2): inline-outer with flex or flow-root inner. Both are
+    // atomic — they sit in a line like a word but lay their contents out
+    // themselves — and both are implemented natively; they were missing here,
+    // so authoring either was a type error even though it worked.
+    | 'inline-flex'
+    | 'inline-block'
+    | 'contents',
+
+  /** `float` takes a box out of the normal flow and packs it against one side
+   *  of its block container, per CSS2 §9.5. Honored inside `display:'block'`
+   *  containers only (flex containers ignore it, as on the web).
+   */
+  float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end',
+
+  /** `clear` places a box below any preceding floats on the given side(s)
+   *  (CSS2 §9.5.2). Honored inside `display:'block'` containers only.
+   */
+  clear?: 'none' | 'left' | 'right' | 'both' | 'inline-start' | 'inline-end',
 
   /** `width` sets the width of this component.
    *
@@ -832,6 +860,35 @@ type ____BlendMode_Internal =
 
 export type ____ViewStyle_InternalBase = Readonly<{
   backfaceVisibility?: 'visible' | 'hidden',
+  /**
+   * `transition` (css-transitions-1), as the four longhands. When a declared
+   * property's value changes, the renderer animates from the previous value —
+   * off the JavaScript thread, driven by the platform display link, gated
+   * behind `useSharedAnimatedBackend`. Comma-separated lists zip by index, and
+   * shorter lists repeat, exactly as on the web.
+   *
+   * Transitionable so far: `opacity`, `background-color`, `border-color`,
+   * `transform` (and `all`, meaning that set). Other property names are
+   * accepted and ignored: the value still applies, immediately.
+   */
+  transitionProperty?: string,
+  transitionDuration?: string | number,
+  transitionDelay?: string | number,
+  transitionTimingFunction?: string,
+  /**
+   * `animation` (css-animations-1), run by the same renderer engine as
+   * transitions. `animationKeyframes` is a JSON string of pre-resolved stops
+   * (`[{offset, opacity?, backgroundColor?, borderColor?, transform?}, ...]`)
+   * — a style layer such as Astryx serializes its `@keyframes` rules into it.
+   * Animatable properties match the transitionable set.
+   */
+  animationKeyframes?: string,
+  animationDuration?: string | number,
+  animationDelay?: string | number,
+  animationTimingFunction?: string,
+  animationIterationCount?: string | number,
+  animationDirection?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse',
+  animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both',
   backgroundColor?: ____ColorValue_Internal,
   borderColor?: ____ColorValue_Internal,
   /**
@@ -1028,6 +1085,35 @@ type ____TextStyle_InternalBase = Readonly<{
   textDecorationStyle?: 'solid' | 'double' | 'dotted' | 'dashed' | 'wavy',
   textDecorationColor?: ____ColorValue_Internal,
   textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase',
+  /**
+   * `white-space` (css-text-3 §3). A shorthand over three independent
+   * behaviours — whether segment breaks survive, whether runs of spaces and
+   * tabs survive, and whether a line that does not fit wraps:
+   *
+   *     value          newlines    spaces/tabs   wraps
+   *     normal         collapse    collapse      yes
+   *     pre            preserve    preserve      no
+   *     nowrap         collapse    collapse      no
+   *     pre-wrap       preserve    preserve      yes
+   *     pre-line       preserve    collapse      yes
+   *     break-spaces   preserve    preserve      yes
+   *
+   * `break-spaces` behaves as `pre-wrap`; they differ only in whether a run of
+   * preserved spaces at a wrap point hangs past the edge or wraps, and hanging
+   * is what both platform text engines do.
+   *
+   *
+   * Applies to elements — `<pre>`, `<div>` and the rest — and to the text
+   * inside them, which is the whitespace model this property comes from. It
+   * has NO effect on `<Text>`, on either platform: `<Text>` predates the DOM
+   * work, already preserves whitespace and newlines as authored, and never had
+   * a collapsing pass for `pre` to turn off. Only the no-wrapping half would
+   * mean anything there, and it is not implemented rather than implemented on
+   * one platform. Accepted on a `<Text>` style only because a TextStyle is a
+   * ViewStyle; it is ignored.
+   */
+  whiteSpace?:
+    'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',
   userSelect?: 'auto' | 'text' | 'none' | 'contain' | 'all',
   verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
   writingDirection?: 'auto' | 'ltr' | 'rtl',
