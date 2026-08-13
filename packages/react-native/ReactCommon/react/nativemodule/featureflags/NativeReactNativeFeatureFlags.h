@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<dff9379b2aa73e50088d4be72cd1c359>>
+ * @generated SignedSource<<5cdcabed4ebf2941bb5e6ea73f7e212a>>
  */
 
 /**
@@ -136,6 +136,8 @@ class NativeReactNativeFeatureFlags
 
   bool enableResizeObserverByDefault(jsi::Runtime& runtime);
 
+  bool enableStringChildren(jsi::Runtime& runtime);
+
   bool enableSwiftUIBasedFilters(jsi::Runtime& runtime);
 
   bool enableViewCulling(jsi::Runtime& runtime);
@@ -151,6 +153,10 @@ class NativeReactNativeFeatureFlags
   bool enableViewRecyclingForView(jsi::Runtime& runtime);
 
   bool enableVirtualViewContainerStateExperimental(jsi::Runtime& runtime);
+
+  bool enableYogaDisplayBlock(jsi::Runtime& runtime);
+
+  bool fixDifferentiatorParentTagForUnflattenCase(jsi::Runtime& runtime);
 
   bool fixMappingOfEventPrioritiesBetweenFabricAndReact(jsi::Runtime& runtime);
 

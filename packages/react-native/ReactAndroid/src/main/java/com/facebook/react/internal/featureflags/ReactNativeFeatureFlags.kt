@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<86390dbd6b2c57cb4f8cdd7cb73cc1f7>>
+ * @generated SignedSource<<0686185e1459078def9ebc6cde770cfa>>
  */
 
 /**
@@ -325,6 +325,12 @@ public object ReactNativeFeatureFlags {
   public fun enableResizeObserverByDefault(): Boolean = accessor.enableResizeObserverByDefault()
 
   /**
+   * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
+   */
+  @JvmStatic
+  public fun enableStringChildren(): Boolean = accessor.enableStringChildren()
+
+  /**
    * When enabled, it will use SwiftUI for filter effects like blur on iOS.
    */
   @JvmStatic
@@ -371,6 +377,18 @@ public object ReactNativeFeatureFlags {
    */
   @JvmStatic
   public fun enableVirtualViewContainerStateExperimental(): Boolean = accessor.enableVirtualViewContainerStateExperimental()
+
+  /**
+   * Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableStringChildren; the emulation remains the flag-off fallback.
+   */
+  @JvmStatic
+  public fun enableYogaDisplayBlock(): Boolean = accessor.enableYogaDisplayBlock()
+
+  /**
+   * Fix incorrect parentTag passed as parentTagForUpdate in the unflatten-unflatten branch of calculateShadowViewMutationsFlattener, which causes UPDATE mutations to reference a parent being created in the same batch.
+   */
+  @JvmStatic
+  public fun fixDifferentiatorParentTagForUnflattenCase(): Boolean = accessor.fixDifferentiatorParentTagForUnflattenCase()
 
   /**
    * Uses the default event priority instead of the discreet event priority by default when dispatching events from Fabric to React.

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<3e939eebe846d12cab15905db8efba18>>
+ * @generated SignedSource<<a357a811b5afb80ee19b72102e1edaa5>>
  */
 
 /**
@@ -69,6 +69,7 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
   private var enablePreparedTextLayoutCache: Boolean? = null
   private var enablePropsUpdateReconciliationAndroidCache: Boolean? = null
   private var enableResizeObserverByDefaultCache: Boolean? = null
+  private var enableStringChildrenCache: Boolean? = null
   private var enableSwiftUIBasedFiltersCache: Boolean? = null
   private var enableViewCullingCache: Boolean? = null
   private var enableViewRecyclingCache: Boolean? = null
@@ -77,6 +78,8 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
   private var enableViewRecyclingForTextCache: Boolean? = null
   private var enableViewRecyclingForViewCache: Boolean? = null
   private var enableVirtualViewContainerStateExperimentalCache: Boolean? = null
+  private var enableYogaDisplayBlockCache: Boolean? = null
+  private var fixDifferentiatorParentTagForUnflattenCaseCache: Boolean? = null
   private var fixMappingOfEventPrioritiesBetweenFabricAndReactCache: Boolean? = null
   private var fixYogaFlexBasisFitContentInMainAxisCache: Boolean? = null
   private var fuseboxAssertSingleHostStateCache: Boolean? = null
@@ -552,6 +555,15 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
     return cached
   }
 
+  override fun enableStringChildren(): Boolean {
+    var cached = enableStringChildrenCache
+    if (cached == null) {
+      cached = ReactNativeFeatureFlagsCxxInterop.enableStringChildren()
+      enableStringChildrenCache = cached
+    }
+    return cached
+  }
+
   override fun enableSwiftUIBasedFilters(): Boolean {
     var cached = enableSwiftUIBasedFiltersCache
     if (cached == null) {
@@ -620,6 +632,24 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
     if (cached == null) {
       cached = ReactNativeFeatureFlagsCxxInterop.enableVirtualViewContainerStateExperimental()
       enableVirtualViewContainerStateExperimentalCache = cached
+    }
+    return cached
+  }
+
+  override fun enableYogaDisplayBlock(): Boolean {
+    var cached = enableYogaDisplayBlockCache
+    if (cached == null) {
+      cached = ReactNativeFeatureFlagsCxxInterop.enableYogaDisplayBlock()
+      enableYogaDisplayBlockCache = cached
+    }
+    return cached
+  }
+
+  override fun fixDifferentiatorParentTagForUnflattenCase(): Boolean {
+    var cached = fixDifferentiatorParentTagForUnflattenCaseCache
+    if (cached == null) {
+      cached = ReactNativeFeatureFlagsCxxInterop.fixDifferentiatorParentTagForUnflattenCase()
+      fixDifferentiatorParentTagForUnflattenCaseCache = cached
     }
     return cached
   }

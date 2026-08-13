@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<8075ab58916ce356d5acac15888aff7a>>
+ * @generated SignedSource<<cd9b1ab8aa5409788e0f65ca83671d78>>
  * @flow strict
  * @noformat
  */
@@ -98,6 +98,7 @@ export type ReactNativeFeatureFlags = Readonly<{
   enablePreparedTextLayout: Getter<boolean>,
   enablePropsUpdateReconciliationAndroid: Getter<boolean>,
   enableResizeObserverByDefault: Getter<boolean>,
+  enableStringChildren: Getter<boolean>,
   enableSwiftUIBasedFilters: Getter<boolean>,
   enableViewCulling: Getter<boolean>,
   enableViewRecycling: Getter<boolean>,
@@ -106,6 +107,8 @@ export type ReactNativeFeatureFlags = Readonly<{
   enableViewRecyclingForText: Getter<boolean>,
   enableViewRecyclingForView: Getter<boolean>,
   enableVirtualViewContainerStateExperimental: Getter<boolean>,
+  enableYogaDisplayBlock: Getter<boolean>,
+  fixDifferentiatorParentTagForUnflattenCase: Getter<boolean>,
   fixMappingOfEventPrioritiesBetweenFabricAndReact: Getter<boolean>,
   fixYogaFlexBasisFitContentInMainAxis: Getter<boolean>,
   fuseboxAssertSingleHostState: Getter<boolean>,
@@ -412,6 +415,10 @@ export const enablePropsUpdateReconciliationAndroid: Getter<boolean> = createNat
  */
 export const enableResizeObserverByDefault: Getter<boolean> = createNativeFlagGetter('enableResizeObserverByDefault', false);
 /**
+ * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
+ */
+export const enableStringChildren: Getter<boolean> = createNativeFlagGetter('enableStringChildren', true);
+/**
  * When enabled, it will use SwiftUI for filter effects like blur on iOS.
  */
 export const enableSwiftUIBasedFilters: Getter<boolean> = createNativeFlagGetter('enableSwiftUIBasedFilters', false);
@@ -443,6 +450,14 @@ export const enableViewRecyclingForView: Getter<boolean> = createNativeFlagGette
  * Enables the experimental version of `VirtualViewContainerState`.
  */
 export const enableVirtualViewContainerStateExperimental: Getter<boolean> = createNativeFlagGetter('enableVirtualViewContainerStateExperimental', false);
+/**
+ * Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableStringChildren; the emulation remains the flag-off fallback.
+ */
+export const enableYogaDisplayBlock: Getter<boolean> = createNativeFlagGetter('enableYogaDisplayBlock', false);
+/**
+ * Fix incorrect parentTag passed as parentTagForUpdate in the unflatten-unflatten branch of calculateShadowViewMutationsFlattener, which causes UPDATE mutations to reference a parent being created in the same batch.
+ */
+export const fixDifferentiatorParentTagForUnflattenCase: Getter<boolean> = createNativeFlagGetter('fixDifferentiatorParentTagForUnflattenCase', true);
 /**
  * Uses the default event priority instead of the discreet event priority by default when dispatching events from Fabric to React.
  */

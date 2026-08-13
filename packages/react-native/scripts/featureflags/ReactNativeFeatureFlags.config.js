@@ -573,6 +573,17 @@ const definitions: FeatureFlagDefinitions = {
       },
       ossReleaseStage: 'none',
     },
+    enableStringChildren: {
+      defaultValue: true,
+      metadata: {
+        dateAdded: '2026-07-21',
+        description:
+          'Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).',
+        expectedReleaseValue: true,
+        purpose: 'experimentation',
+      },
+      ossReleaseStage: 'none',
+    },
     enableSwiftUIBasedFilters: {
       defaultValue: false,
       metadata: {
@@ -656,6 +667,28 @@ const definitions: FeatureFlagDefinitions = {
         dateAdded: '2025-10-09',
         description:
           'Enables the experimental version of `VirtualViewContainerState`.',
+        expectedReleaseValue: true,
+        purpose: 'experimentation',
+      },
+      ossReleaseStage: 'none',
+    },
+    enableYogaDisplayBlock: {
+      defaultValue: false,
+      metadata: {
+        dateAdded: '2026-07-21',
+        description:
+          "Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableStringChildren; the emulation remains the flag-off fallback.",
+        expectedReleaseValue: true,
+        purpose: 'experimentation',
+      },
+      ossReleaseStage: 'none',
+    },
+    fixDifferentiatorParentTagForUnflattenCase: {
+      defaultValue: true,
+      metadata: {
+        dateAdded: '2026-04-18',
+        description:
+          'Fix incorrect parentTag passed as parentTagForUpdate in the unflatten-unflatten branch of calculateShadowViewMutationsFlattener, which causes UPDATE mutations to reference a parent being created in the same batch.',
         expectedReleaseValue: true,
         purpose: 'experimentation',
       },

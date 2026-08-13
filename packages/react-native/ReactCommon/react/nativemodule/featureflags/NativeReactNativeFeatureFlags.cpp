@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<d032dbd4f066b7a8cf742b7f91f66c3b>>
+ * @generated SignedSource<<7b19b82aa750fa9464e59be90963ad49>>
  */
 
 /**
@@ -289,6 +289,11 @@ bool NativeReactNativeFeatureFlags::enableResizeObserverByDefault(
   return ReactNativeFeatureFlags::enableResizeObserverByDefault();
 }
 
+bool NativeReactNativeFeatureFlags::enableStringChildren(
+    jsi::Runtime& /*runtime*/) {
+  return ReactNativeFeatureFlags::enableStringChildren();
+}
+
 bool NativeReactNativeFeatureFlags::enableSwiftUIBasedFilters(
     jsi::Runtime& /*runtime*/) {
   return ReactNativeFeatureFlags::enableSwiftUIBasedFilters();
@@ -327,6 +332,16 @@ bool NativeReactNativeFeatureFlags::enableViewRecyclingForView(
 bool NativeReactNativeFeatureFlags::enableVirtualViewContainerStateExperimental(
     jsi::Runtime& /*runtime*/) {
   return ReactNativeFeatureFlags::enableVirtualViewContainerStateExperimental();
+}
+
+bool NativeReactNativeFeatureFlags::enableYogaDisplayBlock(
+    jsi::Runtime& /*runtime*/) {
+  return ReactNativeFeatureFlags::enableYogaDisplayBlock();
+}
+
+bool NativeReactNativeFeatureFlags::fixDifferentiatorParentTagForUnflattenCase(
+    jsi::Runtime& /*runtime*/) {
+  return ReactNativeFeatureFlags::fixDifferentiatorParentTagForUnflattenCase();
 }
 
 bool NativeReactNativeFeatureFlags::fixMappingOfEventPrioritiesBetweenFabricAndReact(
