@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<848355c91c5827383c35686d975ebb08>>
+ * @generated SignedSource<<83ce1e909f2885cee0b3952e878fc305>>
  * @flow strict
  * @noformat
  */
@@ -68,6 +68,7 @@ export interface Spec extends TurboModule {
   readonly enablePropsUpdateReconciliationAndroid?: () => boolean;
   readonly enableRuntimeSchedulerQueueClearingOnError?: () => boolean;
   readonly enableSchedulerDelegateInvalidation?: () => boolean;
+  readonly enableStringChildren?: () => boolean;
   readonly enableSwiftUIBasedFilters?: () => boolean;
   readonly enableViewCulling?: () => boolean;
   readonly enableViewRecycling?: () => boolean;
@@ -76,6 +77,7 @@ export interface Spec extends TurboModule {
   readonly enableViewRecyclingForText?: () => boolean;
   readonly enableViewRecyclingForView?: () => boolean;
   readonly enableVirtualViewContainerStateExperimental?: () => boolean;
+  readonly enableYogaDisplayBlock?: () => boolean;
   readonly fixDifferentiatorParentTagForUnflattenCase?: () => boolean;
   readonly fixMappingOfEventPrioritiesBetweenFabricAndReact?: () => boolean;
   readonly fixYogaFlexBasisFitContentInMainAxis?: () => boolean;

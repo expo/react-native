@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<77401595559dc52e1b2b206527deb341>>
+ * @generated SignedSource<<ee46404e70331c31f9e574fd9250714b>>
  */
 
 /**
@@ -198,6 +198,10 @@ bool ReactNativeFeatureFlags::enableSchedulerDelegateInvalidation() {
   return getAccessor().enableSchedulerDelegateInvalidation();
 }
 
+bool ReactNativeFeatureFlags::enableStringChildren() {
+  return getAccessor().enableStringChildren();
+}
+
 bool ReactNativeFeatureFlags::enableSwiftUIBasedFilters() {
   return getAccessor().enableSwiftUIBasedFilters();
 }
@@ -228,6 +232,10 @@ bool ReactNativeFeatureFlags::enableViewRecyclingForView() {
 
 bool ReactNativeFeatureFlags::enableVirtualViewContainerStateExperimental() {
   return getAccessor().enableVirtualViewContainerStateExperimental();
+}
+
+bool ReactNativeFeatureFlags::enableYogaDisplayBlock() {
+  return getAccessor().enableYogaDisplayBlock();
 }
 
 bool ReactNativeFeatureFlags::fixDifferentiatorParentTagForUnflattenCase() {

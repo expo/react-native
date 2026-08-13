@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<31af47566a5543079cc3b09567033a57>>
+ * @generated SignedSource<<ded40ef2c3f1077c91833b67779fed4b>>
  */
 
 /**
@@ -122,6 +122,8 @@ class NativeReactNativeFeatureFlags
 
   bool enableSchedulerDelegateInvalidation(jsi::Runtime& runtime);
 
+  bool enableStringChildren(jsi::Runtime& runtime);
+
   bool enableSwiftUIBasedFilters(jsi::Runtime& runtime);
 
   bool enableViewCulling(jsi::Runtime& runtime);
@@ -137,6 +139,8 @@ class NativeReactNativeFeatureFlags
   bool enableViewRecyclingForView(jsi::Runtime& runtime);
 
   bool enableVirtualViewContainerStateExperimental(jsi::Runtime& runtime);
+
+  bool enableYogaDisplayBlock(jsi::Runtime& runtime);
 
   bool fixDifferentiatorParentTagForUnflattenCase(jsi::Runtime& runtime);
 
