@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <react/renderer/attributedstring/InlineBoxDecorations.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/core/Sealable.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
@@ -30,6 +31,84 @@ class AttributedString : public Sealable, public DebugStringConvertible {
     std::string string;
     TextAttributes textAttributes;
     ShadowView parentShadowView;
+
+    /*
+     * CSS box decorations of the inline element that contributed this
+     * fragment (box-model-scope.md G2–G5). Carried on *every* fragment of the
+     * element so painting can find its full extent, while `isInlineBoxStart` /
+     * `isInlineBoxEnd` mark the element's edges — which is where the
+     * inline-axis margin/border/padding occupy advance (CSS2 §10.6.1). A
+     * wrapped box therefore pays for its edges once, not per line.
+     *
+     * Empty for essentially all text; engines that cannot express it ignore it.
+     */
+    /*
+     * For an attachment (an atomic inline box), the distance from the box's
+     * top to its baseline — what the text engine needs to sit it on the line's
+     * baseline (CSS2 §10.8.1). Equal to the box's height when it has no line
+     * boxes of its own, which is the synthesized bottom-edge baseline.
+     */
+    Float atomicInlineBaseline{0};
+
+    /*
+     * A forced line break from `<br>` (HTML §4.5.28).
+     *
+     * Marked explicitly rather than inferred from the fragment's element,
+     * because whitespace collapsing has to tell this newline — which is
+     * content — from an ordinary one in source text, which css-text-3 §3
+     * collapses to a space. Deriving it from the parent view does not work:
+     * `<br>` is a view-config alias of `<span>`, so that is the name it
+     * carries.
+     */
+    bool forcedBreak{false};
+
+    /*
+     * An inline element that contributed no text of its own — `<span></span>`.
+     *
+     * It still has a box: the web gives it zero width and the height of the
+     * line it sits on, and code measures empty inlines on purpose, as anchors.
+     * Without a fragment there is nothing to hang that box on, so an empty
+     * element gets an empty fragment and this flag, which says two things
+     * nothing else can: whitespace collapsing must not drop it for having no
+     * text, and the fragment-rect pass must answer with the caret box at its
+     * position rather than the nothing a zero-length glyph range returns.
+     */
+    bool isEmptyElement{false};
+
+    InlineBoxDecorations inlineBox{};
+    bool isInlineBoxStart{false};
+    bool isInlineBoxEnd{false};
+
+    /** Advance this fragment reserves before its glyphs. */
+    Float leadingInlineSpace() const
+    {
+      return isInlineBoxStart ? inlineBox.leadingInlineSpace() : 0;
+    }
+
+    /** Advance this fragment reserves after its glyphs. */
+    Float trailingInlineSpace() const
+    {
+      return isInlineBoxEnd ? inlineBox.trailingInlineSpace() : 0;
+    }
+
+    /**
+     * How far this fragment's border box extends above and below the line box,
+     * which is what `getBoundingClientRect()` has to include.
+     *
+     * Unlike the inline-axis edges, these apply to EVERY fragment of the
+     * element rather than only its first and last: a wrapped inline is one box
+     * per line, and `box-decoration-break: slice` (CSS §8.6, the initial value)
+     * draws the block-axis padding and border on each of them.
+     *
+     * Margin is excluded — this is the border box, and margin is outside it.
+     */
+    RectangleEdges<Float> blockAxisBoxEdges() const
+    {
+      return {
+          .top = inlineBox.padding.top + inlineBox.borderWidth.top,
+          .bottom = inlineBox.padding.bottom + inlineBox.borderWidth.bottom,
+      };
+    }
 
     /*
      * Returns true is the Fragment represents an attachment.
@@ -70,6 +149,17 @@ class AttributedString : public Sealable, public DebugStringConvertible {
    * Returns a read-only reference to a list of fragments.
    */
   const Fragments &getFragments() const;
+
+  /*
+   * The block-axis space that inline elements' decorations paint *outside* the
+   * line box: padding + border + outline, taking the largest of each edge.
+   *
+   * An inline box never grows the line box vertically (CSS2 §10.6.1) — it
+   * simply overflows it — so a platform view whose drawing surface is sized to
+   * the measured text will clip those decorations away entirely. Views make
+   * room with this without changing layout.
+   */
+  RectangleEdges<Float> inlineBoxBlockAxisOverflow() const;
 
   /*
    * Returns a reference to a list of fragments.

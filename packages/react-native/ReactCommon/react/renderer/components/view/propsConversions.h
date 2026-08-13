@@ -46,7 +46,33 @@ convertRawProp(const PropsParserContext &context, const RawProps &rawProps, cons
 
   yogaStyle.setOverflow(convertRawProp(context, rawProps, "overflow", sourceValue.overflow(), yogaStyle.overflow()));
 
+  // ---------------------------------------------------------------------
+  // ADDING A NEW YOGA STYLE PROP? It must be wired in THREE places or it is
+  // silently dropped — the prop simply never reaches native, with no error:
+  //
+  //   1. HERE (the `convertRawProp` list). This is the path that actually
+  //      parses `style` into `yoga::Style` on a full props build. Adding a
+  //      case to `YogaStylableProps::setProp` ALONE does nothing; that switch
+  //      is a different (per-prop update) path and never sees these on the
+  //      construction path. `display` is wired in both, which is the pattern
+  //      to copy.
+  //   2. `YogaStylableProps::setProp` (the REBUILD_FIELD_SWITCH_CASE macros),
+  //      for the per-prop update path.
+  //   3. `Libraries/Components/View/ReactNativeStyleAttributes.js` — the JS
+  //      allowlist used when diffing `style`. A key missing there is stripped
+  //      before it ever crosses the bridge.
+  //
+  // Learned the slow way while adding `float`/`clear`: only (2) and (3) were
+  // wired, so the props were inert. Worse, the first tests still *passed* —
+  // for `clear`, in-flow layout happens to produce the same numbers as the
+  // floated layout, so green tests hid a completely dead feature. When adding
+  // a layout prop, assert on a case whose result differs from the default
+  // behaviour, not just on a plausible number.
+  // ---------------------------------------------------------------------
   yogaStyle.setDisplay(convertRawProp(context, rawProps, "display", sourceValue.display(), yogaStyle.display()));
+  yogaStyle.setFloatSide(
+      convertRawProp(context, rawProps, "float", sourceValue.floatSide(), yogaStyle.floatSide()));
+  yogaStyle.setClear(convertRawProp(context, rawProps, "clear", sourceValue.clear(), yogaStyle.clear()));
 
   yogaStyle.setFlex(convertRawProp(context, rawProps, "flex", sourceValue.flex(), yogaStyle.flex()));
 

@@ -136,6 +136,11 @@ inline DisplayType displayTypeFromYGDisplay(YGDisplay display)
       return DisplayType::Flex;
     case YGDisplayGrid:
       return DisplayType::Grid;
+    case YGDisplayBlock:
+      // RN has no distinct block display metric; a native block container
+      // reports Flex, exactly as the flex emulation does — so the RN-observable
+      // displayType is identical on both paths (text-children-plan.md §3.A).
+      return DisplayType::Flex;
   }
 }
 
@@ -409,6 +414,75 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   react_native_expect(false);
 }
 
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::FloatSide &result)
+{
+  result = yoga::FloatSide::None;
+  react_native_expect(value.hasType<std::string>());
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  auto stringValue = (std::string)value;
+  if (stringValue == "none") {
+    return;
+  }
+  // The logical sides are kept AS logical. Flattening them here would need
+  // the resolved direction, which is a layout result and inherits, so a
+  // float's own props cannot carry it; `calculateBlockLayout` resolves them
+  // where the direction is known.
+  if (stringValue == "left") {
+    result = yoga::FloatSide::Left;
+    return;
+  }
+  if (stringValue == "right") {
+    result = yoga::FloatSide::Right;
+    return;
+  }
+  if (stringValue == "inline-start") {
+    result = yoga::FloatSide::InlineStart;
+    return;
+  }
+  if (stringValue == "inline-end") {
+    result = yoga::FloatSide::InlineEnd;
+    return;
+  }
+  LOG(ERROR) << "Could not parse yoga::FloatSide: " << stringValue;
+}
+
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::Clear &result)
+{
+  result = yoga::Clear::None;
+  react_native_expect(value.hasType<std::string>());
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  auto stringValue = (std::string)value;
+  if (stringValue == "none") {
+    return;
+  }
+  if (stringValue == "left") {
+    result = yoga::Clear::Left;
+    return;
+  }
+  if (stringValue == "right") {
+    result = yoga::Clear::Right;
+    return;
+  }
+  // Logical, resolved against the direction in `calculateBlockLayout`.
+  if (stringValue == "inline-start") {
+    result = yoga::Clear::InlineStart;
+    return;
+  }
+  if (stringValue == "inline-end") {
+    result = yoga::Clear::InlineEnd;
+    return;
+  }
+  if (stringValue == "both") {
+    result = yoga::Clear::Both;
+    return;
+  }
+  LOG(ERROR) << "Could not parse yoga::Clear: " << stringValue;
+}
+
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, yoga::Display &result)
 {
   result = yoga::Display::Flex;
@@ -427,6 +501,33 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   }
   if (stringValue == "contents") {
     result = yoga::Display::Contents;
+    return;
+  }
+  if (stringValue == "block") {
+    // display:'block' is emulated on Yoga flex primitives
+    // (text-children-plan.md §3.A); Yoga sees Flex, blockness is recorded in
+    // YogaStylableProps::displayBlock.
+    result = yoga::Display::Flex;
+    return;
+  }
+  if (stringValue == "inline" || stringValue == "inline-flex" ||
+      stringValue == "inline-block") {
+    // The inline-level displays never reach Yoga: inline-ness is resolved at
+    // box generation (YogaStylableProps::displayInline). In a block container
+    // the element flows as an inline box in the parent IFC; in a flex
+    // container it is blockified into a regular flex item (css-display-3
+    // §2.7), which is exactly Yoga's Flex default.
+    //
+    // DOM-CSS-LIMITATION(no-grid): `grid`/`inline-grid` are not handled here
+    // and fall through to the parse error below — Yoga has no grid engine, so
+    // this is a feature rather than a mapping.
+    //
+    // Only the *outer* display differs between these three. The inner display
+    // — flow for `inline`, flex for `inline-flex`, flow-root for
+    // `inline-block` — is Yoga's flex box either way; what separates them is
+    // that `inline-flex`/`inline-block` establish a formatting context and so
+    // are always atomic, recorded as YogaStylableProps::displayInlineAtomic.
+    result = yoga::Display::Flex;
     return;
   }
   LOG(ERROR) << "Could not parse yoga::Display: " << stringValue;

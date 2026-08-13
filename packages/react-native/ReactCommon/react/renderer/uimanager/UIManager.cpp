@@ -11,6 +11,7 @@
 #include <cxxreact/TraceSection.h>
 #include <react/debug/react_native_assert.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/core/DynamicPropsUtilities.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/ShadowNodeFragment.h>
@@ -95,6 +96,41 @@ std::shared_ptr<ShadowNode> UIManager::createNode(
           .props = props,
           .children = ShadowNodeFragment::childrenPlaceholder(),
           .state = state,
+      },
+      family);
+
+  if (delegate_ != nullptr) {
+    delegate_->uiManagerDidCreateShadowNode(*shadowNode);
+  }
+  if (leakChecker_) {
+    leakChecker_->uiManagerDidCreateShadowNodeFamily(family);
+  }
+
+  return shadowNode;
+}
+
+std::shared_ptr<ShadowNode> UIManager::createTextNode(
+    Tag tag,
+    const std::string& text,
+    SurfaceId surfaceId,
+    InstanceHandle::Shared instanceHandle) const {
+  TraceSection s("UIManager::createTextNode");
+
+  auto& componentDescriptor =
+      componentDescriptorRegistry_->at(TextNodeComponentName);
+
+  auto family = componentDescriptor.createFamily(
+      {.tag = tag,
+       .surfaceId = surfaceId,
+       .instanceHandle = std::move(instanceHandle)});
+
+  // Character data set directly — no RawProps parsing (§3.F).
+  auto props = std::make_shared<const TextNodeProps>(text);
+
+  auto shadowNode = componentDescriptor.createShadowNode(
+      ShadowNodeFragment{
+          .props = props,
+          .children = ShadowNodeFragment::childrenPlaceholder(),
       },
       family);
 

@@ -56,6 +56,23 @@ class TextMeasurement final {
 
   Size size;
   Attachments attachments;
+
+  /*
+   * The laid-out rect of each fragment of the measured `AttributedString`,
+   * parallel to its fragment list and relative to the text frame's origin.
+   *
+   * This is what gives an *inline element* (`<b>`, `<span>`, a nested
+   * `<Text>`) a box to report from `getBoundingClientRect()`: fragments carry
+   * their owning element in `parentShadowView`, so the rects of the fragments
+   * belonging to one element union into that element's border box, which the
+   * containing Paragraph/View then stamps onto it (text-children-plan.md
+   * §3.G "Geometry APIs").
+   *
+   * Empty when the platform text engine has not implemented it — consumers
+   * must treat it as "unknown" and leave the element without metrics, which
+   * is the pre-existing behavior.
+   */
+  std::vector<Rect> fragmentRects;
 };
 
 // The Key type that is used for Text Measure Cache.
@@ -70,6 +87,14 @@ class TextMeasureCacheKey final {
   // are rounded to the pixel grid. Two otherwise-identical measures at different
   // densities are not interchangeable, so the scale factor is part of the key.
   Float pointScaleFactor{};
+  // Whether the entry carries `fragmentRects`. Two measures of the same string
+  // at the same size are the same SIZE, but not the same ENTRY: one of them
+  // has the per-fragment geometry and the other does not, and handing the
+  // rect-less one to a caller that asked for rects loses every inline
+  // element's box silently. Cheap to carry — only a string that is measured
+  // both ways ever occupies two entries, which is a paragraph with an inline
+  // element in it.
+  bool needsFragmentRects{false};
 };
 
 // The Key type that is used for Line Measure Cache.
@@ -94,6 +119,11 @@ class PreparedTextCacheKey final {
   // A prepared layout is rounded to the pixel grid, so it is only reusable at
   // the pixel scale factor it was laid out at.
   Float pointScaleFactor{};
+  // Whether the layout carries per-fragment rects. A layout prepared without
+  // them must not be handed to a caller that needs them: the entry is a
+  // complete answer to a different question, and reusing it silently loses
+  // every inline element's box. Same reason it is in TextMeasureCacheKey.
+  bool needsFragmentRects{false};
 };
 
 /*
@@ -165,6 +195,14 @@ inline bool areAttributedStringFragmentsEquivalentLayoutWise(
     const AttributedString::Fragment &rhs)
 {
   return lhs.string == rhs.string && areTextAttributesEquivalentLayoutWise(lhs.textAttributes, rhs.textAttributes) &&
+      // An inline element's inline-axis margin/border/padding is reserved as
+      // real advance (box-model-scope.md G3), so it changes the measured size
+      // and two runs differing only by it are NOT interchangeable. Only the
+      // inline axis is compared: block-axis padding and border overflow the
+      // line box rather than growing it (CSS2 §10.6.1), so they genuinely do
+      // not affect layout — comparing them would only cost cache misses.
+      lhs.leadingInlineSpace() == rhs.leadingInlineSpace() &&
+      lhs.trailingInlineSpace() == rhs.trailingInlineSpace() &&
       // LayoutMetrics of an attachment fragment affects the size of a measured
       // attributed string.
       (!lhs.isAttachment() || (lhs.parentShadowView.layoutMetrics == rhs.parentShadowView.layoutMetrics));
@@ -185,7 +223,14 @@ inline size_t attributedStringFragmentHashLayoutWise(const AttributedString::Fra
   // Here we are not taking `isAttachment` and `layoutMetrics` into account
   // because they are logically interdependent and this can break an invariant
   // between hash and equivalence functions (and cause cache misses).
-  return facebook::react::hash_combine(fragment.string, textAttributesHashLayoutWise(fragment.textAttributes));
+  // Must stay in sync with `areAttributedStringFragmentsEquivalentLayoutWise`:
+  // equal fragments have to hash equal, so the inline-axis spacing it compares
+  // is hashed here too.
+  return facebook::react::hash_combine(
+      fragment.string,
+      textAttributesHashLayoutWise(fragment.textAttributes),
+      fragment.leadingInlineSpace(),
+      fragment.trailingInlineSpace());
 }
 
 inline size_t attributedStringFragmentHashDisplayWise(const AttributedString::Fragment &fragment)
@@ -260,7 +305,7 @@ inline bool operator==(const TextMeasureCacheKey &lhs, const TextMeasureCacheKey
 {
   return areAttributedStringsEquivalentLayoutWise(lhs.attributedString, rhs.attributedString) &&
       lhs.paragraphAttributes == rhs.paragraphAttributes && lhs.layoutConstraints == rhs.layoutConstraints &&
-      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor);
+      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor) && lhs.needsFragmentRects == rhs.needsFragmentRects;
 }
 
 inline bool operator==(const LineMeasureCacheKey &lhs, const LineMeasureCacheKey &rhs)
@@ -273,7 +318,7 @@ inline bool operator==(const PreparedTextCacheKey &lhs, const PreparedTextCacheK
 {
   return areAttributedStringsEquivalentDisplayWise(lhs.attributedString, rhs.attributedString) &&
       lhs.paragraphAttributes == rhs.paragraphAttributes && lhs.layoutConstraints == rhs.layoutConstraints &&
-      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor);
+      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor) && lhs.needsFragmentRects == rhs.needsFragmentRects;
 }
 
 } // namespace facebook::react
@@ -288,7 +333,8 @@ struct hash<facebook::react::TextMeasureCacheKey> {
         attributedStringHashLayoutWise(key.attributedString),
         key.paragraphAttributes,
         key.layoutConstraints,
-        key.pointScaleFactor);
+        key.pointScaleFactor,
+        key.needsFragmentRects);
   }
 };
 
@@ -309,7 +355,8 @@ struct hash<facebook::react::PreparedTextCacheKey> {
         attributedStringHashDisplayWise(key.attributedString),
         key.paragraphAttributes,
         key.layoutConstraints,
-        key.pointScaleFactor);
+        key.pointScaleFactor,
+        key.needsFragmentRects);
   }
 };
 

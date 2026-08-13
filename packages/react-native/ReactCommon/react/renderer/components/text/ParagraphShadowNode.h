@@ -45,6 +45,18 @@ class ParagraphShadowNode
     traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
     traits.set(ShadowNodeTraits::Trait::MeasurableYogaNode);
     traits.set(ShadowNodeTraits::Trait::BaselineYogaNode);
+    // A paragraph folds the inherited text cascade beneath its own TextProps
+    // (see adopt), so it is a cascade consumer.
+    traits.set(ShadowNodeTraits::Trait::TextCascadeConsumer);
+    // Root <Text>'s user-agent stylesheet declares `all: 'initial'`: old
+    // React Native's "<Text> is a style boundary" contract, kept for
+    // pixel-identical compatibility (text-children-plan.md §3.D) and
+    // expressed as the cascade's native UA origin. Authored `all` resolves
+    // against this declaration in BaseViewProps::isInheritanceBoundary —
+    // `unset`/`inherit` switch the boundary off, `revert` rolls back to it.
+    // Nested <Text> renders as virtual text (no ParagraphShadowNode), so the
+    // declaration reaches exactly the roots.
+    traits.set(ShadowNodeTraits::Trait::UACascadeBoundary);
 
 #ifdef ANDROID
     // Unsetting `FormsStackingContext` trait is essential on Android where we
@@ -131,6 +143,26 @@ class ParagraphShadowNode
    * Cached content of the subtree started from the node.
    */
   mutable std::optional<Content> content_{};
+
+  /*
+   * The effective inherited cascade, stamped by the configure pass — a
+   * paragraph is a TextCascadeConsumer and reads it at measure time (see
+   * getContent), so it stores its own copy; ordinary Views do not.
+   */
+  std::shared_ptr<const TextAttributes> inheritedCascade_{};
+
+ public:
+  void setInheritedCascade(
+      const std::shared_ptr<const TextAttributes>& cascade) override {
+    inheritedCascade_ = cascade;
+  }
+
+  const std::shared_ptr<const TextAttributes>* getStoredCascade()
+      const override {
+    return &inheritedCascade_;
+  }
+
+ private:
 
   /*
    * Intermediate layout results generated during measurement, that may be
