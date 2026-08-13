@@ -42,6 +42,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
     foregroundColor="rgba(255, 255, 255, 1)"
     includeFontPadding="false"
     lineHeight="20"
+    maxFontSizeMultiplier="1.5"
     nativeID="logbox_header_title_text"
     overflow="hidden"
   >
@@ -85,6 +86,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
       foregroundColor="rgba(243, 83, 105, 1)"
       includeFontPadding="false"
       lineHeight="28"
+      maxFontSizeMultiplier="1.5"
       nativeID="logbox_message_title_text"
       overflow="hidden"
     >
@@ -98,6 +100,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
       foregroundColor="rgba(255, 255, 255, 1)"
       includeFontPadding="false"
       lineHeight="20"
+      maxFontSizeMultiplier="1.5"
       nativeID="logbox_message_contents_text"
       overflow="hidden"
       paddingBottom="10"
@@ -109,6 +112,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
         foregroundColor="rgba(255, 255, 255, 1)"
         layoutDirection="ltr"
         lineHeight="20"
+        maxFontSizeMultiplier="1.5"
       >
         Some kind of message (third)
       </rn-text>
@@ -139,6 +143,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
         lineHeight="20"
+        maxFontSizeMultiplier="1.5"
         overflow="hidden"
       >
         Dismiss
@@ -156,6 +161,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
         lineHeight="20"
+        maxFontSizeMultiplier="1.5"
         overflow="hidden"
       >
         Minimize
@@ -173,6 +179,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
         lineHeight="20"
+        maxFontSizeMultiplier="1.5"
         overflow="hidden"
       >
         Copy
@@ -226,6 +233,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
     foregroundColor="rgba(255, 255, 255, 1)"
     includeFontPadding="false"
     lineHeight="20"
+    maxFontSizeMultiplier="1.5"
     nativeID="logbox_header_title_text"
     overflow="hidden"
   >
@@ -269,6 +277,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
       foregroundColor="rgba(250, 186, 48, 1)"
       includeFontPadding="false"
       lineHeight="28"
+      maxFontSizeMultiplier="1.5"
       nativeID="logbox_message_title_text"
       overflow="hidden"
     >
@@ -282,6 +291,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
       foregroundColor="rgba(255, 255, 255, 1)"
       includeFontPadding="false"
       lineHeight="20"
+      maxFontSizeMultiplier="1.5"
       nativeID="logbox_message_contents_text"
       overflow="hidden"
       paddingBottom="10"
@@ -293,6 +303,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
         foregroundColor="rgba(255, 255, 255, 1)"
         layoutDirection="ltr"
         lineHeight="20"
+        maxFontSizeMultiplier="1.5"
       >
         Some kind of message (first)
       </rn-text>
@@ -323,6 +334,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
         lineHeight="20"
+        maxFontSizeMultiplier="1.5"
         overflow="hidden"
       >
         Dismiss
@@ -340,6 +352,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
         lineHeight="20"
+        maxFontSizeMultiplier="1.5"
         overflow="hidden"
       >
         Minimize
@@ -357,6 +370,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
         lineHeight="20"
+        maxFontSizeMultiplier="1.5"
         overflow="hidden"
       >
         Copy

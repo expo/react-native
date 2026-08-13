@@ -29,6 +29,7 @@ exports[`LogBoxInspectorSourceMapStatus should render for failed 1`] = `
     foregroundColor="rgba(243, 83, 105, 1)"
     includeFontPadding="false"
     lineHeight="16"
+    maxFontSizeMultiplier="1.5"
     overflow="hidden"
   >
     Source Map
@@ -66,6 +67,7 @@ exports[`LogBoxInspectorSourceMapStatus should render for pending 1`] = `
     foregroundColor="rgba(250, 186, 48, 1)"
     includeFontPadding="false"
     lineHeight="16"
+    maxFontSizeMultiplier="1.5"
     overflow="hidden"
   >
     Source Map
