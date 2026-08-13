@@ -396,6 +396,7 @@ public class TextAttributeProps private constructor() {
     public const val TA_KEY_TEXT_TRANSFORM: Int = 27
     public const val TA_KEY_MAX_FONT_SIZE_MULTIPLIER: Int = 29
     public const val TA_KEY_TEXT_EFFECTS: Int = 30
+    public const val TA_KEY_WHITE_SPACE: Int = 31
     private const val TE_KEY_NAME: Int = 0
     private const val TE_KEY_PROPS: Int = 1
 

@@ -120,6 +120,18 @@ internal class PreparedLayoutTextView(context: Context) : ViewGroup(context), Re
   @OptIn(UnstableReactNativeAPI::class)
   override fun onDraw(canvas: Canvas) {
     if (overflow != Overflow.VISIBLE) {
+      // An inline box's block-axis padding, border and outline overflow the
+      // line box rather than growing it (CSS2 §10.6.1) — and `overflow` other
+      // than `visible` clips ink to the padding edge whatever produced it
+      // (CSS2 §11.1.1), descendants' overflow included. So this box's
+      // decorations get cut, which is exactly what a browser does to
+      // `<div style="overflow:hidden">a<span style="padding:20px 0">b</span></div>`:
+      // the div is one line box tall and the span's ink is not.
+      //
+      // Making room for it here instead is what `overflow: hidden` is FOR
+      // defeating, and it also made this the odd platform out: on iOS the
+      // extra room is a wider drawing surface on a subview, which the
+      // container still clips when it clips.
       BackgroundStyleApplicator.clipToPaddingBox(this, canvas)
     }
 
