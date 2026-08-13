@@ -19,6 +19,7 @@
 #include <yoga/enums/Dimension.h>
 #include <yoga/enums/Direction.h>
 #include <yoga/enums/Display.h>
+#include <yoga/enums/FloatSide.h>
 #include <yoga/enums/Edge.h>
 #include <yoga/enums/FlexDirection.h>
 #include <yoga/enums/Gutter.h>
@@ -107,6 +108,22 @@ class YG_EXPORT Style {
   }
   void setPositionType(PositionType value) {
     positionType_ = value;
+  }
+
+  // CSS float/clear, honored by the block formatting context only
+  // (calculateBlockLayout); the flex algorithm ignores them.
+  FloatSide floatSide() const {
+    return floatSide_;
+  }
+  void setFloatSide(FloatSide value) {
+    floatSide_ = value;
+  }
+
+  Clear clear() const {
+    return clear_;
+  }
+  void setClear(Clear value) {
+    clear_ = value;
   }
 
   Wrap flexWrap() const {
@@ -650,7 +667,9 @@ class YG_EXPORT Style {
         justifySelf_ == other.justifySelf_ &&
         alignContent_ == other.alignContent_ &&
         alignItems_ == other.alignItems_ && alignSelf_ == other.alignSelf_ &&
-        positionType_ == other.positionType_ && flexWrap_ == other.flexWrap_ &&
+        positionType_ == other.positionType_ &&
+        floatSide_ == other.floatSide_ && clear_ == other.clear_ &&
+        flexWrap_ == other.flexWrap_ &&
         overflow_ == other.overflow_ && display_ == other.display_ &&
         numbersEqual(flex_, pool_, other.flex_, other.pool_) &&
         numbersEqual(flexGrow_, pool_, other.flexGrow_, other.pool_) &&
@@ -911,6 +930,8 @@ class YG_EXPORT Style {
   Wrap flexWrap_ : bitCount<Wrap>() = Wrap::NoWrap;
   Overflow overflow_ : bitCount<Overflow>() = Overflow::Visible;
   Display display_ : bitCount<Display>() = Display::Flex;
+  FloatSide floatSide_ : bitCount<FloatSide>() = FloatSide::None;
+  Clear clear_ : bitCount<Clear>() = Clear::None;
   BoxSizing boxSizing_ : bitCount<BoxSizing>() = BoxSizing::BorderBox;
 
   StyleValueHandle flex_{};
