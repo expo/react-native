@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<feee721a90dc8eb3371e87778bdbccc7>>
+ * @generated SignedSource<<ceaaf3c42d8478afa35ad121262632e0>>
  */
 
 /**
@@ -479,6 +479,15 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     return ReactNativeFeatureFlagsDefaults::enableResizeObserverByDefault();
   }
 
+  bool enableStringChildren() override {
+    auto value = values_["enableStringChildren"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::enableStringChildren();
+  }
+
   bool enableSwiftUIBasedFilters() override {
     auto value = values_["enableSwiftUIBasedFilters"];
     if (!value.isNull()) {
@@ -549,6 +558,24 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     }
 
     return ReactNativeFeatureFlagsDefaults::enableVirtualViewContainerStateExperimental();
+  }
+
+  bool enableYogaDisplayBlock() override {
+    auto value = values_["enableYogaDisplayBlock"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::enableYogaDisplayBlock();
+  }
+
+  bool fixDifferentiatorParentTagForUnflattenCase() override {
+    auto value = values_["fixDifferentiatorParentTagForUnflattenCase"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::fixDifferentiatorParentTagForUnflattenCase();
   }
 
   bool fixMappingOfEventPrioritiesBetweenFabricAndReact() override {

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<890e204b6cf8afef481f64de44766edf>>
+ * @generated SignedSource<<156dc2ee4727cc0e335ab3aa4fbe1f1a>>
  */
 
 /**
@@ -119,6 +119,8 @@ public open class ReactNativeFeatureFlagsDefaults : ReactNativeFeatureFlagsProvi
 
   override fun enableResizeObserverByDefault(): Boolean = false
 
+  override fun enableStringChildren(): Boolean = true
+
   override fun enableSwiftUIBasedFilters(): Boolean = false
 
   override fun enableViewCulling(): Boolean = false
@@ -134,6 +136,10 @@ public open class ReactNativeFeatureFlagsDefaults : ReactNativeFeatureFlagsProvi
   override fun enableViewRecyclingForView(): Boolean = true
 
   override fun enableVirtualViewContainerStateExperimental(): Boolean = false
+
+  override fun enableYogaDisplayBlock(): Boolean = false
+
+  override fun fixDifferentiatorParentTagForUnflattenCase(): Boolean = true
 
   override fun fixMappingOfEventPrioritiesBetweenFabricAndReact(): Boolean = false
 

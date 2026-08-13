@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<8b8b80ac3744a205b20cfd0627856fba>>
+ * @generated SignedSource<<81ba58c10a3f299b68d4a8bae18c92a5>>
  */
 
 /**
@@ -218,6 +218,10 @@ bool ReactNativeFeatureFlags::enableResizeObserverByDefault() {
   return getAccessor().enableResizeObserverByDefault();
 }
 
+bool ReactNativeFeatureFlags::enableStringChildren() {
+  return getAccessor().enableStringChildren();
+}
+
 bool ReactNativeFeatureFlags::enableSwiftUIBasedFilters() {
   return getAccessor().enableSwiftUIBasedFilters();
 }
@@ -248,6 +252,14 @@ bool ReactNativeFeatureFlags::enableViewRecyclingForView() {
 
 bool ReactNativeFeatureFlags::enableVirtualViewContainerStateExperimental() {
   return getAccessor().enableVirtualViewContainerStateExperimental();
+}
+
+bool ReactNativeFeatureFlags::enableYogaDisplayBlock() {
+  return getAccessor().enableYogaDisplayBlock();
+}
+
+bool ReactNativeFeatureFlags::fixDifferentiatorParentTagForUnflattenCase() {
+  return getAccessor().fixDifferentiatorParentTagForUnflattenCase();
 }
 
 bool ReactNativeFeatureFlags::fixMappingOfEventPrioritiesBetweenFabricAndReact() {
