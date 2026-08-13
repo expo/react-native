@@ -39,6 +39,27 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'Basic',
   },
   {
+    key: 'ListsExample',
+    module: require('../examples/Lists/ListsExample').default,
+  },
+  {
+    key: 'IntrinsicElementsExample',
+    module: require('../examples/TextChildren/IntrinsicElementsExample')
+      .default,
+    category: 'Basic',
+  },
+  {
+    key: 'DisplayBlockExample',
+    module: require('../examples/DisplayBlock/DisplayBlockExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'DisplayInlineExample',
+    module: require('../examples/DisplayInline/DisplayInlineExample').default,
+    category: 'UI',
+  },
+
+  {
     key: 'CascadeExample',
     module: require('../examples/Cascade/CascadeExample').default,
     category: 'UI',
@@ -218,6 +239,12 @@ const APIs: Array<RNTesterModuleInfo> = (
       category: 'UI',
     },
     {
+      key: 'DisplayContentsExample',
+      category: 'UI',
+      module: require('../examples/DisplayContents/DisplayContentsExample')
+        .default,
+    },
+    {
       key: 'AccessibilityExample',
       category: 'Basic',
       module: require('../examples/Accessibility/AccessibilityExample'),
@@ -287,12 +314,6 @@ const APIs: Array<RNTesterModuleInfo> = (
       key: 'Dimensions',
       category: 'UI',
       module: require('../examples/Dimensions/DimensionsExample'),
-    },
-    {
-      key: 'DisplayContentsExample',
-      category: 'UI',
-      module: require('../examples/DisplayContents/DisplayContentsExample')
-        .default,
     },
     {
       key: 'FocusEventsExample',

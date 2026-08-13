@@ -21,7 +21,7 @@
 const {execSync} = require('node:child_process');
 const WebSocket = require('ws');
 
-const IOS_BUNDLE_ID = 'com.meta.RNTester.localDevelopment';
+const IOS_BUNDLE_ID = 'dev.expo.rntester';
 const ANDROID_COMPONENT = 'com.facebook.react.uiapp/.RNTesterActivity';
 const ADB = `${process.env.ANDROID_HOME ?? '/opt/homebrew/share/android-commandlinetools'}/platform-tools/adb`;
 
@@ -38,7 +38,7 @@ async function readVerifyObject() {
   // Both a simulator and an emulator may be attached to the same Metro; pick
   // the target belonging to the platform under test by app id in the title.
   const appId =
-    platform === 'android' ? 'com.facebook.react.uiapp' : 'com.meta.RNTester.localDevelopment';
+    platform === 'android' ? 'com.facebook.react.uiapp' : 'dev.expo.rntester';
   const target = targets.find(
     t => t.webSocketDebuggerUrl != null && (t.title ?? '').includes(appId),
   );
