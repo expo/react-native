@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<6887b671526bc8a3b0678e3e45b4e3b4>>
+ * @generated SignedSource<<ac5343e48d5631ba12c3ee78d1990fff>>
  */
 
 /**
@@ -297,6 +297,11 @@ class ReactNativeFeatureFlags {
   RN_EXPORT static bool enableResizeObserverByDefault();
 
   /**
+   * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
+   */
+  RN_EXPORT static bool enableStringChildren();
+
+  /**
    * When enabled, it will use SwiftUI for filter effects like blur on iOS.
    */
   RN_EXPORT static bool enableSwiftUIBasedFilters();
@@ -337,9 +342,19 @@ class ReactNativeFeatureFlags {
   RN_EXPORT static bool enableVirtualViewContainerStateExperimental();
 
   /**
+   * Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableStringChildren; the emulation remains the flag-off fallback.
+   */
+  RN_EXPORT static bool enableYogaDisplayBlock();
+
+  /**
    * Prevents a borderless ripple feedback underlay from projecting the entire view background on Android, which could hide the background and ripple.
    */
   RN_EXPORT static bool fixBorderlessRippleAndroid();
+
+  /**
+   * Fix incorrect parentTag passed as parentTagForUpdate in the unflatten-unflatten branch of calculateShadowViewMutationsFlattener, which causes UPDATE mutations to reference a parent being created in the same batch.
+   */
+  RN_EXPORT static bool fixDifferentiatorParentTagForUnflattenCase();
 
   /**
    * Uses the default event priority instead of the discreet event priority by default when dispatching events from Fabric to React.
