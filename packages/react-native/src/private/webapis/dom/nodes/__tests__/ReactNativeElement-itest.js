@@ -1015,15 +1015,20 @@ describe('ReactNativeElement', () => {
         expect(outerTextBoundingRect.width).toBe(100);
         expect(outerTextBoundingRect.height).toBe(50);
 
-        // Nested text (virtual text) returns a DOMRect with zero values
-        // since it doesn't have its own independent layout
+        // Nested (virtual) text reports the box it actually occupies within
+        // the paragraph, as an inline element does on the web: ' World'
+        // starts after 'Hello' and wraps, so its rect is the union of both
+        // line pieces. It has no independent *layout* — the paragraph above
+        // is unchanged — the text engine's per-fragment rects are simply
+        // stamped onto the element so DOM geometry can report them
+        // (text-children-plan.md §3.G).
         const nestedTextBoundingRect =
           nestedTextElement.getBoundingClientRect();
         expect(nestedTextBoundingRect).toBeInstanceOf(DOMRect);
-        expect(nestedTextBoundingRect.x).toBe(0);
-        expect(nestedTextBoundingRect.y).toBe(0);
-        expect(nestedTextBoundingRect.width).toBe(0);
-        expect(nestedTextBoundingRect.height).toBe(0);
+        expect(nestedTextBoundingRect.x).toBe(10);
+        expect(nestedTextBoundingRect.y).toBe(20);
+        expect(nestedTextBoundingRect.width).toBe(100);
+        expect(nestedTextBoundingRect.height).toBe(40);
 
         // After unmounting, both should return empty DOMRects
         Fantom.runTask(() => {
