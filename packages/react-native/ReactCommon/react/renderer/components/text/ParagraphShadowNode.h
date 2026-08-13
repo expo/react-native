@@ -25,7 +25,7 @@ extern const char ParagraphComponentName[];
 /*
  * `ShadowNode` for <Paragraph> component, represents <View>-like component
  * containing and displaying text. Text content is represented as nested <Text>
- * and <RawText> components.
+ * components and `#text` nodes.
  */
 class ParagraphShadowNode
     : public ConcreteViewShadowNode<ParagraphComponentName, ParagraphProps, ParagraphEventEmitter, ParagraphState>,
