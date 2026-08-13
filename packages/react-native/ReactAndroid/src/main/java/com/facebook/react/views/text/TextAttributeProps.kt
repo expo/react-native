@@ -80,6 +80,9 @@ public class TextAttributeProps private constructor() {
   private var lineHeightInput: Float = ReactConstants.UNSET.toFloat()
   private var letterSpacingInput: Float = Float.NaN
 
+  /** Numeric baseline shift in dp; positive raises the glyphs. NaN = unset. */
+  public var baselineShift: Float = Float.NaN
+
   // `ReactConstants.UNSET` is -1, same as `LayoutDirection.UNDEFINED` (which is a hidden symbol)
   public var layoutDirection: Int = ReactConstants.UNSET
     private set
@@ -378,6 +381,8 @@ public class TextAttributeProps private constructor() {
     public const val TA_KEY_FONT_VARIANT: Int = 8
     public const val TA_KEY_ALLOW_FONT_SCALING: Int = 9
     public const val TA_KEY_LETTER_SPACING: Int = 10
+    /** Numeric baseline shift in dp (positive raises); must match conversions.h. */
+    public const val TA_KEY_BASELINE_SHIFT: Int = 33
     public const val TA_KEY_LINE_HEIGHT: Int = 11
     public const val TA_KEY_ALIGNMENT: Int = 12
     public const val TA_KEY_BEST_WRITING_DIRECTION: Int = 13
@@ -396,6 +401,7 @@ public class TextAttributeProps private constructor() {
     public const val TA_KEY_TEXT_TRANSFORM: Int = 27
     public const val TA_KEY_MAX_FONT_SIZE_MULTIPLIER: Int = 29
     public const val TA_KEY_TEXT_EFFECTS: Int = 30
+    public const val TA_KEY_WHITE_SPACE: Int = 31
     private const val TE_KEY_NAME: Int = 0
     private const val TE_KEY_PROPS: Int = 1
 
@@ -435,6 +441,7 @@ public class TextAttributeProps private constructor() {
           TA_KEY_FONT_VARIANT -> result.setFontVariant(entry.mapBufferValue)
           TA_KEY_ALLOW_FONT_SCALING -> result.allowFontScaling = entry.booleanValue
           TA_KEY_LETTER_SPACING -> result.letterSpacing = entry.doubleValue.toFloat()
+          TA_KEY_BASELINE_SHIFT -> result.baselineShift = entry.doubleValue.toFloat()
           TA_KEY_LINE_HEIGHT -> result.lineHeight = entry.doubleValue.toFloat()
           TA_KEY_ALIGNMENT -> {}
           TA_KEY_BEST_WRITING_DIRECTION -> {}
