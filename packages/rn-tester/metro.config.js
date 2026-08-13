@@ -33,13 +33,97 @@ const config = {
     path.resolve(__dirname, '../react-native'),
     path.resolve(__dirname, '../virtualized-lists'),
     path.resolve(__dirname, '../react-native-popup-menu-android'),
+    path.resolve(__dirname, '../expo-intrinsics'),
     path.resolve(__dirname, '../react-native-test-library/apple'),
     path.resolve(__dirname, '../react-native-test-library/common'),
+    // The local expo checkout: expo-modules-core and expo-image are linked
+    // into node_modules from it (the DOM element catalog's eventual home), and
+    // their imports resolve through its pnpm store.
+    path.resolve(__dirname, '../../../expo'),
   ],
+  transformer: {
+    // `.css` imports load as raw text for the stylesheet engine
+    // (js/astryx/css); see css-transformer.js.
+    babelTransformerPath: path.resolve(__dirname, 'css-transformer.js'),
+  },
   resolver: {
     blockList: [/..\/react-native\/sdks\/hermes/],
+    sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'css'],
     extraNodeModules: {
       'react-native': path.resolve(__dirname, '../react-native'),
+    },
+    // The vendored Astryx sources (js/astryx/vendor) import '@stylexjs/stylex'
+    // verbatim; resolve it to the RN StyleX runtime so they run unmodified.
+    resolveRequest: (context, moduleName, platform) => {
+      // The Radix shim layer: vendored shadcn sources import
+      // '@radix-ui/react-*' verbatim; each id resolves to the shim
+      // implementing that package's public surface over the fork's machinery
+      // (js/astryx/radix).
+      // The vendored shadcn sources (js/shadcn/ui) import their world by the
+      // upstream names; each resolves to the fork's implementation.
+      if (moduleName === '@/lib/utils') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js', 'shadcn', 'lib', 'utils.js'),
+        };
+      }
+      if (moduleName.startsWith('@/registry/default/ui/')) {
+        const component = moduleName.slice('@/registry/default/ui/'.length);
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(
+            __dirname,
+            'js',
+            'shadcn',
+            'ui',
+            component + '.tsx',
+          ),
+        };
+      }
+      if (moduleName === 'class-variance-authority') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js', 'shadcn', 'lib', 'cva.js'),
+        };
+      }
+      if (moduleName === 'lucide-react') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js', 'shadcn', 'lib', 'lucide.js'),
+        };
+      }
+      if (moduleName.startsWith('@radix-ui/')) {
+        const radixName = moduleName.slice('@radix-ui/'.length);
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(
+            __dirname,
+            'js',
+            'astryx',
+            'radix',
+            'pkg',
+            radixName + '.js',
+          ),
+        };
+      }
+      if (moduleName === '@stylexjs/stylex') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/astryx/stylex-rn.js'),
+        };
+      }
+      // The astryx directory compiles JSX against this runtime (see .babelrc)
+      // so intrinsic elements can inherit CSS custom properties.
+      if (
+        moduleName === 'astryx-jsx/jsx-runtime' ||
+        moduleName === 'astryx-jsx/jsx-dev-runtime'
+      ) {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/astryx/jsx-runtime.js'),
+        };
+      }
+      return context.resolveRequest(context, moduleName, platform);
     },
   },
 };

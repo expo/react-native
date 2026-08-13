@@ -38,7 +38,11 @@ const packageJson = JSON.stringify({
     });
 
     afterAll(() => {
-      fs.rmdirSync(outputDir, {recursive: true});
+      // `rmdirSync`'s `recursive` option was removed in Node 22, so this threw
+      // and took the whole suite down with it — every test in the file had
+      // already passed. `force` also keeps the teardown quiet if `beforeAll`
+      // never got as far as creating the directory.
+      fs.rmSync(outputDir, {recursive: true, force: true});
     });
 
     [

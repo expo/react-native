@@ -12,6 +12,7 @@
 #include <ReactCommon/SampleTurboModuleJSIBindings.h>
 #include <fbjni/fbjni.h>
 #include <react/renderer/componentregistry/ComponentDescriptorProviderRegistry.h>
+#include <react/renderer/core/RendererAbi.h>
 
 #ifdef REACT_NATIVE_APP_CODEGEN_HEADER
 #include REACT_NATIVE_APP_CODEGEN_HEADER
@@ -59,6 +60,10 @@ std::shared_ptr<TurboModule> javaModuleProvider(
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* /*unused*/) {
   return facebook::jni::initialize(vm, [] {
+    // Catches this app's C++ having been built against stale React Native
+    // headers, which otherwise shows up as memory corruption far from the
+    // change that caused it rather than as a build failure.
+    facebook::react::assertRendererAbiMatchesHeaders();
     facebook::react::DefaultTurboModuleManagerDelegate::cxxModuleProvider =
         &facebook::react::cxxModuleProvider;
     facebook::react::DefaultTurboModuleManagerDelegate::javaModuleProvider =

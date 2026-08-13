@@ -42,6 +42,13 @@ export type RNTesterModuleInfo = Readonly<{
   category?: string,
   documentationURL?: string,
   exampleType?: 'components' | 'apis',
+  /**
+   * Puts the example under a named section above the alphabetical list, so the
+   * examples this fork adds stay within reach and arrive next to the ones they
+   * belong with. Sections appear in the order declared in `testerStateUtils`,
+   * and entries keep their relative order from the list definition.
+   */
+  group?: string,
 }>;
 
 export type SectionData<T> = {
