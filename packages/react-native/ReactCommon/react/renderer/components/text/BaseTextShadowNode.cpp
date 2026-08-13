@@ -7,6 +7,8 @@
 
 #include "BaseTextShadowNode.h"
 
+#include <react/renderer/components/view/ViewPropsOf.h>
+
 #include <string_view>
 
 #include <react/renderer/dom/NodeNameProvider.h>
@@ -183,6 +185,18 @@ void BaseTextShadowNode::buildAttributedString(
     // <span onPress>.
     if (YogaLayoutableShadowNode::isInlineFlowContent(*childNode)) {
       auto localTextAttributes = baseTextAttributes;
+      if (const auto* baseViewProps =
+              viewPropsOf(*childNode)) {
+        if (baseViewProps->isInheritanceBoundary(childNode->getTraits().check(
+                ShadowNodeTraits::Trait::UACascadeBoundary))) {
+          // The same `all` reset for a span-like inline View.
+          auto reset = TextAttributes::defaultTextAttributes();
+          reset.fontSizeMultiplier = localTextAttributes.fontSizeMultiplier;
+          reset.layoutDirection = localTextAttributes.layoutDirection;
+          localTextAttributes = reset;
+        }
+        baseViewProps->applyInheritedTextAttributes(localTextAttributes);
+      }
       buildAttributedString(
           localTextAttributes,
           *childNode,
