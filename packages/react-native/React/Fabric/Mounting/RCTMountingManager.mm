@@ -10,6 +10,12 @@
 #import <QuartzCore/QuartzCore.h>
 
 #import <React/RCTAssert.h>
+#import <os/log.h>
+
+#include <algorithm>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #import <React/RCTComponent.h>
 #import <React/RCTLog.h>
 #import <React/RCTUtils.h>
@@ -40,6 +46,186 @@ static SurfaceId RCTSurfaceIdForView(UIView *view)
   return -1;
 }
 
+/*
+ * What the MOUNT costs, when asked for it.
+ *
+ * `EXP_MOUNTING_STATS=1` makes each transaction report itself — how many
+ * mutations of each kind it carried and how long the main thread spent
+ * performing them — as one line a second to `dev.expo.mounting`. A list whose
+ * rows all exist pays for a height change with an `Update` for every row below
+ * it, and this is what says how many that is and what they cost.
+ *
+ * Off, which is the default, it is a `dispatch_once`-guarded read.
+ */
+static BOOL EXPMountingStatsEnabled(void)
+{
+  static BOOL enabled = NO;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    const char *value = getenv("EXP_MOUNTING_STATS");
+    enabled = value != NULL && value[0] == '1';
+  });
+  return enabled;
+}
+
+static os_log_t EXPMountingStatsLog(void)
+{
+  static os_log_t log;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    log = os_log_create("dev.expo.mounting", "transaction");
+  });
+  return log;
+}
+
+static void EXPFlushMountingStats(bool force);
+
+/*
+ * The report is on a CLOCK, not on the next transaction.
+ *
+ * Reporting when the next event arrives loses the last second of every burst —
+ * and an app opening 3000 rows is exactly one burst followed by silence, which
+ * is the measurement that matters most.
+ */
+static void EXPStartMountingStatsTimer(void)
+{
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    dispatch_source_t timer =
+        dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+    dispatch_source_set_timer(
+        timer, dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), NSEC_PER_SEC, NSEC_PER_SEC / 10);
+    dispatch_source_set_event_handler(timer, ^{
+      EXPFlushMountingStats(false);
+    });
+    dispatch_resume(timer);
+    // Held for the process's life; the switch is a launch-time decision.
+    CFRetain((__bridge CFTypeRef)timer);
+  });
+}
+
+namespace {
+/* The tally, reset by each report — see `EXPMountingStatsEnabled`. */
+struct EXPMountingStats {
+  uint64_t transactions;
+  uint64_t creates;
+  uint64_t deletes;
+  uint64_t inserts;
+  uint64_t removes;
+  uint64_t updates;
+  uint64_t totalNanos;
+  uint64_t maxNanos;
+  uint64_t nanosByType[5];
+  /* Which components the updates were for — an animation that commits per frame shows up here. */
+  std::unordered_map<std::string, uint64_t> updatesByComponent;
+  size_t biggest;
+  CFTimeInterval since;
+};
+} // namespace
+
+static EXPMountingStats gMountingStats{};
+
+static void EXPFlushMountingStats(bool force)
+{
+  if (gMountingStats.transactions == 0) {
+    return;
+  }
+  const CFTimeInterval now = CACurrentMediaTime();
+  const CFTimeInterval elapsed = now - gMountingStats.since;
+  if (!force && elapsed < 1.0) {
+    return;
+  }
+  std::string top;
+  {
+    std::vector<std::pair<std::string, uint64_t>> byCount(
+        gMountingStats.updatesByComponent.begin(), gMountingStats.updatesByComponent.end());
+    std::sort(byCount.begin(), byCount.end(), [](const auto &a, const auto &b) {
+      return a.second > b.second;
+    });
+    for (size_t i = 0; i < byCount.size() && i < 3; i++) {
+      top += (i > 0 ? " " : "") + byCount[i].first + "=" + std::to_string(byCount[i].second);
+    }
+  }
+  os_log_info(
+      EXPMountingStatsLog(),
+      "transactions=%llu create=%llu delete=%llu insert=%llu remove=%llu update=%llu "
+      "biggest=%zu ms/txn=%.2f max_ms=%.2f total_ms=%.1f "
+      "ms[create=%.1f delete=%.1f insert=%.1f remove=%.1f update=%.1f] updated{%s} in %.2fs",
+      gMountingStats.transactions,
+      gMountingStats.creates,
+      gMountingStats.deletes,
+      gMountingStats.inserts,
+      gMountingStats.removes,
+      gMountingStats.updates,
+      gMountingStats.biggest,
+      (double)gMountingStats.totalNanos / 1e6 / (double)gMountingStats.transactions,
+      (double)gMountingStats.maxNanos / 1e6,
+      (double)gMountingStats.totalNanos / 1e6,
+      (double)gMountingStats.nanosByType[0] / 1e6,
+      (double)gMountingStats.nanosByType[1] / 1e6,
+      (double)gMountingStats.nanosByType[2] / 1e6,
+      (double)gMountingStats.nanosByType[3] / 1e6,
+      (double)gMountingStats.nanosByType[4] / 1e6,
+      top.c_str(),
+      elapsed);
+  gMountingStats = EXPMountingStats{};
+  gMountingStats.since = now;
+}
+
+/** Where a mutation's time went, by kind — `Insert` carries the props, the state and the layout. */
+static void EXPRecordMountMutation(ShadowViewMutation::Type type, uint64_t nanos)
+{
+  switch (type) {
+    case ShadowViewMutation::Create:
+      gMountingStats.nanosByType[0] += nanos;
+      break;
+    case ShadowViewMutation::Delete:
+      gMountingStats.nanosByType[1] += nanos;
+      break;
+    case ShadowViewMutation::Insert:
+      gMountingStats.nanosByType[2] += nanos;
+      break;
+    case ShadowViewMutation::Remove:
+      gMountingStats.nanosByType[3] += nanos;
+      break;
+    case ShadowViewMutation::Update:
+      gMountingStats.nanosByType[4] += nanos;
+      break;
+  }
+}
+
+static void EXPRecordMountingTransaction(const ShadowViewMutationList &mutations, uint64_t nanos)
+{
+  EXPStartMountingStatsTimer();
+  if (gMountingStats.since == 0) {
+    gMountingStats.since = CACurrentMediaTime();
+  }
+  gMountingStats.transactions++;
+  gMountingStats.totalNanos += nanos;
+  gMountingStats.maxNanos = std::max(gMountingStats.maxNanos, nanos);
+  gMountingStats.biggest = std::max(gMountingStats.biggest, mutations.size());
+  for (const auto &mutation : mutations) {
+    switch (mutation.type) {
+      case ShadowViewMutation::Create:
+        gMountingStats.creates++;
+        break;
+      case ShadowViewMutation::Delete:
+        gMountingStats.deletes++;
+        break;
+      case ShadowViewMutation::Insert:
+        gMountingStats.inserts++;
+        break;
+      case ShadowViewMutation::Remove:
+        gMountingStats.removes++;
+        break;
+      case ShadowViewMutation::Update:
+        gMountingStats.updates++;
+        gMountingStats.updatesByComponent[mutation.newChildShadowView.componentName]++;
+        break;
+    }
+  }
+}
+
 static void RCTPerformMountInstructions(
     const ShadowViewMutationList &mutations,
     RCTComponentViewRegistry *registry,
@@ -47,8 +233,10 @@ static void RCTPerformMountInstructions(
     SurfaceId surfaceId)
 {
   TraceSection s("RCTPerformMountInstructions");
+  const BOOL stats = EXPMountingStatsEnabled();
 
   for (const auto &mutation : mutations) {
+    const uint64_t mutationStartedAt = stats ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
     switch (mutation.type) {
       case ShadowViewMutation::Create: {
         auto &newChildShadowView = mutation.newChildShadowView;
@@ -136,6 +324,9 @@ static void RCTPerformMountInstructions(
 
         break;
       }
+    }
+    if (stats) {
+      EXPRecordMountMutation(mutation.type, clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - mutationStartedAt);
     }
   }
 }
@@ -262,8 +453,14 @@ static void RCTPerformMountInstructions(
         _observerCoordinator.notifyObserversMountingTransactionWillMount(transaction, surfaceTelemetry);
       },
       [&](const MountingTransaction &transaction, const SurfaceTelemetry &surfaceTelemetry) {
+        const BOOL stats = EXPMountingStatsEnabled();
+        const uint64_t startedAt = stats ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
         RCTPerformMountInstructions(
             transaction.getMutations(), _componentViewRegistry, _observerCoordinator, surfaceId);
+        if (stats) {
+          EXPRecordMountingTransaction(
+              transaction.getMutations(), clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - startedAt);
+        }
       },
       [&](const MountingTransaction &transaction, const SurfaceTelemetry &surfaceTelemetry) {
         _observerCoordinator.notifyObserversMountingTransactionDidMount(transaction, surfaceTelemetry);

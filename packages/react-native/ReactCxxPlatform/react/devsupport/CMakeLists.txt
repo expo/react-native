@@ -32,4 +32,4 @@ target_link_libraries(react_cxx_platform_react_devsupport
       react_renderer_graphics
 )
 target_compile_reactnative_options(react_cxx_platform_react_devsupport PRIVATE)
-target_compile_options(react_cxx_platform_react_devsupport PRIVATE -Wpedantic -Wno-deprecated-declarations)
+target_compile_options(react_cxx_platform_react_devsupport PRIVATE -Wpedantic -Wno-deprecated-declarations -Wno-deprecated-literal-operator)
