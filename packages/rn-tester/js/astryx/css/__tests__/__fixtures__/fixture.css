@@ -1,0 +1,6 @@
+:root {
+  --fixture-pad: 6px;
+}
+.fixture {
+  padding: var(--fixture-pad);
+}
