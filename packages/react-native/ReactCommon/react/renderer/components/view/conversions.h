@@ -1286,6 +1286,38 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   react_native_expect(false);
 }
 
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, UserSelect &result)
+{
+  result = UserSelect::Auto;
+  react_native_expect(value.hasType<std::string>());
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  auto stringValue = (std::string)value;
+  if (stringValue == "auto") {
+    result = UserSelect::Auto;
+    return;
+  }
+  if (stringValue == "text") {
+    result = UserSelect::Text;
+    return;
+  }
+  if (stringValue == "none") {
+    result = UserSelect::None;
+    return;
+  }
+  if (stringValue == "contain") {
+    result = UserSelect::Contain;
+    return;
+  }
+  if (stringValue == "all") {
+    result = UserSelect::All;
+    return;
+  }
+  LOG(ERROR) << "Could not parse UserSelect:" << stringValue;
+  react_native_expect(false);
+}
+
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, Cursor &result)
 {
   result = Cursor::Auto;
