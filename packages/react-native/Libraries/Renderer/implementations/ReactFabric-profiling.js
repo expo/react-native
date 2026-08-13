@@ -13273,6 +13273,7 @@ function startViewTransition(
   return suspendedState;
 }
 var createNode = reactPrivateInterface.fabricUIManager.createNode,
+  createTextNode = reactPrivateInterface.fabricUIManager.createTextNode,
   cloneNodeWithNewChildren =
     reactPrivateInterface.fabricUIManager.cloneNodeWithNewChildren,
   cloneNodeWithNewChildrenAndProps =
@@ -13321,11 +13322,10 @@ function createTextInstance(
 ) {
   hostContext = allocateTag();
   return {
-    node: createNode(
+    node: createTextNode(
       hostContext,
-      "RCTRawText",
+      text,
       rootContainerInstance.containerTag,
-      { text: text },
       internalInstanceHandle
     )
   };

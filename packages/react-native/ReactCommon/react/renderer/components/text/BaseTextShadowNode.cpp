@@ -7,15 +7,19 @@
 
 #include "BaseTextShadowNode.h"
 
-#include <react/renderer/components/text/RawTextProps.h>
-#include <react/renderer/components/text/RawTextShadowNode.h>
 #include <react/renderer/components/text/TextEffectShadowNode.h>
+#include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/components/text/TextProps.h>
 #include <react/renderer/components/text/TextShadowNode.h>
 #include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <react/renderer/mounting/ShadowView.h>
 
 namespace facebook::react {
+
+// The `#text` node's component name and DOM `nodeName`. Never resolved from
+// JavaScript; only `UIManager::createTextNode` constructs the node.
+// NOLINTNEXTLINE(modernize-avoid-c-arrays)
+const char TextNodeComponentName[] = "#text";
 
 inline ShadowView shadowViewFromShadowNode(const ShadowNode& shadowNode) {
   auto shadowView = ShadowView{shadowNode};
@@ -33,11 +37,10 @@ void BaseTextShadowNode::buildAttributedString(
     Attachments& outAttachments) {
   bool lastFragmentWasRawText = false;
   for (const auto& childNode : parentNode.getChildren()) {
-    // RawShadowNode
-    auto rawTextShadowNode =
-        dynamic_cast<const RawTextShadowNode*>(childNode.get());
-    if (rawTextShadowNode != nullptr) {
-      const auto& rawText = rawTextShadowNode->getConcreteProps().text;
+    // Character data: the first-class `#text` node.
+    auto* textNode = dynamic_cast<const TextNodeShadowNode*>(childNode.get());
+    if (textNode != nullptr) {
+      const auto& rawText = textNode->getText();
       if (lastFragmentWasRawText) {
         outAttributedString.getFragments().back().string += rawText;
       } else {

@@ -22,7 +22,7 @@ namespace facebook::react {
 /*
  * Template for all <View>-like classes (classes which have all same props
  * as <View> and similar basic behaviour).
- * For example: <Paragraph>, <Image>, but not <Text>, <RawText>.
+ * For example: <Paragraph>, <Image>, but not <Text> or `#text` nodes.
  */
 template <
     const char *concreteComponentName,
