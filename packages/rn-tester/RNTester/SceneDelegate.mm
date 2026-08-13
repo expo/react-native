@@ -13,6 +13,7 @@
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTDefines.h>
 #import <React/RCTLinkingManager.h>
+#import <React/RCTSurfaceHostingProxyRootView.h>
 #import <ReactCommon/RCTSampleTurboModule.h>
 #import <ReactCommon/RCTTurboModuleManager.h>
 
@@ -61,9 +62,15 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
   auto *windowScene = (UIWindowScene *)scene;
   self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
 
+  NSMutableDictionary *initialProps = [[self prepareInitialProps] mutableCopy];
+  NSURL *initialURL = connectionOptions.URLContexts.anyObject.URL;
+  if (initialURL != nil) {
+    initialProps[@"exampleFromAppetizeParams"] = initialURL.absoluteString;
+  }
+
   [self.reactNativeFactory startReactNativeWithModuleName:@"RNTesterApp"
                                                  inWindow:self.window
-                                        initialProperties:[self prepareInitialProps]
+                                        initialProperties:initialProps
                                         connectionOptions:connectionOptions];
 
 #if RCT_DEV_MENU
@@ -87,6 +94,22 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
 - (void)scene:(UIScene *)scene continueUserActivity:(NSUserActivity *)userActivity
 {
   [RCTLinkingManager scene:scene continueUserActivity:userActivity];
+}
+
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts
+{
+  [RCTLinkingManager scene:scene openURLContexts:URLContexts];
+
+  // A scene can receive its URL while JavaScript is still starting, before
+  // Linking has an observer. Retain the route in the root props as well.
+  NSURL *URL = URLContexts.anyObject.URL;
+  UIView *rootView = self.window.rootViewController.view;
+  if (URL != nil && [rootView isKindOfClass:[RCTSurfaceHostingProxyRootView class]]) {
+    auto *hostingView = (RCTSurfaceHostingProxyRootView *)rootView;
+    NSMutableDictionary *properties = [hostingView.appProperties mutableCopy] ?: [NSMutableDictionary dictionary];
+    properties[@"exampleFromAppetizeParams"] = URL.absoluteString;
+    hostingView.appProperties = properties;
+  }
 }
 
 - (NSURL *)bundleURL

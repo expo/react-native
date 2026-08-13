@@ -16,6 +16,9 @@ export type RNTesterModuleExample = Readonly<{
   expect?: string,
   hidden?: boolean,
   scrollable?: boolean,
+  /** The example owns its scrolling and must reach the display edges: the
+   * single-example container skips its padded wrapper. */
+  fullBleed?: boolean,
   render: component(),
 }>;
 
