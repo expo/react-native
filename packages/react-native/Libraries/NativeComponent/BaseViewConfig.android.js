@@ -207,6 +207,39 @@ const directEventTypes = {
 };
 
 const validAttributesForNonEventProps = {
+  // Inheritable text attributes (text children, gated natively behind
+  // enableStringChildren; inert otherwise). Mirrors the CSS inherited
+  // text-property set.
+  color: colorAttribute,
+  fontSize: true,
+  fontFamily: true,
+  fontWeight: true,
+  fontStyle: true,
+  fontVariant: true,
+  letterSpacing: true,
+  lineHeight: true,
+  textAlign: true,
+  textTransform: true,
+  // `white-space`: inherited like the rest of this group, and the reason a
+  // <pre> keeps its newlines and space runs.
+  whiteSpace: true,
+  // `transition` (css-transitions-1). Delivered as the four longhands and
+  // zipped in the renderer, which is also where the animation runs — these
+  // never reach JavaScript again once set.
+  transitionProperty: true,
+  transitionDuration: true,
+  transitionDelay: true,
+  transitionTimingFunction: true,
+  // `animation` (css-animations-1). Keyframes arrive pre-resolved as a JSON
+  // string; the longhands ride alongside. Run by the same renderer engine.
+  animationKeyframes: true,
+  animationDuration: true,
+  animationDelay: true,
+  animationTimingFunction: true,
+  animationIterationCount: true,
+  animationDirection: true,
+  animationFillMode: true,
+
   // @ReactProps from BaseViewManager
   backgroundColor: colorAttribute,
   transform: true,

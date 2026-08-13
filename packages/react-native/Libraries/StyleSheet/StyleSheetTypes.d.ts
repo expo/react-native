@@ -48,7 +48,16 @@ export interface FlexStyle {
   borderWidth?: number | undefined;
   bottom?: DimensionValue | undefined;
   boxSizing?: 'border-box' | 'content-box' | undefined;
-  display?: 'none' | 'flex' | 'contents' | undefined;
+  display?: 'none' | 'flex' | 'block' | 'inline' | 'contents' | undefined;
+  float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end' | undefined;
+  clear?:
+    | 'none'
+    | 'left'
+    | 'right'
+    | 'both'
+    | 'inline-start'
+    | 'inline-end'
+    | undefined;
   end?: DimensionValue | undefined;
   flex?: number | undefined;
   flexBasis?: DimensionValue | undefined;
@@ -445,6 +454,71 @@ export type BackgroundRepeatValue = {
  */
 export interface ViewStyle extends FlexStyle, ShadowStyleIOS, TransformsStyle {
   backfaceVisibility?: 'visible' | 'hidden' | undefined;
+  /**
+   * `transition` (css-transitions-1), as the four longhands. When a declared
+   * property's value changes, the renderer animates from the previous value —
+   * off the JavaScript thread, driven by the platform display link, gated
+   * behind `useSharedAnimatedBackend`. Comma-separated lists zip by index, and
+   * shorter lists repeat, exactly as on the web.
+   *
+   * Transitionable so far: `opacity`, `background-color`, `border-color`,
+   * `transform` (and `all`, meaning that set). Other property names are
+   * accepted and ignored: the value still applies, immediately.
+   */
+  transitionProperty?: string | undefined;
+  transitionDuration?: string | number | undefined;
+  transitionDelay?: string | number | undefined;
+  transitionTimingFunction?: string | undefined;
+  /**
+   * `animation` (css-animations-1), run by the same renderer engine as
+   * transitions. `animationKeyframes` is a JSON string of pre-resolved stops
+   * (`[{offset, opacity?, backgroundColor?, borderColor?, transform?}, ...]`)
+   * — a style layer such as Astryx serializes its `@keyframes` rules into it.
+   * Animatable properties match the transitionable set.
+   */
+  animationKeyframes?: string | undefined;
+  animationDuration?: string | number | undefined;
+  animationDelay?: string | number | undefined;
+  animationTimingFunction?: string | undefined;
+  animationIterationCount?: string | number | undefined;
+  animationDirection?:
+    | 'normal'
+    | 'reverse'
+    | 'alternate'
+    | 'alternate-reverse'
+    | undefined;
+  animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both' | undefined;
+  /**
+   * `white-space` (css-text-3 §3): how white space and newlines in text
+   * children are processed. `normal` collapses runs of spaces and turns
+   * newlines into spaces; `pre` and `pre-wrap` preserve both; `pre-line`
+   * preserves newlines but collapses spaces; `nowrap` collapses and does not
+   * wrap.
+   *
+   * `break-spaces` is accepted and **behaves as `pre-wrap`**. The two differ
+   * only in what happens to a run of preserved spaces sitting at a wrap
+   * point: `pre-wrap` lets it hang past the edge, `break-spaces` measures it
+   * so it wraps like any other character. Hanging is what both platform text
+   * engines do and neither exposes a knob for it — deciding otherwise means
+   * participating in line breaking, which TextKit and Android's `Layout` do
+   * not expose. The two are identical unless a space run is long enough to
+   * outrun the line.
+   *
+   * Applies to elements — `<pre>`, `<div>` and the rest — and to the text
+   * inside them, which is the whitespace model this property comes from. It
+   * has NO effect on `<Text>`, on either platform: `<Text>` predates the DOM
+   * work, already preserves whitespace and newlines as authored, and never
+   * had a collapsing pass for `pre` to turn off. Accepted on a `<Text>` style
+   * only because a TextStyle is a ViewStyle; it is ignored.
+   */
+  whiteSpace?:
+    | 'normal'
+    | 'pre'
+    | 'pre-wrap'
+    | 'pre-line'
+    | 'nowrap'
+    | 'break-spaces'
+    | undefined;
   backgroundColor?: ColorValue | undefined;
   borderBlockColor?: ColorValue | undefined;
   borderBlockEndColor?: ColorValue | undefined;

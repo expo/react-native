@@ -61,6 +61,46 @@ static bool isInlineLevelBox(const ShadowNode& child);
 // it out of inline flow.
 static bool authorDisplayBlockifies(const ShadowNode& child);
 
+// Whether the inheritable text props that feed the element-tree cascade
+// (text-children-plan.md §3.D) differ between two revisions of a View's props.
+// A change here must re-run the cascade into descendant IFCs even though none
+// of these keys is a Yoga layout style. Extend this as the inherited set grows
+// (§5.6).
+static bool inheritableTextPropsDiffer(
+    const BaseViewProps& a,
+    const BaseViewProps& b) {
+  // Toggling an inheritance boundary rewires what the whole subtree inherits.
+  if (a.cascadeReset != b.cascadeReset) {
+    return true;
+  }
+  if (a.inheritedColor != b.inheritedColor ||
+      a.inheritedFontFamily != b.inheritedFontFamily ||
+      a.inheritedFontWeight != b.inheritedFontWeight ||
+      a.inheritedFontStyle != b.inheritedFontStyle ||
+      a.inheritedFontVariant != b.inheritedFontVariant ||
+      a.inheritedTextAlign != b.inheritedTextAlign ||
+      a.inheritedTextTransform != b.inheritedTextTransform) {
+    return true;
+  }
+  // NaN-aware compares for the optional-by-NaN Float props.
+  const std::pair<Float, Float> floatPairs[] = {
+      {a.inheritedFontSize, b.inheritedFontSize},
+      {a.inheritedLetterSpacing, b.inheritedLetterSpacing},
+      {a.inheritedLineHeight, b.inheritedLineHeight}};
+  for (const auto& [x, y] : floatPairs) {
+    const bool xNan = std::isnan(x);
+    const bool yNan = std::isnan(y);
+    if (xNan || yNan) {
+      if (xNan != yNan) {
+        return true;
+      }
+    } else if (x != y) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static int FabricDefaultYogaLog(
     const YGConfigConstRef /*unused*/,
     const YGNodeConstRef /*unused*/,
@@ -207,6 +247,9 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
   // `updateYogaChildren` (which compares child dirtiness) and propagated to the
   // surface root, so `layoutIfNeeded` actually runs the pass.
   if (ReactNativeFeatureFlags::enableStringChildren() && fragment.props) {
+    const auto& source =
+        static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode);
+    const auto* oldProps = dynamic_cast<const BaseViewProps*>(source.props_.get());
     const auto* newProps = dynamic_cast<const BaseViewProps*>(props_.get());
     if (newProps != nullptr) {
       // The boundary is a per-node fact resolved from the authored `all` and
@@ -219,6 +262,18 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
       } else {
         traits_.unset(ShadowNodeTraits::Trait::InheritanceBoundary);
       }
+    }
+    // One-load fast path: when neither revision sets any inheritable text
+    // prop or boundary — almost every View — nothing can differ. And when
+    // something does differ, dirty only if some descendant text actually
+    // DEPENDS on this node's cascade; with no dependents there is no observer,
+    // and the whole subtree walk the dirtying would cause is skipped.
+    if (oldProps != nullptr && newProps != nullptr &&
+        (oldProps->hasInheritedTextProps || newProps->hasInheritedTextProps ||
+         oldProps->cascadeReset != newProps->cascadeReset) &&
+        getTraits().check(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents) &&
+        inheritableTextPropsDiffer(*oldProps, *newProps)) {
+      yogaNode_.setDirty(true);
     }
   }
 
@@ -1175,6 +1230,15 @@ void YogaLayoutableShadowNode::configureYogaTree(
   // 8-byte received memo the change-detection compares against.
   auto effectiveCascade = receivedTextAttributes_;
   if (ReactNativeFeatureFlags::enableStringChildren()) {
+    if (const auto* baseViewProps =
+            dynamic_cast<const BaseViewProps*>(props_.get());
+        baseViewProps != nullptr && baseViewProps->hasInheritedTextProps) {
+      // Copy-on-write: only a node that actually carries inheritable props
+      // establishes a new cascade object; everyone else keeps sharing.
+      auto next = std::make_shared<TextAttributes>(*effectiveCascade);
+      baseViewProps->applyInheritedTextAttributes(*next);
+      effectiveCascade = std::move(next);
+    }
     if (getTraits().check(ShadowNodeTraits::Trait::TextCascadeConsumer)) {
       setInheritedCascade(effectiveCascade);
     }

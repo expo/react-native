@@ -7,11 +7,14 @@
 
 #include "BaseViewProps.h"
 
+
 #include <algorithm>
 
+#include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/components/view/BackgroundImagePropsConversions.h>
 #include <react/renderer/components/view/BoxShadowPropsConversions.h>
 #include <react/renderer/components/view/FilterPropsConversions.h>
+#include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/conversions.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/components/view/propsConversions.h>
@@ -52,11 +55,34 @@ std::array<float, 3> getTranslateForTransformOrigin(
 
 } // namespace
 
+// The public constructor exists only to read `enableStringChildren` once and
+// hand the answer to the real one. See the note on ResolvedFlag in the header:
+// the flag getter is a cross-module call ending in a sequentially-consistent
+// atomic load, so asking it twelve times per View cost more than the twelve
+// raw-prop probes it was gating.
 BaseViewProps::BaseViewProps(
     const PropsParserContext& context,
     const BaseViewProps& sourceProps,
     const RawProps& rawProps,
-    const std::function<bool(const std::string&)>& filterObjectKeys)
+    const std::function<bool(const std::string&)>& filterObjectKeys,
+    bool parseInheritedTextProps)
+    : BaseViewProps(
+          context,
+          sourceProps,
+          rawProps,
+          filterObjectKeys,
+          parseInheritedTextProps,
+          ReactNativeFeatureFlags::enableStringChildren(),
+          ResolvedFlag{}) {}
+
+BaseViewProps::BaseViewProps(
+    const PropsParserContext& context,
+    const BaseViewProps& sourceProps,
+    const RawProps& rawProps,
+    const std::function<bool(const std::string&)>& filterObjectKeys,
+    bool parseInheritedTextProps,
+    bool stringChildrenEnabled,
+    ResolvedFlag)
     : YogaStylableProps(context, sourceProps, rawProps, filterObjectKeys),
       AccessibilityProps(context, sourceProps, rawProps),
       opacity(convertRawProp(
@@ -71,6 +97,111 @@ BaseViewProps::BaseViewProps(
           "backgroundColor",
           sourceProps.backgroundColor,
           {})),
+      // The inheritable text props are gated per-field, IN PLACE: with
+      // `enableStringChildren` off they cost zero raw-prop probes
+      // (pay-for-what-you-use), and with it on the probes sit exactly here,
+      // in declaration order — RawPropsParser optimizes monotonic key
+      // access, and hoisting these probes after the later keys makes its
+      // index roll over per parse (measured: +26% on <Text>-row mounts).
+      inheritedColor(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "color",
+                    sourceProps.inheritedColor,
+                    {})
+              : sourceProps.inheritedColor),
+      inheritedFontSize(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "fontSize",
+                    sourceProps.inheritedFontSize,
+                    std::numeric_limits<Float>::quiet_NaN())
+              : sourceProps.inheritedFontSize),
+      inheritedFontFamily(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "fontFamily",
+                    sourceProps.inheritedFontFamily,
+                    {})
+              : sourceProps.inheritedFontFamily),
+      inheritedFontWeight(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "fontWeight",
+                    sourceProps.inheritedFontWeight,
+                    {})
+              : sourceProps.inheritedFontWeight),
+      inheritedFontStyle(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "fontStyle",
+                    sourceProps.inheritedFontStyle,
+                    {})
+              : sourceProps.inheritedFontStyle),
+      inheritedFontVariant(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "fontVariant",
+                    sourceProps.inheritedFontVariant,
+                    {})
+              : sourceProps.inheritedFontVariant),
+      inheritedLetterSpacing(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "letterSpacing",
+                    sourceProps.inheritedLetterSpacing,
+                    std::numeric_limits<Float>::quiet_NaN())
+              : sourceProps.inheritedLetterSpacing),
+      inheritedLineHeight(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "lineHeight",
+                    sourceProps.inheritedLineHeight,
+                    std::numeric_limits<Float>::quiet_NaN())
+              : sourceProps.inheritedLineHeight),
+      inheritedTextAlign(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "textAlign",
+                    sourceProps.inheritedTextAlign,
+                    {})
+              : sourceProps.inheritedTextAlign),
+      inheritedTextTransform(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "textTransform",
+                    sourceProps.inheritedTextTransform,
+                    {})
+              : sourceProps.inheritedTextTransform),
+      inheritedWhiteSpace(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "whiteSpace",
+                    sourceProps.inheritedWhiteSpace,
+                    {})
+              : sourceProps.inheritedWhiteSpace),
       borderRadii(convertRawProp(
           context,
           rawProps,
@@ -195,6 +326,13 @@ BaseViewProps::BaseViewProps(
           {})),
       cursor(
           convertRawProp(context, rawProps, "cursor", sourceProps.cursor, {})),
+      // Only meaningful when a View paints its own text, so it costs nothing
+      // to parse when that cannot happen.
+      userSelect(
+          stringChildrenEnabled
+              ? convertRawProp(
+                    context, rawProps, "userSelect", sourceProps.userSelect, {})
+              : sourceProps.userSelect),
       boxShadow(convertRawProp(
           context,
           rawProps,
@@ -306,7 +444,47 @@ BaseViewProps::BaseViewProps(
           rawProps,
           "removeClippedSubviews",
           sourceProps.removeClippedSubviews,
-          false)) {}
+          false)) {
+  hasInheritedTextProps = computeHasInheritedTextProps();
+
+
+  // `all` — parsed by hand: its value space here is tiny and a boundary is
+  // structural enough that a malformed value should mean "no declaration".
+  // The keyword is stored verbatim and resolved against the element's
+  // user-agent origin in isInheritanceBoundary(): `unset` erases the cascaded
+  // value from every origin — for inherited properties that means inherit —
+  // so it is the author's switch for turning OFF a user-agent boundary
+  // (<Text style={{all: 'unset'}}>), while `revert` only rolls back to it.
+  if (const auto* rawValue =
+          stringChildrenEnabled ? rawProps.at("all", nullptr, nullptr)
+                                : nullptr) {
+    if (rawValue->hasType<std::string>()) {
+      const auto stringValue = (std::string)*rawValue;
+      // `inherit` explicitly inherits every property; since this `all` is
+      // scoped to inherited properties only, that is the same resolved value
+      // as `unset` (css-cascade-4 §7.3) — and like `unset` it overrides a
+      // user-agent boundary.
+      cascadeReset = stringValue == "initial" ? CascadeReset::Initial
+          : stringValue == "revert"           ? CascadeReset::Revert
+          : stringValue == "unset"            ? CascadeReset::Unset
+          : stringValue == "inherit"          ? CascadeReset::Unset
+                                              : CascadeReset::None;
+    } else {
+      cascadeReset = CascadeReset::None;
+    }
+  } else {
+    cascadeReset = sourceProps.cascadeReset;
+  }
+}
+
+bool BaseViewProps::computeHasInheritedTextProps() const {
+  return inheritedColor || !std::isnan(inheritedFontSize) ||
+      !inheritedFontFamily.empty() || inheritedFontWeight.has_value() ||
+      inheritedFontStyle.has_value() || inheritedFontVariant.has_value() ||
+      !std::isnan(inheritedLetterSpacing) || !std::isnan(inheritedLineHeight) ||
+      inheritedTextAlign.has_value() || inheritedTextTransform.has_value() ||
+      inheritedWhiteSpace.has_value();
+}
 
 #define VIEW_EVENT_CASE(eventType)                      \
   case CONSTEXPR_RAW_PROPS_KEY_HASH("on" #eventType): { \
@@ -336,6 +514,17 @@ void BaseViewProps::setProp(
   switch (hash) {
     RAW_SET_PROP_SWITCH_CASE_BASIC(opacity);
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundColor);
+    RAW_SET_PROP_SWITCH_CASE(inheritedColor, "color");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontSize, "fontSize");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontFamily, "fontFamily");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontWeight, "fontWeight");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontStyle, "fontStyle");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontVariant, "fontVariant");
+    RAW_SET_PROP_SWITCH_CASE(inheritedLetterSpacing, "letterSpacing");
+    RAW_SET_PROP_SWITCH_CASE(inheritedLineHeight, "lineHeight");
+    RAW_SET_PROP_SWITCH_CASE(inheritedTextAlign, "textAlign");
+    RAW_SET_PROP_SWITCH_CASE(inheritedTextTransform, "textTransform");
+    RAW_SET_PROP_SWITCH_CASE(inheritedWhiteSpace, "whiteSpace");
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundImage);
     RAW_SET_PROP_SWITCH_CASE(backgroundImage, "experimental_backgroundImage");
     RAW_SET_PROP_SWITCH_CASE(backgroundSize, "experimental_backgroundSize");
@@ -359,6 +548,7 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(collapsableChildren);
     RAW_SET_PROP_SWITCH_CASE_BASIC(removeClippedSubviews);
     RAW_SET_PROP_SWITCH_CASE_BASIC(cursor);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(userSelect);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineColor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineOffset);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineStyle);
@@ -562,6 +752,43 @@ Transform BaseViewProps::resolveTransform(
 
 bool BaseViewProps::getClipsContentToBounds() const {
   return yogaStyle.overflow() != yoga::Overflow::Visible;
+}
+
+void BaseViewProps::applyInheritedTextAttributes(
+    TextAttributes& textAttributes) const {
+  if (inheritedColor) {
+    textAttributes.foregroundColor = inheritedColor;
+  }
+  if (!std::isnan(inheritedFontSize)) {
+    textAttributes.fontSize = inheritedFontSize;
+  }
+  if (!inheritedFontFamily.empty()) {
+    textAttributes.fontFamily = inheritedFontFamily;
+  }
+  if (inheritedFontWeight) {
+    textAttributes.fontWeight = inheritedFontWeight;
+  }
+  if (inheritedFontStyle) {
+    textAttributes.fontStyle = inheritedFontStyle;
+  }
+  if (inheritedFontVariant) {
+    textAttributes.fontVariant = inheritedFontVariant;
+  }
+  if (!std::isnan(inheritedLetterSpacing)) {
+    textAttributes.letterSpacing = inheritedLetterSpacing;
+  }
+  if (!std::isnan(inheritedLineHeight)) {
+    textAttributes.lineHeight = inheritedLineHeight;
+  }
+  if (inheritedTextAlign) {
+    textAttributes.alignment = inheritedTextAlign;
+  }
+  if (inheritedTextTransform) {
+    textAttributes.textTransform = inheritedTextTransform;
+  }
+  if (inheritedWhiteSpace) {
+    textAttributes.whiteSpace = inheritedWhiteSpace;
+  }
 }
 
 #pragma mark - DebugStringConvertible
