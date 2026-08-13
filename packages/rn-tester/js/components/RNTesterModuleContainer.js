@@ -81,11 +81,25 @@ export default function RNTesterModuleContainer(props: Props): React.Node {
   return singleModule != null ? (
     <>
       {singleModule.scrollable === true ? (
-        <ScrollView style={styles.examplesContainer} testID="example-container">
+        <ScrollView
+          style={styles.examplesContainer}
+          contentContainerStyle={
+            singleModule.fullBleed === true ? null : styles.singleExampleContent
+          }
+          testID="example-container">
           <singleModule.render />
         </ScrollView>
       ) : (
-        <View style={styles.examplesContainer} testID="example-container">
+        <View
+          style={[
+            styles.examplesContainer,
+            // A screen that owns its scrolling must reach the edges: padding
+            // here would inset the screen's OWN ScrollView, floating its
+            // scroll indicator 20pt off the display's right edge and adding
+            // a second frame of chrome around content already padded inside.
+            singleModule.fullBleed === true ? null : styles.singleExampleContent,
+          ]}
+          testID="example-container">
           <singleModule.render />
         </View>
       )}
@@ -154,6 +168,13 @@ const styles = StyleSheet.create({
   examplesContainer: {
     flexGrow: 1,
     flex: 1,
+  },
+  // Opened on its own, an example has no RNTesterBlock around it, so it would
+  // otherwise run edge to edge. Matches the inset the card gives it in the
+  // list, so a demo looks the same either way it is reached.
+  singleExampleContent: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
   separator: {
     borderBottomWidth: Platform.select({
