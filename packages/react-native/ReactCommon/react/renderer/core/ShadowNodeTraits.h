@@ -101,6 +101,13 @@ class ShadowNodeTraits {
     // they lay out.
     AnonymousBox = 1 << 15,
 
+    // The node is inline-level text content: it participates in a text run rather
+    // than becoming its own block/flex item when it is a child of a View's anonymous
+    // inline formatting context. Set by #text nodes. Checking this trait instead of
+    // a component name avoids a components/view → components/text include
+    // dependency.
+    InlineText = 1 << 16,
+
     // The node IS a YogaLayoutableShadowNode. Layout code downcasts child
     // ShadowNodes per child, per pass; the trait plus a static_cast answers
     // the same question as an RTTI dynamic_cast without walking the class

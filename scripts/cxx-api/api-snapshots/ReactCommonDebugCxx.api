@@ -72,6 +72,7 @@ struct facebook::hermes::ISetEventLoopControl : public facebook::jsi::ICast {
 
 
 const char facebook::react::InlineContentComponentName[];
+const char facebook::react::TextNodeComponentName[];
 const char facebook::react::ViewComponentName[];
 const facebook::react::EventTag facebook::react::EMPTY_EVENT_TAG;
 constexpr facebook::react::ReactNativeVersionType facebook::react::ReactNativeVersion;
@@ -1137,6 +1138,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   FormsStackingContext,
   FormsView,
   Hidden,
+  InlineText,
   KeyboardFocusable,
   LeafYogaNode,
   MeasurableYogaNode,
@@ -1180,6 +1182,22 @@ class facebook::react::StateUpdate {
   public facebook::react::StateUpdate::Callback callback;
   public using Callback = std::function<facebook::react::StateData::Shared(const facebook::react::StateData::Shared& data)>;
   public using FailureCallback = std::function<void()>;
+}
+
+class facebook::react::TextNodeComponentDescriptor : public facebook::react::ConcreteComponentDescriptor<facebook::react::TextNodeShadowNode> {
+  public TextNodeComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters);
+}
+
+class facebook::react::TextNodeProps : public facebook::react::Props {
+  public TextNodeProps() = default;
+  public TextNodeProps(const facebook::react::PropsParserContext& context, const facebook::react::TextNodeProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public TextNodeProps(std::string text);
+  public std::string text;
+}
+
+class facebook::react::TextNodeShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::TextNodeComponentName, facebook::react::ShadowNode, facebook::react::TextNodeProps> {
+  public const std::string& getText() const;
+  public static facebook::react::ShadowNodeTraits BaseTraits();
 }
 
 class facebook::react::TouchEventEmitter : public facebook::react::EventEmitter {
