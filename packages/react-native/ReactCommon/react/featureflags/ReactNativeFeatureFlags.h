@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<df8968adcf11283d6745bb2e0f5f7a5b>>
+ * @generated SignedSource<<8ba5c6baaeafdee99cc59753a7f0ebd5>>
  */
 
 /**
@@ -255,6 +255,11 @@ class ReactNativeFeatureFlags {
   RN_EXPORT static bool enableSchedulerDelegateInvalidation();
 
   /**
+   * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
+   */
+  RN_EXPORT static bool enableStringChildren();
+
+  /**
    * When enabled, it will use SwiftUI for filter effects like blur on iOS.
    */
   RN_EXPORT static bool enableSwiftUIBasedFilters();
@@ -293,6 +298,11 @@ class ReactNativeFeatureFlags {
    * Enables the experimental version of `VirtualViewContainerState`.
    */
   RN_EXPORT static bool enableVirtualViewContainerStateExperimental();
+
+  /**
+   * Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableStringChildren; the emulation remains the flag-off fallback.
+   */
+  RN_EXPORT static bool enableYogaDisplayBlock();
 
   /**
    * Fix incorrect parentTag passed as parentTagForUpdate in the unflatten-unflatten branch of calculateShadowViewMutationsFlattener, which causes UPDATE mutations to reference a parent being created in the same batch.
