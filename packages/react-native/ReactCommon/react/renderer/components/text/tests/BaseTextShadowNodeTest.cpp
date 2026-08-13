@@ -18,10 +18,10 @@ namespace facebook::react {
 
 namespace {
 
-Element<RawTextShadowNode> rawTextElement(const char* text) {
-  auto rawTextProps = std::make_shared<RawTextProps>();
+Element<TextNodeShadowNode> rawTextElement(const char* text) {
+  auto rawTextProps = std::make_shared<TextNodeProps>();
   rawTextProps->text = text;
-  return Element<RawTextShadowNode>().props(rawTextProps);
+  return Element<TextNodeShadowNode>().props(rawTextProps);
 }
 
 std::string roundTripTextAlignment(const char* textAlignment) {

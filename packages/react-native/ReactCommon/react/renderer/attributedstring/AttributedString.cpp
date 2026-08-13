@@ -30,28 +30,48 @@ bool Fragment::isAttachment() const {
 }
 
 bool Fragment::operator==(const Fragment& rhs) const {
-  return std::tie(
-             string,
-             textAttributes,
-             parentShadowView.tag,
-             parentShadowView.layoutMetrics) ==
-      std::tie(
-             rhs.string,
-             rhs.textAttributes,
-             rhs.parentShadowView.tag,
-             rhs.parentShadowView.layoutMetrics);
+  // Full equality is content equality plus the two parentShadowView fields
+  // that identify and place the fragment's element. Deferring to
+  // `isContentEqual` rather than listing the content fields again is what
+  // keeps the two from drifting apart: a field added for layout gets picked
+  // up by both, and there is exactly one place to decide whether a new field
+  // is content.
+  return isContentEqual(rhs) &&
+      std::tie(parentShadowView.tag, parentShadowView.layoutMetrics) ==
+      std::tie(rhs.parentShadowView.tag, rhs.parentShadowView.layoutMetrics);
 }
 
 bool Fragment::isContentEqual(const Fragment& rhs) const {
-  return std::tie(string, textAttributes) ==
-      std::tie(rhs.string, rhs.textAttributes);
+  // Inline box spacing changes the measured advance, so it is part of the
+  // content for measure-cache purposes.
+  // `atomicInlineBaseline` changes where the box sits on the line, so it is
+  // part of the content for measure-cache purposes.
+  return std::tie(
+             string,
+             textAttributes,
+             inlineBox,
+             isInlineBoxStart,
+             isInlineBoxEnd,
+             atomicInlineBaseline,
+             forcedBreak) ==
+      std::tie(
+          rhs.string,
+          rhs.textAttributes,
+          rhs.inlineBox,
+          rhs.isInlineBoxStart,
+          rhs.isInlineBoxEnd,
+          rhs.atomicInlineBaseline,
+          rhs.forcedBreak);
 }
 
 #pragma mark - AttributedString
 
 void AttributedString::appendFragment(Fragment&& fragment) {
   ensureUnsealed();
-  if (!fragment.string.empty()) {
+  // Empty fragments are dropped because they are nothing — except for the one
+  // that is empty on purpose: an inline element with no text still has a box
+  // on the line (CSSOM-View §4), and this fragment is the only record of it.
+  if (!fragment.string.empty() || fragment.isEmptyElement) {
     fragments_.push_back(std::move(fragment));
   }
 }
@@ -74,6 +94,25 @@ const Fragments& AttributedString::getFragments() const {
 
 Fragments& AttributedString::getFragments() {
   return fragments_;
+}
+
+RectangleEdges<Float> AttributedString::inlineBoxBlockAxisOverflow() const {
+  auto overflow = RectangleEdges<Float>{};
+  for (const auto& fragment : fragments_) {
+    const auto& box = fragment.inlineBox;
+    if (box.isEmpty()) {
+      continue;
+    }
+    // The outline is stroked centred on a path `outlineOffset` outside the
+    // border box, so it reaches `outlineOffset + outlineWidth` beyond it.
+    auto outline =
+        box.outlineWidth > 0 ? box.outlineOffset + box.outlineWidth : 0;
+    overflow.top = std::max(
+        overflow.top, box.padding.top + box.borderWidth.top + outline);
+    overflow.bottom = std::max(
+        overflow.bottom, box.padding.bottom + box.borderWidth.bottom + outline);
+  }
+  return overflow;
 }
 
 std::string AttributedString::getString() const {
