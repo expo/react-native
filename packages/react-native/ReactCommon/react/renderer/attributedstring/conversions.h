@@ -1193,6 +1193,10 @@ constexpr static MapBuffer::Key FR_KEY_IS_INLINE_BOX_END = 8;
 // the platform can sit that baseline on the line's instead of dropping the
 // box's bottom onto it.
 constexpr static MapBuffer::Key FR_KEY_ATOMIC_INLINE_BASELINE = 9;
+// An inline element that contributed no text of its own. Its fragment is empty
+// on purpose, and the platform has to build its zero-width box from the line it
+// sits on rather than from glyphs it does not have.
+constexpr static MapBuffer::Key FR_KEY_IS_EMPTY_ELEMENT = 10;
 
 constexpr static MapBuffer::Key IB_KEY_MARGIN_LEFT = 0;
 constexpr static MapBuffer::Key IB_KEY_MARGIN_RIGHT = 1;
@@ -1536,6 +1540,9 @@ inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
   }
   if (fragment.isAttachment()) {
     builder.putDouble(FR_KEY_ATOMIC_INLINE_BASELINE, fragment.atomicInlineBaseline);
+  }
+  if (fragment.isEmptyElement) {
+    builder.putBool(FR_KEY_IS_EMPTY_ELEMENT, true);
   }
 
   return builder.build();

@@ -33,6 +33,7 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.UiThreadUtil.assertOnUiThread
 import com.facebook.react.bridge.UiThreadUtil.runOnUiThread
 import com.facebook.react.common.ReactConstants.TAG
+import com.facebook.react.common.mapbuffer.MapBuffer
 import com.facebook.react.config.ReactFeatureFlags
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.touch.OnInterceptTouchEventListener
@@ -58,12 +59,16 @@ import com.facebook.react.uimanager.ReactAxOrderHelper
 import com.facebook.react.uimanager.ReactClippingProhibitedView
 import com.facebook.react.uimanager.ReactClippingViewGroup
 import com.facebook.react.uimanager.ReactClippingViewGroupHelper.calculateClippingRect
+import com.facebook.react.uimanager.ReactCompoundViewGroup
+import com.facebook.react.views.text.internal.span.ReactTagSpan
 import com.facebook.react.uimanager.ReactOverflowViewWithInset
 import com.facebook.react.uimanager.ReactPointerEventsView
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
+import com.facebook.react.views.text.internal.span.CanvasEffectSpan
+import com.facebook.react.views.text.internal.span.TextInlineViewPlaceholderSpan
 import com.facebook.react.views.view.CanvasUtil.enableZ
 import java.util.ArrayList
 import kotlin.concurrent.Volatile
@@ -82,6 +87,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
     ReactClippingViewGroup,
     ReactPointerEventsView,
     ReactHitSlopView,
+    ReactCompoundViewGroup,
     ReactOverflowViewWithInset {
 
   public override val overflowInset: Rect = Rect()
@@ -186,6 +192,10 @@ public open class ReactViewGroup public constructor(context: Context?) :
     childrenRemovedWhileTransitioning = null
     nativeBackgroundMap = null
     nativeForegroundMap = null
+    // A recycled view must not paint (or dedupe against) the previous
+    // occupant's text runs.
+    textRunLayouts = null
+    mountedTextRunsState = null
   }
 
   internal open fun recycleView() {
@@ -907,8 +917,163 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (_overflow != Overflow.VISIBLE || getTag(R.id.filter) != null) {
       clipToPaddingBox(this, canvas)
     }
+    // Interleave the text runs with the mounted child views by document order (CSS paint order): a
+    // run paints right after the block child it follows, so text before a box paints under it and
+    // text after paints over it. Runs before any child (documentOrder 0) paint first (under all
+    // children); drawChild paints the runs that follow each child as it is drawn.
+    drawnChildCount = 0
+    drawTextRunsWithDocumentOrder(canvas, 0)
     super.dispatchDraw(canvas)
+    // Safety: any run whose document order exceeds the drawn child count paints above everything.
+    drawTextRunsAboveDocumentOrder(canvas, drawnChildCount)
   }
+
+  /**
+   * Text children (expo-intrinsics): the laid-out text runs of this View's anonymous inline
+   * formatting context, computed natively and delivered via [ViewState]/MapBuffer. Interleaved with
+   * the View's child views by document order, mirroring iOS's RCTViewComponentView text-run painting.
+   */
+  private var textRunLayouts: List<TextRunLayout>? = null
+  private var drawnChildCount = 0
+
+  /**
+   * The serialized ViewState the current [textRunLayouts] were built from. Fabric can deliver the
+   * same state more than once (initial mount plus the state-update mount item of the very commit
+   * that computed the runs); comparing against this lets `updateState` keep the mounted layouts
+   * instead of rebuilding identical ones on the UI thread (run-layout-reuse-plan.md).
+   */
+  @JvmField internal var mountedTextRunsState: MapBuffer? = null
+
+  /**
+   * A single laid-out text run: an Android [Layout] positioned at [left]/[top] in pixels.
+   * [documentOrder] is the number of mounted child views that precede the run, so it can be painted
+   * in the correct z-order relative to those children.
+   */
+  public class TextRunLayout(
+      @JvmField public val layout: android.text.Layout,
+      @JvmField public val left: Float,
+      @JvmField public val top: Float,
+      @JvmField public val documentOrder: Int,
+  )
+
+  public fun setTextRunLayouts(runs: List<TextRunLayout>?) {
+    textRunLayouts = runs
+    invalidate()
+  }
+
+  private fun drawTextRun(canvas: Canvas, run: TextRunLayout) {
+    canvas.save()
+    canvas.translate(run.left, run.top)
+    val layout = run.layout
+    // Text-decoration (underline/strikethrough) and text shadow are CanvasEffectSpans: they are not
+    // drawn by Layout.draw but painted around it — onPreDraw before, onDraw after — exactly as
+    // PreparedLayoutTextView does for a normal <Text>. Without this pass a <u>/<s> in the anonymous
+    // IFC would flow inline but show no decoration.
+    val spanned = layout.text as? android.text.Spanned
+    val effectSpans =
+        spanned?.getSpans(0, spanned.length, CanvasEffectSpan::class.java) ?: emptyArray()
+    if (spanned != null) {
+      for (span in effectSpans) {
+        span.onPreDraw(spanned.getSpanStart(span), spanned.getSpanEnd(span), canvas, layout)
+      }
+    }
+    layout.draw(canvas)
+    if (spanned != null) {
+      for (span in effectSpans) {
+        span.onDraw(spanned.getSpanStart(span), spanned.getSpanEnd(span), canvas, layout)
+      }
+    }
+    canvas.restore()
+  }
+
+  private fun drawTextRunsWithDocumentOrder(canvas: Canvas, documentOrder: Int) {
+    val runs = textRunLayouts ?: return
+    for (run in runs) {
+      if (run.documentOrder == documentOrder) {
+        drawTextRun(canvas, run)
+      }
+    }
+  }
+
+  private fun drawTextRunsAboveDocumentOrder(canvas: Canvas, documentOrder: Int) {
+    val runs = textRunLayouts ?: return
+    for (run in runs) {
+      if (run.documentOrder > documentOrder) {
+        drawTextRun(canvas, run)
+      }
+    }
+  }
+
+  // ReactCompoundViewGroup: the painted text runs are not real child views, so touch targeting must
+  // resolve a point inside a run to the react tag of the inline element (or bare-text fragment) under
+  // it — the same ReactTagSpan lookup ReactTextView does. This is what lets a tap on an inline
+  // <b onClick> fire the <b>'s own handler (and bubble) rather than only hitting the container View.
+  private fun reactTagForTextRunTouch(touchX: Float, touchY: Float): Int? {
+    val runs = textRunLayouts ?: return null
+    for (run in runs) {
+      val layout = run.layout
+      val localX = touchX - run.left
+      val localY = touchY - run.top
+      if (localX < 0f || localY < 0f || localY > layout.height.toFloat()) {
+        continue
+      }
+      val text = layout.text
+      if (text !is android.text.Spanned) {
+        continue
+      }
+      val line = layout.getLineForVertical(localY.toInt())
+      if (localX < layout.getLineLeft(line) || localX > layout.getLineRight(line)) {
+        continue
+      }
+      val index =
+          try {
+            layout.getOffsetForHorizontal(line, localX)
+          } catch (e: ArrayIndexOutOfBoundsException) {
+            continue
+          }
+      // An atomic inline — an <img>, an inline-block, an inline-flex — is an
+      // attachment in the run AND a real mounted child view sitting on top of
+      // it. Claiming the point here would intercept the touch before that child
+      // ever sees it, so a tap on the box resolved to this View instead of to
+      // the box. Decline, and let the ordinary child hit-test run.
+      // The offset is a CURSOR position, so a point over the attachment can
+      // resolve to either side of it; look at the character on both.
+      val attachmentFrom = (index - 1).coerceAtLeast(0)
+      val attachmentTo = (index + 1).coerceAtMost(text.length)
+      if (attachmentFrom < attachmentTo &&
+          text.getSpans(attachmentFrom, attachmentTo, TextInlineViewPlaceholderSpan::class.java)
+              .isNotEmpty()) {
+        return null
+      }
+
+      // Most-inner (shortest) ReactTagSpan at the offset is the innermost react element. Skip
+      // non-positive tags: bare-text (#text) nodes carry no event emitter by design, so a click on
+      // bare text must resolve to the nearest real ancestor element (the container View, `id`) —
+      // matching the web/iOS, where bare text hits only its container while an inline <b>/<span>
+      // hits the element and bubbles.
+      var target = id
+      var targetLen = text.length
+      for (span in text.getSpans(index, index, ReactTagSpan::class.java)) {
+        if (span.reactTag <= 0) {
+          continue
+        }
+        val start = text.getSpanStart(span)
+        val end = text.getSpanEnd(span)
+        if (end >= index && (end - start) <= targetLen) {
+          target = span.reactTag
+          targetLen = end - start
+        }
+      }
+      return target
+    }
+    return null
+  }
+
+  override fun reactTagForTouch(touchX: Float, touchY: Float): Int =
+      reactTagForTextRunTouch(touchX, touchY) ?: id
+
+  override fun interceptsTouchEvent(touchX: Float, touchY: Float): Boolean =
+      reactTagForTextRunTouch(touchX, touchY) != null
 
   override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {
     val drawWithZ = child.elevation > 0
@@ -943,6 +1108,10 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (drawWithZ) {
       enableZ(canvas, false)
     }
+
+    // Paint the text runs that follow this child in document order (see dispatchDraw).
+    drawnChildCount++
+    drawTextRunsWithDocumentOrder(canvas, drawnChildCount)
     return result
   }
 
