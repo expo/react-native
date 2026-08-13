@@ -7,6 +7,10 @@
 
 #pragma once
 
+#include <limits>
+
+#include <react/renderer/attributedstring/TextAttributes.h>
+#include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/components/view/primitives.h>
@@ -35,16 +39,120 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
       const PropsParserContext &context,
       const BaseViewProps &sourceProps,
       const RawProps &rawProps,
-      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr);
+      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr,
+      // Text-vocabulary props (ParagraphProps) pass false: their BaseTextProps
+      // parse already probes the same style keys into `textAttributes`, and
+      // re-probing them here doubled the parse cost of every <Text>. They copy
+      // the parsed values into the inherited* fields instead (zero probes).
+      bool parseInheritedTextProps = true);
 
   void
   setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+
+ private:
+  // Tag for the delegated constructor below. The public constructor reads
+  // `enableStringChildren` ONCE and forwards the answer; this one takes it as
+  // a plain bool.
+  //
+  // Reading the flag at each of the twelve probe sites instead cost more than
+  // the probes did: the getter is a cross-module call that ends in a
+  // sequentially-consistent atomic load, it does not inline, and it is paid
+  // whether the flag is on or off. Twelve of them per View, on every props
+  // construction, measured about 0.4ms on a 1,365-View mount — larger than
+  // the entire cost of the feature it was gating.
+  struct ResolvedFlag {};
+
+  BaseViewProps(
+      const PropsParserContext &context,
+      const BaseViewProps &sourceProps,
+      const RawProps &rawProps,
+      const std::function<bool(const std::string &)> &filterObjectKeys,
+      bool parseInheritedTextProps,
+      bool stringChildrenEnabled,
+      ResolvedFlag);
+
+ public:
 
 #pragma mark - Props
 
   // Color
   Float opacity{1.0};
   SharedColor backgroundColor{};
+
+  // Inheritable text attributes (text-children-plan.md §3.D): cascade to
+  // descendant text content when enableStringChildren is on. Keys mirror
+  // the CSS inherited text-property set. Parsed here on every View (inert
+  // unless the flag is on); folded into the cascade in `configureYogaTree`.
+  SharedColor inheritedColor{};
+  Float inheritedFontSize{std::numeric_limits<Float>::quiet_NaN()};
+  std::string inheritedFontFamily{""};
+  std::optional<FontWeight> inheritedFontWeight{};
+  std::optional<FontStyle> inheritedFontStyle{};
+  std::optional<FontVariant> inheritedFontVariant{};
+  Float inheritedLetterSpacing{std::numeric_limits<Float>::quiet_NaN()};
+  Float inheritedLineHeight{std::numeric_limits<Float>::quiet_NaN()};
+  std::optional<TextAlignment> inheritedTextAlign{};
+  std::optional<TextTransform> inheritedTextTransform{};
+  // `white-space`, inherited like the rest of these: a `<pre>` sets it and
+  // every run inside keeps it.
+  std::optional<WhiteSpace> inheritedWhiteSpace{};
+
+  /*
+   * Whether ANY inheritable text prop above is set — computed once at parse.
+   * The cascade's hot paths (the clone-path differ, the per-configure fold)
+   * run for every View on every commit, and for the overwhelming majority the
+   * answer is "nothing to do"; this bit is that answer in one load.
+   */
+  bool hasInheritedTextProps{false};
+
+  bool computeHasInheritedTextProps() const;
+
+  /*
+   * CSS `all` (css-cascade-4 §3.2), scoped to the inherited text set — the
+   * only cascading properties this renderer has. The parsed keyword is kept
+   * verbatim; what it MEANS depends on the element's user-agent origin, so
+   * resolution happens in `isInheritanceBoundary(bool)` below, against the
+   * UACascadeBoundary trait. Catalog UA styles merged into props on the JS
+   * side are author-level from this cascade's point of view; the UA origin
+   * here is exclusively the trait-declared one.
+   */
+  enum class CascadeReset : uint8_t { None, Initial, Revert, Unset };
+  CascadeReset cascadeReset{CascadeReset::None};
+
+  /*
+   * Resolves the authored `all` against the element's user-agent declaration
+   * (`uaDeclaresBoundary` = the node's UACascadeBoundary trait), per
+   * css-cascade-4 §7.3: `initial` is a boundary and `unset` is not, from any
+   * origin's default; `revert` rolls the author declaration back to the UA
+   * origin; and an absent declaration leaves the UA origin in force. Root
+   * <Text> (UA `all: 'initial'`) therefore stays a boundary under `revert`
+   * and loses it under `unset`; every other element inherits under both.
+   */
+  const BaseViewProps *asBaseViewProps() const override {
+    return this;
+  }
+
+  bool isInheritanceBoundary(bool uaDeclaresBoundary) const override {
+    switch (cascadeReset) {
+      case CascadeReset::Initial:
+        return true;
+      case CascadeReset::Unset:
+        return false;
+      case CascadeReset::Revert:
+      case CascadeReset::None:
+        return uaDeclaresBoundary;
+    }
+    return uaDeclaresBoundary;
+  }
+
+  /*
+   * Folds the set inheritable text props above into `textAttributes`. Single
+   * source for the two consumers: the element-tree cascade
+   * (`YogaLayoutableShadowNode::configureYogaTree`, §3.D) and span-like
+   * `display:'inline'` boxes whose contents join a run with their props
+   * applied (`BaseTextShadowNode::buildAttributedString`).
+   */
+  void applyInheritedTextAttributes(TextAttributes &textAttributes) const;
 
   // Borders
   CascadedBorderRadii borderRadii{};
@@ -65,6 +173,13 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   Float shadowRadius{3};
 
   Cursor cursor{};
+
+  /*
+   * `user-select` (css-ui-4 §5.1) — whether the anonymous text runs this View
+   * paints can be selected and copied. Per-element, like `<Text selectable>`:
+   * it does not cascade to descendant Views (see the note on the enum).
+   */
+  UserSelect userSelect{UserSelect::Auto};
 
   // Box shadow
   std::vector<BoxShadow> boxShadow{};
