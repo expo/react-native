@@ -9,6 +9,7 @@
 #import <React/RCTSurfaceHostingProxyRootView.h>
 
 #import <CoreGraphics/CoreGraphics.h>
+#import <MobileCoreServices/UTCoreTypes.h>
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
 #import <ranges>
@@ -24,19 +25,38 @@
 #import <React/RCTLog.h>
 #import <React/RCTRadialGradient.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
+#import <react/renderer/animationbackend/CSSTransitionsTrace.h>
 #import <react/renderer/components/view/ViewComponentDescriptor.h>
+#import <react/renderer/components/view/ViewShadowNode.h>
+#import <react/renderer/components/view/ViewState.h>
+#import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
+#import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
+#import <react/renderer/textlayoutmanager/TextLayoutManager.h>
+#import <react/utils/ManagedObjectWrapper.h>
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
 
-#ifdef RCT_DYNAMIC_FRAMEWORKS
+// The generic-box component view (RCTElementBoxComponentView) self-registers
+// with the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
-#endif
+#import <react/renderer/components/view/ElementBoxShadowNode.h>
+
+// Per-run text painting lives in its own file: it is a self-contained concept,
+// and this class is the one every React Native change touches.
+#import "RCTAnonymousTextRunView.h"
 
 using namespace facebook::react;
 
 const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
+
+
+#if !TARGET_OS_TV
+@interface RCTViewComponentView () <UIEditMenuInteractionDelegate>
+@property (nonatomic, nullable) UIEditMenuInteraction *textSelectionEditMenuInteraction API_AVAILABLE(ios(16.0));
+@end
+#endif
 
 @implementation RCTViewComponentView {
   UIColor *_backgroundColor;
@@ -56,6 +76,14 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   NSMutableSet<NSString *> *_accessibilityOrderNativeIDs;
   RCTSwiftUIContainerViewWrapper *_swiftUIWrapper;
   BOOL _focusable;
+  // One paint view per anonymous text run, interleaved with mounted children in
+  // document order (text-children-plan.md §3.B). Internal, never differ-driven.
+  NSMutableArray<RCTAnonymousTextRunView *> *_textRunViews;
+#if !TARGET_OS_TV
+  // Installed only while this View both paints text and asks for it to be
+  // selectable. See the `user-select` section below.
+  UILongPressGestureRecognizer *_textSelectionLongPress;
+#endif
 }
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -154,6 +182,33 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   return concreteComponentDescriptorProvider<ViewComponentDescriptor>();
 }
 
+// Anonymous text run views are the container's own paint layers (plain
+// UIViews, tag 0), interleaved BETWEEN mounted children to honor CSS painting
+// order. Mounting instructions know nothing about them: a mutation's index
+// counts only Fabric children. With run views present, that logical index and
+// the UIKit subview index diverge — using one as the other mounts children at
+// the wrong z-position and trips the unmount assertions on perfectly valid
+// removals. This maps a mutation's index to the UIKit position of that slot,
+// counting only non-run subviews.
+- (NSInteger)_containerIndexForMountIndex:(NSInteger)index
+{
+  if (_textRunViews.count == 0) {
+    return index;
+  }
+  NSArray<UIView *> *subviews = self.currentContainerView.subviews;
+  NSInteger mountedSeen = 0;
+  for (NSUInteger position = 0; position < subviews.count; position++) {
+    if ([subviews[position] isKindOfClass:[RCTAnonymousTextRunView class]]) {
+      continue;
+    }
+    if (mountedSeen == index) {
+      return (NSInteger)position;
+    }
+    mountedSeen++;
+  }
+  return (NSInteger)subviews.count;
+}
+
 - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index
 {
   RCTAssert(
@@ -167,7 +222,8 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   if (_removeClippedSubviews) {
     [_reactSubviews insertObject:childComponentView atIndex:index];
   } else {
-    [self.currentContainerView insertSubview:childComponentView atIndex:index];
+    [self.currentContainerView insertSubview:childComponentView
+                                     atIndex:[self _containerIndexForMountIndex:index]];
   }
 }
 
@@ -189,15 +245,16 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
         childComponentView,
         @(index),
         @([childComponentView.superview tag]));
+    NSInteger containerIndex = [self _containerIndexForMountIndex:index];
     RCTAssert(
-        (self.currentContainerView.subviews.count > index) &&
-            [self.currentContainerView.subviews objectAtIndex:index] == childComponentView,
+        (self.currentContainerView.subviews.count > containerIndex) &&
+            [self.currentContainerView.subviews objectAtIndex:containerIndex] == childComponentView,
         @"Attempt to unmount a view which has a different index. (parent: %@, child: %@, index: %@, actual index: %@, tag at index: %@)",
         self,
         childComponentView,
         @(index),
         @([self.currentContainerView.subviews indexOfObject:childComponentView]),
-        @([[self.currentContainerView.subviews objectAtIndex:index] tag]));
+        @([[self.currentContainerView.subviews objectAtIndex:containerIndex] tag]));
   }
 
   [childComponentView removeFromSuperview];
@@ -214,7 +271,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
         self,
         @(_reactSubviews.count));
     if (self.currentContainerView.subviews.count > 0) {
-      _reactSubviews = [NSMutableArray arrayWithArray:self.currentContainerView.subviews];
+      _reactSubviews = [NSMutableArray new];
+      for (UIView *subview in self.currentContainerView.subviews) {
+        // The container's own text-run paint layers are not React children.
+        if (![subview isKindOfClass:[RCTAnonymousTextRunView class]]) {
+          [_reactSubviews addObject:subview];
+        }
+      }
     }
   } else {
     // Toggled OFF: re-mount all children in the correct order, then clear the tracking array.
@@ -258,6 +321,222 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       // View is completely outside the clipRect, so unmount it
       [view removeFromSuperview];
     }
+  }
+}
+
+- (void)updateState:(const facebook::react::State::Shared &)state
+           oldState:(const facebook::react::State::Shared &)oldState
+{
+  const auto *viewState =
+      std::dynamic_pointer_cast<const facebook::react::ConcreteState<facebook::react::ViewState>>(state).get();
+  if (viewState == nullptr) {
+    return;
+  }
+
+  const auto &data = viewState->getData();
+
+  // Remove surplus run views when the run count shrinks (incl. to zero).
+  while (_textRunViews.count > data.textRuns.size()) {
+    [_textRunViews.lastObject removeFromSuperview];
+    [_textRunViews removeLastObject];
+  }
+  if (data.textRuns.empty()) {
+    // The last run just went away: there is nothing left to select.
+    [self _updateTextSelectionInteraction];
+    return;
+  }
+
+  if (_textRunViews == nil) {
+    _textRunViews = [NSMutableArray new];
+  }
+  for (size_t i = 0; i < data.textRuns.size(); i++) {
+    RCTAnonymousTextRunView *runView = nil;
+    if (i < _textRunViews.count) {
+      runView = _textRunViews[i];
+      // A recycled View keeps its run views but detaches them (see
+      // -prepareForRecycle), so one being reused for text again is re-attached
+      // rather than allocated.
+      if (runView.superview == nil) {
+        [self.currentContainerView addSubview:runView];
+      }
+    } else {
+      runView = [[RCTAnonymousTextRunView alloc] initWithFrame:self.currentContainerView.bounds];
+      [_textRunViews addObject:runView];
+      [self.currentContainerView addSubview:runView];
+    }
+    runView->_run = data.textRuns[i];
+    runView->_layoutManager = data.layoutManager;
+    [runView setContainerBounds:self.currentContainerView.bounds];
+    [runView setNeedsDisplay];
+  }
+  // Re-establish authored paint order relative to mounted children.
+  [self setNeedsLayout];
+  [self _updateTextSelectionInteraction];
+}
+
+// Interleaves the internal per-run paint views with mounted child views in
+// authored document order (CSS painting order, text-children-plan.md §3.B): a
+// run with `documentOrder == d` is placed just below the d-th mounted child, so
+// text authored before a child paints under it and text after paints over it.
+- (void)reorderAnonymousTextRunViewsIfNeeded
+{
+  // A pooled-but-detached run view (see -prepareForRecycle) is not in the
+  // hierarchy and has no order to establish.
+  if (_textRunViews.count == 0 || _textRunViews.firstObject.superview == nil) {
+    return;
+  }
+  UIView *container = self.currentContainerView;
+
+  // Nothing to interleave WITH is the overwhelmingly common case — a row, a
+  // cell, a label: a view whose only content is its own text. Its run views
+  // were appended in order and there is no mounted child to sit above or
+  // below, so the work below would allocate an array, walk the subviews and
+  // re-front each run to arrive exactly where it already was. On a 1,000-row
+  // list that is a thousand array allocations and subview scans per layout
+  // pass, for nothing.
+  if (container.subviews.count == _textRunViews.count) {
+    return;
+  }
+
+  NSMutableArray<UIView *> *mountedChildren = [NSMutableArray new];
+  for (UIView *subview in container.subviews) {
+    if (![subview isKindOfClass:[RCTAnonymousTextRunView class]]) {
+      [mountedChildren addObject:subview];
+    }
+  }
+  for (NSUInteger i = 0; i < _textRunViews.count; i++) {
+    RCTAnonymousTextRunView *runView = _textRunViews[i];
+    int documentOrder = runView->_run.documentOrder;
+    if (documentOrder >= (int)mountedChildren.count) {
+      // After all mounted children: on top.
+      [container bringSubviewToFront:runView];
+    } else {
+      // Just below the child it precedes in document order.
+      UIView *anchor = mountedChildren[documentOrder];
+      NSUInteger anchorIndex = [container.subviews indexOfObject:anchor];
+      if (anchorIndex != NSNotFound) {
+        [container insertSubview:runView belowSubview:anchor];
+        (void)anchorIndex;
+      }
+    }
+  }
+}
+
+#pragma mark - `user-select` on a View's own text
+
+/*
+ * A View that paints its own text (text-children-plan.md §3.B) is not a text
+ * view, so none of UIKit's text-selection machinery reaches it. What
+ * `<Text selectable>` gives on iOS is not range selection either — it is a
+ * long press that offers **Copy**, and copies the whole string
+ * (`RCTParagraphComponentView`'s context menu). This gives a View with
+ * `userSelect: 'text'` exactly that, from the runs it already holds, so bare
+ * strings and `<Text selectable>` behave identically on this platform.
+ *
+ * Range selection with drag handles does not exist for either one on iOS.
+ */
+
+- (BOOL)_hasSelectableText
+{
+  if (_textRunViews.count == 0) {
+    return NO;
+  }
+  return selectsText(static_cast<const ViewProps &>(*_props).userSelect);
+}
+
+#if !TARGET_OS_TV
+- (void)_updateTextSelectionInteraction
+{
+  BOOL wanted = [self _hasSelectableText];
+  BOOL installed = _textSelectionLongPress != nil;
+  if (wanted == installed) {
+    return;
+  }
+
+  if (wanted) {
+    _textSelectionLongPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self
+                                                                           action:@selector(_handleTextSelectionLongPress:)];
+    [self addGestureRecognizer:_textSelectionLongPress];
+    if (@available(iOS 16.0, *)) {
+      self.textSelectionEditMenuInteraction = [[UIEditMenuInteraction alloc] initWithDelegate:self];
+      [self addInteraction:self.textSelectionEditMenuInteraction];
+    }
+  } else {
+    [self removeGestureRecognizer:_textSelectionLongPress];
+    _textSelectionLongPress = nil;
+    if (@available(iOS 16.0, *)) {
+      if (self.textSelectionEditMenuInteraction != nil) {
+        [self removeInteraction:self.textSelectionEditMenuInteraction];
+        self.textSelectionEditMenuInteraction = nil;
+      }
+    }
+  }
+}
+
+- (void)_handleTextSelectionLongPress:(UILongPressGestureRecognizer *)gesture
+{
+  if (gesture.state != UIGestureRecognizerStateBegan) {
+    return;
+  }
+  if (![self becomeFirstResponder]) {
+    return;
+  }
+  if (@available(iOS 16.0, *)) {
+    UIEditMenuInteraction *interaction = self.textSelectionEditMenuInteraction;
+    if (interaction != nil) {
+      CGPoint location = [gesture locationInView:self];
+      UIEditMenuConfiguration *config = [UIEditMenuConfiguration configurationWithIdentifier:nil
+                                                                                sourcePoint:location];
+      [interaction presentEditMenuWithConfiguration:config];
+    }
+  }
+}
+
+/*
+ * Every run this View paints, in authored document order, joined by newlines —
+ * the same text a reader sees, in the order they see it. `documentOrder`
+ * counts the mounted children that precede a run, which is exactly the key
+ * that puts interleaved runs back in reading order.
+ */
+- (NSAttributedString *)_selectableAttributedText
+{
+  NSArray<RCTAnonymousTextRunView *> *runViews =
+      [_textRunViews sortedArrayUsingComparator:^NSComparisonResult(RCTAnonymousTextRunView *a, RCTAnonymousTextRunView *b) {
+        int lhs = a->_run.documentOrder;
+        int rhs = b->_run.documentOrder;
+        if (lhs == rhs) {
+          return NSOrderedSame;
+        }
+        return lhs < rhs ? NSOrderedAscending : NSOrderedDescending;
+      }];
+
+  NSMutableAttributedString *text = [NSMutableAttributedString new];
+  for (RCTAnonymousTextRunView *runView in runViews) {
+    NSAttributedString *runText = RCTNSAttributedStringFromAttributedString(runView->_run.attributedString);
+    if (runText.length == 0) {
+      continue;
+    }
+    if (text.length > 0) {
+      [text appendAttributedString:[[NSAttributedString alloc] initWithString:@"\n"]];
+    }
+    [text appendAttributedString:runText];
+  }
+  return text;
+}
+#else
+- (void)_updateTextSelectionInteraction
+{
+}
+#endif
+
+- (void)layoutSubviews
+{
+  [super layoutSubviews];
+  if (_textRunViews.count > 0) {
+    for (RCTAnonymousTextRunView *runView in _textRunViews) {
+      [runView setContainerBounds:self.currentContainerView.bounds];
+    }
+    [self reorderAnonymousTextRunViewsIfNeeded];
   }
 }
 
@@ -610,6 +889,11 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   _needsInvalidateLayer = _needsInvalidateLayer || needsInvalidateLayer;
 
   _props = std::static_pointer_cast<const ViewProps>(props);
+
+  // After `_props`, which is what `_hasSelectableText` reads.
+  if (oldViewProps.userSelect != newViewProps.userSelect) {
+    [self _updateTextSelectionInteraction];
+  }
 }
 
 - (void)updateEventEmitter:(const EventEmitter::Shared &)eventEmitter
@@ -697,6 +981,31 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
     self.layer.opacity = (float)props.opacity;
   }
+
+  // Per-run text paint views (text-children-plan.md §3.B): DETACHED, not
+  // destroyed.
+  //
+  // Views are recycled (`enableViewRecyclingForView`), and a `<Text>`'s
+  // paragraph view comes back out of that pool — while these were allocated
+  // fresh every time a recycled View was given text again. That asymmetry is
+  // paid per row: on a 1,000-row list it is a thousand view allocations that
+  // the thing being compared against does not do.
+  //
+  // Detaching rather than keeping them attached is what makes this safe: a
+  // recycled View that is given no text displays nothing, because nothing is
+  // in its hierarchy until `updateState` puts it back. A couple of spare views
+  // held by a pooled container is the whole cost.
+  static const NSUInteger kMaxPooledRunViews = 4;
+  if (_textRunViews != nil) {
+    for (RCTAnonymousTextRunView *runView in _textRunViews) {
+      [runView removeFromSuperview];
+    }
+    while (_textRunViews.count > kMaxPooledRunViews) {
+      [_textRunViews removeLastObject];
+    }
+  }
+  // No runs left, so this tears the selection interaction down with them.
+  [self _updateTextSelectionInteraction];
 
   // Clean up box shadow layers to prevent cross-component contamination
   if (_boxShadowLayers != nullptr) {
@@ -1672,6 +1981,21 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 
 - (SharedTouchEventEmitter)touchEventEmitterAtPoint:(CGPoint)point
 {
+  // Hit-testing on drawn text children (text-children-plan.md §3.G / next-steps
+  // T6): a tap that lands on an inline element with its own handler (e.g.
+  // <b onPress>) resolves to that element's fragment emitter; a tap on bare text
+  // resolves to null here (text-node fragments carry the emitter-less anonymous
+  // box) and falls through to the View's own emitter — matching web semantics,
+  // where text nodes are not event targets but the containing element is.
+  // Each run view owns its geometry and resolves the hit against the same
+  // `containerFrame` it paints with — so a tap can never land somewhere the
+  // glyphs are not drawn. Runs are non-overlapping (separated by block
+  // children), so the first containing run wins.
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    if (auto touchEventEmitter = [runView touchEventEmitterAtContainerPoint:point]) {
+      return touchEventEmitter;
+    }
+  }
   return _eventEmitter;
 }
 
@@ -1746,8 +2070,40 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 
 - (BOOL)canBecomeFirstResponder
 {
-  return ReactNativeFeatureFlags::enableImperativeFocus();
+  // Presenting the Copy menu requires first-responder status, so a View whose
+  // own text is selectable must be able to take it even with imperative focus
+  // off.
+  return ReactNativeFeatureFlags::enableImperativeFocus() || [self _hasSelectableText];
 }
+
+#if !TARGET_OS_TV
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender
+{
+  if (action == @selector(copy:) && [self _hasSelectableText]) {
+    return YES;
+  }
+  return [super canPerformAction:action withSender:sender];
+}
+
+- (void)copy:(id)sender
+{
+  NSAttributedString *attributedText = [self _selectableAttributedText];
+  if (attributedText.length == 0) {
+    return;
+  }
+
+  NSMutableDictionary *item = [NSMutableDictionary new];
+  NSData *rtf = [attributedText dataFromRange:NSMakeRange(0, attributedText.length)
+                           documentAttributes:@{NSDocumentTypeDocumentAttribute : NSRTFDTextDocumentType}
+                                        error:nil];
+  if (rtf) {
+    [item setObject:rtf forKey:(id)kUTTypeFlatRTFD];
+  }
+  [item setObject:attributedText.string forKey:(id)kUTTypeUTF8PlainText];
+
+  UIPasteboard.generalPasteboard.items = @[ item ];
+}
+#endif
 
 - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args
 {
@@ -1848,6 +2204,37 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 }
 
 #endif
+
+@end
+
+/*
+ * The box-backed flavor of a DOM element (`element-box`): a plain view, since
+ * everything that distinguishes it lives in layout, not in drawing. The
+ * renderer swaps an element onto this component when its display generates a
+ * box — see ElementBoxShadowNode.h.
+ */
+@interface RCTElementBoxComponentView : RCTViewComponentView
+@end
+
+@implementation RCTElementBoxComponentView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    _props = ElementBoxShadowNode::defaultSharedProps();
+  }
+  return self;
+}
+
++ (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
+{
+  return facebook::react::concreteComponentDescriptorProvider<facebook::react::ElementBoxComponentDescriptor>();
+}
+
++ (void)load
+{
+  [[RCTComponentViewFactory currentComponentViewFactory] registerComponentViewClass:self];
+}
 
 @end
 

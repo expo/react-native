@@ -27,6 +27,22 @@ using RCTTextLayoutFragmentEnumerationBlock =
  */
 @interface RCTTextLayoutManager : NSObject
 
+/*
+ * Returns the laid-out rect of each fragment of `attributedString`, parallel
+ * to its fragment list and relative to the text frame's origin, for the given
+ * container size.
+ *
+ * This is what lets an inline element (`<b>`, `<span>`, a nested `<Text>`)
+ * report a real box from `getBoundingClientRect()`: the containing
+ * Paragraph/View unions the rects of the fragments belonging to an element
+ * and stamps the result onto it. A fragment that wraps reports the union of
+ * its line pieces, matching the web.
+ */
+- (std::vector<facebook::react::Rect>)
+    getFragmentRectsWithAttributedString:(facebook::react::AttributedString)attributedString
+                     paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
+                                    size:(CGSize)size;
+
 - (facebook::react::TextMeasurement)measureAttributedString:(facebook::react::AttributedString)attributedString
                                         paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
                                               layoutContext:(facebook::react::TextLayoutContext)layoutContext
@@ -41,6 +57,31 @@ using RCTTextLayoutFragmentEnumerationBlock =
          paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
                        frame:(CGRect)frame
            drawHighlightPath:(void (^_Nullable)(UIBezierPath *highlightPath))block;
+
+/*
+ * The run TextKit storage cache (ios-run-draw-reuse-plan.md). Measuring a
+ * run already builds and fully lays out its NSTextStorage stack on the
+ * layout thread; caching it by content + container width lets the run view
+ * draw from it instead of converting, building, and re-shaping the
+ * identical stack on the main thread. Content keying mirrors the caching
+ * policy the C++ text measure cache already applies to the same inputs, so
+ * measure-cache-hit re-mounts still find their storage. Returns nil on a
+ * miss (the draw falls back to the rebuild path).
+ */
+- (nullable NSTextStorage *)cachedRunTextStorageForAttributedString:
+                                (const facebook::react::AttributedString &)attributedString
+                                                              width:(CGFloat)width;
+
+/*
+ * Draws a laid-out text storage (from the handoff above) exactly as
+ * `drawAttributedString` would: background, inline box decorations, glyphs,
+ * custom decorations, highlight path. The storage must already have a
+ * layout manager and container attached.
+ */
+- (void)drawTextStorage:(NSTextStorage *)textStorage
+       attributedString:(const facebook::react::AttributedString &)attributedString
+                  frame:(CGRect)frame
+      drawHighlightPath:(void (^_Nullable)(UIBezierPath *highlightPath))block;
 
 - (facebook::react::LinesMeasurements)getLinesForAttributedString:(facebook::react::AttributedString)attributedString
                                               paragraphAttributes:

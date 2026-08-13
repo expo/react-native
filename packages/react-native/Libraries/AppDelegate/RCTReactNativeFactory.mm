@@ -212,6 +212,17 @@ using namespace facebook::react;
   }
 }
 
+- (void)host:(RCTHost *)host didInitializeRuntime:(facebook::jsi::Runtime &)runtime
+{
+  // Forwarded so the app can bind runtime-level machinery the moment the JS
+  // runtime exists — e.g. a module system like Expo's installing its
+  // `global.expo` object. The host already offers this to its delegate; the
+  // factory was simply not passing it through.
+  if ([_delegate respondsToSelector:@selector(host:didInitializeRuntime:)]) {
+    [_delegate host:host didInitializeRuntime:runtime];
+  }
+}
+
 - (NSArray<NSString *> *)unstableModulesRequiringMainQueueSetup
 {
 #if RN_DISABLE_OSS_PLUGIN_HEADER
