@@ -7,6 +7,10 @@
 
 #include "BaseTextProps.h"
 
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+
+#include <react/renderer/components/text/InlineBoxProps.h>
+
 #include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/core/propsConversions.h>
@@ -228,13 +232,38 @@ static TextAttributes convertRawProp(
 BaseTextProps::BaseTextProps(
     const PropsParserContext& context,
     const BaseTextProps& sourceProps,
-    const RawProps& rawProps)
+    const RawProps& rawProps,
+    bool parseInlineBox)
     : textAttributes(convertRawProp(
           context,
           rawProps,
           sourceProps.textAttributes,
-          TextAttributes{})) {};
-
+          TextAttributes{})),
+      // CSS box decorations for inline use (box-model-scope.md G2). Parsed
+      // behind the feature flag: with `enableStringChildren` off these keys
+      // cost zero raw-prop probes on every <Text> parse.
+      inlineBox(
+          parseInlineBox && ReactNativeFeatureFlags::enableStringChildren()
+              ? parseInlineBoxProps(context, sourceProps.inlineBox, rawProps)
+              : sourceProps.inlineBox) {
+  if (const auto* rawValue = ReactNativeFeatureFlags::enableStringChildren()
+          ? rawProps.at("all")
+          : nullptr) {
+    if (rawValue->hasType<std::string>()) {
+      const auto stringValue = (std::string)*rawValue;
+      // Only `initial` resets the run fold. No inline text element's native
+      // user-agent stylesheet declares `all` (root <Text>'s declaration lives
+      // on ParagraphShadowNode; nested <Text> is virtual text), so `revert`
+      // rolls back to an empty UA origin and resolves to unset — inherit —
+      // exactly like `unset`/`inherit`/absent (css-cascade-4 §7.3).
+      cascadeResetAll = stringValue == "initial";
+    } else {
+      cascadeResetAll = false;
+    }
+  } else {
+    cascadeResetAll = sourceProps.cascadeResetAll;
+  }
+};
 void BaseTextProps::setProp(
     const PropsParserContext& context,
     RawPropsPropNameHash hash,

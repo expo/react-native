@@ -7,6 +7,8 @@
 
 #include "ParagraphShadowNode.h"
 
+#include <react/renderer/components/text/InlineElementMetrics.h>
+
 #include <cmath>
 
 #include <react/debug/react_native_assert.h>
@@ -58,6 +60,10 @@ ParagraphShadowNode::ParagraphShadowNode(
     const ShadowNode& sourceShadowNode,
     const ShadowNodeFragment& fragment)
     : ConcreteViewShadowNode(sourceShadowNode, fragment) {
+  // A clone the configure pass later skips (unchanged cascade) must keep the
+  // cascade its source was stamped with.
+  inheritedCascade_ = static_cast<const ParagraphShadowNode&>(sourceShadowNode)
+                          .inheritedCascade_;
   initialize();
 }
 
@@ -76,6 +82,15 @@ const Content& ParagraphShadowNode::getContent(
   ensureUnsealed();
 
   auto textAttributes = TextAttributes::defaultTextAttributes();
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      !getTraits().check(ShadowNodeTraits::Trait::InheritanceBoundary) &&
+      inheritedCascade_ != nullptr) {
+    // Web-like inheritance from ancestor elements. <Text> ships with
+    // `all: 'initial'` in its user-agent style — the compatibility boundary,
+    // in the web's own vocabulary (text-inheritance-boundaries.md) — so a
+    // default <Text> never reaches here; an authored `all: 'unset'` opts in.
+    textAttributes = *inheritedCascade_;
+  }
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
   textAttributes.apply(getConcreteProps().textAttributes);
   textAttributes.layoutDirection =
@@ -117,8 +132,14 @@ Content ParagraphShadowNode::getContentWithMeasuredAttachments(
       continue;
     }
 
-    auto size =
-        laytableShadowNode->measure(layoutContext, localLayoutConstraints);
+    // A measurement root takes its min/max from the constraints, not from
+    // its own style — see `constraintsHonoringOwnBounds` for the bug that
+    // is. The zeroed minimum above stays right for the RUN; the attachment's
+    // own stated bounds must survive it.
+    auto size = laytableShadowNode->measure(
+        layoutContext,
+        constraintsHonoringOwnBounds(
+            *attachment.shadowNode, localLayoutConstraints));
 
     // Rounding to *next* value on the pixel grid.
     size.width += 0.01f;
@@ -312,6 +333,40 @@ void ParagraphShadowNode::layout(LayoutContext layoutContext) {
       .layoutDirection = layoutMetrics.layoutDirection};
   auto content =
       getContentWithMeasuredAttachments(layoutContext, layoutConstraints);
+
+  // Give nested inline elements (a nested `<Text>`, `<b>`, `<span>`) a real
+  // box to report from `getBoundingClientRect()`. Nothing here feeds back into
+  // measuring or painting, so authored `<Text>` lays out exactly as before
+  // (text-children-plan.md §3.G).
+  //
+  // Only when there IS such an element. This is a second full text layout of
+  // the whole paragraph, and it was running for every `<Text>` on every
+  // layout, including the overwhelming majority that contain nothing but
+  // their own string and have no box to report. Benchmarked against upstream
+  // on the simulator: a 1,000-line article in one `<Text>` took 65.6ms
+  // against upstream's 13.9ms, and 1,000 single-line `<Text>` rows 177.7ms
+  // against 127.7ms. The predicate is the same one the anonymous-run path
+  // already applies, and it is a scan of the fragments rather than a layout.
+  if (hasStampableInlineElements(*this, content.attributedString)) {
+    TextLayoutContext inlineMetricsContext{
+        .pointScaleFactor = layoutContext.pointScaleFactor,
+        .surfaceId = getSurfaceId(),
+        .needsFragmentRects = true,
+    };
+    auto measurement = textLayoutManager_->measure(
+        AttributedStringBox{content.attributedString},
+        content.paragraphAttributes,
+        inlineMetricsContext,
+        layoutConstraints);
+    stampInlineElementMetrics(
+        *this,
+        content.attributedString,
+        measurement.fragmentRects,
+        layoutMetrics.contentInsets.left != 0 || layoutMetrics.contentInsets.top != 0
+            ? Point{layoutMetrics.contentInsets.left, layoutMetrics.contentInsets.top}
+            : Point{0, 0},
+        layoutMetrics);
+  }
 
   auto measuredLayout = findUsableLayout();
 

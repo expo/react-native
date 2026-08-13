@@ -7,6 +7,8 @@
 
 #include "BaseParagraphProps.h"
 
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+
 #include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/core/propsConversions.h>
@@ -20,8 +22,8 @@ BaseParagraphProps::BaseParagraphProps(
     const PropsParserContext& context,
     const BaseParagraphProps& sourceProps,
     const RawProps& rawProps)
-    : ViewProps(context, sourceProps, rawProps),
-      BaseTextProps(context, sourceProps, rawProps),
+    : ViewProps(context, sourceProps, rawProps, nullptr),
+      BaseTextProps(context, sourceProps, rawProps, /*parseInlineBox*/ false),
       paragraphAttributes(convertRawProp(
           context,
           rawProps,
