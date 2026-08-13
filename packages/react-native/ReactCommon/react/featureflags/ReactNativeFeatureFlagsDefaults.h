@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<0218b6cf490454e1ccd93001208a58be>>
+ * @generated SignedSource<<65e77ad5ce85989761583263f5399bc6>>
  */
 
 /**
@@ -233,6 +233,10 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
     return false;
   }
 
+  bool enableStringChildren() override {
+    return true;
+  }
+
   bool enableSwiftUIBasedFilters() override {
     return false;
   }
@@ -265,8 +269,16 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
     return false;
   }
 
+  bool enableYogaDisplayBlock() override {
+    return false;
+  }
+
   bool fixBorderlessRippleAndroid() override {
     return false;
+  }
+
+  bool fixDifferentiatorParentTagForUnflattenCase() override {
+    return true;
   }
 
   bool fixMappingOfEventPrioritiesBetweenFabricAndReact() override {

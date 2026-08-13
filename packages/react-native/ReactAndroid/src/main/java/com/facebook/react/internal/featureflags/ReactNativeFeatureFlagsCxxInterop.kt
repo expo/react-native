@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<6d86d4adbc261c9271b5bed72bd12dcf>>
+ * @generated SignedSource<<508e9a0c8ac72ca32403e0db97f5cd16>>
  */
 
 /**
@@ -130,6 +130,8 @@ public object ReactNativeFeatureFlagsCxxInterop {
 
   @DoNotStrip @JvmStatic public external fun enableResizeObserverByDefault(): Boolean
 
+  @DoNotStrip @JvmStatic public external fun enableStringChildren(): Boolean
+
   @DoNotStrip @JvmStatic public external fun enableSwiftUIBasedFilters(): Boolean
 
   @DoNotStrip @JvmStatic public external fun enableViewCulling(): Boolean
@@ -146,7 +148,11 @@ public object ReactNativeFeatureFlagsCxxInterop {
 
   @DoNotStrip @JvmStatic public external fun enableVirtualViewContainerStateExperimental(): Boolean
 
+  @DoNotStrip @JvmStatic public external fun enableYogaDisplayBlock(): Boolean
+
   @DoNotStrip @JvmStatic public external fun fixBorderlessRippleAndroid(): Boolean
+
+  @DoNotStrip @JvmStatic public external fun fixDifferentiatorParentTagForUnflattenCase(): Boolean
 
   @DoNotStrip @JvmStatic public external fun fixMappingOfEventPrioritiesBetweenFabricAndReact(): Boolean
 
