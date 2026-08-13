@@ -201,6 +201,10 @@ LayoutMetrics LayoutableShadowNode::getLayoutMetrics() const {
   return layoutMetrics_;
 }
 
+LayoutMetrics LayoutableShadowNode::getMountedLayoutMetrics() const {
+  return getLayoutMetrics();
+}
+
 void LayoutableShadowNode::setLayoutMetrics(LayoutMetrics layoutMetrics) {
   ensureUnsealed();
 
@@ -265,8 +269,22 @@ Size LayoutableShadowNode::measure(
 
 Float LayoutableShadowNode::baseline(
     const LayoutContext& /*layoutContext*/,
-    Size /*size*/) const {
-  return 0;
+    Size size) const {
+  // CSS2 §10.8.1's fallback: a box with no in-flow line boxes to align to —
+  // which includes every replaced element, `<img>` among them — is aligned by
+  // its bottom margin edge. So the default is the bottom of the box, not zero.
+  //
+  // Zero means "the baseline is the box's TOP", which drops the whole box below
+  // the line. It went unnoticed while nothing consumed this value; once
+  // `InlineContentShadowNode` began reporting it to the text engine as an
+  // atomic inline's baseline, an inline `<img>` rendered a full image-height
+  // too low.
+  //
+  // Nodes that genuinely have a baseline of their own — Paragraph, the text
+  // inputs, and Views wrapping inline content — all override this. Yoga only
+  // asks nodes carrying `BaselineYogaNode`, and every one of those overrides
+  // it, so this default is reached solely through the atomic-inline path.
+  return size.height;
 }
 
 std::shared_ptr<const ShadowNode> LayoutableShadowNode::findNodeAtPoint(

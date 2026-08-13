@@ -57,6 +57,35 @@ class YogaStylableProps : public Props {
   yoga::Style::Length paddingBlockStart;
   yoga::Style::Length paddingBlockEnd;
 
+  /*
+   * True when style `display` is 'block' (CSS block container, emulated on
+   * Yoga flex primitives; text-children-plan.md §3.A).
+   */
+  bool displayBlock{false};
+
+  /*
+   * True when style `display` is 'inline' (CSS inline-level box). Inline-ness
+   * is resolved at box generation, never in Yoga: in a block container the
+   * element becomes an atomic inline-level box flowing in the parent's inline
+   * formatting context; in a flex container it is blockified into a regular
+   * flex item (css-display-3 §2.7). See text-children-plan.md §3.A/§7.
+   */
+  bool displayInline{false};
+  /*
+   * `display:'inline-flex'`/`'inline-block'`: inline-level, but establishing a
+   * formatting context, so the box is always atomic and its contents never
+   * fold into the surrounding inline flow the way a span-like `inline` does.
+   */
+  bool displayInlineAtomic{false};
+  /*
+   * Whether the author wrote a `display` at all. An element whose UA display
+   * differs from the RN default (`<div>` is block) needs to apply that default
+   * *only* when the author did not ask for something else — the resolved flags
+   * cannot express it, since an authored `display:'flex'` leaves them in the
+   * same state as no display at all.
+   */
+  bool displayAuthored{false};
+
 #if RN_DEBUG_STRING_CONVERTIBLE
 
 #pragma mark - DebugStringConvertible (Partial)

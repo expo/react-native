@@ -95,6 +95,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
     <rn-paragraph
       allowFontScaling="true"
       ellipsizeMode="tail"
+      fontSize="14"
       fontSizeMultiplier="NaN"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 1)"
@@ -108,6 +109,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
     >
       <rn-text
         allowFontScaling="true"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 1)"
         layoutDirection="ltr"
@@ -139,6 +141,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
       <rn-paragraph
         allowFontScaling="true"
         ellipsizeMode="tail"
+        fontSize="14"
         fontSizeMultiplier="NaN"
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
@@ -157,6 +160,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
       <rn-paragraph
         allowFontScaling="true"
         ellipsizeMode="tail"
+        fontSize="14"
         fontSizeMultiplier="NaN"
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
@@ -175,6 +179,7 @@ exports[`LogBoxInspector should render fatal with selectedIndex 2 1`] = `
       <rn-paragraph
         allowFontScaling="true"
         ellipsizeMode="tail"
+        fontSize="14"
         fontSizeMultiplier="NaN"
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
@@ -286,6 +291,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
     <rn-paragraph
       allowFontScaling="true"
       ellipsizeMode="tail"
+      fontSize="14"
       fontSizeMultiplier="NaN"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 1)"
@@ -299,6 +305,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
     >
       <rn-text
         allowFontScaling="true"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 1)"
         layoutDirection="ltr"
@@ -330,6 +337,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
       <rn-paragraph
         allowFontScaling="true"
         ellipsizeMode="tail"
+        fontSize="14"
         fontSizeMultiplier="NaN"
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
@@ -348,6 +356,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
       <rn-paragraph
         allowFontScaling="true"
         ellipsizeMode="tail"
+        fontSize="14"
         fontSizeMultiplier="NaN"
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"
@@ -366,6 +375,7 @@ exports[`LogBoxInspector should render warning with selectedIndex 0 1`] = `
       <rn-paragraph
         allowFontScaling="true"
         ellipsizeMode="tail"
+        fontSize="14"
         fontSizeMultiplier="NaN"
         foregroundColor="rgba(255, 255, 255, 1)"
         includeFontPadding="false"

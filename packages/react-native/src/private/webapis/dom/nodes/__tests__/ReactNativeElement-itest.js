@@ -995,6 +995,11 @@ describe('ReactNativeElement', () => {
                 style={{
                   width: 100,
                   height: 50,
+                  // Pinned: the nested rect below is asserted in whole lines
+                  // (40 = two lines), and the document's default size is the
+                  // platform's body size rather than a fixed 14, so leaving it
+                  // unset makes the number platform-dependent.
+                  fontSize: 14,
                 }}
                 ref={outerTextRef}>
                 Hello

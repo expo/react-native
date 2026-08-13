@@ -46,46 +46,59 @@ class TextAttributes : public DebugStringConvertible {
 
 #pragma mark - Fields
 
-  // Color
+  // Layout of this struct is deliberate: pointer-sized members first, then
+  // 4-byte members, then the small optionals — TextAttributes is copied into
+  // every AttributedString fragment and TextMeasureCache key, and interleaving
+  // these by topic costs real padding bytes at that volume. Group by SIZE
+  // here; group by topic in the docs.
+
+  // 8-byte-aligned
+  std::string fontFamily{""};
+  // Text Effects (ordered by nesting depth: index 0 = outermost = drawn first)
+  std::vector<TextEffectInfo> textEffects{};
+
+  // 4-byte-aligned
   SharedColor foregroundColor{};
   SharedColor backgroundColor{};
+  SharedColor textDecorationColor{};
+  SharedColor textShadowColor{};
   Float opacity{std::numeric_limits<Float>::quiet_NaN()};
-
-  // Font
-  std::string fontFamily{""};
   Float fontSize{std::numeric_limits<Float>::quiet_NaN()};
   Float fontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
+  Float maxFontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
+  Float letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
+  /*
+   * A NUMERIC baseline shift in points; positive raises the glyphs. Unlike
+   * `verticalAlign`, whose amount each platform derives from its font, this
+   * states the distance — what a symbolic list marker needs to centre its
+   * ink on the x-height midpoint the way browsers paint theirs, and what
+   * `vertical-align: <length>` will need. iOS: NSBaselineOffset; Android: a
+   * MetricAffecting span adjusting TextPaint.baselineShift.
+   */
+  Float baselineShift{std::numeric_limits<Float>::quiet_NaN()};
+  Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
+  Float textShadowRadius{std::numeric_limits<Float>::quiet_NaN()};
+  // TODO: Use `Point` type instead of `Size` for `textShadowOffset` attribute.
+  std::optional<Size> textShadowOffset{};
+  // A bitmask up to 1 << 25, so it keeps the int base (and 8-byte optional).
+  std::optional<FontVariant> fontVariant{};
+
+  // 2-byte-and-under optionals (the enums carry explicit small bases)
   std::optional<FontWeight> fontWeight{};
   std::optional<FontStyle> fontStyle{};
-  std::optional<FontVariant> fontVariant{};
   std::optional<bool> allowFontScaling{};
-  Float maxFontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<DynamicTypeRamp> dynamicTypeRamp{};
-  Float letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextTransform> textTransform{};
-
-  // Paragraph Styles
-  Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
+  // `white-space`. Inherited, so a `<pre>` passes it to every run inside it.
+  std::optional<WhiteSpace> whiteSpace{};
   std::optional<TextAlignment> alignment{};
   std::optional<WritingDirection> baseWritingDirection{};
   std::optional<LineBreakStrategy> lineBreakStrategy{};
   std::optional<LineBreakMode> lineBreakMode{};
-
-  // Decoration
-  SharedColor textDecorationColor{};
   std::optional<TextDecorationLineType> textDecorationLineType{};
   std::optional<TextDecorationStyle> textDecorationStyle{};
-
-  // Shadow
-  // TODO: Use `Point` type instead of `Size` for `textShadowOffset` attribute.
-  std::optional<Size> textShadowOffset{};
-  Float textShadowRadius{std::numeric_limits<Float>::quiet_NaN()};
-  SharedColor textShadowColor{};
-
-  // Special
   std::optional<bool> isHighlighted{};
   std::optional<bool> isPressable{};
-
   // TODO T59221129: document where this value comes from and how it is set.
   // It's not clear if this is being used properly, or if it's being set at all.
   // Currently, it is intentionally *not* being set as part of BaseTextProps
@@ -93,9 +106,6 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<LayoutDirection> layoutDirection{};
   std::optional<AccessibilityRole> accessibilityRole{};
   std::optional<Role> role{};
-
-  // Text Effects (ordered by nesting depth: index 0 = outermost = drawn first)
-  std::vector<TextEffectInfo> textEffects{};
 
 #pragma mark - Operations
 
@@ -145,7 +155,9 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.fontVariant,
         textAttributes.allowFontScaling,
         textAttributes.letterSpacing,
+        textAttributes.baselineShift,
         textAttributes.textTransform,
+        textAttributes.whiteSpace,
         textAttributes.lineHeight,
         textAttributes.alignment,
         textAttributes.baseWritingDirection,
