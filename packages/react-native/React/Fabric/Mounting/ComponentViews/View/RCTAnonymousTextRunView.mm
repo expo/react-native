@@ -9,6 +9,7 @@
 
 #import <React/RCTAssert.h>
 #import <React/RCTConversions.h>
+#import <react/renderer/animationbackend/CSSTransitionsTrace.h>
 #import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
 #import <react/utils/ManagedObjectWrapper.h>
 
@@ -141,7 +142,9 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
   if (!nativeTextLayoutManager) {
     // A silent blank: the run's layout manager is gone, so NOTHING paints
-    // this frame.
+    // this frame. If the reported flicker is text blinking out, this line is
+    // the whole story.
+    facebook::react::CSSTransitionsTrace::shared()->log("paint-nil-mgr");
     return;
   }
   // Paint and hit-testing must share ONE geometry — the run's own Yoga frame.
