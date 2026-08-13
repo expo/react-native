@@ -25,12 +25,17 @@
 import type {ElementDescriptor, InteractionStates, Matcher} from './match';
 import type {Stylesheet} from './parse';
 
-import {registerNamedKeyframes, resolveDeclarations} from '../stylex-rn';
+import {
+  INHERITED_PROPERTIES,
+  registerNamedKeyframes,
+  resolveDeclarations,
+} from '../stylex-rn';
 import {createMatcher} from './match';
 import {compileSelector, parseStylesheet} from './parse';
 import {AccessibilityInfo, Appearance, Dimensions} from 'react-native';
 
 export type {ElementDescriptor} from './match';
+export {withoutOutrankedBoxEdges} from './cascade';
 
 // -----------------------------------------------------------------------------
 // Environment
@@ -380,23 +385,6 @@ const QUIET_WEB_ONLY: Set<string> = new Set([
   'transformOrigin',
 ]);
 
-// The properties the renderer's text cascade inherits — the ones for which
-// an explicit author `inherit` has a value to resolve to (see the `inherit`
-// handling below).
-const INHERITED_PROPERTIES: Set<string> = new Set([
-  'color',
-  'fontFamily',
-  'fontSize',
-  'fontStyle',
-  'fontVariant',
-  'fontWeight',
-  'letterSpacing',
-  'lineHeight',
-  'textAlign',
-  'textTransform',
-  'writingDirection',
-]);
-
 const EMPTY: CssResolution = {style: null, vars: null, dependsOnStates: false};
 
 /**
@@ -461,19 +449,6 @@ export function resolveCssForElement(
     merged[camel] = value;
   }
 
-  // `display: grid` degrades to flex (grid layout is upstream, in flight).
-  // The direction matters: a grid's default auto-flow stacks children in
-  // ROWS, while RN's flex default is a row AXIS, so a bare `flex` laid a
-  // dialog's header and footer out side by side and pushed the buttons off
-  // screen. Only fill in the direction the author did not state.
-  // DOM-CSS-LIMITATION(display-grid-as-flex-column)
-  if (merged.display === 'grid' || merged.display === 'inline-grid') {
-    merged.display = 'flex';
-    if (merged.flexDirection == null) {
-      merged.flexDirection = 'column';
-    }
-  }
-
   // `inherit`, by cascade origin. For an INHERITED property, an author's
   // explicit `inherit` must still DEFEAT a user-agent declaration — that is
   // the whole point of preflight's `h1..h6 { font-size: inherit }`, and
@@ -521,6 +496,23 @@ export function resolveCssForElement(
     merged.fontSize == null
   ) {
     delete merged.lineHeight;
+  }
+
+  // An `em` length is the same case and arrives the same way: Tailwind's
+  // `tracking-tight` is `letter-spacing: -0.025em` and carries no font size of
+  // its own, so an element that does not also name a size has nothing here to
+  // resolve against. Dropped for the same reason and just as quietly — a
+  // stylesheet author cannot act on it either.
+  if (merged.fontSize == null) {
+    for (const property of Object.keys(merged)) {
+      if (
+        property !== 'fontSize' &&
+        typeof merged[property] === 'string' &&
+        /^[+-]?(\d+\.?\d*|\.\d+)em$/.test(merged[property])
+      ) {
+        delete merged[property];
+      }
+    }
   }
 
   const style = resolveDeclarations(
