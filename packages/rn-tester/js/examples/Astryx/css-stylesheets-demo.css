@@ -1,0 +1,139 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * The CSS Stylesheets demo sheet: written the way a real stylesheet is —
+ * variables in :root with a .dark override, classes, state pseudo-classes,
+ * attribute selectors, descendant selectors, a media query, @keyframes, and
+ * a Tailwind-shaped escaped utility — so the screen demonstrates the parser,
+ * matcher, cascade, and value pipeline together.
+ */
+
+:root {
+  --cs-surface: rgb(255, 255, 255);
+  --cs-surface-raised: rgb(242, 244, 247);
+  --cs-ink: rgb(16, 24, 40);
+  --cs-ink-muted: rgb(102, 112, 133);
+  --cs-accent: rgb(21, 112, 239);
+  --cs-accent-ink: rgb(255, 255, 255);
+  --cs-radius: 10px;
+  /* Every touchable element on this screen is at least this tall (the iOS
+     HIG minimum); the shorthands below are what a real sheet writes. */
+  --cs-touch: 44px;
+}
+
+.dark {
+  --cs-surface: rgb(16, 18, 27);
+  --cs-surface-raised: rgb(30, 34, 45);
+  --cs-ink: rgb(242, 242, 247);
+  --cs-ink-muted: rgb(152, 152, 159);
+  --cs-accent: rgb(84, 158, 255);
+  --cs-accent-ink: rgb(10, 14, 20);
+}
+
+.card {
+  padding: 14px 16px;
+  border-radius: var(--cs-radius);
+  background-color: var(--cs-surface-raised);
+  margin-bottom: 12px;
+}
+
+.card .title {
+  font-weight: 700;
+  color: var(--cs-ink);
+}
+
+.card .caption {
+  font-size: 13px;
+  color: var(--cs-ink-muted);
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--cs-touch);
+  min-width: var(--cs-touch);
+  padding: 0 18px;
+  border-radius: var(--cs-radius);
+  background-color: var(--cs-accent);
+  color: var(--cs-accent-ink);
+  font-weight: 600;
+  transition: opacity 150ms ease, background-color 150ms ease;
+}
+
+.btn:active {
+  opacity: 0.7;
+}
+
+.btn[data-variant='outline'] {
+  background-color: var(--cs-surface);
+  border: 1px solid var(--cs-accent);
+  color: var(--cs-accent);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: rgb(255, 255, 255);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge[data-state='on'] {
+  background-color: rgb(18, 183, 106);
+}
+
+.badge[data-state='off'] {
+  background-color: rgb(152, 152, 159);
+}
+
+@keyframes demo-pulse {
+  from {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pulse {
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background-color: var(--cs-accent);
+  animation: demo-pulse 1.6s ease-in-out infinite;
+}
+
+.swatch {
+  width: 56px;
+  height: 32px;
+  border-radius: 6px;
+  background-color: var(--cs-accent);
+}
+
+@media (min-width: 700px) {
+  .swatch {
+    width: 120px;
+  }
+}
+
+/* A Tailwind-shaped escaped utility, exactly as a build emits it. */
+.active\:opacity-75:active {
+  opacity: 0.75;
+}
