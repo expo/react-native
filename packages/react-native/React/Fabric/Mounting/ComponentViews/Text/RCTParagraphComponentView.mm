@@ -13,7 +13,8 @@
 #import <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #import <react/renderer/components/text/ParagraphProps.h>
 #import <react/renderer/components/text/ParagraphState.h>
-#import <react/renderer/components/text/RawTextComponentDescriptor.h>
+#import <react/renderer/components/text/DomElementsRegistry.h>
+#import <react/renderer/components/text/TextNodeComponentDescriptor.h>
 #import <react/renderer/components/text/TextComponentDescriptor.h>
 #import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
 #import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
@@ -109,9 +110,15 @@ using namespace facebook::react;
 
 + (std::vector<facebook::react::ComponentDescriptorProvider>)supplementalComponentDescriptorProviders
 {
-  return {
-      concreteComponentDescriptorProvider<RawTextComponentDescriptor>(),
+  // Core text nodes first, then the inline-level DOM elements (<b>/<i>/<span> +
+  // unknown fallback) that resolve inside this paragraph's inline formatting
+  // context. Block-level <div>/<img> register elsewhere (not paragraph-supplemental).
+  std::vector<facebook::react::ComponentDescriptorProvider> providers = {
+      concreteComponentDescriptorProvider<TextNodeComponentDescriptor>(),
       concreteComponentDescriptorProvider<TextComponentDescriptor>()};
+  auto elements = facebook::react::dom::inlineTextElementProviders();
+  providers.insert(providers.end(), elements.begin(), elements.end());
+  return providers;
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps
@@ -179,6 +186,23 @@ using namespace facebook::react;
                                                                         frame:drawingFrame
                                                                containerFrame:&drawingContainerFrame];
       textViewFrame = CGRectUnion(textViewFrame, drawingContainerFrame);
+    }
+  }
+
+  // Inline elements' block-axis padding/border/outline overflow the line box
+  // instead of growing it, so the measured text frame is too small to draw
+  // them into and `drawRect:` would clip them away. Widen only the drawing
+  // surface — the layout frame is deliberately untouched.
+  if (_textView.state) {
+    auto overflow = _textView.state->getData().attributedString.inlineBoxBlockAxisOverflow();
+    if (overflow.top > 0 || overflow.bottom > 0) {
+      textViewFrame = CGRectUnion(
+          textViewFrame,
+          CGRectMake(
+              drawingFrame.origin.x,
+              drawingFrame.origin.y - overflow.top,
+              drawingFrame.size.width,
+              drawingFrame.size.height + overflow.top + overflow.bottom));
     }
   }
 
