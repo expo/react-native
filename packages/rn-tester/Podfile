@@ -1,7 +1,14 @@
 require_relative '../react-native/scripts/react_native_pods'
+# Expo modules for the DOM-elements PoC. The tester requires the autolinking
+# entry straight from the local expo checkout — the catalog's eventual home —
+# and searches this repo's node_modules, where expo-modules-core and expo-image
+# are linked to that checkout.
+require File.expand_path('../../../expo/packages/expo/scripts/autolinking.rb', __dir__)
 
 source 'https://cdn.cocoapods.org/'
-platform :ios, min_ios_version_supported
+# Expo modules on main require iOS 16.4; the tester follows (PoC — the tester
+# may track expo's floor, the framework keeps its own).
+platform :ios, '16.4'
 
 cmake_path = `command -v cmake`
 
@@ -47,6 +54,15 @@ def pods(target_name, options = {})
   # Additional Pods which aren't included in the default Podfile
   pod 'React-RCTPushNotification', :path => "#{@prefix_path}/Libraries/PushNotificationIOS"
   # Additional Pods which are classed as unstable
+
+  use_expo_modules!(
+    searchPaths: [File.expand_path('../../node_modules', __dir__)],
+    # Only the module system and the image module: the tester bootstraps the
+    # runtime itself (AppDelegate host:didInitializeRuntime:), so it does not
+    # need Expo's AppDelegate/factory pod — which also tracks a different
+    # react-native than this fork.
+    exclude: ['expo', 'expo-asset', 'expo-constants', '@expo/dom-webview', 'expo-file-system', 'expo-font', 'expo-keep-awake'],
+  )
 
   # RNTester native modules and components
   pod 'ScreenshotManager', :path => "NativeModuleExample"
