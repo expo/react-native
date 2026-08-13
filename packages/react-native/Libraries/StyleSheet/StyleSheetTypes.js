@@ -58,10 +58,38 @@ export type CursorValue = 'auto' | 'pointer';
 type ____LayoutStyle_Internal = Readonly<{
   /** `display` sets the display type of this component.
    *
-   *  It works similarly to `display` in CSS, but only support 'flex' and 'none'.
-   *  'flex' is the default.
+   *  It works similarly to `display` in CSS. 'flex' (the default) makes the
+   *  element a flex container; 'block' makes it a CSS block container (a true
+   *  block formatting context under the text-children feature, otherwise
+   *  emulated on flex); 'inline' makes it an atomic inline-level box that
+   *  flows in a block container's inline formatting context (in a flex
+   *  container it is blockified into a regular flex item, as on web);
+   *  'none' hides it; 'contents' removes the box itself.
    */
-  display?: 'none' | 'flex' | 'contents',
+  display?:
+    | 'none'
+    | 'flex'
+    | 'block'
+    | 'inline'
+    // Inline-level boxes that establish a formatting context of their own
+    // (css-display-3 §2): inline-outer with flex or flow-root inner. Both are
+    // atomic — they sit in a line like a word but lay their contents out
+    // themselves — and both are implemented natively; they were missing here,
+    // so authoring either was a type error even though it worked.
+    | 'inline-flex'
+    | 'inline-block'
+    | 'contents',
+
+  /** `float` takes a box out of the normal flow and packs it against one side
+   *  of its block container, per CSS2 §9.5. Honored inside `display:'block'`
+   *  containers only (flex containers ignore it, as on the web).
+   */
+  float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end',
+
+  /** `clear` places a box below any preceding floats on the given side(s)
+   *  (CSS2 §9.5.2). Honored inside `display:'block'` containers only.
+   */
+  clear?: 'none' | 'left' | 'right' | 'both' | 'inline-start' | 'inline-end',
 
   /** `width` sets the width of this component.
    *
