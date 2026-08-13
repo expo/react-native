@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<ee4c0f9c1e7c6af3b0d15948ebc519b3>>
+ * @generated SignedSource<<a9621f801f0f54bdadb18cceb1cc97f8>>
  */
 
 /**
@@ -74,6 +74,7 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
   private var enablePreparedTextLayoutCache: Boolean? = null
   private var enablePropsUpdateReconciliationAndroidCache: Boolean? = null
   private var enableResizeObserverByDefaultCache: Boolean? = null
+  private var enableStringChildrenCache: Boolean? = null
   private var enableSwiftUIBasedFiltersCache: Boolean? = null
   private var enableViewCullingCache: Boolean? = null
   private var enableViewRecyclingCache: Boolean? = null
@@ -82,7 +83,9 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
   private var enableViewRecyclingForTextCache: Boolean? = null
   private var enableViewRecyclingForViewCache: Boolean? = null
   private var enableVirtualViewContainerStateExperimentalCache: Boolean? = null
+  private var enableYogaDisplayBlockCache: Boolean? = null
   private var fixBorderlessRippleAndroidCache: Boolean? = null
+  private var fixDifferentiatorParentTagForUnflattenCaseCache: Boolean? = null
   private var fixMappingOfEventPrioritiesBetweenFabricAndReactCache: Boolean? = null
   private var fixTextLayoutOnPixelDensityChangeCache: Boolean? = null
   private var fixYogaFlexBasisFitContentInMainAxisCache: Boolean? = null
@@ -619,6 +622,16 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
     return cached
   }
 
+  override fun enableStringChildren(): Boolean {
+    var cached = enableStringChildrenCache
+    if (cached == null) {
+      cached = currentProvider.enableStringChildren()
+      accessedFeatureFlags.add("enableStringChildren")
+      enableStringChildrenCache = cached
+    }
+    return cached
+  }
+
   override fun enableSwiftUIBasedFilters(): Boolean {
     var cached = enableSwiftUIBasedFiltersCache
     if (cached == null) {
@@ -699,12 +712,32 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
     return cached
   }
 
+  override fun enableYogaDisplayBlock(): Boolean {
+    var cached = enableYogaDisplayBlockCache
+    if (cached == null) {
+      cached = currentProvider.enableYogaDisplayBlock()
+      accessedFeatureFlags.add("enableYogaDisplayBlock")
+      enableYogaDisplayBlockCache = cached
+    }
+    return cached
+  }
+
   override fun fixBorderlessRippleAndroid(): Boolean {
     var cached = fixBorderlessRippleAndroidCache
     if (cached == null) {
       cached = currentProvider.fixBorderlessRippleAndroid()
       accessedFeatureFlags.add("fixBorderlessRippleAndroid")
       fixBorderlessRippleAndroidCache = cached
+    }
+    return cached
+  }
+
+  override fun fixDifferentiatorParentTagForUnflattenCase(): Boolean {
+    var cached = fixDifferentiatorParentTagForUnflattenCaseCache
+    if (cached == null) {
+      cached = currentProvider.fixDifferentiatorParentTagForUnflattenCase()
+      accessedFeatureFlags.add("fixDifferentiatorParentTagForUnflattenCase")
+      fixDifferentiatorParentTagForUnflattenCaseCache = cached
     }
     return cached
   }

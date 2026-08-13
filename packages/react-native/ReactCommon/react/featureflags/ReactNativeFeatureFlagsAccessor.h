@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<074e6ad1d773f289f93ce1d16656ec6e>>
+ * @generated SignedSource<<434e239eb32cb9c4d6cb47e48ee39c59>>
  */
 
 /**
@@ -84,6 +84,7 @@ class ReactNativeFeatureFlagsAccessor {
   bool enablePreparedTextLayout();
   bool enablePropsUpdateReconciliationAndroid();
   bool enableResizeObserverByDefault();
+  bool enableStringChildren();
   bool enableSwiftUIBasedFilters();
   bool enableViewCulling();
   bool enableViewRecycling();
@@ -92,7 +93,9 @@ class ReactNativeFeatureFlagsAccessor {
   bool enableViewRecyclingForText();
   bool enableViewRecyclingForView();
   bool enableVirtualViewContainerStateExperimental();
+  bool enableYogaDisplayBlock();
   bool fixBorderlessRippleAndroid();
+  bool fixDifferentiatorParentTagForUnflattenCase();
   bool fixMappingOfEventPrioritiesBetweenFabricAndReact();
   bool fixTextLayoutOnPixelDensityChange();
   bool fixYogaFlexBasisFitContentInMainAxis();
@@ -139,7 +142,7 @@ class ReactNativeFeatureFlagsAccessor {
   std::unique_ptr<ReactNativeFeatureFlagsProvider> currentProvider_;
   bool wasOverridden_;
 
-  std::array<std::atomic<const char*>, 94> accessedFeatureFlags_;
+  std::array<std::atomic<const char*>, 97> accessedFeatureFlags_;
 
   std::atomic<std::optional<bool>> commonTestFlag_;
   std::atomic<std::optional<bool>> cdpInteractionMetricsEnabled_;
@@ -191,6 +194,7 @@ class ReactNativeFeatureFlagsAccessor {
   std::atomic<std::optional<bool>> enablePreparedTextLayout_;
   std::atomic<std::optional<bool>> enablePropsUpdateReconciliationAndroid_;
   std::atomic<std::optional<bool>> enableResizeObserverByDefault_;
+  std::atomic<std::optional<bool>> enableStringChildren_;
   std::atomic<std::optional<bool>> enableSwiftUIBasedFilters_;
   std::atomic<std::optional<bool>> enableViewCulling_;
   std::atomic<std::optional<bool>> enableViewRecycling_;
@@ -199,7 +203,9 @@ class ReactNativeFeatureFlagsAccessor {
   std::atomic<std::optional<bool>> enableViewRecyclingForText_;
   std::atomic<std::optional<bool>> enableViewRecyclingForView_;
   std::atomic<std::optional<bool>> enableVirtualViewContainerStateExperimental_;
+  std::atomic<std::optional<bool>> enableYogaDisplayBlock_;
   std::atomic<std::optional<bool>> fixBorderlessRippleAndroid_;
+  std::atomic<std::optional<bool>> fixDifferentiatorParentTagForUnflattenCase_;
   std::atomic<std::optional<bool>> fixMappingOfEventPrioritiesBetweenFabricAndReact_;
   std::atomic<std::optional<bool>> fixTextLayoutOnPixelDensityChange_;
   std::atomic<std::optional<bool>> fixYogaFlexBasisFitContentInMainAxis_;

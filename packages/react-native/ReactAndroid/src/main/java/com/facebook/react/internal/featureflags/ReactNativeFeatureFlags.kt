@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<cfa7aa53731059247d858fd8fb6e914b>>
+ * @generated SignedSource<<a5ecf3afac5f89437f52ba2bcc8fbe9b>>
  */
 
 /**
@@ -331,6 +331,12 @@ public object ReactNativeFeatureFlags {
   public fun enableResizeObserverByDefault(): Boolean = accessor.enableResizeObserverByDefault()
 
   /**
+   * Enables rendering bare string children of Views without an explicit <Text> wrapper, following CSS/DOM semantics (anonymous inline formatting contexts at the layout level).
+   */
+  @JvmStatic
+  public fun enableStringChildren(): Boolean = accessor.enableStringChildren()
+
+  /**
    * When enabled, it will use SwiftUI for filter effects like blur on iOS.
    */
   @JvmStatic
@@ -379,10 +385,22 @@ public object ReactNativeFeatureFlags {
   public fun enableVirtualViewContainerStateExperimental(): Boolean = accessor.enableVirtualViewContainerStateExperimental()
 
   /**
+   * Implements display:'block' (and the intrinsic <div> tag) as a first-class Yoga block formatting context (YGDisplayBlock) instead of the flex column+stretch emulation, so block-level children stack with block sizing rather than as flex items. Sub-flag of enableStringChildren; the emulation remains the flag-off fallback.
+   */
+  @JvmStatic
+  public fun enableYogaDisplayBlock(): Boolean = accessor.enableYogaDisplayBlock()
+
+  /**
    * Prevents a borderless ripple feedback underlay from projecting the entire view background on Android, which could hide the background and ripple.
    */
   @JvmStatic
   public fun fixBorderlessRippleAndroid(): Boolean = accessor.fixBorderlessRippleAndroid()
+
+  /**
+   * Fix incorrect parentTag passed as parentTagForUpdate in the unflatten-unflatten branch of calculateShadowViewMutationsFlattener, which causes UPDATE mutations to reference a parent being created in the same batch.
+   */
+  @JvmStatic
+  public fun fixDifferentiatorParentTagForUnflattenCase(): Boolean = accessor.fixDifferentiatorParentTagForUnflattenCase()
 
   /**
    * Uses the default event priority instead of the discreet event priority by default when dispatching events from Fabric to React.
