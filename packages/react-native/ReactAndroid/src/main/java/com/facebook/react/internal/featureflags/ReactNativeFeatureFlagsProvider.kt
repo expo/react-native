@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<33bd0d69031266aecf69a8b4b216936f>>
+ * @generated SignedSource<<c2673c7cc21a5e0929bd833cdad8907f>>
  */
 
 /**
@@ -127,6 +127,8 @@ public interface ReactNativeFeatureFlagsProvider {
 
   @DoNotStrip public fun enableResizeObserverByDefault(): Boolean
 
+  @DoNotStrip public fun enableStringChildren(): Boolean
+
   @DoNotStrip public fun enableSwiftUIBasedFilters(): Boolean
 
   @DoNotStrip public fun enableViewCulling(): Boolean
@@ -143,7 +145,11 @@ public interface ReactNativeFeatureFlagsProvider {
 
   @DoNotStrip public fun enableVirtualViewContainerStateExperimental(): Boolean
 
+  @DoNotStrip public fun enableYogaDisplayBlock(): Boolean
+
   @DoNotStrip public fun fixBorderlessRippleAndroid(): Boolean
+
+  @DoNotStrip public fun fixDifferentiatorParentTagForUnflattenCase(): Boolean
 
   @DoNotStrip public fun fixMappingOfEventPrioritiesBetweenFabricAndReact(): Boolean
 

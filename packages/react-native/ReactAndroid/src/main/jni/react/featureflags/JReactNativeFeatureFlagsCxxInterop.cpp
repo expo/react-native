@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<5948daf54ab796ec4bc2754bd309cbc1>>
+ * @generated SignedSource<<df7847927842a9ca9b8f1210f385c0c3>>
  */
 
 /**
@@ -351,6 +351,12 @@ class ReactNativeFeatureFlagsJavaProvider
     return method(javaProvider_);
   }
 
+  bool enableStringChildren() override {
+    static const auto method =
+        getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableStringChildren");
+    return method(javaProvider_);
+  }
+
   bool enableSwiftUIBasedFilters() override {
     static const auto method =
         getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableSwiftUIBasedFilters");
@@ -399,9 +405,21 @@ class ReactNativeFeatureFlagsJavaProvider
     return method(javaProvider_);
   }
 
+  bool enableYogaDisplayBlock() override {
+    static const auto method =
+        getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableYogaDisplayBlock");
+    return method(javaProvider_);
+  }
+
   bool fixBorderlessRippleAndroid() override {
     static const auto method =
         getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("fixBorderlessRippleAndroid");
+    return method(javaProvider_);
+  }
+
+  bool fixDifferentiatorParentTagForUnflattenCase() override {
+    static const auto method =
+        getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("fixDifferentiatorParentTagForUnflattenCase");
     return method(javaProvider_);
   }
 
@@ -909,6 +927,11 @@ bool JReactNativeFeatureFlagsCxxInterop::enableResizeObserverByDefault(
   return ReactNativeFeatureFlags::enableResizeObserverByDefault();
 }
 
+bool JReactNativeFeatureFlagsCxxInterop::enableStringChildren(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
+  return ReactNativeFeatureFlags::enableStringChildren();
+}
+
 bool JReactNativeFeatureFlagsCxxInterop::enableSwiftUIBasedFilters(
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
   return ReactNativeFeatureFlags::enableSwiftUIBasedFilters();
@@ -949,9 +972,19 @@ bool JReactNativeFeatureFlagsCxxInterop::enableVirtualViewContainerStateExperime
   return ReactNativeFeatureFlags::enableVirtualViewContainerStateExperimental();
 }
 
+bool JReactNativeFeatureFlagsCxxInterop::enableYogaDisplayBlock(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
+  return ReactNativeFeatureFlags::enableYogaDisplayBlock();
+}
+
 bool JReactNativeFeatureFlagsCxxInterop::fixBorderlessRippleAndroid(
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
   return ReactNativeFeatureFlags::fixBorderlessRippleAndroid();
+}
+
+bool JReactNativeFeatureFlagsCxxInterop::fixDifferentiatorParentTagForUnflattenCase(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
+  return ReactNativeFeatureFlags::fixDifferentiatorParentTagForUnflattenCase();
 }
 
 bool JReactNativeFeatureFlagsCxxInterop::fixMappingOfEventPrioritiesBetweenFabricAndReact(
@@ -1342,6 +1375,9 @@ void JReactNativeFeatureFlagsCxxInterop::registerNatives() {
         "enableResizeObserverByDefault",
         JReactNativeFeatureFlagsCxxInterop::enableResizeObserverByDefault),
       makeNativeMethod(
+        "enableStringChildren",
+        JReactNativeFeatureFlagsCxxInterop::enableStringChildren),
+      makeNativeMethod(
         "enableSwiftUIBasedFilters",
         JReactNativeFeatureFlagsCxxInterop::enableSwiftUIBasedFilters),
       makeNativeMethod(
@@ -1366,8 +1402,14 @@ void JReactNativeFeatureFlagsCxxInterop::registerNatives() {
         "enableVirtualViewContainerStateExperimental",
         JReactNativeFeatureFlagsCxxInterop::enableVirtualViewContainerStateExperimental),
       makeNativeMethod(
+        "enableYogaDisplayBlock",
+        JReactNativeFeatureFlagsCxxInterop::enableYogaDisplayBlock),
+      makeNativeMethod(
         "fixBorderlessRippleAndroid",
         JReactNativeFeatureFlagsCxxInterop::fixBorderlessRippleAndroid),
+      makeNativeMethod(
+        "fixDifferentiatorParentTagForUnflattenCase",
+        JReactNativeFeatureFlagsCxxInterop::fixDifferentiatorParentTagForUnflattenCase),
       makeNativeMethod(
         "fixMappingOfEventPrioritiesBetweenFabricAndReact",
         JReactNativeFeatureFlagsCxxInterop::fixMappingOfEventPrioritiesBetweenFabricAndReact),

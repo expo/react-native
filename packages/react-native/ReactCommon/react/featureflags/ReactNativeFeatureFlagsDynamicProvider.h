@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<f06aa9c4b4027083a00720ea796a5d43>>
+ * @generated SignedSource<<4025a1c6ec3d95c23c5205c971f27ce4>>
  */
 
 /**
@@ -515,6 +515,15 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     return ReactNativeFeatureFlagsDefaults::enableResizeObserverByDefault();
   }
 
+  bool enableStringChildren() override {
+    auto value = values_["enableStringChildren"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::enableStringChildren();
+  }
+
   bool enableSwiftUIBasedFilters() override {
     auto value = values_["enableSwiftUIBasedFilters"];
     if (!value.isNull()) {
@@ -587,6 +596,15 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     return ReactNativeFeatureFlagsDefaults::enableVirtualViewContainerStateExperimental();
   }
 
+  bool enableYogaDisplayBlock() override {
+    auto value = values_["enableYogaDisplayBlock"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::enableYogaDisplayBlock();
+  }
+
   bool fixBorderlessRippleAndroid() override {
     auto value = values_["fixBorderlessRippleAndroid"];
     if (!value.isNull()) {
@@ -594,6 +612,15 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     }
 
     return ReactNativeFeatureFlagsDefaults::fixBorderlessRippleAndroid();
+  }
+
+  bool fixDifferentiatorParentTagForUnflattenCase() override {
+    auto value = values_["fixDifferentiatorParentTagForUnflattenCase"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::fixDifferentiatorParentTagForUnflattenCase();
   }
 
   bool fixMappingOfEventPrioritiesBetweenFabricAndReact() override {

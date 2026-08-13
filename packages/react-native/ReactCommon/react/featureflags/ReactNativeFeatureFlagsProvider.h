@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<5e1a9381d32baeeddbb848c7d2fc2b63>>
+ * @generated SignedSource<<c83dd54040740e772c38e52de77c9ce5>>
  */
 
 /**
@@ -79,6 +79,7 @@ class ReactNativeFeatureFlagsProvider {
   virtual bool enablePreparedTextLayout() = 0;
   virtual bool enablePropsUpdateReconciliationAndroid() = 0;
   virtual bool enableResizeObserverByDefault() = 0;
+  virtual bool enableStringChildren() = 0;
   virtual bool enableSwiftUIBasedFilters() = 0;
   virtual bool enableViewCulling() = 0;
   virtual bool enableViewRecycling() = 0;
@@ -87,7 +88,9 @@ class ReactNativeFeatureFlagsProvider {
   virtual bool enableViewRecyclingForText() = 0;
   virtual bool enableViewRecyclingForView() = 0;
   virtual bool enableVirtualViewContainerStateExperimental() = 0;
+  virtual bool enableYogaDisplayBlock() = 0;
   virtual bool fixBorderlessRippleAndroid() = 0;
+  virtual bool fixDifferentiatorParentTagForUnflattenCase() = 0;
   virtual bool fixMappingOfEventPrioritiesBetweenFabricAndReact() = 0;
   virtual bool fixProgrammaticScrollMomentumEventsIOS() = 0;
   virtual bool fixTextInlineViewLineHeight() = 0;
