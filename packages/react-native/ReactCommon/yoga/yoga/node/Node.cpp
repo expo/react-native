@@ -269,6 +269,18 @@ void Node::setLayoutComputedFlexBasis(const FloatOptional computedFlexBasis) {
   layout_.computedFlexBasis = computedFlexBasis;
 }
 
+void Node::setLayoutStaticPositionBlockStart(FloatOptional staticPosition) {
+  layout_.staticPositionBlockStart = staticPosition;
+}
+
+void Node::setLayoutEscapedFloats(std::vector<PlacedFloat> floats) {
+  layout_.setEscapedFloats(std::move(floats));
+}
+
+void Node::setLayoutInheritedFloats(std::vector<PlacedFloat> floats) {
+  layout_.setInheritedFloats(std::move(floats));
+}
+
 void Node::setLayoutPosition(float position, PhysicalEdge edge) {
   layout_.setPosition(edge, position);
 }

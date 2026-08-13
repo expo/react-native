@@ -31,6 +31,24 @@ static inline void setFlexStartLayoutPosition(
     position += parent->getLayout().padding(flexStartEdge(axis));
   }
 
+  // In a BLOCK container with no inset on this axis, the child keeps the
+  // position the flow had reached — its static position (CSS2 §10.6.4).
+  // `justifyContent` and `alignItems` decide it everywhere else, and a block
+  // container has neither, so without this the child lands at the content
+  // edge. Block axis only: the inline component of a static position IS the
+  // content edge, which is what this function already computes.
+  //
+  // Guarded on the parent being a block container as well as on the value
+  // being defined, because layout results outlive a reparent and a stale
+  // offset must not follow a child from a block parent into a flex one.
+  if (!isRow(axis) && parent->style().display() == Display::Block) {
+    const FloatOptional staticPosition =
+        child->getLayout().staticPositionBlockStart;
+    if (staticPosition.isDefined()) {
+      position += staticPosition.unwrap();
+    }
+  }
+
   child->setLayoutPosition(position, flexStartEdge(axis));
 }
 
@@ -103,6 +121,13 @@ static void justifyAbsoluteChild(
     const Direction direction,
     const FlexDirection mainAxis,
     const float containingBlockWidth) {
+  // A block container has no alignment properties, so the child keeps its
+  // static position (CSS2 §10.3.7, §10.6.4)
+  if (parent->style().display() == Display::Block) {
+    setFlexStartLayoutPosition(
+        parent, child, direction, mainAxis, containingBlockWidth);
+    return;
+  }
   const Justify justify = parent->style().display() == Display::Grid
       ? resolveChildJustification(parent, child)
       : parent->style().justifyContent();
@@ -135,6 +160,11 @@ static void alignAbsoluteChild(
     const Direction direction,
     const FlexDirection crossAxis,
     const float containingBlockWidth) {
+  if (parent->style().display() == Display::Block) {
+    setFlexStartLayoutPosition(
+        parent, child, direction, crossAxis, containingBlockWidth);
+    return;
+  }
   Align itemAlign = resolveChildAlignment(parent, child);
   const Wrap parentWrap = parent->style().flexWrap();
   if (parentWrap == Wrap::WrapReverse) {
@@ -261,8 +291,13 @@ void layoutAbsoluteChild(
   // For grid containers, use inline (Row) and block (Column) axes for
   // positioning, since grid alignment properties (justify-self, align-self)
   // operate on inline/block axes, not main/cross axes based on flex-direction.
+  //
+  // A block container's axes are fixed: its flow runs in the block (column)
+  // direction whatever its `flex-direction` says.
   const FlexDirection mainAxis = node->style().display() == Display::Grid
       ? resolveDirection(FlexDirection::Row, direction)
+      : node->style().display() == Display::Block
+      ? FlexDirection::Column
       : resolveDirection(node->style().flexDirection(), direction);
   const FlexDirection crossAxis = node->style().display() == Display::Grid
       ? FlexDirection::Column
@@ -503,8 +538,11 @@ bool layoutAbsoluteDescendants(
        * offset is complicated since the two nodes can have different main/cross
        * axes.
        */
-      const FlexDirection parentMainAxis = resolveDirection(
-          currentNode->style().flexDirection(), currentNodeDirection);
+      const FlexDirection parentMainAxis =
+          currentNode->style().display() == Display::Block
+          ? FlexDirection::Column
+          : resolveDirection(
+                currentNode->style().flexDirection(), currentNodeDirection);
       const FlexDirection parentCrossAxis =
           resolveCrossDirection(parentMainAxis, currentNodeDirection);
 
