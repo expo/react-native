@@ -17,6 +17,7 @@
 #include <react/performance/cdpmetrics/CdpPerfIssuesReporter.h>
 #include <react/performance/timeline/PerformanceEntryReporter.h>
 #include <react/renderer/animationbackend/AnimationBackend.h>
+#include <react/renderer/animationbackend/CSSTransitions.h>
 #include <react/renderer/componentregistry/ComponentDescriptorRegistry.h>
 #include <react/renderer/core/EventQueueProcessor.h>
 #include <react/renderer/core/LayoutContext.h>
@@ -131,6 +132,13 @@ Scheduler::Scheduler(
   // surface-start callback, and `UIManager` silently drops those while it has
   // no delegate.
   if (ReactNativeFeatureFlags::useSharedAnimatedBackend()) {
+    // CSS transitions ride the shared backend, which is what makes them run
+    // off the JavaScript thread. Constructed BEFORE the backend so its commit
+    // hook registers first: hooks run in registration order, and the diff has
+    // to see the tree as React committed it, before the backend's hook
+    // overlays mid-flight animated values (see CSSTransitions.h).
+    cssTransitions_ = std::make_unique<CSSTransitions>(*uiManager);
+
     auto animationBackend = std::make_shared<AnimationBackend>(
         schedulerToolbox.animationChoreographer, uiManager);
 
@@ -138,6 +146,36 @@ Scheduler::Scheduler(
         animationBackend);
 
     uiManager->unstable_setAnimationBackend(animationBackend);
+
+    cssTransitions_->setAnimationBackend(animationBackend);
+
+    // The engine's debug trace, drained from JavaScript as
+    // `globalThis.__cssTransitionsTrace()` → Array<string>. Installed so the
+    // engine can be observed on a device, where nothing else can see it. The
+    // host function captures the shared buffer, not the engine.
+    auto trace = cssTransitions_->trace();
+    runtimeExecutor_([trace](jsi::Runtime& runtime) {
+      runtime.global().setProperty(
+          runtime,
+          "__cssTransitionsTrace",
+          jsi::Function::createFromHostFunction(
+              runtime,
+              jsi::PropNameID::forAscii(runtime, "__cssTransitionsTrace"),
+              0,
+              [trace](
+                  jsi::Runtime& rt,
+                  const jsi::Value& /*thisValue*/,
+                  const jsi::Value* /*arguments*/,
+                  size_t /*count*/) -> jsi::Value {
+                auto lines = trace->drain();
+                auto array = jsi::Array(rt, lines.size());
+                for (size_t i = 0; i < lines.size(); i++) {
+                  array.setValueAtIndex(
+                      rt, i, jsi::String::createFromUtf8(rt, lines[i]));
+                }
+                return array;
+              }));
+    });
   }
 
   auto bindingsExecutor =

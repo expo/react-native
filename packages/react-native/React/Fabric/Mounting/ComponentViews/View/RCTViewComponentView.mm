@@ -27,6 +27,7 @@
 #import <React/RCTLog.h>
 #import <React/RCTRadialGradient.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
+#import <react/renderer/animationbackend/CSSTransitionsTrace.h>
 #import <react/renderer/components/view/ViewComponentDescriptor.h>
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
