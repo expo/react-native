@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text as a first-class child in React Native</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5c6470; --line: #e5e8ec;
+    --card: #f7f8fa; --code-bg: #14181d; --code-fg: #d6dde6; --code-c: #6b7684;
+    --accent: #4361ee; --accent2: #06b06f; --warn: #b4550a;
+    --bar-a: #4361ee; --bar-b: #9aa7b8; --bar-win: #06b06f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101317; --fg: #e8ebef; --muted: #98a2ad; --line: #262c33;
+      --card: #171c22; --code-bg: #0b0e12; --code-fg: #d6dde6;
+      --accent: #7b96ff; --accent2: #2fd08e; --warn: #e8963e;
+      --bar-a: #6d87f5; --bar-b: #4a5563; --bar-win: #2fd08e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 24px 96px; }
+  header { margin-bottom: 40px; }
+  h1 { font-size: 2.1em; line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 14px; }
+  .sub { color: var(--muted); font-size: 0.95em; }
+  .sub code { font-size: 0.9em; }
+  h2 {
+    font-size: 1.35em; letter-spacing: -0.01em; margin: 2.4em 0 0.6em;
+    padding-top: 1.2em; border-top: 1px solid var(--line);
+  }
+  h2 .stage {
+    display: block; font-size: 0.62em; font-weight: 600; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;
+  }
+  h3 { font-size: 1.05em; margin: 1.6em 0 0.5em; }
+  p { margin: 0.8em 0; }
+  a { color: var(--accent); }
+  code {
+    font: 0.86em/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--card); padding: 0.13em 0.35em; border-radius: 5px;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; margin: 1em 0; font-size: 0.84em;
+    line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+  pre .c { color: var(--code-c); }
+  pre .k { color: #8ab4ff; }
+  pre .s { color: #97d383; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .good { color: var(--accent2); font-weight: 650; }
+  .callout {
+    background: var(--card); border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0; padding: 12px 18px; margin: 1.2em 0; font-size: 0.95em;
+  }
+  .callout.warn { border-left-color: var(--warn); }
+  .bars { margin: 1.4em 0 1.8em; }
+  .bar-row { display: grid; grid-template-columns: 190px 1fr 84px; gap: 10px; align-items: center; margin: 7px 0; font-size: 0.88em; }
+  .bar-label { color: var(--muted); text-align: right; line-height: 1.25; }
+  .bar-track { background: var(--card); border-radius: 5px; height: 22px; position: relative; }
+  .bar-fill { height: 100%; border-radius: 5px; background: var(--bar-b); min-width: 3px; }
+  .bar-fill.win { background: var(--bar-win); }
+  .bar-fill.ours { background: var(--bar-a); }
+  .bar-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .bar-val small { color: var(--muted); font-weight: 400; }
+  .bench-title { font-weight: 650; margin: 1.6em 0 0.2em; }
+  .bench-note { color: var(--muted); font-size: 0.85em; margin: 0 0 0.6em; }
+  .tree { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .tree { grid-template-columns: 1fr; } .bar-row { grid-template-columns: 120px 1fr 76px; } }
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85em; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Text as a first-class child in React&nbsp;Native</h1>
+  <p class="sub">A plain-language report on the string-children project: what
+  changed, what it looks like in code at each stage, and what it costs and
+  saves. No prior context assumed. Engine numbers are medians from optimized
+  (-O3) release builds, measured together in one session at commit
+  <code>2affd860114</code>; real-app numbers are from release builds of
+  RNTester. Reproducible with <code>./bench-string-children.sh</code>.</p>
+</header>
+
+<h2 style="border-top:none;padding-top:0">The one-paragraph version</h2>
+
+<p>React Native has always required text to live inside a
+<code>&lt;Text&gt;</code> component — putting a string anywhere else was a
+crash. This project makes text a first-class child of any component, the way
+it is on the web:</p>
+
+<pre><code><span class="c">// Before: crashes ("Text strings must be rendered within a &lt;Text&gt; component")</span>
+&lt;View style={{padding: 12}}&gt;Hello world&lt;/View&gt;
+
+<span class="c">// After (flag on): renders, and text styles inherit from parents like CSS</span>
+&lt;View style={{padding: 12, fontSize: 16, color: '#333'}}&gt;Hello world&lt;/View&gt;</code></pre>
+
+<p>Everything ships behind one flag, <code>enableStringChildren</code>. With
+the flag off, nothing changes: not pixels, not speed, and existing
+<code>&lt;Text&gt;</code> code behaves identically even with the flag on.
+With it on, text gets faster and the layout engine gains the web&rsquo;s text
+model: inheritance, block layout, inline flow, and white-space handling.</p>
+
+<p>The work is staged as 21 reviewable pieces in eight groups. This report
+walks the groups in order — each is independently useful, and each was
+tested on both iOS and Android.</p>
+
+<h2><span class="stage">Stage 1</span>Shrink the text data structures (no new feature)</h2>
+
+<p>Every piece of styled text carries a <code>TextAttributes</code> struct
+(its font, color, spacing, and so on), and that struct is copied and compared
+constantly — once per text fragment, once per measurement-cache entry. It was
+232 bytes mostly out of habit: fields declared in historical order (padding
+holes), enums defaulting to 4 bytes each.</p>
+
+<p>Reordering fields by size and giving enums explicit small storage shrank
+it to <strong>168 bytes (−28%)</strong> with zero behavior change. A
+compile-time check now fails the build if it silently grows again. This stage
+requires no belief in any of the rest — it is a free win for every app.</p>
+
+<h2><span class="stage">Stage 2</span>Real block layout in Yoga</h2>
+
+<p>React Native&rsquo;s layout engine (Yoga) speaks flexbox. The web&rsquo;s
+default for documents is <em>block layout</em>: children stack vertically,
+fill the line, and their vertical margins collapse. Emulating that with a
+flex column gets the stacking right but not the margins — and margins are
+where documents get their rhythm.</p>
+
+<pre><code>&lt;View style={{display: <span class="s">'block'</span>}}&gt;
+  &lt;View style={{height: 10, marginBottom: 20}} /&gt;
+  &lt;View style={{height: 10, marginTop: 30}} /&gt;
+&lt;/View&gt;
+<span class="c">// Block layout: the 20 and 30 margins COLLAPSE to max(20, 30) = 30.
+// Total height 50 — exactly what a browser does.
+// A flex column would add them: 20 + 30 = 50 between, total 70.</span></code></pre>
+
+<p><code>display: 'block'</code> is now a first-class Yoga display value,
+with CSS2 margin collapsing (including the subtle cases: margins collapsing
+through empty blocks, and a child&rsquo;s margin &ldquo;escaping&rdquo;
+through its parent&rsquo;s edge). Floats exist as an optional extension.
+The layout assertions run on-device in the platform test suites, and the
+trickier rules were pinned against live Safari during development.</p>
+
+<h2><span class="stage">Stage 3</span>Text becomes a real node</h2>
+
+<p>On the web, the string inside <code>&lt;p&gt;hello&lt;/p&gt;</code> is
+itself a node in the document — a <em>text node</em>,
+<code>nodeName: "#text"</code>. React Native&rsquo;s DOM APIs
+(<code>ReadOnlyText</code>, nodeType 3) already model this on the JavaScript
+side; this stage gives the native tree the matching thing. A string child
+becomes a lightweight <code>#text</code> node: no styles of its own, no
+layout box, no mounted view — just character data with an identity.</p>
+
+<div class="tree">
+<pre><code>&lt;View&gt;
+  {<span class="s">'Hello '</span>}
+  {<span class="s">'world'</span>}
+&lt;/View&gt;</code></pre>
+<pre><code>View
+├─ #text <span class="s">"Hello "</span>
+└─ #text <span class="s">"world"</span></code></pre>
+</div>
+
+<p>That lightness matters later: a <code>#text</code> node skips everything a
+component costs — props parsing, a layout node, a mounted platform view.</p>
+
+<h2><span class="stage">Stage 4</span>Anonymous text runs (the core)</h2>
+
+<p>When a View has text children, who lays the text out? The web&rsquo;s
+answer (CSS&nbsp;2.1 §9.2.1.1): the container groups contiguous inline
+content into an <em>anonymous box</em> — a box that exists in layout but not
+in your code — and that box measures and renders the text as one run.</p>
+
+<pre><code>&lt;View style={{width: 200}}&gt;
+  {<span class="s">'This wraps like '</span>}
+  {<span class="s">'one paragraph, '</span>}
+  {<span class="s">'because contiguous strings form ONE run.'</span>}
+&lt;/View&gt;</code></pre>
+
+<p>Runs split around block-level children and rejoin after them, in document
+order:</p>
+
+<pre><code>&lt;View&gt;
+  before
+  &lt;View style={{height: 8, backgroundColor: <span class="s">'steelblue'</span>}} /&gt;
+  after
+&lt;/View&gt;
+<span class="c">// "before" is one run, the blue bar is a normal child, "after" is
+// another run — painted in exactly that order.</span></code></pre>
+
+<p>White space collapses the way CSS says it should
+(<code>white-space: normal</code> by default; <code>'pre'</code>,
+<code>'pre-line'</code>, and friends are supported as a style):</p>
+
+<pre><code>&lt;View&gt;{<span class="s">'collapse   these\n  spaces'</span>}&lt;/View&gt;   <span class="c">// → "collapse these spaces"</span>
+&lt;View style={{whiteSpace: <span class="s">'pre-line'</span>}}&gt;{<span class="s">'keep\nthe line break'</span>}&lt;/View&gt;</code></pre>
+
+<p>One behavioral difference to know: classic <code>&lt;Text&gt;</code> has
+always preserved newline characters, while bare strings follow CSS — under
+the default <code>white-space: normal</code>, a <code>\n</code> in a string
+collapses to a space, and <code>'pre-line'</code> preserves it. The same
+string moved from a <code>&lt;Text&gt;</code> into a bare position can
+therefore render differently until the white-space mode says otherwise.</p>
+
+<p>Under the hood each run is measured by the same text engine
+<code>&lt;Text&gt;</code> uses, positioned by the container, and painted
+without creating extra mounted views for the differ to track.</p>
+
+<h2><span class="stage">Stage 5</span>Native rendering on both platforms</h2>
+
+<p>The shared engine decides <em>what</em> the runs are; each platform paints
+them. On iOS, run painting interleaves with child views inside the
+container&rsquo;s existing view. On Android, runs draw directly in the
+container&rsquo;s <code>dispatchDraw</code> between children — no extra views
+on either platform. Both platforms pass the same scripted layout checks (18
+assertions each, read from the running app), and both render the
+interleaving example above identically.</p>
+
+<h2><span class="stage">Stage 6</span>Inline-level Views</h2>
+
+<p>The web distinguishes <em>inline</em> content (flows within a line of
+text) from <em>block</em> content (gets its own box). Views can now opt into
+inline behavior:</p>
+
+<pre><code>&lt;View style={{display: <span class="s">'block'</span>}}&gt;
+  before &lt;View style={{width: 30, height: 40, display: <span class="s">'inline'</span>}} /&gt; after
+&lt;/View&gt;
+<span class="c">// The 30×40 box sits IN the sentence; the line grows to fit it.</span>
+
+&lt;View style={{display: <span class="s">'block'</span>}}&gt;
+  a &lt;View style={{display: <span class="s">'inline'</span>, color: <span class="s">'tomato'</span>}}&gt;flowing inline contents&lt;/View&gt; b
+&lt;/View&gt;
+<span class="c">// An un-sized all-inline View acts like a &lt;span&gt;: its contents join the
+// surrounding run, its color applies, taps on it hit its own handler.</span></code></pre>
+
+<p>In a flex container the same child becomes a regular flex item, exactly
+as css-display specifies for flex contexts.</p>
+
+<h2><span class="stage">Stage 7</span>Style inheritance and <code>all</code></h2>
+
+<p>With the flag on, the CSS <em>inherited text properties</em> —
+<code>color</code>, <code>fontSize</code>, <code>fontFamily</code>,
+<code>fontWeight</code>, <code>fontStyle</code>, <code>fontVariant</code>,
+<code>letterSpacing</code>, <code>lineHeight</code>, <code>textAlign</code>,
+<code>textTransform</code>, <code>whiteSpace</code> — cascade down the tree
+into text, like CSS:</p>
+
+<pre><code>&lt;View style={{fontSize: 16, color: <span class="s">'#333'</span>}}&gt;
+  &lt;View style={{padding: 8}}&gt;
+    Inherited: 16pt, #333 — through the intervening View.
+  &lt;/View&gt;
+&lt;/View&gt;</code></pre>
+
+<div class="callout"><strong>Compatibility is the centerpiece.</strong> Many
+apps have leftover <code>color</code> or <code>fontSize</code> keys in View
+styles that old React Native silently ignored. Turning on inheritance must
+not activate them into existing <code>&lt;Text&gt;</code>. So a root
+<code>&lt;Text&gt;</code> ships with the standard CSS reset in its
+user-agent style — <code>all: 'initial'</code> — making it an inheritance
+boundary by default. Nothing on existing screens changes.</div>
+
+<p>Every keyword of the standard <code>all</code> property then works, per
+spec, on any element:</p>
+
+<pre><code>&lt;View style={{fontSize: 30, color: <span class="s">'red'</span>}}&gt;
+  &lt;Text&gt;14pt, black — exactly as before this project&lt;/Text&gt;
+  &lt;Text style={{all: <span class="s">'unset'</span>}}&gt;30pt red — opted into the cascade&lt;/Text&gt;
+  &lt;Text style={{all: <span class="s">'revert'</span>}}&gt;14pt — revert returns TO the UA boundary&lt;/Text&gt;
+  &lt;View style={{all: <span class="s">'initial'</span>}}&gt;isolated: the cascade restarts here&lt;/View&gt;
+  &lt;View style={{all: <span class="s">'revert'</span>}}&gt;30pt red — a View has no UA rule to
+  revert to, so revert means inherit&lt;/View&gt;
+&lt;/View&gt;</code></pre>
+
+<p>That last distinction — <code>revert</code> is not a synonym for
+<code>initial</code> — was a spec-correctness bug found in review and fixed
+with tests on both platforms. Boundaries are also a performance tool: the
+engine tracks which subtrees contain text that could observe a style change,
+and skips everything else.</p>
+
+<h2><span class="stage">Stage 8</span>Geometry and events</h2>
+
+<p>Text runs are real: they answer geometry queries and receive touches.
+<code>getBoundingClientRect()</code> works on text nodes (fragment
+rectangles, like the web&rsquo;s Range APIs), and pressing a span-like inline
+View inside a run resolves to that element&rsquo;s own handlers.</p>
+
+<h2>Speed</h2>
+
+<p>Methodology: release (-O3) builds of the C++ test harness, medians of
+20–50 iterations, quiet machine. Every benchmark scenario renders inside the
+same plain parent View, and every tier within a scenario renders the same
+content in the same containers — only the way text is expressed changes.</p>
+
+<h3>The flag itself is free</h3>
+
+<p>With the flag off — or on, if you keep writing <code>&lt;Text&gt;</code> —
+nothing costs anything. Every mount and style-update benchmark lands within
+run-to-run noise (±5%) between flag values, and the parse work for the new
+style keys does not even run with the flag off:</p>
+
+<table>
+<tr><th>workload</th><th class="num">flag off</th><th class="num">flag on</th></tr>
+<tr><td>mount 1,365 plain Views</td><td class="num">16.5ms</td><td class="num">16.2ms</td></tr>
+<tr><td>inheritable style update, 1,365 Views</td><td class="num">2.11ms</td><td class="num">2.21ms</td></tr>
+<tr><td>mount 200 styled <code>&lt;Text&gt;</code> rows</td><td class="num">6.65ms</td><td class="num">6.81ms</td></tr>
+<tr><td>mount 15,000 <code>&lt;Text&gt;</code> lines</td><td class="num">354ms</td><td class="num">345ms</td></tr>
+</table>
+
+<h3>What text costs, in the shapes apps actually render</h3>
+
+<p><strong>A settings-style list</strong> — 1,000 single-line rows. The rows
+exist regardless (press handlers, padding, separators), so the number that
+matters is the marginal cost of the text inside them, measured by
+subtracting the empty-rows floor:</p>
+
+<div class="bars">
+  <p class="bench-title">text cost per row <span class="bench-note">· engine harness, floor-subtracted</span></p>
+  <div class="bar-row"><div class="bar-label">bare string</div><div class="bar-track"><div class="bar-fill ours" style="width:18%"></div></div><div class="bar-val">+2.9µs</div></div>
+  <div class="bar-row"><div class="bar-label">NativeText</div><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><div class="bar-val">+6.9µs</div></div>
+  <div class="bar-row"><div class="bar-label">&lt;Text&gt;</div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">+16.0µs</div></div>
+</div>
+
+<p>Putting a line of text into a row you already have: a bare string is 2.4×
+cheaper than a NativeText and 5.6× cheaper than a <code>&lt;Text&gt;</code>.</p>
+
+<p><strong>A message list</strong> — 100 rows, each with a 10-line body (a
+chat or comment screen). Today&rsquo;s idiom is one <code>&lt;Text&gt;</code>
+per body; the bare tier renders the identical body under
+<code>whiteSpace: 'pre-line'</code>: <strong>2.31ms vs 2.92ms</strong> — 21%
+faster.</p>
+
+<p><strong>An article</strong> — one 1,000-line block. Here today&rsquo;s
+<code>&lt;Text&gt;</code> wins: 0.45ms vs 0.57ms for the bare block. An
+honest result — for one big block of plain text, <code>&lt;Text&gt;</code>&rsquo;s
+simpler fold beats the run pipeline&rsquo;s CSS white-space processing, and
+there is likely optimization headroom in the pre-line pass.</p>
+
+<p><strong>The community benchmark&rsquo;s shape</strong> — 1,000 sibling
+text components with no row containers — is kept purely for apples-to-apples
+with fast-text and react-native-boost (their NativeText measures 8.4ms
+there). It is not a shape real apps render: real apps always have
+containers, and the per-line-component premise only existed because text
+could not be a child. In both real scenarios above, bare strings beat
+NativeText in the same containers.</p>
+
+<p>Scaling is linear: 50 → 400 inline children in one container measures
+1.15ms → 17.1ms with no super-linear bend (an early quadratic in run
+construction was found by this benchmark and fixed before anything
+shipped).</p>
+
+<h3>The same scenarios in a real app</h3>
+
+<p>The harness isolates the rendering engine. To measure the whole pipeline —
+JavaScript render, commit, layout, real text shaping, view mounting — the
+same scenarios run inside RNTester <strong>release builds</strong> (setState
+→ first onLayout, medians of 10 after warmup):</p>
+
+<table>
+<tr><th>scenario (mount)</th><th class="num">iOS release</th><th class="num">Android release</th></tr>
+<tr><td>settings: 1k rows only (floor)</td><td class="num">19ms</td><td class="num">32ms</td></tr>
+<tr><td>settings: rows + bare string</td><td class="num">243ms</td><td class="num">104ms</td></tr>
+<tr><td>settings: rows + <code>&lt;Text&gt;</code></td><td class="num">240ms</td><td class="num">92ms</td></tr>
+<tr><td>settings: rows + NativeText</td><td class="num">230ms</td><td class="num">84ms</td></tr>
+<tr><td>messages: 100 <code>&lt;Text&gt;</code> bodies</td><td class="num">38ms</td><td class="num">29ms</td></tr>
+<tr><td>messages: 100 bare bodies</td><td class="num">42ms</td><td class="num">32ms</td></tr>
+<tr><td>article: one <code>&lt;Text&gt;</code></td><td class="num">7.5ms</td><td class="num">45ms</td></tr>
+<tr><td>article: one bare block</td><td class="num">7.1ms</td><td class="num">35ms</td></tr>
+<tr><td>community shape: 1k sibling NativeText</td><td class="num">225ms</td><td class="num">74ms</td></tr>
+</table>
+
+<p>What the real apps say, plainly:</p>
+
+<p><strong>On device, platform text layout dominates mounts.</strong> The
+per-row tiers land within ~6% of each other on iOS — end-to-end, the choice
+of text primitive inside your rows barely moves a mount. On Android, bare
+per-row text currently runs 14–24% behind — a real platform-path gap in the
+run pipeline, recorded as an optimization target.</p>
+
+<p><strong>Against today&rsquo;s idiom, device mounts are at parity.</strong>
+One <code>&lt;Text&gt;</code> per message body vs one bare body: ±10% either
+way, with the article shape slightly favoring bare on both platforms.</p>
+
+<p><strong>The big end-to-end lever is component count, not text
+primitive.</strong> A thousand single-line text components cost 230–243ms on
+iOS however you spell them; a hundred 10-line bodies with identical content
+cost ~40ms. That option — fewer text components for the same lines — is
+what the content model makes natural. The engine-level advantages (the
+marginal-cost chart above, update gating, memory) surface where the engine
+is the bottleneck, not in device mount-time totals.</p>
+
+<div class="callout warn">Mount benchmarks on simulator/emulator, not
+physical hardware; the Android numbers were read from the on-screen report
+because release Android blocks the collector&rsquo;s cleartext HTTP.</div>
+
+<h2>Memory</h2>
+
+<p>Measured by removing fields, recompiling, and comparing struct sizes
+(<code>./bench-string-children.sh --sizes</code>); compile-time asserts pin
+every number.</p>
+
+<table>
+<tr><th>where</th><th class="num">change</th><th>why</th></tr>
+<tr><td>every View&rsquo;s props</td><td class="num">+68 B</td><td>the eleven inheritable style fields</td></tr>
+<tr><td>every View&rsquo;s node</td><td class="num">+16 B</td><td>one cascade change-tracking pointer</td></tr>
+<tr><td>each text run / <code>&lt;Text&gt;</code></td><td class="num">+8–16 B</td><td>its stored inherited style</td></tr>
+<tr><td>each View that sets a text style</td><td class="num">+168 B</td><td>one style object, only when actually styled</td></tr>
+<tr><td>every text fragment &amp; cache entry</td><td class="num good">−64 B</td><td>TextAttributes 232 → 168</td></tr>
+<tr><td>every View&rsquo;s node, from this project&rsquo;s optimization work</td><td class="num good">−448 B</td><td>1,576 → 1,128 bytes</td></tr>
+</table>
+
+<p>Net: the feature itself costs ~84 bytes per View, and the optimization
+work done alongside repaid that several times over — a benchmark tree of
+1,365 Views measured ~2.15&nbsp;MB of nodes per tree copy when this work
+started and ~1.54&nbsp;MB at the end, feature cost included. Rendering text
+as bare strings saves more: each replaced <code>&lt;Text&gt;</code> drops a
+1,472-byte paragraph node, 2,176 bytes of props, a JS component instance,
+and a state object.</p>
+
+<h2>How this was tested</h2>
+
+<p><strong>3,129 native-renderer tests green</strong> (207 suites),
+including ~250 for this feature&rsquo;s behavior: inheritance, boundaries,
+every <code>all</code> keyword, inline layout, white space, block layout,
+margin collapsing.</p>
+
+<p><strong>Both platforms, scripted:</strong> RNTester screens publish their
+measured layout rectangles; verification scripts read them from the running
+iOS simulator and Android emulator and assert the layout relations — 18
+checks per platform, all green, including the boundary semantics on the real
+CoreText and StaticLayout text stacks.</p>
+
+<p><strong>One command reproduces the numbers</strong>, and the benchmark
+suites run in CI as ordinary tests so the code paths cannot silently rot.
+Struct sizes are compile-time assertions per platform (iOS&rsquo;s types are
+legitimately larger; its ceilings are pinned separately).</p>
+
+<h2>What is deliberately NOT here</h2>
+
+<p>React Native gains the <em>machinery</em> — text nodes, runs, block and
+inline layout, inheritance, <code>all</code>. It does not gain a component
+library. An element catalog with user-agent styles is a framework-layer
+product (built and proven separately) so react-native stays
+vocabulary-agnostic, and frameworks can define elements without any engine
+changes.</p>
+
+<footer>
+  Engine numbers: commit <code>2affd860114</code>, one session, quiet
+  machine. Real-app numbers: RNTester release builds, iOS 26.5 simulator and
+  android-36 emulator. Markdown source: <code>string-children-report.md</code>.
+</footer>
+
+</main>
+</body>
+</html>

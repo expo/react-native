@@ -13,6 +13,30 @@ import type {RNTesterModule, RNTesterModuleInfo} from '../types/RNTesterTypes';
 import * as RNTesterListFbInternal from './RNTesterListFbInternal';
 
 const Components: Array<RNTesterModuleInfo> = [
+  // ---- Fork work: text children / css-display / Astryx ----
+  // Kept at the head of the list for quick access while these are the
+  // features under active development.
+  {
+    key: 'SharedTextBenchmarkExample',
+    module: require('../examples/DeviceBench/SharedTextBenchmarkExample').default,
+    category: 'Basic',
+  },
+  {
+    key: 'StringChildrenExample',
+    module: require('../examples/TextChildren/StringChildrenExample').default,
+    category: 'Basic',
+  },
+  {
+    key: 'CascadeExample',
+    module: require('../examples/Cascade/CascadeExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'DeviceTextBenchmarkExample',
+    module: require('../examples/DeviceBench/DeviceTextBenchmarkExample')
+      .default,
+    category: 'UI',
+  }, // ---- Upstream RNTester components ----
   {
     key: 'ActivityIndicatorExample',
     category: 'UI',
