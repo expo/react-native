@@ -7416,8 +7416,8 @@ function completeWork(current, workInProgress, renderLanes) {
         ) {
           b: {
             renderLanes = reactPrivateInterface.diffAttributePayloads(
-              renderLanes,
-              newProps,
+              applyUAStyle(renderLanes, previousCache.canonical.viewConfig),
+              applyUAStyle(newProps, previousCache.canonical.viewConfig),
               previousCache.canonical.viewConfig.validAttributes
             );
             previousCache.canonical.currentProps = newProps;
@@ -7455,13 +7455,24 @@ function completeWork(current, workInProgress, renderLanes) {
         previousCache = allocateTag();
         renderLanes = getViewConfigForType(renderLanes);
         var updatePayload = reactPrivateInterface.createAttributePayload(
-          newProps,
+          applyUAStyle(newProps, renderLanes),
           renderLanes.validAttributes
         );
+        // Generic seam: a view config may opt into recording its authored JSX
+        // type as a `nodeName` prop (recordNodeName). Intrinsic-component
+        // modules use this so a tag keeps its name for DOM APIs without the
+        // renderer knowing any component. This has to be in EVERY renderer
+        // build, not just dev: it was dev-only, so release builds delivered no
+        // tag to C++ at all and anything reading one — list markers, DOM
+        // tagName from native — silently saw an empty string.
+        if (renderLanes.recordNodeName)
+          updatePayload = Object.assign({}, updatePayload, {
+            nodeName: workInProgress.type
+          });
         current = {
           node: createNode(
             previousCache,
-            renderLanes.uiViewClassName,
+            (renderLanes.resolveUIViewClassName ? renderLanes.resolveUIViewClassName(newProps) : renderLanes.uiViewClassName),
             current.containerTag,
             updatePayload,
             workInProgress
@@ -11395,6 +11406,7 @@ function startViewTransition(
   return suspendedState;
 }
 var createNode = reactPrivateInterface.fabricUIManager.createNode,
+  createTextNode = reactPrivateInterface.fabricUIManager.createTextNode,
   cloneNodeWithNewChildren =
     reactPrivateInterface.fabricUIManager.cloneNodeWithNewChildren,
   cloneNodeWithNewChildrenAndProps =
@@ -11443,11 +11455,10 @@ function createTextInstance(
 ) {
   hostContext = allocateTag();
   return {
-    node: createNode(
+    node: createTextNode(
       hostContext,
-      "RCTRawText",
+      text,
       rootContainerInstance.containerTag,
-      { text: text },
       internalInstanceHandle
     )
   };
@@ -11498,6 +11509,21 @@ function resolveUpdatePriority() {
 }
 var scheduleTimeout = setTimeout,
   cancelTimeout = clearTimeout;
+function applyUAStyle(props, viewConfig) {
+  // The user-agent origin of the cascade: the element's UA style sits
+  // *beneath* the author's, so an author declaration always wins simply by
+  // being later in the array. Applied here rather than in author code, the
+  // way a browser consults its own stylesheet.
+  //
+  // Applied on both sides of an update diff as well as at creation — a diff
+  // between two unmerged props objects would drop the UA value the moment
+  // an author removed the property that had been overriding it.
+  var uaStyle = viewConfig && viewConfig.uaStyle;
+  if (!uaStyle || props == null) return props;
+  var merged = Object.assign({}, props);
+  merged.style = props.style == null ? uaStyle : [uaStyle, props.style];
+  return merged;
+}
 function cloneHiddenInstance(instance) {
   var node = instance.node,
     updatePayload = reactPrivateInterface.createAttributePayload(

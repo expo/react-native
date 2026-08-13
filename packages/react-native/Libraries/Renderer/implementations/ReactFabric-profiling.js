@@ -7956,8 +7956,8 @@ function completeWork(current, workInProgress, renderLanes) {
         ) {
           b: {
             type = reactPrivateInterface.diffAttributePayloads(
-              type,
-              newProps,
+              applyUAStyle(type, renderLanes.canonical.viewConfig),
+              applyUAStyle(newProps, renderLanes.canonical.viewConfig),
               renderLanes.canonical.viewConfig.validAttributes
             );
             renderLanes.canonical.currentProps = newProps;
@@ -7995,13 +7995,19 @@ function completeWork(current, workInProgress, renderLanes) {
         renderLanes = allocateTag();
         type = getViewConfigForType(type);
         var updatePayload = reactPrivateInterface.createAttributePayload(
-          newProps,
+          applyUAStyle(newProps, type),
           type.validAttributes
         );
+        // See the note in ReactFabric-prod.js: `recordNodeName` must be in
+        // every renderer build, or a release build delivers no tag to C++.
+        if (type.recordNodeName)
+          updatePayload = Object.assign({}, updatePayload, {
+            nodeName: workInProgress.type
+          });
         current = {
           node: createNode(
             renderLanes,
-            type.uiViewClassName,
+            (type.resolveUIViewClassName ? type.resolveUIViewClassName(newProps) : type.uiViewClassName),
             current.containerTag,
             updatePayload,
             workInProgress
@@ -13273,6 +13279,7 @@ function startViewTransition(
   return suspendedState;
 }
 var createNode = reactPrivateInterface.fabricUIManager.createNode,
+  createTextNode = reactPrivateInterface.fabricUIManager.createTextNode,
   cloneNodeWithNewChildren =
     reactPrivateInterface.fabricUIManager.cloneNodeWithNewChildren,
   cloneNodeWithNewChildrenAndProps =
@@ -13321,11 +13328,10 @@ function createTextInstance(
 ) {
   hostContext = allocateTag();
   return {
-    node: createNode(
+    node: createTextNode(
       hostContext,
-      "RCTRawText",
+      text,
       rootContainerInstance.containerTag,
-      { text: text },
       internalInstanceHandle
     )
   };
@@ -13400,6 +13406,21 @@ function resolveEventTimeStamp() {
 }
 var scheduleTimeout = setTimeout,
   cancelTimeout = clearTimeout;
+function applyUAStyle(props, viewConfig) {
+  // The user-agent origin of the cascade: the element's UA style sits
+  // *beneath* the author's, so an author declaration always wins simply by
+  // being later in the array. Applied here rather than in author code, the
+  // way a browser consults its own stylesheet.
+  //
+  // Applied on both sides of an update diff as well as at creation — a diff
+  // between two unmerged props objects would drop the UA value the moment
+  // an author removed the property that had been overriding it.
+  var uaStyle = viewConfig && viewConfig.uaStyle;
+  if (!uaStyle || props == null) return props;
+  var merged = Object.assign({}, props);
+  merged.style = props.style == null ? uaStyle : [uaStyle, props.style];
+  return merged;
+}
 function cloneHiddenInstance(instance) {
   var node = instance.node,
     updatePayload = reactPrivateInterface.createAttributePayload(
