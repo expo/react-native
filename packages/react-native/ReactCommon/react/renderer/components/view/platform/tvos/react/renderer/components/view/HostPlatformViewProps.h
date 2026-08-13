@@ -18,7 +18,9 @@ class HostPlatformViewProps : public BaseViewProps {
   HostPlatformViewProps(
       const PropsParserContext &context,
       const HostPlatformViewProps &sourceProps,
-      const RawProps &rawProps);
+      const RawProps &rawProps,
+      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr,
+      bool parseInheritedTextProps = true);
 
   void
   setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);

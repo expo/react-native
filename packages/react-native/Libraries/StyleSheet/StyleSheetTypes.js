@@ -86,6 +86,13 @@ type ____LayoutStyle_Internal = Readonly<{
    */
   float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end',
 
+  /** Where an inline-level box sits against the line it is on (CSS2 §10.8.1).
+   *  It belongs here rather than with the text properties because it places a
+   *  BOX: an `inline-block` View, or an HTML element backed by one, is aligned
+   *  by it exactly as a `<Text>` is.
+   */
+  verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
+
   /** `clear` places a box below any preceding floats on the given side(s)
    *  (CSS2 §9.5.2). Honored inside `display:'block'` containers only.
    */
@@ -858,8 +865,88 @@ type ____BlendMode_Internal =
   | 'luminosity'
   | 'plus-lighter';
 
+/**
+ * The properties CSS calls *inherited*: they are set on an element and apply to
+ * every descendant that does not override them.
+ *
+ * They live on the VIEW style rather than the text style because that is where
+ * they are set. `<View style={{fontSize: 20}}>` styles the text inside it, which
+ * is the whole point of an inherited property, and `BaseViewProps` reads exactly
+ * this list off any view. A `<Text>` still has them, because a TextStyle is a
+ * ViewStyle.
+ *
+ * They were previously declared only on the text style, which had it backwards:
+ * the one component that cannot usefully inherit from itself was the only one
+ * that accepted them, and setting `fontSize` on a `<View>` — the thing the
+ * cascade is for — needed a suppression at every call site.
+ *
+ * Keep this list in step with the `inherited*` props in `BaseViewProps.h`; a
+ * property here that the native side does not read is silently ignored.
+ */
+export type ____InheritableTextStyle_Internal = Readonly<{
+  /**
+   * The CSS-wide shorthand that resets the properties above.
+   *
+   * Scoped to the inherited properties, which is why it lives with them:
+   * `initial` drops to the initial value, `revert` rolls back to the
+   * user-agent origin, and `unset`/`inherit` erase the cascaded value from
+   * every origin — which for an inherited property means inherit, and is
+   * therefore the author's switch for turning OFF a user-agent boundary such
+   * as the one `<Text>` establishes.
+   *
+   * `inherit` resolves the same as `unset` here rather than being missing:
+   * for inherited properties the two agree (css-cascade-4 §7.3).
+   */
+  all?: 'initial' | 'inherit' | 'unset' | 'revert',
+  color?: ____ColorValue_Internal,
+  fontFamily?: string,
+  fontSize?: number,
+  fontStyle?: 'normal' | 'italic',
+  /**
+   * Specifies font weight. The values 'normal' and 'bold' are supported
+   * for most fonts. Not all fonts have a variant for each of the numeric
+   * values, in that case the closest one is chosen.
+   */
+  fontWeight?: ____FontWeight_Internal,
+  fontVariant?: ____FontVariantArray_Internal | string,
+  letterSpacing?: number,
+  lineHeight?: number,
+  textAlign?:
+    'auto' | 'left' | 'right' | 'center' | 'justify' | 'start' | 'end',
+  textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase',
+}>;
+
 export type ____ViewStyle_InternalBase = Readonly<{
   backfaceVisibility?: 'visible' | 'hidden',
+  /**
+   * `transition` (css-transitions-1), as the four longhands. When a declared
+   * property's value changes, the renderer animates from the previous value —
+   * off the JavaScript thread, driven by the platform display link, gated
+   * behind `useSharedAnimatedBackend`. Comma-separated lists zip by index, and
+   * shorter lists repeat, exactly as on the web.
+   *
+   * Transitionable so far: `opacity`, `background-color`, `border-color`,
+   * `transform` (and `all`, meaning that set). Other property names are
+   * accepted and ignored: the value still applies, immediately.
+   */
+  transitionProperty?: string,
+  transitionDuration?: string | number,
+  transitionDelay?: string | number,
+  transitionTimingFunction?: string,
+  /**
+   * `animation` (css-animations-1), run by the same renderer engine as
+   * transitions. `animationKeyframes` is a JSON string of pre-resolved stops
+   * (`[{offset, opacity?, backgroundColor?, borderColor?, transform?}, ...]`)
+   * — a style layer such as Astryx serializes its `@keyframes` rules into it.
+   * Animatable properties match the transitionable set.
+   */
+  animationKeyframes?: string,
+  animationDuration?: string | number,
+  animationDelay?: string | number,
+  animationTimingFunction?: string,
+  animationIterationCount?: string | number,
+  animationDirection?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse',
+  animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both',
   backgroundColor?: ____ColorValue_Internal,
   borderColor?: ____ColorValue_Internal,
   /**
@@ -926,9 +1013,45 @@ export type ____ViewStyle_InternalBase = Readonly<{
     ReadonlyArray<BackgroundPositionValue> | string,
   experimental_backgroundRepeat?: ReadonlyArray<BackgroundRepeatValue> | string,
   isolation?: 'auto' | 'isolate',
+  /**
+   * `white-space` (css-text-3 §3). A shorthand over three independent
+   * behaviours — whether segment breaks survive, whether runs of spaces and
+   * tabs survive, and whether a line that does not fit wraps:
+   *
+   *     value          newlines    spaces/tabs   wraps
+   *     normal         collapse    collapse      yes
+   *     pre            preserve    preserve      no
+   *     nowrap         collapse    collapse      no
+   *     pre-wrap       preserve    preserve      yes
+   *     pre-line       preserve    collapse      yes
+   *     break-spaces   preserve    preserve      yes
+   *
+   * `break-spaces` behaves as `pre-wrap`; they differ only in whether a run of
+   * preserved spaces at a wrap point hangs past the edge or wraps, and hanging
+   * is what both platform text engines do.
+   *
+   *
+   * Applies to elements — `<pre>`, `<div>` and the rest — and to the text
+   * inside them, which is the whitespace model this property comes from. It
+   * has NO effect on `<Text>`, on either platform: `<Text>` predates the DOM
+   * work, already preserves whitespace and newlines as authored, and never had
+   * a collapsing pass for `pre` to turn off. Only the no-wrapping half would
+   * mean anything there, and it is not implemented rather than implemented on
+   * one platform. A `<Text>` style still accepts it, because a TextStyle is a
+   * ViewStyle, and there it is ignored.
+   *
+   * Declared here, on the VIEW style, for that reason: the element it applies
+   * to is the block container, and `BaseViewProps` reads it as an inherited
+   * property alongside `lineHeight` and `textAlign`. It spent a while in the
+   * text style instead — which put it on the one component the comment above
+   * says it does nothing for, and off the ones it is for.
+   */
+  whiteSpace?:
+    'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',
 }>;
 
 export type ____ViewStyle_InternalCore = Readonly<{
+  ...$Exact<____InheritableTextStyle_Internal>,
   ...$Exact<____LayoutStyle_Internal>,
   ...$Exact<____ShadowStyle_Internal>,
   ...$Exact<____TransformStyle_Internal>,
@@ -1028,36 +1151,19 @@ export type ____FontVariantArray_Internal =
   ReadonlyArray<____FontVariant_Internal>;
 
 type ____TextStyle_InternalBase = Readonly<{
-  color?: ____ColorValue_Internal,
-  fontFamily?: string,
-  fontSize?: number,
-  fontStyle?: 'normal' | 'italic',
-  /**
-   * Specifies font weight. The values 'normal' and 'bold' are supported
-   * for most fonts. Not all fonts have a variant for each of the numeric
-   * values, in that case the closest one is chosen.
-   */
-  fontWeight?: ____FontWeight_Internal,
-  fontVariant?: ____FontVariantArray_Internal | string,
   textShadowOffset?: Readonly<{
     width: number,
     height: number,
   }>,
   textShadowRadius?: number,
   textShadowColor?: ____ColorValue_Internal,
-  letterSpacing?: number,
-  lineHeight?: number,
-  textAlign?:
-    'auto' | 'left' | 'right' | 'center' | 'justify' | 'start' | 'end',
   textAlignVertical?: 'auto' | 'top' | 'bottom' | 'center',
   includeFontPadding?: boolean,
   textDecorationLine?:
     'none' | 'underline' | 'line-through' | 'underline line-through',
   textDecorationStyle?: 'solid' | 'double' | 'dotted' | 'dashed' | 'wavy',
   textDecorationColor?: ____ColorValue_Internal,
-  textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase',
   userSelect?: 'auto' | 'text' | 'none' | 'contain' | 'all',
-  verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
   writingDirection?: 'auto' | 'ltr' | 'rtl',
 }>;
 

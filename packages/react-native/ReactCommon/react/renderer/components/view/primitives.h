@@ -100,6 +100,37 @@ struct CornerRadii {
   bool operator==(const CornerRadii &other) const = default;
 };
 
+/*
+ * `user-select` (css-ui-4 §5.1). On a View this says whether the text the View
+ * paints itself — its anonymous runs — can be selected and copied. `<Text>`
+ * never sees this value: Text.js maps it onto the `selectable` prop and
+ * removes it from the style, which is the behaviour that already shipped.
+ *
+ * `Auto` is NOT the web's auto. On the web text is selectable everywhere
+ * unless something says otherwise; in React Native nothing has ever been
+ * selectable unless it asked to be, and flipping that under an existing app
+ * is not a change this feature gets to make. So `Auto` means "not
+ * selectable", exactly as `<Text>` without `selectable` behaves, and `Text`
+ * / `All` / `Contain` opt in. Recorded as a deviation in
+ * dom-css-limitations.md.
+ */
+enum class UserSelect : uint8_t {
+  Auto,
+  Text,
+  None,
+  Contain,
+  All,
+};
+
+/*
+ * Whether this value asks for the text to be selectable. See the note above
+ * on why `Auto` does not.
+ */
+inline bool selectsText(UserSelect userSelect)
+{
+  return userSelect == UserSelect::Text || userSelect == UserSelect::Contain || userSelect == UserSelect::All;
+}
+
 enum class Cursor : uint8_t {
   Auto,
   Alias,
