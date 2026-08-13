@@ -7,6 +7,8 @@
 
 #include "BaseTextShadowNode.h"
 
+#include <react/renderer/components/view/ViewPropsOf.h>
+
 #include <string_view>
 
 #include <react/renderer/dom/NodeNameProvider.h>
@@ -41,7 +43,8 @@ void BaseTextShadowNode::buildAttributedString(
     const TextAttributes& baseTextAttributes,
     const ShadowNode& parentNode,
     AttributedString& outAttributedString,
-    Attachments& outAttachments) {
+    Attachments& outAttachments,
+    const TextAttributes& initialTextAttributes) {
   bool lastFragmentWasRawText = false;
   for (const auto& childNode : parentNode.getChildren()) {
     // Character data: the first-class `#text` node (§3.F).
@@ -97,9 +100,10 @@ void BaseTextShadowNode::buildAttributedString(
     if (textShadowNode != nullptr) {
       auto localTextAttributes = baseTextAttributes;
       if (textShadowNode->getConcreteProps().cascadeResetAll) {
-        // `all: 'initial'` on an inline element: restart from the defaults,
-        // keeping the layout-context fields that are not cascade values.
-        auto reset = TextAttributes::defaultTextAttributes();
+        // `all: 'initial'` on an inline element: restart from the formatting
+        // root's initial values, keeping the layout-context fields that are not
+        // cascade values.
+        auto reset = initialTextAttributes;
         reset.fontSizeMultiplier = localTextAttributes.fontSizeMultiplier;
         reset.layoutDirection = localTextAttributes.layoutDirection;
         localTextAttributes = reset;
@@ -125,7 +129,8 @@ void BaseTextShadowNode::buildAttributedString(
           localTextAttributes,
           *textShadowNode,
           outAttributedString,
-          outAttachments);
+          outAttachments,
+          initialTextAttributes);
 
       // An element with no text of its own still has a box on the line
       // (CSSOM-View §4), and the only way to report one is to have a fragment
@@ -170,7 +175,8 @@ void BaseTextShadowNode::buildAttributedString(
           localTextAttributes,
           *textEffectNode,
           outAttributedString,
-          outAttachments);
+          outAttachments,
+          initialTextAttributes);
       continue;
     }
 
@@ -183,8 +189,23 @@ void BaseTextShadowNode::buildAttributedString(
     // <span onPress>.
     if (YogaLayoutableShadowNode::isInlineFlowContent(*childNode)) {
       auto localTextAttributes = baseTextAttributes;
+      if (const auto* baseViewProps = viewPropsOf(*childNode)) {
+        if (baseViewProps->isInheritanceBoundary(childNode->getTraits().check(
+                ShadowNodeTraits::Trait::UACascadeBoundary))) {
+          // The same `all` reset for a span-like inline View.
+          auto reset = initialTextAttributes;
+          reset.fontSizeMultiplier = localTextAttributes.fontSizeMultiplier;
+          reset.layoutDirection = localTextAttributes.layoutDirection;
+          localTextAttributes = reset;
+        }
+        baseViewProps->applyInheritedTextAttributes(localTextAttributes);
+      }
       buildAttributedString(
-          localTextAttributes, *childNode, outAttributedString, outAttachments);
+          localTextAttributes,
+          *childNode,
+          outAttributedString,
+          outAttachments,
+          initialTextAttributes);
       continue;
     }
 

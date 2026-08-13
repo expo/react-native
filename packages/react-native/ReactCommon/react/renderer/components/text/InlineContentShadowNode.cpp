@@ -495,7 +495,11 @@ Float InlineContentShadowNode::baseline(
   const auto cascade = cascadeWithResolvedDirection();
   appendListMarkerIfNeeded(attributedString, cascade);
   BaseTextShadowNode::buildAttributedString(
-      cascade, *this, attributedString, attachments);
+      cascade,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
   if (attributedString.isEmpty()) {
     return 0;
   }
@@ -540,7 +544,11 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
 
   appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
-      textAttributes, *this, attributedString, attachments);
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
   // Reserve each inline `<img>` box so the painted run offsets the surrounding
   // glyphs past the image, matching the measured layout. The image nodes are
   // never Yoga-laid-out in place (their owning View lays out clones), so their
@@ -597,7 +605,11 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
   auto attachments = BaseTextShadowNode::Attachments{};
   appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
-      textAttributes, *this, attributedString, attachments);
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
   if (attachments.empty()) {
     return placements;
   }
@@ -668,7 +680,11 @@ InlineContentShadowNode::stampInlineElementMetrics(
   auto attachments = BaseTextShadowNode::Attachments{};
   appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
-      textAttributes, *this, attributedString, attachments);
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
   if (attributedString.isEmpty()) {
     return {};
   }
@@ -760,7 +776,11 @@ Size InlineContentShadowNode::measureContent(
     auto attachments = BaseTextShadowNode::Attachments{};
     appendListMarkerIfNeeded(attributedString, textAttributes);
     BaseTextShadowNode::buildAttributedString(
-        textAttributes, *this, attributedString, attachments);
+        textAttributes,
+        *this,
+        attributedString,
+        attachments,
+        *defaultCascadeTextAttributes());
     measureImageAttachments(
         attributedString, attachments, layoutContext, layoutConstraints);
     collapseWhitespace(attributedString);
