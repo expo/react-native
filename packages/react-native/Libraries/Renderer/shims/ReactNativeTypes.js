@@ -68,6 +68,35 @@ export type ViewConfig = Readonly<{
   supportsRawText?: boolean,
   uiViewClassName: string,
   validAttributes: AttributeConfiguration,
+  // When set, the reconciler records the authored JSX type onto the instance as
+  // a `nodeName` prop. Generic seam for intrinsic components that must preserve
+  // their tag name for DOM APIs (e.g. HTMLUnknownElement), so the renderer names
+  // no specific component.
+  recordNodeName?: boolean,
+  /**
+   * Resolves the native component to instantiate from the element's props,
+   * letting one JSX tag be backed by different native components. Box
+   * generation follows computed `display`, not the tag, so an intrinsic
+   * element uses a cheap text-backed component while it folds into an inline
+   * formatting context and a box-backed one when its display establishes one.
+   *
+   * Consulted at instance creation only, which is the same point at which a
+   * browser picks a layout object class.
+   *
+   * DOM-CSS-LIMITATION(display-change-needs-remount): an element whose display
+   * later crosses the box/no-box boundary keeps its original backing until it
+   * remounts. Browsers destroy and recreate the layout object there; matching
+   * that needs a remount signal the reconciler does not have. Static display —
+   * the overwhelming case — is correct.
+   */
+  resolveUIViewClassName?: (props: {[string]: unknown}) => string,
+  /**
+   * The element's user-agent style, merged *beneath* the author's `style` so
+   * an author declaration always wins — the cascade's user-agent origin, with
+   * no per-property special-casing. Applied by the renderer, so author code
+   * never sees it, the way a browser consults its own stylesheet.
+   */
+  uaStyle?: {[string]: unknown},
 }>;
 
 export type PartialViewConfig = Readonly<{
@@ -76,6 +105,12 @@ export type PartialViewConfig = Readonly<{
   supportsRawText?: boolean,
   uiViewClassName: string,
   validAttributes?: AttributeConfiguration,
+  // The seams intrinsic-component modules opt into. Declared here because
+  // `createViewConfig` reads them off a partial config, and their absence was
+  // a type hole around code that has shipped for a while.
+  recordNodeName?: ViewConfig['recordNodeName'],
+  resolveUIViewClassName?: ViewConfig['resolveUIViewClassName'],
+  uaStyle?: ViewConfig['uaStyle'],
 }>;
 
 type InspectorDataProps = Readonly<{

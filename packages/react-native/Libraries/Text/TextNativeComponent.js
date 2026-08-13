@@ -30,6 +30,12 @@ export type NativeTextProps = Readonly<{
 }>;
 
 const textViewConfig = {
+  // <Text> is an inheritance boundary by default — old React Native's
+  // isolation semantics, expressed in the web's own vocabulary as a
+  // user-agent `all: initial` declaration, carried natively by
+  // ParagraphShadowNode's UACascadeBoundary trait (css-cascade-4 §3.2).
+  // Authors opt into web-style inheritance from ancestor elements with
+  // `style={{all: 'unset'}}`; see text-inheritance-boundaries.md.
   validAttributes: {
     isHighlighted: true,
     isPressable: true,
