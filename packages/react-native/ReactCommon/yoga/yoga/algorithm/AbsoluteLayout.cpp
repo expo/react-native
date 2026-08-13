@@ -31,6 +31,24 @@ static inline void setFlexStartLayoutPosition(
     position += parent->getLayout().padding(flexStartEdge(axis));
   }
 
+  // In a BLOCK container with no inset on this axis, the child keeps the
+  // position the flow had reached — its static position (CSS2 §10.6.4).
+  // `justifyContent` and `alignItems` decide it everywhere else, and a block
+  // container has neither, so without this the child lands at the content
+  // edge. Block axis only: the inline component of a static position IS the
+  // content edge, which is what this function already computes.
+  //
+  // Guarded on the parent being a block container as well as on the value
+  // being defined, because layout results outlive a reparent and a stale
+  // offset must not follow a child from a block parent into a flex one.
+  if (!isRow(axis) && parent->style().display() == Display::Block) {
+    const FloatOptional staticPosition =
+        child->getLayout().staticPositionBlockStart;
+    if (staticPosition.isDefined()) {
+      position += staticPosition.unwrap();
+    }
+  }
+
   child->setLayoutPosition(position, flexStartEdge(axis));
 }
 
