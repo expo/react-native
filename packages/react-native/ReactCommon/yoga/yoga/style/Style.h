@@ -19,6 +19,7 @@
 #include <yoga/enums/Dimension.h>
 #include <yoga/enums/Direction.h>
 #include <yoga/enums/Display.h>
+#include <yoga/enums/FloatSide.h>
 #include <yoga/enums/Edge.h>
 #include <yoga/enums/FlexDirection.h>
 #include <yoga/enums/Gutter.h>
@@ -108,6 +109,33 @@ class YG_EXPORT Style {
   }
   void setPositionType(PositionType value) {
     positionType_ = value;
+  }
+
+  // CSS float/clear, honored by the block formatting context only
+  // (calculateBlockLayout); the flex algorithm ignores them.
+  FloatSide floatSide() const {
+    return floatSide_;
+  }
+  void setFloatSide(FloatSide value) {
+    floatSide_ = value;
+  }
+
+  Clear clear() const {
+    return clear_;
+  }
+  void setClear(Clear value) {
+    clear_ = value;
+  }
+
+  // Whether a block container establishes a block formatting context of its
+  // own, as `display: flow-root` does (css-display-3 §2): its children's
+  // margins stay inside it, and the calculateBlockLayout path does not let
+  // them collapse through its edges
+  bool formattingContextRoot() const {
+    return formattingContextRoot_;
+  }
+  void setFormattingContextRoot(bool value) {
+    formattingContextRoot_ = value;
   }
 
   Wrap flexWrap() const {
@@ -651,7 +679,10 @@ class YG_EXPORT Style {
         justifySelf_ == other.justifySelf_ &&
         alignContent_ == other.alignContent_ &&
         alignItems_ == other.alignItems_ && alignSelf_ == other.alignSelf_ &&
-        positionType_ == other.positionType_ && flexWrap_ == other.flexWrap_ &&
+        positionType_ == other.positionType_ &&
+        floatSide_ == other.floatSide_ && clear_ == other.clear_ &&
+        formattingContextRoot_ == other.formattingContextRoot_ &&
+        flexWrap_ == other.flexWrap_ &&
         overflow_ == other.overflow_ && display_ == other.display_ &&
         boxSizing_ == other.boxSizing_ &&
         numbersEqual(flex_, pool_, other.flex_, other.pool_) &&
@@ -906,6 +937,9 @@ class YG_EXPORT Style {
   Wrap flexWrap_ : bitCount<Wrap>() = Wrap::NoWrap;
   Overflow overflow_ : bitCount<Overflow>() = Overflow::Visible;
   Display display_ : bitCount<Display>() = Display::Flex;
+  FloatSide floatSide_ : bitCount<FloatSide>() = FloatSide::None;
+  Clear clear_ : bitCount<Clear>() = Clear::None;
+  bool formattingContextRoot_ : 1 = false;
   BoxSizing boxSizing_ : bitCount<BoxSizing>() = BoxSizing::BorderBox;
 
   StyleValueHandle flex_{};
