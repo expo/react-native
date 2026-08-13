@@ -16,7 +16,7 @@ namespace facebook::react {
 
 /*
  * Base class (one of) for shadow nodes that represents attributed text,
- * such as Text and Paragraph (but not RawText).
+ * such as Text and Paragraph (but not `#text` nodes).
  */
 class BaseTextShadowNode {
  public:
