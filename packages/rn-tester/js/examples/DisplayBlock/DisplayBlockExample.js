@@ -31,11 +31,33 @@ import '@react-native/expo-intrinsics-poc';
 // publish to globalThis.__displayVerify for CDP assertions
 // (scripts/css-display-cdp-verify.js).
 
+
+/*
+ * The block container's own edge.
+ *
+ * These cases are about where BOXES end up, and every box in them was the same
+ * unlabelled colour on the same background: the code said
+ * `<View style={{display: 'block'}}>` and there was no way to tell, on screen,
+ * which rectangle that was.
+ *
+ * Drawn with `outline` rather than `borderWidth` on purpose. A border between
+ * a parent and its first child is exactly what STOPS their margins collapsing
+ * (CSS2 §8.3.1) — which is the subject of two of the cases below — so a border
+ * added to make the container visible would have quietly changed the result it
+ * was added to explain. An outline is painted outside the box and takes part
+ * in no layout at all.
+ */
+const CONTAINER_EDGE = {
+  outlineWidth: 1,
+  outlineStyle: 'dashed' as 'dashed',
+  outlineColor: '#8a8a8e',
+};
+
 function MarginSiblingsCase(): React.Node {
   const marginSiblingsRef = useRef<React.ElementRef<typeof View> | null>(null);
   usePublishRects({marginSiblings: marginSiblingsRef});
   return (
-    <View ref={marginSiblingsRef} style={{display: 'block'}}>
+    <View ref={marginSiblingsRef} style={{display: 'block', ...CONTAINER_EDGE}}>
       <View
         style={{height: 10, marginBottom: 20, backgroundColor: DEMO_BAR_COLOR}}
       />
@@ -51,10 +73,14 @@ function MarginEscapeCase(): React.Node {
   const escapeMidRef = useRef<React.ElementRef<typeof View> | null>(null);
   usePublishRects({escapeOuter: escapeOuterRef, escapeMid: escapeMidRef});
   return (
-    <View ref={escapeOuterRef} style={{display: 'block'}}>
+    <View ref={escapeOuterRef} style={{display: 'block', ...CONTAINER_EDGE}}>
       <View
         ref={escapeMidRef}
-        style={{display: 'block', backgroundColor: DEMO_THEME.border}}>
+        style={{
+          display: 'block',
+          backgroundColor: DEMO_THEME.border,
+          ...CONTAINER_EDGE,
+        }}>
         <View
           style={{height: 10, marginTop: 20, backgroundColor: DEMO_BAR_COLOR}}
         />
@@ -69,7 +95,7 @@ function ContiguityCase(): React.Node {
   usePublishRects({contigAbs: contigAbsRef, contigControl: contigControlRef});
   return (
     <>
-      <View ref={contigAbsRef} style={{display: 'block'}}>
+      <View ref={contigAbsRef} style={{display: 'block', ...CONTAINER_EDGE}}>
         one continuous line <View style={{display: 'none', height: 40}} />
         <View
           style={{
@@ -84,7 +110,7 @@ function ContiguityCase(): React.Node {
         />
         of text — the hidden and absolute Views leave no gap
       </View>
-      <View ref={contigControlRef} style={{display: 'block'}}>
+      <View ref={contigControlRef} style={{display: 'block', ...CONTAINER_EDGE}}>
         one continuous line of text — the hidden and absolute Views leave no gap
       </View>
     </>
@@ -98,7 +124,10 @@ export default {
     "display:'block' (and the intrinsic <div>) as a true CSS block " +
     'formatting context: one inline flow, anonymous block boxes around ' +
     'block-level children, and CSS2 §8.3.1 margin collapsing — native ' +
-    'YGDisplayBlock, Safari-pinned behavior.',
+    'YGDisplayBlock, Safari-pinned behavior. Each dashed outline is a block ' +
+    "container — the View the code writes as display:'block' — and the solid " +
+    'bars inside are its children. The outline is drawn rather than a border ' +
+    'because a border would stop the very margin collapsing these show.',
   examples: [
     {
       title: 'Block container: one inline flow',
@@ -111,7 +140,7 @@ export default {
             '  a<b>b</b>c — one wrapping inline flow\n' +
             '</View>'
           }>
-          <View style={{display: 'block'}}>
+          <View style={{display: 'block', ...CONTAINER_EDGE}}>
             a{/* $FlowExpectedError[not-a-component] intrinsic <b> tag */}
             <b>b</b>c — one wrapping inline flow
           </View>
@@ -145,7 +174,7 @@ export default {
             '  c<i>d</i>\n' +
             '</View>'
           }>
-          <View style={{display: 'block'}}>
+          <View style={{display: 'block', ...CONTAINER_EDGE}}>
             a{/* $FlowExpectedError[not-a-component] intrinsic <b> tag */}
             <b>b</b>
             <View style={{height: 8, backgroundColor: DEMO_BAR_COLOR}} />c
