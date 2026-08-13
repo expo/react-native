@@ -21,4 +21,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+/**
+ * UIView class for the intrinsic inline `<img>` tag (text-children-plan.md §3.C).
+ * Reuses the whole `RCTImageComponentView` rendering (its `<img>` shadow node
+ * uses the same `ImageProps`/`ImageState`); only the component handle differs so
+ * it can be routed inline and positioned by its owning View.
+ */
+@interface RCTImgComponentView : RCTImageComponentView
+@end
+
 NS_ASSUME_NONNULL_END

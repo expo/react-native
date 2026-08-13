@@ -7,6 +7,8 @@
 
 #import "RCTImageComponentView.h"
 
+#import <React/RCTComponentViewFactory.h>
+
 #import <React/RCTAssert.h>
 #import <React/RCTConversions.h>
 #import <React/RCTImageBlurUtils.h>
@@ -207,6 +209,23 @@ using namespace facebook::react;
   }
   static_cast<const ImageEventEmitter &>(*_eventEmitter).onError(ImageErrorInfo(info));
   static_cast<const ImageEventEmitter &>(*_eventEmitter).onLoadEnd();
+}
+
+@end
+
+@implementation RCTImgComponentView
+
++ (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
+{
+  return facebook::react::concreteComponentDescriptorProvider<facebook::react::ImgTagComponentDescriptor>();
+}
+
+// Self-register so the mounting layer maps the "img" component handle to this
+// view (text-children-plan.md §3.C). The intrinsic <img> tag is not part of the
+// generated component provider.
++ (void)load
+{
+  [[RCTComponentViewFactory currentComponentViewFactory] registerComponentViewClass:self];
 }
 
 @end

@@ -37,6 +37,19 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
     const facebook::react::TextAttributes &textAttributes);
 
 /*
+ * Adds an inline element's inline-axis margin/border/padding to the advance of
+ * the surrounding text (box-model-scope.md G3), as kerning.
+ *
+ * Deliberately adds no characters: this string is also what
+ * `RCTParagraphComponentView.attributedText` hands to copy/selection and to
+ * accessibility, so a zero-width spacer inserted for layout would leak into
+ * the text a user reads and copies.
+ */
+void RCTApplyInlineBoxSpacing(
+    NSMutableAttributedString *string,
+    const facebook::react::AttributedString &attributedString);
+
+/*
  * Conversions amond `NSAttributedString`, `AttributedString` and `AttributedStringBox`.
  */
 NSAttributedString *RCTNSAttributedStringFromAttributedString(
