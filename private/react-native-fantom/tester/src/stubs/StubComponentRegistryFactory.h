@@ -12,6 +12,7 @@
 #include <react/renderer/components/image/ImageComponentDescriptor.h>
 #include <react/renderer/components/modal/ModalHostViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
+#include <react/renderer/components/text/DomElementsRegistry.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/TextNodeComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
@@ -33,6 +34,7 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<ViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
       // Intrinsic DOM elements (<b>/<i>/<span>/<img>/<div> + unknown fallback).
+      dom::addAllElementDescriptors(*providerRegistry);
       return providerRegistry;
     }();
     return providerRegistry->createComponentDescriptorRegistry({eventDispatcher, contextContainer, nullptr});

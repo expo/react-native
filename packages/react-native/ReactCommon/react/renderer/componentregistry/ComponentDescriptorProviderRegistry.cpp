@@ -7,6 +7,8 @@
 
 #include "ComponentDescriptorProviderRegistry.h"
 
+#include <react/renderer/componentregistry/OnDemandComponentDescriptorProviders.h>
+
 namespace facebook::react {
 
 void ComponentDescriptorProviderRegistry::add(
@@ -56,6 +58,18 @@ void ComponentDescriptorProviderRegistry::request(
   {
     std::shared_lock lock(mutex_);
     componentDescriptorProviderRequest = componentDescriptorProviderRequest_;
+  }
+
+  // A library may register component descriptor providers to be resolved lazily, on first request for
+  // the name (see OnDemandComponentDescriptorProviders). This is the timing-safe way out-of-core /
+  // intrinsic components (e.g. expo-intrinsics) register — the request fires at commit, after all
+  // init. It is consulted BEFORE the platform request handler so an intrinsic (e.g. the <u> text
+  // element) wins over that handler's unknown-component fallbacks (Paper interop / UnimplementedView),
+  // which would otherwise claim the name as a plain view and drop its text.
+  auto onDemand = OnDemandComponentDescriptorProviders::find(componentName);
+  if (onDemand) {
+    add(*onDemand);
+    return;
   }
 
   if (componentDescriptorProviderRequest) {
