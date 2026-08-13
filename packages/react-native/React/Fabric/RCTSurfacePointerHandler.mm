@@ -78,6 +78,17 @@ struct ActivePointer {
   CGPoint offsetPoint;
 
   /*
+   * The nearest enclosing UIScrollView at pointer-down, and its contentOffset at
+   * that moment. If the offset differs by pointer-up, a scroll happened during
+   * this gesture and no synthetic `click` is produced — a scroll cancels the
+   * press, like the web. Reading the offset delta at release is timing-independent
+   * (unlike sampling `isDragging` on moves, which misses a pause-then-scroll once
+   * the scroll view steals touch delivery).
+   */
+  UIScrollView *initialScrollView;
+  CGPoint initialScrollOffset;
+
+  /*
    * Current timestamp of the pointer event
    */
   NSTimeInterval timestamp;
@@ -156,6 +167,16 @@ static NSInteger constexpr kPencilPointerId = 1;
 // If a new reserved ID is added above this should be incremented to ensure touch events
 // do not conflict
 static NSInteger constexpr kTouchIdentifierPoolOffset = 2;
+
+// Walks up from a view to the nearest enclosing UIScrollView, or nil.
+static UIScrollView *RCTEnclosingScrollView(UIView *view) {
+  for (UIView *candidate = view; candidate != nil; candidate = candidate.superview) {
+    if ([candidate isKindOfClass:[UIScrollView class]]) {
+      return (UIScrollView *)candidate;
+    }
+  }
+  return nil;
+}
 
 static SharedTouchEventEmitter GetTouchEmitterFromView(UIView *componentView, CGPoint point)
 {
@@ -555,6 +576,11 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 
     UpdateActivePointerWithUITouch(activePointer, touch, event, _rootComponentView);
 
+    activePointer.initialScrollView = RCTEnclosingScrollView(touch.view);
+    activePointer.initialScrollOffset = activePointer.initialScrollView != nil
+        ? activePointer.initialScrollView.contentOffset
+        : CGPointZero;
+
     _activePointers.emplace(touch, activePointer);
   }
 }
@@ -563,7 +589,6 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 {
   for (UITouch *touch in touches) {
     auto iterator = _activePointers.find(touch);
-    RCTAssert(iterator != _activePointers.end(), @"Inconsistency between local and UIKit touch registries");
     if (iterator == _activePointers.end()) {
       continue;
     }
@@ -575,28 +600,63 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 {
   for (UITouch *touch in touches) {
     auto iterator = _activePointers.find(touch);
-    RCTAssert(iterator != _activePointers.end(), @"Inconsistency between local and UIKit touch registries");
+    // A pointer may already be gone if an enclosing scroll cancelled it mid-gesture
+    // (see `_cancelActivePointersAfterScroll`), so a miss here is expected — not a desync.
     if (iterator == _activePointers.end()) {
       continue;
     }
     auto &activePointer = iterator->second;
 
-    if (activePointer.identifier == _primaryTouchPointerId) {
-      _primaryTouchPointerId = -1;
-    }
-
-    // only need to enqueue if the touch type isn't one with a reserved identifier
-    switch (touch.type) {
-      case UITouchTypeIndirectPointer:
-      case UITouchTypePencil:
-        break;
-      default:
-        // since the touch's identifier has been offset we need to re-normalize it to 0-based
-        // which is what the identifier pool expects
-        _identifierPool.enqueue(activePointer.identifier - kTouchIdentifierPoolOffset);
-    }
-
+    [self _recycleIdentifierForActivePointer:activePointer touchType:touch.type];
     _activePointers.erase(touch);
+  }
+}
+
+// Recycles a pointer's id back into the pool and clears the primary-touch slot.
+// Shared by `_unregisterTouches` and `_cancelActivePointersAfterScroll`.
+- (void)_recycleIdentifierForActivePointer:(const ActivePointer &)activePointer touchType:(UITouchType)touchType
+{
+  if (activePointer.identifier == _primaryTouchPointerId) {
+    _primaryTouchPointerId = -1;
+  }
+
+  // only need to enqueue if the touch type isn't one with a reserved identifier
+  switch (touchType) {
+    case UITouchTypeIndirectPointer:
+    case UITouchTypePencil:
+      break;
+    default:
+      // since the touch's identifier has been offset we need to re-normalize it to 0-based
+      // which is what the identifier pool expects
+      _identifierPool.enqueue(activePointer.identifier - kTouchIdentifierPoolOffset);
+  }
+}
+
+// Mirrors the web: once an enclosing UIScrollView actually scrolls during a pointer's
+// lifetime, the press is over. Fire `pointercancel` and drop the pointer so (a) no
+// further move/up and no synthetic `click` are produced for it, and (b) no stale pointer
+// state survives a scroll — which on iOS steals touch delivery and, in multi-touch, could
+// otherwise leave the pointer handler's registry wedged. Scroll is detected by the scroll
+// view's contentOffset changing since pointer-down, which is timing-independent (unlike an
+// `isDragging`/movement heuristic that misses a pause-then-scroll).
+- (void)_cancelActivePointersAfterScroll
+{
+  std::vector<ActivePointer> cancelledPointers;
+  for (auto iterator = _activePointers.begin(); iterator != _activePointers.end();) {
+    ActivePointer &activePointer = iterator->second;
+    BOOL scrolled = activePointer.initialScrollView != nil &&
+        !CGPointEqualToPoint(activePointer.initialScrollView.contentOffset, activePointer.initialScrollOffset);
+    if (scrolled) {
+      cancelledPointers.push_back(activePointer);
+      [self _recycleIdentifierForActivePointer:activePointer touchType:activePointer.touchType];
+      iterator = _activePointers.erase(iterator);
+    } else {
+      ++iterator;
+    }
+  }
+
+  if (!cancelledPointers.empty()) {
+    [self _dispatchActivePointers:cancelledPointers eventType:RCTPointerEventTypeCancel];
   }
 }
 
@@ -607,7 +667,6 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 
   for (UITouch *touch in touches) {
     auto iterator = _activePointers.find(touch);
-    RCTAssert(iterator != _activePointers.end(), @"Inconsistency between local and UIKit touch registries");
     if (iterator == _activePointers.end()) {
       continue;
     }
@@ -638,7 +697,15 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
         }
         case RCTPointerEventTypeEnd: {
           eventEmitter->onPointerUp(pointerEvent);
-          if (pointerEvent.isPrimary && pointerEvent.button == 0 && IsPointerWithinInitialTree(activePointer)) {
+          // A scroll during this pointer's lifetime cancels the click (the press),
+          // like the web. Detected by the enclosing scroll view's contentOffset
+          // changing between pointer-down and now — timing-independent, unlike a
+          // movement or `isDragging` heuristic (which misses a pause-then-scroll).
+          const bool scrolledDuringGesture = activePointer.initialScrollView != nil &&
+              !CGPointEqualToPoint(
+                  activePointer.initialScrollView.contentOffset, activePointer.initialScrollOffset);
+          if (pointerEvent.isPrimary && pointerEvent.button == 0 && !scrolledDuringGesture &&
+              IsPointerWithinInitialTree(activePointer)) {
             eventEmitter->onClick(std::move(pointerEvent));
           }
           break;
@@ -673,6 +740,9 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
   [super touchesMoved:touches withEvent:event];
 
   [self _updateTouches:touches withEvent:event];
+  // A scroll cancels the active pointers (web-style `pointercancel`), before any
+  // `pointermove` is dispatched for this event, so a scrolled pointer is dropped cleanly.
+  [self _cancelActivePointersAfterScroll];
   [self _dispatchActivePointers:[self _activePointersFromTouches:touches] eventType:RCTPointerEventTypeMove];
 
   self.state = UIGestureRecognizerStateChanged;
@@ -731,6 +801,29 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 - (BOOL)canPreventGestureRecognizer:(UIGestureRecognizer *)preventedGestureRecognizer
 {
   return NO;
+}
+
+#pragma mark - UIGestureRecognizerDelegate
+
+// This handler is a pure observer: it only dispatches W3C pointer/click events
+// and never cancels touches (cancelsTouchesInView == NO) or claims the responder.
+// When W3C pointer events are on it is attached as a SECOND always-on continuous
+// recognizer beside the surface's RCTSurfaceTouchHandler. If it participates in
+// gesture arbitration at all, a multi-touch sequence (e.g. a 2nd finger landing
+// on a touchable while a 1st finger is scrolling) desyncs its state from UIKit's
+// touch registry and wedges an enclosing ScrollView's pan — leaving scrolling
+// locked. So it must recognize simultaneously with EVERY other recognizer (the
+// sibling touch handler AND the ScrollView's pan), never blocking anything.
+//
+// Recognizing simultaneously with the pan means the scroll no longer cancels our
+// pointers, so a scroll would otherwise still synthesize a `click` on release.
+// That is prevented separately, by the contentOffset check in the End dispatch
+// (a scroll cancels the press, like the web) — which is timing-independent and
+// does not depend on gesture arbitration.
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
+    shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+  return YES;
 }
 
 #pragma mark - Hover callbacks

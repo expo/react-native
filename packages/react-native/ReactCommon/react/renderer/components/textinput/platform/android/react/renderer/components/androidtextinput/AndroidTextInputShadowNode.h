@@ -36,6 +36,12 @@ class AndroidTextInputShadowNode final : public ConcreteViewShadowNode<
     traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
     traits.set(ShadowNodeTraits::Trait::MeasurableYogaNode);
     traits.set(ShadowNodeTraits::Trait::BaselineYogaNode);
+    // `ReactEditText` is a `TextView`, so no view can be mounted inside it.
+    // A `<TextInput>` may carry `<Text>` children, which form a view on this
+    // platform, and mounting one into the input throws. Unsetting the trait
+    // flattens them into the input's parent instead, which is what
+    // `ParagraphShadowNode` does for the same reason.
+    traits.unset(ShadowNodeTraits::Trait::FormsStackingContext);
     return traits;
   }
 
