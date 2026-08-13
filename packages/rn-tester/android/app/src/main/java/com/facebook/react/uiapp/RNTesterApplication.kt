@@ -10,6 +10,7 @@
 package com.facebook.react.uiapp
 
 import android.app.Application
+import android.util.Log
 import com.facebook.fbreact.specs.SampleLegacyModule
 import com.facebook.fbreact.specs.SampleTurboModule
 import com.facebook.react.BaseReactPackage
@@ -19,6 +20,9 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.ReactPackage
+import com.facebook.react.config.ReactFeatureFlags
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
+import com.facebook.react.internal.featureflags.ReactNativeNewArchitectureFeatureFlagsDefaults
 import com.facebook.react.ViewManagerOnDemandReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
@@ -27,6 +31,7 @@ import com.facebook.react.defaults.DefaultReactHost
 import com.facebook.react.module.model.ReactModuleInfo
 import com.facebook.react.module.model.ReactModuleInfoProvider
 import com.facebook.react.uiapp.component.MyLegacyViewManager
+import com.facebook.react.uiapp.component.AstryxVectorShapeManager
 import com.facebook.react.uiapp.component.MyNativeViewManager
 import com.facebook.react.uiapp.component.ReportFullyDrawnViewManager
 import com.facebook.react.uimanager.ReactShadowNode
@@ -86,6 +91,7 @@ internal class RNTesterApplication : Application(), ReactApplication {
                             "RNTMyNativeView",
                             "RNTMyLegacyNativeView",
                             "RNTReportFullyDrawnView",
+                            "AstryxVectorShape",
                         )
 
                     override fun createViewManagers(
@@ -95,6 +101,7 @@ internal class RNTesterApplication : Application(), ReactApplication {
                             MyNativeViewManager(),
                             MyLegacyViewManager(reactContext),
                             ReportFullyDrawnViewManager(),
+                            AstryxVectorShapeManager(),
                         )
 
                     override fun createViewManager(
@@ -105,6 +112,7 @@ internal class RNTesterApplication : Application(), ReactApplication {
                           "RNTMyNativeView" -> MyNativeViewManager()
                           "RNTMyLegacyNativeView" -> MyLegacyViewManager(reactContext)
                           "RNTReportFullyDrawnView" -> ReportFullyDrawnViewManager()
+                          "AstryxVectorShape" -> AstryxVectorShapeManager()
                           else -> null
                         }
                   },
@@ -123,10 +131,56 @@ internal class RNTesterApplication : Application(), ReactApplication {
   override fun onCreate() {
     ReactFontManager.getInstance().addCustomFont(this, "Rubik", R.font.rubik)
     ReactFontManager.getInstance().addCustomFont(this, "FiraCode", R.font.firacode)
+    // Enable W3C pointer events so DOM-style click events (onClick + bubbling) on
+    // intrinsics fire like on the web — the Android analog of iOS's
+    // RCTSetDispatchW3CPointerEvents(YES) in AppDelegate (text-children demo).
+    ReactFeatureFlags.dispatchPointerEvents = true
     super.onCreate()
     // Must run before loadReactNative so E2E-provided system properties are readable by the
     // feature flag overrides applied during React Native startup.
     FBRNTesterEndToEndHelper.initializeConfig(this)
     loadReactNative(this)
+    // The shared C++ animation backend, which drives prop updates from the
+    // Choreographer WITHOUT going through React's JavaScript pipeline. Both
+    // flags are needed: the backend itself, and the C++ Animated implementation
+    // that owns it. Upstream has these default-off with an expected release
+    // value of true.
+    //
+    // After `loadReactNative`, not before: that installs the OSS-Stable
+    // provider, and a second plain `override` — on either side — throws. So
+    // this replaces it through the sanctioned escape hatch, which is what the
+    // iOS counterpart in AppDelegate.mm does for the same reason. The React
+    // host is created lazily by the activity, so the new values are in place
+    // before anything renders. Any flag read before this point is reported
+    // back, and is worth knowing about rather than swallowing.
+    //
+    // Built on the new architecture's defaults, which the OSS-Stable provider
+    // being replaced is itself built on, and not on the plain defaults: those
+    // switch off `useNativeViewConfigsInBridgelessMode` and
+    // `useTurboModuleInterop`, the legacy interop layer, and the NewArchitecture
+    // example's legacy view red-boxed on "Cannot read property 'Constants' of
+    // null" while the legacy module screen rendered empty.
+    val accessedEarly =
+        ReactNativeFeatureFlags.dangerouslyForceOverride(
+            object : ReactNativeNewArchitectureFeatureFlagsDefaults() {
+              // The native Yoga block formatting context (YGDisplayBlock)
+              // instead of the flex emulation, matching the iOS AppDelegate.
+              // Without it the two platforms lay block containers out through
+              // different code entirely: the emulation stacks children with
+              // column-flex, where `align-content` — which is how a <button>
+              // centres its content (css-align-3 §5.3) — does not apply. A
+              // radio's dot sat at the top of its ring on Android while iOS
+              // centred it, from one missing line here rather than anything
+              // platform-specific in the renderer.
+              override fun enableYogaDisplayBlock(): Boolean = true
+
+              override fun useSharedAnimatedBackend(): Boolean = true
+
+              override fun cxxNativeAnimatedEnabled(): Boolean = true
+            }
+        )
+    if (accessedEarly != null) {
+      Log.w("RNTester", "Feature flags read before the override: " + accessedEarly)
+    }
   }
 }

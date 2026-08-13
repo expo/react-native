@@ -1,4 +1,21 @@
 [ignore]
+; The local expo checkout, linked into node_modules for the DOM-elements PoC
+; (expo-modules-core, expo-image). Nothing here imports their JS — the catalog
+; names native components, not packages — and following the symlinks would pull
+; the entire pnpm store of that repo into the crawl.
+**/Developer/expo/**
+; The same packages through their node_modules symlinks: flow does not
+; canonicalize before matching, so both spellings need ignoring.
+node_modules/expo/**
+node_modules/expo-image/**
+node_modules/expo-modules-core/**
+node_modules/expo-modules-autolinking/**
+
+; The Fantom runner's per-test Metro bundle cache: gigabytes of generated
+; multi-megabyte bundles that grow with every suite run. Parsing them is what
+; turns a cold check from minutes into hours.
+private/react-native-fantom/.out/**
+
 ; Ignore build cache folder
 packages/react-native/sdks/**
 
@@ -10,6 +27,13 @@ packages/react-native-codegen/e2e/__test_fixtures__/modules/NativeEnumTurboModul
 
 ; Ignore "BUCK" generated dirs
 .buckd/**
+
+; Ignore git's own metadata. A branch name ending in ".json" — upstream has
+; one, `@chrfalch/prebuild-fix-missing-script-file-in-package.json` — becomes a
+; reflog file of that name under .git/logs/refs, which Flow then tries to parse
+; as JSON and fails the whole check on. Fetching a branch should not be able to
+; break typechecking.
+.git/**
 
 ; Ignore other platform suffixes
 **/*.macos.js
