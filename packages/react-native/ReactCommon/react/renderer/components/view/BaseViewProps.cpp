@@ -7,6 +7,7 @@
 
 #include "BaseViewProps.h"
 
+#include <react/renderer/components/view/TransitionConversions.h>
 
 #include <algorithm>
 
@@ -97,12 +98,14 @@ BaseViewProps::BaseViewProps(
           "backgroundColor",
           sourceProps.backgroundColor,
           {})),
-      // The inheritable text props are gated per-field, IN PLACE: with
-      // `enableStringChildren` off they cost zero raw-prop probes
-      // (pay-for-what-you-use), and with it on the probes sit exactly here,
-      // in declaration order — RawPropsParser optimizes monotonic key
-      // access, and hoisting these probes after the later keys makes its
-      // index roll over per parse (measured: +26% on <Text>-row mounts).
+      // The inheritable text props are read here, in declaration order, and
+      // only when the feature is on — so a View in an app that does not use it
+      // reads none of them.
+      //
+      // They have to be read in declaration order. `RawPropsParser` finds a
+      // key by advancing a cursor through its key list, so a key read in that
+      // order costs one step, while a key read out of order makes the cursor
+      // wrap the whole list.
       inheritedColor(
           parseInheritedTextProps && stringChildrenEnabled
               ? convertRawProp(
@@ -447,6 +450,81 @@ BaseViewProps::BaseViewProps(
           false)) {
   hasInheritedTextProps = computeHasInheritedTextProps();
 
+  // `transition` and `animation` (css-transitions-1, css-animations-1).
+  //
+  // Parsed into a local and side-allocated only if something was authored.
+  // Inline these were 368 bytes on EVERY view — eleven authored longhands, the
+  // zipped transitions and an optional animation — and empty on essentially
+  // all of them, copied again on every props clone.
+  //
+  // Three outcomes, in the order they are worth having:
+  //  - nothing authored and none inherited: the pointer stays null and no
+  //    allocation happens at all, which is every view in almost every app;
+  //  - the same longhands as the source: SHARE its allocation. A props clone
+  //    carries only the keys that changed, so an animating view re-parses to
+  //    the identical strings on every commit, and allocating a fresh copy of
+  //    them each time is exactly the cost this change exists to remove;
+  //  - genuinely different: allocate, and zip the longhands once here rather
+  //    than re-parsing strings while a frame is being interpolated.
+  {
+    const auto* inherited = sourceProps.cssMotion.get();
+    auto motion = CssMotion{};
+    const auto raw = [&](const char* name, const std::string& fallback) {
+      return convertRawProp(context, rawProps, name, fallback, std::string{});
+    };
+    static const std::string kEmpty{};
+    motion.transitionPropertyRaw = raw("transitionProperty", inherited ? inherited->transitionPropertyRaw : kEmpty);
+    motion.transitionDurationRaw = raw("transitionDuration", inherited ? inherited->transitionDurationRaw : kEmpty);
+    motion.transitionDelayRaw = raw("transitionDelay", inherited ? inherited->transitionDelayRaw : kEmpty);
+    motion.transitionTimingFunctionRaw =
+        raw("transitionTimingFunction", inherited ? inherited->transitionTimingFunctionRaw : kEmpty);
+    motion.animationKeyframesRaw = raw("animationKeyframes", inherited ? inherited->animationKeyframesRaw : kEmpty);
+    motion.animationDurationRaw = raw("animationDuration", inherited ? inherited->animationDurationRaw : kEmpty);
+    motion.animationDelayRaw = raw("animationDelay", inherited ? inherited->animationDelayRaw : kEmpty);
+    motion.animationTimingFunctionRaw =
+        raw("animationTimingFunction", inherited ? inherited->animationTimingFunctionRaw : kEmpty);
+    // The one motion longhand CSS states as a NUMBER as often as a keyword —
+    // `animation-iteration-count: 3` or `infinite` — and the style type
+    // accepts both. The others are strings because CSS spells them that way,
+    // units and all. Read as a string only, a numeric count converted to
+    // nothing and the animation silently ran once. `buildAnimation` reads the
+    // digits back with `stof`, so the number is kept in that form.
+    motion.animationIterationCountRaw = [&]() -> std::string {
+      const auto& fallback = inherited ? inherited->animationIterationCountRaw : kEmpty;
+      const auto* value = rawProps.at("animationIterationCount", nullptr, nullptr);
+      if (value == nullptr || !value->hasValue()) {
+        return fallback;
+      }
+      if (value->hasType<std::string>()) {
+        return (std::string)*value;
+      }
+      if (value->hasType<Float>()) {
+        return std::to_string((Float)*value);
+      }
+      return fallback;
+    }();
+    motion.animationDirectionRaw = raw("animationDirection", inherited ? inherited->animationDirectionRaw : kEmpty);
+    motion.animationFillModeRaw = raw("animationFillMode", inherited ? inherited->animationFillModeRaw : kEmpty);
+
+    if (inherited != nullptr && motion.rawsEqual(*inherited)) {
+      cssMotion = sourceProps.cssMotion;
+    } else if (!motion.isEmpty()) {
+      motion.transitions = buildTransitions(
+          motion.transitionPropertyRaw,
+          motion.transitionDurationRaw,
+          motion.transitionDelayRaw,
+          motion.transitionTimingFunctionRaw);
+      motion.animation = buildAnimation(
+          motion.animationKeyframesRaw,
+          motion.animationDurationRaw,
+          motion.animationDelayRaw,
+          motion.animationTimingFunctionRaw,
+          motion.animationIterationCountRaw,
+          motion.animationDirectionRaw,
+          motion.animationFillModeRaw);
+      cssMotion = std::make_shared<const CssMotion>(std::move(motion));
+    }
+  }
 
   // `all` — parsed by hand: its value space here is tiny and a boundary is
   // structural enough that a malformed value should mean "no declaration".
