@@ -197,6 +197,11 @@ const APIs: Array<RNTesterModuleInfo> = (
     // ---- Fork work, pinned for quick access (same pattern as Components):
     // the renderer's CSS transitions and display: contents coverage.
     {
+      key: 'ShadcnExample',
+      module: require('../examples/Astryx/ShadcnExample').default,
+      category: 'UI',
+    },
+    {
       key: 'RadixExample',
       module: require('../examples/Astryx/RadixExample').default,
       category: 'UI',
