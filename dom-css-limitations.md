@@ -47,6 +47,31 @@ walk has descended a level. Both were documented in the code as deliberate and
 carried no marker, so neither reached this file. Recorded rather than measured:
 they need nesting deep enough that the corpus has not produced either.
 
+## User-agent styles
+
+All in `Libraries/DomElements/uaStyles.js`.
+
+**`no-em-units`** — browsers express UA defaults in `em`; we have no
+font-relative units, so the sheet stores points computed against a 16px root.
+They therefore do not track the user's font size the way the web does.
+
+**`no-native-form-widgets`** — `<button>` and friends get layout defaults but
+no platform-drawn appearance. Design systems that restyle controls completely
+(Astryx does) are unaffected.
+
+**`no-link-state`** — `<a>` gets no colour or underline, because those depend
+on `:link`/`:visited`, which need history state that does not exist here.
+
+**`no-quirks-mode`** — no `quirks.css` equivalent, there being no quirks mode
+to be compatible with. Listed so its absence reads as deliberate.
+
+## Platform
+
+**`android-img-is-a-plain-view`** — `.../fabric/mounting/mountitems/FabricNameComponentMapping.kt`
+`<img>` mounts as a plain View on Android rather than `RCTImageView`, which
+expects a different `source` shape — so an `<img>` lays out but draws nothing
+there. iOS renders it through the Image machinery.
+
 ## Performance
 
 **`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`
@@ -66,4 +91,24 @@ Each remaining marker, with the file that carries it.
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `list-style-type-additive-scripts` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
+
+---
+
+## Not limitations, though they look like ones
+
+Recorded because each has been mistaken for a bug at least once:
+
+- **Block-axis padding on an inline box does not grow the line box.** That is
+  CSS2 §10.6.1 — it overflows instead. The painting paths widen only their
+  drawing surface to avoid clipping it.
+- **`<b>` and `<strong>` render identically.** They are separate elements with
+  separate `tagName`s; identical rendering is what the UA sheet specifies.
+- **Fantom cannot observe a font-size change.** Its measurer is a fixed width
+  per character, so heading sizes must be checked on device — see
+  `packages/rn-tester/scripts/inline-metrics-verify.js`.
+- **12 LogBox Fantom suites fail.** Pre-existing upstream stale snapshots;
+  `frontier` fails identically under a clean-snapshot protocol. Note that the
+  runner **rewrites snapshots on failure**, so re-running masks it and
+  invalidates any comparison made afterwards — restore them first.
