@@ -104,7 +104,6 @@ NSSet<NSString *> *getCoreModuleClasses(void)
       @"RCTBaseTextInputViewManager",
       @"RCTInputAccessoryViewManager",
       @"RCTMultilineTextInputViewManager",
-      @"RCTRawTextViewManager",
       @"RCTSinglelineTextInputViewManager",
       @"RCTTextViewManager",
       @"RCTVirtualTextViewManager",
