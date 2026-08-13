@@ -33,7 +33,21 @@ internal class RNTesterActivity : ReactActivity() {
       val bundle = activity.intent?.extras
 
       if (bundle != null && bundle.containsKey(PARAM_ROUTE)) {
-        val routeUri = "rntester://example/${bundle.getString(PARAM_ROUTE)}Example"
+        // `--es route Grid` opens the module; `--es route Grid/autofill` opens
+        // one example within it. The "Example" suffix belongs to the MODULE key
+        // only, so it is appended to the first path segment — otherwise an
+        // example key would come out as "…/autofillExample" and fail to
+        // resolve. Mirrors the iOS AppDelegate, and makes a single example
+        // addressable for screenshots without driving the UI.
+        val route = bundle.getString(PARAM_ROUTE)
+        val routeUri =
+            if (route != null && route.contains("/")) {
+              val moduleKey = route.substringBefore("/")
+              val exampleKey = route.substringAfter("/")
+              "rntester://example/${moduleKey}Example/$exampleKey"
+            } else {
+              "rntester://example/${route}Example"
+            }
         initialProps = Bundle().apply { putString("exampleFromAppetizeParams", routeUri) }
       }
       FBRNTesterEndToEndHelper.onCreate(activity.application)

@@ -48,6 +48,56 @@ const filterEmptySections = (examplesList: ExamplesList): any => {
   return filteredSections;
 };
 
+const byTitle = (a: RNTesterModuleInfo, b: RNTesterModuleInfo): number =>
+  a.module.title.localeCompare(b.module.title);
+
+/*
+ * The order the fork's own sections appear in, above the stock list. A group
+ * named here but empty on this platform is dropped by `filterEmptySections`,
+ * and a group an example names but this list forgets would silently vanish —
+ * so anything grouped but unlisted is appended rather than lost.
+ */
+const GROUP_ORDER = [
+  'HTML Elements',
+  'Text Children',
+  'CSS Layout',
+  'CSS Styling',
+  'Design Systems',
+  'Native UI',
+  'Benchmarks',
+];
+
+const groupedSections = (
+  examples: Array<RNTesterModuleInfo>,
+): Array<SectionData<RNTesterModuleInfo>> => {
+  const byGroup = new Map<string, Array<RNTesterModuleInfo>>();
+  for (const example of examples) {
+    const group = example.group;
+    if (group == null) {
+      continue;
+    }
+    const bucket = byGroup.get(group);
+    if (bucket == null) {
+      byGroup.set(group, [example]);
+    } else {
+      bucket.push(example);
+    }
+  }
+  const ordered = [
+    ...GROUP_ORDER.filter(group => byGroup.has(group)),
+    ...[...byGroup.keys()].filter(group => !GROUP_ORDER.includes(group)),
+  ];
+  return ordered.map(group => ({
+    key: 'GROUP_' + group.toUpperCase().replace(/ /g, '_'),
+    data: byGroup.get(group) ?? [],
+    title: group,
+  }));
+};
+
+const ungrouped = (
+  examples: Array<RNTesterModuleInfo>,
+): Array<RNTesterModuleInfo> => examples.filter(example => example.group == null);
+
 export const getExamplesListWithRecentlyUsed = ({
   recentlyUsed,
   testList,
@@ -96,11 +146,10 @@ export const getExamplesListWithRecentlyUsed = ({
         data: recentlyUsedComponents,
         title: 'Recently Viewed',
       },
+      ...groupedSections(components),
       {
         key: 'COMPONENTS',
-        data: components.sort((a, b) =>
-          a.module.title.localeCompare(b.module.title),
-        ),
+        data: ungrouped(components).sort(byTitle),
         title: 'Components',
       },
     ],
@@ -110,9 +159,10 @@ export const getExamplesListWithRecentlyUsed = ({
         data: recentlyUsedAPIs,
         title: 'Recently viewed',
       },
+      ...groupedSections(apis),
       {
         key: 'APIS',
-        data: apis.sort((a, b) => a.module.title.localeCompare(b.module.title)),
+        data: ungrouped(apis).sort(byTitle),
         title: 'APIs',
       },
     ],
