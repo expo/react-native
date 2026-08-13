@@ -17,6 +17,7 @@
 #include <react/renderer/components/safeareaview/SafeAreaViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/AndroidHorizontalScrollContentViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
+#include <react/renderer/components/text/DomElementsRegistry.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/SelectableParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
@@ -87,6 +88,11 @@ void addCoreComponents(
           LayoutConformanceComponentDescriptor>());
   providerRegistry->add(
       concreteComponentDescriptorProvider<VirtualViewComponentDescriptor>());
+  // Intrinsic DOM elements (<b>/<i>/<span>/<img>/<div> + unknown fallback).
+  // Registers the element shadow-node descriptors so they resolve in the shadow
+  // tree; the mounting half is FabricNameComponentMapping, which points the
+  // inline text elements at the same ViewManager as <Text>.
+  dom::addAllElementDescriptors(*providerRegistry);
 }
 
 } // namespace facebook::react::CoreComponentsRegistry
