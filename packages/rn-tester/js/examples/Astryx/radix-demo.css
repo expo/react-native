@@ -1,0 +1,164 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * Styling for the Radix demo, entirely through data attributes — the way
+ * shadcn styles Radix. Nothing in the demo JS sets colors.
+ */
+
+:root {
+  --rx-surface: rgb(255, 255, 255);
+  --rx-panel: rgb(242, 244, 247);
+  --rx-line: rgb(208, 213, 221);
+  --rx-ink: rgb(16, 24, 40);
+  --rx-ink-muted: rgb(102, 112, 133);
+  --rx-accent: rgb(21, 112, 239);
+  --rx-accent-ink: rgb(255, 255, 255);
+  --rx-ok: rgb(18, 183, 106);
+  /* The iOS HIG minimum touch target; every pressable below is at least
+     this in one dimension. */
+  --rx-touch: 44px;
+}
+
+/*
+ * The dark palette, keyed off the SYSTEM rather than off a class.
+ *
+ * These values used to sit on `.dark`, and nothing ever added that class:
+ * there is no theme switcher in the demo and no framework here that sets one.
+ * So every component drawing from `var(--rx-*)` stayed on the light values in
+ * dark mode, while the ones using system colours followed the appearance —
+ * which is why some buttons adapted, the accordion did not, and the popover and
+ * modal came up light on a dark screen.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rx-surface: rgb(16, 18, 27);
+    --rx-panel: rgb(30, 34, 45);
+    --rx-line: rgb(58, 58, 60);
+    --rx-ink: rgb(242, 242, 247);
+    --rx-ink-muted: rgb(152, 152, 159);
+    --rx-accent: rgb(84, 158, 255);
+    --rx-accent-ink: rgb(10, 14, 20);
+  }
+}
+
+.rx-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.rx-caption {
+  font-size: 13px;
+  color: var(--rx-ink-muted);
+}
+
+.rx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--rx-touch);
+  min-width: var(--rx-touch);
+  padding: 0 18px;
+  border-radius: 10px;
+  background-color: var(--rx-accent);
+  color: var(--rx-accent-ink);
+  font-weight: 600;
+  transition: opacity 120ms ease;
+}
+
+.rx-btn:active {
+  opacity: 0.75;
+}
+
+.rx-btn[data-state='open'] {
+  opacity: 0.75;
+}
+
+.rx-panel {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--rx-line);
+  background-color: var(--rx-panel);
+  min-width: 220px;
+}
+
+.rx-overlay {
+  background-color: rgba(0, 0, 0, 0.45);
+}
+
+.rx-title {
+  font-weight: 700;
+  color: var(--rx-ink);
+}
+
+.rx-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--rx-touch);
+  min-width: var(--rx-touch);
+  padding: 0 16px;
+  border-radius: 10px;
+  background-color: var(--rx-panel);
+  color: var(--rx-ink);
+  font-weight: 600;
+}
+
+.rx-toggle[data-state='on'],
+.rx-toggle[data-state='checked'],
+.rx-toggle[data-state='active'] {
+  background-color: var(--rx-accent);
+  color: var(--rx-accent-ink);
+}
+
+.rx-switch {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 64px;
+  height: var(--rx-touch);
+  border-radius: 22px;
+  padding: 0 4px;
+  background-color: var(--rx-panel);
+  transition: background-color 150ms ease;
+}
+
+.rx-switch[data-state='checked'] {
+  background-color: var(--rx-ok);
+}
+
+.rx-thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  background-color: var(--rx-surface);
+  transition: transform 150ms ease;
+}
+
+.rx-thumb[data-state='checked'] {
+  transform: translateX(22px);
+}
+
+.rx-item {
+  display: flex;
+  align-items: center;
+  min-height: var(--rx-touch);
+  padding: 0 14px;
+  border-radius: 8px;
+  color: var(--rx-ink);
+}
+
+.rx-item:active {
+  background-color: var(--rx-accent);
+  color: var(--rx-accent-ink);
+}
+
+.rx-tabpanel {
+  padding: 12px 2px;
+  color: var(--rx-ink);
+}
