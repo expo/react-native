@@ -415,8 +415,16 @@ bool ReactHost::loadScriptFromBundlePath(const std::string& bundlePath) {
     reactInstance_->loadScript(std::move(script), bundlePath);
     LOG(INFO) << "Loaded JS bundle from bundle path: " << bundlePath;
     return true;
+  } catch (const std::exception& e) {
+    // Keep the reason. Whether this was a missing file, a permissions problem
+    // or a syntax error in the bundle is the whole of the diagnosis, and
+    // `catch (...)` threw it away.
+    LOG(ERROR) << "Unable to read bundle from bundle path " << bundlePath
+               << ": " << e.what();
+    return false;
   } catch (...) {
-    LOG(WARNING) << "Unable to read bundle from bundle path" << bundlePath;
+    LOG(ERROR) << "Unable to read bundle from bundle path " << bundlePath
+               << ": unknown error";
     return false;
   }
 }

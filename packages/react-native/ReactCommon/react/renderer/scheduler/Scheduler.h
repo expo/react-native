@@ -15,6 +15,7 @@
 #include <react/performance/cdpmetrics/CdpMetricsReporter.h>
 #include <react/performance/cdpmetrics/CdpPerfIssuesReporter.h>
 #include <react/performance/timeline/PerformanceEntryReporter.h>
+#include <react/renderer/animationbackend/CSSTransitions.h>
 #include <react/renderer/componentregistry/ComponentDescriptorFactory.h>
 #include <react/renderer/core/ComponentDescriptor.h>
 #include <react/renderer/core/EventEmitter.h>
@@ -132,6 +133,8 @@ class Scheduler final : public UIManagerDelegate {
   SharedComponentDescriptorRegistry componentDescriptorRegistry_;
   RuntimeExecutor runtimeExecutor_;
   std::shared_ptr<UIManager> uiManager_;
+  // Owned so it outlives the commit-hook registration it makes on UIManager.
+  std::unique_ptr<CSSTransitions> cssTransitions_;
 
   std::vector<std::shared_ptr<UIManagerCommitHook>> commitHooks_;
 
