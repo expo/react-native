@@ -24,6 +24,16 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'Basic',
   },
   {
+    key: 'AstryxExample',
+    module: require('../examples/Astryx/AstryxExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'IconsExample',
+    module: require('../examples/Astryx/IconsExample').default,
+    category: 'UI',
+  },
+  {
     key: 'StringChildrenExample',
     module: require('../examples/TextChildren/StringChildrenExample').default,
     category: 'Basic',
@@ -181,6 +191,11 @@ const APIs: Array<RNTesterModuleInfo> = (
   [
     // ---- Fork work, pinned for quick access (same pattern as Components):
     // the renderer's CSS transitions and display: contents coverage.
+    {
+      key: 'CSSStylesheetsExample',
+      module: require('../examples/Astryx/CSSStylesheetsExample').default,
+      category: 'UI',
+    },
     {
       key: 'CSSAnimationsExample',
       module: require('../examples/CSSAnimations/CSSAnimationsExample').default,

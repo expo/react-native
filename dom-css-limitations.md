@@ -88,10 +88,19 @@ a real screen first. Background in `element-model-design.md`.
 
 Each remaining marker, with the file that carries it.
 
+- `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
+- `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
+- `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `list-style-type-additive-scripts` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
+- `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
+- `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
+- `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
+- `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
 
 ---
