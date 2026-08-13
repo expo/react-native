@@ -21,6 +21,7 @@ import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
 import android.text.TextUtils
+import android.text.style.LeadingMarginSpan
 import android.util.LayoutDirection
 import android.view.Gravity
 import android.view.View
@@ -44,6 +45,8 @@ import com.facebook.react.uimanager.ReactAccessibilityDelegate
 import com.facebook.react.views.text.internal.span.CustomLetterSpacingSpan
 import com.facebook.react.views.text.internal.span.CustomLineHeightSpan
 import com.facebook.react.views.text.internal.span.CustomStyleSpan
+import com.facebook.react.views.text.internal.span.InlineBoxDecorationSpan
+import com.facebook.react.views.text.internal.span.InlineBoxSpacingSpan
 import com.facebook.react.views.text.internal.span.ReactAbsoluteSizeSpan
 import com.facebook.react.views.text.internal.span.ReactBackgroundColorSpan
 import com.facebook.react.views.text.internal.span.ReactClickableSpan
@@ -77,6 +80,9 @@ internal object TextLayoutManager {
   const val AS_KEY_FRAGMENTS: Int = 2
   const val AS_KEY_CACHE_ID: Int = 3
   const val AS_KEY_BASE_ATTRIBUTES: Int = 4
+  // The owning anonymous run box's tag; present only on text-run content.
+  // Keys the measure->mount layout handoff (run-layout-reuse-plan.md).
+  const val AS_KEY_RUN_TAG: Int = 5
 
   // constants for Fragment serialization
   const val FR_KEY_STRING: Int = 0
@@ -85,6 +91,35 @@ internal object TextLayoutManager {
   const val FR_KEY_WIDTH: Int = 3
   const val FR_KEY_HEIGHT: Int = 4
   const val FR_KEY_TEXT_ATTRIBUTES: Int = 5
+  // Inline box decorations (box-model-scope.md G2); present only on fragments of a decorated
+  // inline element. Keys must match `attributedstring/conversions.h`.
+  const val FR_KEY_INLINE_BOX: Int = 6
+  const val FR_KEY_IS_INLINE_BOX_START: Int = 7
+  const val FR_KEY_IS_INLINE_BOX_END: Int = 8
+  // The attachment's own baseline, from the box's top (CSS2 §10.8.1).
+  const val FR_KEY_ATOMIC_INLINE_BASELINE: Int = 9
+  // An inline element that contributed no text of its own — `<span></span>`.
+  // Its fragment is empty on purpose and still has a box on the line.
+  const val FR_KEY_IS_EMPTY_ELEMENT: Int = 10
+
+  const val IB_KEY_MARGIN_LEFT: Int = 0
+  const val IB_KEY_MARGIN_RIGHT: Int = 1
+  const val IB_KEY_PADDING_LEFT: Int = 2
+  const val IB_KEY_PADDING_TOP: Int = 3
+  const val IB_KEY_PADDING_RIGHT: Int = 4
+  const val IB_KEY_PADDING_BOTTOM: Int = 5
+  const val IB_KEY_BORDER_LEFT_WIDTH: Int = 6
+  const val IB_KEY_BORDER_TOP_WIDTH: Int = 7
+  const val IB_KEY_BORDER_RIGHT_WIDTH: Int = 8
+  const val IB_KEY_BORDER_BOTTOM_WIDTH: Int = 9
+  const val IB_KEY_BORDER_LEFT_COLOR: Int = 10
+  const val IB_KEY_BORDER_TOP_COLOR: Int = 11
+  const val IB_KEY_BORDER_RIGHT_COLOR: Int = 12
+  const val IB_KEY_BORDER_BOTTOM_COLOR: Int = 13
+  const val IB_KEY_BORDER_RADIUS: Int = 14
+  const val IB_KEY_OUTLINE_COLOR: Int = 15
+  const val IB_KEY_OUTLINE_WIDTH: Int = 16
+  const val IB_KEY_OUTLINE_OFFSET: Int = 17
 
   // constants for ParagraphAttributes serialization
   const val PA_KEY_MAX_NUMBER_OF_LINES: Int = 0
@@ -176,6 +211,39 @@ internal object TextLayoutManager {
     return null
   }
 
+  /**
+   * Whether the run's `white-space` forbids wrapping (css-text-3 §3) — `pre` or `nowrap`. A line
+   * then ends only where the source has a segment break, and a long one overflows its container
+   * rather than folding onto the next line.
+   *
+   * The other four values all wrap; they differ from each other in which whitespace survives, which
+   * is settled before this point, in the collapsing pass.
+   *
+   * Read off the first fragment because `white-space` is inherited and applies to the whole run,
+   * the same way [getTextAlignmentAttr] reads `textAlign`.
+   */
+  @JvmStatic
+  public fun forbidsWrapping(attributedString: MapBuffer): Boolean {
+    if (!attributedString.contains(AS_KEY_FRAGMENTS)) {
+      return false
+    }
+
+    val fragments = attributedString.getMapBuffer(AS_KEY_FRAGMENTS)
+    if (fragments.count == 0) {
+      return false
+    }
+
+    val textAttributes = fragments.getMapBuffer(0).getMapBuffer(FR_KEY_TEXT_ATTRIBUTES)
+    if (!textAttributes.contains(TextAttributeProps.TA_KEY_WHITE_SPACE)) {
+      return false
+    }
+    return when (textAttributes.getString(TextAttributeProps.TA_KEY_WHITE_SPACE)) {
+      "pre",
+      "nowrap" -> true
+      else -> false
+    }
+  }
+
   private fun getTextJustificationMode(alignmentAttr: String?): Int {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
       return -1
@@ -236,6 +304,241 @@ internal object TextLayoutManager {
     }
   }
 
+  /**
+   * The element's box decorations, as a span that paints them
+   * (box-model-scope.md G4/G5). Null when the element has nothing to draw, so
+   * undecorated text pays nothing.
+   */
+  private fun inlineBoxDecorationSpan(
+      box: MapBuffer,
+      leadingSpaceInsideAdvance: Boolean,
+  ): InlineBoxDecorationSpan? {
+    fun px(key: Int): Float =
+        if (box.contains(key)) PixelUtil.toPixelFromDIP(box.getDouble(key)) else 0f
+    fun color(key: Int): Int? = if (box.contains(key)) box.getInt(key) else null
+
+    val borderWidths =
+        listOf(
+            px(IB_KEY_BORDER_LEFT_WIDTH),
+            px(IB_KEY_BORDER_TOP_WIDTH),
+            px(IB_KEY_BORDER_RIGHT_WIDTH),
+            px(IB_KEY_BORDER_BOTTOM_WIDTH),
+        )
+    val outlineWidth = px(IB_KEY_OUTLINE_WIDTH)
+    if (borderWidths.all { it == 0f } && outlineWidth == 0f) {
+      // Padding and margin alone change the advance but draw nothing.
+      return null
+    }
+
+    return InlineBoxDecorationSpan(
+        paddingLeft = px(IB_KEY_PADDING_LEFT),
+        paddingTop = px(IB_KEY_PADDING_TOP),
+        paddingRight = px(IB_KEY_PADDING_RIGHT),
+        paddingBottom = px(IB_KEY_PADDING_BOTTOM),
+        borderLeftWidth = borderWidths[0],
+        borderTopWidth = borderWidths[1],
+        borderRightWidth = borderWidths[2],
+        borderBottomWidth = borderWidths[3],
+        borderLeftColor = color(IB_KEY_BORDER_LEFT_COLOR),
+        borderTopColor = color(IB_KEY_BORDER_TOP_COLOR),
+        borderRightColor = color(IB_KEY_BORDER_RIGHT_COLOR),
+        borderBottomColor = color(IB_KEY_BORDER_BOTTOM_COLOR),
+        borderRadius = px(IB_KEY_BORDER_RADIUS),
+        outlineColor = color(IB_KEY_OUTLINE_COLOR),
+        outlineWidth = outlineWidth,
+        outlineOffset = px(IB_KEY_OUTLINE_OFFSET),
+        marginLeft = px(IB_KEY_MARGIN_LEFT),
+        marginRight = px(IB_KEY_MARGIN_RIGHT),
+        leadingSpaceInsideAdvance = leadingSpaceInsideAdvance,
+    )
+  }
+
+  /**
+   * One edge's reserve — an inline element's inline-axis margin + border + padding, in px, kept as
+   * PARTS because painting needs them apart (background covers padding only) while advance needs
+   * their sum. THE INLINE RESERVE MODEL is documented on [InlineBoxSpacingSpan].
+   */
+  internal class InlineReserve(val margin: Float, val border: Float, val padding: Float) {
+    val total: Float
+      get() = margin + border + padding
+
+    companion object {
+      val NONE: InlineReserve = InlineReserve(0f, 0f, 0f)
+    }
+  }
+
+  /**
+   * The inline-axis space an inline element reserves at its leading and trailing edges: margin +
+   * border + padding (box-model-scope.md G3, CSS2 §10.6.1). Block-axis values deliberately do not
+   * appear — they paint but never change line height.
+   */
+  private fun leadingInlineSpace(fragment: MapBuffer): InlineReserve {
+    if (!fragment.contains(FR_KEY_INLINE_BOX) ||
+        !(fragment.contains(FR_KEY_IS_INLINE_BOX_START) &&
+            fragment.getBoolean(FR_KEY_IS_INLINE_BOX_START))) {
+      return InlineReserve.NONE
+    }
+    val box = fragment.getMapBuffer(FR_KEY_INLINE_BOX)
+    return InlineReserve(
+        margin = PixelUtil.toPixelFromDIP(box.getDouble(IB_KEY_MARGIN_LEFT)),
+        border = PixelUtil.toPixelFromDIP(box.getDouble(IB_KEY_BORDER_LEFT_WIDTH)),
+        padding = PixelUtil.toPixelFromDIP(box.getDouble(IB_KEY_PADDING_LEFT)),
+    )
+  }
+
+  /**
+   * How far a fragment's border box extends above and below the line box, in
+   * pixels. The mirror of `AttributedString::Fragment::blockAxisBoxEdges`.
+   *
+   * Unlike the inline-axis edges this is NOT gated on the element's first or
+   * last fragment: a wrapped inline is one box per line and
+   * `box-decoration-break: slice` (CSS §8.6, the initial value) draws the
+   * block-axis padding and border on every one of them.
+   *
+   * Margin is excluded — this is the border box.
+   */
+  private fun blockAxisBoxEdges(fragment: MapBuffer): Pair<Float, Float> {
+    if (!fragment.contains(FR_KEY_INLINE_BOX)) {
+      return 0f to 0f
+    }
+    val box = fragment.getMapBuffer(FR_KEY_INLINE_BOX)
+    return PixelUtil.toPixelFromDIP(
+        box.getDouble(IB_KEY_PADDING_TOP) + box.getDouble(IB_KEY_BORDER_TOP_WIDTH)
+    ) to
+        PixelUtil.toPixelFromDIP(
+            box.getDouble(IB_KEY_PADDING_BOTTOM) + box.getDouble(IB_KEY_BORDER_BOTTOM_WIDTH)
+        )
+  }
+
+  private fun trailingInlineSpace(fragment: MapBuffer): InlineReserve {
+    if (!fragment.contains(FR_KEY_INLINE_BOX) ||
+        !(fragment.contains(FR_KEY_IS_INLINE_BOX_END) &&
+            fragment.getBoolean(FR_KEY_IS_INLINE_BOX_END))) {
+      return InlineReserve.NONE
+    }
+    val box = fragment.getMapBuffer(FR_KEY_INLINE_BOX)
+    return InlineReserve(
+        margin = PixelUtil.toPixelFromDIP(box.getDouble(IB_KEY_MARGIN_RIGHT)),
+        border = PixelUtil.toPixelFromDIP(box.getDouble(IB_KEY_BORDER_RIGHT_WIDTH)),
+        padding = PixelUtil.toPixelFromDIP(box.getDouble(IB_KEY_PADDING_RIGHT)),
+    )
+  }
+
+  /**
+   * Turns an inline element's inline-axis space into real advance, without adding characters —
+   * see [InlineBoxSpacingSpan] for why that constraint matters.
+   *
+   * Emits `(start, end, span)` rather than applying anything, because there are two Spannable
+   * construction paths — `enableAndroidTextMeasurementOptimizations` chooses between them — and
+   * this rule is subtle enough that writing it twice is precisely how it comes out right in one and
+   * wrong in the other. It lives here once and both paths apply whatever it yields.
+   *
+   * `InlineBoxSpacingSpansAgreeTest` holds them to that by running the same fragments through both.
+   *
+   * The leading space hangs off the character *preceding* the element. Two cases cannot use one:
+   * - There is no preceding character when the element starts the text. A leading margin is used
+   *   instead: such an element necessarily starts the first line, and `LeadingMarginSpan` indents
+   *   only that line, which is right because a leading edge applies once no matter how often the
+   *   box wraps.
+   * - The preceding character is an attachment placeholder, which is a `ReplacementSpan` and owns
+   *   its character's advance outright. A second one fights it and the attachment loses its width.
+   *   The space goes on this element's own first character instead, drawn ahead of the glyph, which
+   *   puts it in the same place on screen.
+   *
+   * An attachment fragment emits nothing at all: [TextInlineViewPlaceholderSpan] already takes its
+   * leading and trailing space and builds them into its own advance. Adding a second span for that
+   * same space used to be harmless because this was a `MetricAffectingSpan` and a ReplacementSpan's
+   * size wins, so it was silently discarded — the duplication was real but inert. It is a
+   * ReplacementSpan now, and the two fought: a box 40 wide measured 6.
+   */
+  private inline fun inlineBoxSpacingSpans(
+      leading: InlineReserve,
+      trailing: InlineReserve,
+      start: Int,
+      end: Int,
+      isAttachment: Boolean,
+      previousWasAttachment: Boolean,
+      emit: (start: Int, end: Int, span: Any) -> Unit,
+  ) {
+    if (isAttachment || end <= start) {
+      return
+    }
+    if (leading.total > 0f) {
+      when {
+        start == 0 -> emit(0, end, LeadingMarginSpan.Standard(Math.round(leading.total), 0))
+        previousWasAttachment ->
+            emit(
+                start,
+                start + 1,
+                InlineBoxSpacingSpan(
+                    leading.margin, leading.border, leading.padding, spaceBefore = true))
+        else ->
+            emit(
+                start - 1,
+                start,
+                InlineBoxSpacingSpan(
+                    leading.margin,
+                    leading.border,
+                    leading.padding,
+                    spacingTakesFollowingBackground = true))
+      }
+    }
+    if (trailing.total > 0f) {
+      emit(end - 1, end, InlineBoxSpacingSpan(trailing.margin, trailing.border, trailing.padding))
+    }
+  }
+
+  /**
+   * Emits the box-painting span for a whole inline element.
+   *
+   * The decorations are stamped on *every* fragment of an element, so adding a
+   * span per fragment paints one box per fragment — visibly, two overlapping
+   * boxes for an element that produced two fragments. The box belongs to the
+   * element, so it is emitted once, spanning from the fragment flagged as the
+   * element's start to the one flagged as its end. That is the same grouping
+   * the iOS painting pass does.
+   *
+   * Returns the still-open element, or null when none is open. Shared by BOTH
+   * Spannable construction paths, like [inlineBoxSpacingSpans] and for the
+   * same reason: a rule applied on one path only is invisible on screen when
+   * the other is enabled.
+   */
+  private inline fun applyInlineBoxDecoration(
+      box: MapBuffer?,
+      isStart: Boolean,
+      isEnd: Boolean,
+      start: Int,
+      end: Int,
+      pending: PendingInlineBox?,
+      followsAttachment: Boolean,
+      emit: (start: Int, end: Int, span: Any) -> Unit,
+  ): PendingInlineBox? {
+    if (box == null) {
+      return pending
+    }
+    val open = if (isStart) PendingInlineBox(start, followsAttachment) else pending
+    if (!isEnd) {
+      return open
+    }
+    if (open != null && end > open.start) {
+      inlineBoxDecorationSpan(box, open.followsAttachment)?.let { emit(open.start, end, it) }
+    }
+    return null
+  }
+
+  /** An inline element whose box has opened but not yet closed. */
+  private class PendingInlineBox(val start: Int, val followsAttachment: Boolean)
+
+  private fun inlineBoxOf(fragment: MapBuffer): MapBuffer? =
+      if (fragment.contains(FR_KEY_INLINE_BOX)) fragment.getMapBuffer(FR_KEY_INLINE_BOX) else null
+
+  private fun isInlineBoxStart(fragment: MapBuffer): Boolean =
+      fragment.contains(FR_KEY_IS_INLINE_BOX_START) &&
+          fragment.getBoolean(FR_KEY_IS_INLINE_BOX_START)
+
+  private fun isInlineBoxEnd(fragment: MapBuffer): Boolean =
+      fragment.contains(FR_KEY_IS_INLINE_BOX_END) && fragment.getBoolean(FR_KEY_IS_INLINE_BOX_END)
+
   @OptIn(UnstableReactNativeAPI::class)
   private fun buildSpannableFromFragments(
       assets: AssetManager,
@@ -250,6 +553,9 @@ internal object TextLayoutManager {
     // single spans, avoiding duplicate draws (e.g. multiple accent marks in HighlighterTextSpan).
     var pendingEffects: List<TextAttributeProps.TextEffectEntry> = emptyList()
     var pendingEffectStart = 0
+    // The inline element whose box is still open, or null.
+    var openInlineBox: PendingInlineBox? = null
+    var previousWasAttachment = false
 
     for (i in 0 until fragments.count) {
       val fragment = fragments.getMapBuffer(i)
@@ -263,16 +569,50 @@ internal object TextLayoutManager {
       )
 
       val end = sb.length
+      val isAttachment =
+          fragment.contains(FR_KEY_IS_ATTACHMENT) && fragment.getBoolean(FR_KEY_IS_ATTACHMENT)
+      inlineBoxSpacingSpans(
+          leadingInlineSpace(fragment),
+          trailingInlineSpace(fragment),
+          start,
+          end,
+          isAttachment,
+          previousWasAttachment,
+      ) { spanStart, spanEnd, span ->
+        ops.add(SetSpanOperation(spanStart, spanEnd, span))
+      }
+      openInlineBox =
+          applyInlineBoxDecoration(
+              inlineBoxOf(fragment),
+              isInlineBoxStart(fragment),
+              isInlineBoxEnd(fragment),
+              start,
+              end,
+              openInlineBox,
+              previousWasAttachment,
+          ) { spanStart, spanEnd, span ->
+            ops.add(SetSpanOperation(spanStart, spanEnd, span))
+          }
+      previousWasAttachment = isAttachment
       val reactTag =
           if (fragment.contains(FR_KEY_REACT_TAG)) fragment.getInt(FR_KEY_REACT_TAG) else View.NO_ID
-      if (fragment.contains(FR_KEY_IS_ATTACHMENT) && fragment.getBoolean(FR_KEY_IS_ATTACHMENT)) {
+      if (isAttachment) {
         val width = PixelUtil.toPixelFromSP(fragment.getDouble(FR_KEY_WIDTH))
         val height = PixelUtil.toPixelFromSP(fragment.getDouble(FR_KEY_HEIGHT))
+        val baselineFromTop =
+            if (fragment.contains(FR_KEY_ATOMIC_INLINE_BASELINE))
+                PixelUtil.toPixelFromSP(fragment.getDouble(FR_KEY_ATOMIC_INLINE_BASELINE))
+            else height
         ops.add(
             SetSpanOperation(
                 sb.length - 1,
                 sb.length,
-                TextInlineViewPlaceholderSpan(reactTag, width.toInt(), height.toInt()),
+                TextInlineViewPlaceholderSpan(
+                    reactTag,
+                    width.toInt(),
+                    height.toInt(),
+                    baselineFromTop.toInt(),
+                ),
             )
         )
       } else if (end >= start) {
@@ -307,6 +647,28 @@ internal object TextLayoutManager {
         if (!textAttributes.letterSpacing.isNaN()) {
           ops.add(
               SetSpanOperation(start, end, CustomLetterSpacingSpan(textAttributes.letterSpacing))
+          )
+        }
+        if (!textAttributes.baselineShift.isNaN() && textAttributes.baselineShift != 0f) {
+          // Numeric baseline shift, dp -> px; positive raises. TextPaint's
+          // baselineShift moves the BASELINE down for positive values, so the
+          // raise is the negation (the same sign dance SuperscriptSpan does
+          // with the negative ascent).
+          val shiftPx = PixelUtil.toPixelFromDIP(textAttributes.baselineShift).toInt()
+          ops.add(
+              SetSpanOperation(
+                  start,
+                  end,
+                  object : android.text.style.MetricAffectingSpan() {
+                    override fun updateDrawState(tp: android.text.TextPaint) {
+                      tp.baselineShift -= shiftPx
+                    }
+
+                    override fun updateMeasureState(tp: android.text.TextPaint) {
+                      tp.baselineShift -= shiftPx
+                    }
+                  },
+              )
           )
         }
         ops.add(SetSpanOperation(start, end, ReactAbsoluteSizeSpan(textAttributes.fontSize)))
@@ -424,6 +786,17 @@ internal object TextLayoutManager {
       val isAttachment: Boolean,
       val width: Double,
       val height: Double,
+      // The box's own baseline, from its top, in the same units as `height`.
+      val atomicInlineBaseline: Double,
+      // box-model-scope.md G3, in px.
+      val leadingInlineSpace: InlineReserve,
+      val trailingInlineSpace: InlineReserve,
+      // G4/G5: the element's painted box, carried so this path emits the
+      // decoration span too — a rule applied on one construction path only is
+      // invisible on screen when the other is enabled.
+      val inlineBox: MapBuffer?,
+      val isInlineBoxStart: Boolean,
+      val isInlineBoxEnd: Boolean,
   )
 
   @OptIn(UnstableReactNativeAPI::class)
@@ -467,6 +840,20 @@ internal object TextLayoutManager {
                   } else {
                     Double.NaN
                   },
+              atomicInlineBaseline =
+                  if (fragment.contains(FR_KEY_ATOMIC_INLINE_BASELINE)) {
+                    fragment.getDouble(FR_KEY_ATOMIC_INLINE_BASELINE)
+                  } else if (fragment.contains(FR_KEY_HEIGHT)) {
+                    // No baseline of its own: the bottom edge is the baseline.
+                    fragment.getDouble(FR_KEY_HEIGHT)
+                  } else {
+                    Double.NaN
+                  },
+              leadingInlineSpace = leadingInlineSpace(fragment),
+              trailingInlineSpace = trailingInlineSpace(fragment),
+              inlineBox = inlineBoxOf(fragment),
+              isInlineBoxStart = isInlineBoxStart(fragment),
+              isInlineBoxEnd = isInlineBoxEnd(fragment),
           )
       )
     }
@@ -477,6 +864,9 @@ internal object TextLayoutManager {
     // single spans, avoiding duplicate draws (e.g. multiple accent marks in HighlighterTextSpan).
     var pendingEffects: List<TextAttributeProps.TextEffectEntry> = emptyList()
     var pendingEffectStart = 0
+    var previousWasAttachment = false
+    // The inline element whose box is still open, or null.
+    var openInlineBox: PendingInlineBox? = null
 
     var start = 0
     for ((i, fragment) in parsedFragments.withIndex()) {
@@ -484,12 +874,52 @@ internal object TextLayoutManager {
       val spanFlags =
           if (start == 0) Spannable.SPAN_INCLUSIVE_INCLUSIVE else Spannable.SPAN_EXCLUSIVE_INCLUSIVE
 
+      // G3: inline-axis space as advance, expressed without adding characters.
+      inlineBoxSpacingSpans(
+          fragment.leadingInlineSpace,
+          fragment.trailingInlineSpace,
+          start,
+          end,
+          fragment.isAttachment,
+          previousWasAttachment,
+      ) { spanStart, spanEnd, span ->
+        spannable.setSpan(
+            span,
+            spanStart,
+            spanEnd,
+            // The same rule `SetSpanOperation` applies on the other path: a span at the very
+            // start of the text extends left too, everything else only right.
+            if (spanStart == 0) Spannable.SPAN_INCLUSIVE_INCLUSIVE
+            else Spannable.SPAN_EXCLUSIVE_INCLUSIVE,
+        )
+      }
+      openInlineBox =
+          applyInlineBoxDecoration(
+              fragment.inlineBox,
+              fragment.isInlineBoxStart,
+              fragment.isInlineBoxEnd,
+              start,
+              end,
+              openInlineBox,
+              previousWasAttachment,
+          ) { spanStart, spanEnd, span ->
+            spannable.setSpan(
+                span,
+                spanStart,
+                spanEnd,
+                if (spanStart == 0) Spannable.SPAN_INCLUSIVE_INCLUSIVE
+                else Spannable.SPAN_EXCLUSIVE_INCLUSIVE,
+            )
+          }
+      previousWasAttachment = fragment.isAttachment
+
       if (fragment.isAttachment) {
         spannable.setSpan(
             TextInlineViewPlaceholderSpan(
                 fragment.reactTag,
                 PixelUtil.toPixelFromSP(fragment.width).toInt(),
                 PixelUtil.toPixelFromSP(fragment.height).toInt(),
+                PixelUtil.toPixelFromSP(fragment.atomicInlineBaseline).toInt(),
             ),
             start,
             end,
@@ -783,6 +1213,7 @@ internal object TextLayoutManager {
       ellipsizeMode: TextUtils.TruncateAt?,
       maxNumberOfLines: Int,
       paint: TextPaint,
+      floatExclusionsDip: FloatArray? = null,
   ): Layout {
     // If our text is boring, and fully fits in the available space, we can represent the text
     // layout as a BoringLayout
@@ -827,6 +1258,7 @@ internal object TextLayoutManager {
         ellipsizeMode,
         maxNumberOfLines,
         paint,
+        floatExclusionsDip,
     )
   }
 
@@ -841,28 +1273,93 @@ internal object TextLayoutManager {
       ellipsizeMode: TextUtils.TruncateAt?,
       maxNumberOfLines: Int,
       paint: TextPaint,
+      floatExclusionsDip: FloatArray? = null,
   ): Layout {
-    val builder =
-        StaticLayout.Builder.obtain(text, 0, text.length, paint, layoutWidth)
-            .setAlignment(alignment)
-            .setLineSpacing(0f, 1f)
-            .setIncludePad(includeFontPadding)
-            .setBreakStrategy(textBreakStrategy)
-            .setHyphenationFrequency(hyphenationFrequency)
+    // A fresh builder per layout, deliberately. `StaticLayout.Builder.obtain`
+    // hands out a POOLED builder and `build()` recycles it, so a builder that
+    // has produced a layout cannot produce another — reusing one for the
+    // second pass below threw a NullPointerException out of `build()`.
+    fun newBuilder(): StaticLayout.Builder {
+      val builder =
+          StaticLayout.Builder.obtain(text, 0, text.length, paint, layoutWidth)
+              .setAlignment(alignment)
+              .setLineSpacing(0f, 1f)
+              .setIncludePad(includeFontPadding)
+              .setBreakStrategy(textBreakStrategy)
+              .setHyphenationFrequency(hyphenationFrequency)
 
-    if (maxNumberOfLines != ReactConstants.UNSET && maxNumberOfLines != 0) {
-      builder.setEllipsize(ellipsizeMode).setMaxLines(maxNumberOfLines)
+      if (maxNumberOfLines != ReactConstants.UNSET && maxNumberOfLines != 0) {
+        builder.setEllipsize(ellipsizeMode).setMaxLines(maxNumberOfLines)
+      }
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        builder.setJustificationMode(justificationMode)
+      }
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        builder.setUseLineSpacingFromFallbacks(true)
+      }
+
+      return builder
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      builder.setJustificationMode(justificationMode)
+    if (floatExclusionsDip != null && floatExclusionsDip.isNotEmpty()) {
+      return buildLayoutWithFloatIndents(::newBuilder, floatExclusionsDip)
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-      builder.setUseLineSpacingFromFallbacks(true)
+    return newBuilder().build()
+  }
+
+  /**
+   * A layout whose lines shorten beside the floats intruding on it (CSS2 §9.5).
+   *
+   * `setIndents` is per LINE, and which lines a float covers depends on where the lines fall — so
+   * the layout is built once to learn their tops, then rebuilt with the indents that band implies.
+   * Laying out twice is confined to content that actually has a float beside it, which is rare;
+   * estimating line positions from the font metrics instead would be wrong for any run whose lines
+   * differ in height, which is exactly the mixed content floats are used with.
+   */
+  private fun buildLayoutWithFloatIndents(
+      newBuilder: () -> StaticLayout.Builder,
+      floatExclusionsDip: FloatArray,
+  ): Layout {
+    val probe = newBuilder().build()
+    val lineCount = probe.lineCount
+    if (lineCount == 0) {
+      return probe
     }
 
-    return builder.build()
+    val leftIndentsPx = IntArray(lineCount)
+    val rightIndentsPx = IntArray(lineCount)
+    var anyIndent = false
+    for (line in 0 until lineCount) {
+      val lineTopPx = probe.getLineTop(line).toFloat()
+      val lineBottomPx = probe.getLineBottom(line).toFloat()
+      var i = 0
+      while (i + 3 < floatExclusionsDip.size) {
+        // Converted here, once, because everything below compares against a
+        // LINE coordinate and those are pixels. Comparing a DIP band with a
+        // pixel line indents by a density's worth of the intended amount, and
+        // that reads as a layout bug rather than a unit one.
+        val bandTopPx = PixelUtil.toPixelFromDIP(floatExclusionsDip[i])
+        val bandBottomPx = PixelUtil.toPixelFromDIP(floatExclusionsDip[i + 1])
+        // A line is beside a float when their extents OVERLAP; touching at an
+        // edge is the next line down, not this one.
+        if (lineBottomPx > bandTopPx && lineTopPx < bandBottomPx) {
+          val leftInsetPx = ceil(PixelUtil.toPixelFromDIP(floatExclusionsDip[i + 2])).toInt()
+          val rightInsetPx = ceil(PixelUtil.toPixelFromDIP(floatExclusionsDip[i + 3])).toInt()
+          if (leftInsetPx > leftIndentsPx[line]) leftIndentsPx[line] = leftInsetPx
+          if (rightInsetPx > rightIndentsPx[line]) rightIndentsPx[line] = rightInsetPx
+          if (leftInsetPx > 0 || rightInsetPx > 0) anyIndent = true
+        }
+        i += 4
+      }
+    }
+
+    if (!anyIndent) {
+      return probe
+    }
+    return newBuilder().setIndents(leftIndentsPx, rightIndentsPx).build()
   }
 
   /**
@@ -954,6 +1451,7 @@ internal object TextLayoutManager {
       heightYogaMeasureMode: YogaMeasureMode,
       reactTextViewManagerCallback: ReactTextViewManagerCallback?,
       textEffectRegistry: TextEffectRegistry? = null,
+      floatExclusionsDip: FloatArray? = null,
   ): Layout {
     val text = getOrCreateSpannableForText(
         assets,
@@ -969,7 +1467,13 @@ internal object TextLayoutManager {
     } else {
       val baseTextAttributes =
           TextAttributeProps.fromMapBuffer(attributedString.getMapBuffer(AS_KEY_BASE_ATTRIBUTES))
-      paint = scratchPaintWithAttributes(baseTextAttributes, assets, fontWeightAdjustment)
+      val scratch = scratchPaintWithAttributes(baseTextAttributes, assets, fontWeightAdjustment)
+      // A run-tagged layout outlives the measurement (the run handoff parks
+      // it for mounting), and Layout retains its paint — it cannot share the
+      // thread-local scratch paint the next measurement will mutate.
+      paint =
+          if (attributedString.contains(AS_KEY_RUN_TAG)) TextPaint().apply { set(scratch) }
+          else scratch
     }
 
     return createLayout(
@@ -981,6 +1485,7 @@ internal object TextLayoutManager {
         widthYogaMeasureMode,
         height,
         heightYogaMeasureMode,
+        floatExclusionsDip,
     )
         .layout
   }
@@ -994,6 +1499,7 @@ internal object TextLayoutManager {
       widthYogaMeasureMode: YogaMeasureMode,
       height: Float,
       heightYogaMeasureMode: YogaMeasureMode,
+      floatExclusionsDip: FloatArray? = null,
   ): CreateLayoutResult {
     val boring = isBoring(text, paint)
 
@@ -1052,12 +1558,19 @@ internal object TextLayoutManager {
       )
     }
 
+    // A `white-space` that forbids wrapping lays out as though there were no available width at
+    // all, so the only line breaks are the ones in the text. The container still clips it — the
+    // text overflows rather than reflowing, which is what the web does. Only elements carry the
+    // attribute; a `<Text>` never does (see ____TextStyle_InternalBase.whiteSpace).
+    val layoutWidthMode =
+        if (forbidsWrapping(attributedString)) YogaMeasureMode.UNDEFINED else widthYogaMeasureMode
+
     return CreateLayoutResult(
         createLayout(
             text,
             boring,
             width,
-            widthYogaMeasureMode,
+            layoutWidthMode,
             includeFontPadding,
             textBreakStrategy,
             hyphenationFrequency,
@@ -1066,6 +1579,7 @@ internal object TextLayoutManager {
             ellipsizeMode,
             maximumNumberOfLines,
             paint,
+            floatExclusionsDip,
         ),
         textBreakStrategy,
         justificationMode,
@@ -1274,6 +1788,7 @@ internal object TextLayoutManager {
       heightYogaMeasureMode: YogaMeasureMode,
       reactTextViewManagerCallback: ReactTextViewManagerCallback?,
       attachmentsPositions: FloatArray?,
+      floatExclusionsDip: FloatArray? = null,
       textEffectRegistry: TextEffectRegistry? = null,
   ): Long = measureText(
       assets,
@@ -1286,8 +1801,187 @@ internal object TextLayoutManager {
       heightYogaMeasureMode,
       reactTextViewManagerCallback,
       attachmentsPositions,
+      floatExclusionsDip,
       textEffectRegistry,
   )
+
+  /**
+   * Returns the laid-out rect of each fragment of [attributedString], as a flat
+   * array of `[x, y, width, height]` per fragment in fragment order.
+   *
+   * This is what lets an inline element (`<b>`, `<span>`, a nested `<Text>`)
+   * report a real box from `getBoundingClientRect()`: the containing
+   * Paragraph/View unions the rects of the fragments belonging to an element
+   * and stamps the result onto it (text-children-plan.md 3.G).
+   *
+   * A fragment spanning several lines reports the union of its line pieces —
+   * the same box the web reports for a wrapped inline element.
+   *
+   * Called only when a string actually has multiple fragments (i.e. contains
+   * inline elements), so plain text pays nothing for it.
+   */
+  /**
+   * The last offset on a line whose horizontal position Android will measure.
+   *
+   * `Layout.getHorizontal` drops a line's trailing line break before measuring
+   * within it, so an offset that sits just past one — where a fragment ending
+   * in `\n` puts it — is refused with "offset should be less than line limit".
+   * The break carries no advance, so the position asked for is the one at the
+   * end of the line's text anyway.
+   */
+  private fun measurableEndOfLine(layout: Layout, line: Int): Int {
+    val lineEnd = layout.getLineEnd(line)
+    return if (lineEnd > layout.getLineStart(line) && layout.text[lineEnd - 1] == '\n') {
+      lineEnd - 1
+    } else {
+      lineEnd
+    }
+  }
+
+  @JvmStatic
+  @OptIn(UnstableReactNativeAPI::class)
+  fun measureFragmentRects(
+      assets: AssetManager,
+      attributedString: MapBuffer,
+      paragraphAttributes: MapBuffer,
+      width: Float,
+      widthYogaMeasureMode: YogaMeasureMode,
+      height: Float,
+      heightYogaMeasureMode: YogaMeasureMode,
+      floatExclusionsDip: FloatArray? = null,
+  ): FloatArray {
+    if (!attributedString.contains(AS_KEY_FRAGMENTS)) {
+      return FloatArray(0)
+    }
+    val fragments = attributedString.getMapBuffer(AS_KEY_FRAGMENTS)
+    if (fragments.count == 0) {
+      return FloatArray(0)
+    }
+
+    val layout =
+        createLayoutForMeasurement(
+            assets,
+            0,
+            attributedString,
+            paragraphAttributes,
+            width,
+            widthYogaMeasureMode,
+            height,
+            heightYogaMeasureMode,
+            null,
+            null,
+            floatExclusionsDip,
+        )
+
+    val rects = FloatArray(fragments.count * 4)
+    val text = layout.text
+    var offset = 0
+    var index = 0
+    // The attachment-preceded reserve placement shifts where the start pen
+    // sits — see the border-box correction below.
+    var previousWasAttachment = false
+    for (fragment in fragments) {
+      val fragmentText = fragment.mapBufferValue.getString(FR_KEY_STRING)
+      // An attachment is represented by a single placeholder character.
+      val length = fragmentText.length
+      val start = offset
+      val end = (offset + length).coerceAtMost(text.length)
+      offset += length
+      val followsAttachment = previousWasAttachment
+      previousWasAttachment =
+          fragment.mapBufferValue.contains(FR_KEY_IS_ATTACHMENT) &&
+              fragment.mapBufferValue.getBoolean(FR_KEY_IS_ATTACHMENT)
+
+      if (length == 0) {
+        // An inline element with no text of its own still has a box: zero wide,
+        // on the line it sits on, as tall as that line (CSSOM-View §4). There
+        // are no glyphs to measure, so it is built from the line the element's
+        // position falls in and the caret position within it.
+        val isEmptyElement =
+            fragment.mapBufferValue.contains(FR_KEY_IS_EMPTY_ELEMENT) &&
+                fragment.mapBufferValue.getBoolean(FR_KEY_IS_EMPTY_ELEMENT)
+        if (isEmptyElement && text.isNotEmpty()) {
+          val at = start.coerceAtMost(text.length)
+          val line = layout.getLineForOffset(at.coerceAtMost(text.length - 1))
+          // Pixels here, points on the C++ side, like every other rect below.
+          rects[index] =
+              layout.getPrimaryHorizontal(at.coerceAtMost(measurableEndOfLine(layout, line)))
+                  .pxToDp()
+          rects[index + 1] = layout.getLineTop(line).toFloat().pxToDp()
+          rects[index + 2] = 0f
+          rects[index + 3] =
+              (layout.getLineBottom(line) - layout.getLineTop(line)).toFloat().pxToDp()
+        }
+        index += 4
+        continue
+      }
+      if (start >= text.length) {
+        index += 4
+        continue
+      }
+
+      val firstLine = layout.getLineForOffset(start)
+      val lastLine = layout.getLineForOffset(end - 1)
+
+      // Horizontal extent: the fragment's own edges on its first and last
+      // line, widened to the full line box for any line it spans entirely —
+      // which is what makes a wrapped element's union match the web's.
+      var left: Float
+      var right: Float
+      if (firstLine == lastLine) {
+        val startX =
+            layout.getPrimaryHorizontal(start.coerceAtMost(measurableEndOfLine(layout, firstLine)))
+        val endX =
+            layout.getPrimaryHorizontal(end.coerceAtMost(measurableEndOfLine(layout, lastLine)))
+        left = minOf(startX, endX)
+        right = maxOf(startX, endX)
+      } else {
+        left = layout.getLineLeft(firstLine)
+        right = layout.getLineRight(firstLine)
+        for (line in firstLine..lastLine) {
+          left = minOf(left, layout.getLineLeft(line))
+          right = maxOf(right, layout.getLineRight(line))
+        }
+      }
+
+      // An element's box is its *border* box. Pen positions include every
+      // consumed reserved advance (THE INLINE RESERVE MODEL, documented on
+      // InlineBoxSpacingSpan): at the element's start offset the pen sits at
+      // its CONTENT left edge — the leading reserve was consumed by the
+      // preceding character, outermost part first — and at its end offset at
+      // the MARGIN's outer right edge. So the border box runs from
+      // `left - (border + padding)` to `right - margin`. The one exception is
+      // an element that follows an attachment: its leading reserve rides its
+      // own first character ahead of the glyph, so the start pen sits at the
+      // margin's outer LEFT edge and the border box starts `margin` inside it.
+      val leadingReserve = leadingInlineSpace(fragment.mapBufferValue)
+      if (followsAttachment) {
+        left += leadingReserve.margin
+      } else {
+        left -= leadingReserve.border + leadingReserve.padding
+      }
+      if (firstLine == lastLine) {
+        right -= trailingInlineSpace(fragment.mapBufferValue).margin
+      }
+
+      // Block-axis padding and borders belong to the border box the element
+      // reports, even though CSS2 §10.6.1 has them overflow the line box
+      // instead of growing it — so they are never inside the line extents.
+      val (blockTop, blockBottom) = blockAxisBoxEdges(fragment.mapBufferValue)
+      val top = layout.getLineTop(firstLine).toFloat() - blockTop
+      val bottom = layout.getLineBottom(lastLine).toFloat() + blockBottom
+
+      // `Layout` works in pixels; the C++ side consumes these as points, like
+      // the attachment positions right below.
+      rects[index] = left.pxToDp()
+      rects[index + 1] = top.pxToDp()
+      rects[index + 2] = (right - left).pxToDp()
+      rects[index + 3] = (bottom - top).pxToDp()
+      index += 4
+    }
+
+    return rects
+  }
 
   @JvmStatic
   @OptIn(UnstableReactNativeAPI::class)
@@ -1302,6 +1996,7 @@ internal object TextLayoutManager {
       heightYogaMeasureMode: YogaMeasureMode,
       reactTextViewManagerCallback: ReactTextViewManagerCallback?,
       attachmentsPositions: FloatArray?,
+      floatExclusionsDip: FloatArray? = null,
       textEffectRegistry: TextEffectRegistry? = null,
   ): Long {
     // TODO(5578671): Handle text direction (see View#getTextDirectionHeuristic)
@@ -1316,7 +2011,20 @@ internal object TextLayoutManager {
         heightYogaMeasureMode,
         reactTextViewManagerCallback,
         textEffectRegistry,
+        floatExclusionsDip,
     )
+
+    if (attributedString.contains(AS_KEY_RUN_TAG)) {
+      // Park this run's layout for the mounting layer: the alternative is
+      // rebuilding the identical spannable + layout on the UI thread at
+      // mount (run-layout-reuse-plan.md).
+      RunLayoutHandoff.store(
+          attributedString.getInt(AS_KEY_RUN_TAG),
+          attributedString,
+          layout,
+          PixelUtil.getDisplayMetricDensity(),
+      )
+    }
 
     val maximumNumberOfLines =
         if (paragraphAttributes.contains(PA_KEY_MAX_NUMBER_OF_LINES))
@@ -1546,7 +2254,13 @@ internal object TextLayoutManager {
       }
 
       // Vertically align the inline view to the baseline of the line of text.
-      val placeholderTopPosition = layout.getLineBaseline(line) - placeholderHeight
+      // The box's OWN baseline goes on the line's (CSS2 §10.8.1). Subtracting
+      // the full height instead put its bottom edge there, which is only right
+      // for a box with no line boxes of its own — for one containing text it
+      // floated the whole box up by its descent, so its text sat above the
+      // text around it.
+      val placeholderTopPosition =
+          layout.getLineBaseline(line) - placeholder.baselineFromTop.toFloat()
 
       // The attachment array returns the positions of each of the attachments as
       metrics.top = placeholderTopPosition
