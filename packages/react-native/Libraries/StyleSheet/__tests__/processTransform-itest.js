@@ -39,6 +39,21 @@ describe('processTransform', () => {
       processTransform('translateX(10%)');
     });
 
+    it('should keep the percentage of a single-axis translate', () => {
+      // A percentage resolves against the element's own size, so dropping the
+      // unit here would silently mean points — a different offset for every
+      // element the style is used on.
+      expect(processTransform('translateX(-70%)')).toEqual([
+        {translateX: '-70%'},
+      ]);
+      expect(processTransform('translateY(50%)')).toEqual([
+        {translateY: '50%'},
+      ]);
+      expect(processTransform('translateX(-70px)')).toEqual([
+        {translateX: -70},
+      ]);
+    });
+
     it('should throw on object with multiple properties', () => {
       expect(() => processTransform([{scale: 0.5, translateY: 10}])).toThrow(
         'You must specify exactly one property per transform object. Passed properties: {"scale":0.5,"translateY":10}',

@@ -13,6 +13,7 @@
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
+#include <react/renderer/components/view/TransitionPrimitives.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/Props.h>
@@ -143,6 +144,81 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
         return uaDeclaresBoundary;
     }
     return uaDeclaresBoundary;
+  }
+
+  /**
+   * Everything `transition` and `animation` authored on this view
+   * (css-transitions-1, css-animations-1), behind one pointer.
+   *
+   * Side-allocated because it is 368 bytes — eleven `std::string`s of authored
+   * longhands, the zipped `Transitions`, and an `optional<CSSAnimation>` — and
+   * on essentially every view in essentially every app, all of it is empty.
+   * Inline, that is 368 bytes per view of nothing, copied again on every props
+   * clone. As a pointer it is 8, and a clone of a view with no motion copies a
+   * null pointer.
+   *
+   * The raw strings are kept, and are why this cannot simply be the parsed
+   * values: a props clone only carries the keys that CHANGED, so without
+   * somewhere to fall back to, an update would re-parse from nothing and
+   * silently drop the transitions of every view that did not restate them —
+   * which is every view, every time.
+   *
+   * Null means none authored. Read through `transitions()` and `animation()`,
+   * which answer the same way whether or not anything was.
+   */
+  struct CssMotion {
+    std::string transitionPropertyRaw{};
+    std::string transitionDurationRaw{};
+    std::string transitionDelayRaw{};
+    std::string transitionTimingFunctionRaw{};
+    Transitions transitions{};
+
+    std::string animationKeyframesRaw{};
+    std::string animationDurationRaw{};
+    std::string animationDelayRaw{};
+    std::string animationTimingFunctionRaw{};
+    std::string animationIterationCountRaw{};
+    std::string animationDirectionRaw{};
+    std::string animationFillModeRaw{};
+    std::optional<CSSAnimation> animation{};
+
+    /** Whether anything was authored, i.e. whether this is worth allocating. */
+    bool isEmpty() const
+    {
+      return transitionPropertyRaw.empty() && transitionDurationRaw.empty() && transitionDelayRaw.empty() &&
+          transitionTimingFunctionRaw.empty() && animationKeyframesRaw.empty() && animationDurationRaw.empty() &&
+          animationDelayRaw.empty() && animationTimingFunctionRaw.empty() && animationIterationCountRaw.empty() &&
+          animationDirectionRaw.empty() && animationFillModeRaw.empty();
+    }
+
+    /** Whether the authored longhands are the same ones, so the clone can share. */
+    bool rawsEqual(const CssMotion &other) const
+    {
+      return transitionPropertyRaw == other.transitionPropertyRaw &&
+          transitionDurationRaw == other.transitionDurationRaw && transitionDelayRaw == other.transitionDelayRaw &&
+          transitionTimingFunctionRaw == other.transitionTimingFunctionRaw &&
+          animationKeyframesRaw == other.animationKeyframesRaw &&
+          animationDurationRaw == other.animationDurationRaw && animationDelayRaw == other.animationDelayRaw &&
+          animationTimingFunctionRaw == other.animationTimingFunctionRaw &&
+          animationIterationCountRaw == other.animationIterationCountRaw &&
+          animationDirectionRaw == other.animationDirectionRaw && animationFillModeRaw == other.animationFillModeRaw;
+    }
+  };
+
+  std::shared_ptr<const CssMotion> cssMotion{};
+
+  /** The view's transitions; empty when none were authored. */
+  const Transitions &transitions() const
+  {
+    static const Transitions kNone{};
+    return cssMotion == nullptr ? kNone : cssMotion->transitions;
+  }
+
+  /** The view's animation; absent when none was authored. */
+  const std::optional<CSSAnimation> &animation() const
+  {
+    static const std::optional<CSSAnimation> kNone{};
+    return cssMotion == nullptr ? kNone : cssMotion->animation;
   }
 
   /*
