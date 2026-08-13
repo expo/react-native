@@ -12,7 +12,7 @@
 
 namespace facebook::yoga {
 
-bool LayoutResults::operator==(LayoutResults layout) const {
+bool LayoutResults::operator==(const LayoutResults& layout) const {
   bool isEqual = yoga::inexactEquals(position_, layout.position_) &&
       yoga::inexactEquals(dimensions_, layout.dimensions_) &&
       yoga::inexactEquals(margin_, layout.margin_) &&

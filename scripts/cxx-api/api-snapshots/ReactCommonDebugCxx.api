@@ -1812,11 +1812,20 @@ struct facebook::react::FilterFunction {
   public std::variant<Float, facebook::react::DropShadowParams> parameters;
 }
 
+struct facebook::react::FloatExclusion {
+  public Float blockEnd;
+  public Float blockStart;
+  public Float leftInset;
+  public Float rightInset;
+  public bool operator==(const facebook::react::FloatExclusion& other) const = default;
+}
+
 struct facebook::react::LayoutConstraints {
   public facebook::react::LayoutDirection layoutDirection;
   public facebook::react::Size clamp(const facebook::react::Size& size) const;
   public facebook::react::Size maximumSize;
   public facebook::react::Size minimumSize;
+  public std::vector<facebook::react::FloatExclusion> floatExclusions;
 }
 
 struct facebook::react::LayoutContext {
@@ -3663,12 +3672,14 @@ bool facebook::yoga::needsTrailingPosition(const facebook::yoga::FlexDirection a
 const char* facebook::yoga::LayoutPassReasonToString(facebook::yoga::LayoutPassReason value);
 const char* facebook::yoga::toString(facebook::yoga::Align e);
 const char* facebook::yoga::toString(facebook::yoga::BoxSizing e);
+const char* facebook::yoga::toString(facebook::yoga::Clear e);
 const char* facebook::yoga::toString(facebook::yoga::Dimension e);
 const char* facebook::yoga::toString(facebook::yoga::Direction e);
 const char* facebook::yoga::toString(facebook::yoga::Display e);
 const char* facebook::yoga::toString(facebook::yoga::Edge e);
 const char* facebook::yoga::toString(facebook::yoga::Errata e);
 const char* facebook::yoga::toString(facebook::yoga::FlexDirection e);
+const char* facebook::yoga::toString(facebook::yoga::FloatSide e);
 const char* facebook::yoga::toString(facebook::yoga::GridTrackType e);
 const char* facebook::yoga::toString(facebook::yoga::Gutter e);
 const char* facebook::yoga::toString(facebook::yoga::Justify e);
@@ -3727,11 +3738,13 @@ constexpr facebook::yoga::Unit facebook::yoga::scopedEnum(YGUnit unscoped);
 constexpr facebook::yoga::Wrap facebook::yoga::scopedEnum(YGWrap unscoped);
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::Align>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::BoxSizing>();
+constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::Clear>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::Dimension>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::Direction>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::Display>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::Edge>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::FlexDirection>();
+constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::FloatSide>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::GridTrackType>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::Gutter>();
 constexpr int32_t facebook::yoga::ordinalCount<facebook::yoga::Justify>();
@@ -3899,12 +3912,16 @@ class facebook::yoga::Node : public YGNode {
   public void setLayoutComputedFlexBasisGeneration(uint32_t computedFlexBasisGeneration);
   public void setLayoutDimension(float lengthValue, facebook::yoga::Dimension dimension);
   public void setLayoutDirection(facebook::yoga::Direction direction);
+  public void setLayoutEscapedFloats(std::vector<facebook::yoga::PlacedFloat> floats);
   public void setLayoutHadOverflow(bool hadOverflow);
+  public void setLayoutHasClearance(bool hasClearance);
+  public void setLayoutInheritedFloats(std::vector<facebook::yoga::PlacedFloat> floats);
   public void setLayoutLastOwnerDirection(facebook::yoga::Direction direction);
   public void setLayoutMargin(float margin, facebook::yoga::PhysicalEdge edge);
   public void setLayoutMeasuredDimension(float measuredDimension, facebook::yoga::Dimension dimension);
   public void setLayoutPadding(float padding, facebook::yoga::PhysicalEdge edge);
   public void setLayoutPosition(float position, facebook::yoga::PhysicalEdge edge);
+  public void setLayoutStaticPositionBlockStart(facebook::yoga::FloatOptional staticPosition);
   public void setLineIndex(size_t lineIndex);
   public void setMeasureFunc(YGMeasureFunc measureFunc);
   public void setMinContentHeight(facebook::yoga::FloatOptional minContentHeight) noexcept;
@@ -3920,6 +3937,7 @@ class facebook::yoga::Node : public YGNode {
 class facebook::yoga::Style {
   public bool flexEndMarginIsAuto(facebook::yoga::FlexDirection axis, facebook::yoga::Direction direction) const;
   public bool flexStartMarginIsAuto(facebook::yoga::FlexDirection axis, facebook::yoga::Direction direction) const;
+  public bool formattingContextRoot() const;
   public bool horizontalInsetsDefined() const;
   public bool inlineEndMarginIsAuto(facebook::yoga::FlexDirection axis, facebook::yoga::Direction direction) const;
   public bool inlineStartMarginIsAuto(facebook::yoga::FlexDirection axis, facebook::yoga::Direction direction) const;
@@ -3947,6 +3965,7 @@ class facebook::yoga::Style {
   public facebook::yoga::Align alignItems() const;
   public facebook::yoga::Align alignSelf() const;
   public facebook::yoga::BoxSizing boxSizing() const;
+  public facebook::yoga::Clear clear() const;
   public facebook::yoga::Direction direction() const;
   public facebook::yoga::Display display() const;
   public facebook::yoga::FlexDirection flexDirection() const;
@@ -3956,6 +3975,7 @@ class facebook::yoga::Style {
   public facebook::yoga::FloatOptional flexShrink() const;
   public facebook::yoga::FloatOptional resolvedMaxDimension(facebook::yoga::Direction direction, facebook::yoga::Dimension axis, float referenceLength, float ownerWidth) const;
   public facebook::yoga::FloatOptional resolvedMinDimension(facebook::yoga::Direction direction, facebook::yoga::Dimension axis, float referenceLength, float ownerWidth) const;
+  public facebook::yoga::FloatSide floatSide() const;
   public facebook::yoga::Justify justifyContent() const;
   public facebook::yoga::Justify justifyItems() const;
   public facebook::yoga::Justify justifySelf() const;
@@ -4011,6 +4031,7 @@ class facebook::yoga::Style {
   public void setAspectRatio(facebook::yoga::FloatOptional value);
   public void setBorder(facebook::yoga::Edge edge, facebook::yoga::Style::Length value);
   public void setBoxSizing(facebook::yoga::BoxSizing value);
+  public void setClear(facebook::yoga::Clear value);
   public void setDimension(facebook::yoga::Dimension axis, facebook::yoga::Style::SizeLength value);
   public void setDirection(facebook::yoga::Direction value);
   public void setDisplay(facebook::yoga::Display value);
@@ -4020,6 +4041,8 @@ class facebook::yoga::Style {
   public void setFlexGrow(facebook::yoga::FloatOptional value);
   public void setFlexShrink(facebook::yoga::FloatOptional value);
   public void setFlexWrap(facebook::yoga::Wrap value);
+  public void setFloatSide(facebook::yoga::FloatSide value);
+  public void setFormattingContextRoot(bool value);
   public void setGap(facebook::yoga::Gutter gutter, facebook::yoga::Style::Length value);
   public void setGridAutoColumnAt(size_t index, facebook::yoga::GridTrackSize value);
   public void setGridAutoColumns(facebook::yoga::GridTrackList value);
@@ -4126,6 +4149,15 @@ enum facebook::yoga::BoxSizing : uint8_t {
   ContentBox,
 }
 
+enum facebook::yoga::Clear : uint8_t {
+  Both,
+  InlineEnd,
+  InlineStart,
+  Left,
+  None,
+  Right,
+}
+
 enum facebook::yoga::Dimension : uint8_t {
   Height,
   Width,
@@ -4138,6 +4170,7 @@ enum facebook::yoga::Direction : uint8_t {
 }
 
 enum facebook::yoga::Display : uint8_t {
+  Block,
   Contents,
   Flex,
   Grid,
@@ -4172,6 +4205,14 @@ enum facebook::yoga::FlexDirection : uint8_t {
   ColumnReverse,
   Row,
   RowReverse,
+}
+
+enum facebook::yoga::FloatSide : uint8_t {
+  InlineEnd,
+  InlineStart,
+  Left,
+  None,
+  Right,
 }
 
 enum facebook::yoga::GridLineType : uint8_t {
@@ -4432,12 +4473,16 @@ struct facebook::yoga::LayoutData {
 
 struct facebook::yoga::LayoutResults {
   public bool hadOverflow() const;
-  public bool operator==(facebook::yoga::LayoutResults layout) const;
+  public bool hasClearance() const;
+  public bool operator==(const facebook::yoga::LayoutResults& layout) const;
+  public const std::vector<facebook::yoga::PlacedFloat>& escapedFloats() const;
+  public const std::vector<facebook::yoga::PlacedFloat>& inheritedFloats() const;
   public facebook::yoga::CachedMeasurement cachedLayout;
   public facebook::yoga::Direction direction() const;
   public facebook::yoga::Direction lastOwnerDirection;
   public facebook::yoga::FloatOptional computedAutoMinMainSize;
   public facebook::yoga::FloatOptional computedFlexBasis;
+  public facebook::yoga::FloatOptional staticPositionBlockStart;
   public float border(facebook::yoga::PhysicalEdge physicalEdge) const;
   public float dimension(facebook::yoga::Dimension axis) const;
   public float margin(facebook::yoga::PhysicalEdge physicalEdge) const;
@@ -4457,12 +4502,27 @@ struct facebook::yoga::LayoutResults {
   public void setBorder(facebook::yoga::PhysicalEdge physicalEdge, float dimension);
   public void setDimension(facebook::yoga::Dimension axis, float dimension);
   public void setDirection(facebook::yoga::Direction direction);
+  public void setEscapedFloats(std::vector<facebook::yoga::PlacedFloat> floats);
   public void setHadOverflow(bool hadOverflow);
+  public void setHasClearance(bool hasClearance);
+  public void setInheritedFloats(std::vector<facebook::yoga::PlacedFloat> floats);
   public void setMargin(facebook::yoga::PhysicalEdge physicalEdge, float dimension);
   public void setMeasuredDimension(facebook::yoga::Dimension axis, float dimension);
   public void setPadding(facebook::yoga::PhysicalEdge physicalEdge, float dimension);
   public void setPosition(facebook::yoga::PhysicalEdge physicalEdge, float dimension);
   public void setRawDimension(facebook::yoga::Dimension axis, float dimension);
+}
+
+struct facebook::yoga::LayoutResults::FloatLists {
+  public std::vector<facebook::yoga::PlacedFloat> escaped;
+  public std::vector<facebook::yoga::PlacedFloat> inherited;
+}
+
+struct facebook::yoga::PlacedFloat {
+  public facebook::yoga::FloatSide side;
+  public float blockEnd;
+  public float blockStart;
+  public float inlineExtent;
 }
 
 template <size_t BufferSize>
@@ -4478,6 +4538,18 @@ class facebook::yoga::SmallValueBuffer {
   public uint16_t replace(uint16_t index, uint64_t value);
   public uint32_t get32(uint16_t index) const;
   public uint64_t get64(uint16_t index) const;
+}
+
+template <typename T>
+class facebook::yoga::DeepCopyPtr {
+  public DeepCopyPtr() = default;
+  public DeepCopyPtr(const facebook::yoga::DeepCopyPtr& other);
+  public DeepCopyPtr(facebook::yoga::DeepCopyPtr&&) noexcept = default;
+  public T& ensure();
+  public const T* get() const;
+  public facebook::yoga::DeepCopyPtr& operator=(const facebook::yoga::DeepCopyPtr& other);
+  public facebook::yoga::DeepCopyPtr& operator=(facebook::yoga::DeepCopyPtr&&) noexcept = default;
+  public ~DeepCopyPtr() = default;
 }
 
 template <typename T>
