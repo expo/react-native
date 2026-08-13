@@ -17177,17 +17177,21 @@ __DEV__ &&
       hostContext,
       internalInstanceHandle
     ) {
+      // When string children are enabled, a bare string under any host
+      // component is allowed; each string becomes a `#text` node holding its
+      // character data directly.
       hostContext.isInAParentText ||
+        (null != reactPrivateInterface.ReactNativeFeatureFlags &&
+          reactPrivateInterface.ReactNativeFeatureFlags.enableStringChildren()) ||
         console.error(
           "Text strings must be rendered within a <Text> component."
         );
       hostContext = allocateTag();
       return {
-        node: createNode(
+        node: createTextNode(
           hostContext,
-          "RCTRawText",
+          text,
           rootContainerInstance.containerTag,
-          { text: text },
           internalInstanceHandle
         )
       };
@@ -20102,6 +20106,7 @@ __DEV__ &&
       fabricStartViewTransitionReadyFinished =
         reactPrivateInterface.fabricUIManager.startViewTransitionReadyFinished,
       createNode = reactPrivateInterface.fabricUIManager.createNode,
+      createTextNode = reactPrivateInterface.fabricUIManager.createTextNode,
       cloneNodeWithNewChildren =
         reactPrivateInterface.fabricUIManager.cloneNodeWithNewChildren,
       cloneNodeWithNewChildrenAndProps =

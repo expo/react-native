@@ -379,11 +379,11 @@ const char facebook::react::ImageManagerKey[];
 const char facebook::react::InlineContentComponentName[];
 const char facebook::react::ModalHostViewComponentName[];
 const char facebook::react::ParagraphComponentName[];
-const char facebook::react::RawTextComponentName[];
 const char facebook::react::RootComponentName[];
 const char facebook::react::RuntimeSchedulerKey[];
 const char facebook::react::ScrollViewComponentName[];
 const char facebook::react::TextComponentName[];
+const char facebook::react::TextNodeComponentName[];
 const char facebook::react::ViewComponentName[];
 const facebook::react::EventTag facebook::react::EMPTY_EVENT_TAG;
 constexpr auto facebook::react::kSimpleThreadSafeCacheSizeCap;
@@ -552,7 +552,6 @@ using facebook::react::RawCallback = std::function<void(facebook::jsi::Runtime&)
 using facebook::react::RawPropsPropNameHash = uint32_t;
 using facebook::react::RawPropsPropNameLength = uint16_t;
 using facebook::react::RawPropsValueIndex = uint16_t;
-using facebook::react::RawTextComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::RawTextShadowNode>;
 using facebook::react::RootComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::RootShadowNode>;
 using facebook::react::RuntimeExecutor = std::function<void(std::function<void(facebook::jsi::Runtime& runtime)>&& callback)>;
 using facebook::react::RuntimeSchedulerRenderingUpdate = std::function<void()>;
@@ -567,7 +566,6 @@ using facebook::react::SharedEventEmitter = std::shared_ptr<facebook::react::Eve
 using facebook::react::SharedEventPayload = std::shared_ptr<const facebook::react::EventPayload>;
 using facebook::react::SharedEventTarget = std::shared_ptr<facebook::react::EventTarget>;
 using facebook::react::SharedParagraphAttributes = std::shared_ptr<const facebook::react::ParagraphAttributes>;
-using facebook::react::SharedRawTextProps = std::shared_ptr<const facebook::react::RawTextProps>;
 using facebook::react::SharedScrollViewProps = std::shared_ptr<const facebook::react::ScrollViewProps>;
 using facebook::react::SharedShadowNodeFamily = std::shared_ptr<const facebook::react::ShadowNodeFamily>;
 using facebook::react::SharedTextAttributes = std::shared_ptr<const facebook::react::TextAttributes>;
@@ -3337,17 +3335,6 @@ class facebook::react::RawPropsParser {
   public void prepare() noexcept;
 }
 
-class facebook::react::RawTextProps : public facebook::react::Props {
-  public RawTextProps() = default;
-  public RawTextProps(const facebook::react::PropsParserContext& context, const facebook::react::RawTextProps& sourceProps, const facebook::react::RawProps& rawProps);
-  public std::string text;
-  public virtual facebook::react::ComponentName getDiffPropsImplementationTarget() const override;
-  public virtual folly::dynamic getDiffProps(const facebook::react::Props* prevProps) const override;
-}
-
-class facebook::react::RawTextShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::RawTextComponentName, facebook::react::ShadowNode, facebook::react::RawTextProps> {
-}
-
 class facebook::react::RawValue {
   public RawValue() noexcept;
   public RawValue(const folly::dynamic& dynamic) noexcept;
@@ -3727,6 +3714,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   FormsStackingContext,
   FormsView,
   Hidden,
+  InlineText,
   KeyboardFocusable,
   LeafYogaNode,
   MeasurableYogaNode,
@@ -4061,6 +4049,22 @@ class facebook::react::TextMeasurement::Attachment {
   public facebook::react::Rect frame;
 }
 
+class facebook::react::TextNodeComponentDescriptor : public facebook::react::ConcreteComponentDescriptor<facebook::react::TextNodeShadowNode> {
+  public TextNodeComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters);
+}
+
+class facebook::react::TextNodeProps : public facebook::react::Props {
+  public TextNodeProps() = default;
+  public TextNodeProps(const facebook::react::PropsParserContext& context, const facebook::react::TextNodeProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public TextNodeProps(std::string text);
+  public std::string text;
+}
+
+class facebook::react::TextNodeShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::TextNodeComponentName, facebook::react::ShadowNode, facebook::react::TextNodeProps> {
+  public const std::string& getText() const;
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+}
+
 class facebook::react::TextProps : public facebook::react::Props, public facebook::react::BaseTextProps {
   public TextProps() = default;
   public TextProps(const facebook::react::PropsParserContext& context, const facebook::react::TextProps& sourceProps, const facebook::react::RawProps& rawProps);
@@ -4219,6 +4223,7 @@ class facebook::react::UIManager : public facebook::react::ShadowTreeDelegate {
   public std::shared_ptr<const facebook::react::ShadowNode> getNewestCloneOfShadowNode(const facebook::react::ShadowNode& shadowNode) const;
   public std::shared_ptr<facebook::react::ShadowNode> cloneNode(const facebook::react::ShadowNode& shadowNode, const std::shared_ptr<const std::vector<std::shared_ptr<const facebook::react::ShadowNode>>>& children, facebook::react::RawProps rawProps) const;
   public std::shared_ptr<facebook::react::ShadowNode> createNode(facebook::react::Tag tag, const std::string& componentName, facebook::react::SurfaceId surfaceId, facebook::react::RawProps props, facebook::react::InstanceHandle::Shared instanceHandle) const;
+  public std::shared_ptr<facebook::react::ShadowNode> createTextNode(facebook::react::Tag tag, const std::string& text, facebook::react::SurfaceId surfaceId, facebook::react::InstanceHandle::Shared instanceHandle) const;
   public virtual facebook::react::RootShadowNode::Unshared shadowTreeWillCommit(const facebook::react::ShadowTree& shadowTree, const facebook::react::RootShadowNode::Shared& oldRootShadowNode, const facebook::react::RootShadowNode::Unshared& newRootShadowNode, const facebook::react::ShadowTree::CommitOptions& commitOptions) const override;
   public virtual void shadowTreeDidCommit(const facebook::react::ShadowTree& shadowTree, const facebook::react::RootShadowNode::Shared& rootShadowNode, const std::vector<const facebook::react::LayoutableShadowNode*>& affectedLayoutableNodes) const noexcept override;
   public virtual void shadowTreeDidFinishReactCommit(const facebook::react::ShadowTree& shadowTree) const override;
