@@ -11,13 +11,156 @@
 
 #import "RCTAttributedTextUtils.h"
 
+#include <react/renderer/textlayoutmanager/RCTTextPrimitivesConversions.h>
+
 #import <React/NSTextStorage+FontScaling.h>
 #import <React/RCTUtils.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/utils/ManagedObjectWrapper.h>
 #import <react/utils/SimpleThreadSafeCache.h>
 
+#include <list>
+#include <mutex>
+#include <unordered_map>
+
 using namespace facebook::react;
+
+namespace {
+
+/*
+ * The run TextKit storage cache (ios-run-draw-reuse-plan.md). Measuring a
+ * run builds and fully lays out its NSTextStorage stack on the layout
+ * thread; caching it by CONTENT + width lets the run view draw from it
+ * instead of converting, rebuilding, and re-shaping the identical stack on
+ * the main thread. Content keying — not take-on-remove — is deliberate: it
+ * extends the exact caching policy the C++ text measure cache already
+ * applies to the same inputs, so a measure-cache-hit re-mount (repeated
+ * content, relayout churn) still finds its storage at draw. Entries are
+ * only ever inserted whole and never mutated; the mutex is the
+ * happens-before edge for the layout-thread -> main-thread handoff, and
+ * draws happen serially on the main thread.
+ */
+struct RunStorageKey {
+  AttributedString attributedString;
+  CGFloat width;
+
+  /*
+   * Equality over exactly what glyph layout depends on: the container width,
+   * the base attributes, and each fragment's content.
+   *
+   * "Content" is `Fragment::isContentEqual` rather than a field list written
+   * out here, and that is the point. A fragment's inline box is not
+   * decoration the draw adds on top — its inline-axis margin/border/padding
+   * becomes kerning and `firstLineHeadIndent` on the NSAttributedString
+   * (RCTApplyInlineBoxSpacing), so it moves glyphs and changes where lines
+   * break. Listing fields by hand is how a key silently stops covering one:
+   * two rows in a fixed-width block with the same text and the same text
+   * attributes but different `<span>` padding are a legal cache collision
+   * under a text-and-attributes key, and they render identically.
+   * `isContentEqual` is the codebase's existing "everything measurement
+   * depends on" predicate, so a new layout-affecting field on Fragment is
+   * covered the day it lands.
+   *
+   * Deliberately NOT the fragments' parentShadowView — its layout metrics
+   * are zero at measure and stamped with real geometry by publish
+   * (inline-element rects), and they have no effect on shaping for
+   * non-attachment fragments. Attachment fragments DO layout by those
+   * metrics, which is why attachment-bearing runs are never cached (see the
+   * park site) and are rejected here too.
+   */
+  bool operator==(const RunStorageKey &other) const
+  {
+    if (width != other.width ||
+        !(attributedString.getBaseTextAttributes() == other.attributedString.getBaseTextAttributes())) {
+      return false;
+    }
+    const auto &fragments = attributedString.getFragments();
+    const auto &otherFragments = other.attributedString.getFragments();
+    if (fragments.size() != otherFragments.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < fragments.size(); i++) {
+      if (fragments[i].isAttachment() || otherFragments[i].isAttachment() ||
+          !fragments[i].isContentEqual(otherFragments[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+struct RunStorageKeyHash {
+  size_t operator()(const RunStorageKey &key) const
+  {
+    // Hash only the components equality always inspects; collisions are
+    // resolved by the full comparison above.
+    return std::hash<std::string>{}(key.attributedString.getString()) ^ std::hash<CGFloat>{}(key.width);
+  }
+};
+
+struct RunStorageState {
+  // Most-recently-used at the back. The list owns the storages; the map
+  // indexes into it.
+  std::list<std::pair<RunStorageKey, NSTextStorage *__strong>> order;
+  std::unordered_map<RunStorageKey, decltype(order)::iterator, RunStorageKeyHash> entries;
+  size_t totalChars = 0;
+};
+
+// Bounded by character count: entries hold whole laid-out TextKit stacks.
+constexpr size_t kRunStorageMaxChars = 65536;
+constexpr size_t kRunStorageMaxEntries = 256;
+
+std::mutex &runStorageMutex()
+{
+  static std::mutex mutex;
+  return mutex;
+}
+RunStorageState &runStorageState()
+{
+  static RunStorageState state;
+  return state;
+}
+
+void cacheRunTextStorage(const AttributedString &attributedString, CGFloat width, NSTextStorage *textStorage)
+{
+  auto key = RunStorageKey{.attributedString = attributedString, .width = width};
+  size_t chars = attributedString.getString().size();
+  std::lock_guard<std::mutex> lock(runStorageMutex());
+  auto &state = runStorageState();
+  auto it = state.entries.find(key);
+  if (it != state.entries.end()) {
+    state.totalChars -= it->second->first.attributedString.getString().size();
+    state.order.erase(it->second);
+    state.entries.erase(it);
+  }
+  state.order.emplace_back(key, textStorage);
+  state.entries[key] = std::prev(state.order.end());
+  state.totalChars += chars;
+  while (!state.order.empty() &&
+         (state.totalChars > kRunStorageMaxChars || state.entries.size() > kRunStorageMaxEntries)) {
+    auto &oldest = state.order.front();
+    state.totalChars -= oldest.first.attributedString.getString().size();
+    state.entries.erase(oldest.first);
+    state.order.pop_front();
+  }
+}
+
+NSTextStorage *cachedRunTextStorage(const AttributedString &attributedString, CGFloat width)
+{
+  auto key = RunStorageKey{.attributedString = attributedString, .width = width};
+  std::lock_guard<std::mutex> lock(runStorageMutex());
+  auto &state = runStorageState();
+  auto it = state.entries.find(key);
+  if (it == state.entries.end()) {
+    return nil;
+  }
+  // Touch: move to most-recently-used.
+  state.order.splice(state.order.end(), state.order, it->second);
+  it->second = std::prev(state.order.end());
+  return it->second->second;
+}
+
+} // namespace
 
 @implementation RCTTextLayoutManager {
   SimpleThreadSafeCache<AttributedString, std::shared_ptr<void>, 256> _cache;
@@ -62,10 +205,149 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
                              layoutContext:(TextLayoutContext)layoutContext
                          layoutConstraints:(LayoutConstraints)layoutConstraints
 {
-  return [self measureNSAttributedString:[self _nsAttributedStringFromAttributedString:attributedString]
+  NSAttributedString *nsAttributedString = [self _nsAttributedStringFromAttributedString:attributedString];
+
+  // A run-tagged measure caches the TextKit stack it builds — fully laid
+  // out on this (layout) thread — for the run view to draw from instead of
+  // rebuilding and re-shaping it on the main thread
+  // (ios-run-draw-reuse-plan.md).
+  if (layoutContext.runTag != 0 && nsAttributedString.length != 0) {
+    CGSize maximumSize = CGSize{layoutConstraints.maximumSize.width, CGFLOAT_MAX};
+    NSTextStorage *textStorage = [self _textStorageAndLayoutManagerWithAttributesString:nsAttributedString
+                                                                    paragraphAttributes:paragraphAttributes
+                                                                                   size:maximumSize];
+    auto measurement = [self _measureTextStorage:textStorage
+                             paragraphAttributes:paragraphAttributes
+                                   layoutContext:layoutContext];
+    // Attachment-bearing runs are never cached: an attachment's placeholder
+    // lays out by its parentShadowView's metrics, which change between
+    // measure and mount — the cache key deliberately ignores those metrics
+    // for the fragments it does compare.
+    bool hasAttachments = false;
+    for (const auto &fragment : attributedString.getFragments()) {
+      if (fragment.isAttachment()) {
+        hasAttachments = true;
+        break;
+      }
+    }
+    if (!hasAttachments) {
+      cacheRunTextStorage(attributedString, maximumSize.width, textStorage);
+    }
+    return measurement;
+  }
+
+  return [self measureNSAttributedString:nsAttributedString
                      paragraphAttributes:paragraphAttributes
                            layoutContext:layoutContext
                        layoutConstraints:layoutConstraints];
+}
+
+- (nullable NSTextStorage *)cachedRunTextStorageForAttributedString:(const AttributedString &)attributedString
+                                                              width:(CGFloat)width
+{
+  // Content-keyed: the storage returned is by construction the layout for
+  // exactly what is being drawn (the key IS the content plus the container
+  // width wrapping depends on; the container height deliberately differs —
+  // CGFLOAT_MAX at measure — and cannot affect glyph layout because runs
+  // never truncate). A miss falls back to the rebuild path; it can never
+  // become wrong pixels.
+  return cachedRunTextStorage(attributedString, width);
+}
+
+- (std::vector<facebook::react::Rect>)
+    getFragmentRectsWithAttributedString:(AttributedString)attributedString
+                     paragraphAttributes:(ParagraphAttributes)paragraphAttributes
+                                    size:(CGSize)size
+{
+  std::vector<facebook::react::Rect> rects;
+  const auto &fragments = attributedString.getFragments();
+  if (fragments.empty()) {
+    return rects;
+  }
+
+  NSAttributedString *nsAttributedString = [self _nsAttributedStringFromAttributedString:attributedString];
+  NSTextStorage *textStorage = [self _textStorageAndLayoutManagerWithAttributesString:nsAttributedString
+                                                                 paragraphAttributes:paragraphAttributes
+                                                                                size:size];
+  NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
+  NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
+  [layoutManager ensureLayoutForTextContainer:textContainer];
+
+  rects.reserve(fragments.size());
+
+  // Fragments are appended to the attributed string in order, so their
+  // character ranges tile it. Lengths are counted in UTF-16 units (what
+  // NSAttributedString indexes by), and an attachment occupies exactly the
+  // one attachment character.
+  NSUInteger location = 0;
+  for (const auto &fragment : fragments) {
+    NSUInteger length;
+    if (fragment.isAttachment()) {
+      length = 1;
+    } else {
+      NSString *fragmentText = [NSString stringWithUTF8String:fragment.string.c_str()];
+      length = fragmentText != nil ? fragmentText.length : 0;
+    }
+    if (length == 0 && fragment.isEmptyElement && textStorage.length > 0) {
+      // An inline element with no text of its own. The web gives it a
+      // zero-width box on the line it sits on (CSSOM-View §4), and a
+      // zero-length glyph range returns nothing at all — so the box is built
+      // from the line fragment it lands in and the caret position within it.
+      NSUInteger charIndex = MIN(location, textStorage.length - 1);
+      NSUInteger glyphIndex = [layoutManager glyphIndexForCharacterAtIndex:charIndex];
+      CGRect lineRect = [layoutManager lineFragmentRectForGlyphAtIndex:glyphIndex effectiveRange:NULL];
+      CGFloat x;
+      if (location >= textStorage.length) {
+        // Nothing follows: the caret sits after the last glyph, not before it.
+        CGRect last = [layoutManager boundingRectForGlyphRange:NSMakeRange(glyphIndex, 1)
+                                              inTextContainer:textContainer];
+        x = CGRectGetMaxX(last);
+      } else {
+        x = lineRect.origin.x + [layoutManager locationForGlyphAtIndex:glyphIndex].x;
+      }
+      rects.push_back(facebook::react::Rect{
+          .origin = {.x = (Float)x, .y = (Float)lineRect.origin.y},
+          .size = {.width = 0, .height = (Float)lineRect.size.height}});
+      continue;
+    }
+    if (length == 0 || location + length > textStorage.length) {
+      rects.push_back(facebook::react::Rect{});
+      location += length;
+      continue;
+    }
+
+    NSRange characterRange = NSMakeRange(location, length);
+    NSRange glyphRange = [layoutManager glyphRangeForCharacterRange:characterRange actualCharacterRange:nullptr];
+    // `boundingRectForGlyphRange:` already unions the pieces of a range that
+    // wraps across lines, which is exactly the box the web reports.
+    CGRect boundingRect = [layoutManager boundingRectForGlyphRange:glyphRange inTextContainer:textContainer];
+
+    // An element's box is its *border* box, so it includes the inline-axis
+    // space G3 reserved. The trailing space is kerning on the element's own
+    // last character and is already inside `boundingRect`; the leading space
+    // is kerning on the *preceding* character (no spacer character is ever
+    // injected — see RCTApplyInlineBoxSpacing), so it sits just outside and
+    // has to be added back here.
+    CGFloat leading = fragment.leadingInlineSpace();
+    boundingRect.origin.x -= leading;
+    boundingRect.size.width += leading;
+
+    // Block-axis padding and borders are part of the border box too. They
+    // deliberately do NOT grow the line box (CSS2 §10.6.1 — they overflow it),
+    // so the glyph bounds TextKit returns never include them, but the element
+    // still reports them as its own box.
+    const auto blockAxis = fragment.blockAxisBoxEdges();
+    boundingRect.origin.y -= blockAxis.top;
+    boundingRect.size.height += blockAxis.top + blockAxis.bottom;
+
+    rects.push_back(facebook::react::Rect{
+        .origin = {.x = (Float)boundingRect.origin.x, .y = (Float)boundingRect.origin.y},
+        .size = {.width = (Float)boundingRect.size.width, .height = (Float)boundingRect.size.height}});
+
+    location += length;
+  }
+
+  return rects;
 }
 
 - (CGRect)drawingFrameForAttributedString:(AttributedString)attributedString
@@ -126,6 +408,238 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
   return drawingFrame;
 }
 
+
+namespace {
+
+// SharedColor -> UIColor. Kept local: this module does not depend on
+// React/Fabric (where RCTUIColorFromSharedColor lives), and the conversion is
+// a single unwrap.
+UIColor *_Nullable inlineBoxColor(const facebook::react::SharedColor &sharedColor)
+{
+  return RCTUIColorFromSharedColor(sharedColor);
+}
+
+// Paints the CSS box decorations of inline elements: one box per line
+// fragment, with the leading edge's border drawn only on the first fragment
+// and the trailing edge's only on the last (CSS2 §8.6 `box-decoration-break:
+// slice`, the default). box-model-scope.md G4/G5.
+//
+// Vertical padding/border deliberately overflow the line box rather than
+// growing it, which is what the web does for inline boxes.
+void drawInlineBoxDecorations(
+    const AttributedString &attributedString,
+    NSTextStorage *textStorage,
+    NSLayoutManager *layoutManager,
+    NSTextContainer *textContainer,
+    CGPoint origin)
+{
+  const auto &fragments = attributedString.getFragments();
+  CGContextRef context = UIGraphicsGetCurrentContext();
+  if (context == nullptr) {
+    return;
+  }
+
+  // G3 expresses inline-axis spacing as kerning, never as extra characters, so
+  // fragments still tile the built string one-for-one.
+  auto builtLengthOfFragment = [](const AttributedString::Fragment &fragment) -> NSUInteger {
+    NSString *text = [NSString stringWithUTF8String:fragment.string.c_str()];
+    return fragment.isAttachment() ? 1 : (text != nil ? text.length : 0);
+  };
+
+  NSUInteger location = 0;
+  size_t index = 0;
+  while (index < fragments.size()) {
+    const auto &fragment = fragments[index];
+
+    if (fragment.inlineBox.isEmpty()) {
+      location += builtLengthOfFragment(fragment);
+      index++;
+      continue;
+    }
+
+    // Consume the whole element: consecutive fragments sharing these
+    // decorations, ending at the fragment flagged as the box's end.
+    const auto decorations = fragment.inlineBox;
+    NSUInteger elementStart = location;
+    NSUInteger elementLength = 0;
+    bool sawEnd = false;
+    while (index < fragments.size()) {
+      const auto &current = fragments[index];
+      NSUInteger currentLength = builtLengthOfFragment(current);
+      elementLength += currentLength;
+      location += currentLength;
+      index++;
+      if (current.isInlineBoxEnd) {
+        sawEnd = true;
+        break;
+      }
+    }
+    if (!sawEnd || elementLength == 0 || elementStart + elementLength > textStorage.length) {
+      continue;
+    }
+
+    const CGFloat borderTop = decorations.borderWidth.top;
+    const CGFloat borderBottom = decorations.borderWidth.bottom;
+    const CGFloat borderLeft = decorations.borderWidth.left;
+    const CGFloat borderRight = decorations.borderWidth.right;
+    const CGFloat padTop = decorations.padding.top;
+    const CGFloat padBottom = decorations.padding.bottom;
+
+    NSRange characterRange = NSMakeRange(elementStart, elementLength);
+    NSRange glyphRange = [layoutManager glyphRangeForCharacterRange:characterRange
+                                               actualCharacterRange:nullptr];
+
+    // One rect per line the element occupies, tight to *this element's* glyphs.
+    //
+    // Both of the obvious APIs are wrong here, and both fail in ways that look
+    // plausible on screen:
+    //  - `boundingRectForGlyphRange:` widens to the whole line fragment, and to
+    //    the container's full width once the range spans a line break.
+    //  - `enumerateEnclosingRectsForGlyphRange:` is built for selection
+    //    highlighting, so it *merges* contiguous full-width lines into a single
+    //    tall rect. Border edges then get painted across the middle of the run
+    //    instead of on each line.
+    // So the extents are derived from glyph positions directly, which is the
+    // only formulation that stays tight at both ends of every line.
+    NSMutableArray<NSValue *> *lineRects = [NSMutableArray array];
+    [layoutManager
+        enumerateLineFragmentsForGlyphRange:glyphRange
+                                 usingBlock:^(
+                                     CGRect lineRect,
+                                     CGRect usedRect,
+                                     NSTextContainer *__unused container,
+                                     NSRange lineGlyphRange,
+                                     BOOL *__unused stop) {
+                                   NSRange intersection =
+                                       NSIntersectionRange(lineGlyphRange, glyphRange);
+                                   if (intersection.length == 0) {
+                                     return;
+                                   }
+                                   // `locationForGlyphAtIndex:` is relative to
+                                   // the line fragment's origin.
+                                   CGFloat startX = lineRect.origin.x +
+                                       [layoutManager locationForGlyphAtIndex:intersection.location].x;
+                                   NSUInteger endGlyph = NSMaxRange(intersection);
+                                   CGFloat endX;
+                                   if (endGlyph < NSMaxRange(lineGlyphRange)) {
+                                     endX = lineRect.origin.x +
+                                         [layoutManager locationForGlyphAtIndex:endGlyph].x;
+                                   } else {
+                                     // The element runs to the end of this
+                                     // line; `usedRect` is where the line's
+                                     // content actually stops.
+                                     endX = CGRectGetMaxX(usedRect);
+                                   }
+                                   if (endX <= startX) {
+                                     return;
+                                   }
+                                   [lineRects
+                                       addObject:[NSValue
+                                                     valueWithCGRect:CGRectMake(
+                                                                         startX,
+                                                                         usedRect.origin.y,
+                                                                         endX - startX,
+                                                                         usedRect.size.height)]];
+                                 }];
+
+    for (NSUInteger i = 0; i < lineRects.count; i++) {
+      // CSS2 §8.6 `box-decoration-break: slice`: only the first fragment gets
+      // the leading edge and only the last gets the trailing one.
+      // DOM-CSS-LIMITATION(no-box-decoration-break-clone): only `slice` (the
+      // default) is implemented; `clone` would repeat both edges per fragment.
+      const bool isFirst = (i == 0);
+      const bool isLast = (i + 1 == lineRects.count);
+      const CGFloat leadBorder = isFirst ? borderLeft : 0;
+      const CGFloat trailBorder = isLast ? borderRight : 0;
+
+      // `run` is the element's own glyphs. G3's leading space is kerning on the
+      // *preceding* character, so it falls outside this rect and the padding
+      // and border have to be added back here; the trailing space is kerning
+      // on the element's last character, so it is inside `run` and comes off.
+      // The margin is not painted at all.
+      //
+      // Vertically nothing is reserved, and nothing should be — an inline
+      // box's block-axis padding and border overflow the line box instead of
+      // growing it (CSS2 §10.6.1) — so those grow the box outwards here.
+      CGRect run = [lineRects[i] CGRectValue];
+      CGFloat left = origin.x + run.origin.x - (isFirst ? decorations.padding.left + borderLeft : 0);
+      CGFloat right = origin.x + CGRectGetMaxX(run) -
+          (isLast ? decorations.trailingInlineSpace() - decorations.padding.right - borderRight : 0);
+      CGRect borderBox = CGRectMake(
+          left,
+          origin.y + run.origin.y - padTop - borderTop,
+          std::max((CGFloat)0, right - left),
+          run.size.height + padTop + padBottom + borderTop + borderBottom);
+
+      // Edges are filled as solid rects rather than stroked: a stroke centres
+      // on the path, so a degenerate (zero-height) rect straddles the edge and
+      // lands half a point off, and CoreGraphics' handling of zero-size rects
+      // is not worth relying on.
+      UIColor *topColor = inlineBoxColor(decorations.borderColor.top);
+      UIColor *bottomColor = inlineBoxColor(decorations.borderColor.bottom);
+      UIColor *leftColor = inlineBoxColor(decorations.borderColor.left);
+      UIColor *rightColor = inlineBoxColor(decorations.borderColor.right);
+
+      if (borderTop > 0 && topColor != nil) {
+        CGContextSetFillColorWithColor(context, topColor.CGColor);
+        CGContextFillRect(
+            context,
+            CGRectMake(borderBox.origin.x, borderBox.origin.y, borderBox.size.width, borderTop));
+      }
+      if (borderBottom > 0 && bottomColor != nil) {
+        CGContextSetFillColorWithColor(context, bottomColor.CGColor);
+        CGContextFillRect(
+            context,
+            CGRectMake(
+                borderBox.origin.x,
+                CGRectGetMaxY(borderBox) - borderBottom,
+                borderBox.size.width,
+                borderBottom));
+      }
+      if (leadBorder > 0 && leftColor != nil) {
+        CGContextSetFillColorWithColor(context, leftColor.CGColor);
+        CGContextFillRect(
+            context,
+            CGRectMake(borderBox.origin.x, borderBox.origin.y, leadBorder, borderBox.size.height));
+      }
+      if (trailBorder > 0 && rightColor != nil) {
+        CGContextSetFillColorWithColor(context, rightColor.CGColor);
+        CGContextFillRect(
+            context,
+            CGRectMake(
+                CGRectGetMaxX(borderBox) - trailBorder,
+                borderBox.origin.y,
+                trailBorder,
+                borderBox.size.height));
+      }
+
+      // G5: the outline is the border box pushed out by `outline-offset`.
+      // It is stroked (not sliced per edge) and never affects layout.
+      if (decorations.outlineWidth > 0) {
+        UIColor *outlineColor = inlineBoxColor(decorations.outlineColor);
+        if (outlineColor != nil) {
+          // Stroke centres on the path, so offset by half the width to keep
+          // the inner edge exactly `outlineOffset` away from the border box.
+          CGFloat inset = -(decorations.outlineOffset + decorations.outlineWidth / 2);
+          CGRect outlineRect = CGRectInset(borderBox, inset, inset);
+          CGContextSetStrokeColorWithColor(context, outlineColor.CGColor);
+          CGContextSetLineWidth(context, decorations.outlineWidth);
+          if (decorations.borderRadius > 0) {
+            UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:outlineRect
+                                                           cornerRadius:decorations.borderRadius];
+            CGContextAddPath(context, path.CGPath);
+            CGContextStrokePath(context);
+          } else {
+            CGContextStrokeRect(context, outlineRect);
+          }
+        }
+      }
+    }
+  }
+}
+
+} // namespace
+
 - (void)drawAttributedString:(AttributedString)attributedString
          paragraphAttributes:(ParagraphAttributes)paragraphAttributes
                        frame:(CGRect)frame
@@ -135,6 +649,14 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
       _textStorageAndLayoutManagerWithAttributesString:[self _nsAttributedStringFromAttributedString:attributedString]
                                    paragraphAttributes:paragraphAttributes
                                                   size:frame.size];
+  [self drawTextStorage:textStorage attributedString:attributedString frame:frame drawHighlightPath:block];
+}
+
+- (void)drawTextStorage:(NSTextStorage *)textStorage
+       attributedString:(const AttributedString &)attributedString
+                  frame:(CGRect)frame
+      drawHighlightPath:(void (^_Nullable)(UIBezierPath *highlightPath))block
+{
   NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
   NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
 
@@ -149,6 +671,9 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
   [self processTruncatedAttributedText:textStorage textContainer:textContainer layoutManager:layoutManager];
 
   [layoutManager drawBackgroundForGlyphRange:glyphRange atPoint:frame.origin];
+  // Inline box decorations paint beneath the glyphs, like a background.
+  drawInlineBoxDecorations(
+      attributedString, textStorage, layoutManager, textContainer, frame.origin);
   [layoutManager drawGlyphsForGlyphRange:glyphRange atPoint:frame.origin];
 
 #if TARGET_OS_MACCATALYST
@@ -616,13 +1141,50 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
                   CGRect glyphRect = [layoutManager boundingRectForGlyphRange:range inTextContainer:textContainer];
 
                   CGRect frame;
-                  UIFont *font = [[textStorage attributedSubstringFromRange:range] attribute:NSFontAttributeName
-                                                                                     atIndex:0
-                                                                              effectiveRange:nil];
+                  // The line's baseline, asked of TextKit rather than derived.
+                  //
+                  // Deriving it as `lineBottom + font.descender` used the
+                  // TEXT's descender, but the line's descent is whatever the
+                  // tallest thing on it needs — an attachment hanging below the
+                  // baseline makes it larger. On the probe line the box hung
+                  // 3.72pt below while the font's descender is 2.76, so the
+                  // baseline came out 0.96pt low and every attachment on that
+                  // line was placed a point off. `locationForGlyphAtIndex:`
+                  // returns the glyph's position within its line fragment, and
+                  // its y IS the baseline.
+                  CGRect lineFragment = [layoutManager lineFragmentRectForGlyphAtIndex:range.location
+                                                                        effectiveRange:NULL];
+                  // `locationForGlyphAtIndex:` already has the attachment's own
+                  // `bounds.origin.y` baked in — that offset is how the glyph
+                  // was positioned in the first place — so it has to be backed
+                  // out to recover the line's baseline. Leaving it in
+                  // double-counted the offset and pushed the box down by
+                  // exactly that much again.
+                  //
+                  // Verified against an independent ground truth (the baseline
+                  // read off a TEXT glyph on the same line, where
+                  // `locationForGlyphAtIndex:` IS the baseline) across four
+                  // probes covering both terms: offsets of 0, -3.7, -8.5 and
+                  // -27.7pt, and boxes both taller and shorter than the line.
+                  // Exact to six decimals in every case — the demo's probes on
+                  // the Lists screen are those cases.
+                  CGPoint glyphLocation = [layoutManager locationForGlyphAtIndex:range.location];
+                  CGFloat lineBaseline =
+                      lineFragment.origin.y + glyphLocation.y + attachment.bounds.origin.y;
+                  // The box's OWN baseline goes on the line's (CSS2 §10.8.1).
+                  // `bounds.origin.y` is how far the box hangs below the
+                  // baseline (negative), so the box's baseline sits
+                  // `height + origin.y` down from its top.
+                  //
+                  // This is the SECOND placement path an attachment goes
+                  // through: the bounds offset positions the glyph TextKit
+                  // lays out, while this positions the child view that
+                  // actually draws the box. Setting the bounds alone moved the
+                  // placeholder and left the view behind, which is why an
+                  // inline-block's text still sat above the line around it.
+                  CGFloat baselineFromTop = attachmentSize.height + attachment.bounds.origin.y;
                   frame = {
-                      .origin =
-                          {glyphRect.origin.x,
-                           glyphRect.origin.y + glyphRect.size.height - attachmentSize.height + font.descender},
+                      .origin = {glyphRect.origin.x, lineBaseline - baselineFromTop},
                       .size = attachmentSize};
 
                   auto rect = facebook::react::Rect{
