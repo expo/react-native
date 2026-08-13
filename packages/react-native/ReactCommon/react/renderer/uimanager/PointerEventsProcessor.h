@@ -46,7 +46,13 @@ using DispatchEvent = std::function<void(
     const EventPayload &payload)>;
 
 using PointerIdentifier = int32_t;
-using CaptureTargetOverrideRegistry = std::unordered_map<PointerIdentifier, std::weak_ptr<const ShadowNode>>;
+// The node a pointer is captured to, held for as long as the capture lasts,
+// which is until the pointer lifts at the latest. Events go to its newest clone:
+// a weak reference to the node `setPointerCapture` was handed expired when the
+// element next re-rendered, and the capture ended without a
+// `lostpointercapture`, so a drag that re-rendered as it began stopped getting
+// its moves once the finger left the element.
+using CaptureTargetOverrideRegistry = std::unordered_map<PointerIdentifier, std::shared_ptr<const ShadowNode>>;
 
 using ActivePointerRegistry = std::unordered_map<PointerIdentifier, ActivePointer>;
 using PointerHoverTrackerRegistry = std::unordered_map<PointerIdentifier, PointerHoverTracker::Unique>;
