@@ -10002,8 +10002,8 @@ __DEV__ &&
               b: {
                 var keepChildren = !current;
                 _type2 = ReactNativePrivateInterface.diffAttributePayloads(
-                  _type2,
-                  newProps,
+                  applyUAStyle(_type2, renderLanes.canonical.viewConfig),
+                  applyUAStyle(newProps, renderLanes.canonical.viewConfig),
                   renderLanes.canonical.viewConfig.validAttributes
                 );
                 renderLanes.canonical.currentProps = newProps;
@@ -10049,13 +10049,21 @@ __DEV__ &&
                   newProps[keepChildren]
                 );
             keepChildren = ReactNativePrivateInterface.createAttributePayload(
-              newProps,
+              applyUAStyle(newProps, _type2),
               _type2.validAttributes
             );
+            // Generic seam: a view config may opt into recording its authored
+            // JSX type as a `nodeName` prop (recordNodeName). Intrinsic-component
+            // modules use this so a tag preserves its name for DOM APIs (e.g.
+            // HTMLUnknownElement) without the renderer knowing any component.
+            if (_type2.recordNodeName)
+              keepChildren = Object.assign({}, keepChildren, {
+                nodeName: workInProgress.type
+              });
             current = {
               node: createNode(
                 renderLanes,
-                _type2.uiViewClassName,
+                (_type2.resolveUIViewClassName ? _type2.resolveUIViewClassName(newProps) : _type2.uiViewClassName),
                 current.containerTag,
                 keepChildren,
                 workInProgress
@@ -15892,18 +15900,16 @@ __DEV__ &&
       hostContext,
       internalInstanceHandle
     ) {
-      hostContext.isInAParentText ||
-        console.error(
-          "Text strings must be rendered within a <Text> component."
-        );
+      // text-children: bare strings are supported (text-children-plan.md §3.E).
+      // First-class text node via the createTextNode host-config path (§3.F):
+      // character data is passed directly (no RawText fake-component packaging).
       hostContext = nextReactTag;
       nextReactTag += 2;
       return {
-        node: createNode(
+        node: createTextNode(
           hostContext,
-          "RCTRawText",
+          text,
           rootContainerInstance.containerTag,
-          { text: text },
           internalInstanceHandle
         )
       };
@@ -15948,6 +15954,21 @@ __DEV__ &&
             return IdleEventPriority;
         }
       return DefaultEventPriority;
+    }
+    function applyUAStyle(props, viewConfig) {
+      // The user-agent origin of the cascade: the element's UA style sits
+      // *beneath* the author's, so an author declaration always wins simply by
+      // being later in the array. Applied here rather than in author code, the
+      // way a browser consults its own stylesheet.
+      //
+      // Applied on both sides of an update diff as well as at creation — a diff
+      // between two unmerged props objects would drop the UA value the moment
+      // an author removed the property that had been overriding it.
+      var uaStyle = viewConfig && viewConfig.uaStyle;
+      if (!uaStyle || props == null) return props;
+      var merged = Object.assign({}, props);
+      merged.style = props.style == null ? uaStyle : [uaStyle, props.style];
+      return merged;
     }
     function cloneHiddenInstance(instance) {
       var node = instance.node,
@@ -18693,6 +18714,7 @@ __DEV__ &&
       suspendResource = shim,
       _nativeFabricUIManage = nativeFabricUIManager,
       createNode = _nativeFabricUIManage.createNode,
+      createTextNode = _nativeFabricUIManage.createTextNode,
       cloneNodeWithNewChildren = _nativeFabricUIManage.cloneNodeWithNewChildren,
       cloneNodeWithNewChildrenAndProps =
         _nativeFabricUIManage.cloneNodeWithNewChildrenAndProps,

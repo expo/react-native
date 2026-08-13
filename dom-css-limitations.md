@@ -19,6 +19,14 @@ means adding a marker; the slug is what ties it to the row below.
 
 ## Layout and box generation
 
+**`display-change-needs-remount`** — `Libraries/Renderer/shims/ReactNativeTypes.js`
+An element's backing box is chosen at instance creation, so one whose `display`
+later crosses the box/no-box boundary (e.g. `inline` → `inline-flex`) keeps its
+original backing until it remounts. Browsers destroy and recreate the layout
+object at that point. Matching that needs a remount signal the reconciler does
+not have. Static display — the overwhelming case, and all of Astryx — is
+correct.
+
 **`escaped-margin-walk-approximations`** — `yoga/algorithm/CalculateLayout.cpp`
 Two approximations in the walk that folds descendant margins escaping through a
 block container's edges. Descendants of self-collapsing boxes are not walked,

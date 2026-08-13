@@ -7058,8 +7058,8 @@ function completeWork(current, workInProgress, renderLanes) {
         ) {
           b: {
             type = ReactNativePrivateInterface.diffAttributePayloads(
-              type,
-              newProps,
+              applyUAStyle(type, renderLanes.canonical.viewConfig),
+              applyUAStyle(newProps, renderLanes.canonical.viewConfig),
               renderLanes.canonical.viewConfig.validAttributes
             );
             renderLanes.canonical.currentProps = newProps;
@@ -7097,13 +7097,24 @@ function completeWork(current, workInProgress, renderLanes) {
         nextReactTag += 2;
         type = getViewConfigForType(type);
         var updatePayload = ReactNativePrivateInterface.createAttributePayload(
-          newProps,
+          applyUAStyle(newProps, type),
           type.validAttributes
         );
+        // Generic seam: a view config may opt into recording its authored JSX
+        // type as a `nodeName` prop (recordNodeName). Intrinsic-component
+        // modules use this so a tag keeps its name for DOM APIs without the
+        // renderer knowing any component. This has to be in EVERY renderer
+        // build, not just dev: it was dev-only, so release builds delivered no
+        // tag to C++ at all and anything reading one — list markers, DOM
+        // tagName from native — silently saw an empty string.
+        if (type.recordNodeName)
+          updatePayload = Object.assign({}, updatePayload, {
+            nodeName: workInProgress.type
+          });
         current = {
           node: createNode(
             renderLanes,
-            type.uiViewClassName,
+            (type.resolveUIViewClassName ? type.resolveUIViewClassName(newProps) : type.uiViewClassName),
             current.containerTag,
             updatePayload,
             workInProgress
@@ -10305,6 +10316,7 @@ function shim() {
 }
 var _nativeFabricUIManage = nativeFabricUIManager,
   createNode = _nativeFabricUIManage.createNode,
+  createTextNode = _nativeFabricUIManage.createTextNode,
   cloneNodeWithNewChildren = _nativeFabricUIManage.cloneNodeWithNewChildren,
   cloneNodeWithNewChildrenAndProps =
     _nativeFabricUIManage.cloneNodeWithNewChildrenAndProps,
@@ -10347,11 +10359,10 @@ function createTextInstance(
   hostContext = nextReactTag;
   nextReactTag += 2;
   return {
-    node: createNode(
+    node: createTextNode(
       hostContext,
-      "RCTRawText",
+      text,
       rootContainerInstance.containerTag,
-      { text: text },
       internalInstanceHandle
     )
   };
@@ -10399,7 +10410,22 @@ function resolveUpdatePriority() {
 }
 var scheduleTimeout = setTimeout,
   cancelTimeout = clearTimeout;
-function cloneHiddenInstance(instance) {
+function applyUAStyle(props, viewConfig) {
+      // The user-agent origin of the cascade: the element's UA style sits
+      // *beneath* the author's, so an author declaration always wins simply by
+      // being later in the array. Applied here rather than in author code, the
+      // way a browser consults its own stylesheet.
+      //
+      // Applied on both sides of an update diff as well as at creation — a diff
+      // between two unmerged props objects would drop the UA value the moment
+      // an author removed the property that had been overriding it.
+      var uaStyle = viewConfig && viewConfig.uaStyle;
+      if (!uaStyle || props == null) return props;
+      var merged = Object.assign({}, props);
+      merged.style = props.style == null ? uaStyle : [uaStyle, props.style];
+      return merged;
+    }
+    function cloneHiddenInstance(instance) {
   var node = instance.node,
     updatePayload = ReactNativePrivateInterface.createAttributePayload(
       { style: { display: "none" } },
