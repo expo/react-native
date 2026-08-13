@@ -39,6 +39,12 @@ export type RNTesterModuleInfo = Readonly<{
   category?: string,
   documentationURL?: string,
   exampleType?: 'components' | 'apis',
+  /**
+   * Sorts ahead of the alphabetical list, keeping work-in-progress examples
+   * within reach at the top of the screen. Pinned entries keep their relative
+   * order from the list definition.
+   */
+  pinned?: boolean,
 }>;
 
 export type SectionData<T> = {

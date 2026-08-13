@@ -13,6 +13,69 @@ import type {RNTesterModule, RNTesterModuleInfo} from '../types/RNTesterTypes';
 import * as RNTesterListFbInternal from './RNTesterListFbInternal';
 
 const Components: Array<RNTesterModuleInfo> = [
+  // ---- Fork work: text children / css-display / Astryx ----
+  // Kept at the head of the list for quick access while these are the
+  // features under active development.
+  {
+    key: 'SharedTextBenchmarkExample',
+    module: require('../examples/DeviceBench/SharedTextBenchmarkExample').default,
+    category: 'Basic',
+  },
+  {
+    key: 'AstryxExample',
+    pinned: true,
+    module: require('../examples/Astryx/AstryxExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'IconsExample',
+    pinned: true,
+    module: require('../examples/Astryx/IconsExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'StringChildrenExample',
+    pinned: true,
+    module: require('../examples/TextChildren/StringChildrenExample').default,
+    category: 'Basic',
+  },
+  {
+    key: 'ListsExample',
+    module: require('../examples/Lists/ListsExample').default,
+  },
+  {
+    key: 'IntrinsicElementsExample',
+    pinned: true,
+    module: require('../examples/TextChildren/IntrinsicElementsExample')
+      .default,
+    category: 'Basic',
+  },
+  {
+    key: 'DisplayBlockExample',
+    pinned: true,
+    module: require('../examples/DisplayBlock/DisplayBlockExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'DisplayInlineExample',
+    pinned: true,
+    module: require('../examples/DisplayInline/DisplayInlineExample').default,
+    category: 'UI',
+  },
+
+  {
+    key: 'CascadeExample',
+    pinned: true,
+    module: require('../examples/Cascade/CascadeExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'DeviceTextBenchmarkExample',
+    pinned: true,
+    module: require('../examples/DeviceBench/DeviceTextBenchmarkExample')
+      .default,
+    category: 'UI',
+  }, // ---- Upstream RNTester components ----
   {
     key: 'ActivityIndicatorExample',
     category: 'UI',
@@ -158,6 +221,46 @@ const Components: Array<RNTesterModuleInfo> = [
 
 const APIs: Array<RNTesterModuleInfo> = (
   [
+    // ---- Fork work, pinned for quick access (same pattern as Components):
+    // the renderer's CSS transitions and display: contents coverage.
+    {
+      key: 'ShadcnExample',
+      pinned: true,
+      module: require('../examples/Astryx/ShadcnExample').default,
+      category: 'UI',
+    },
+    {
+      key: 'RadixExample',
+      pinned: true,
+      module: require('../examples/Astryx/RadixExample').default,
+      category: 'UI',
+    },
+    {
+      key: 'CSSStylesheetsExample',
+      pinned: true,
+      module: require('../examples/Astryx/CSSStylesheetsExample').default,
+      category: 'UI',
+    },
+    {
+      key: 'CSSAnimationsExample',
+      pinned: true,
+      module: require('../examples/CSSAnimations/CSSAnimationsExample').default,
+      category: 'UI',
+    },
+    {
+      key: 'CSSTransitionsExample',
+      pinned: true,
+      module: require('../examples/CSSTransitions/CSSTransitionsExample')
+        .default,
+      category: 'UI',
+    },
+    {
+      key: 'DisplayContentsExample',
+      pinned: true,
+      category: 'UI',
+      module: require('../examples/DisplayContents/DisplayContentsExample')
+        .default,
+    },
     {
       key: 'AccessibilityExample',
       module: require('../examples/Accessibility/AccessibilityExample'),
@@ -226,12 +329,6 @@ const APIs: Array<RNTesterModuleInfo> = (
     {
       key: 'Dimensions',
       module: require('../examples/Dimensions/DimensionsExample'),
-    },
-    {
-      key: 'DisplayContentsExample',
-      category: 'UI',
-      module: require('../examples/DisplayContents/DisplayContentsExample')
-        .default,
     },
     {
       key: 'InvalidPropsExample',
