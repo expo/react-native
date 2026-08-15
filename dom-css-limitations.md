@@ -87,27 +87,6 @@ all text at once is the user's own text-size setting, which arrives as
 `fontSizeMultiplier` and scales resolved sizes after the fact rather than
 through this base.
 
-**`no-author-facing-em-lengths`** — `text-conformance/cases.js`
-`em` and `rem` resolve for `font-size` (`fontSizeEm`, `fontSizeRem`) and for
-the user-agent block margin (`uaMarginBlockEm`, `uaMarginBlockRem`), but there
-is no way for an AUTHOR to write a relative length on an arbitrary layout
-property — `width: '1.5em'` is not a value React Native styles take. A style
-value here is a resolved number, and at the moment one is written there is no
-font size to resolve against; carrying the unit through would mean a unit in
-Yoga's `StyleLength`, which is part of its public C API and reaches the Java
-and Objective-C bindings. The corpus translates an author's `margin-block: 1em`
-into the user-agent channel, which is a different cascade origin — fine for
-geometry, wrong for a case about precedence.
-
-**`rem-root-is-the-unstylable-surface-root`** — `Libraries/Text/__tests__/RelativeFontSize-itest.js`
-`rem` resolves against the surface root — the node the layout walk starts from
-— and everything an app renders is already a child of it. So an app has no way
-to state the root's font size the way a page styles `<html>`, and `rem` is the
-platform's body size for the life of the surface. The native lever for moving
-all text at once is the user's own text-size setting, which arrives as
-`fontSizeMultiplier` and scales resolved sizes after the fact rather than
-through this base.
-
 **`no-box-decoration-break-clone`** — `.../ios/.../RCTTextLayoutManager.mm`
 A wrapped inline box paints with `box-decoration-break: slice` (the CSS
 default) — leading edge on the first fragment, trailing on the last. `clone`,

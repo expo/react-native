@@ -212,11 +212,23 @@ inline bool parseTrackSize(GridTrackScanner& scanner, yoga::GridTrackSize& out) 
     if (!parseBreadth(inner.nextToken(), limit)) {
       return false;
     }
-    // fit-content(x) is minmax(auto, x) bounded by max-content. Yoga's
-    // FitContent unit takes no argument, so the clamp is expressed directly.
-    // DOM-CSS-LIMITATION(grid-fit-content): the max-content upper bound is
-    // approximated by the given limit.
-    out = yoga::GridTrackSize::minmax(yoga::StyleSizeLength::ofAuto(), limit);
+    (void)limit;
+    // DOM-CSS-LIMITATION(grid-fit-content-limit): `fit-content(x)` is
+    // `max(min-content, min(max-content, x))`. Yoga's FitContent sizing
+    // function has no argument, so the max-content clamp is honoured and the
+    // `x` ceiling is dropped.
+    //
+    // Mapping to `minmax(auto, x)` instead would keep the ceiling but lose the
+    // max-content clamp, which is worse: the track would then grow to `x`
+    // whenever there is free space, even for content far narrower than that,
+    // which is the visible half of the behaviour.
+    //
+    // The ceiling only ever binds when min-content < x < max-content, i.e. for
+    // content that can reflow. It is not reachable for a fixed-size box, which
+    // is why the conformance corpus cannot catch this one.
+    out = yoga::GridTrackSize{
+        .minSizingFunction = yoga::StyleSizeLength::ofAuto(),
+        .maxSizingFunction = yoga::StyleSizeLength::ofFitContent()};
     return true;
   }
 
@@ -225,8 +237,14 @@ inline bool parseTrackSize(GridTrackScanner& scanner, yoga::GridTrackSize& out) 
   if (!parseBreadth(token, breadth)) {
     return false;
   }
-  if (breadth.isStretch()) {
-    // <flex> is a maximum with an auto minimum.
+  if (breadth.isStretch() || breadth.isMaxContent() || breadth.isFitContent()) {
+    // <flex> is a maximum with an auto minimum by definition. `max-content`
+    // and `fit-content` are written here the same way: CSS says a lone
+    // <track-breadth> becomes both the minimum and the maximum, but Yoga has
+    // no max-content MINIMUM — a track given one sizes to zero. Its `auto`
+    // minimum is the automatic minimum size, which is what the intrinsic
+    // minimum means for a non-scrollable box, so this is the same track with a
+    // representable floor.
     out = yoga::GridTrackSize::minmax(yoga::StyleSizeLength::ofAuto(), breadth);
   } else {
     out = yoga::GridTrackSize{

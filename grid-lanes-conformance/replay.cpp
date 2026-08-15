@@ -59,6 +59,12 @@ void applySimple(
     case TrackKind::Auto:
       set(YGGridTrackTypeAuto, 0.0f);
       break;
+    case TrackKind::MaxContent:
+      set(YGGridTrackTypeMaxContent, 0.0f);
+      break;
+    case TrackKind::FitContent:
+      set(YGGridTrackTypeFitContent, 0.0f);
+      break;
     case TrackKind::Minmax: {
       auto toType = [](TrackKind k) {
         switch (k) {
@@ -68,6 +74,8 @@ void applySimple(
             return YGGridTrackTypePercent;
           case TrackKind::Fr:
             return YGGridTrackTypeFr;
+          case TrackKind::MaxContent:
+            return YGGridTrackTypeMaxContent;
           default:
             return YGGridTrackTypeAuto;
         }
@@ -104,6 +112,9 @@ void applyAutoRow(YGNodeRef node, size_t index, const Track& t) {
       break;
     case TrackKind::Fr:
       YGNodeStyleSetGridAutoRow(node, index, YGGridTrackTypeFr, t.value);
+      break;
+    case TrackKind::MaxContent:
+      YGNodeStyleSetGridAutoRow(node, index, YGGridTrackTypeMaxContent, 0.0f);
       break;
     default:
       YGNodeStyleSetGridAutoRow(node, index, YGGridTrackTypeAuto, 0.0f);
