@@ -540,6 +540,56 @@ export default {
       ),
     },
     {
+      title: 'grid-template-areas — a page shell by name',
+      name: 'areas',
+      description:
+        'Items are placed by naming an area rather than counting lines. The ' +
+        'template is the layout, readable as a picture of itself.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "gridTemplateAreas:\n" +
+            "  '\"header header\" \"sidebar main\" \"footer footer\"'\n" +
+            "gridTemplateColumns: '90px 1fr'\n" +
+            "// then:  gridArea: 'header'"
+          }>
+          <View
+            // $FlowExpectedError[incompatible-type] grid style keys
+            style={{
+              display: 'grid',
+              gridTemplateAreas:
+                '"header header" "sidebar main" "footer footer"',
+              gridTemplateColumns: '90px 1fr',
+              gridTemplateRows: '40px 72px 32px',
+              gap: 8,
+            }}>
+            {[
+              ['header', SWATCHES[0]],
+              ['sidebar', SWATCHES[1]],
+              ['main', SWATCHES[2]],
+              ['footer', SWATCHES[3]],
+            ].map(([area, color]) => (
+              <View
+                key={area}
+                // $FlowExpectedError[incompatible-type] grid style keys
+                style={{
+                  gridArea: area,
+                  backgroundColor: color,
+                  borderRadius: 6,
+                  justifyContent: 'center',
+                  paddingHorizontal: 8,
+                }}>
+                <Text
+                  style={{fontSize: 12, fontWeight: '600', color: '#1a1a1a'}}>
+                  {area}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </DemoContent>
+      ),
+    },
+    {
       title: 'grid-auto-flow: dense — backfilling holes',
       name: 'dense',
       description:
@@ -554,7 +604,7 @@ export default {
             "// item 1 and 2: gridColumnEnd: 'span 2'\n" +
             "gridAutoFlow: 'row'   // vs   'row dense'"
           }>
-          {(['row', 'row dense']: Array<'row' | 'row dense'>).map(flow => (
+          {(['row', 'row dense'] as Array<'row' | 'row dense'>).map(flow => (
             <View key={flow}>
               <Text
                 style={{

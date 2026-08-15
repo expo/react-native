@@ -39,16 +39,27 @@ const OUT = path.join(__dirname, 'expected.json');
 // Case → CSS
 // ---------------------------------------------------------------------------
 
+// `grid-template-areas` puts double quotes INSIDE the style declaration, which
+// would close the HTML attribute and corrupt every case after it on the page.
+// The corruption is silent — the page still renders, just as something else
+// entirely — so it shows up as a wrong expected value rather than an error.
+function escapeAttribute(value) {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
 function buildHtml() {
   const blocks = cases
     .map(c => {
       const items = c.items
-        .map((it, i) => `<i style="${itemCss(it)}" data-i="${i}"></i>`)
+        .map(
+          (it, i) =>
+            `<i style="${escapeAttribute(itemCss(it))}" data-i="${i}"></i>`,
+        )
         .join('');
       // Each case sits in its own fixed-width wrapper so that nothing about
       // the page layout leaks into the case.
-      return `<div class="wrap"><div class="case" data-id="${c.id}" style="${containerCss(
-        c.container,
+      return `<div class="wrap"><div class="case" data-id="${c.id}" style="${escapeAttribute(
+        containerCss(c.container),
       )}">${items}</div></div>`;
     })
     .join('\n');

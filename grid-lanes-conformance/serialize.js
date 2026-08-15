@@ -56,6 +56,8 @@ function containerCss(c) {
   if (c.flowTolerance != null)
     d.push(`flow-tolerance: ${toleranceToCss(c.flowTolerance)}`);
   if (c.autoFlow) d.push(`grid-auto-flow: ${c.autoFlow}`);
+  if (c.areas)
+    d.push(`grid-template-areas: ${c.areas.map(r => `"${r}"`).join(' ')}`);
   if (c.justifyItems) d.push(`justify-items: ${c.justifyItems}`);
   if (c.alignItems) d.push(`align-items: ${c.alignItems}`);
   if (c.justifyContent) d.push(`justify-content: ${c.justifyContent}`);
@@ -87,8 +89,25 @@ function itemCss(it) {
   if (it.order != null) d.push(`order: ${it.order}`);
   if (it.justifySelf) d.push(`justify-self: ${it.justifySelf}`);
   if (it.alignSelf) d.push(`align-self: ${it.alignSelf}`);
-  if (it.col != null) d.push(`grid-column: ${placementToCss(it.col)}`);
-  if (it.row != null) d.push(`grid-row: ${placementToCss(it.row)}`);
+  if (it.area != null) d.push(`grid-area: ${it.area}`);
+  if (it.colEnd != null) {
+    // Longhands, deliberately: the `grid-column` shorthand resets the END to
+    // auto, so emitting it after a `grid-column-end` silently drops the span
+    // and the case stops testing what it says it tests.
+    d.push(`grid-column-start: ${placementToCss(it.col)}`);
+    d.push(`grid-column-end: ${it.colEnd}`);
+  } else if (it.col != null) {
+    d.push(`grid-column: ${placementToCss(it.col)}`);
+  }
+  if (it.row != null) {
+    // A numeric row is written as the longhand for the same reason as the
+    // column above: it must not reset an end that another declaration set.
+    d.push(
+      typeof it.row === 'number'
+        ? `grid-row-start: ${it.row}`
+        : `grid-row: ${placementToCss(it.row)}`,
+    );
+  }
   return d.join('; ');
 }
 
