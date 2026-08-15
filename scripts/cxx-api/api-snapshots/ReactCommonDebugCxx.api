@@ -4982,6 +4982,7 @@ constexpr YGWrap facebook::yoga::unscopedEnum(facebook::yoga::Wrap scoped);
 constexpr auto facebook::yoga::maxOrDefined(std::floating_point auto a, std::floating_point auto b);
 constexpr auto facebook::yoga::minOrDefined(std::floating_point auto a, std::floating_point auto b);
 constexpr auto facebook::yoga::to_underlying(Enumeration auto e) noexcept;
+constexpr bool facebook::yoga::isColumnFlow(facebook::yoga::GridAutoFlow flow);
 constexpr bool facebook::yoga::isDefined(std::floating_point auto value);
 constexpr bool facebook::yoga::isDense(facebook::yoga::GridAutoFlow flow);
 constexpr bool facebook::yoga::isUndefined(std::floating_point auto value);
@@ -5498,6 +5499,8 @@ enum facebook::yoga::FloatSide : uint8_t {
 }
 
 enum facebook::yoga::GridAutoFlow : uint8_t {
+  Column,
+  ColumnDense,
   Row,
   RowDense,
 }
