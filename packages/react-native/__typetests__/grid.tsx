@@ -89,6 +89,28 @@ const styles = StyleSheet.create({
   shellHeader: {
     gridArea: 'header',
   },
+  // css-grid-3 grid lanes.
+  waterfall: {
+    display: 'grid-lanes',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+    gap: 12,
+    flowTolerance: 'normal',
+  },
+  brick: {
+    display: 'grid-lanes',
+    gridTemplateRows: 'repeat(3, minmax(60px, 1fr))',
+    flowTolerance: 16,
+  },
+  strictOrder: {
+    display: 'grid-lanes',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    flowTolerance: 'infinite',
+  },
+  proportionalTolerance: {
+    display: 'grid-lanes',
+    gridTemplateColumns: '1fr 1fr',
+    flowTolerance: '10%',
+  },
   alignment: {
     display: 'grid',
     justifyItems: 'center',
