@@ -104,8 +104,17 @@ a real screen first. Background in `element-model-design.md`.
   duplicating it: every axis-specific read is swapped on the way in and the
   resulting placements swapped back on the way out, so nothing in between knows
   which flow it is running.
-- **Named grid lines and `grid-template-areas` are not implemented.** Placement
-  is by line number or span only.
+- **`grid-template-areas` is implemented; NAMED GRID LINES are not.** An item
+  is placed by area name (`gridArea: 'header'`) or by line number, but a track
+  list cannot declare `[names]` and `grid-column: main-start / main-end` will
+  not resolve.
+- **`DOM-CSS-LIMITATION(grid-unknown-area-name)` — an item naming an area that
+  does not exist falls back to auto placement.** css-grid-2 §8.3 places it
+  against IMPLICIT lines carrying that name, which creates implicit tracks and
+  puts the item outside the grid. Auto placement is the friendlier reading of a
+  typo, and the spec behaviour is obscure enough that it is more likely to be
+  read as a bug than as conformance — but it is a divergence, recorded here
+  rather than asserted as correct in the corpus.
 - **`subgrid` is not implemented.**
 
 ---

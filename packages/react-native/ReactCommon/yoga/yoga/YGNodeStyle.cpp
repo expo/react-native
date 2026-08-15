@@ -9,6 +9,7 @@
 #include <yoga/debug/AssertFatal.h>
 #include <yoga/node/Node.h>
 #include <yoga/style/GridAutoFlow.h>
+#include <yoga/style/GridTemplateAreas.h>
 #include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridTrack.h>
 
@@ -684,6 +685,26 @@ GridAutoRepeat toGridAutoRepeat(
       static_cast<uint16_t>(trackCount)};
 }
 } // namespace
+
+void YGNodeStyleSetGridTemplateAreas(
+    YGNodeRef node,
+    const char* const* rows,
+    size_t rowCount) {
+  std::vector<std::string> rowStrings;
+  rowStrings.reserve(rowCount);
+  for (size_t i = 0; i < rowCount; i++) {
+    rowStrings.emplace_back(rows[i] == nullptr ? "" : rows[i]);
+  }
+  resolveRef(node)->style().setGridTemplateAreas(
+      parseGridTemplateAreas(rowStrings));
+  resolveRef(node)->markDirtyAndPropagate();
+}
+
+void YGNodeStyleSetGridArea(YGNodeRef node, const char* areaName) {
+  resolveRef(node)->style().setGridArea(
+      areaName == nullptr ? std::string{} : std::string{areaName});
+  resolveRef(node)->markDirtyAndPropagate();
+}
 
 void YGNodeStyleSetGridAutoFlow(YGNodeRef node, YGGridAutoFlow flow) {
   GridAutoFlow resolved = GridAutoFlow::Row;
