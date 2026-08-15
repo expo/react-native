@@ -5500,7 +5500,9 @@ enum facebook::yoga::GridLineType : uint8_t {
 
 enum facebook::yoga::GridTrackType : uint8_t {
   Auto,
+  FitContent,
   Fr,
+  MaxContent,
   Minmax,
   Percent,
   Points,
