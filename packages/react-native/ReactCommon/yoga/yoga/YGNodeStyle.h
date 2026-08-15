@@ -192,11 +192,13 @@ YG_EXPORT int YGNodeStyleGetGridRowEnd(YGNodeConstRef node);
 //     -> three tracks set: 10px, minmax(120px, 1fr), 10px
 //     -> auto-repeat at startIndex 1, trackCount 1
 // https://www.w3.org/TR/css-grid-2/#grid-auto-flow-property
-// Only row flow is implemented; `dense` changes the auto-placement cursor so
-// that later items can backfill holes left by earlier spanning ones.
+// `column` fills down a column before moving to the next; `dense` lets a later
+// item backfill a hole an earlier spanning item left behind.
 typedef enum YGGridAutoFlow {
   YGGridAutoFlowRow = 0,
   YGGridAutoFlowRowDense = 1,
+  YGGridAutoFlowColumn = 2,
+  YGGridAutoFlowColumnDense = 3,
 } YGGridAutoFlow;
 
 YG_EXPORT void YGNodeStyleSetGridAutoFlow(YGNodeRef node, YGGridAutoFlow flow);
