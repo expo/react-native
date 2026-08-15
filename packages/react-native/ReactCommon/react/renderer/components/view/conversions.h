@@ -136,6 +136,11 @@ inline DisplayType displayTypeFromYGDisplay(YGDisplay display)
       return DisplayType::Flex;
     case YGDisplayGrid:
       return DisplayType::Grid;
+    case YGDisplayGridLanes:
+      // Lanes IS a grid formatting context — one axis is flowed rather than
+      // gridded — and RN's DisplayType has no separate value for it, so it
+      // reports as Grid rather than inventing a distinction nothing consumes.
+      return DisplayType::Grid;
     case YGDisplayBlock:
       // RN has no distinct block display metric; a native block container
       // reports Flex, exactly as the flex emulation does — so the RN-observable
