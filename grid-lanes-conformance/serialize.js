@@ -48,7 +48,8 @@ function containerCss(c) {
   d.push(`display: ${c.display}`);
   if (c.width != null) d.push(`width: ${c.width}px`);
   if (c.height != null) d.push(`height: ${c.height}px`);
-  if (c.cols) d.push(`grid-template-columns: ${c.cols.map(trackToCss).join(' ')}`);
+  if (c.cols)
+    d.push(`grid-template-columns: ${c.cols.map(trackToCss).join(' ')}`);
   if (c.rows) d.push(`grid-template-rows: ${c.rows.map(trackToCss).join(' ')}`);
   if (c.gap != null) d.push(`gap: ${c.gap}px`);
   if (c.rowGap != null) d.push(`row-gap: ${c.rowGap}px`);
@@ -66,13 +67,15 @@ function containerCss(c) {
   if (c.border) d.push(`border: ${c.border}px solid #0000`);
   if (c.fontSize) d.push(`font-size: ${c.fontSize}px`);
   if (c.direction) d.push(`direction: ${c.direction}`);
+  if (c.positioned) d.push('position: relative');
   // oracleLimitation is metadata, not CSS.
   if (c.gapPercent) d.push(`gap: ${c.gapPercent}`);
   if (c.minWidth != null) d.push(`min-width: ${c.minWidth}px`);
   if (c.maxWidth != null) d.push(`max-width: ${c.maxWidth}px`);
   if (c.minHeight != null) d.push(`min-height: ${c.minHeight}px`);
   if (c.maxHeight != null) d.push(`max-height: ${c.maxHeight}px`);
-  if (c.autoRows) d.push(`grid-auto-rows: ${c.autoRows.map(trackToCss).join(' ')}`);
+  if (c.autoRows)
+    d.push(`grid-auto-rows: ${c.autoRows.map(trackToCss).join(' ')}`);
   if (c.autoColumns)
     d.push(`grid-auto-columns: ${c.autoColumns.map(trackToCss).join(' ')}`);
   return d.join('; ');
@@ -88,6 +91,16 @@ function itemCss(it) {
   if (it.p != null) d.push(`padding: ${it.p}px`);
   if (it.b != null) d.push(`border: ${it.b}px solid #0000`);
   if (it.order != null) d.push(`order: ${it.order}`);
+  // An out-of-flow item (§8). The container is given `position: relative` so
+  // that it is the containing block in the browser too — Yoga has no static
+  // position, so without that the two would be measuring against different
+  // boxes.
+  if (it.displayNone) d.push('display: none');
+  if (it.absolute) {
+    d.push('position: absolute');
+    if (it.top != null) d.push(`top: ${it.top}px`);
+    if (it.left != null) d.push(`left: ${it.left}px`);
+  }
   if (it.justifySelf) d.push(`justify-self: ${it.justifySelf}`);
   if (it.alignSelf) d.push(`align-self: ${it.alignSelf}`);
   if (it.area != null) d.push(`grid-area: ${it.area}`);
@@ -119,7 +132,6 @@ function placementToCss(p) {
   return String(p);
 }
 
-
 // An item with `childHeight` contains a fixed-size child instead of having a
 // height of its own, which is how a case exercises CONTENT sizing without
 // depending on a font.
@@ -129,4 +141,11 @@ function itemChildHtml(it) {
     : '';
 }
 
-module.exports = {trackToCss, toleranceToCss, containerCss, itemCss, placementToCss, itemChildHtml};
+module.exports = {
+  trackToCss,
+  toleranceToCss,
+  containerCss,
+  itemCss,
+  placementToCss,
+  itemChildHtml,
+};
