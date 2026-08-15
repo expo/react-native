@@ -568,6 +568,7 @@ facebook::react::LayoutMetrics facebook::react::layoutMetricsFromYogaNode(facebo
 facebook::react::ListStylePosition facebook::react::listStylePositionFromString(const std::string& value, facebook::react::ListStylePosition fallback);
 facebook::react::ListStyleType facebook::react::listStyleTypeFromString(const std::string& value, facebook::react::ListStyleType fallback);
 facebook::react::ListStyleType facebook::react::nestedBulletForDepth(int depth);
+facebook::react::ParsedGridTrackList facebook::react::parseGridTrackList(std::string_view source);
 facebook::react::Rect facebook::react::insetBy(const facebook::react::Rect& rect, const facebook::react::EdgeInsets& insets) noexcept;
 facebook::react::Rect facebook::react::outsetBy(const facebook::react::Rect& rect, const facebook::react::EdgeInsets& outsets) noexcept;
 facebook::react::SharedColor facebook::react::blackColor();
@@ -585,6 +586,7 @@ facebook::react::TurboModuleMethodValueKind facebook::react::getTurboModuleMetho
 facebook::react::ValueUnit facebook::react::toValueUnit(const facebook::react::RawValue& value);
 facebook::yoga::FloatOptional facebook::react::convertAspectRatio(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value);
 facebook::yoga::FloatOptional facebook::react::yogaOptionalFloatFromFloat(facebook::react::Float value);
+facebook::yoga::GridLine facebook::react::parseGridLine(std::string_view source);
 float facebook::react::alphaFromHostPlatformColor(facebook::react::Color color);
 float facebook::react::blueFromHostPlatformColor(facebook::react::Color color);
 float facebook::react::greenFromHostPlatformColor(facebook::react::Color color);
@@ -715,6 +717,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ImageSource& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Isolation& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::LayoutConformance& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ParsedGridTrackList& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Point& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Size& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::UserSelect& result);
@@ -722,6 +725,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::BoxSizing& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Clear& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::FloatSide& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::GridLine& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Style::SizeLength& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, std::vector<facebook::react::BackgroundPosition>& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, std::vector<facebook::react::BackgroundRepeat>& result);
@@ -1121,7 +1125,7 @@ class facebook::react::CSSLayoutTransitions : public facebook::react::MountingOv
   public bool hasWork() const;
   public virtual bool shouldOverridePullTransaction() const override;
   public virtual std::optional<facebook::react::MountingTransaction> pullTransaction(facebook::react::SurfaceId surfaceId, facebook::react::MountingTransaction::Number number, const facebook::react::TransactionTelemetry& telemetry, facebook::react::ShadowViewMutationList mutations) const override;
-  public void beginCapture(facebook::react::SurfaceId surfaceId, std::unordered_map<facebook::react::Tag, facebook::react::CSSLayoutTransitions::Timeline> timelines, std::unordered_map<facebook::react::Tag, facebook::react::LayoutMetrics> scratchMetrics);
+  public void beginCapture(facebook::react::SurfaceId surfaceId, std::unordered_map<facebook::react::Tag, facebook::react::CSSLayoutTransitions::Timeline> timelines, std::unordered_map<facebook::react::Tag, facebook::react::LayoutMetrics> scratchMetrics, std::unordered_map<facebook::react::Tag, facebook::react::Props::Shared> declaringProps);
   public void pump(double nowMs, facebook::react::UIManager& uiManager);
 }
 
@@ -3947,6 +3951,7 @@ enum facebook::react::TransitionProperty {
   All,
   BackgroundColor,
   BorderColor,
+  GridTemplateRows,
   Height,
   Opacity,
   PaddingBottom,
@@ -4545,6 +4550,11 @@ struct facebook::react::NodeNameProvider {
   public virtual ~NodeNameProvider() = default;
 }
 
+struct facebook::react::ParsedGridTrackList {
+  public facebook::yoga::GridAutoRepeat autoRepeat;
+  public facebook::yoga::GridTrackList tracks;
+}
+
 struct facebook::react::PendingInlineElementMetrics {
   public const facebook::react::ShadowNodeFamily* family;
   public facebook::react::LayoutMetrics metrics;
@@ -4877,6 +4887,8 @@ struct facebook::react::TransitionValue {
   public facebook::react::Float number;
   public facebook::react::SharedColor color;
   public facebook::react::Transform transform;
+  public facebook::yoga::GridAutoRepeat tracksAutoRepeat;
+  public facebook::yoga::GridTrackList tracks;
   public facebook::yoga::Style::Length paddingLength;
   public facebook::yoga::Style::SizeLength length;
 }
@@ -6278,6 +6290,29 @@ struct facebook::react::HostPlatformViewTraitsInitializer::RadioRowPadding {
 }
 
 
+bool facebook::react::detail::equalsIgnoreCase(std::string_view a, std::string_view b);
+bool facebook::react::detail::parseBreadth(std::string_view token, facebook::yoga::StyleSizeLength& out);
+bool facebook::react::detail::parseTrackSize(facebook::react::detail::GridTrackScanner& scanner, facebook::yoga::GridTrackSize& out);
+template <typename T, typename C>
+C facebook::react::detail::memberFunctionClass(T C::*);
+
+class facebook::react::detail::OwnedBytesBuffer : public facebook::jsi::MutableBuffer {
+  public OwnedBytesBuffer(std::vector<uint8_t> bytes) noexcept;
+  public virtual size_t size() const override;
+  public virtual uint8_t* data() override;
+}
+
+struct facebook::react::detail::GridTrackScanner {
+  public bool done();
+  public size_t pos;
+  public std::string_view consumeBlock();
+  public std::string_view input;
+  public std::string_view nextToken();
+  public std::string_view peekToken();
+  public void skipWhitespace();
+}
+
+
 class facebook::react::jsinspector_modern::JCxxInspectorPackagerConnection : public jni::HybridClass<facebook::react::jsinspector_modern::JCxxInspectorPackagerConnection> {
   public static constexpr auto kJavaDescriptor;
   public static void registerNatives();
@@ -6503,16 +6538,6 @@ struct facebook::react::array_detail::BridgingStatic {
 template <typename T>
 struct facebook::react::array_detail::BridgingDynamic {
   public static facebook::jsi::Array toJs(facebook::jsi::Runtime& rt, const T& list, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
-}
-
-
-template <typename T, typename C>
-C facebook::react::detail::memberFunctionClass(T C::*);
-
-class facebook::react::detail::OwnedBytesBuffer : public facebook::jsi::MutableBuffer {
-  public OwnedBytesBuffer(std::vector<uint8_t> bytes) noexcept;
-  public virtual size_t size() const override;
-  public virtual uint8_t* data() override;
 }
 
 

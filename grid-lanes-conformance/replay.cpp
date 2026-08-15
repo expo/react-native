@@ -91,6 +91,23 @@ void applySimple(YGNodeRef node, bool isColumn, size_t index, const Track& t) {
   }
 }
 
+void applyAutoRow(YGNodeRef node, size_t index, const Track& t) {
+  switch (t.kind) {
+    case TrackKind::Points:
+      YGNodeStyleSetGridAutoRow(node, index, YGGridTrackTypePoints, t.value);
+      break;
+    case TrackKind::Percent:
+      YGNodeStyleSetGridAutoRow(node, index, YGGridTrackTypePercent, t.value);
+      break;
+    case TrackKind::Fr:
+      YGNodeStyleSetGridAutoRow(node, index, YGGridTrackTypeFr, t.value);
+      break;
+    default:
+      YGNodeStyleSetGridAutoRow(node, index, YGGridTrackTypeAuto, 0.0f);
+      break;
+  }
+}
+
 void applyPlacement(YGNodeRef node, bool isColumn, const Placement& p) {
   switch (p.kind) {
     case PlacementKind::Auto:
@@ -144,6 +161,27 @@ YGNodeRef build(const Case& c) {
   }
   if (isSet(c.colGap)) {
     YGNodeStyleSetGap(root, YGGutterColumn, c.colGap);
+  }
+  if (isSet(c.minWidth)) {
+    YGNodeStyleSetMinWidth(root, c.minWidth);
+  }
+  if (isSet(c.maxWidth)) {
+    YGNodeStyleSetMaxWidth(root, c.maxWidth);
+  }
+  if (isSet(c.minHeight)) {
+    YGNodeStyleSetMinHeight(root, c.minHeight);
+  }
+  if (isSet(c.maxHeight)) {
+    YGNodeStyleSetMaxHeight(root, c.maxHeight);
+  }
+  if (isSet(c.gapPercent)) {
+    YGNodeStyleSetGapPercent(root, YGGutterAll, c.gapPercent);
+  }
+  if (c.autoRowCount > 0) {
+    YGNodeStyleSetGridAutoRowsCount(root, c.autoRowCount);
+    for (size_t i = 0; i < c.autoRowCount; i++) {
+      applyAutoRow(root, i, c.autoRows[i]);
+    }
   }
   if (c.padding > 0) {
     YGNodeStyleSetPadding(root, YGEdgeAll, c.padding);
@@ -202,6 +240,12 @@ YGNodeRef build(const Case& c) {
     YGNodeRef child = YGNodeNewWithConfig(unroundedConfig());
     if (isSet(it.width)) {
       YGNodeStyleSetWidth(child, it.width);
+    }
+    if (isSet(it.widthPercent)) {
+      YGNodeStyleSetWidthPercent(child, it.widthPercent);
+    }
+    if (isSet(it.aspectRatio)) {
+      YGNodeStyleSetAspectRatio(child, it.aspectRatio);
     }
     if (isSet(it.height)) {
       YGNodeStyleSetHeight(child, it.height);
@@ -267,9 +311,17 @@ int main(int argc, char** argv) {
     }
 
     ran++;
+    // The browser lays every case out inside a 900px-wide wrapper, where a
+    // `display: grid` box is BLOCK-level: with no width of its own it fills
+    // that wrapper and is then clamped by any min/max-width. Laying the
+    // container out as a root instead would shrink-wrap it to its content,
+    // which is a different box entirely — so the wrapper is modelled
+    // explicitly rather than approximated by the root's available width.
+    YGNodeRef wrapper = YGNodeNewWithConfig(unroundedConfig());
+    YGNodeStyleSetWidth(wrapper, 900.0f);
     YGNodeRef root = build(c);
-    // The browser lays every case out inside a 900px wrapper.
-    YGNodeCalculateLayout(root, 900.0f, YGUndefined, YGDirectionLTR);
+    YGNodeInsertChild(wrapper, root, 0);
+    YGNodeCalculateLayout(wrapper, 900.0f, YGUndefined, YGDirectionLTR);
 
     size_t caseMismatches = 0;
     auto check = [&](const char* what, float actual, float expected) {
@@ -314,7 +366,7 @@ int main(int argc, char** argv) {
           c.note,
           caseMismatches);
     }
-    YGNodeFreeRecursive(root);
+    YGNodeFreeRecursive(wrapper);
   }
 
   if (!failures.empty()) {

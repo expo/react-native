@@ -387,6 +387,7 @@ facebook::react::ListStylePosition facebook::react::listStylePositionFromString(
 facebook::react::ListStyleType facebook::react::listStyleTypeFromString(const std::string& value, facebook::react::ListStyleType fallback);
 facebook::react::ListStyleType facebook::react::nestedBulletForDepth(int depth);
 facebook::react::ParagraphAttributes facebook::react::convertRawProp(const facebook::react::PropsParserContext& context, const facebook::react::RawProps& rawProps, const facebook::react::ParagraphAttributes& sourceParagraphAttributes, const facebook::react::ParagraphAttributes& defaultParagraphAttributes);
+facebook::react::ParsedGridTrackList facebook::react::parseGridTrackList(std::string_view source);
 facebook::react::Rect facebook::react::insetBy(const facebook::react::Rect& rect, const facebook::react::EdgeInsets& insets) noexcept;
 facebook::react::Rect facebook::react::outsetBy(const facebook::react::Rect& rect, const facebook::react::EdgeInsets& outsets) noexcept;
 facebook::react::ScriptTag facebook::react::parseTypeFromHeader(const facebook::react::BundleHeader& header);
@@ -406,6 +407,7 @@ facebook::react::TurboModuleMethodValueKind facebook::react::getTurboModuleMetho
 facebook::react::ValueUnit facebook::react::toValueUnit(const facebook::react::RawValue& value);
 facebook::yoga::FloatOptional facebook::react::convertAspectRatio(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value);
 facebook::yoga::FloatOptional facebook::react::yogaOptionalFloatFromFloat(Float value);
+facebook::yoga::GridLine facebook::react::parseGridLine(std::string_view source);
 float facebook::react::yogaFloatFromFloat(Float value);
 folly::dynamic facebook::react::diffDynamicProps(const folly::dynamic& oldProps, const folly::dynamic& newProps);
 folly::dynamic facebook::react::mergeDynamicProps(const folly::dynamic& source, const folly::dynamic& patch, facebook::react::NullValueStrategy nullValueStrategy);
@@ -581,6 +583,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Isolation& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::LayoutConformance& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::LineBreakMode& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ParsedGridTrackList& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Point& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Size& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::TextAlignmentVertical& result);
@@ -591,6 +594,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::BoxSizing& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Clear& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::FloatSide& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::GridLine& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Style::SizeLength& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, std::vector<facebook::react::BackgroundPosition>& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, std::vector<facebook::react::BackgroundRepeat>& result);
@@ -1058,7 +1062,7 @@ class facebook::react::CSSLayoutTransitions : public facebook::react::MountingOv
   public bool hasWork() const;
   public virtual bool shouldOverridePullTransaction() const override;
   public virtual std::optional<facebook::react::MountingTransaction> pullTransaction(facebook::react::SurfaceId surfaceId, facebook::react::MountingTransaction::Number number, const facebook::react::TransactionTelemetry& telemetry, facebook::react::ShadowViewMutationList mutations) const override;
-  public void beginCapture(facebook::react::SurfaceId surfaceId, std::unordered_map<facebook::react::Tag, facebook::react::CSSLayoutTransitions::Timeline> timelines, std::unordered_map<facebook::react::Tag, facebook::react::LayoutMetrics> scratchMetrics);
+  public void beginCapture(facebook::react::SurfaceId surfaceId, std::unordered_map<facebook::react::Tag, facebook::react::CSSLayoutTransitions::Timeline> timelines, std::unordered_map<facebook::react::Tag, facebook::react::LayoutMetrics> scratchMetrics, std::unordered_map<facebook::react::Tag, facebook::react::Props::Shared> declaringProps);
   public void pump(double nowMs, facebook::react::UIManager& uiManager);
 }
 
@@ -4308,6 +4312,7 @@ enum facebook::react::PropName {
   FLEX_GROW,
   FLEX_SHRINK,
   FLEX_WRAP,
+  GRID_TEMPLATE_ROWS,
   HEIGHT,
   ISOLATION,
   JUSTIFY_CONTENT,
@@ -4559,6 +4564,7 @@ enum facebook::react::TransitionProperty {
   All,
   BackgroundColor,
   BorderColor,
+  GridTemplateRows,
   Height,
   Opacity,
   PaddingBottom,
@@ -4686,6 +4692,7 @@ struct facebook::react::AnimatedPropsBuilder {
   public void setFlexGrow(facebook::yoga::FloatOptional value);
   public void setFlexShrink(facebook::yoga::FloatOptional value);
   public void setFlexWrap(facebook::yoga::Wrap value);
+  public void setGridTemplateRows(const facebook::yoga::GridTrackList& value);
   public void setHeight(facebook::yoga::Style::SizeLength value);
   public void setIsolation(facebook::react::Isolation value);
   public void setJustifyContent(facebook::yoga::Justify value);
@@ -5430,6 +5437,11 @@ struct facebook::react::NodeNameProvider {
   public virtual ~NodeNameProvider() = default;
 }
 
+struct facebook::react::ParsedGridTrackList {
+  public facebook::yoga::GridAutoRepeat autoRepeat;
+  public facebook::yoga::GridTrackList tracks;
+}
+
 struct facebook::react::PendingInlineElementMetrics {
   public const facebook::react::ShadowNodeFamily* family;
   public facebook::react::LayoutMetrics metrics;
@@ -5842,6 +5854,8 @@ struct facebook::react::TransitionValue {
   public Float number;
   public facebook::react::SharedColor color;
   public facebook::react::Transform transform;
+  public facebook::yoga::GridAutoRepeat tracksAutoRepeat;
+  public facebook::yoga::GridTrackList tracks;
   public facebook::yoga::Style::Length paddingLength;
   public facebook::yoga::Style::SizeLength length;
 }
@@ -6572,6 +6586,9 @@ struct facebook::react::HostPlatformViewTraitsInitializer::RadioRowPadding {
 }
 
 
+bool facebook::react::detail::equalsIgnoreCase(std::string_view a, std::string_view b);
+bool facebook::react::detail::parseBreadth(std::string_view token, facebook::yoga::StyleSizeLength& out);
+bool facebook::react::detail::parseTrackSize(facebook::react::detail::GridTrackScanner& scanner, facebook::yoga::GridTrackSize& out);
 constexpr bool facebook::react::detail::isHexDigit(char c);
 constexpr bool facebook::react::detail::isValidHexColor(std::string_view hex);
 constexpr float facebook::react::detail::hueToRgb(float p, float q, float t);
@@ -6613,6 +6630,16 @@ class facebook::react::detail::OwnedBytesBuffer : public facebook::jsi::MutableB
 enum facebook::react::detail::HexColorType {
   Long,
   Short,
+}
+
+struct facebook::react::detail::GridTrackScanner {
+  public bool done();
+  public size_t pos;
+  public std::string_view consumeBlock();
+  public std::string_view input;
+  public std::string_view nextToken();
+  public std::string_view peekToken();
+  public void skipWhitespace();
 }
 
 template <CSSDataType AlllowedType1T, CSSDataType AlllowedType2T, CSSMaybeCompoundDataType... RestT>

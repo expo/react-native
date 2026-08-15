@@ -171,9 +171,10 @@ struct TransitionTimingFunction {
  * The properties a transition can apply to: a closed set, since the
  * interpolator has to know how to interpolate each value. `All` is
  * `transition-property: all`. The first four are paint properties, whose
- * frames are written straight to the mounted view; `Height` and
- * `padding-bottom` are layout properties, whose frames go through a commit
- * (see `isLayoutAffecting` in `CSSTransitions.cpp`).
+ * frames are written straight to the mounted view; `Height`, `padding-bottom`
+ * and `grid-template-rows` are layout properties, whose frames glide the
+ * mounted views between two layouts (see `isLayoutAffecting` in
+ * `CSSTransitions.cpp`).
  */
 enum class TransitionProperty {
   All,
@@ -183,6 +184,7 @@ enum class TransitionProperty {
   Transform,
   Height,
   PaddingBottom,
+  GridTemplateRows,
 };
 
 /*
