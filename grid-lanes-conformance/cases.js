@@ -1481,4 +1481,88 @@ for (const flow of ['row', 'column', 'row dense', 'column dense']) {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// A. grid-template-areas — css-grid-2 §7.3
+//
+// An item placed by area name must land exactly where the same item placed by
+// line number would, so each shape is also asserted against the explicit-line
+// equivalent through Safari.
+// ---------------------------------------------------------------------------
+
+add(
+  'template-areas-basic',
+  'A',
+  grid({
+    cols: [px(120), px(120)],
+    rows: [px(40), px(60)],
+    gap: 10,
+    areas: ['header header', 'sidebar main'],
+  }),
+  [
+    item(null, null, {area: 'header'}),
+    item(null, null, {area: 'sidebar'}),
+    item(null, null, {area: 'main'}),
+  ],
+  'a classic header / sidebar / main template',
+);
+
+// The same layout written with line numbers instead: the two must agree.
+add(
+  'template-areas-equivalent-lines',
+  'A',
+  grid({cols: [px(120), px(120)], rows: [px(40), px(60)], gap: 10}),
+  [
+    item(null, null, {col: 1, colEnd: 3, row: 1}),
+    item(null, null, {col: 1, row: 2}),
+    item(null, null, {col: 2, row: 2}),
+  ],
+  'the same placement by line number',
+);
+
+// A template with a hole: `.` is a null cell that nothing is placed into.
+add(
+  'template-areas-null-cells',
+  'A',
+  grid({
+    cols: [px(80), px(80), px(80)],
+    rows: [px(40), px(40)],
+    gap: 8,
+    areas: ['nav . aside', 'nav main aside'],
+  }),
+  [
+    item(null, null, {area: 'nav'}),
+    item(null, null, {area: 'main'}),
+    item(null, null, {area: 'aside'}),
+  ],
+  'null cells leave a hole in the template',
+);
+
+// The template sizes the explicit grid on its own: no track lists at all.
+add(
+  'template-areas-sizes-grid',
+  'A',
+  grid({
+    gap: 10,
+    width: 400,
+    areas: ['a b', 'c d'],
+  }),
+  [
+    item(null, 30, {area: 'a'}),
+    item(null, 30, {area: 'b'}),
+    item(null, 30, {area: 'c'}),
+    item(null, 30, {area: 'd'}),
+  ],
+  'the template alone defines a 2x2 explicit grid',
+);
+
+// An item naming an area that does not exist is deliberately NOT covered.
+//
+// I assumed it would fall back to auto placement; Safari showed otherwise.
+// css-grid-2 §8.3 says an unresolved name is placed against IMPLICIT lines
+// carrying that name, which creates implicit tracks — so the item lands
+// outside the grid rather than flowing into it. We fall back to auto
+// placement instead. See DOM-CSS-LIMITATION(grid-unknown-area-name); a case
+// asserting our behaviour would be asserting the divergence, not the spec.
+
 module.exports = {cases, px, pct, fr, auto, minmax};

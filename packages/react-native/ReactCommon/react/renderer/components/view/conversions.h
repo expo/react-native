@@ -39,6 +39,7 @@
 #include <yoga/YGEnums.h>
 #include <yoga/node/Node.h>
 #include <yoga/style/GridAutoFlow.h>
+#include <yoga/style/GridTemplateAreas.h>
 #include <cmath>
 #include <optional>
 #include <string>
@@ -573,6 +574,48 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     return;
   }
   LOG(ERROR) << "Could not parse yoga::Display: " << stringValue;
+}
+
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::GridTemplateAreas &result)
+{
+  result = {};
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  // The CSS form is a sequence of quoted rows:
+  //
+  //   gridTemplateAreas: '"header header" "sidebar main"'
+  //
+  // Newline-separated rows without quotes are accepted too, since that is
+  // the natural way to write it in a JS template literal.
+  const auto source = (std::string)value;
+  std::vector<std::string> rows;
+  size_t i = 0;
+  while (i < source.size()) {
+    if (source[i] == '"' || source[i] == '\'') {
+      const char quote = source[i++];
+      const size_t start = i;
+      while (i < source.size() && source[i] != quote) {
+        i++;
+      }
+      rows.push_back(source.substr(start, i - start));
+      if (i < source.size()) {
+        i++;
+      }
+    } else if (source[i] == '\n') {
+      i++;
+    } else if (std::isspace(static_cast<unsigned char>(source[i])) != 0) {
+      i++;
+    } else {
+      // An unquoted run up to the next newline is one row.
+      const size_t start = i;
+      while (i < source.size() && source[i] != '\n') {
+        i++;
+      }
+      rows.push_back(source.substr(start, i - start));
+    }
+  }
+  result = yoga::parseGridTemplateAreas(rows);
 }
 
 inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::GridAutoFlow &result)

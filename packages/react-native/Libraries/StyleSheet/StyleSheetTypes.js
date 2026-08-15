@@ -738,6 +738,20 @@ type ____LayoutStyle_Internal = Readonly<{
    * column before moving to the next; `dense` lets a later item backfill a
    * hole an earlier spanning item left behind.
    */
+  /**
+   * Named areas (css-grid-2 §7.3), written as the CSS rows:
+   *
+   *   gridTemplateAreas: '"header header" "sidebar main"'
+   *
+   * A `.` is a null cell. A ragged template, or a name that does not form a
+   * rectangle, makes the whole declaration invalid and is ignored.
+   */
+  gridTemplateAreas?: string,
+  /**
+   * Places this item into a named area of its parent's template. A name the
+   * template does not define falls back to automatic placement.
+   */
+  gridArea?: string,
   gridAutoFlow?: 'row' | 'row dense' | 'column' | 'column dense',
   /**
    * Sizes for implicit tracks — those created by items placed outside the
