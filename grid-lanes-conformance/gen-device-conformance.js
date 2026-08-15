@@ -108,6 +108,13 @@ function rnItemStyle(item) {
   if (item.area != null) style.gridArea = item.area;
   if (item.colEnd != null) style.gridColumnEnd = item.colEnd;
   if (item.justifySelf) style.justifySelf = item.justifySelf;
+  if (item.alignSelf) style.alignSelf = item.alignSelf;
+  if (item.displayNone) style.display = 'none';
+  if (item.absolute) {
+    style.position = 'absolute';
+    if (item.top != null) style.top = item.top;
+    if (item.left != null) style.left = item.left;
+  }
   if (item.col != null) {
     const css = placementToCss(item.col);
     if (css.startsWith('span ')) {

@@ -204,6 +204,10 @@ w('  float childHeight;   // kUnset when the item has no nested child');
 w('  float aspectRatio;   // kUnset when absent');
 w('  Placement col, row;');
 w('  int justifySelf;       // -1 when unset');
+w('  int alignSelf;         // -1 when unset');
+w('  int absolute;          // 1 when the item is out of flow');
+w('  int displayNone;       // 1 when the item is display:none');
+w('  float top, left;       // kUnset when unset');
 w('  const char* area;      // nullptr when the item names no area');
 w('  int colEndLine, rowEndLine;  // 0 when unset');
 w('  Rect expected;');
@@ -270,11 +274,15 @@ expected.cases.forEach((c, idx) => {
   const items = c.items.map((it, i) => {
     const e = c.expected.items[i] ?? {x: 0, y: 0, w: 0, h: 0};
     const js = it.justifySelf != null ? JUSTIFY[it.justifySelf] : null;
+    const as = it.alignSelf != null ? ALIGN[it.alignSelf] : null;
     return (
       `  {${optF(it.w)}, ${optF(it.h)}, ${f(it.m ?? 0)}, ${f(it.p ?? 0)}, ` +
       `${f(it.b ?? 0)}, ${optF(it.widthPercent)}, ${optF(it.childHeight)}, ${optF(it.aspectRatio)}, ` +
       `${placementToCpp(it.col)}, ${placementToCpp(it.row)}, ` +
-      `${js ?? -1}, ${it.area != null ? JSON.stringify(it.area) : 'nullptr'}, ` +
+      `${js ?? -1}, ${as ?? -1}, ` +
+      `${it.absolute ? 1 : 0}, ${it.displayNone ? 1 : 0}, ` +
+      `${optF(it.top)}, ${optF(it.left)}, ` +
+      `${it.area != null ? JSON.stringify(it.area) : 'nullptr'}, ` +
       `${typeof it.colEnd === 'number' ? it.colEnd : 0}, ${typeof it.rowEnd === 'number' ? it.rowEnd : 0}, ` +
       `{${f(e.x)}, ${f(e.y)}, ${f(e.w)}, ${f(e.h)}}}`
     );

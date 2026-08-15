@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <yoga/algorithm/AbsoluteLayout.h>
 #include <yoga/algorithm/BoundAxis.h>
 #include <yoga/algorithm/CalculateLayout.h>
 #include <yoga/algorithm/GridAutoRepeat.h>
@@ -700,6 +701,157 @@ void calculateGridLanesLayoutInternal(
   // nothing after the last one.
   const float stackingContentSize = stackingExtent;
 
+  // ---------------------------------------------------------------------
+  // Stacking-axis alignment (§6.4, then §6.3)
+  //
+  // These run after the loop because both need answers the loop cannot give
+  // while it is still running: which item is LAST in each track, and how deep
+  // the deepest lane finished.
+  //
+  // §6.4 moves individual items into the void that follows them; §6.3 then
+  // moves the whole result as one block. That order is what the spec
+  // describes — an item's alignment container is bounded by the stacking
+  // range, and content distribution relocates the range afterwards.
+  // ---------------------------------------------------------------------
+  if (performLayout && !items.empty()) {
+    // The slack below each item: the empty space between where it ends and
+    // whatever comes next in the same track, MINUS the gutter, which is not a
+    // void — it is space the author asked for between neighbours.
+    //
+    // A spanning item takes the smallest slack across the tracks it covers.
+    // That is the only region genuinely free for the whole item; using any
+    // larger one would push it into a track that has already been filled.
+    std::vector<float> slack(items.size(), 0.0f);
+    {
+      // Per track, the start position of the next item after each position.
+      std::vector<std::vector<size_t>> itemsInTrack(trackCount);
+      for (size_t i = 0; i < items.size(); i++) {
+        const auto& item = items[i];
+        for (size_t t = 0; t < item.span && item.placedLine + t < trackCount;
+             t++) {
+          itemsInTrack[item.placedLine + t].push_back(i);
+        }
+      }
+      // Items were laid out in document order, so each track's list is
+      // already ordered by position.
+      std::vector<float> perItem(items.size(),
+                                 std::numeric_limits<float>::max());
+      for (size_t t = 0; t < trackCount; t++) {
+        const auto& inTrack = itemsInTrack[t];
+        for (size_t k = 0; k < inTrack.size(); k++) {
+          const auto& item = items[inTrack[k]];
+          const float bottom = item.stackingStart + item.outerStackingSize;
+          const float available = k + 1 < inTrack.size()
+              // An interior void: everything up to the next item, less the
+              // gutter that would have been there anyway.
+              ? items[inTrack[k + 1]].stackingStart - bottom - stackingAxisGap
+              // §6.4: the last item in a track aligns against the lowest
+              // bottom edge among ALL the tracks' last items — the bottom of
+              // the stacking range, not of this lane.
+              : stackingContentSize - bottom;
+          perItem[inTrack[k]] =
+              std::min(perItem[inTrack[k]], std::max(0.0f, available));
+        }
+      }
+      for (size_t i = 0; i < items.size(); i++) {
+        slack[i] = perItem[i] == std::numeric_limits<float>::max()
+            ? 0.0f
+            : perItem[i];
+      }
+    }
+
+    // §6.3's note settles what the non-positional values mean in this axis:
+    // "The behavior of normal and stretch is identical to start." Self
+    // alignment gets the same reading, and it is the only one that keeps a
+    // waterfall working — Yoga's default align-items is `stretch`, so filling
+    // the void instead of ignoring it would make every lanes container grow
+    // its last items down to the deepest lane by default.
+    auto positionalOffset = [](Align align, float freeSpace) {
+      switch (align) {
+        case Align::Center:
+          return freeSpace / 2.0f;
+        case Align::FlexEnd:
+        case Align::End:
+          return freeSpace;
+        default:
+          return 0.0f;
+      }
+    };
+    auto positionalOffsetJustify = [](Justify justify, float freeSpace) {
+      switch (justify) {
+        case Justify::Center:
+          return freeSpace / 2.0f;
+        case Justify::FlexEnd:
+        case Justify::End:
+          return freeSpace;
+        default:
+          return 0.0f;
+      }
+    };
+
+    // §6.3: one alignment subject — the whole stacking range — so the
+    // distributed values have nothing to distribute BETWEEN and collapse to
+    // their fallbacks: space-between to start, space-around and space-evenly
+    // to center.
+    float contentOffset = 0.0f;
+    {
+      // Only a container that will actually take its available size has room
+      // to distribute; one sized by its content ends exactly at the stacking
+      // range, whatever align-content says. Same condition as the measured
+      // dimension below, so the two can never disagree about the free space.
+      const bool stretchesToAvailable = yoga::isDefined(stackingAxisAvailable) &&
+          (inlineIsGridAxis ? heightSizingMode : widthSizingMode) ==
+              SizingMode::StretchFit;
+      const float free = stretchesToAvailable
+          ? stackingAxisAvailable - stackingContentSize
+          : 0.0f;
+      if (free > 0.0f) {
+        if (inlineIsGridAxis) {
+          auto align = nodeStyle.alignContent();
+          if (align == Align::SpaceAround || align == Align::SpaceEvenly) {
+            align = Align::Center;
+          } else if (align == Align::SpaceBetween) {
+            align = Align::FlexStart;
+          }
+          contentOffset = positionalOffset(align, free);
+        } else {
+          auto justify = nodeStyle.justifyContent();
+          if (justify == Justify::SpaceAround ||
+              justify == Justify::SpaceEvenly) {
+            justify = Justify::Center;
+          } else if (justify == Justify::SpaceBetween) {
+            justify = Justify::FlexStart;
+          }
+          contentOffset = positionalOffsetJustify(justify, free);
+        }
+      }
+    }
+
+    for (size_t i = 0; i < items.size(); i++) {
+      auto* child = items[i].node;
+      const float selfOffset = inlineIsGridAxis
+          ? positionalOffset(resolveChildAlignment(node, child), slack[i])
+          : positionalOffsetJustify(
+                resolveChildJustification(node, child), slack[i]);
+      const float delta = selfOffset + contentOffset;
+      if (delta == 0.0f) {
+        continue;
+      }
+      if (inlineIsGridAxis) {
+        child->setLayoutPosition(
+            child->getLayout().position(PhysicalEdge::Top) + delta,
+            PhysicalEdge::Top);
+      } else {
+        // The stacking axis is the inline one here, so "forward" is whichever
+        // way the writing mode runs.
+        child->setLayoutPosition(
+            child->getLayout().position(PhysicalEdge::Left) +
+                (direction == Direction::RTL ? -delta : delta),
+            PhysicalEdge::Left);
+      }
+    }
+  }
+
   const float measuredGridAxis = yoga::isDefined(gridAxisAvailable) &&
           (inlineIsGridAxis ? widthSizingMode : heightSizingMode) ==
               SizingMode::StretchFit
@@ -739,6 +891,42 @@ void calculateGridLanesLayoutInternal(
           ownerHeight,
           ownerWidth),
       Dimension::Height);
+
+  // §8: absolutely-positioned children take no part in placement — they were
+  // skipped when the items were collected — but they still have to be laid
+  // out, and a `display: none` child still has to be cleared. Grid does both
+  // at the end of its own algorithm; without the same tail here an absolute
+  // child of a lanes container simply keeps whatever layout it last had.
+  //
+  // (TODO, as in Grid: a grid-area should be able to serve as the containing
+  // block. Until then the container's content box is used.)
+  if (nodeStyle.positionType() != PositionType::Static ||
+      node->alwaysFormsContainingBlock() || depth == 1) {
+    for (auto child : node->getLayoutChildren()) {
+      if (child->style().display() == Display::None) {
+        zeroOutLayoutRecursively(child);
+        child->setHasNewLayout(true);
+        child->setDirty(false);
+        continue;
+      }
+      if (child->style().positionType() == PositionType::Absolute) {
+        child->processDimensions();
+      }
+    }
+
+    layoutAbsoluteDescendants(
+        node,
+        node,
+        widthSizingMode,
+        direction,
+        layoutMarkerData,
+        depth,
+        generationCount,
+        0.0f,
+        0.0f,
+        availableInnerWidth,
+        availableInnerHeight);
+  }
 
   (void)dense;
 }
