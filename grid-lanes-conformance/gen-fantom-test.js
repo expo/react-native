@@ -28,8 +28,10 @@ const expected = require(path.join(__dirname, 'expected.json'));
 function rnStyle(container) {
   if (container.display !== 'grid') return null;
   if (container.direction != null && container.direction !== 'ltr') return null;
-  if (container.autoFlow != null && container.autoFlow !== 'row' &&
-      container.autoFlow !== 'row dense') return null;
+  if (container.autoFlow != null &&
+      !['row', 'row dense', 'column', 'column dense'].includes(container.autoFlow)) {
+    return null;
+  }
 
   const style = {display: 'grid'};
   // max-content and fit-content are supported; min-content as a MAXIMUM is
