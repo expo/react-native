@@ -38,6 +38,7 @@
 #include <react/renderer/graphics/ValueUnit.h>
 #include <yoga/YGEnums.h>
 #include <yoga/node/Node.h>
+#include <yoga/style/FlowTolerance.h>
 #include <yoga/style/GridAutoFlow.h>
 #include <yoga/style/GridTemplateAreas.h>
 #include <cmath>
@@ -556,6 +557,12 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     result = yoga::Display::Flex;
     return;
   }
+  if (stringValue == "grid-lanes" || stringValue == "inline-grid-lanes") {
+    // css-grid-3 §2.2. As with grid, only the OUTER display differs between
+    // the two; the inner display is lanes either way.
+    result = yoga::Display::GridLanes;
+    return;
+  }
   if (stringValue == "grid" || stringValue == "inline-grid") {
     // The inner display is grid either way; `inline-grid` differs only in its
     // OUTER display, which is resolved at box generation like the other
@@ -579,6 +586,42 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     return;
   }
   LOG(ERROR) << "Could not parse yoga::Display: " << stringValue;
+}
+
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::FlowTolerance &result)
+{
+  result = {};
+  if (value.hasType<Float>()) {
+    result.kind = yoga::FlowToleranceKind::Length;
+    result.length = yoga::StyleSizeLength::points((float)value);
+    return;
+  }
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  const auto stringValue = (std::string)value;
+  if (stringValue == "normal") {
+    result.kind = yoga::FlowToleranceKind::Normal;
+    return;
+  }
+  if (stringValue == "infinite") {
+    result.kind = yoga::FlowToleranceKind::Infinite;
+    return;
+  }
+  if (!stringValue.empty() && stringValue.back() == '%') {
+    result.kind = yoga::FlowToleranceKind::Length;
+    result.length = yoga::StyleSizeLength::percent(std::strtof(stringValue.c_str(), nullptr));
+    return;
+  }
+  // A bare number or a `px` length.
+  char *end = nullptr;
+  const float parsed = std::strtof(stringValue.c_str(), &end);
+  if (end != stringValue.c_str()) {
+    result.kind = yoga::FlowToleranceKind::Length;
+    result.length = yoga::StyleSizeLength::points(parsed);
+    return;
+  }
+  LOG(ERROR) << "Could not parse flow-tolerance: " << stringValue;
 }
 
 inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::GridTemplateAreas &result)

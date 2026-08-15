@@ -280,6 +280,11 @@ const APIs: Array<RNTesterModuleInfo> = (
       category: 'UI',
     },
     {
+      key: 'GridLanesExample',
+      module: require('../examples/Grid/GridLanesExample').default,
+      category: 'UI',
+    },
+    {
       key: 'GridExample',
       module: require('../examples/Grid/GridExample').default,
       category: 'UI',
