@@ -31,7 +31,6 @@ function rnStyle(container) {
   }
   // A case the ORACLE could not decide is not evidence either way.
   if (container.oracleLimitation != null) return null;
-  if (container.direction != null && container.direction !== 'ltr') return null;
   if (container.autoFlow != null &&
       !['row', 'row dense', 'column', 'column dense'].includes(container.autoFlow)) {
     return null;
@@ -50,6 +49,9 @@ function rnStyle(container) {
     return null;
   }
 
+  // React Native has a `direction` style, so the writing-mode half of
+  // placement is checkable rather than something to skip.
+  if (container.direction != null) style.direction = container.direction;
   if (container.width != null) style.width = container.width;
   if (container.height != null) style.height = container.height;
   if (container.cols) {
@@ -135,7 +137,9 @@ const usable = [];
 let skipped = 0;
 for (const c of expected.cases) {
   const style = rnStyle(c.container);
-  if (style == null || c.items.length === 0 || c.items.some(i => i.order != null)) {
+  // An empty container is kept: its own size is still an assertion, and a
+  // grid with no items is exactly where an off-by-one in track sizing hides.
+  if (style == null || c.items.some(i => i.order != null)) {
     skipped++;
     continue;
   }
