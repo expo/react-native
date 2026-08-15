@@ -191,7 +191,9 @@ static_assert(
     "generation during commits");
 #else
 static_assert(
-    sizeof(ViewShadowNode) <= 1200,
+    // 1200 -> 1216 for the grid track-repeat descriptors in Yoga's `Style`,
+    // measured on an iphonesimulator Release build.
+    sizeof(ViewShadowNode) <= 1216,
     "ViewShadowNode grew past its memory budget");
 static_assert(
     // 288 -> 296 for the numeric `baselineShift` (2026-08: symbolic list
