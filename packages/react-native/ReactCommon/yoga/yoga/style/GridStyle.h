@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <yoga/style/GridAutoFlow.h>
 #include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridLine.h>
 #include <yoga/style/GridTrack.h>
@@ -29,6 +30,8 @@ struct GridStyle {
   GridAutoRepeat templateRowsAutoRepeat{};
   GridTrackList autoColumns{};
   GridTrackList autoRows{};
+
+  GridAutoFlow autoFlow{GridAutoFlow::Row};
 
   // Grid item properties
   GridLine columnStart{};
