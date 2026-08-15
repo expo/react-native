@@ -38,6 +38,8 @@ struct GridTracks {
 // Creates implicit grid tracks based on the auto placement result
 GridTracks createGridTracks(
     yoga::Node* node,
-    const ResolvedAutoPlacement& autoPlacement);
+    const ResolvedAutoPlacement& autoPlacement,
+    const GridTrackList& expandedColumns,
+    const GridTrackList& expandedRows);
 
 } // namespace facebook::yoga
