@@ -21,7 +21,7 @@
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 312 cases; 9 corpus cases are not expressible as RN styles
+ * 316 cases; 7 corpus cases are not expressible as RN styles
  * (grid-lanes, min-content/max-content/fit-content tracks, rtl, order).
  */
 
@@ -8699,6 +8699,27 @@ describe("lanes-dense", () => {
   });
 });
 
+describe("lanes-empty", () => {
+  it("lanes-empty-0124: no items", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr","gap":10}}>
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-empty-0124 container.width');
+    expectClose(container.height, 0, 'lanes-empty-0124 container.height');
+  });
+});
+
 describe("lanes-single", () => {
   it("lanes-single-0125: a single item occupies lane 1 only", () => {
     const containerRef = createRef<HostInstance>();
@@ -12861,7 +12882,7 @@ describe("lanes-direction", () => {
           collapsable={false}
           ref={containerRef}
           /* $FlowExpectedError[incompatible-type] grid style keys */
-          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          style={{"display":"grid-lanes","direction":"ltr","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
           <View
             collapsable={false}
             ref={itemRefs[0]}
@@ -12919,6 +12940,76 @@ describe("lanes-direction", () => {
       expectClose(r.y - container.y, 40, 'lanes-direction-0182 item[3].y');
       expectClose(r.width, 193.34, 'lanes-direction-0182 item[3].w');
       expectClose(r.height, 50, 'lanes-direction-0182 item[3].h');
+    }
+  });
+  it("lanes-direction-0183: lanes under direction:rtl", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","direction":"rtl","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-direction-0183 container.width');
+    expectClose(container.height, 90, 'lanes-direction-0183 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 406.67, 'lanes-direction-0183 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-direction-0183 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-direction-0183 item[0].w');
+      expectClose(r.height, 40, 'lanes-direction-0183 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.34, 'lanes-direction-0183 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-direction-0183 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-direction-0183 item[1].w');
+      expectClose(r.height, 60, 'lanes-direction-0183 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 0, 'lanes-direction-0183 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-direction-0183 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-direction-0183 item[2].w');
+      expectClose(r.height, 30, 'lanes-direction-0183 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'lanes-direction-0183 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-direction-0183 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-direction-0183 item[3].w');
+      expectClose(r.height, 50, 'lanes-direction-0183 item[3].h');
     }
   });
 });
@@ -21498,6 +21589,157 @@ describe("lanes-mixed-sizing", () => {
       expectClose(r.y - container.y, 80, 'lanes-mixed-sizing-0321 item[5].y');
       expectClose(r.width, 193.34, 'lanes-mixed-sizing-0321 item[5].w');
       expectClose(r.height, 60, 'lanes-mixed-sizing-0321 item[5].h');
+    }
+  });
+});
+
+describe("lanes-aspect-ratio-with-content", () => {
+  it("lanes-aspect-ratio-with-content-0322: aspect-ratio 1.5 tiles with padding and content", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":620,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"padding":6,"aspectRatio":1.5}}>
+            <View style={{height: 12}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"padding":6,"aspectRatio":3}}>
+            <View style={{height: 12}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"padding":6,"aspectRatio":1.5}}>
+            <View style={{height: 12}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"padding":6,"aspectRatio":0.75}}>
+            <View style={{height: 12}} />
+          </View>
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 620, 'lanes-aspect-ratio-with-content-0322 container.width');
+    expectClose(container.height, 343.31, 'lanes-aspect-ratio-with-content-0322 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-aspect-ratio-with-content-0322 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-aspect-ratio-with-content-0322 item[0].y');
+      expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0322 item[0].w');
+      expectClose(r.height, 133.33, 'lanes-aspect-ratio-with-content-0322 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 210, 'lanes-aspect-ratio-with-content-0322 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-aspect-ratio-with-content-0322 item[1].y');
+      expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0322 item[1].w');
+      expectClose(r.height, 66.66, 'lanes-aspect-ratio-with-content-0322 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 420, 'lanes-aspect-ratio-with-content-0322 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-aspect-ratio-with-content-0322 item[2].y');
+      expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0322 item[2].w');
+      expectClose(r.height, 133.33, 'lanes-aspect-ratio-with-content-0322 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 210, 'lanes-aspect-ratio-with-content-0322 item[3].x');
+      expectClose(r.y - container.y, 76.66, 'lanes-aspect-ratio-with-content-0322 item[3].y');
+      expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0322 item[3].w');
+      expectClose(r.height, 266.66, 'lanes-aspect-ratio-with-content-0322 item[3].h');
+    }
+  });
+  it("lanes-aspect-ratio-with-content-0323: aspect-ratio 0.75 tiles with padding and content", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":620,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"padding":6,"aspectRatio":0.75}}>
+            <View style={{height: 12}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"padding":6,"aspectRatio":1.5}}>
+            <View style={{height: 12}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"padding":6,"aspectRatio":0.75}}>
+            <View style={{height: 12}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"padding":6,"aspectRatio":0.375}}>
+            <View style={{height: 12}} />
+          </View>
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 620, 'lanes-aspect-ratio-with-content-0323 container.width');
+    expectClose(container.height, 676.66, 'lanes-aspect-ratio-with-content-0323 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-aspect-ratio-with-content-0323 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-aspect-ratio-with-content-0323 item[0].y');
+      expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0323 item[0].w');
+      expectClose(r.height, 266.66, 'lanes-aspect-ratio-with-content-0323 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 210, 'lanes-aspect-ratio-with-content-0323 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-aspect-ratio-with-content-0323 item[1].y');
+      expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0323 item[1].w');
+      expectClose(r.height, 133.33, 'lanes-aspect-ratio-with-content-0323 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 420, 'lanes-aspect-ratio-with-content-0323 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-aspect-ratio-with-content-0323 item[2].y');
+      expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0323 item[2].w');
+      expectClose(r.height, 266.66, 'lanes-aspect-ratio-with-content-0323 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 210, 'lanes-aspect-ratio-with-content-0323 item[3].x');
+      expectClose(r.y - container.y, 143.33, 'lanes-aspect-ratio-with-content-0323 item[3].y');
+      expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0323 item[3].w');
+      expectClose(r.height, 533.33, 'lanes-aspect-ratio-with-content-0323 item[3].h');
     }
   });
 });
