@@ -13,6 +13,7 @@
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/PropsParserContext.h>
+#include <react/renderer/components/view/GridTrackListParser.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/css/CSSAngle.h>
@@ -273,6 +274,19 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     result = yoga::Justify::FlexStart;
     return;
   }
+  // As above: the css-align-3 keywords CSS Grid uses.
+  if (stringValue == "start") {
+    result = yoga::Justify::Start;
+    return;
+  }
+  if (stringValue == "end") {
+    result = yoga::Justify::End;
+    return;
+  }
+  if (stringValue == "stretch") {
+    result = yoga::Justify::Stretch;
+    return;
+  }
   if (stringValue == "center") {
     result = yoga::Justify::Center;
     return;
@@ -310,6 +324,17 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   }
   if (stringValue == "flex-start") {
     result = yoga::Align::FlexStart;
+    return;
+  }
+  // css-align-3 `start`/`end` are the values CSS Grid is specified in terms
+  // of; they are distinct from flex-start/flex-end in that they resolve
+  // against the writing mode rather than the flex direction.
+  if (stringValue == "start") {
+    result = yoga::Align::Start;
+    return;
+  }
+  if (stringValue == "end") {
+    result = yoga::Align::End;
     return;
   }
   if (stringValue == "center") {
@@ -489,6 +514,13 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     result = yoga::Display::Flex;
     return;
   }
+  if (stringValue == "grid" || stringValue == "inline-grid") {
+    // The inner display is grid either way; `inline-grid` differs only in its
+    // OUTER display, which is resolved at box generation like the other
+    // inline-level values below.
+    result = yoga::Display::Grid;
+    return;
+  }
   if (stringValue == "inline" || stringValue == "inline-flex" ||
       stringValue == "inline-block") {
     // The inline-level displays never reach Yoga: inline-ness is resolved at
@@ -496,10 +528,6 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     // the element flows as an inline box in the parent IFC; in a flex
     // container it is blockified into a regular flex item (css-display-3
     // §2.7), which is exactly Yoga's Flex default.
-    //
-    // DOM-CSS-LIMITATION(no-grid): `grid`/`inline-grid` are not handled here
-    // and fall through to the parse error below — Yoga has no grid engine, so
-    // this is a feature rather than a mapping.
     //
     // Only the *outer* display differs between these three. The inner display
     // — flow for `inline`, flex for `inline-flex`, flow-root for
@@ -510,6 +538,44 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     return;
   }
   LOG(ERROR) << "Could not parse yoga::Display: " << stringValue;
+}
+
+inline void fromRawValue(
+    const PropsParserContext & /*context*/,
+    const RawValue &value,
+    ParsedGridTrackList &result)
+{
+  // `grid-template-columns: "repeat(auto-fill, minmax(120px, 1fr))"` — the
+  // CSS syntax, as a string, rather than a bespoke array shape.
+  if (value.hasType<std::string>()) {
+    result = parseGridTrackList((std::string)value);
+    return;
+  }
+  // A bare number is a single fixed track, which keeps `gridTemplateColumns:
+  // 100` working like every other RN length prop.
+  if (value.hasType<Float>()) {
+    result.tracks.push_back(yoga::GridTrackSize::length((float)value));
+    return;
+  }
+  LOG(ERROR) << "Could not parse grid track list";
+}
+
+inline void fromRawValue(
+    const PropsParserContext & /*context*/,
+    const RawValue &value,
+    yoga::GridLine &result)
+{
+  if (value.hasType<std::string>()) {
+    result = parseGridLine((std::string)value);
+    return;
+  }
+  if (value.hasType<int>()) {
+    const auto line = (int)value;
+    // css-grid-1 §8.3: line 0 is invalid and behaves as auto.
+    result = line == 0 ? yoga::GridLine::auto_() : yoga::GridLine::fromInteger(line);
+    return;
+  }
+  LOG(ERROR) << "Could not parse grid line";
 }
 
 inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::Style::SizeLength &result)
