@@ -31,12 +31,14 @@ function rnStyle(container) {
   if (container.autoFlow != null && container.autoFlow !== 'row') return null;
 
   const style = {display: 'grid'};
+  // max-content and fit-content are supported; min-content as a MAXIMUM is
+  // not distinguishable from auto in Yoga, so those cases stay out rather
+  // than asserting a value the engine cannot mean.
   const tracksUnsupported = list =>
-    (list ?? []).some(t =>
-      JSON.stringify(t).includes('min-content') ||
-      JSON.stringify(t).includes('max-content') ||
-      JSON.stringify(t).includes('fit-content'),
-    );
+    (list ?? []).some(t => {
+      const json = JSON.stringify(t);
+      return json.includes('min-content') && !json.includes('max-content');
+    });
   if (tracksUnsupported(container.cols) || tracksUnsupported(container.rows)) {
     return null;
   }
