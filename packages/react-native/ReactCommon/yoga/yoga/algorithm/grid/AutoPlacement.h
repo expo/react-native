@@ -8,6 +8,7 @@
 #pragma once
 
 #include <yoga/node/Node.h>
+#include <yoga/style/GridAutoFlow.h>
 #include <yoga/style/GridLine.h>
 #include <array>
 #include <cstdint>
@@ -441,6 +442,14 @@ struct AutoPlacement {
         else if (!hasDefiniteRow && !hasDefiniteColumn) {
           auto itemColumnSpan = columnPlacement.span;
           auto itemRowSpan = rowPlacement.span;
+
+          // css-grid-2 §8.5: the dense packing algorithm restarts the search
+          // from the start of the implicit grid for every item, so a later
+          // small item can fill a hole an earlier spanning item left behind.
+          // A sparse flow never moves the cursor backwards and leaves the hole.
+          if (isDense(node->style().gridAutoFlow())) {
+            autoPlacementCursor = {minColumnStart, minRowStart};
+          }
 
           bool foundPosition = false;
           while (!foundPosition) {

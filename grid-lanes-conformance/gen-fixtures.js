@@ -134,7 +134,9 @@ function unsupportedReason(c) {
   for (const t of [...fc.tracks, ...fr_.tracks]) {
     if (trackToCpp(t) == null) return `track ${t.t}`;
   }
-  if (k.autoFlow != null && k.autoFlow !== 'row') return `grid-auto-flow:${k.autoFlow}`;
+  // `row` and `row dense` are implemented; column flow is not.
+  if (k.autoFlow != null && k.autoFlow !== 'row' && k.autoFlow !== 'row dense')
+    return `grid-auto-flow:${k.autoFlow}`;
   if (k.justifyContent != null && JUSTIFY[k.justifyContent] == null)
     return `justify-content:${k.justifyContent}`;
   if (k.alignContent != null && ALIGN[k.alignContent] == null)
@@ -196,6 +198,7 @@ w('  const char* unsupported;  // nullptr when replayable');
 w('  float width, height;');
 w('  float gap, rowGap, colGap;');
 w('  float padding, border;');
+w('  int autoFlowDense;  // 1 when grid-auto-flow includes `dense`');
 w('  float minWidth, maxWidth, minHeight, maxHeight;  // kUnset when absent');
 w('  float gapPercent;  // kUnset when absent');
 w('  const Track* autoRows; size_t autoRowCount;');
@@ -256,6 +259,7 @@ expected.cases.forEach((c, idx) => {
       `${optF(k.width)}, ${optF(k.height)}, ` +
       `${optF(k.gap)}, ${optF(k.rowGap)}, ${optF(k.colGap)}, ` +
       `${f(k.padding ?? 0)}, ${f(k.border ?? 0)}, ` +
+      `${k.autoFlow === 'row dense' ? 1 : 0}, ` +
       `${optF(k.minWidth)}, ${optF(k.maxWidth)}, ${optF(k.minHeight)}, ${optF(k.maxHeight)}, ` +
       `${k.gapPercent ? f(parseFloat(k.gapPercent)) : 'kUnset'}, ` +
       `${autoRowsOk && autoRows.length ? `kAutoRows${idx}` : 'nullptr'}, ${autoRowsOk ? autoRows.length : 0}, ` +

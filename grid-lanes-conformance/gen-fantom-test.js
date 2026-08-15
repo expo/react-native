@@ -28,7 +28,8 @@ const expected = require(path.join(__dirname, 'expected.json'));
 function rnStyle(container) {
   if (container.display !== 'grid') return null;
   if (container.direction != null && container.direction !== 'ltr') return null;
-  if (container.autoFlow != null && container.autoFlow !== 'row') return null;
+  if (container.autoFlow != null && container.autoFlow !== 'row' &&
+      container.autoFlow !== 'row dense') return null;
 
   const style = {display: 'grid'};
   // max-content and fit-content are supported; min-content as a MAXIMUM is
@@ -67,6 +68,7 @@ function rnStyle(container) {
   if (container.autoColumns) {
     style.gridAutoColumns = container.autoColumns.map(trackToCss).join(' ');
   }
+  if (container.autoFlow) style.gridAutoFlow = container.autoFlow;
   if (container.gapPercent) style.gap = container.gapPercent;
   if (container.minWidth != null) style.minWidth = container.minWidth;
   if (container.maxWidth != null) style.maxWidth = container.maxWidth;
