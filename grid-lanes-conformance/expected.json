@@ -6,9 +6,9 @@
   "flowTolerance": true,
   "flowToleranceInfinite": true
  },
- "caseCount": 288,
+ "caseCount": 291,
  "byTier": {
-  "A": 165,
+  "A": 168,
   "B": 108,
   "C": 15
  },
@@ -22724,6 +22724,174 @@
       "y": 260,
       "w": 30,
       "h": 40
+     }
+    ]
+   }
+  },
+  {
+   "id": "fit-content-limit-0289",
+   "group": "fit-content-limit",
+   "tier": "A",
+   "note": "fit-content(140px) around a 90px item",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fit-content",
+      "v": {
+       "t": "px",
+       "v": 140
+      }
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10
+   },
+   "items": [
+    {
+     "w": 90,
+     "h": 20
+    },
+    {
+     "w": 40,
+     "h": 20
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 20
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 90,
+      "h": 20
+     },
+     {
+      "i": 1,
+      "x": 100,
+      "y": 0,
+      "w": 40,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "fit-content-limit-0290",
+   "group": "fit-content-limit",
+   "tier": "A",
+   "note": "fit-content(50px) around a 90px item",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fit-content",
+      "v": {
+       "t": "px",
+       "v": 50
+      }
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10
+   },
+   "items": [
+    {
+     "w": 90,
+     "h": 20
+    },
+    {
+     "w": 40,
+     "h": 20
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 20
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 90,
+      "h": 20
+     },
+     {
+      "i": 1,
+      "x": 100,
+      "y": 0,
+      "w": 40,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "fit-content-limit-0291",
+   "group": "fit-content-limit",
+   "tier": "A",
+   "note": "fit-content(200px) around a 240px item",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fit-content",
+      "v": {
+       "t": "px",
+       "v": 200
+      }
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10
+   },
+   "items": [
+    {
+     "w": 240,
+     "h": 20
+    },
+    {
+     "w": 40,
+     "h": 20
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 20
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 240,
+      "h": 20
+     },
+     {
+      "i": 1,
+      "x": 250,
+      "y": 0,
+      "w": 40,
+      "h": 20
      }
     ]
    }

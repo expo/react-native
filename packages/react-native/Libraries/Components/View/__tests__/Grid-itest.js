@@ -21,7 +21,7 @@
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 169 cases; 119 corpus cases are not expressible as RN styles
+ * 174 cases; 117 corpus cases are not expressible as RN styles
  * (grid-lanes, min-content/max-content/fit-content tracks, rtl, order).
  */
 
@@ -7512,6 +7512,100 @@ describe("auto-fit-x-trailing-hole", () => {
   });
 });
 
+describe("intrinsic-max-content", () => {
+  it("intrinsic-max-content-0243: max-content track sizing", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"max-content 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":90,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'intrinsic-max-content-0243 container.width');
+    expectClose(container.height, 20, 'intrinsic-max-content-0243 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'intrinsic-max-content-0243 item[0].x');
+      expectClose(r.y - container.y, 0, 'intrinsic-max-content-0243 item[0].y');
+      expectClose(r.width, 90, 'intrinsic-max-content-0243 item[0].w');
+      expectClose(r.height, 20, 'intrinsic-max-content-0243 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 100, 'intrinsic-max-content-0243 item[1].x');
+      expectClose(r.y - container.y, 0, 'intrinsic-max-content-0243 item[1].y');
+      expectClose(r.width, 40, 'intrinsic-max-content-0243 item[1].w');
+      expectClose(r.height, 20, 'intrinsic-max-content-0243 item[1].h');
+    }
+  });
+});
+
+describe("intrinsic-fit-content", () => {
+  it("intrinsic-fit-content-0244: fit-content track sizing", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"fit-content(140px) 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":90,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'intrinsic-fit-content-0244 container.width');
+    expectClose(container.height, 20, 'intrinsic-fit-content-0244 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'intrinsic-fit-content-0244 item[0].x');
+      expectClose(r.y - container.y, 0, 'intrinsic-fit-content-0244 item[0].y');
+      expectClose(r.width, 90, 'intrinsic-fit-content-0244 item[0].w');
+      expectClose(r.height, 20, 'intrinsic-fit-content-0244 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 100, 'intrinsic-fit-content-0244 item[1].x');
+      expectClose(r.y - container.y, 0, 'intrinsic-fit-content-0244 item[1].y');
+      expectClose(r.width, 40, 'intrinsic-fit-content-0244 item[1].w');
+      expectClose(r.height, 20, 'intrinsic-fit-content-0244 item[1].h');
+    }
+  });
+});
+
 describe("implicit-rows", () => {
   it("implicit-rows-0245: implicit rows sized by content", () => {
     const containerRef = createRef<HostInstance>();
@@ -9790,6 +9884,141 @@ describe("align-content-block", () => {
       expectClose(r.y - container.y, 260, 'align-content-block-0288 item[1].y');
       expectClose(r.width, 30, 'align-content-block-0288 item[1].w');
       expectClose(r.height, 40, 'align-content-block-0288 item[1].h');
+    }
+  });
+});
+
+describe("fit-content-limit", () => {
+  it("fit-content-limit-0289: fit-content(140px) around a 90px item", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"fit-content(140px) 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":90,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fit-content-limit-0289 container.width');
+    expectClose(container.height, 20, 'fit-content-limit-0289 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fit-content-limit-0289 item[0].x');
+      expectClose(r.y - container.y, 0, 'fit-content-limit-0289 item[0].y');
+      expectClose(r.width, 90, 'fit-content-limit-0289 item[0].w');
+      expectClose(r.height, 20, 'fit-content-limit-0289 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 100, 'fit-content-limit-0289 item[1].x');
+      expectClose(r.y - container.y, 0, 'fit-content-limit-0289 item[1].y');
+      expectClose(r.width, 40, 'fit-content-limit-0289 item[1].w');
+      expectClose(r.height, 20, 'fit-content-limit-0289 item[1].h');
+    }
+  });
+  it("fit-content-limit-0290: fit-content(50px) around a 90px item", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"fit-content(50px) 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":90,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fit-content-limit-0290 container.width');
+    expectClose(container.height, 20, 'fit-content-limit-0290 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fit-content-limit-0290 item[0].x');
+      expectClose(r.y - container.y, 0, 'fit-content-limit-0290 item[0].y');
+      expectClose(r.width, 90, 'fit-content-limit-0290 item[0].w');
+      expectClose(r.height, 20, 'fit-content-limit-0290 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 100, 'fit-content-limit-0290 item[1].x');
+      expectClose(r.y - container.y, 0, 'fit-content-limit-0290 item[1].y');
+      expectClose(r.width, 40, 'fit-content-limit-0290 item[1].w');
+      expectClose(r.height, 20, 'fit-content-limit-0290 item[1].h');
+    }
+  });
+  it("fit-content-limit-0291: fit-content(200px) around a 240px item", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"fit-content(200px) 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":240,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fit-content-limit-0291 container.width');
+    expectClose(container.height, 20, 'fit-content-limit-0291 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fit-content-limit-0291 item[0].x');
+      expectClose(r.y - container.y, 0, 'fit-content-limit-0291 item[0].y');
+      expectClose(r.width, 240, 'fit-content-limit-0291 item[0].w');
+      expectClose(r.height, 20, 'fit-content-limit-0291 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 250, 'fit-content-limit-0291 item[1].x');
+      expectClose(r.y - container.y, 0, 'fit-content-limit-0291 item[1].y');
+      expectClose(r.width, 40, 'fit-content-limit-0291 item[1].w');
+      expectClose(r.height, 20, 'fit-content-limit-0291 item[1].h');
     }
   });
 });
