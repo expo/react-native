@@ -48,6 +48,45 @@ function escapeAttribute(value) {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
 
+// A `display: none` child has no box at all, so getBoundingClientRect gives
+// zeros in absolute coordinates and subtracting the container's origin turns
+// them into a large negative offset. Record the empty box every engine must
+// agree on; the consumers skip the position assertions for these items, since
+// there is no position to agree about.
+function zeroHiddenItems(c, result) {
+  if (result == null) return result;
+  return {
+    ...result,
+    items: result.items.map((item, i) =>
+      c.items[i]?.displayNone ? {...item, x: 0, y: 0, w: 0, h: 0} : item,
+    ),
+  };
+}
+
+// A case may declare that Safari is wrong about the stacking axis and supply
+// spec-derived positions for it. Everything else Safari measured is kept —
+// the grid axis, the sizes, the container — so only the disputed number is
+// hand-supplied, and it is supplied ONE place rather than in each consumer.
+//
+// The count is asserted because a corpus edit that adds or removes an item
+// would otherwise silently leave the override applying to the wrong ones.
+function applyDivergence(c, result) {
+  const divergence = c.oracleDivergence;
+  if (divergence == null || result == null) {
+    return result;
+  }
+  if (divergence.y.length !== result.items.length) {
+    throw new Error(
+      `${c.id}: the stacking override lists ${divergence.y.length} positions ` +
+        `but the case has ${result.items.length} items`,
+    );
+  }
+  return {
+    ...result,
+    items: result.items.map((item, i) => ({...item, y: divergence.y[i]})),
+  };
+}
+
 function buildHtml() {
   const blocks = cases
     .map(c => {
@@ -284,7 +323,8 @@ async function main() {
         note: c.note,
         container: c.container,
         items: c.items,
-        expected: measured.results[c.id],
+        oracleDivergence: c.oracleDivergence ?? null,
+        expected: zeroHiddenItems(c, applyDivergence(c, measured.results[c.id])),
       })),
     };
     fs.writeFileSync(OUT, JSON.stringify(payload, null, 1));

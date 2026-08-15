@@ -3,7 +3,11 @@
  * against what real Safari produced for the identical CSS.
  *
  * The cases come from cases.js by way of expected.json and fixtures.h, so the
- * geometry asserted here is measured, never hand-written.
+ * geometry asserted here is measured, never hand-written — with one stated
+ * exception. A few cases replace Safari's stacking-axis positions with
+ * spec-derived ones, because Safari does not implement css-grid-3 §6.4 and
+ * mis-distributes §6.3. Each says so in cases.js, and the derivations are
+ * written out in stacking-alignment-test.cpp.
  *
  * A case Yoga's API cannot yet express is reported as UNSUPPORTED with the
  * reason, not skipped silently — coverage that shrinks quietly is worse than
@@ -292,6 +296,21 @@ YGNodeRef build(const Case& c) {
     if (it.justifySelf >= 0) {
       YGNodeStyleSetJustifySelf(child, (YGJustify)it.justifySelf);
     }
+    if (it.alignSelf >= 0) {
+      YGNodeStyleSetAlignSelf(child, (YGAlign)it.alignSelf);
+    }
+    if (it.displayNone != 0) {
+      YGNodeStyleSetDisplay(child, YGDisplayNone);
+    }
+    if (it.absolute != 0) {
+      YGNodeStyleSetPositionType(child, YGPositionTypeAbsolute);
+      if (isSet(it.top)) {
+        YGNodeStyleSetPosition(child, YGEdgeTop, it.top);
+      }
+      if (isSet(it.left)) {
+        YGNodeStyleSetPosition(child, YGEdgeLeft, it.left);
+      }
+    }
     if (it.area != nullptr) {
       YGNodeStyleSetGridArea(child, it.area);
     }
@@ -389,10 +408,15 @@ int main(int argc, char** argv) {
       YGNodeRef child = YGNodeGetChild(root, i);
       const Rect& e = c.items[i].expected;
       char buf[64];
-      std::snprintf(buf, sizeof(buf), "item[%zu].x", i);
-      check(buf, YGNodeLayoutGetLeft(child), e.x);
-      std::snprintf(buf, sizeof(buf), "item[%zu].y", i);
-      check(buf, YGNodeLayoutGetTop(child), e.y);
+      // A display:none item has no box, so only its emptiness is assertable —
+      // there is no position for the engines to agree or disagree about. That
+      // it takes no lane is proved by where the OTHER items landed.
+      if (c.items[i].displayNone == 0) {
+        std::snprintf(buf, sizeof(buf), "item[%zu].x", i);
+        check(buf, YGNodeLayoutGetLeft(child), e.x);
+        std::snprintf(buf, sizeof(buf), "item[%zu].y", i);
+        check(buf, YGNodeLayoutGetTop(child), e.y);
+      }
       std::snprintf(buf, sizeof(buf), "item[%zu].w", i);
       check(buf, YGNodeLayoutGetWidth(child), e.w);
       std::snprintf(buf, sizeof(buf), "item[%zu].h", i);
@@ -454,7 +478,13 @@ int main(int argc, char** argv) {
       ran - passed,
       unsupported);
   std::printf(
-      "%zu assertions, %zu mismatches vs Safari\n", assertions, mismatches);
-  std::printf("\n%s\n", mismatches == 0 ? "ALL REPLAYED CASES MATCH SAFARI" : "MISMATCHES PRESENT");
+      "%zu assertions, %zu mismatches vs the corpus\n", assertions, mismatches);
+  // "the corpus", not "Safari": a handful of cases carry a spec-derived
+  // stacking-axis position because Safari is demonstrably wrong there. Those
+  // are listed in cases.js with the reason, and derived in
+  // stacking-alignment-test.cpp.
+  std::printf(
+      "\n%s\n",
+      mismatches == 0 ? "ALL REPLAYED CASES MATCH" : "MISMATCHES PRESENT");
   return mismatches == 0 ? 0 : 1;
 }
