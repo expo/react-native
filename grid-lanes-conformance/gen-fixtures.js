@@ -85,13 +85,43 @@ const ALIGN = {
 
 // Why a case cannot be replayed through Yoga's API today. Recorded per case so
 // the harness reports coverage honestly instead of quietly shrinking.
+// Flattens a track list for the fixture: `repeat(<integer>, ...)` is a static
+// expansion so it is done here, while `repeat(auto-fill|auto-fit, ...)` cannot
+// be — its count depends on the container size — so the pattern is emitted
+// once and described positionally for the engine to expand.
+function flattenTracks(list) {
+  const out = [];
+  let autoRepeat = null;
+  for (const t of list ?? []) {
+    if (t.t !== 'repeat') {
+      out.push(t);
+      continue;
+    }
+    if (typeof t.n === 'number') {
+      for (let i = 0; i < t.n; i++) out.push(...t.tracks);
+      continue;
+    }
+    if (autoRepeat != null) return {tracks: null, autoRepeat: null}; // two auto-repeats: invalid
+    autoRepeat = {
+      type: t.n === 'auto-fit' ? 'YGGridAutoRepeatAutoFit' : 'YGGridAutoRepeatAutoFill',
+      startIndex: out.length,
+      trackCount: t.tracks.length,
+    };
+    out.push(...t.tracks);
+  }
+  return {tracks: out, autoRepeat};
+}
+
 function unsupportedReason(c) {
   const k = c.container;
   if (k.display !== 'grid') {
     return `display:${k.display}`;
   }
   if (k.direction != null && k.direction !== 'ltr') return 'direction:rtl';
-  for (const t of [...(k.cols ?? []), ...(k.rows ?? [])]) {
+  const fc = flattenTracks(k.cols);
+  const fr_ = flattenTracks(k.rows);
+  if (fc.tracks == null || fr_.tracks == null) return 'multiple auto-repeats';
+  for (const t of [...fc.tracks, ...fr_.tracks]) {
     if (trackToCpp(t) == null) return `track ${t.t}`;
   }
   if (k.autoFlow != null && k.autoFlow !== 'row') return `grid-auto-flow:${k.autoFlow}`;
@@ -117,6 +147,7 @@ w('//');
 w('// Expected geometry measured in real Safari; see oracle.js.');
 w('#pragma once');
 w('#include <cstddef>');
+w('#include <yoga/YGNodeStyle.h>');
 w('');
 w('namespace gridconf {');
 w('');
@@ -150,6 +181,9 @@ w('  float padding, border;');
 w('  const Track* cols; size_t colCount;');
 w('  const Track* rows; size_t rowCount;');
 w('  int justifyItems, alignItems, justifyContent, alignContent;  // -1 unset');
+w('  // repeat(auto-fill|auto-fit, ...): 0 = none, else the C API enum value');
+w('  int colAutoRepeatType; size_t colAutoRepeatStart, colAutoRepeatCount;');
+w('  int rowAutoRepeatType; size_t rowAutoRepeatStart, rowAutoRepeatCount;');
 w('  const Item* items; size_t itemCount;');
 w('  float expectedWidth, expectedHeight;');
 w('};');
@@ -159,8 +193,10 @@ const caseVars = [];
 expected.cases.forEach((c, idx) => {
   const k = c.container;
   const reason = unsupportedReason(c);
-  const cols = (k.cols ?? []).map(trackToCpp);
-  const rows = (k.rows ?? []).map(trackToCpp);
+  const flatCols = flattenTracks(k.cols);
+  const flatRows = flattenTracks(k.rows);
+  const cols = (flatCols.tracks ?? []).map(trackToCpp);
+  const rows = (flatRows.tracks ?? []).map(trackToCpp);
   const colsOk = cols.every(x => x != null);
   const rowsOk = rows.every(x => x != null);
 
@@ -199,6 +235,12 @@ expected.cases.forEach((c, idx) => {
       `${k.alignItems ? (ALIGN[k.alignItems] ?? -1) : -1}, ` +
       `${k.justifyContent ? (JUSTIFY[k.justifyContent] ?? -1) : -1}, ` +
       `${k.alignContent ? (ALIGN[k.alignContent] ?? -1) : -1}, ` +
+      `${flatCols.autoRepeat ? flatCols.autoRepeat.type : 0}, ` +
+      `${flatCols.autoRepeat ? flatCols.autoRepeat.startIndex : 0}, ` +
+      `${flatCols.autoRepeat ? flatCols.autoRepeat.trackCount : 0}, ` +
+      `${flatRows.autoRepeat ? flatRows.autoRepeat.type : 0}, ` +
+      `${flatRows.autoRepeat ? flatRows.autoRepeat.startIndex : 0}, ` +
+      `${flatRows.autoRepeat ? flatRows.autoRepeat.trackCount : 0}, ` +
       `${items.length ? `kItems${idx}` : 'nullptr'}, ${items.length}, ` +
       `${f(c.expected.container.w)}, ${f(c.expected.container.h)}}`,
   );
