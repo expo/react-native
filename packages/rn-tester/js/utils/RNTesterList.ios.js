@@ -278,6 +278,11 @@ const APIs: Array<RNTesterModuleInfo> = (
       category: 'UI',
     },
     {
+      key: 'GridExample',
+      module: require('../examples/Grid/GridExample').default,
+      category: 'UI',
+    },
+    {
       key: 'CSSAnimationsExample',
       module: require('../examples/CSSAnimations/CSSAnimationsExample').default,
       category: 'UI',
