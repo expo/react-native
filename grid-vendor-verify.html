@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { margin: 0; }
+  #g {
+    display: grid;
+    width: 600px;
+    grid-template-columns: 100px 1fr 2fr;
+    grid-template-rows: 50px auto;
+    gap: 10px;
+  }
+  #g > div { background: #cde; }
+</style></head>
+<body>
+<div id="g">
+  <div id="a" style="height:20px"></div>
+  <div id="b" style="height:30px"></div>
+  <div id="c" style="height:25px"></div>
+  <div id="d" style="height:40px"></div>
+  <div id="e" style="height:15px"></div>
+  <div id="f" style="height:35px"></div>
+</div>
+<script>
+window.__rects = (function () {
+  const out = {};
+  const g = document.getElementById('g');
+  const gr = g.getBoundingClientRect();
+  out.container = {w: gr.width, h: gr.height};
+  for (const id of ['a','b','c','d','e','f']) {
+    const r = document.getElementById(id).getBoundingClientRect();
+    out[id] = {x: r.left - gr.left, y: r.top - gr.top, w: r.width, h: r.height};
+  }
+  return out;
+})();
+</script>
+</body></html>
