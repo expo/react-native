@@ -100,6 +100,7 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   gridTemplateColumns: true,
   gridTemplateRows: true,
   gridAutoColumns: true,
+  gridAutoFlow: true,
   gridAutoRows: true,
   gridColumnStart: true,
   gridColumnEnd: true,

@@ -21,7 +21,7 @@
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 174 cases; 117 corpus cases are not expressible as RN styles
+ * 182 cases; 117 corpus cases are not expressible as RN styles
  * (grid-lanes, min-content/max-content/fit-content tracks, rtl, order).
  */
 
@@ -10019,6 +10019,630 @@ describe("fit-content-limit", () => {
       expectClose(r.y - container.y, 0, 'fit-content-limit-0291 item[1].y');
       expectClose(r.width, 40, 'fit-content-limit-0291 item[1].w');
       expectClose(r.height, 20, 'fit-content-limit-0291 item[1].h');
+    }
+  });
+});
+
+describe("auto-flow-dense-basic", () => {
+  it("auto-flow-dense-basic-0292: grid-auto-flow: row with two spanning items", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"gridAutoFlow":"row"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'auto-flow-dense-basic-0292 container.width');
+    expectClose(container.height, 110, 'auto-flow-dense-basic-0292 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-basic-0292 item[0].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-basic-0292 item[0].y');
+      expectClose(r.width, 396.66, 'auto-flow-dense-basic-0292 item[0].w');
+      expectClose(r.height, 30, 'auto-flow-dense-basic-0292 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-basic-0292 item[1].x');
+      expectClose(r.y - container.y, 40, 'auto-flow-dense-basic-0292 item[1].y');
+      expectClose(r.width, 396.66, 'auto-flow-dense-basic-0292 item[1].w');
+      expectClose(r.height, 30, 'auto-flow-dense-basic-0292 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'auto-flow-dense-basic-0292 item[2].x');
+      expectClose(r.y - container.y, 40, 'auto-flow-dense-basic-0292 item[2].y');
+      expectClose(r.width, 193.34, 'auto-flow-dense-basic-0292 item[2].w');
+      expectClose(r.height, 30, 'auto-flow-dense-basic-0292 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-basic-0292 item[3].x');
+      expectClose(r.y - container.y, 80, 'auto-flow-dense-basic-0292 item[3].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-basic-0292 item[3].w');
+      expectClose(r.height, 30, 'auto-flow-dense-basic-0292 item[3].h');
+    }
+  });
+  it("auto-flow-dense-basic-0296: grid-auto-flow: row dense with two spanning items", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"gridAutoFlow":"row dense"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'auto-flow-dense-basic-0296 container.width');
+    expectClose(container.height, 70, 'auto-flow-dense-basic-0296 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-basic-0296 item[0].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-basic-0296 item[0].y');
+      expectClose(r.width, 396.66, 'auto-flow-dense-basic-0296 item[0].w');
+      expectClose(r.height, 30, 'auto-flow-dense-basic-0296 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-basic-0296 item[1].x');
+      expectClose(r.y - container.y, 40, 'auto-flow-dense-basic-0296 item[1].y');
+      expectClose(r.width, 396.66, 'auto-flow-dense-basic-0296 item[1].w');
+      expectClose(r.height, 30, 'auto-flow-dense-basic-0296 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'auto-flow-dense-basic-0296 item[2].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-basic-0296 item[2].y');
+      expectClose(r.width, 193.34, 'auto-flow-dense-basic-0296 item[2].w');
+      expectClose(r.height, 30, 'auto-flow-dense-basic-0296 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'auto-flow-dense-basic-0296 item[3].x');
+      expectClose(r.y - container.y, 40, 'auto-flow-dense-basic-0296 item[3].y');
+      expectClose(r.width, 193.34, 'auto-flow-dense-basic-0296 item[3].w');
+      expectClose(r.height, 30, 'auto-flow-dense-basic-0296 item[3].h');
+    }
+  });
+});
+
+describe("auto-flow-dense-mixed", () => {
+  it("auto-flow-dense-mixed-0293: grid-auto-flow: row over four columns with mixed spans", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr 1fr","gap":8,"gridAutoFlow":"row"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnEnd":"span 3"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[5]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'auto-flow-dense-mixed-0293 container.width');
+    expectClose(container.height, 88, 'auto-flow-dense-mixed-0293 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-mixed-0293 item[0].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-mixed-0293 item[0].y');
+      expectClose(r.width, 448, 'auto-flow-dense-mixed-0293 item[0].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0293 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-mixed-0293 item[1].x');
+      expectClose(r.y - container.y, 32, 'auto-flow-dense-mixed-0293 item[1].y');
+      expectClose(r.width, 296, 'auto-flow-dense-mixed-0293 item[1].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0293 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 304, 'auto-flow-dense-mixed-0293 item[2].x');
+      expectClose(r.y - container.y, 32, 'auto-flow-dense-mixed-0293 item[2].y');
+      expectClose(r.width, 144, 'auto-flow-dense-mixed-0293 item[2].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0293 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-mixed-0293 item[3].x');
+      expectClose(r.y - container.y, 64, 'auto-flow-dense-mixed-0293 item[3].y');
+      expectClose(r.width, 296, 'auto-flow-dense-mixed-0293 item[3].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0293 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 304, 'auto-flow-dense-mixed-0293 item[4].x');
+      expectClose(r.y - container.y, 64, 'auto-flow-dense-mixed-0293 item[4].y');
+      expectClose(r.width, 144, 'auto-flow-dense-mixed-0293 item[4].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0293 item[4].h');
+    }
+    {
+      const r = rectOf(itemRefs[5]);
+      expectClose(r.x - container.x, 456, 'auto-flow-dense-mixed-0293 item[5].x');
+      expectClose(r.y - container.y, 64, 'auto-flow-dense-mixed-0293 item[5].y');
+      expectClose(r.width, 144, 'auto-flow-dense-mixed-0293 item[5].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0293 item[5].h');
+    }
+  });
+  it("auto-flow-dense-mixed-0297: grid-auto-flow: row dense over four columns with mixed spans", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr 1fr","gap":8,"gridAutoFlow":"row dense"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnEnd":"span 3"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[5]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'auto-flow-dense-mixed-0297 container.width');
+    expectClose(container.height, 88, 'auto-flow-dense-mixed-0297 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-mixed-0297 item[0].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-mixed-0297 item[0].y');
+      expectClose(r.width, 448, 'auto-flow-dense-mixed-0297 item[0].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0297 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-mixed-0297 item[1].x');
+      expectClose(r.y - container.y, 32, 'auto-flow-dense-mixed-0297 item[1].y');
+      expectClose(r.width, 296, 'auto-flow-dense-mixed-0297 item[1].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0297 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 456, 'auto-flow-dense-mixed-0297 item[2].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-mixed-0297 item[2].y');
+      expectClose(r.width, 144, 'auto-flow-dense-mixed-0297 item[2].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0297 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 304, 'auto-flow-dense-mixed-0297 item[3].x');
+      expectClose(r.y - container.y, 32, 'auto-flow-dense-mixed-0297 item[3].y');
+      expectClose(r.width, 296, 'auto-flow-dense-mixed-0297 item[3].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0297 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-mixed-0297 item[4].x');
+      expectClose(r.y - container.y, 64, 'auto-flow-dense-mixed-0297 item[4].y');
+      expectClose(r.width, 144, 'auto-flow-dense-mixed-0297 item[4].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0297 item[4].h');
+    }
+    {
+      const r = rectOf(itemRefs[5]);
+      expectClose(r.x - container.x, 152, 'auto-flow-dense-mixed-0297 item[5].x');
+      expectClose(r.y - container.y, 64, 'auto-flow-dense-mixed-0297 item[5].y');
+      expectClose(r.width, 144, 'auto-flow-dense-mixed-0297 item[5].w');
+      expectClose(r.height, 24, 'auto-flow-dense-mixed-0297 item[5].h');
+    }
+  });
+});
+
+describe("auto-flow-dense-explicit", () => {
+  it("auto-flow-dense-explicit-0294: grid-auto-flow: row around an explicitly placed item", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"gridAutoFlow":"row"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnStart":3}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'auto-flow-dense-explicit-0294 container.width');
+    expectClose(container.height, 92, 'auto-flow-dense-explicit-0294 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 406.66, 'auto-flow-dense-explicit-0294 item[0].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-explicit-0294 item[0].y');
+      expectClose(r.width, 193.34, 'auto-flow-dense-explicit-0294 item[0].w');
+      expectClose(r.height, 24, 'auto-flow-dense-explicit-0294 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-explicit-0294 item[1].x');
+      expectClose(r.y - container.y, 34, 'auto-flow-dense-explicit-0294 item[1].y');
+      expectClose(r.width, 396.66, 'auto-flow-dense-explicit-0294 item[1].w');
+      expectClose(r.height, 24, 'auto-flow-dense-explicit-0294 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'auto-flow-dense-explicit-0294 item[2].x');
+      expectClose(r.y - container.y, 34, 'auto-flow-dense-explicit-0294 item[2].y');
+      expectClose(r.width, 193.34, 'auto-flow-dense-explicit-0294 item[2].w');
+      expectClose(r.height, 24, 'auto-flow-dense-explicit-0294 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-explicit-0294 item[3].x');
+      expectClose(r.y - container.y, 68, 'auto-flow-dense-explicit-0294 item[3].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-explicit-0294 item[3].w');
+      expectClose(r.height, 24, 'auto-flow-dense-explicit-0294 item[3].h');
+    }
+  });
+  it("auto-flow-dense-explicit-0298: grid-auto-flow: row dense around an explicitly placed item", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"gridAutoFlow":"row dense"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnStart":3}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24,"gridColumnEnd":"span 2"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'auto-flow-dense-explicit-0298 container.width');
+    expectClose(container.height, 58, 'auto-flow-dense-explicit-0298 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 406.66, 'auto-flow-dense-explicit-0298 item[0].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-explicit-0298 item[0].y');
+      expectClose(r.width, 193.34, 'auto-flow-dense-explicit-0298 item[0].w');
+      expectClose(r.height, 24, 'auto-flow-dense-explicit-0298 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-explicit-0298 item[1].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-explicit-0298 item[1].y');
+      expectClose(r.width, 396.66, 'auto-flow-dense-explicit-0298 item[1].w');
+      expectClose(r.height, 24, 'auto-flow-dense-explicit-0298 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-explicit-0298 item[2].x');
+      expectClose(r.y - container.y, 34, 'auto-flow-dense-explicit-0298 item[2].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-explicit-0298 item[2].w');
+      expectClose(r.height, 24, 'auto-flow-dense-explicit-0298 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 203.33, 'auto-flow-dense-explicit-0298 item[3].x');
+      expectClose(r.y - container.y, 34, 'auto-flow-dense-explicit-0298 item[3].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-explicit-0298 item[3].w');
+      expectClose(r.height, 24, 'auto-flow-dense-explicit-0298 item[3].h');
+    }
+  });
+});
+
+describe("auto-flow-dense-noop", () => {
+  it("auto-flow-dense-noop-0295: grid-auto-flow: row with no holes to fill", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"gridAutoFlow":"row"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'auto-flow-dense-noop-0295 container.width');
+    expectClose(container.height, 58, 'auto-flow-dense-noop-0295 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-noop-0295 item[0].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-noop-0295 item[0].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-noop-0295 item[0].w');
+      expectClose(r.height, 24, 'auto-flow-dense-noop-0295 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'auto-flow-dense-noop-0295 item[1].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-noop-0295 item[1].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-noop-0295 item[1].w');
+      expectClose(r.height, 24, 'auto-flow-dense-noop-0295 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'auto-flow-dense-noop-0295 item[2].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-noop-0295 item[2].y');
+      expectClose(r.width, 193.34, 'auto-flow-dense-noop-0295 item[2].w');
+      expectClose(r.height, 24, 'auto-flow-dense-noop-0295 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-noop-0295 item[3].x');
+      expectClose(r.y - container.y, 34, 'auto-flow-dense-noop-0295 item[3].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-noop-0295 item[3].w');
+      expectClose(r.height, 24, 'auto-flow-dense-noop-0295 item[3].h');
+    }
+  });
+  it("auto-flow-dense-noop-0299: grid-auto-flow: row dense with no holes to fill", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"gridAutoFlow":"row dense"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":24}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'auto-flow-dense-noop-0299 container.width');
+    expectClose(container.height, 58, 'auto-flow-dense-noop-0299 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-noop-0299 item[0].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-noop-0299 item[0].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-noop-0299 item[0].w');
+      expectClose(r.height, 24, 'auto-flow-dense-noop-0299 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'auto-flow-dense-noop-0299 item[1].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-noop-0299 item[1].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-noop-0299 item[1].w');
+      expectClose(r.height, 24, 'auto-flow-dense-noop-0299 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'auto-flow-dense-noop-0299 item[2].x');
+      expectClose(r.y - container.y, 0, 'auto-flow-dense-noop-0299 item[2].y');
+      expectClose(r.width, 193.34, 'auto-flow-dense-noop-0299 item[2].w');
+      expectClose(r.height, 24, 'auto-flow-dense-noop-0299 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'auto-flow-dense-noop-0299 item[3].x');
+      expectClose(r.y - container.y, 34, 'auto-flow-dense-noop-0299 item[3].y');
+      expectClose(r.width, 193.33, 'auto-flow-dense-noop-0299 item[3].w');
+      expectClose(r.height, 24, 'auto-flow-dense-noop-0299 item[3].h');
     }
   });
 });
