@@ -197,8 +197,8 @@ YGNodeRef build(const Case& c) {
       applyAutoRow(root, i, c.autoRows[i]);
     }
   }
-  if (c.autoFlowDense != 0) {
-    YGNodeStyleSetGridAutoFlow(root, YGGridAutoFlowRowDense);
+  if (c.autoFlow != 0) {
+    YGNodeStyleSetGridAutoFlow(root, (YGGridAutoFlow)c.autoFlow);
   }
   if (c.padding > 0) {
     YGNodeStyleSetPadding(root, YGEdgeAll, c.padding);

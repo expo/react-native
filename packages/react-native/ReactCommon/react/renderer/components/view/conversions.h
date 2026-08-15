@@ -580,15 +580,12 @@ inline void fromRawValue(
     result = yoga::GridAutoFlow::RowDense;
     return;
   }
-  // DOM-CSS-LIMITATION(grid-auto-flow-column): column flow is not implemented;
-  // the value is accepted and behaves as the row equivalent rather than being
-  // dropped, so a layout written for the web still places its items.
   if (stringValue == "column") {
-    result = yoga::GridAutoFlow::Row;
+    result = yoga::GridAutoFlow::Column;
     return;
   }
-  if (stringValue == "column dense") {
-    result = yoga::GridAutoFlow::RowDense;
+  if (stringValue == "column dense" || stringValue == "dense column") {
+    result = yoga::GridAutoFlow::ColumnDense;
     return;
   }
   LOG(ERROR) << "Could not parse yoga::GridAutoFlow: " << stringValue;
