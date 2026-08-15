@@ -3541,6 +3541,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::FloatSide& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::GridAutoFlow& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::GridLine& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::GridTemplateAreas& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Style::SizeLength& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, std::vector<facebook::react::BackgroundPosition>& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, std::vector<facebook::react::BackgroundRepeat>& result);
@@ -9513,6 +9514,7 @@ facebook::yoga::FlexDirection facebook::yoga::resolveCrossDirection(const facebo
 facebook::yoga::FlexDirection facebook::yoga::resolveDirection(const facebook::yoga::FlexDirection flexDirection, const facebook::yoga::Direction direction);
 facebook::yoga::FlexLine facebook::yoga::calculateFlexLine(facebook::yoga::Node* node, facebook::yoga::Direction ownerDirection, float ownerWidth, float mainAxisOwnerSize, float availableInnerWidth, float availableInnerMainDim, facebook::yoga::Node::LayoutableChildren::Iterator& iterator, size_t lineCount);
 facebook::yoga::FloatOptional facebook::yoga::boundAxisWithinMinAndMax(const facebook::yoga::Node *const node, const facebook::yoga::Direction direction, const facebook::yoga::FlexDirection axis, const facebook::yoga::FloatOptional value, const float axisSize, const float widthSize);
+facebook::yoga::GridTemplateAreas facebook::yoga::parseGridTemplateAreas(const std::vector<std::string>& rows);
 facebook::yoga::GridTrackList facebook::yoga::expandAutoRepeat(const facebook::yoga::GridTrackList& authoredTracks, const facebook::yoga::GridAutoRepeat& autoRepeat, const float availableSize, const float gap, const bool coverMinimum = false);
 facebook::yoga::GridTracks facebook::yoga::createGridTracks(facebook::yoga::Node* node, const facebook::yoga::ResolvedAutoPlacement& autoPlacement, const facebook::yoga::GridTrackList& expandedColumns, const facebook::yoga::GridTrackList& expandedRows);
 facebook::yoga::Justify facebook::yoga::resolveChildJustification(const facebook::yoga::Node* node, const facebook::yoga::Node* child);
@@ -9714,10 +9716,12 @@ class facebook::yoga::Style {
   public const facebook::yoga::GridLine& gridColumnStart() const;
   public const facebook::yoga::GridLine& gridRowEnd() const;
   public const facebook::yoga::GridLine& gridRowStart() const;
+  public const facebook::yoga::GridTemplateAreas& gridTemplateAreas() const;
   public const facebook::yoga::GridTrackList& gridAutoColumns() const;
   public const facebook::yoga::GridTrackList& gridAutoRows() const;
   public const facebook::yoga::GridTrackList& gridTemplateColumns() const;
   public const facebook::yoga::GridTrackList& gridTemplateRows() const;
+  public const std::string& gridArea() const;
   public facebook::yoga::Align alignContent() const;
   public facebook::yoga::Align alignItems() const;
   public facebook::yoga::Align alignSelf() const;
@@ -9802,6 +9806,7 @@ class facebook::yoga::Style {
   public void setFloatSide(facebook::yoga::FloatSide value);
   public void setFormattingContextRoot(bool value);
   public void setGap(facebook::yoga::Gutter gutter, facebook::yoga::Style::Length value);
+  public void setGridArea(std::string value);
   public void setGridAutoColumnAt(size_t index, facebook::yoga::GridTrackSize value);
   public void setGridAutoColumns(facebook::yoga::GridTrackList value);
   public void setGridAutoFlow(facebook::yoga::GridAutoFlow value);
@@ -9811,6 +9816,7 @@ class facebook::yoga::Style {
   public void setGridColumnStart(facebook::yoga::GridLine value);
   public void setGridRowEnd(facebook::yoga::GridLine value);
   public void setGridRowStart(facebook::yoga::GridLine value);
+  public void setGridTemplateAreas(facebook::yoga::GridTemplateAreas value);
   public void setGridTemplateColumnAt(size_t index, facebook::yoga::GridTrackSize value);
   public void setGridTemplateColumns(facebook::yoga::GridTrackList value);
   public void setGridTemplateColumnsAutoRepeat(facebook::yoga::GridAutoRepeat value);
@@ -10223,6 +10229,14 @@ struct facebook::yoga::FloatOptional {
   public constexpr float unwrapOrDefault(float defaultValue) const;
 }
 
+struct facebook::yoga::GridAreaRect {
+  public bool operator==(const facebook::yoga::GridAreaRect& other) const = default;
+  public uint16_t columnEnd;
+  public uint16_t columnStart;
+  public uint16_t rowEnd;
+  public uint16_t rowStart;
+}
+
 struct facebook::yoga::GridAutoRepeat {
   public bool operator==(const facebook::yoga::GridAutoRepeat& other) const = default;
   public constexpr bool isAuto() const;
@@ -10275,10 +10289,21 @@ struct facebook::yoga::GridStyle {
   public facebook::yoga::GridLine columnStart;
   public facebook::yoga::GridLine rowEnd;
   public facebook::yoga::GridLine rowStart;
+  public facebook::yoga::GridTemplateAreas templateAreas;
   public facebook::yoga::GridTrackList autoColumns;
   public facebook::yoga::GridTrackList autoRows;
   public facebook::yoga::GridTrackList templateColumns;
   public facebook::yoga::GridTrackList templateRows;
+  public std::string area;
+}
+
+struct facebook::yoga::GridTemplateAreas {
+  public bool empty() const;
+  public bool operator==(const facebook::yoga::GridTemplateAreas& other) const = default;
+  public const facebook::yoga::GridAreaRect* find(const std::string& name) const;
+  public std::vector<std::pair<std::string, facebook::yoga::GridAreaRect>> areas;
+  public uint16_t columnCount;
+  public uint16_t rowCount;
 }
 
 struct facebook::yoga::GridTrack : public facebook::yoga::GridTrackSize {
