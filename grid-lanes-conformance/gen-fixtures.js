@@ -124,7 +124,12 @@ function flattenTracks(list) {
 
 function unsupportedReason(c) {
   const k = c.container;
-  if (k.display !== 'grid') {
+  // A case the ORACLE cannot decide is not the same as one the engine cannot
+  // express, but both must be reported rather than counted as passing.
+  if (k.oracleLimitation != null) {
+    return `oracle: ${k.oracleLimitation}`;
+  }
+  if (k.display !== 'grid' && k.display !== 'grid-lanes') {
     return `display:${k.display}`;
   }
   if (k.direction != null && k.direction !== 'ltr') return 'direction:rtl';
@@ -151,6 +156,17 @@ function unsupportedReason(c) {
     if (it.colEnd != null && typeof it.colEnd !== 'number') return 'colEnd form';
   }
   return null;
+}
+
+// flow-tolerance: normal | <length-percentage> | infinite
+function flowTolerance(container) {
+  const v = container.flowTolerance;
+  if (v == null || v === 'normal') return {type: 0, value: 0};
+  if (v === 'infinite') return {type: 3, value: 0};
+  if (typeof v === 'number') return {type: 1, value: v};
+  const text = String(v);
+  if (text.endsWith('%')) return {type: 2, value: parseFloat(text)};
+  return {type: 1, value: parseFloat(text)};
 }
 
 function placementToCpp(p) {
@@ -184,6 +200,7 @@ w('struct Item {');
 w('  float width, height;   // kUnset when the case leaves it auto');
 w('  float margin, padding, border;');
 w('  float widthPercent;  // kUnset when absent');
+w('  float childHeight;   // kUnset when the item has no nested child');
 w('  float aspectRatio;   // kUnset when absent');
 w('  Placement col, row;');
 w('  int justifySelf;       // -1 when unset');
@@ -202,6 +219,10 @@ w('  float width, height;');
 w('  float gap, rowGap, colGap;');
 w('  float padding, border;');
 w('  int autoFlow;  // the YGGridAutoFlow enum value');
+w('  int lanes;     // 1 when display is grid-lanes');
+w('  int flowToleranceType;  // the YGFlowToleranceType enum value');
+w('  float flowToleranceValue;');
+w('  float fontSize;  // kUnset when unset; `normal` tolerance is 1em');
 w('  const char* const* areas; size_t areaRowCount;');
 w('  float minWidth, maxWidth, minHeight, maxHeight;  // kUnset when absent');
 w('  float gapPercent;  // kUnset when absent');
@@ -251,7 +272,7 @@ expected.cases.forEach((c, idx) => {
     const js = it.justifySelf != null ? JUSTIFY[it.justifySelf] : null;
     return (
       `  {${optF(it.w)}, ${optF(it.h)}, ${f(it.m ?? 0)}, ${f(it.p ?? 0)}, ` +
-      `${f(it.b ?? 0)}, ${optF(it.widthPercent)}, ${optF(it.aspectRatio)}, ` +
+      `${f(it.b ?? 0)}, ${optF(it.widthPercent)}, ${optF(it.childHeight)}, ${optF(it.aspectRatio)}, ` +
       `${placementToCpp(it.col)}, ${placementToCpp(it.row)}, ` +
       `${js ?? -1}, ${it.area != null ? JSON.stringify(it.area) : 'nullptr'}, ` +
       `${typeof it.colEnd === 'number' ? it.colEnd : 0}, ${typeof it.rowEnd === 'number' ? it.rowEnd : 0}, ` +
@@ -272,6 +293,8 @@ expected.cases.forEach((c, idx) => {
       `${optF(k.gap)}, ${optF(k.rowGap)}, ${optF(k.colGap)}, ` +
       `${f(k.padding ?? 0)}, ${f(k.border ?? 0)}, ` +
       `${{'row': 0, 'row dense': 1, 'column': 2, 'column dense': 3}[k.autoFlow ?? 'row'] ?? 0}, ` +
+      `${k.display === 'grid-lanes' ? 1 : 0}, ` +
+      `${flowTolerance(k).type}, ${f(flowTolerance(k).value)}, ${optF(k.fontSize)}, ` +
       `${k.areas != null && k.areas.length ? `kAreas${idx}` : 'nullptr'}, ${k.areas?.length ?? 0}, ` +
       `${optF(k.minWidth)}, ${optF(k.maxWidth)}, ${optF(k.minHeight)}, ${optF(k.maxHeight)}, ` +
       `${k.gapPercent ? f(parseFloat(k.gapPercent)) : 'kUnset'}, ` +
