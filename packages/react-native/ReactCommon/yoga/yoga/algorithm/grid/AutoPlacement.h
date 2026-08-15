@@ -189,17 +189,23 @@ struct AutoPlacement {
   int32_t maxColumnEnd;
   int32_t maxRowEnd;
 
-  static AutoPlacement performAutoPlacement(yoga::Node* node) {
+  // `explicitColumnCount`/`explicitRowCount` are the EXPANDED explicit track
+  // counts: repeat(auto-fill|auto-fit, ...) has already been resolved against
+  // the container size by the caller. Line numbering and negative line
+  // resolution are defined against the expanded grid, so placement must not
+  // read the authored list here.
+  static AutoPlacement performAutoPlacement(
+      yoga::Node* node,
+      size_t explicitColumnCount,
+      size_t explicitRowCount) {
     std::vector<AutoPlacementItem> gridItems;
     gridItems.reserve(node->getChildCount());
     std::unordered_set<yoga::Node*> placedItems;
     placedItems.reserve(node->getChildCount());
     int32_t minColumnStart = 0;
     int32_t minRowStart = 0;
-    int32_t maxColumnEnd =
-        static_cast<int32_t>(node->style().gridTemplateColumns().size());
-    int32_t maxRowEnd =
-        static_cast<int32_t>(node->style().gridTemplateRows().size());
+    int32_t maxColumnEnd = static_cast<int32_t>(explicitColumnCount);
+    int32_t maxRowEnd = static_cast<int32_t>(explicitRowCount);
     OccupancyGrid occupancy;
 
     // function to push back a grid item placement and record the min/max
@@ -225,9 +231,8 @@ struct AutoPlacement {
     };
 
     auto explicitColumnLineCount =
-        static_cast<int32_t>(node->style().gridTemplateColumns().size() + 1);
-    auto explicitRowLineCount =
-        static_cast<int32_t>(node->style().gridTemplateRows().size() + 1);
+        static_cast<int32_t>(explicitColumnCount + 1);
+    auto explicitRowLineCount = static_cast<int32_t>(explicitRowCount + 1);
 
     // Step 1: Position anything that's not auto-positioned.
     // In spec level 1, span is always definite. Default is 1.
@@ -536,8 +541,12 @@ struct ResolvedAutoPlacement {
 
   // Offset column and row so they starts at 0 index
   // also casts start and end values from int32_t to size_t
-  static ResolvedAutoPlacement resolveGridItemPlacements(Node* node) {
-    auto autoPlacement = AutoPlacement::performAutoPlacement(node);
+  static ResolvedAutoPlacement resolveGridItemPlacements(
+      Node* node,
+      size_t explicitColumnCount,
+      size_t explicitRowCount) {
+    auto autoPlacement = AutoPlacement::performAutoPlacement(
+        node, explicitColumnCount, explicitRowCount);
 
     auto minColumnStart = autoPlacement.minColumnStart;
     auto minRowStart = autoPlacement.minRowStart;
