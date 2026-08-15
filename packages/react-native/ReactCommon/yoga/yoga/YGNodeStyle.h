@@ -180,6 +180,34 @@ YG_EXPORT void YGNodeStyleSetGridRowEndSpan(YGNodeRef node, int span);
 YG_EXPORT int YGNodeStyleGetGridRowEnd(YGNodeConstRef node);
 
 // Grid Container Properties
+
+// https://www.w3.org/TR/css-grid-2/#auto-repeat
+//
+// A track list may contain at most one repeat(auto-fill|auto-fit, ...). Set
+// the track list to the pattern expanded ONCE, then mark which slice of it is
+// the auto-repeat: layout expands it against the container's real size, since
+// the repetition count is not knowable from style alone.
+//
+//   grid-template-columns: 10px repeat(auto-fill, minmax(120px, 1fr)) 10px
+//     -> three tracks set: 10px, minmax(120px, 1fr), 10px
+//     -> auto-repeat at startIndex 1, trackCount 1
+typedef enum YGGridAutoRepeatType {
+  YGGridAutoRepeatNone = 0,
+  YGGridAutoRepeatAutoFill = 1,
+  YGGridAutoRepeatAutoFit = 2,
+} YGGridAutoRepeatType;
+
+YG_EXPORT void YGNodeStyleSetGridTemplateColumnsAutoRepeat(
+    YGNodeRef node,
+    YGGridAutoRepeatType type,
+    size_t startIndex,
+    size_t trackCount);
+YG_EXPORT void YGNodeStyleSetGridTemplateRowsAutoRepeat(
+    YGNodeRef node,
+    YGGridAutoRepeatType type,
+    size_t startIndex,
+    size_t trackCount);
+
 YG_EXPORT void YGNodeStyleSetGridTemplateColumnsCount(
     YGNodeRef node,
     size_t count);

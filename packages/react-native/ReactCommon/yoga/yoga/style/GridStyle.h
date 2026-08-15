@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridLine.h>
 #include <yoga/style/GridTrack.h>
 
@@ -21,6 +22,11 @@ struct GridStyle {
   // Grid container properties
   GridTrackList templateColumns{};
   GridTrackList templateRows{};
+  // https://www.w3.org/TR/css-grid-2/#auto-repeat — where the single
+  // `repeat(auto-fill|auto-fit, ...)` sits inside the authored track list, if
+  // there is one. Layout expands it once the container size is known.
+  GridAutoRepeat templateColumnsAutoRepeat{};
+  GridAutoRepeat templateRowsAutoRepeat{};
   GridTrackList autoColumns{};
   GridTrackList autoRows{};
 
