@@ -11,8 +11,17 @@ import {Animated} from '../Animated/Animated';
 import {ImageResizeMode} from '../Image/ImageResizeMode';
 import {ColorValue} from './StyleSheet';
 
+// `start` and `end` are the css-align-3 keywords CSS Grid is specified in
+// terms of. They differ from flex-start/flex-end in resolving against the
+// writing mode rather than the flex direction.
 type FlexAlignType =
-  'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
+  | 'flex-start'
+  | 'flex-end'
+  | 'start'
+  | 'end'
+  | 'center'
+  | 'stretch'
+  | 'baseline';
 
 export type DimensionValue =
   number | 'auto' | `${number}%` | Animated.AnimatedNode | null;
@@ -30,6 +39,8 @@ export interface FlexStyle {
   alignContent?:
     | 'flex-start'
     | 'flex-end'
+    | 'start'
+    | 'end'
     | 'center'
     | 'stretch'
     | 'space-between'
@@ -48,7 +59,17 @@ export interface FlexStyle {
   borderWidth?: number | undefined;
   bottom?: DimensionValue | undefined;
   boxSizing?: 'border-box' | 'content-box' | undefined;
-  display?: 'none' | 'flex' | 'block' | 'inline' | 'contents' | undefined;
+  display?:
+    | 'none'
+    | 'flex'
+    | 'block'
+    | 'inline'
+    | 'contents'
+    // CSS Grid (css-grid-2). `grid` is block-level, `inline-grid` the
+    // inline-level form; the inner display is grid either way.
+    | 'grid'
+    | 'inline-grid'
+    | undefined;
   float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end' | undefined;
   clear?:
     | 'none'
@@ -63,6 +84,32 @@ export interface FlexStyle {
   flexBasis?: DimensionValue | undefined;
   flexDirection?:
     'row' | 'column' | 'row-reverse' | 'column-reverse' | undefined;
+  /**
+   * CSS Grid track lists (css-grid-2 §7), written as CSS:
+   *
+   *   gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))'
+   *
+   * Supports <length>, <percentage>, fr, auto, max-content, minmax(),
+   * fit-content(), and repeat() including auto-fill and auto-fit. Named
+   * lines and grid-template-areas are not implemented; min-content as a
+   * MAXIMUM behaves as auto.
+   */
+  gridTemplateColumns?: number | string | undefined;
+  gridTemplateRows?: number | string | undefined;
+  /** Sizes for implicit tracks (css-grid-2 §7.5). */
+  gridAutoColumns?: number | string | undefined;
+  gridAutoRows?: number | string | undefined;
+  /**
+   * Grid item placement (css-grid-2 §8): a line number, negative to count
+   * from the end, or `span <n>`. Line 0 behaves as `auto`.
+   */
+  gridColumnStart?: number | string | undefined;
+  gridColumnEnd?: number | string | undefined;
+  gridRowStart?: number | string | undefined;
+  gridRowEnd?: number | string | undefined;
+  /** Default in-track alignment on the inline axis (css-align-3). */
+  justifyItems?: 'start' | 'end' | 'center' | 'stretch' | undefined;
+  justifySelf?: 'start' | 'end' | 'center' | 'stretch' | undefined;
   rowGap?: number | string | undefined;
   gap?: number | string | undefined;
   columnGap?: number | string | undefined;
@@ -73,7 +120,10 @@ export interface FlexStyle {
   justifyContent?:
     | 'flex-start'
     | 'flex-end'
+    | 'start'
+    | 'end'
     | 'center'
+    | 'stretch'
     | 'space-between'
     | 'space-around'
     | 'space-evenly'
