@@ -203,6 +203,23 @@ typedef enum YGGridAutoFlow {
 
 YG_EXPORT void YGNodeStyleSetGridAutoFlow(YGNodeRef node, YGGridAutoFlow flow);
 
+// https://www.w3.org/TR/css-grid-2/#grid-template-areas-property
+//
+// Set the row strings of the template, then the name an item is placed into:
+//
+//   grid-template-areas: "header header" "sidebar main"
+//     -> YGNodeStyleSetGridTemplateAreas(grid, (const char*[]){"header header",
+//                                                              "sidebar main"}, 2)
+//     -> YGNodeStyleSetGridArea(item, "header")
+//
+// A ragged template, or a name that does not form a rectangle, makes the whole
+// declaration invalid per §7.3 and is ignored.
+YG_EXPORT void YGNodeStyleSetGridTemplateAreas(
+    YGNodeRef node,
+    const char* const* rows,
+    size_t rowCount);
+YG_EXPORT void YGNodeStyleSetGridArea(YGNodeRef node, const char* areaName);
+
 typedef enum YGGridAutoRepeatType {
   YGGridAutoRepeatNone = 0,
   YGGridAutoRepeatAutoFill = 1,

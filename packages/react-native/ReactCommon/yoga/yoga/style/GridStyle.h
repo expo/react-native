@@ -10,6 +10,8 @@
 #include <memory>
 
 #include <yoga/style/GridAutoFlow.h>
+#include <yoga/style/GridTemplateAreas.h>
+#include <string>
 #include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridLine.h>
 #include <yoga/style/GridTrack.h>
@@ -32,6 +34,10 @@ struct GridStyle {
   GridTrackList autoRows{};
 
   GridAutoFlow autoFlow{GridAutoFlow::Row};
+
+  // Container: the named areas. Item: the area it asked for by name.
+  GridTemplateAreas templateAreas{};
+  std::string area{};
 
   // Grid item properties
   GridLine columnStart{};
