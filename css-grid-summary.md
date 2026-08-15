@@ -29,15 +29,13 @@ every width.
 | repetition | `repeat(n, …)`, `repeat(auto-fill, …)`, `repeat(auto-fit, …)` |
 | placement | `gridColumnStart/End`, `gridRowStart/End`, line numbers incl. negatives, `span n` |
 | implicit tracks | `gridAutoRows`, `gridAutoColumns` |
-| flow | `gridAutoFlow: 'row'`, `'row dense'` |
+| flow | `gridAutoFlow: 'row'`, `'column'`, either with `dense` |
 | alignment | `justifyItems`, `alignItems`, `justifySelf`, `alignSelf`, `justifyContent`, `alignContent` |
 | gaps | `gap`, `rowGap`, `columnGap`, including percentages |
 
-**Not supported.** `grid-auto-flow: column` (it is accepted and behaves as
-`row`, so a layout ported from the web still places its items), `min-content`
-as a *maximum*, the `x` ceiling in `fit-content(x)`, named grid lines,
-`grid-template-areas`, and `subgrid`. Each is in `dom-css-limitations.md` with
-the reason.
+**Not supported.** `min-content` as a *maximum*, the `x` ceiling in
+`fit-content(x)`, named grid lines, `grid-template-areas`, and `subgrid`. Each
+is in `dom-css-limitations.md` with the reason.
 
 ## How it is checked
 
@@ -52,7 +50,7 @@ One declarative list of cases feeds three consumers, so they cannot drift:
 - `gen-fantom-test.js` emits a Fantom suite that renders it as React Native
   and reads `getBoundingClientRect()`.
 
-**182 cases, 2,560 coordinate assertions, zero mismatches** — in the engine and
+**194 cases, 2,840 coordinate assertions, zero mismatches** — in the engine and
 through React Native. The full Fantom suite (3,342 tests) is unaffected. On a
 real simulator and emulator, `grid-cdp-verify.js` re-checks track geometry
 through the actual platform layout pass: 9 of 9 on each.
@@ -67,7 +65,9 @@ shows up as a different layout rather than a small delta. `auto-fit` is run at
 item counts that leave 0, 1 and 4 tracks empty. `dense` is run against the same
 shapes as sparse, and Safari confirms three of the four place items
 differently — so an implementation that ignored `dense` would fail, and one
-that reordered everything would fail the fourth.
+that reordered everything would fail the fourth. Every `grid-auto-flow` shape
+is run in all four flows, and row differs from column in each, so the column
+keyword cannot be quietly ignored either.
 
 ## Bugs this found
 
