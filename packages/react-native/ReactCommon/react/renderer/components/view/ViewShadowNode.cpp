@@ -59,13 +59,13 @@ static_assert(
     "generation during commits");
 #else
 static_assert(
-    sizeof(ViewShadowNode) <= 1200,
+    sizeof(ViewShadowNode) <= 1088,
     "ViewShadowNode grew past its memory budget");
 static_assert(
     sizeof(TextAttributes) <= 288,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
-    sizeof(ViewProps) <= 2400,
+    sizeof(ViewProps) <= 2288,
     "ViewProps grew; every mounted View holds one, plus one per pending "
     "generation during commits");
 #endif
