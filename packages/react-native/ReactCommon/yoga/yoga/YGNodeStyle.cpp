@@ -8,6 +8,7 @@
 #include <yoga/Yoga.h>
 #include <yoga/debug/AssertFatal.h>
 #include <yoga/node/Node.h>
+#include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridTrack.h>
 
 using namespace facebook;
@@ -646,6 +647,50 @@ StyleSizeLength styleSizeLengthFromTypeAndValue(
 } // namespace
 
 // GridTemplateColumns
+
+namespace {
+GridAutoRepeat toGridAutoRepeat(
+    YGGridAutoRepeatType type,
+    size_t startIndex,
+    size_t trackCount) {
+  GridAutoRepeatType resolved = GridAutoRepeatType::None;
+  switch (type) {
+    case YGGridAutoRepeatNone:
+      resolved = GridAutoRepeatType::None;
+      break;
+    case YGGridAutoRepeatAutoFill:
+      resolved = GridAutoRepeatType::AutoFill;
+      break;
+    case YGGridAutoRepeatAutoFit:
+      resolved = GridAutoRepeatType::AutoFit;
+      break;
+  }
+  return GridAutoRepeat{
+      resolved,
+      static_cast<uint16_t>(startIndex),
+      static_cast<uint16_t>(trackCount)};
+}
+} // namespace
+
+void YGNodeStyleSetGridTemplateColumnsAutoRepeat(
+    YGNodeRef node,
+    YGGridAutoRepeatType type,
+    size_t startIndex,
+    size_t trackCount) {
+  resolveRef(node)->style().setGridTemplateColumnsAutoRepeat(
+      toGridAutoRepeat(type, startIndex, trackCount));
+  resolveRef(node)->markDirtyAndPropagate();
+}
+
+void YGNodeStyleSetGridTemplateRowsAutoRepeat(
+    YGNodeRef node,
+    YGGridAutoRepeatType type,
+    size_t startIndex,
+    size_t trackCount) {
+  resolveRef(node)->style().setGridTemplateRowsAutoRepeat(
+      toGridAutoRepeat(type, startIndex, trackCount));
+  resolveRef(node)->markDirtyAndPropagate();
+}
 
 void YGNodeStyleSetGridTemplateColumnsCount(YGNodeRef node, size_t count) {
   resolveRef(node)->style().resizeGridTemplateColumns(count);

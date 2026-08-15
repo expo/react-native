@@ -894,6 +894,154 @@ for (const cols of [
   );
 }
 
+// ---------------------------------------------------------------------------
+// A. repeat(), auto-fill and auto-fit — css-grid-2 §7.2.3
+//
+// Every one of the six WebKit grid-lanes demos uses
+// `repeat(auto-fill, minmax(Xrem, 1fr))` and none uses a literal track list,
+// so this is the idiom that has to be right, not a nicety.
+//
+// The repetition count is a function of the container width, so each shape is
+// swept across widths: a count that is off by one shows as a completely
+// different layout rather than a small delta.
+// ---------------------------------------------------------------------------
+
+const repeat = (n, tracks) => ({t: 'repeat', n, tracks});
+
+// The canonical responsive shape at widths that bracket every integer count.
+for (const width of [200, 320, 480, 600, 720, 900, 1000]) {
+  for (const gap of [0, 16]) {
+    add(
+      'auto-fill-minmax',
+      'A',
+      grid({cols: [repeat('auto-fill', [minmax(px(120), fr(1))])], width, gap}),
+      [item(null, 30), item(null, 40), item(null, 20), item(null, 50)],
+      `repeat(auto-fill, minmax(120px, 1fr)) at width ${width}, gap ${gap}`,
+    );
+  }
+}
+
+// auto-fit differs from auto-fill only when there are fewer items than tracks:
+// the empty repeated tracks collapse, and the remaining ones absorb the space.
+for (const width of [480, 720, 1000]) {
+  for (const n of [1, 2, 6]) {
+    add(
+      'auto-fit-collapse',
+      'A',
+      grid({cols: [repeat('auto-fit', [minmax(px(120), fr(1))])], width, gap: 16}),
+      Array.from({length: n}, (_, i) => item(null, 30 + i * 5)),
+      `repeat(auto-fit, minmax(120px, 1fr)) at width ${width} with ${n} items`,
+    );
+    add(
+      'auto-fill-vs-fit',
+      'A',
+      grid({cols: [repeat('auto-fill', [minmax(px(120), fr(1))])], width, gap: 16}),
+      Array.from({length: n}, (_, i) => item(null, 30 + i * 5)),
+      `auto-fill counterpart at width ${width} with ${n} items`,
+    );
+  }
+}
+
+// An integer repeat is a static expansion, and must equal the same list
+// written out longhand.
+for (const [n, tracks] of [
+  [3, [fr(1)]],
+  [2, [px(100), fr(1)]],
+  [4, [px(60)]],
+]) {
+  add(
+    'repeat-integer',
+    'A',
+    grid({cols: [repeat(n, tracks)], gap: 10}),
+    [item(40, 20), item(40, 20), item(40, 20)],
+    `repeat(${n}, ...) expands statically`,
+  );
+}
+
+// Fixed tracks bracketing an auto-repeat: the repetitions get what is left
+// after the fixed tracks and all the gaps, which is where an off-by-one in the
+// gap accounting shows up. This is the photos demo's fourth layout.
+for (const width of [500, 800, 1100]) {
+  add(
+    'auto-fill-with-fixed-sides',
+    'A',
+    grid({
+      cols: [px(80), repeat('auto-fill', [minmax(px(160), fr(1))]), px(80)],
+      width,
+      gap: 16,
+    }),
+    [item(null, 30), item(null, 40), item(null, 20), item(null, 50)],
+    `fixed 80px sides around an auto-fill run at width ${width}`,
+  );
+}
+
+// A multi-track repeat pattern — the photos demo's fifth layout.
+for (const width of [600, 900]) {
+  add(
+    'auto-fill-multi-track',
+    'A',
+    grid({
+      cols: [repeat('auto-fill', [minmax(px(90), fr(1)), minmax(px(150), fr(2))])],
+      width,
+      gap: 16,
+    }),
+    [item(null, 30), item(null, 40), item(null, 20), item(null, 50), item(null, 25)],
+    `two-track auto-fill pattern at width ${width}`,
+  );
+}
+
+// A pattern too wide to fit even once must still produce one repetition
+// rather than zero tracks.
+add(
+  'auto-fill-overflow',
+  'A',
+  grid({cols: [repeat('auto-fill', [minmax(px(400), fr(1))])], width: 300, gap: 10}),
+  [item(null, 30), item(null, 40)],
+  'a pattern wider than the container still repeats once',
+);
+
+// Fixed-size and percentage patterns, where the count is exact arithmetic.
+for (const width of [300, 600, 630]) {
+  add(
+    'auto-fill-fixed',
+    'A',
+    grid({cols: [repeat('auto-fill', [px(100)])], width, gap: 10}),
+    [item(null, 20), item(null, 30), item(null, 25)],
+    `repeat(auto-fill, 100px) at width ${width} with gap 10`,
+  );
+}
+
+// auto-fit collapsing is implemented by DROPPING empty repeated tracks rather
+// than zero-sizing them, on the reasoning that a collapsed track contributes
+// nothing — 0px wide, and its two gutters merge into one — and that no line an
+// item refers to can be dropped, since a track an item occupies or spans is by
+// definition not empty. These cases exist to make Safari adjudicate that
+// reasoning instead of trusting it: each leaves empty repeated tracks in a
+// position where dropping and collapsing could conceivably differ.
+for (const width of [500, 800]) {
+  add(
+    'auto-fit-x-explicit-line',
+    'A',
+    grid({cols: [repeat('auto-fit', [minmax(px(120), fr(1))])], width, gap: 16}),
+    [item(null, 30, {col: 3}), item(null, 40)],
+    `auto-fit with an item pinned to line 3 at width ${width}`,
+  );
+  add(
+    'auto-fit-x-full-bleed',
+    'A',
+    grid({cols: [repeat('auto-fit', [minmax(px(120), fr(1))])], width, gap: 16}),
+    [item(null, 30, {col: {span: 2}}), item(null, 40)],
+    `auto-fit with a spanning item at width ${width}`,
+  );
+  add(
+    'auto-fit-x-trailing-hole',
+    'A',
+    grid({cols: [repeat('auto-fit', [minmax(px(120), fr(1))])], width, gap: 16}),
+    [item(null, 30), item(null, 40, {col: 2})],
+    `auto-fit with an interior hole at width ${width}`,
+  );
+}
+
 for (const [name, track] of [
   ['min-content', minContent()],
   ['max-content', maxContent()],

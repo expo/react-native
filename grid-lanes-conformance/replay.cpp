@@ -115,8 +115,20 @@ void applyPlacement(YGNodeRef node, bool isColumn, const Placement& p) {
   }
 }
 
+// Yoga rounds layout to the pixel grid by default (point scale factor 1),
+// while the browser reports fractional geometry. Comparing the two directly
+// would charge Yoga for rounding the oracle never did, so rounding is off.
+YGConfigRef unroundedConfig() {
+  static YGConfigRef config = [] {
+    YGConfigRef c = YGConfigNew();
+    YGConfigSetPointScaleFactor(c, 0.0f);
+    return c;
+  }();
+  return config;
+}
+
 YGNodeRef build(const Case& c) {
-  YGNodeRef root = YGNodeNew();
+  YGNodeRef root = YGNodeNewWithConfig(unroundedConfig());
   YGNodeStyleSetDisplay(root, YGDisplayGrid);
   // Every case is measured inside a 900px wrapper in the browser; a case that
   // does not state a width is shrink-to-fit against that, so give Yoga the
@@ -164,17 +176,33 @@ YGNodeRef build(const Case& c) {
     for (size_t i = 0; i < c.colCount; i++) {
       applySimple(root, /* isColumn */ true, i, c.cols[i]);
     }
+    // The track list above holds the auto-repeat pattern once; this says which
+    // slice of it repeats, for layout to expand against the container size.
+    if (c.colAutoRepeatType != 0) {
+      YGNodeStyleSetGridTemplateColumnsAutoRepeat(
+          root,
+          (YGGridAutoRepeatType)c.colAutoRepeatType,
+          c.colAutoRepeatStart,
+          c.colAutoRepeatCount);
+    }
   }
   if (c.rowCount > 0) {
     YGNodeStyleSetGridTemplateRowsCount(root, c.rowCount);
     for (size_t i = 0; i < c.rowCount; i++) {
       applySimple(root, /* isColumn */ false, i, c.rows[i]);
     }
+    if (c.rowAutoRepeatType != 0) {
+      YGNodeStyleSetGridTemplateRowsAutoRepeat(
+          root,
+          (YGGridAutoRepeatType)c.rowAutoRepeatType,
+          c.rowAutoRepeatStart,
+          c.rowAutoRepeatCount);
+    }
   }
 
   for (size_t i = 0; i < c.itemCount; i++) {
     const Item& it = c.items[i];
-    YGNodeRef child = YGNodeNew();
+    YGNodeRef child = YGNodeNewWithConfig(unroundedConfig());
     if (isSet(it.width)) {
       YGNodeStyleSetWidth(child, it.width);
     }
