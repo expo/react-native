@@ -83,6 +83,32 @@ a real screen first. Background in `element-model-design.md`.
 
 ---
 
+## CSS Grid
+
+- **`DOM-CSS-LIMITATION(grid-fit-content-limit)` — `fit-content(x)` drops its
+  `x` ceiling.** The value is `max(min-content, min(max-content, x))`; Yoga's
+  FitContent sizing function takes no argument, so the max-content clamp is
+  honoured and the ceiling is not. The alternative mapping, `minmax(auto, x)`,
+  keeps the ceiling but loses the clamp, which is worse — the track would grow
+  to `x` whenever there is free space, however narrow the content. The ceiling
+  can only bind when min-content < x < max-content, i.e. for content that
+  reflows, which is also why the conformance corpus cannot catch it: every case
+  there is a fixed-size box, deliberately, so that no case depends on a font.
+- **`DOM-CSS-LIMITATION(grid-min-content)` — `min-content` as a MAXIMUM sizing
+  function behaves as `auto`.** Yoga has no min-content sizing function. Its
+  `auto` minimum IS the automatic minimum size, which is min-content for a
+  non-scrollable box, so `min-content` as a minimum is correct; only the
+  maximum position is approximated.
+- **`grid-auto-flow` is not implemented.** Yoga's style has no field for it, so
+  there is no `column` flow and no `dense` packing; placement is always `row`.
+  Items still place in order, and `auto-fit` collapsing works, because that is
+  a track-list concern rather than a flow one.
+- **Named grid lines and `grid-template-areas` are not implemented.** Placement
+  is by line number or span only.
+- **`subgrid` is not implemented.**
+
+---
+
 ## Not limitations, though they look like ones
 
 Recorded because each has been mistaken for a bug at least once:
