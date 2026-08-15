@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <yoga/style/GridAutoFlow.h>
 #include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridLine.h>
 #include <yoga/style/GridTrack.h>
@@ -33,6 +34,8 @@ struct GridStyle {
   GridTrackList gridTemplateRows{};
   GridTrackList gridAutoColumns{};
   GridTrackList gridAutoRows{};
+
+  GridAutoFlow gridAutoFlow{GridAutoFlow::Row};
 
   GridAutoRepeat gridTemplateColumnsAutoRepeat{};
   GridAutoRepeat gridTemplateRowsAutoRepeat{};
