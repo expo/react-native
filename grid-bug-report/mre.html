@@ -1,0 +1,16 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+* { box-sizing: border-box; margin:0; padding:0; }
+body { font: 16px/1 -apple-system, sans-serif; padding: 20px; background:#fff; }
+#g { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px;
+     border: 1px solid #000; width: 300px; }
+#g > div { height: 20px; }
+#a { background:#6ea8fe } #b { background:#f0a15c }
+#label { margin-top: 8px; font-size: 13px; font-weight: 600; }
+</style></head><body>
+<div id="g"><div id="a"></div><div id="b"></div></div>
+<div id="label"></div>
+<script>
+var h = document.getElementById('g').getBoundingClientRect().height;
+document.getElementById('label').textContent = 'measured height: ' + h.toFixed(1) + 'px  (Safari)';
+window.__mre = h;
+</script></body></html>

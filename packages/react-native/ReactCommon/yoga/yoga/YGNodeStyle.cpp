@@ -631,6 +631,14 @@ GridTrackSize gridTrackSizeFromTypeAndValue(YGGridTrackType type, float value) {
       return GridTrackSize::auto_();
     case YGGridTrackTypeMinmax:
       return GridTrackSize::auto_();
+    case YGGridTrackTypeMaxContent:
+      return GridTrackSize{
+          .minSizingFunction = StyleSizeLength::ofAuto(),
+          .maxSizingFunction = StyleSizeLength::ofMaxContent()};
+    case YGGridTrackTypeFitContent:
+      return GridTrackSize{
+          .minSizingFunction = StyleSizeLength::ofAuto(),
+          .maxSizingFunction = StyleSizeLength::ofFitContent()};
   }
   fatalWithMessage("Unknown YGGridTrackType");
 }
@@ -649,6 +657,10 @@ StyleSizeLength styleSizeLengthFromTypeAndValue(
       return StyleSizeLength::ofAuto();
     case YGGridTrackTypeMinmax:
       return StyleSizeLength::ofAuto();
+    case YGGridTrackTypeMaxContent:
+      return StyleSizeLength::ofMaxContent();
+    case YGGridTrackTypeFitContent:
+      return StyleSizeLength::ofFitContent();
   }
   fatalWithMessage("Unknown YGGridTrackType");
 }
