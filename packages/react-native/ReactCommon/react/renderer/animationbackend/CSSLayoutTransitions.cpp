@@ -92,7 +92,8 @@ CSSLayoutTransitions::CSSLayoutTransitions(
 void CSSLayoutTransitions::beginCapture(
     SurfaceId surfaceId,
     std::unordered_map<Tag, Timeline> timelines,
-    std::unordered_map<Tag, LayoutMetrics> scratchMetrics) {
+    std::unordered_map<Tag, LayoutMetrics> scratchMetrics,
+    std::unordered_map<Tag, Props::Shared> declaringProps) {
   std::scoped_lock lock(mutex_);
   /*
    * Merged into whatever is already waiting, not replaced: two commits can
@@ -117,6 +118,9 @@ void CSSLayoutTransitions::beginCapture(
   }
   for (auto& [tag, metrics] : scratchMetrics) {
     capture.scratchMetrics[tag] = metrics;
+  }
+  for (auto& [tag, props] : declaringProps) {
+    capture.declaringProps[tag] = std::move(props);
   }
 }
 
@@ -210,19 +214,27 @@ std::optional<MountingTransaction> CSSLayoutTransitions::pullTransaction(
   const bool flying = flightsIt != flights_.end() && !flightsIt->second.empty();
 
   /*
-   * A waiting capture is consumed only by the transaction that carries a
-   * metric change on a declaring node; anything that mounts in between passes
-   * by and leaves the capture waiting
+   * A waiting capture is consumed only by the transaction that mounts a
+   * declaring node's change: an update that moves the node, or one that
+   * carries the props the transition started from, since a grid's tracks
+   * inside a box of fixed size move only its items. Anything that mounts in
+   * between passes by and leaves the capture waiting.
    */
   bool capturing = false;
   if (captureIt != capture_.end()) {
+    const auto& capture = captureIt->second;
     for (const auto& mutation : mutations) {
       if (mutation.type != ShadowViewMutation::Update) {
         continue;
       }
-      auto timelineIt =
-          captureIt->second.timelines.find(mutation.newChildShadowView.tag);
-      if (timelineIt != captureIt->second.timelines.end() &&
+      const auto tag = mutation.newChildShadowView.tag;
+      if (capture.timelines.find(tag) == capture.timelines.end()) {
+        continue;
+      }
+      auto propsIt = capture.declaringProps.find(tag);
+      const bool carriesTheChange = propsIt != capture.declaringProps.end() &&
+          propsIt->second == mutation.newChildShadowView.props;
+      if (carriesTheChange ||
           metricsDiffer(
               mutation.oldChildShadowView.layoutMetrics,
               mutation.newChildShadowView.layoutMetrics)) {
@@ -326,10 +338,10 @@ std::optional<MountingTransaction> CSSLayoutTransitions::pullTransaction(
           flight.to = mutation.newChildShadowView.layoutMetrics;
           /*
            * Only the vertical axis glides: every property this engine diverts
-           * (height, padding-bottom) is vertical, so the horizontal components
-           * of the attribution are noise. A horizontal change sharing a commit
-           * with a transition lands instantly, as css-transitions-1 says of
-           * undeclared properties.
+           * (height, padding-bottom, grid-template-rows) is vertical, so the
+           * horizontal components of the attribution are noise. A horizontal
+           * change sharing a commit with a transition lands instantly, as
+           * css-transitions-1 says of undeclared properties.
            */
           flight.from.frame.origin.x = flight.to.frame.origin.x;
           flight.from.frame.size.width = flight.to.frame.size.width;

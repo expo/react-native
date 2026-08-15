@@ -1,28 +1,31 @@
 # Animating a layout-affecting property
 
-`height` and `padding-bottom` transition. They are the layout-affecting
-properties that do, and they take a different path through the engine from the
-paint properties — one that costs **no commits at all beyond the author's own**,
-and none per frame.
+`height`, `padding-bottom` and `grid-template-rows` transition. They are the
+layout-affecting properties that do, and they take a different path through the
+engine from the paint properties — one that costs **no commits at all beyond the
+author's own**, and none per frame.
 
 ## Why they needed their own path
 
 The four properties the engine started with — opacity, background-color,
-border-color and transform — share something these two do not: changing one
+border-color and transform — share something these three do not: changing one
 alters what a view _paints_ and never where anything _is_. That is what lets a
 frame be written straight to a mounted view from the UI thread, with no commit,
 no React, and no memory of what it wrote.
 
 A layout property breaks all of it. A view's height decides its siblings'
 positions and its ancestors' sizes; a balloon's `padding-bottom` is the reserve
-its whole column slides into. A frame of either moves OTHER views.
+its whole column slides into. A frame of any of them moves OTHER views.
 
 The shapes that motivated them: shadcn's accordion, which animates `height`
 because the web writes it that way (Radix measures the panel and publishes the
 number as a custom property _precisely so the height can be animated_); a chat
-composer growing a line (the platform's own eases it over about 0.1s); and a
-chat balloon's tail, whose reserve is `padding-bottom` and whose outline is
-drawn from the mounted padding every frame.
+composer growing a line (the platform's own eases it over about 0.1s); a chat
+balloon's tail, whose reserve is `padding-bottom` and whose outline is drawn
+from the mounted padding every frame; and a collapsible panel whose one row
+track moves between `1fr` and `0fr`, which is how Astryx opens and closes its
+composer drawer, code blocks, side navigation and toasts without measuring their
+content.
 
 ## What it does
 
@@ -168,8 +171,10 @@ beside the tree would tear against a real commit landing mid-flight, and would
 need its own answer to every question — consistency, mounting, revision — that
 `ShadowTree::commit` already answers.
 
-**Width, margin and the rest.** Nothing in the mechanism is specific to the two
+**Width, margin and the rest.** Nothing in the mechanism is specific to these
 properties — the hook's divert and `isLayoutAffecting` are a line each. They are
 absent because each new one is a number of frames someone will spend, and these
-are the two with cases behind them (the accordion and the composer; the balloon
-tail). Adding another should mean naming the case.
+are the three with cases behind them (the accordion and the composer; the
+balloon tail; the collapsible panels). Adding another should mean naming the
+case. `grid-template-columns` would also need the horizontal axis to glide,
+which `CSSLayoutTransitions` holds still.

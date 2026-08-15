@@ -49,6 +49,12 @@ struct TransitionValue {
    * `height` is `Style::SizeLength`
    */
   yoga::Style::Length paddingLength{};
+  /*
+   * A track list for `grid-template-rows`, with where its auto-repeat sits:
+   * two lists interpolate only where their `repeat()`s agree
+   */
+  yoga::GridTrackList tracks{};
+  yoga::GridAutoRepeat tracksAutoRepeat{};
 };
 
 /*
@@ -292,6 +298,9 @@ class CSSTransitions final : public UIManagerCommitHook {
     std::unordered_set<std::shared_ptr<const ShadowNodeFamily>> families;
     std::unordered_map<Tag, AnimatedProps> scratchProps;
     std::unordered_map<Tag, CSSLayoutTransitions::Timeline> timelines;
+    // Each declaring node's props as they will mount, by which the mounting
+    // layer knows the transaction that carries the change
+    std::unordered_map<Tag, Props::Shared> declaringProps;
   };
   std::unordered_map<SurfaceId, PendingScratch> pendingScratch_;
 

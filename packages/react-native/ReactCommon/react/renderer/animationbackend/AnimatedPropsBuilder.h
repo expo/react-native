@@ -227,6 +227,10 @@ struct AnimatedPropsBuilder {
   {
     props.push_back(std::make_unique<AnimatedProp<BackfaceVisibility>>(BACKFACE_VISIBILITY, value));
   }
+  void setGridTemplateRows(const yoga::GridTrackList &value)
+  {
+    props.push_back(std::make_unique<AnimatedProp<yoga::GridTrackList>>(GRID_TEMPLATE_ROWS, value));
+  }
   void storeDynamic(folly::dynamic &d)
   {
     rawProps = std::make_unique<RawProps>(std::move(d));
