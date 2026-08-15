@@ -29,6 +29,7 @@ constexpr TransitionProperty kInterpolatedProperties[] = {
     TransitionProperty::Transform,
     TransitionProperty::Height,
     TransitionProperty::PaddingBottom,
+    TransitionProperty::GridTemplateRows,
 };
 
 /*
@@ -42,7 +43,8 @@ constexpr TransitionProperty kInterpolatedProperties[] = {
  */
 bool isLayoutAffecting(TransitionProperty property) {
   return property == TransitionProperty::Height ||
-      property == TransitionProperty::PaddingBottom;
+      property == TransitionProperty::PaddingBottom ||
+      property == TransitionProperty::GridTemplateRows;
 }
 
 /*
@@ -81,6 +83,82 @@ bool paddingLengthsInterpolable(
   return from.isPercent() && to.isPercent();
 }
 
+/*
+ * One sizing function of a grid track against its counterpart: interpolable
+ * when unchanged, when both are lengths or percentages, or when both are `fr`
+ * (a stretch with a fraction), which is the `0fr` to `1fr` a collapsible panel
+ * animates. A keyword such as `auto` or `max-content` changes discretely.
+ *
+ * Unlike `lengthsInterpolable`, a length and a percentage pair up, as
+ * css-values-4 combines them through calc(): a track list is never
+ * interpolated as a value, since its flight runs between two real layouts, so
+ * no in-between calc() has to be built.
+ */
+bool trackSizingFunctionsInterpolable(
+    const yoga::Style::SizeLength& from,
+    const yoga::Style::SizeLength& to) {
+  if (from == to) {
+    return true;
+  }
+  const auto isLengthPercentage = [](const yoga::Style::SizeLength& length) {
+    return length.isPoints() || length.isPercent();
+  };
+  if (isLengthPercentage(from) && isLengthPercentage(to)) {
+    return true;
+  }
+  return from.isStretch() && to.isStretch() && from.value().isDefined() &&
+      to.value().isDefined();
+}
+
+/*
+ * Whether two `grid-template-rows` values can be interpolated: css-grid-1 §7.2
+ * animates track lists of the same length track by track, a `repeat()` only
+ * against one with the same count and as many tracks (§7.2.3.3), and makes
+ * every other pair discrete.
+ */
+bool trackListsInterpolable(
+    const TransitionValue& from,
+    const TransitionValue& to) {
+  if (from.tracks.size() != to.tracks.size() ||
+      from.tracksAutoRepeat != to.tracksAutoRepeat) {
+    return false;
+  }
+  for (size_t i = 0; i < from.tracks.size(); i++) {
+    if (!trackSizingFunctionsInterpolable(
+            from.tracks[i].minSizingFunction, to.tracks[i].minSizingFunction) ||
+        !trackSizingFunctionsInterpolable(
+            from.tracks[i].maxSizingFunction, to.tracks[i].maxSizingFunction)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*
+ * Whether a layout property's pair of values can be interpolated; a pair that
+ * cannot is a discrete change, which css-transitions-1 applies at once
+ */
+bool layoutValuesInterpolable(
+    TransitionProperty property,
+    const TransitionValue& from,
+    const TransitionValue& to) {
+  switch (property) {
+    case TransitionProperty::Height:
+      return lengthsInterpolable(from.length, to.length);
+    case TransitionProperty::PaddingBottom:
+      return paddingLengthsInterpolable(from.paddingLength, to.paddingLength);
+    case TransitionProperty::GridTemplateRows:
+      return trackListsInterpolable(from, to);
+    case TransitionProperty::All:
+    case TransitionProperty::Opacity:
+    case TransitionProperty::BackgroundColor:
+    case TransitionProperty::BorderColor:
+    case TransitionProperty::Transform:
+      return true;
+  }
+  return true;
+}
+
 TransitionValue currentValue(
     const ViewProps& props,
     TransitionProperty property) {
@@ -105,6 +183,10 @@ TransitionValue currentValue(
       break;
     case TransitionProperty::PaddingBottom:
       value.paddingLength = props.yogaStyle.padding(yoga::Edge::Bottom);
+      break;
+    case TransitionProperty::GridTemplateRows:
+      value.tracks = props.yogaStyle.gridTemplateRows();
+      value.tracksAutoRepeat = props.yogaStyle.gridTemplateRowsAutoRepeat();
       break;
     case TransitionProperty::All:
       break;
@@ -146,6 +228,8 @@ bool valuesEqual(
       }
       return av == bv;
     }
+    case TransitionProperty::GridTemplateRows:
+      return a.tracks == b.tracks && a.tracksAutoRepeat == b.tracksAutoRepeat;
     case TransitionProperty::All:
       return true;
   }
@@ -257,6 +341,12 @@ TransitionValue interpolateValue(
           : yoga::Style::Length::points(static_cast<float>(interpolated));
       break;
     }
+    case TransitionProperty::GridTemplateRows:
+      // Holds the target: a track list runs only as a layout flight, between
+      // two real layouts, and has no in-between value
+      value.tracks = transition.to.tracks;
+      value.tracksAutoRepeat = transition.to.tracksAutoRepeat;
+      break;
     case TransitionProperty::All:
       break;
   }
@@ -299,6 +389,9 @@ void buildValue(
       builder.setPadding(paddings);
       break;
     }
+    case TransitionProperty::GridTemplateRows:
+      builder.setGridTemplateRows(value.tracks);
+      break;
     case TransitionProperty::All:
       break;
   }
@@ -347,6 +440,28 @@ std::string describeValue(
       return std::to_string(length.value().unwrap()).substr(0, 6) +
           (length.isPercent() ? "%" : "px");
     }
+    case TransitionProperty::GridTemplateRows: {
+      if (value.tracks.empty()) {
+        return "none";
+      }
+      // Each track's maximum, which is where an `fr` sits
+      std::string out;
+      for (const auto& track : value.tracks) {
+        const auto& max = track.maxSizingFunction;
+        if (!out.empty()) {
+          out += " ";
+        }
+        if (max.isStretch() && max.value().isDefined()) {
+          out += std::to_string(max.value().unwrap()).substr(0, 4) + "fr";
+        } else if (max.isPoints() || max.isPercent()) {
+          out += std::to_string(max.value().unwrap()).substr(0, 6) +
+              (max.isPercent() ? "%" : "px");
+        } else {
+          out += "kw";
+        }
+      }
+      return out;
+    }
     case TransitionProperty::All:
       return "all";
   }
@@ -394,6 +509,8 @@ const char* cssPropertyName(TransitionProperty property) {
       return "height";
     case TransitionProperty::PaddingBottom:
       return "padding-bottom";
+    case TransitionProperty::GridTemplateRows:
+      return "grid-template-rows";
     case TransitionProperty::All:
       return "all";
   }
@@ -414,6 +531,8 @@ const char* propName(TransitionProperty property) {
       return "h";
     case TransitionProperty::PaddingBottom:
       return "pb";
+    case TransitionProperty::GridTemplateRows:
+      return "gtr";
     case TransitionProperty::All:
       return "all";
   }
@@ -672,6 +791,8 @@ RootShadowNode::Unshared CSSTransitions::buildScratch(
             auto newProps = ShadowNodeFragment::propsPlaceholder();
             auto found = pending.scratchProps.find(shadowNode.getTag());
             if (found != pending.scratchProps.end()) {
+              pending.declaringProps[shadowNode.getTag()] =
+                  shadowNode.getProps();
               newProps = cloneAnimatedProps(found->second, shadowNode);
             }
             return shadowNode.clone(
@@ -698,7 +819,8 @@ RootShadowNode::Unshared CSSTransitions::buildScratch(
   layout_->beginCapture(
       shadowTree.getSurfaceId(),
       std::move(pending.timelines),
-      std::move(scratchMetrics));
+      std::move(scratchMetrics),
+      std::move(pending.declaringProps));
 
   return newRootShadowNode;
 }
@@ -917,8 +1039,7 @@ void CSSTransitions::diffNode(
       // DOM-CSS-LIMITATION(layout-transition-events): a layout property's
       // transition, flown by `CSSLayoutTransitions`, dispatches no transition
       // events
-      if (property == TransitionProperty::Height ||
-          property == TransitionProperty::PaddingBottom) {
+      if (isLayoutAffecting(property)) {
         if (valuesEqual(previous, target, property)) {
           continue;
         }
@@ -933,17 +1054,7 @@ void CSSTransitions::diffNode(
          * from "the change was refused", and both read as silence. `auto` ->
          * `0` on a height is the case that has already cost a round.
          */
-        if (property == TransitionProperty::Height &&
-            !lengthsInterpolable(previous.length, target.length)) {
-          trace_->log(
-              "skip t=" + std::to_string(tag) + " " + propName(property) + " " +
-              describeValue(previous, property) + "->" +
-              describeValue(target, property) + " not interpolable");
-          continue;
-        }
-        if (property == TransitionProperty::PaddingBottom &&
-            !paddingLengthsInterpolable(
-                previous.paddingLength, target.paddingLength)) {
+        if (!layoutValuesInterpolable(property, previous, target)) {
           trace_->log(
               "skip t=" + std::to_string(tag) + " " + propName(property) + " " +
               describeValue(previous, property) + "->" +
@@ -1266,12 +1377,8 @@ void CSSTransitions::frame(double nowMs) {
          * pair — and a transition left running on it would commit the same
          * value every frame for its whole duration.
          */
-        const bool discrete =
-            (running->property == TransitionProperty::Height &&
-             !lengthsInterpolable(running->from.length, running->to.length)) ||
-            (running->property == TransitionProperty::PaddingBottom &&
-             !paddingLengthsInterpolable(
-                 running->from.paddingLength, running->to.paddingLength));
+        const bool discrete = !layoutValuesInterpolable(
+            running->property, running->from, running->to);
         const auto rawProgress = (running->duration <= 0.0 || discrete)
             ? static_cast<Float>(1)
             : static_cast<Float>(

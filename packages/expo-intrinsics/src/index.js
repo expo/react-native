@@ -976,6 +976,29 @@ function resolveInlineElementComponent(
     if (typeof float === 'string' && float !== 'none') {
       return boxComponentName;
     }
+    /*
+     * The grid row of the same table. A grid item is blockified (css-grid-2
+     * §6.1, css-display-3 §2.7), and an explicit placement names the element
+     * as one: `grid-row-start`, `grid-area` and the rest apply to grid items
+     * only (css-grid-2 §8). Left text-backed, the element reaches the grid
+     * through the anonymous item the layout wraps a blockified inline text
+     * element in, and that item carries none of its Yoga style — the
+     * placement is lost and the grid auto-places it. Two labels stacked in
+     * one cell (Astryx's Tab draws a hidden bold sizer under its label so the
+     * tab keeps its width when selected) came out as two rows. Resolving to
+     * the box backing gives the placement to a node that carries it; in a
+     * block container the box is still an inline-level box and flows in the
+     * run as before.
+     */
+    if (
+      flat?.gridRowStart != null ||
+      flat?.gridRowEnd != null ||
+      flat?.gridColumnStart != null ||
+      flat?.gridColumnEnd != null ||
+      flat?.gridArea != null
+    ) {
+      return boxComponentName;
+    }
 
     const display = flat?.display ?? uaStyle?.display;
     return typeof display === 'string' && BOX_DISPLAYS.has(display)
