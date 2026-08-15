@@ -79,6 +79,16 @@ const styles = StyleSheet.create({
     justifySelf: 'center',
     alignSelf: 'end',
   },
+  // Named areas, as in a page shell.
+  shell: {
+    display: 'grid',
+    gridTemplateAreas: '"header header" "sidebar main"',
+    gridTemplateColumns: '200px 1fr',
+    gridTemplateRows: 'auto 1fr',
+  },
+  shellHeader: {
+    gridArea: 'header',
+  },
   alignment: {
     display: 'grid',
     justifyItems: 'center',
