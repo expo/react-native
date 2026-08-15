@@ -6,10 +6,10 @@
   "flowTolerance": true,
   "flowToleranceInfinite": true
  },
- "caseCount": 315,
+ "caseCount": 323,
  "byTier": {
   "A": 192,
-  "B": 108,
+  "B": 116,
   "C": 15
  },
  "cases": [
@@ -8320,7 +8320,8 @@
     ],
     "gap": 10,
     "flowTolerance": "5%",
-    "height": 400
+    "height": 400,
+    "oracleLimitation": "Safari parses percentage flow-tolerance but does not resolve it"
    },
    "items": [
     {
@@ -8423,7 +8424,8 @@
     ],
     "gap": 10,
     "flowTolerance": "10%",
-    "height": 400
+    "height": 400,
+    "oracleLimitation": "Safari parses percentage flow-tolerance but does not resolve it"
    },
    "items": [
     {
@@ -8526,7 +8528,8 @@
     ],
     "gap": 10,
     "flowTolerance": "25%",
-    "height": 400
+    "height": 400,
+    "oracleLimitation": "Safari parses percentage flow-tolerance but does not resolve it"
    },
    "items": [
     {
@@ -25206,6 +25209,787 @@
       "y": 40,
       "w": 195,
       "h": 30
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-content-sized-0316",
+   "group": "lanes-content-sized",
+   "tier": "B",
+   "note": "content-sized items at flow-tolerance 0",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 50
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 30
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 70
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 40
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 60
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 20
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 120
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 50
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 70
+     },
+     {
+      "i": 3,
+      "x": 203.33,
+      "y": 40,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 60,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 5,
+      "x": 406.66,
+      "y": 80,
+      "w": 193.34,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-content-sized-0317",
+   "group": "lanes-content-sized",
+   "tier": "B",
+   "note": "content-sized items at flow-tolerance normal",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": "normal"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 50
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 30
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 70
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 40
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 60
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 20
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 120
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 50
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 70
+     },
+     {
+      "i": 3,
+      "x": 203.33,
+      "y": 40,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 60,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 5,
+      "x": 203.33,
+      "y": 90,
+      "w": 193.33,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-content-sized-padded-0318",
+   "group": "lanes-content-sized-padded",
+   "tier": "B",
+   "note": "content-sized items with padding",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 40,
+     "p": 8
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 20,
+     "p": 8
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 60,
+     "p": 8
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 30,
+     "p": 8
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 122
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 295,
+      "h": 56
+     },
+     {
+      "i": 1,
+      "x": 305,
+      "y": 0,
+      "w": 295,
+      "h": 36
+     },
+     {
+      "i": 2,
+      "x": 305,
+      "y": 46,
+      "w": 295,
+      "h": 76
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 66,
+      "w": 295,
+      "h": 46
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-aspect-ratio-0319",
+   "group": "lanes-aspect-ratio",
+   "tier": "B",
+   "note": "aspect-ratio items around 1 in lanes",
+   "container": {
+    "display": "grid-lanes",
+    "width": 620,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 2
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 0.5
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 620,
+     "h": 510
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 200
+     },
+     {
+      "i": 1,
+      "x": 210,
+      "y": 0,
+      "w": 200,
+      "h": 100
+     },
+     {
+      "i": 2,
+      "x": 420,
+      "y": 0,
+      "w": 200,
+      "h": 200
+     },
+     {
+      "i": 3,
+      "x": 210,
+      "y": 110,
+      "w": 200,
+      "h": 400
+     },
+     {
+      "i": 4,
+      "x": 420,
+      "y": 210,
+      "w": 200,
+      "h": 200
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-aspect-ratio-0320",
+   "group": "lanes-aspect-ratio",
+   "tier": "B",
+   "note": "aspect-ratio items around 1.5 in lanes",
+   "container": {
+    "display": "grid-lanes",
+    "width": 620,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1.5
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 3
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1.5
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 0.75
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1.5
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 620,
+     "h": 343.31
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 133.33
+     },
+     {
+      "i": 1,
+      "x": 210,
+      "y": 0,
+      "w": 200,
+      "h": 66.66
+     },
+     {
+      "i": 2,
+      "x": 420,
+      "y": 0,
+      "w": 200,
+      "h": 133.33
+     },
+     {
+      "i": 3,
+      "x": 210,
+      "y": 76.66,
+      "w": 200,
+      "h": 266.66
+     },
+     {
+      "i": 4,
+      "x": 420,
+      "y": 143.33,
+      "w": 200,
+      "h": 133.33
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-mixed-sizing-0321",
+   "group": "lanes-mixed-sizing",
+   "tier": "B",
+   "note": "explicit and content-sized items in one container",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 50
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 30
+    },
+    {
+     "w": null,
+     "h": 70
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 40
+    },
+    {
+     "w": null,
+     "h": 20
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 60
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 140
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 50
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 70
+     },
+     {
+      "i": 3,
+      "x": 203.33,
+      "y": 40,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 60,
+      "w": 193.33,
+      "h": 20
+     },
+     {
+      "i": 5,
+      "x": 406.66,
+      "y": 80,
+      "w": 193.34,
+      "h": 60
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-aspect-ratio-with-content-0322",
+   "group": "lanes-aspect-ratio-with-content",
+   "tier": "B",
+   "note": "aspect-ratio 1.5 tiles with padding and content",
+   "container": {
+    "display": "grid-lanes",
+    "width": 620,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1.5,
+     "p": 6,
+     "childHeight": 12
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 3,
+     "p": 6,
+     "childHeight": 12
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1.5,
+     "p": 6,
+     "childHeight": 12
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 0.75,
+     "p": 6,
+     "childHeight": 12
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 620,
+     "h": 343.31
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 133.33
+     },
+     {
+      "i": 1,
+      "x": 210,
+      "y": 0,
+      "w": 200,
+      "h": 66.66
+     },
+     {
+      "i": 2,
+      "x": 420,
+      "y": 0,
+      "w": 200,
+      "h": 133.33
+     },
+     {
+      "i": 3,
+      "x": 210,
+      "y": 76.66,
+      "w": 200,
+      "h": 266.66
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-aspect-ratio-with-content-0323",
+   "group": "lanes-aspect-ratio-with-content",
+   "tier": "B",
+   "note": "aspect-ratio 0.75 tiles with padding and content",
+   "container": {
+    "display": "grid-lanes",
+    "width": 620,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 0.75,
+     "p": 6,
+     "childHeight": 12
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 1.5,
+     "p": 6,
+     "childHeight": 12
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 0.75,
+     "p": 6,
+     "childHeight": 12
+    },
+    {
+     "w": null,
+     "h": null,
+     "aspectRatio": 0.375,
+     "p": 6,
+     "childHeight": 12
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 620,
+     "h": 676.66
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 266.66
+     },
+     {
+      "i": 1,
+      "x": 210,
+      "y": 0,
+      "w": 200,
+      "h": 133.33
+     },
+     {
+      "i": 2,
+      "x": 420,
+      "y": 0,
+      "w": 200,
+      "h": 266.66
+     },
+     {
+      "i": 3,
+      "x": 210,
+      "y": 143.33,
+      "w": 200,
+      "h": 533.33
      }
     ]
    }
