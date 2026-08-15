@@ -70,6 +70,74 @@ convertRawProp(const PropsParserContext &context, const RawProps &rawProps, cons
   // behaviour, not just on a plausible number.
   // ---------------------------------------------------------------------
   yogaStyle.setDisplay(convertRawProp(context, rawProps, "display", sourceValue.display(), yogaStyle.display()));
+
+  // Grid container tracks. The parsed value carries both the track list and
+  // the position of any repeat(auto-fill|auto-fit, ...) inside it, so the two
+  // are set together.
+  {
+    const auto columns = convertRawProp(
+        context,
+        rawProps,
+        "gridTemplateColumns",
+        ParsedGridTrackList{
+            sourceValue.gridTemplateColumns(),
+            sourceValue.gridTemplateColumnsAutoRepeat()},
+        ParsedGridTrackList{});
+    yogaStyle.setGridTemplateColumns(columns.tracks);
+    yogaStyle.setGridTemplateColumnsAutoRepeat(columns.autoRepeat);
+
+    const auto rows = convertRawProp(
+        context,
+        rawProps,
+        "gridTemplateRows",
+        ParsedGridTrackList{
+            sourceValue.gridTemplateRows(),
+            sourceValue.gridTemplateRowsAutoRepeat()},
+        ParsedGridTrackList{});
+    yogaStyle.setGridTemplateRows(rows.tracks);
+    yogaStyle.setGridTemplateRowsAutoRepeat(rows.autoRepeat);
+
+    const auto autoColumns = convertRawProp(
+        context,
+        rawProps,
+        "gridAutoColumns",
+        ParsedGridTrackList{sourceValue.gridAutoColumns(), {}},
+        ParsedGridTrackList{});
+    yogaStyle.setGridAutoColumns(autoColumns.tracks);
+
+    const auto autoRows = convertRawProp(
+        context,
+        rawProps,
+        "gridAutoRows",
+        ParsedGridTrackList{sourceValue.gridAutoRows(), {}},
+        ParsedGridTrackList{});
+    yogaStyle.setGridAutoRows(autoRows.tracks);
+  }
+
+  // Grid item placement.
+  yogaStyle.setGridColumnStart(convertRawProp(context, rawProps, "gridColumnStart", sourceValue.gridColumnStart(), yogaStyle.gridColumnStart()));
+  yogaStyle.setGridColumnEnd(convertRawProp(context, rawProps, "gridColumnEnd", sourceValue.gridColumnEnd(), yogaStyle.gridColumnEnd()));
+  yogaStyle.setGridRowStart(convertRawProp(context, rawProps, "gridRowStart", sourceValue.gridRowStart(), yogaStyle.gridRowStart()));
+  yogaStyle.setGridRowEnd(convertRawProp(context, rawProps, "gridRowEnd", sourceValue.gridRowEnd(), yogaStyle.gridRowEnd()));
+
+  // Grid box alignment.
+  yogaStyle.setJustifyItems(convertRawProp(context, rawProps, "justifyItems", sourceValue.justifyItems(), yogaStyle.justifyItems()));
+  yogaStyle.setJustifySelf(convertRawProp(context, rawProps, "justifySelf", sourceValue.justifySelf(), yogaStyle.justifySelf()));
+
+  // CSS's initial value for both content-distribution properties is `normal`,
+  // which on a GRID container behaves as `stretch`: auto-sized tracks absorb
+  // the leftover space (css-grid-2 §12.8). Yoga has no `normal` and defaults
+  // to the flex value, flex-start, so without this an auto track shrink-wraps
+  // instead of filling. Only applied when the author said nothing, so an
+  // explicit `justifyContent: 'flex-start'` still means flex-start.
+  if (yogaStyle.display() == yoga::Display::Grid) {
+    if (rawProps.at("justifyContent", nullptr, nullptr) == nullptr) {
+      yogaStyle.setJustifyContent(yoga::Justify::Stretch);
+    }
+    if (rawProps.at("alignContent", nullptr, nullptr) == nullptr) {
+      yogaStyle.setAlignContent(yoga::Align::Stretch);
+    }
+  }
   yogaStyle.setFloatSide(
       convertRawProp(context, rawProps, "float", sourceValue.floatSide(), yogaStyle.floatSide()));
   yogaStyle.setClear(convertRawProp(context, rawProps, "clear", sourceValue.clear(), yogaStyle.clear()));
