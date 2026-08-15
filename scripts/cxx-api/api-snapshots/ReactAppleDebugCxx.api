@@ -3539,6 +3539,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::BoxSizing& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Clear& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::FloatSide& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::GridAutoFlow& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::GridLine& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Style::SizeLength& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, std::vector<facebook::react::BackgroundPosition>& result);
@@ -9601,6 +9602,7 @@ constexpr auto facebook::yoga::maxOrDefined(std::floating_point auto a, std::flo
 constexpr auto facebook::yoga::minOrDefined(std::floating_point auto a, std::floating_point auto b);
 constexpr auto facebook::yoga::to_underlying(Enumeration auto e) noexcept;
 constexpr bool facebook::yoga::isDefined(std::floating_point auto value);
+constexpr bool facebook::yoga::isDense(facebook::yoga::GridAutoFlow flow);
 constexpr bool facebook::yoga::isUndefined(std::floating_point auto value);
 constexpr bool facebook::yoga::isinf(auto value);
 constexpr facebook::yoga::Align facebook::yoga::fallbackAlignment(facebook::yoga::Align align);
@@ -9871,6 +9873,7 @@ class facebook::yoga::Style {
   public facebook::yoga::FloatOptional resolvedMaxDimension(facebook::yoga::Direction direction, facebook::yoga::Dimension axis, float referenceLength, float ownerWidth) const;
   public facebook::yoga::FloatOptional resolvedMinDimension(facebook::yoga::Direction direction, facebook::yoga::Dimension axis, float referenceLength, float ownerWidth) const;
   public facebook::yoga::FloatSide floatSide() const;
+  public facebook::yoga::GridAutoFlow gridAutoFlow() const;
   public facebook::yoga::Justify justifyContent() const;
   public facebook::yoga::Justify justifyItems() const;
   public facebook::yoga::Justify justifySelf() const;
@@ -9941,6 +9944,7 @@ class facebook::yoga::Style {
   public void setGap(facebook::yoga::Gutter gutter, facebook::yoga::Style::Length value);
   public void setGridAutoColumnAt(size_t index, facebook::yoga::GridTrackSize value);
   public void setGridAutoColumns(facebook::yoga::GridTrackList value);
+  public void setGridAutoFlow(facebook::yoga::GridAutoFlow value);
   public void setGridAutoRowAt(size_t index, facebook::yoga::GridTrackSize value);
   public void setGridAutoRows(facebook::yoga::GridTrackList value);
   public void setGridColumnEnd(facebook::yoga::GridLine value);
@@ -10110,6 +10114,11 @@ enum facebook::yoga::FloatSide : uint8_t {
   Left,
   None,
   Right,
+}
+
+enum facebook::yoga::GridAutoFlow : uint8_t {
+  Row,
+  RowDense,
 }
 
 enum facebook::yoga::GridAutoRepeatType : uint8_t {
@@ -10397,6 +10406,7 @@ struct facebook::yoga::GridLine {
 
 struct facebook::yoga::GridStyle {
   public bool operator==(const facebook::yoga::GridStyle& other) const = default;
+  public facebook::yoga::GridAutoFlow autoFlow;
   public facebook::yoga::GridAutoRepeat templateColumnsAutoRepeat;
   public facebook::yoga::GridAutoRepeat templateRowsAutoRepeat;
   public facebook::yoga::GridLine columnEnd;
