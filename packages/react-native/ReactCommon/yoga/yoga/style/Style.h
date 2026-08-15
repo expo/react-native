@@ -288,6 +288,13 @@ class YG_EXPORT Style {
     ensureGrid().gridAutoRows[index] = value;
   }
 
+  GridAutoFlow gridAutoFlow() const {
+    return grid().gridAutoFlow;
+  }
+  void setGridAutoFlow(GridAutoFlow value) {
+    ensureGrid().gridAutoFlow = value;
+  }
+
   // https://www.w3.org/TR/css-grid-2/#auto-repeat — where the single
   // `repeat(auto-fill|auto-fit, ...)` sits inside the authored track list, if
   // there is one. Layout expands it once the container size is known.
