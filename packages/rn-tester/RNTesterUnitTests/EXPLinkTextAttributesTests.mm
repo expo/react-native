@@ -373,3 +373,180 @@ static const CGFloat kBox = 72;
 }
 
 @end
+
+#pragma mark - A link that contains a picture
+
+/*
+ * `<a><img>caption</a>`: does the link's OWN GEOMETRY include the picture?
+ *
+ * This is the question underneath the context-menu chip. The lift is built
+ * from the rects this API returns, so if an atomic inline inside a link
+ * contributes no rect, the link's bounds stop at the words and no amount of
+ * work further up can put the picture back into the preview.
+ *
+ * It comes down to one line in `BaseTextShadowNode`: an attachment fragment is
+ * given the ambient `baseTextAttributes`, which inside an `<a>` carry `href` —
+ * so the attachment CHARACTER holds `NSLinkAttributeName` like any other, and
+ * the link's character range runs straight through it. That is a quiet
+ * dependency of the chip on the text stack, and this pins it in both
+ * directions: a picture inside the link is included, and a picture beside it
+ * is not.
+ */
+@interface EXPAtomicInlineLinkRangeTests : XCTestCase
+@end
+
+@implementation EXPAtomicInlineLinkRangeTests {
+  RCTTextLayoutManager *_layoutManager;
+}
+
+static const CGFloat kPictureSide = 72;
+
+- (void)setUp
+{
+  [super setUp];
+  _layoutManager = [RCTTextLayoutManager new];
+}
+
+/*
+ * A picture followed by a caption, then ordinary text. `pictureIsInTheLink`
+ * decides the ONE thing under test: whether the picture's own fragment carries
+ * the link, as it does when the `<img>` is written inside the `<a>`.
+ */
+- (AttributedString)_pictureThenCaptionInTheLink:(BOOL)pictureIsInTheLink
+{
+  auto base = TextAttributes::defaultTextAttributes();
+  base.fontSize = 15;
+
+  auto linkAttributes = base;
+  linkAttributes.href = "https://reactnative.dev/";
+  linkAttributes.role = facebook::react::Role::Link;
+
+  auto string = AttributedString{};
+
+  auto picture = AttributedString::Fragment{};
+  picture.string = AttributedString::Fragment::AttachmentCharacter();
+  picture.textAttributes = pictureIsInTheLink ? linkAttributes : base;
+  auto metrics = LayoutMetrics{};
+  metrics.frame.size = {kPictureSide, kPictureSide};
+  picture.parentShadowView.layoutMetrics = metrics;
+  // A box with no baseline of its own sits on the line's baseline (CSS2 §10.8.1).
+  picture.atomicInlineBaseline = kPictureSide;
+  string.appendFragment(std::move(picture));
+
+  auto caption = AttributedString::Fragment{};
+  caption.string = "a caption long enough to press";
+  caption.textAttributes = linkAttributes;
+  string.appendFragment(std::move(caption));
+
+  // Ordinary text after it, so the link is not the end of the string — the
+  // lookup rejects a point past the last glyph, and a link that ended the
+  // paragraph would be answering that guard rather than this question.
+  auto after = AttributedString::Fragment{};
+  after.string = " and words after it";
+  after.textAttributes = base;
+  string.appendFragment(std::move(after));
+
+  string.setBaseTextAttributes(base);
+  return string;
+}
+
+// The union of the rects the link reports, pressed at a point on the CAPTION —
+// past the picture, so the answer cannot come from having pressed the picture.
+- (CGRect)_linkBoundsPressingTheCaptionWithPictureInTheLink:(BOOL)pictureIsInTheLink
+{
+  NSMutableArray<NSValue *> *rects = [NSMutableArray array];
+  id link = [_layoutManager getLinkWithAttributedString:[self _pictureThenCaptionInTheLink:pictureIsInTheLink]
+                                    paragraphAttributes:ParagraphAttributes{}
+                                                  frame:CGRectMake(0, 0, 400, 400)
+                                                atPoint:CGPointMake(kPictureSide + 30, kPictureSide / 2)
+                                                  rects:rects];
+  XCTAssertNotNil(link, @"precondition: the press must land on the link's caption");
+
+  CGRect bounds = CGRectNull;
+  for (NSValue *rect in rects) {
+    bounds = CGRectIsNull(bounds) ? rect.CGRectValue : CGRectUnion(bounds, rect.CGRectValue);
+  }
+  XCTAssertFalse(CGRectIsNull(bounds), @"precondition: a link must report rects");
+  return bounds;
+}
+
+- (void)testALinkIsNotCutShortByAStyledFragmentInsideIt
+{
+  /*
+   * The general form of the same fault, and the cheaper way to see it: a link
+   * whose words are not all styled alike.
+   *
+   * The destination is one value over the whole link, but it is stored in
+   * ATTRIBUTE RUNS, and a run ends wherever any attribute changes. Ask for the
+   * range the "effective" way and a `<b>` in the middle of a link ends it. Only
+   * the longest-effective-range form describes a link.
+   */
+  auto base = TextAttributes::defaultTextAttributes();
+  base.fontSize = 15;
+  auto linkAttributes = base;
+  linkAttributes.href = "https://reactnative.dev/";
+  linkAttributes.role = facebook::react::Role::Link;
+  auto boldLink = linkAttributes;
+  boldLink.fontWeight = FontWeight::Bold;
+
+  auto string = AttributedString{};
+  for (const auto& [text, attributes] : {
+           std::pair<std::string, TextAttributes>{"a link with ", linkAttributes},
+           std::pair<std::string, TextAttributes>{"bold", boldLink},
+           std::pair<std::string, TextAttributes>{" inside it", linkAttributes},
+           std::pair<std::string, TextAttributes>{" and words after", base},
+       }) {
+    auto fragment = AttributedString::Fragment{};
+    fragment.string = text;
+    fragment.textAttributes = attributes;
+    string.appendFragment(std::move(fragment));
+  }
+  string.setBaseTextAttributes(base);
+
+  // Pressed PAST the bold word, so the answer cannot come from the run pressed.
+  NSMutableArray<NSValue *> *rects = [NSMutableArray array];
+  id link = [_layoutManager getLinkWithAttributedString:string
+                                   paragraphAttributes:ParagraphAttributes{}
+                                                 frame:CGRectMake(0, 0, 400, 400)
+                                               atPoint:CGPointMake(150, 8)
+                                                 rects:rects];
+  XCTAssertNotNil(link, @"precondition: the press must land on the link");
+
+  CGRect bounds = CGRectNull;
+  for (NSValue *rect in rects) {
+    bounds = CGRectIsNull(bounds) ? rect.CGRectValue : CGRectUnion(bounds, rect.CGRectValue);
+  }
+  XCTAssertLessThan(
+      CGRectGetMinX(bounds), 1.0, @"the link starts where the link starts, not where the pressed run does");
+}
+
+- (void)testAPictureInsideTheLinkIsPartOfTheLinksBounds
+{
+  const CGRect bounds = [self _linkBoundsPressingTheCaptionWithPictureInTheLink:YES];
+
+  XCTAssertLessThan(
+      CGRectGetMinX(bounds),
+      1.0,
+      @"the link's bounds must start at the picture, not after it — the chip is built from these rects");
+  XCTAssertGreaterThan(
+      CGRectGetWidth(bounds), kPictureSide, @"and must run past the picture, over the caption too");
+}
+
+- (void)testAPictureMERELYBesideTheLinkIsNot
+{
+  /*
+   * The control, and what makes the assertion above mean something: the same
+   * geometry with the picture OUTSIDE the `<a>`. If the rects came from the
+   * line rather than from the link's character range, this would be
+   * indistinguishable from the case above — and both tests would pass while
+   * the renderer lifted an image that belongs to the sentence.
+   */
+  const CGRect bounds = [self _linkBoundsPressingTheCaptionWithPictureInTheLink:NO];
+
+  XCTAssertGreaterThanOrEqual(
+      CGRectGetMinX(bounds),
+      kPictureSide - 1.0,
+      @"an image next to a link belongs to the sentence, and is not in the link's bounds");
+}
+
+@end
