@@ -686,9 +686,22 @@ GridAutoRepeat toGridAutoRepeat(
 } // namespace
 
 void YGNodeStyleSetGridAutoFlow(YGNodeRef node, YGGridAutoFlow flow) {
-  resolveRef(node)->style().setGridAutoFlow(
-      flow == YGGridAutoFlowRowDense ? GridAutoFlow::RowDense
-                                     : GridAutoFlow::Row);
+  GridAutoFlow resolved = GridAutoFlow::Row;
+  switch (flow) {
+    case YGGridAutoFlowRow:
+      resolved = GridAutoFlow::Row;
+      break;
+    case YGGridAutoFlowRowDense:
+      resolved = GridAutoFlow::RowDense;
+      break;
+    case YGGridAutoFlowColumn:
+      resolved = GridAutoFlow::Column;
+      break;
+    case YGGridAutoFlowColumnDense:
+      resolved = GridAutoFlow::ColumnDense;
+      break;
+  }
+  resolveRef(node)->style().setGridAutoFlow(resolved);
   resolveRef(node)->markDirtyAndPropagate();
 }
 

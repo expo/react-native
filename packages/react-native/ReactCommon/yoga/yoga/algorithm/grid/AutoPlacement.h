@@ -205,8 +205,29 @@ struct AutoPlacement {
     placedItems.reserve(node->getChildCount());
     int32_t minColumnStart = 0;
     int32_t minRowStart = 0;
-    int32_t maxColumnEnd = static_cast<int32_t>(explicitColumnCount);
-    int32_t maxRowEnd = static_cast<int32_t>(explicitRowCount);
+    // css-grid-2 §8.5: column flow is the row algorithm with the two axes
+    // exchanged. Rather than write it twice, the placement below runs in
+    // TRANSPOSED space — every axis-specific read is swapped on the way in,
+    // and the resulting placements are swapped back on the way out. Nothing
+    // between here and the return knows which flow it is running.
+    const bool transposed = isColumnFlow(node->style().gridAutoFlow());
+    auto itemColumnStart = [&](const yoga::Node* c) {
+      return transposed ? c->style().gridRowStart() : c->style().gridColumnStart();
+    };
+    auto itemColumnEnd = [&](const yoga::Node* c) {
+      return transposed ? c->style().gridRowEnd() : c->style().gridColumnEnd();
+    };
+    auto itemRowStart = [&](const yoga::Node* c) {
+      return transposed ? c->style().gridColumnStart() : c->style().gridRowStart();
+    };
+    auto itemRowEnd = [&](const yoga::Node* c) {
+      return transposed ? c->style().gridColumnEnd() : c->style().gridRowEnd();
+    };
+
+    int32_t maxColumnEnd = static_cast<int32_t>(
+        transposed ? explicitRowCount : explicitColumnCount);
+    int32_t maxRowEnd = static_cast<int32_t>(
+        transposed ? explicitColumnCount : explicitRowCount);
     OccupancyGrid occupancy;
 
     // function to push back a grid item placement and record the min/max
@@ -231,9 +252,10 @@ struct AutoPlacement {
       maxRowEnd = std::max(maxRowEnd, gridItemArea.rowEnd);
     };
 
-    auto explicitColumnLineCount =
-        static_cast<int32_t>(explicitColumnCount + 1);
-    auto explicitRowLineCount = static_cast<int32_t>(explicitRowCount + 1);
+    auto explicitColumnLineCount = static_cast<int32_t>(
+        (transposed ? explicitRowCount : explicitColumnCount) + 1);
+    auto explicitRowLineCount = static_cast<int32_t>(
+        (transposed ? explicitColumnCount : explicitRowCount) + 1);
 
     // Step 1: Position anything that's not auto-positioned.
     // In spec level 1, span is always definite. Default is 1.
@@ -245,10 +267,10 @@ struct AutoPlacement {
         continue;
       }
 
-      auto gridItemColumnStart = child->style().gridColumnStart();
-      auto gridItemColumnEnd = child->style().gridColumnEnd();
-      auto gridItemRowStart = child->style().gridRowStart();
-      auto gridItemRowEnd = child->style().gridRowEnd();
+      auto gridItemColumnStart = itemColumnStart(child);
+      auto gridItemColumnEnd = itemColumnEnd(child);
+      auto gridItemRowStart = itemRowStart(child);
+      auto gridItemRowEnd = itemRowEnd(child);
       auto hasDefiniteColumn =
           gridItemColumnStart.type == GridLineType::Integer ||
           gridItemColumnEnd.type == GridLineType::Integer;
@@ -289,10 +311,10 @@ struct AutoPlacement {
         continue;
       }
 
-      auto gridItemColumnStart = child->style().gridColumnStart();
-      auto gridItemColumnEnd = child->style().gridColumnEnd();
-      auto gridItemRowStart = child->style().gridRowStart();
-      auto gridItemRowEnd = child->style().gridRowEnd();
+      auto gridItemColumnStart = itemColumnStart(child);
+      auto gridItemColumnEnd = itemColumnEnd(child);
+      auto gridItemRowStart = itemRowStart(child);
+      auto gridItemRowEnd = itemRowEnd(child);
       auto hasDefiniteRow = gridItemRowStart.type == GridLineType::Integer ||
           gridItemRowEnd.type == GridLineType::Integer;
       auto hasDefiniteColumn =
@@ -345,8 +367,8 @@ struct AutoPlacement {
         continue;
       }
 
-      auto gridItemColumnStart = child->style().gridColumnStart();
-      auto gridItemColumnEnd = child->style().gridColumnEnd();
+      auto gridItemColumnStart = itemColumnStart(child);
+      auto gridItemColumnEnd = itemColumnEnd(child);
 
       auto hasDefiniteColumn =
           gridItemColumnStart.type == GridLineType::Integer ||
@@ -383,14 +405,14 @@ struct AutoPlacement {
       }
 
       if (!placedItems.contains(child)) {
-        auto gridItemColumnStart = child->style().gridColumnStart();
-        auto gridItemColumnEnd = child->style().gridColumnEnd();
+        auto gridItemColumnStart = itemColumnStart(child);
+        auto gridItemColumnEnd = itemColumnEnd(child);
         auto hasDefiniteColumn =
             gridItemColumnStart.type == GridLineType::Integer ||
             gridItemColumnEnd.type == GridLineType::Integer;
 
-        auto gridItemRowStart = child->style().gridRowStart();
-        auto gridItemRowEnd = child->style().gridRowEnd();
+        auto gridItemRowStart = itemRowStart(child);
+        auto gridItemRowEnd = itemRowEnd(child);
         auto hasDefiniteRow = gridItemRowStart.type == GridLineType::Integer ||
             gridItemRowEnd.type == GridLineType::Integer;
 
@@ -485,6 +507,21 @@ struct AutoPlacement {
           }
         }
       }
+    }
+
+    if (transposed) {
+      // Back to real axes: everything above placed items in a grid whose
+      // columns are this grid's rows.
+      for (auto& item : gridItems) {
+        std::swap(item.columnStart, item.rowStart);
+        std::swap(item.columnEnd, item.rowEnd);
+      }
+      return AutoPlacement{
+          std::move(gridItems),
+          minRowStart,
+          minColumnStart,
+          maxRowEnd,
+          maxColumnEnd};
     }
 
     return AutoPlacement{
