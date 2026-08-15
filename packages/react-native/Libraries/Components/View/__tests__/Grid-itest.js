@@ -13,16 +13,20 @@
  * CSS Grid layout, checked end to end through React Native.
  *
  * Every expected number here was measured in real Safari, which implements
- * CSS Grid natively — see grid-lanes-conformance/oracle.js. Nothing in this
- * file is hand-computed.
+ * CSS Grid natively — see grid-lanes-conformance/oracle.js. The only
+ * exception is the stacking-axis position in a handful of grid-lanes cases,
+ * where Safari does not implement css-grid-3 §6.4 and mis-distributes §6.3;
+ * those are derived from the spec in stacking-alignment-test.cpp and marked
+ * in cases.js with the reason.
  *
  * The C++ harness (grid-lanes-conformance/replay.cpp) proves the same cases
  * against Yoga directly. This suite proves the rest of the path: the style
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 316 cases; 7 corpus cases are not expressible as RN styles
- * (grid-lanes, min-content/max-content/fit-content tracks, rtl, order).
+ * 339 cases; 7 corpus cases are not expressible as RN styles
+ * (min-content as a maximum, inline-level containers, order, and the
+ * percentage flow-tolerance Safari cannot adjudicate).
  */
 
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
@@ -21740,6 +21744,1749 @@ describe("lanes-aspect-ratio-with-content", () => {
       expectClose(r.y - container.y, 143.33, 'lanes-aspect-ratio-with-content-0323 item[3].y');
       expectClose(r.width, 200, 'lanes-aspect-ratio-with-content-0323 item[3].w');
       expectClose(r.height, 533.33, 'lanes-aspect-ratio-with-content-0323 item[3].h');
+    }
+  });
+});
+
+describe("lanes-stacking-content", () => {
+  it("lanes-stacking-content-0324: align-content:start in the stacking axis", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"height":300,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignContent":"start"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-content-0324 container.width');
+    expectClose(container.height, 300, 'lanes-stacking-content-0324 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-content-0324 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0324 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0324 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-content-0324 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-content-0324 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0324 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0324 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-content-0324 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0324 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0324 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0324 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-content-0324 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0324 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-content-0324 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0324 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-content-0324 item[3].h');
+    }
+  });
+  it("lanes-stacking-content-0325: align-content:center in the stacking axis", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"height":300,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignContent":"center"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-content-0325 container.width');
+    expectClose(container.height, 300, 'lanes-stacking-content-0325 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-content-0325 item[0].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-0325 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0325 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-content-0325 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-content-0325 item[1].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-0325 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0325 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-content-0325 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0325 item[2].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-0325 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0325 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-content-0325 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0325 item[3].x');
+      expectClose(r.y - container.y, 145, 'lanes-stacking-content-0325 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0325 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-content-0325 item[3].h');
+    }
+  });
+  it("lanes-stacking-content-0326: align-content:end in the stacking axis", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"height":300,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignContent":"end"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-content-0326 container.width');
+    expectClose(container.height, 300, 'lanes-stacking-content-0326 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-content-0326 item[0].x');
+      expectClose(r.y - container.y, 210, 'lanes-stacking-content-0326 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0326 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-content-0326 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-content-0326 item[1].x');
+      expectClose(r.y - container.y, 210, 'lanes-stacking-content-0326 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0326 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-content-0326 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0326 item[2].x');
+      expectClose(r.y - container.y, 210, 'lanes-stacking-content-0326 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0326 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-content-0326 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0326 item[3].x');
+      expectClose(r.y - container.y, 250, 'lanes-stacking-content-0326 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0326 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-content-0326 item[3].h');
+    }
+  });
+  it("lanes-stacking-content-0327: align-content:stretch in the stacking axis", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"height":300,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignContent":"stretch"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-content-0327 container.width');
+    expectClose(container.height, 300, 'lanes-stacking-content-0327 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-content-0327 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0327 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0327 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-content-0327 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-content-0327 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0327 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0327 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-content-0327 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0327 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0327 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0327 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-content-0327 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0327 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-content-0327 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0327 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-content-0327 item[3].h');
+    }
+  });
+  it("lanes-stacking-content-0328: align-content:space-between in the stacking axis", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"height":300,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignContent":"space-between"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-content-0328 container.width');
+    expectClose(container.height, 300, 'lanes-stacking-content-0328 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-content-0328 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0328 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0328 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-content-0328 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-content-0328 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0328 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-0328 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-content-0328 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0328 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-content-0328 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0328 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-content-0328 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-0328 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-content-0328 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-0328 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-content-0328 item[3].h');
+    }
+  });
+});
+
+describe("lanes-stacking-content-distributed", () => {
+  it("lanes-stacking-content-distributed-0329: align-content:space-around falls back to center", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"height":300,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignContent":"space-around"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-content-distributed-0329 container.width');
+    expectClose(container.height, 300, 'lanes-stacking-content-distributed-0329 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-content-distributed-0329 item[0].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-distributed-0329 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-distributed-0329 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-content-distributed-0329 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-content-distributed-0329 item[1].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-distributed-0329 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-distributed-0329 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-content-distributed-0329 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-distributed-0329 item[2].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-distributed-0329 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-distributed-0329 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-content-distributed-0329 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-distributed-0329 item[3].x');
+      expectClose(r.y - container.y, 145, 'lanes-stacking-content-distributed-0329 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-distributed-0329 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-content-distributed-0329 item[3].h');
+    }
+  });
+  it("lanes-stacking-content-distributed-0330: align-content:space-evenly falls back to center", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"height":300,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignContent":"space-evenly"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-content-distributed-0330 container.width');
+    expectClose(container.height, 300, 'lanes-stacking-content-distributed-0330 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-content-distributed-0330 item[0].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-distributed-0330 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-distributed-0330 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-content-distributed-0330 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-content-distributed-0330 item[1].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-distributed-0330 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-content-distributed-0330 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-content-distributed-0330 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-distributed-0330 item[2].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-content-distributed-0330 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-distributed-0330 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-content-distributed-0330 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-content-distributed-0330 item[3].x');
+      expectClose(r.y - container.y, 145, 'lanes-stacking-content-distributed-0330 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-content-distributed-0330 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-content-distributed-0330 item[3].h');
+    }
+  });
+});
+
+describe("lanes-stacking-align", () => {
+  it("lanes-stacking-align-0331: align-items:start on lanes ending at different depths", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignItems":"start"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-0331 container.width');
+    expectClose(container.height, 90, 'lanes-stacking-align-0331 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-0331 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0331 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0331 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-0331 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-0331 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0331 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0331 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-0331 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-0331 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0331 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-0331 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-0331 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-0331 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-align-0331 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-0331 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-align-0331 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-0331 item[4].x');
+      expectClose(r.y - container.y, 50, 'lanes-stacking-align-0331 item[4].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0331 item[4].w');
+      expectClose(r.height, 20, 'lanes-stacking-align-0331 item[4].h');
+    }
+  });
+  it("lanes-stacking-align-0332: align-items:stretch on lanes ending at different depths", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignItems":"stretch"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-0332 container.width');
+    expectClose(container.height, 90, 'lanes-stacking-align-0332 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-0332 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0332 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0332 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-0332 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-0332 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0332 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0332 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-0332 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-0332 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0332 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-0332 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-0332 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-0332 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-align-0332 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-0332 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-align-0332 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-0332 item[4].x');
+      expectClose(r.y - container.y, 50, 'lanes-stacking-align-0332 item[4].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0332 item[4].w');
+      expectClose(r.height, 20, 'lanes-stacking-align-0332 item[4].h');
+    }
+  });
+  it("lanes-stacking-align-0333: align-items:center on lanes ending at different depths", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignItems":"center"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-0333 container.width');
+    expectClose(container.height, 90, 'lanes-stacking-align-0333 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-0333 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0333 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0333 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-0333 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-0333 item[1].x');
+      expectClose(r.y - container.y, 15, 'lanes-stacking-align-0333 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0333 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-0333 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-0333 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0333 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-0333 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-0333 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-0333 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-align-0333 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-0333 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-align-0333 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-0333 item[4].x');
+      expectClose(r.y - container.y, 60, 'lanes-stacking-align-0333 item[4].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0333 item[4].w');
+      expectClose(r.height, 20, 'lanes-stacking-align-0333 item[4].h');
+    }
+  });
+  it("lanes-stacking-align-0334: align-items:end on lanes ending at different depths", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignItems":"end"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-0334 container.width');
+    expectClose(container.height, 90, 'lanes-stacking-align-0334 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-0334 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0334 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0334 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-0334 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-0334 item[1].x');
+      expectClose(r.y - container.y, 30, 'lanes-stacking-align-0334 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0334 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-0334 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-0334 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-0334 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-0334 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-0334 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-0334 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-align-0334 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-0334 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-align-0334 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-0334 item[4].x');
+      expectClose(r.y - container.y, 70, 'lanes-stacking-align-0334 item[4].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-0334 item[4].w');
+      expectClose(r.height, 20, 'lanes-stacking-align-0334 item[4].h');
+    }
+  });
+});
+
+describe("lanes-stacking-align-self", () => {
+  it("lanes-stacking-align-self-0335: align-self:end on one item only", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40,"alignSelf":"end"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-self-0335 container.width');
+    expectClose(container.height, 90, 'lanes-stacking-align-self-0335 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-self-0335 item[0].x');
+      expectClose(r.y - container.y, 50, 'lanes-stacking-align-self-0335 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-self-0335 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-self-0335 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-self-0335 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-self-0335 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-self-0335 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-self-0335 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-self-0335 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-self-0335 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-self-0335 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-self-0335 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-self-0335 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-align-self-0335 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-self-0335 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-align-self-0335 item[3].h');
+    }
+  });
+  it("lanes-stacking-align-self-0336: align-self:center on one item only", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40,"alignSelf":"center"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-self-0336 container.width');
+    expectClose(container.height, 90, 'lanes-stacking-align-self-0336 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-self-0336 item[0].x');
+      expectClose(r.y - container.y, 25, 'lanes-stacking-align-self-0336 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-self-0336 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-self-0336 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-self-0336 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-self-0336 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-self-0336 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-self-0336 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-self-0336 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-self-0336 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-self-0336 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-self-0336 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-self-0336 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-align-self-0336 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-self-0336 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-align-self-0336 item[3].h');
+    }
+  });
+});
+
+describe("lanes-stacking-align-span", () => {
+  it("lanes-stacking-align-span-0337: align-items:start with a spanning item leaving a void", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignItems":"start"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":25,"gridColumnEnd":"span 3"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-span-0337 container.width');
+    expectClose(container.height, 125, 'lanes-stacking-align-span-0337 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-span-0337 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-span-0337 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-span-0337 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-span-0337 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-span-0337 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-span-0337 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-span-0337 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-span-0337 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-span-0337 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-span-0337 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-span-0337 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-span-0337 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-span-0337 item[3].x');
+      expectClose(r.y - container.y, 70, 'lanes-stacking-align-span-0337 item[3].y');
+      expectClose(r.width, 600, 'lanes-stacking-align-span-0337 item[3].w');
+      expectClose(r.height, 25, 'lanes-stacking-align-span-0337 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-span-0337 item[4].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-align-span-0337 item[4].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-span-0337 item[4].w');
+      expectClose(r.height, 20, 'lanes-stacking-align-span-0337 item[4].h');
+    }
+  });
+  it("lanes-stacking-align-span-0338: align-items:end with a spanning item leaving a void", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignItems":"end"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":25,"gridColumnEnd":"span 3"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-span-0338 container.width');
+    expectClose(container.height, 125, 'lanes-stacking-align-span-0338 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-span-0338 item[0].x');
+      expectClose(r.y - container.y, 20, 'lanes-stacking-align-span-0338 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-span-0338 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-span-0338 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-span-0338 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-span-0338 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-span-0338 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-span-0338 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-span-0338 item[2].x');
+      expectClose(r.y - container.y, 30, 'lanes-stacking-align-span-0338 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-span-0338 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-span-0338 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-span-0338 item[3].x');
+      expectClose(r.y - container.y, 70, 'lanes-stacking-align-span-0338 item[3].y');
+      expectClose(r.width, 600, 'lanes-stacking-align-span-0338 item[3].w');
+      expectClose(r.height, 25, 'lanes-stacking-align-span-0338 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-span-0338 item[4].x');
+      expectClose(r.y - container.y, 105, 'lanes-stacking-align-span-0338 item[4].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-span-0338 item[4].w');
+      expectClose(r.height, 20, 'lanes-stacking-align-span-0338 item[4].h');
+    }
+  });
+});
+
+describe("lanes-stacking-align-stretch-auto", () => {
+  it("lanes-stacking-align-stretch-auto-0339: align-items:stretch on auto-height items in lanes", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"alignItems":"stretch"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{}}>
+            <View style={{height: 40}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{}}>
+            <View style={{height: 60}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{}}>
+            <View style={{height: 30}} />
+          </View>
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{}}>
+            <View style={{height: 50}} />
+          </View>
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-stacking-align-stretch-auto-0339 container.width');
+    expectClose(container.height, 90, 'lanes-stacking-align-stretch-auto-0339 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-stacking-align-stretch-auto-0339 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-stretch-auto-0339 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-stretch-auto-0339 item[0].w');
+      expectClose(r.height, 40, 'lanes-stacking-align-stretch-auto-0339 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-stacking-align-stretch-auto-0339 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-stretch-auto-0339 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-stacking-align-stretch-auto-0339 item[1].w');
+      expectClose(r.height, 60, 'lanes-stacking-align-stretch-auto-0339 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-stretch-auto-0339 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-stacking-align-stretch-auto-0339 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-stretch-auto-0339 item[2].w');
+      expectClose(r.height, 30, 'lanes-stacking-align-stretch-auto-0339 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-stacking-align-stretch-auto-0339 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-stacking-align-stretch-auto-0339 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-stacking-align-stretch-auto-0339 item[3].w');
+      expectClose(r.height, 50, 'lanes-stacking-align-stretch-auto-0339 item[3].h');
+    }
+  });
+});
+
+describe("lanes-container-min-max", () => {
+  it("lanes-container-min-max-0340: maxHeight: 60 on a lanes container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"maxHeight":60}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-container-min-max-0340 container.width');
+    expectClose(container.height, 60, 'lanes-container-min-max-0340 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0340 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0340 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-container-min-max-0340 item[0].w');
+      expectClose(r.height, 40, 'lanes-container-min-max-0340 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-container-min-max-0340 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0340 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-container-min-max-0340 item[1].w');
+      expectClose(r.height, 60, 'lanes-container-min-max-0340 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0340 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0340 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-container-min-max-0340 item[2].w');
+      expectClose(r.height, 30, 'lanes-container-min-max-0340 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0340 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0340 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-container-min-max-0340 item[3].w');
+      expectClose(r.height, 50, 'lanes-container-min-max-0340 item[3].h');
+    }
+  });
+  it("lanes-container-min-max-0341: minHeight: 200 on a lanes container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"minHeight":200}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-container-min-max-0341 container.width');
+    expectClose(container.height, 200, 'lanes-container-min-max-0341 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0341 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0341 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-container-min-max-0341 item[0].w');
+      expectClose(r.height, 40, 'lanes-container-min-max-0341 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-container-min-max-0341 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0341 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-container-min-max-0341 item[1].w');
+      expectClose(r.height, 60, 'lanes-container-min-max-0341 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0341 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0341 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-container-min-max-0341 item[2].w');
+      expectClose(r.height, 30, 'lanes-container-min-max-0341 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0341 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0341 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-container-min-max-0341 item[3].w');
+      expectClose(r.height, 50, 'lanes-container-min-max-0341 item[3].h');
+    }
+  });
+  it("lanes-container-min-max-0342: maxWidth: 400 on a lanes container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"maxWidth":400}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 400, 'lanes-container-min-max-0342 container.width');
+    expectClose(container.height, 90, 'lanes-container-min-max-0342 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0342 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[0].y');
+      expectClose(r.width, 126.66, 'lanes-container-min-max-0342 item[0].w');
+      expectClose(r.height, 40, 'lanes-container-min-max-0342 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 136.66, 'lanes-container-min-max-0342 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[1].y');
+      expectClose(r.width, 126.67, 'lanes-container-min-max-0342 item[1].w');
+      expectClose(r.height, 60, 'lanes-container-min-max-0342 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 273.33, 'lanes-container-min-max-0342 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[2].y');
+      expectClose(r.width, 126.67, 'lanes-container-min-max-0342 item[2].w');
+      expectClose(r.height, 30, 'lanes-container-min-max-0342 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 273.33, 'lanes-container-min-max-0342 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0342 item[3].y');
+      expectClose(r.width, 126.67, 'lanes-container-min-max-0342 item[3].w');
+      expectClose(r.height, 50, 'lanes-container-min-max-0342 item[3].h');
+    }
+  });
+  it("lanes-container-min-max-0343: minWidth: 800 on a lanes container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0,"minWidth":800}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 800, 'lanes-container-min-max-0343 container.width');
+    expectClose(container.height, 90, 'lanes-container-min-max-0343 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0343 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[0].y');
+      expectClose(r.width, 260, 'lanes-container-min-max-0343 item[0].w');
+      expectClose(r.height, 40, 'lanes-container-min-max-0343 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 270, 'lanes-container-min-max-0343 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[1].y');
+      expectClose(r.width, 260, 'lanes-container-min-max-0343 item[1].w');
+      expectClose(r.height, 60, 'lanes-container-min-max-0343 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 540, 'lanes-container-min-max-0343 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[2].y');
+      expectClose(r.width, 260, 'lanes-container-min-max-0343 item[2].w');
+      expectClose(r.height, 30, 'lanes-container-min-max-0343 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 540, 'lanes-container-min-max-0343 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0343 item[3].y');
+      expectClose(r.width, 260, 'lanes-container-min-max-0343 item[3].w');
+      expectClose(r.height, 50, 'lanes-container-min-max-0343 item[3].h');
+    }
+  });
+});
+
+describe("lanes-absolute", () => {
+  it("lanes-absolute-0344: an absolutely-positioned child at 20,30 is out of flow", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":50,"height":25,"position":"absolute","top":20,"left":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-absolute-0344 container.width');
+    expectClose(container.height, 90, 'lanes-absolute-0344 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-absolute-0344 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0344 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-absolute-0344 item[0].w');
+      expectClose(r.height, 40, 'lanes-absolute-0344 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-absolute-0344 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0344 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-absolute-0344 item[1].w');
+      expectClose(r.height, 60, 'lanes-absolute-0344 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0344 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0344 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-absolute-0344 item[2].w');
+      expectClose(r.height, 30, 'lanes-absolute-0344 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 30, 'lanes-absolute-0344 item[3].x');
+      expectClose(r.y - container.y, 20, 'lanes-absolute-0344 item[3].y');
+      expectClose(r.width, 50, 'lanes-absolute-0344 item[3].w');
+      expectClose(r.height, 25, 'lanes-absolute-0344 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0344 item[4].x');
+      expectClose(r.y - container.y, 40, 'lanes-absolute-0344 item[4].y');
+      expectClose(r.width, 193.34, 'lanes-absolute-0344 item[4].w');
+      expectClose(r.height, 50, 'lanes-absolute-0344 item[4].h');
+    }
+  });
+  it("lanes-absolute-0345: an absolutely-positioned child at 0,0 is out of flow", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":50,"height":25,"position":"absolute","top":0,"left":0}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-absolute-0345 container.width');
+    expectClose(container.height, 90, 'lanes-absolute-0345 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-absolute-0345 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0345 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-absolute-0345 item[0].w');
+      expectClose(r.height, 40, 'lanes-absolute-0345 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-absolute-0345 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0345 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-absolute-0345 item[1].w');
+      expectClose(r.height, 60, 'lanes-absolute-0345 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0345 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0345 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-absolute-0345 item[2].w');
+      expectClose(r.height, 30, 'lanes-absolute-0345 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'lanes-absolute-0345 item[3].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0345 item[3].y');
+      expectClose(r.width, 50, 'lanes-absolute-0345 item[3].w');
+      expectClose(r.height, 25, 'lanes-absolute-0345 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0345 item[4].x');
+      expectClose(r.y - container.y, 40, 'lanes-absolute-0345 item[4].y');
+      expectClose(r.width, 193.34, 'lanes-absolute-0345 item[4].w');
+      expectClose(r.height, 50, 'lanes-absolute-0345 item[4].h');
+    }
+  });
+});
+
+describe("lanes-display-none", () => {
+  it("lanes-display-none-0346: a display:none child takes no lane", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":10,"flowTolerance":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"display":"none"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":50}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-display-none-0346 container.width');
+    expectClose(container.height, 60, 'lanes-display-none-0346 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-display-none-0346 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-display-none-0346 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-display-none-0346 item[0].w');
+      expectClose(r.height, 40, 'lanes-display-none-0346 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'lanes-display-none-0346 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-display-none-0346 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-display-none-0346 item[1].w');
+      expectClose(r.height, 60, 'lanes-display-none-0346 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.width, 0, 'lanes-display-none-0346 item[2].w');
+      expectClose(r.height, 0, 'lanes-display-none-0346 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 406.66, 'lanes-display-none-0346 item[3].x');
+      expectClose(r.y - container.y, 0, 'lanes-display-none-0346 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-display-none-0346 item[3].w');
+      expectClose(r.height, 50, 'lanes-display-none-0346 item[3].h');
     }
   });
 });
