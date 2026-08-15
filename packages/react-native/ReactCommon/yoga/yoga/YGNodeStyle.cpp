@@ -8,6 +8,7 @@
 #include <yoga/Yoga.h>
 #include <yoga/debug/AssertFatal.h>
 #include <yoga/node/Node.h>
+#include <yoga/style/FlowTolerance.h>
 #include <yoga/style/GridAutoFlow.h>
 #include <yoga/style/GridTemplateAreas.h>
 #include <yoga/style/GridAutoRepeat.h>
@@ -703,6 +704,36 @@ void YGNodeStyleSetGridTemplateAreas(
 void YGNodeStyleSetGridArea(YGNodeRef node, const char* areaName) {
   resolveRef(node)->style().setGridArea(
       areaName == nullptr ? std::string{} : std::string{areaName});
+  resolveRef(node)->markDirtyAndPropagate();
+}
+
+void YGNodeStyleSetFlowTolerance(
+    YGNodeRef node,
+    YGFlowToleranceType type,
+    float value) {
+  FlowTolerance tolerance;
+  switch (type) {
+    case YGFlowToleranceNormal:
+      tolerance.kind = FlowToleranceKind::Normal;
+      // `normal` is 1em and Yoga has no font model, so the caller passes the
+      // em size; a non-positive value keeps the 16pt default.
+      if (value > 0.0f) {
+        tolerance.emSize = value;
+      }
+      break;
+    case YGFlowToleranceInfinite:
+      tolerance.kind = FlowToleranceKind::Infinite;
+      break;
+    case YGFlowTolerancePoints:
+      tolerance.kind = FlowToleranceKind::Length;
+      tolerance.length = StyleSizeLength::points(value);
+      break;
+    case YGFlowTolerancePercent:
+      tolerance.kind = FlowToleranceKind::Length;
+      tolerance.length = StyleSizeLength::percent(value);
+      break;
+  }
+  resolveRef(node)->style().setFlowTolerance(tolerance);
   resolveRef(node)->markDirtyAndPropagate();
 }
 
