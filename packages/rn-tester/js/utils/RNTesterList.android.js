@@ -251,6 +251,13 @@ const APIs: Array<RNTesterModuleInfo> = (
       category: 'UI',
     },
     {
+      // A harness, not a demo: it renders the whole conformance corpus so the
+      // rects can be read back over CDP. Deliberately not pinned.
+      key: 'GridConformanceExample',
+      module: require('../examples/Grid/GridConformanceExample').default,
+      category: 'UI',
+    },
+    {
       key: 'CSSAnimationsExample',
       pinned: true,
       module: require('../examples/CSSAnimations/CSSAnimationsExample').default,
