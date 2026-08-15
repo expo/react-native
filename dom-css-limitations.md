@@ -117,6 +117,43 @@ a real screen first. Background in `element-model-design.md`.
   rather than asserted as correct in the corpus.
 - **`subgrid` is not implemented.**
 
+## CSS Grid Lanes
+
+Section-by-section coverage is in `grid-lanes-spec-coverage.md`; these are the
+divergences.
+
+- **`DOM-CSS-LIMITATION(lanes-order)` — `order` is not supported.** css-grid-3
+  §2.1 reorders items before placement. Neither Yoga nor React Native's style
+  surface has `order`, so this is not a lanes limitation so much as an engine
+  one, and it applies equally to flex and grid.
+- **`DOM-CSS-LIMITATION(lanes-inline-level)` — `inline-grid-lanes` is
+  block-level.** The INNER display is right — it lays out as lanes — but the
+  outer one is not, so the container fills its parent instead of shrink-
+  wrapping. The inline-level displays are resolved at box generation in
+  `YogaStylableProps` and never reach Yoga; closing this means adding
+  `inline-grid` and `inline-grid-lanes` to `displayInline`/`displayInlineAtomic`
+  alongside `inline-block`. Deliberately left for the `display: 'inline'` work
+  rather than done here, since it changes box generation that the grid branch
+  otherwise does not touch. `inline-grid` has the same gap.
+- **`DOM-CSS-LIMITATION(lanes-baseline-export)` — a lanes container does not
+  export a baseline.** Baseline alignment *inside* the grid-axis tracks works
+  as it does for a regular grid container (css-grid-3 §6.5). What is missing is
+  the container's own first/last baseline set in the stacking axis — "the
+  highest alignment baseline among the grid items placed first in each track" —
+  which matters only when a lanes container is itself a baseline-aligned flex
+  or grid item.
+- **`DOM-CSS-LIMITATION(lanes-abspos-containing-block)` — a grid area cannot be
+  the containing block for an out-of-flow child.** css-grid-3 §8 lets
+  `grid-column`/`grid-row` on an absolutely-positioned child pick out a grid
+  area; the container's content box is used instead. Grid carries the same TODO,
+  and the two should be fixed together.
+- **Safari is not the oracle for §6.3 and §6.4.** It does not implement
+  stacking-axis self alignment at all, and it distributes the stacking axis as
+  though the lanes had rows. The affected cases keep Safari's grid-axis
+  measurements and take spec-derived stacking positions, declared in `cases.js`
+  and derived in `stacking-alignment-test.cpp`. Recorded here because a future
+  Safari that fixes either one will make those cases look like regressions.
+
 ---
 
 ## Not limitations, though they look like ones

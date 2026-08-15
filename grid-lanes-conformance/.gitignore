@@ -1,0 +1,5 @@
+# Built by run-replay.sh / run-cpp-tests.sh.
+.replay
+.percentage-tolerance-test
+.stacking-alignment-test
+*.dSYM/

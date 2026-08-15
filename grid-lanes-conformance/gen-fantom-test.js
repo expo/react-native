@@ -114,6 +114,13 @@ function rnItemStyle(item) {
   if (item.area != null) style.gridArea = item.area;
   if (item.colEnd != null) style.gridColumnEnd = item.colEnd;
   if (item.justifySelf) style.justifySelf = item.justifySelf;
+  if (item.alignSelf) style.alignSelf = item.alignSelf;
+  if (item.displayNone) style.display = 'none';
+  if (item.absolute) {
+    style.position = 'absolute';
+    if (item.top != null) style.top = item.top;
+    if (item.left != null) style.left = item.left;
+  }
   if (item.col != null) {
     const css = placementToCss(item.col);
     if (css.startsWith('span ')) {
@@ -165,8 +172,11 @@ w('/**');
 w(' * CSS Grid layout, checked end to end through React Native.');
 w(' *');
 w(' * Every expected number here was measured in real Safari, which implements');
-w(' * CSS Grid natively — see grid-lanes-conformance/oracle.js. Nothing in this');
-w(' * file is hand-computed.');
+w(' * CSS Grid natively — see grid-lanes-conformance/oracle.js. The only');
+w(' * exception is the stacking-axis position in a handful of grid-lanes cases,');
+w(' * where Safari does not implement css-grid-3 §6.4 and mis-distributes §6.3;');
+w(' * those are derived from the spec in stacking-alignment-test.cpp and marked');
+w(' * in cases.js with the reason.');
 w(' *');
 w(' * The C++ harness (grid-lanes-conformance/replay.cpp) proves the same cases');
 w(' * against Yoga directly. This suite proves the rest of the path: the style');
@@ -174,7 +184,8 @@ w(' * prop, the track-list parser, the props wiring, and layout as the app sees'
 w(' * it through getBoundingClientRect().');
 w(' *');
 w(` * ${usable.length} cases; ${skipped} corpus cases are not expressible as RN styles`);
-w(' * (grid-lanes, min-content/max-content/fit-content tracks, rtl, order).');
+w(' * (min-content as a maximum, inline-level containers, order, and the');
+w(' * percentage flow-tolerance Safari cannot adjudicate).');
 w(' */');
 w('');
 w("import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';");
@@ -261,12 +272,17 @@ for (const [group, groupCases] of byGroup) {
     c.expected.items.forEach((e, i) => {
       w(`    {`);
       w(`      const r = rectOf(itemRefs[${i}]);`);
-      w(
-        `      expectClose(r.x - container.x, ${e.x}, '${c.id} item[${i}].x');`,
-      );
-      w(
-        `      expectClose(r.y - container.y, ${e.y}, '${c.id} item[${i}].y');`,
-      );
+      // A display:none item has no box, so only its emptiness is assertable —
+      // there is no position for the engines to agree or disagree about. That
+      // it takes no lane is proved by where the OTHER items landed.
+      if (!c.items[i]?.displayNone) {
+        w(
+          `      expectClose(r.x - container.x, ${e.x}, '${c.id} item[${i}].x');`,
+        );
+        w(
+          `      expectClose(r.y - container.y, ${e.y}, '${c.id} item[${i}].y');`,
+        );
+      }
       w(`      expectClose(r.width, ${e.w}, '${c.id} item[${i}].w');`);
       w(`      expectClose(r.height, ${e.h}, '${c.id} item[${i}].h');`);
       w(`    }`);
