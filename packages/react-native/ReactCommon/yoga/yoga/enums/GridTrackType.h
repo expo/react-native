@@ -21,11 +21,13 @@ enum class GridTrackType : uint8_t {
   Percent = YGGridTrackTypePercent,
   Fr = YGGridTrackTypeFr,
   Minmax = YGGridTrackTypeMinmax,
+  MaxContent = YGGridTrackTypeMaxContent,
+  FitContent = YGGridTrackTypeFitContent,
 };
 
 template <>
 constexpr int32_t ordinalCount<GridTrackType>() {
-  return 5;
+  return 7;
 }
 
 constexpr GridTrackType scopedEnum(YGGridTrackType unscoped) {
