@@ -6,9 +6,9 @@
   "flowTolerance": true,
   "flowToleranceInfinite": true
  },
- "caseCount": 299,
+ "caseCount": 311,
  "byTier": {
-  "A": 176,
+  "A": 188,
   "B": 108,
   "C": 15
  },
@@ -23622,6 +23622,1270 @@
       "y": 34,
       "w": 193.33,
       "h": 24
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-basic-0300",
+   "group": "auto-flow-column-basic",
+   "tier": "A",
+   "note": "grid-auto-flow: row filling a 3x2 grid",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 90
+     },
+     {
+      "t": "px",
+      "v": 90
+     },
+     {
+      "t": "px",
+      "v": 90
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 100,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 200,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 100,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 5,
+      "x": 200,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-spans-0301",
+   "group": "auto-flow-column-spans",
+   "tier": "A",
+   "note": "grid-auto-flow: row with row-spanning items",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 30
+     },
+     {
+      "t": "px",
+      "v": 30
+     },
+     {
+      "t": "px",
+      "v": 30
+     }
+    ],
+    "gap": 8,
+    "autoFlow": "row"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "row": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null,
+     "row": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 106
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 80,
+      "h": 68
+     },
+     {
+      "i": 1,
+      "x": 88,
+      "y": 0,
+      "w": 80,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 176,
+      "y": 0,
+      "w": 80,
+      "h": 68
+     },
+     {
+      "i": 3,
+      "x": 88,
+      "y": 38,
+      "w": 80,
+      "h": 30
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 76,
+      "w": 80,
+      "h": 30
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-implicit-0302",
+   "group": "auto-flow-column-implicit",
+   "tier": "A",
+   "note": "grid-auto-flow: row creating implicit tracks",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "cols": [
+     {
+      "t": "px",
+      "v": 70
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 120
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 70,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 50,
+      "w": 70,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 0,
+      "y": 100,
+      "w": 70,
+      "h": 0
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 110,
+      "w": 70,
+      "h": 0
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 120,
+      "w": 70,
+      "h": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-basic-0303",
+   "group": "auto-flow-column-basic",
+   "tier": "A",
+   "note": "grid-auto-flow: column filling a 3x2 grid",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 90
+     },
+     {
+      "t": "px",
+      "v": 90
+     },
+     {
+      "t": "px",
+      "v": 90
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "column"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 100,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 3,
+      "x": 100,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 200,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 5,
+      "x": 200,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-spans-0304",
+   "group": "auto-flow-column-spans",
+   "tier": "A",
+   "note": "grid-auto-flow: column with row-spanning items",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 30
+     },
+     {
+      "t": "px",
+      "v": 30
+     },
+     {
+      "t": "px",
+      "v": 30
+     }
+    ],
+    "gap": 8,
+    "autoFlow": "column"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "row": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null,
+     "row": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 106
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 80,
+      "h": 68
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 76,
+      "w": 80,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 88,
+      "y": 0,
+      "w": 80,
+      "h": 68
+     },
+     {
+      "i": 3,
+      "x": 88,
+      "y": 76,
+      "w": 80,
+      "h": 30
+     },
+     {
+      "i": 4,
+      "x": 176,
+      "y": 0,
+      "w": 80,
+      "h": 30
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-implicit-0305",
+   "group": "auto-flow-column-implicit",
+   "tier": "A",
+   "note": "grid-auto-flow: column creating implicit tracks",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "cols": [
+     {
+      "t": "px",
+      "v": 70
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "column"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 70,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 50,
+      "w": 70,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 80,
+      "y": 0,
+      "w": 255,
+      "h": 40
+     },
+     {
+      "i": 3,
+      "x": 80,
+      "y": 50,
+      "w": 255,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 345,
+      "y": 0,
+      "w": 255,
+      "h": 40
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-basic-0306",
+   "group": "auto-flow-column-basic",
+   "tier": "A",
+   "note": "grid-auto-flow: row dense filling a 3x2 grid",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 90
+     },
+     {
+      "t": "px",
+      "v": 90
+     },
+     {
+      "t": "px",
+      "v": 90
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 100,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 200,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 100,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 5,
+      "x": 200,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-spans-0307",
+   "group": "auto-flow-column-spans",
+   "tier": "A",
+   "note": "grid-auto-flow: row dense with row-spanning items",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 30
+     },
+     {
+      "t": "px",
+      "v": 30
+     },
+     {
+      "t": "px",
+      "v": 30
+     }
+    ],
+    "gap": 8,
+    "autoFlow": "row dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "row": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null,
+     "row": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 106
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 80,
+      "h": 68
+     },
+     {
+      "i": 1,
+      "x": 88,
+      "y": 0,
+      "w": 80,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 176,
+      "y": 0,
+      "w": 80,
+      "h": 68
+     },
+     {
+      "i": 3,
+      "x": 88,
+      "y": 38,
+      "w": 80,
+      "h": 30
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 76,
+      "w": 80,
+      "h": 30
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-implicit-0308",
+   "group": "auto-flow-column-implicit",
+   "tier": "A",
+   "note": "grid-auto-flow: row dense creating implicit tracks",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "cols": [
+     {
+      "t": "px",
+      "v": 70
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 120
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 70,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 50,
+      "w": 70,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 0,
+      "y": 100,
+      "w": 70,
+      "h": 0
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 110,
+      "w": 70,
+      "h": 0
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 120,
+      "w": 70,
+      "h": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-basic-0309",
+   "group": "auto-flow-column-basic",
+   "tier": "A",
+   "note": "grid-auto-flow: column dense filling a 3x2 grid",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 90
+     },
+     {
+      "t": "px",
+      "v": 90
+     },
+     {
+      "t": "px",
+      "v": 90
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "column dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 100,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 3,
+      "x": 100,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 200,
+      "y": 0,
+      "w": 90,
+      "h": 40
+     },
+     {
+      "i": 5,
+      "x": 200,
+      "y": 50,
+      "w": 90,
+      "h": 40
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-spans-0310",
+   "group": "auto-flow-column-spans",
+   "tier": "A",
+   "note": "grid-auto-flow: column dense with row-spanning items",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 30
+     },
+     {
+      "t": "px",
+      "v": 30
+     },
+     {
+      "t": "px",
+      "v": 30
+     }
+    ],
+    "gap": 8,
+    "autoFlow": "column dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "row": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null,
+     "row": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 106
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 80,
+      "h": 68
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 76,
+      "w": 80,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 88,
+      "y": 0,
+      "w": 80,
+      "h": 68
+     },
+     {
+      "i": 3,
+      "x": 88,
+      "y": 76,
+      "w": 80,
+      "h": 30
+     },
+     {
+      "i": 4,
+      "x": 176,
+      "y": 0,
+      "w": 80,
+      "h": 30
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-column-implicit-0311",
+   "group": "auto-flow-column-implicit",
+   "tier": "A",
+   "note": "grid-auto-flow: column dense creating implicit tracks",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "cols": [
+     {
+      "t": "px",
+      "v": 70
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "column dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    },
+    {
+     "w": null,
+     "h": null
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 70,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 50,
+      "w": 70,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 80,
+      "y": 0,
+      "w": 255,
+      "h": 40
+     },
+     {
+      "i": 3,
+      "x": 80,
+      "y": 50,
+      "w": 255,
+      "h": 40
+     },
+     {
+      "i": 4,
+      "x": 345,
+      "y": 0,
+      "w": 255,
+      "h": 40
      }
     ]
    }

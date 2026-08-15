@@ -1413,4 +1413,72 @@ for (const dense of [false, true]) {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// A. grid-auto-flow: column — css-grid-2 §8.5
+//
+// Column flow fills DOWN a column before moving to the next, which is the row
+// algorithm with the axes exchanged. Every shape is run in all four flows, so
+// an implementation that ignored the column keyword would fail against its own
+// row counterpart.
+// ---------------------------------------------------------------------------
+
+for (const flow of ['row', 'column', 'row dense', 'column dense']) {
+  add(
+    'auto-flow-column-basic',
+    'A',
+    grid({
+      cols: [px(90), px(90), px(90)],
+      rows: [px(40), px(40)],
+      gap: 10,
+      autoFlow: flow,
+    }),
+    [
+      item(null, null),
+      item(null, null),
+      item(null, null),
+      item(null, null),
+      item(null, null),
+      item(null, null),
+    ],
+    `grid-auto-flow: ${flow} filling a 3x2 grid`,
+  );
+  add(
+    'auto-flow-column-spans',
+    'A',
+    grid({
+      cols: [px(80), px(80), px(80)],
+      rows: [px(30), px(30), px(30)],
+      gap: 8,
+      autoFlow: flow,
+    }),
+    [
+      item(null, null, {row: {span: 2}}),
+      item(null, null),
+      item(null, null, {row: {span: 2}}),
+      item(null, null),
+      item(null, null),
+    ],
+    `grid-auto-flow: ${flow} with row-spanning items`,
+  );
+  add(
+    'auto-flow-column-implicit',
+    'A',
+    grid({
+      rows: [px(40), px(40)],
+      cols: [px(70)],
+      gap: 10,
+      autoFlow: flow,
+    }),
+    [
+      item(null, null),
+      item(null, null),
+      item(null, null),
+      item(null, null),
+      item(null, null),
+    ],
+    `grid-auto-flow: ${flow} creating implicit tracks`,
+  );
+}
+
 module.exports = {cases, px, pct, fr, auto, minmax};
