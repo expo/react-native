@@ -32,6 +32,8 @@
 #include <yoga/numeric/FloatOptional.h>
 #include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridLine.h>
+#include <yoga/style/GridStyle.h>
+#include <memory>
 #include <yoga/style/GridTrack.h>
 #include <yoga/style/StyleLength.h>
 #include <yoga/style/StyleSizeLength.h>
@@ -225,104 +227,113 @@ class YG_EXPORT Style {
     pool_.store(minDimensions_[yoga::to_underlying(axis)], value);
   }
 
+  // Grid properties live in a side allocation (GridStyle.h): they are large,
+  // and almost no node in a real tree is a grid container or grid item.
+  // Reads of an unset grid style return shared defaults; writes allocate and
+  // copy on demand.
+  const GridStyle& grid() const {
+    return grid_ == nullptr ? kDefaultGridStyle : *grid_;
+  }
+
   // Grid Container Properties
   const GridTrackList& gridTemplateColumns() const {
-    return gridTemplateColumns_;
+    return grid().gridTemplateColumns;
   }
   void setGridTemplateColumns(GridTrackList value) {
-    gridTemplateColumns_ = std::move(value);
+    ensureGrid().gridTemplateColumns = std::move(value);
   }
   void resizeGridTemplateColumns(size_t count) {
-    gridTemplateColumns_.resize(count);
+    ensureGrid().gridTemplateColumns.resize(count);
   }
   void setGridTemplateColumnAt(size_t index, GridTrackSize value) {
-    gridTemplateColumns_[index] = value;
+    ensureGrid().gridTemplateColumns[index] = value;
   }
 
   const GridTrackList& gridTemplateRows() const {
-    return gridTemplateRows_;
+    return grid().gridTemplateRows;
   }
   void setGridTemplateRows(GridTrackList value) {
-    gridTemplateRows_ = std::move(value);
+    ensureGrid().gridTemplateRows = std::move(value);
   }
   void resizeGridTemplateRows(size_t count) {
-    gridTemplateRows_.resize(count);
+    ensureGrid().gridTemplateRows.resize(count);
   }
   void setGridTemplateRowAt(size_t index, GridTrackSize value) {
-    gridTemplateRows_[index] = value;
+    ensureGrid().gridTemplateRows[index] = value;
   }
 
   const GridTrackList& gridAutoColumns() const {
-    return gridAutoColumns_;
+    return grid().gridAutoColumns;
   }
   void setGridAutoColumns(GridTrackList value) {
-    gridAutoColumns_ = std::move(value);
+    ensureGrid().gridAutoColumns = std::move(value);
   }
   void resizeGridAutoColumns(size_t count) {
-    gridAutoColumns_.resize(count);
+    ensureGrid().gridAutoColumns.resize(count);
   }
   void setGridAutoColumnAt(size_t index, GridTrackSize value) {
-    gridAutoColumns_[index] = value;
+    ensureGrid().gridAutoColumns[index] = value;
   }
 
   const GridTrackList& gridAutoRows() const {
-    return gridAutoRows_;
+    return grid().gridAutoRows;
   }
   void setGridAutoRows(GridTrackList value) {
-    gridAutoRows_ = std::move(value);
+    ensureGrid().gridAutoRows = std::move(value);
   }
   void resizeGridAutoRows(size_t count) {
-    gridAutoRows_.resize(count);
+    ensureGrid().gridAutoRows.resize(count);
   }
   void setGridAutoRowAt(size_t index, GridTrackSize value) {
-    gridAutoRows_[index] = value;
+    ensureGrid().gridAutoRows[index] = value;
   }
 
   // https://www.w3.org/TR/css-grid-2/#auto-repeat — where the single
   // `repeat(auto-fill|auto-fit, ...)` sits inside the authored track list, if
   // there is one. Layout expands it once the container size is known.
   const GridAutoRepeat& gridTemplateColumnsAutoRepeat() const {
-    return gridTemplateColumnsAutoRepeat_;
+    return grid().gridTemplateColumnsAutoRepeat;
   }
   void setGridTemplateColumnsAutoRepeat(GridAutoRepeat value) {
-    gridTemplateColumnsAutoRepeat_ = value;
+    ensureGrid().gridTemplateColumnsAutoRepeat = value;
   }
 
   const GridAutoRepeat& gridTemplateRowsAutoRepeat() const {
-    return gridTemplateRowsAutoRepeat_;
+    return grid().gridTemplateRowsAutoRepeat;
   }
   void setGridTemplateRowsAutoRepeat(GridAutoRepeat value) {
-    gridTemplateRowsAutoRepeat_ = value;
+    ensureGrid().gridTemplateRowsAutoRepeat = value;
   }
 
   // Grid Item Properties
   const GridLine& gridColumnStart() const {
-    return gridColumnStart_;
+    return grid().gridColumnStart;
   }
   void setGridColumnStart(GridLine value) {
-    gridColumnStart_ = value;
+    ensureGrid().gridColumnStart = value;
   }
 
   const GridLine& gridColumnEnd() const {
-    return gridColumnEnd_;
+    return grid().gridColumnEnd;
   }
   void setGridColumnEnd(GridLine value) {
-    gridColumnEnd_ = value;
+    ensureGrid().gridColumnEnd = value;
   }
 
   const GridLine& gridRowStart() const {
-    return gridRowStart_;
+    return grid().gridRowStart;
   }
   void setGridRowStart(GridLine value) {
-    gridRowStart_ = value;
+    ensureGrid().gridRowStart = value;
   }
 
   const GridLine& gridRowEnd() const {
-    return gridRowEnd_;
+    return grid().gridRowEnd;
   }
   void setGridRowEnd(GridLine value) {
-    gridRowEnd_ = value;
+    ensureGrid().gridRowEnd = value;
   }
+
 
   FloatOptional resolvedMinDimension(
       Direction direction,
@@ -704,17 +715,7 @@ class YG_EXPORT Style {
         sizeLengthsEqual(
                maxDimensions_, pool_, other.maxDimensions_, other.pool_) &&
         numbersEqual(aspectRatio_, pool_, other.aspectRatio_, other.pool_) &&
-        gridTemplateColumns_ == other.gridTemplateColumns_ &&
-        gridTemplateColumnsAutoRepeat_ ==
-            other.gridTemplateColumnsAutoRepeat_ &&
-        gridTemplateRowsAutoRepeat_ == other.gridTemplateRowsAutoRepeat_ &&
-        gridTemplateRows_ == other.gridTemplateRows_ &&
-        gridAutoColumns_ == other.gridAutoColumns_ &&
-        gridAutoRows_ == other.gridAutoRows_ &&
-        gridColumnStart_ == other.gridColumnStart_ &&
-        gridColumnEnd_ == other.gridColumnEnd_ &&
-        gridRowStart_ == other.gridRowStart_ &&
-        gridRowEnd_ == other.gridRowEnd_;
+        gridStyleEquals(other);
   }
 
  private:
@@ -971,17 +972,35 @@ class YG_EXPORT Style {
   Dimensions maxDimensions_{};
   StyleValueHandle aspectRatio_{};
 
-  // Grid properties
-  GridTrackList gridTemplateColumns_{};
-  GridAutoRepeat gridTemplateColumnsAutoRepeat_{};
-  GridAutoRepeat gridTemplateRowsAutoRepeat_{};
-  GridTrackList gridTemplateRows_{};
-  GridTrackList gridAutoColumns_{};
-  GridTrackList gridAutoRows_{};
-  GridLine gridColumnStart_{};
-  GridLine gridColumnEnd_{};
-  GridLine gridRowStart_{};
-  GridLine gridRowEnd_{};
+
+  // Copy-on-write: a Style copy shares the grid allocation until one of them
+  // writes to it.
+  GridStyle& ensureGrid() {
+    // Always replace rather than mutate in place, even when this Style looks
+    // like the only owner. Props are copied between threads during a commit,
+    // so a use_count check can be stale by the time it is acted on, and
+    // mutating a GridStyle another Style is reading is a data race. Writes
+    // happen a handful of times while props are built, so the copy is cheap
+    // and the shared value is never written to.
+    grid_ = grid_ == nullptr ? std::make_shared<GridStyle>()
+                             : std::make_shared<GridStyle>(*grid_);
+    return *grid_;
+  }
+
+  bool gridStyleEquals(const Style& other) const {
+    if (grid_ == other.grid_) {
+      return true;
+    }
+    if (grid_ == nullptr) {
+      return other.grid_->isDefault();
+    }
+    if (other.grid_ == nullptr) {
+      return grid_->isDefault();
+    }
+    return *grid_ == *other.grid_;
+  }
+
+  std::shared_ptr<GridStyle> grid_{};
 
   StyleValuePool pool_;
 };
