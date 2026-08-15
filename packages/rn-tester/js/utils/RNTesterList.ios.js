@@ -296,6 +296,12 @@ const APIs: Array<RNTesterModuleInfo> = (
       category: 'UI',
     },
     {
+      key: 'GridLanesExample',
+      pinned: true,
+      module: require('../examples/Grid/GridLanesExample').default,
+      category: 'UI',
+    },
+    {
       key: 'GridExample',
       pinned: true,
       module: require('../examples/Grid/GridExample').default,
