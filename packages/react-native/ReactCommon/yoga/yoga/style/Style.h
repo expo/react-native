@@ -30,6 +30,7 @@
 #include <yoga/enums/Unit.h>
 #include <yoga/enums/Wrap.h>
 #include <yoga/numeric/FloatOptional.h>
+#include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridLine.h>
 #include <yoga/style/GridTrack.h>
 #include <yoga/style/StyleLength.h>
@@ -275,6 +276,23 @@ class YG_EXPORT Style {
   }
   void setGridAutoRowAt(size_t index, GridTrackSize value) {
     gridAutoRows_[index] = value;
+  }
+
+  // https://www.w3.org/TR/css-grid-2/#auto-repeat — where the single
+  // `repeat(auto-fill|auto-fit, ...)` sits inside the authored track list, if
+  // there is one. Layout expands it once the container size is known.
+  const GridAutoRepeat& gridTemplateColumnsAutoRepeat() const {
+    return gridTemplateColumnsAutoRepeat_;
+  }
+  void setGridTemplateColumnsAutoRepeat(GridAutoRepeat value) {
+    gridTemplateColumnsAutoRepeat_ = value;
+  }
+
+  const GridAutoRepeat& gridTemplateRowsAutoRepeat() const {
+    return gridTemplateRowsAutoRepeat_;
+  }
+  void setGridTemplateRowsAutoRepeat(GridAutoRepeat value) {
+    gridTemplateRowsAutoRepeat_ = value;
   }
 
   // Grid Item Properties
@@ -687,6 +705,9 @@ class YG_EXPORT Style {
                maxDimensions_, pool_, other.maxDimensions_, other.pool_) &&
         numbersEqual(aspectRatio_, pool_, other.aspectRatio_, other.pool_) &&
         gridTemplateColumns_ == other.gridTemplateColumns_ &&
+        gridTemplateColumnsAutoRepeat_ ==
+            other.gridTemplateColumnsAutoRepeat_ &&
+        gridTemplateRowsAutoRepeat_ == other.gridTemplateRowsAutoRepeat_ &&
         gridTemplateRows_ == other.gridTemplateRows_ &&
         gridAutoColumns_ == other.gridAutoColumns_ &&
         gridAutoRows_ == other.gridAutoRows_ &&
@@ -952,6 +973,8 @@ class YG_EXPORT Style {
 
   // Grid properties
   GridTrackList gridTemplateColumns_{};
+  GridAutoRepeat gridTemplateColumnsAutoRepeat_{};
+  GridAutoRepeat gridTemplateRowsAutoRepeat_{};
   GridTrackList gridTemplateRows_{};
   GridTrackList gridAutoColumns_{};
   GridTrackList gridAutoRows_{};
