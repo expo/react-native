@@ -64,12 +64,22 @@ function containerCss(c) {
   if (c.border) d.push(`border: ${c.border}px solid #0000`);
   if (c.fontSize) d.push(`font-size: ${c.fontSize}px`);
   if (c.direction) d.push(`direction: ${c.direction}`);
+  if (c.gapPercent) d.push(`gap: ${c.gapPercent}`);
+  if (c.minWidth != null) d.push(`min-width: ${c.minWidth}px`);
+  if (c.maxWidth != null) d.push(`max-width: ${c.maxWidth}px`);
+  if (c.minHeight != null) d.push(`min-height: ${c.minHeight}px`);
+  if (c.maxHeight != null) d.push(`max-height: ${c.maxHeight}px`);
+  if (c.autoRows) d.push(`grid-auto-rows: ${c.autoRows.map(trackToCss).join(' ')}`);
+  if (c.autoColumns)
+    d.push(`grid-auto-columns: ${c.autoColumns.map(trackToCss).join(' ')}`);
   return d.join('; ');
 }
 
 function itemCss(it) {
   const d = [];
   if (it.w != null) d.push(`width: ${it.w}px`);
+  if (it.widthPercent != null) d.push(`width: ${it.widthPercent}%`);
+  if (it.aspectRatio != null) d.push(`aspect-ratio: ${it.aspectRatio}`);
   if (it.h != null) d.push(`height: ${it.h}px`);
   if (it.m != null) d.push(`margin: ${it.m}px`);
   if (it.p != null) d.push(`padding: ${it.p}px`);
