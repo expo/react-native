@@ -72,7 +72,13 @@ function add(group, tier, container, items, note, extra) {
 //
 // The derivations are written out in full in stacking-alignment-test.cpp;
 // `reason` says why Safari cannot be believed here.
-const stackingOverride = (reason, y) => ({oracleDivergence: {reason, y}});
+//
+// `axis` names the STACKING axis, which is not always the block one: a brick
+// layout puts the tracks in the block axis, so its lanes run sideways and the
+// disputed coordinate is x.
+const stackingOverride = (reason, values, axis = 'y') => ({
+  oracleDivergence: {reason, axis, [axis]: values},
+});
 
 // A container with sensible defaults; every case states only what it varies.
 const grid = o => ({display: 'grid', width: 600, ...o});
@@ -1906,6 +1912,44 @@ add(
   ],
   'align-items:stretch on auto-height items in lanes',
 );
+
+// §6.4 in a BRICK layout, where the stacking axis is the inline one. Same
+// rule, different properties: `justify-items` rather than `align-items`, and
+// the void opens to the item's right rather than below it. Worth its own case
+// because the implementation has a separate branch for it, and a sign error
+// there would only ever show up here.
+//
+//   two 100px rows, 10px gap, items 40 / 60 / 30 wide filling their row
+//     item0 -> row 0 at x=0, run [50, 0]
+//     item1 -> row 1 at x=0, run [50, 70]
+//     item2 -> shortest is row 0 at 50, so x=50, run [90, 70]
+//
+//   right edges 40, 60, 80; the stacking range is 0..80
+//     item0  row 0, followed by item2 at 50 -> 50 - 40 - 10 = 0
+//     item1  row 1, last                    -> 80 - 60     = 20
+//     item2  row 0, last                    -> 80 - 80     = 0
+//
+// so only item1 moves, and `end` moves it by exactly 20.
+for (const [justifyItems, x] of [
+  ['start', null],
+  ['end', [0, 20, 50]],
+]) {
+  add(
+    'lanes-brick-stacking-align',
+    'B',
+    lanes({
+      rows: [px(100), px(100)],
+      gap: 10,
+      flowTolerance: 0,
+      justifyItems,
+    }),
+    [item(40, null), item(60, null), item(30, null)],
+    `justify-items:${justifyItems} in a brick layout`,
+    x == null
+      ? undefined
+      : stackingOverride(STACKING_ALIGN_DIVERGENCE, x, 'x'),
+  );
+}
 
 // ---------------------------------------------------------------------------
 // §5 Sizing grid containers

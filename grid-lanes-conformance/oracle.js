@@ -75,15 +75,17 @@ function applyDivergence(c, result) {
   if (divergence == null || result == null) {
     return result;
   }
-  if (divergence.y.length !== result.items.length) {
+  const axis = divergence.axis ?? 'y';
+  const values = divergence[axis];
+  if (values.length !== result.items.length) {
     throw new Error(
-      `${c.id}: the stacking override lists ${divergence.y.length} positions ` +
+      `${c.id}: the stacking override lists ${values.length} positions ` +
         `but the case has ${result.items.length} items`,
     );
   }
   return {
     ...result,
-    items: result.items.map((item, i) => ({...item, y: divergence.y[i]})),
+    items: result.items.map((item, i) => ({...item, [axis]: values[i]})),
   };
 }
 
