@@ -82,6 +82,10 @@ type ____LayoutStyle_Internal = Readonly<{
     // inline-level form; the inner display is grid either way.
     | 'grid'
     | 'inline-grid'
+    // css-grid-3: tracks in one axis, a flowed stacking axis. `grid-lanes` is
+    // block-level, `inline-grid-lanes` the inline-level form.
+    | 'grid-lanes'
+    | 'inline-grid-lanes'
     | 'contents',
 
   /** `float` takes a box out of the normal flow and packs it against one side
@@ -745,6 +749,18 @@ type ____LayoutStyle_Internal = Readonly<{
    * template does not define falls back to automatic placement.
    */
   gridArea?: string,
+  /**
+   * The tie threshold for grid lanes placement (css-grid-3 §4.2). Candidate
+   * positions within this distance of the shortest one count as equally good,
+   * and tied positions fill in document order — which stops lanes that differ
+   * by a pixel or two from filling out of order.
+   *
+   *   'normal'    1em (the initial value)
+   *   16          a length in points
+   *   '10%'       relative to the grid-axis content box
+   *   'infinite'  every position ties, so items fill strictly in order
+   */
+  flowTolerance?: number | string,
   gridAutoFlow?: 'row' | 'row dense' | 'column' | 'column dense',
   /**
    * Sizes for implicit tracks — those created by items placed outside the
