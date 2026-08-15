@@ -79,6 +79,8 @@ const char* YGDisplayToString(const YGDisplay value) {
       return "contents";
     case YGDisplayGrid:
       return "grid";
+    case YGDisplayGridLanes:
+      return "grid-lanes";
     case YGDisplayBlock:
       return "block";
   }

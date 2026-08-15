@@ -9684,6 +9684,7 @@ bool facebook::yoga::inexactEquals(const std::array<ElementT, Size>& val1, const
 void facebook::yoga::assertFatal(bool condition, const char* message);
 void facebook::yoga::assertFatalWithConfig(const facebook::yoga::Config* config, bool condition, const char* message);
 void facebook::yoga::assertFatalWithNode(const facebook::yoga::Node* node, bool condition, const char* message);
+void facebook::yoga::calculateGridLanesLayoutInternal(facebook::yoga::Node* node, float availableWidth, float availableHeight, facebook::yoga::Direction ownerDirection, facebook::yoga::SizingMode widthSizingMode, facebook::yoga::SizingMode heightSizingMode, float ownerWidth, float ownerHeight, bool performLayout, facebook::yoga::LayoutPassReason reason, facebook::yoga::LayoutData& layoutMarkerData, uint32_t depth, uint32_t generationCount);
 void facebook::yoga::calculateGridLayoutInternal(facebook::yoga::Node* node, float availableWidth, float availableHeight, facebook::yoga::Direction ownerDirection, facebook::yoga::SizingMode widthSizingMode, facebook::yoga::SizingMode heightSizingMode, float ownerWidth, float ownerHeight, bool performLayout, facebook::yoga::LayoutPassReason reason, facebook::yoga::LayoutData& layoutMarkerData, uint32_t depth, uint32_t generationCount);
 void facebook::yoga::calculateLayout(facebook::yoga::Node* node, float ownerWidth, float ownerHeight, facebook::yoga::Direction ownerDirection);
 void facebook::yoga::cleanupContentsNodesRecursively(facebook::yoga::Node* node, bool didPerformLayout);
@@ -9851,6 +9852,7 @@ class facebook::yoga::Style {
   public bool resolvesAgainstOwnerHeight() const;
   public bool resolvesAgainstOwnerWidth() const;
   public bool verticalInsetsDefined() const;
+  public const facebook::yoga::FlowTolerance& flowTolerance() const;
   public const facebook::yoga::GridAutoRepeat& gridTemplateColumnsAutoRepeat() const;
   public const facebook::yoga::GridAutoRepeat& gridTemplateRowsAutoRepeat() const;
   public const facebook::yoga::GridLine& gridColumnEnd() const;
@@ -9945,6 +9947,7 @@ class facebook::yoga::Style {
   public void setFlexShrink(facebook::yoga::FloatOptional value);
   public void setFlexWrap(facebook::yoga::Wrap value);
   public void setFloatSide(facebook::yoga::FloatSide value);
+  public void setFlowTolerance(facebook::yoga::FlowTolerance value);
   public void setFormattingContextRoot(bool value);
   public void setGap(facebook::yoga::Gutter gutter, facebook::yoga::Style::Length value);
   public void setGridArea(std::string value);
@@ -10082,6 +10085,7 @@ enum facebook::yoga::Display : uint8_t {
   Contents,
   Flex,
   Grid,
+  GridLanes,
   None,
 }
 
@@ -10121,6 +10125,12 @@ enum facebook::yoga::FloatSide : uint8_t {
   Left,
   None,
   Right,
+}
+
+enum facebook::yoga::FlowToleranceKind : uint8_t {
+  Infinite,
+  Length,
+  Normal,
 }
 
 enum facebook::yoga::GridAutoFlow : uint8_t {
@@ -10370,6 +10380,14 @@ struct facebook::yoga::FloatOptional {
   public constexpr float unwrapOrDefault(float defaultValue) const;
 }
 
+struct facebook::yoga::FlowTolerance {
+  public bool operator==(const facebook::yoga::FlowTolerance& other) const = default;
+  public facebook::yoga::FlowToleranceKind kind;
+  public facebook::yoga::StyleSizeLength length;
+  public float emSize;
+  public float resolve(float gridAxisSize) const;
+}
+
 struct facebook::yoga::GridAreaRect {
   public bool operator==(const facebook::yoga::GridAreaRect& other) const = default;
   public uint16_t columnEnd;
@@ -10423,6 +10441,7 @@ struct facebook::yoga::GridLine {
 
 struct facebook::yoga::GridStyle {
   public bool operator==(const facebook::yoga::GridStyle& other) const = default;
+  public facebook::yoga::FlowTolerance flowTolerance;
   public facebook::yoga::GridAutoFlow autoFlow;
   public facebook::yoga::GridAutoRepeat templateColumnsAutoRepeat;
   public facebook::yoga::GridAutoRepeat templateRowsAutoRepeat;
