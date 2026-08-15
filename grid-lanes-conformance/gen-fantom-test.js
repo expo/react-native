@@ -26,14 +26,18 @@ const expected = require(path.join(__dirname, 'expected.json'));
 // Yoga has no representation for are left out, and counted in the header so
 // the coverage claim stays honest.
 function rnStyle(container) {
-  if (container.display !== 'grid') return null;
+  if (container.display !== 'grid' && container.display !== 'grid-lanes') {
+    return null;
+  }
+  // A case the ORACLE could not decide is not evidence either way.
+  if (container.oracleLimitation != null) return null;
   if (container.direction != null && container.direction !== 'ltr') return null;
   if (container.autoFlow != null &&
       !['row', 'row dense', 'column', 'column dense'].includes(container.autoFlow)) {
     return null;
   }
 
-  const style = {display: 'grid'};
+  const style = {display: container.display};
   // max-content and fit-content are supported; min-content as a MAXIMUM is
   // not distinguishable from auto in Yoga, so those cases stay out rather
   // than asserting a value the engine cannot mean.
@@ -71,6 +75,13 @@ function rnStyle(container) {
     style.gridAutoColumns = container.autoColumns.map(trackToCss).join(' ');
   }
   if (container.autoFlow) style.gridAutoFlow = container.autoFlow;
+  if (container.flowTolerance != null) {
+    style.flowTolerance =
+      typeof container.flowTolerance === 'number'
+        ? container.flowTolerance
+        : container.flowTolerance;
+  }
+  if (container.fontSize != null) style.fontSize = container.fontSize;
   if (container.areas) {
     style.gridTemplateAreas = container.areas.map(r => `"${r}"`).join(' ');
   }
