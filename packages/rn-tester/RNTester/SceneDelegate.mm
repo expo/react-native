@@ -104,8 +104,21 @@ class RNTesterFeatureFlagsOverrides : public facebook::react::ReactNativeFeature
   NSMutableDictionary *initProps = [NSMutableDictionary dictionary];
   NSString *routeUri = [[NSUserDefaults standardUserDefaults] stringForKey:@"route"];
   if (routeUri != nil) {
-    NSString *example = [NSString stringWithFormat:@"rntester://example/%@Example", routeUri];
-    initProps[@"exampleFromAppetizeParams"] = example;
+    // `-route Grid` opens the module; `-route Grid/autofill` opens one example
+    // within it. The "Example" suffix belongs to the MODULE key only, so it is
+    // appended to the first path segment rather than to the whole string —
+    // otherwise an example key would come out as "…/autofillExample" and fail
+    // to resolve. This is what makes a single example addressable for
+    // screenshots without driving the UI.
+    NSRange separator = [routeUri rangeOfString:@"/"];
+    if (separator.location == NSNotFound) {
+      initProps[@"exampleFromAppetizeParams"] = [NSString stringWithFormat:@"rntester://example/%@Example", routeUri];
+    } else {
+      NSString *moduleKey = [routeUri substringToIndex:separator.location];
+      NSString *exampleKey = [routeUri substringFromIndex:separator.location + 1];
+      initProps[@"exampleFromAppetizeParams"] =
+          [NSString stringWithFormat:@"rntester://example/%@Example/%@", moduleKey, exampleKey];
+    }
   }
   return [initProps copy];
 }
