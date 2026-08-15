@@ -49,7 +49,7 @@ const item = (w, h, extra) => ({w, h, ...(extra ?? {})});
 const cases = [];
 let seq = 0;
 
-function add(group, tier, container, items, note) {
+function add(group, tier, container, items, note, extra) {
   seq++;
   cases.push({
     id: `${group}-${String(seq).padStart(4, '0')}`,
@@ -58,8 +58,27 @@ function add(group, tier, container, items, note) {
     note: note ?? null,
     container,
     items,
+    ...(extra ?? {}),
   });
 }
+
+// A case where Safari is wrong about ONE axis and right about the rest.
+//
+// Marking the whole case an oracle limitation would throw away the good half
+// — the grid axis, where Safari is authoritative — and drop the case out of
+// every consumer. Instead the oracle keeps Safari's measurements and replaces
+// just the stacking-axis positions with values derived from the spec, so the
+// case still runs everywhere and only the disputed number is hand-supplied.
+//
+// The derivations are written out in full in stacking-alignment-test.cpp;
+// `reason` says why Safari cannot be believed here.
+//
+// `axis` names the STACKING axis, which is not always the block one: a brick
+// layout puts the tracks in the block axis, so its lanes run sideways and the
+// disputed coordinate is x.
+const stackingOverride = (reason, values, axis = 'y') => ({
+  oracleDivergence: {reason, axis, [axis]: values},
+});
 
 // A container with sensible defaults; every case states only what it varies.
 const grid = o => ({display: 'grid', width: 600, ...o});
@@ -212,7 +231,12 @@ for (const [rg, cg] of [
   add(
     'gap-asymmetric',
     'A',
-    grid({cols: [px(100), px(100)], rows: [px(50), px(50)], rowGap: rg, colGap: cg}),
+    grid({
+      cols: [px(100), px(100)],
+      rows: [px(50), px(50)],
+      rowGap: rg,
+      colGap: cg,
+    }),
     [item(30, 20), item(30, 20), item(30, 20), item(30, 20)],
     `row-gap ${rg} column-gap ${cg}`,
   );
@@ -296,7 +320,11 @@ for (const n of [1, 2, 3, 4, 5]) {
   add(
     'lanes-count',
     'B',
-    lanes({cols: Array.from({length: n}, () => fr(1)), gap: 10, flowTolerance: 0}),
+    lanes({
+      cols: Array.from({length: n}, () => fr(1)),
+      gap: 10,
+      flowTolerance: 0,
+    }),
     [
       item(null, 40),
       item(null, 55),
@@ -781,7 +809,12 @@ for (const justifyItems of ['start', 'center', 'end', 'stretch']) {
   add(
     'lanes-x-justify-items',
     'B',
-    lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0, justifyItems}),
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      justifyItems,
+    }),
     [item(80, 40), item(80, 60), item(80, 30), item(80, 50)],
     `justify-items:${justifyItems} on narrow items in lanes`,
   );
@@ -880,7 +913,10 @@ for (const direction of ['ltr', 'rtl']) {
   add(
     'lanes-direction',
     'C',
-    {...lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0}), direction},
+    {
+      ...lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0}),
+      direction,
+    },
     [item(null, 40), item(null, 60), item(null, 30), item(null, 50)],
     `lanes under direction:${direction}`,
   );
@@ -942,14 +978,22 @@ for (const width of [480, 720, 1000]) {
     add(
       'auto-fit-collapse',
       'A',
-      grid({cols: [repeat('auto-fit', [minmax(px(120), fr(1))])], width, gap: 16}),
+      grid({
+        cols: [repeat('auto-fit', [minmax(px(120), fr(1))])],
+        width,
+        gap: 16,
+      }),
       Array.from({length: n}, (_, i) => item(null, 30 + i * 5)),
       `repeat(auto-fit, minmax(120px, 1fr)) at width ${width} with ${n} items`,
     );
     add(
       'auto-fill-vs-fit',
       'A',
-      grid({cols: [repeat('auto-fill', [minmax(px(120), fr(1))])], width, gap: 16}),
+      grid({
+        cols: [repeat('auto-fill', [minmax(px(120), fr(1))])],
+        width,
+        gap: 16,
+      }),
       Array.from({length: n}, (_, i) => item(null, 30 + i * 5)),
       `auto-fill counterpart at width ${width} with ${n} items`,
     );
@@ -995,11 +1039,19 @@ for (const width of [600, 900]) {
     'auto-fill-multi-track',
     'A',
     grid({
-      cols: [repeat('auto-fill', [minmax(px(90), fr(1)), minmax(px(150), fr(2))])],
+      cols: [
+        repeat('auto-fill', [minmax(px(90), fr(1)), minmax(px(150), fr(2))]),
+      ],
       width,
       gap: 16,
     }),
-    [item(null, 30), item(null, 40), item(null, 20), item(null, 50), item(null, 25)],
+    [
+      item(null, 30),
+      item(null, 40),
+      item(null, 20),
+      item(null, 50),
+      item(null, 25),
+    ],
     `two-track auto-fill pattern at width ${width}`,
   );
 }
@@ -1009,7 +1061,11 @@ for (const width of [600, 900]) {
 add(
   'auto-fill-overflow',
   'A',
-  grid({cols: [repeat('auto-fill', [minmax(px(400), fr(1))])], width: 300, gap: 10}),
+  grid({
+    cols: [repeat('auto-fill', [minmax(px(400), fr(1))])],
+    width: 300,
+    gap: 10,
+  }),
   [item(null, 30), item(null, 40)],
   'a pattern wider than the container still repeats once',
 );
@@ -1036,21 +1092,33 @@ for (const width of [500, 800]) {
   add(
     'auto-fit-x-explicit-line',
     'A',
-    grid({cols: [repeat('auto-fit', [minmax(px(120), fr(1))])], width, gap: 16}),
+    grid({
+      cols: [repeat('auto-fit', [minmax(px(120), fr(1))])],
+      width,
+      gap: 16,
+    }),
     [item(null, 30, {col: 3}), item(null, 40)],
     `auto-fit with an item pinned to line 3 at width ${width}`,
   );
   add(
     'auto-fit-x-full-bleed',
     'A',
-    grid({cols: [repeat('auto-fit', [minmax(px(120), fr(1))])], width, gap: 16}),
+    grid({
+      cols: [repeat('auto-fit', [minmax(px(120), fr(1))])],
+      width,
+      gap: 16,
+    }),
     [item(null, 30, {col: {span: 2}}), item(null, 40)],
     `auto-fit with a spanning item at width ${width}`,
   );
   add(
     'auto-fit-x-trailing-hole',
     'A',
-    grid({cols: [repeat('auto-fit', [minmax(px(120), fr(1))])], width, gap: 16}),
+    grid({
+      cols: [repeat('auto-fit', [minmax(px(120), fr(1))])],
+      width,
+      gap: 16,
+    }),
     [item(null, 30), item(null, 40, {col: 2})],
     `auto-fit with an interior hole at width ${width}`,
   );
@@ -1069,7 +1137,6 @@ for (const [name, track] of [
     `${name} track sizing`,
   );
 }
-
 
 // ---------------------------------------------------------------------------
 // A. Areas the corpus did not reach — added specifically to hunt for bugs in
@@ -1151,19 +1218,18 @@ for (const span of [2, 3]) {
     'span-across-intrinsic',
     'A',
     grid({cols: [auto(), auto(), auto()], gap: 10, width: null}),
-    [
-      item(40, 20),
-      item(40, 20),
-      item(40, 20),
-      item(300, 20, {col: {span}}),
-    ],
+    [item(40, 20), item(40, 20), item(40, 20), item(300, 20, {col: {span}})],
     `a wide item spanning ${span} auto tracks distributes its size`,
   );
   add(
     'span-across-minmax',
     'A',
     grid({
-      cols: [minmax(px(50), auto()), minmax(px(50), auto()), minmax(px(50), auto())],
+      cols: [
+        minmax(px(50), auto()),
+        minmax(px(50), auto()),
+        minmax(px(50), auto()),
+      ],
       gap: 10,
       width: null,
     }),
@@ -1239,7 +1305,6 @@ add(
   'a zero track next to an fr with no gap',
 );
 
-
 // ---------------------------------------------------------------------------
 // A. The intricate corners of §12: spanning items crossing flexible tracks,
 // baseline alignment, and fr floors that force overflow. These are the parts
@@ -1296,11 +1361,7 @@ for (const alignItems of ['baseline', 'start']) {
       alignItems,
       rows: [auto()],
     }),
-    [
-      item(40, 30, {p: 10}),
-      item(40, 60, {p: 20}),
-      item(40, 20, {p: 5}),
-    ],
+    [item(40, 30, {p: 10}), item(40, 60, {p: 20}), item(40, 20, {p: 5})],
     `align-items:${alignItems} with items of differing height and padding`,
   );
 }
@@ -1312,7 +1373,10 @@ for (const ratio of [1, 2]) {
     'item-aspect-ratio',
     'A',
     grid({cols: [fr(1), fr(1)], gap: 10, width: 600}),
-    [item(null, null, {aspectRatio: ratio}), item(null, null, {aspectRatio: ratio})],
+    [
+      item(null, null, {aspectRatio: ratio}),
+      item(null, null, {aspectRatio: ratio}),
+    ],
     `items with aspect-ratio ${ratio} in fr tracks`,
   );
 }
@@ -1344,7 +1408,6 @@ for (const alignContent of ['start', 'center', 'end', 'space-between']) {
   );
 }
 
-
 // fit-content(x) is max(min-content, min(max-content, x)).
 //
 // These pass, but they do NOT discriminate the `x` ceiling, and it would be
@@ -1354,8 +1417,8 @@ for (const alignContent of ['start', 'center', 'end', 'space-between']) {
 // content that reflows — which the corpus deliberately avoids, so that no case
 // depends on a font. See DOM-CSS-LIMITATION(grid-fit-content-limit).
 for (const [limit, itemWidth] of [
-  [140, 90],  // limit does not bind: expect the content width
-  [50, 90],   // limit binds: expect the limit
+  [140, 90], // limit does not bind: expect the content width
+  [50, 90], // limit binds: expect the limit
   [200, 240], // limit binds against a wider item
 ]) {
   add(
@@ -1366,7 +1429,6 @@ for (const [limit, itemWidth] of [
     `fit-content(${limit}px) around a ${itemWidth}px item`,
   );
 }
-
 
 // ---------------------------------------------------------------------------
 // A. grid-auto-flow: dense — css-grid-2 §8.5
@@ -1426,7 +1488,6 @@ for (const dense of [false, true]) {
     `grid-auto-flow: ${flow} with no holes to fill`,
   );
 }
-
 
 // ---------------------------------------------------------------------------
 // A. grid-auto-flow: column — css-grid-2 §8.5
@@ -1494,7 +1555,6 @@ for (const flow of ['row', 'column', 'row dense', 'column dense']) {
     `grid-auto-flow: ${flow} creating implicit tracks`,
   );
 }
-
 
 // ---------------------------------------------------------------------------
 // A. grid-template-areas — css-grid-2 §7.3
@@ -1578,7 +1638,6 @@ add(
 // outside the grid rather than flowing into it. We fall back to auto
 // placement instead. See DOM-CSS-LIMITATION(grid-unknown-area-name); a case
 // asserting our behaviour would be asserting the divergence, not the spec.
-
 
 // ---------------------------------------------------------------------------
 // B. Lanes over CONTENT-SIZED items
@@ -1681,7 +1740,6 @@ add(
   'explicit and content-sized items in one container',
 );
 
-
 // Aspect-ratio items that ALSO have content and padding — which is what a real
 // gallery tile is, and what the demo screen actually renders. The visual pass
 // showed every tile coming out the same height there despite ratios varying
@@ -1701,5 +1759,311 @@ for (const ratio of [1.5, 0.75]) {
     `aspect-ratio ${ratio} tiles with padding and content`,
   );
 }
+
+// ---------------------------------------------------------------------------
+// §6.3 Stacking-axis content distribution
+//
+// The stacking axis has exactly one alignment subject — the whole stacking
+// range — so align-content moves all the items together, like a block. The
+// spec says the distributed values collapse to their fallbacks here, which is
+// the part an implementation is most likely to get wrong: space-between in a
+// lanes container must NOT spread the lanes out.
+//
+// The container is taller than its content so there is free space to move
+// into; without that every value would look identical and the case would
+// prove nothing.
+// ---------------------------------------------------------------------------
+
+// Safari agrees on the positional values. It does NOT agree on the
+// distributed ones: for space-around it shifts the content by 52.5 and for
+// space-evenly by 70, where a single alignment subject can only give the
+// fallback — center, i.e. 105. Those two numbers are what you get by treating
+// the deepest lane's item COUNT as the number of subjects, which is the grid
+// row-distribution rule leaking into an axis that has no rows. The spec is
+// unambiguous that there is only ever one subject here, so the corpus follows
+// the spec and marks Safari as unable to adjudicate.
+for (const alignContent of [
+  'start',
+  'center',
+  'end',
+  'stretch',
+  'space-between',
+]) {
+  add(
+    'lanes-stacking-content',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      height: 300,
+      alignContent,
+    }),
+    [item(null, 40), item(null, 60), item(null, 30), item(null, 50)],
+    `align-content:${alignContent} in the stacking axis`,
+  );
+}
+
+const DISTRIBUTED_DIVERGENCE =
+  'Safari distributes the stacking axis as if the lanes had rows (52.5 for ' +
+  'space-around, 70 for space-evenly); §6.3 has a single alignment subject, ' +
+  'so both fall back to center — half of 300 - 90 = 105';
+
+for (const alignContent of ['space-around', 'space-evenly']) {
+  add(
+    'lanes-stacking-content-distributed',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      height: 300,
+      alignContent,
+    }),
+    [item(null, 40), item(null, 60), item(null, 30), item(null, 50)],
+    `align-content:${alignContent} falls back to center`,
+    stackingOverride(DISTRIBUTED_DIVERGENCE, [105, 105, 105, 145]),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §6.4 Stacking-axis self alignment
+//
+// Only items adjacent to a "gap" respond: the last item in a track, whose
+// alignment container reaches down to the lowest bottom edge among all the
+// tracks' last items, and an item immediately before a spanning one, whose
+// container is its own box plus the void the span leaves behind.
+//
+// Three lanes ending at different heights give every value something to do:
+// with `end`, the short lanes' last items drop to the deepest lane's bottom;
+// with `start` they stay put.
+//
+// Safari implements none of this — every value below produces identical
+// geometry there, including `align-self` on a single item — so the oracle
+// cannot adjudicate the section and these are pinned by
+// stacking-alignment-test.cpp instead, derived from §6.4 directly.
+// ---------------------------------------------------------------------------
+
+const STACKING_ALIGN_DIVERGENCE =
+  'Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: ' +
+  'every value lays out identically there';
+
+// The five items settle at y = 0, 0, 0, 40, 50, and only two of them have a
+// void to move into — item1 is last in lane 1 with 30 to spare, item4 is last
+// in lane 0 with 20. `start` and `stretch` leave both where they are, which
+// happens to be what Safari produces for every value, so those two cases can
+// still be pinned to it.
+for (const [alignItems, y] of [
+  ['start', null],
+  ['stretch', null],
+  ['center', [0, 15, 0, 40, 60]],
+  ['end', [0, 30, 0, 40, 70]],
+]) {
+  add(
+    'lanes-stacking-align',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      alignItems,
+    }),
+    [
+      item(null, 40),
+      item(null, 60),
+      item(null, 30),
+      item(null, 50),
+      item(null, 20),
+    ],
+    `align-items:${alignItems} on lanes ending at different depths`,
+    y == null ? undefined : stackingOverride(STACKING_ALIGN_DIVERGENCE, y),
+  );
+}
+
+// align-self overrides align-items for one item only. The other lanes' last
+// items must not move: "alignment of an item does not affect the size or
+// position of other items' alignment containers".
+// Without a fifth item, item0 is the last in lane 0 and has the whole
+// 90 - 40 = 50 to itself; the other three must not budge.
+for (const [alignSelf, y] of [
+  ['end', [50, 0, 0, 40]],
+  ['center', [25, 0, 0, 40]],
+]) {
+  add(
+    'lanes-stacking-align-self',
+    'B',
+    lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0}),
+    [
+      item(null, 40, {alignSelf}),
+      item(null, 60),
+      item(null, 30),
+      item(null, 50),
+    ],
+    `align-self:${alignSelf} on one item only`,
+    stackingOverride(STACKING_ALIGN_DIVERGENCE, y),
+  );
+}
+
+// A spanning item creates the interior gap: the lanes it covers must all be
+// clear before it can start, so whichever lane was shortest is left with a
+// void between its last item and the span. That item — not just the final one
+// in the track — is what §6.4 says responds to alignment.
+// The span waits for the deepest lane, max(50, 70, 40) = 70, so items 0 and 2
+// are left 20 and 30 short of it. Under `end` they drop to meet it; the item
+// already flush against it, and the span itself, cannot move.
+for (const [alignItems, y] of [
+  ['start', null],
+  ['end', [20, 0, 30, 70, 105]],
+]) {
+  add(
+    'lanes-stacking-align-span',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      alignItems,
+    }),
+    [
+      item(null, 40),
+      item(null, 60),
+      item(null, 30),
+      item(null, 25, {col: {span: 3}}),
+      item(null, 20),
+    ],
+    `align-items:${alignItems} with a spanning item leaving a void`,
+    y == null ? undefined : stackingOverride(STACKING_ALIGN_DIVERGENCE, y),
+  );
+}
+
+// Content-sized items under `stretch`: whether the alignment container's
+// extra room grows the item or only moves it is the one question the
+// fixed-height cases above cannot answer.
+add(
+  'lanes-stacking-align-stretch-auto',
+  'B',
+  lanes({
+    cols: [fr(1), fr(1), fr(1)],
+    gap: 10,
+    flowTolerance: 0,
+    alignItems: 'stretch',
+  }),
+  [contentItem(40), contentItem(60), contentItem(30), contentItem(50)],
+  'align-items:stretch on auto-height items in lanes',
+);
+
+// §6.4 in a BRICK layout, where the stacking axis is the inline one. Same
+// rule, different properties: `justify-items` rather than `align-items`, and
+// the void opens to the item's right rather than below it. Worth its own case
+// because the implementation has a separate branch for it, and a sign error
+// there would only ever show up here.
+//
+//   two 100px rows, 10px gap, items 40 / 60 / 30 wide filling their row
+//     item0 -> row 0 at x=0, run [50, 0]
+//     item1 -> row 1 at x=0, run [50, 70]
+//     item2 -> shortest is row 0 at 50, so x=50, run [90, 70]
+//
+//   right edges 40, 60, 80; the stacking range is 0..80
+//     item0  row 0, followed by item2 at 50 -> 50 - 40 - 10 = 0
+//     item1  row 1, last                    -> 80 - 60     = 20
+//     item2  row 0, last                    -> 80 - 80     = 0
+//
+// so only item1 moves, and `end` moves it by exactly 20.
+for (const [justifyItems, x] of [
+  ['start', null],
+  ['end', [0, 20, 50]],
+]) {
+  add(
+    'lanes-brick-stacking-align',
+    'B',
+    lanes({
+      rows: [px(100), px(100)],
+      gap: 10,
+      flowTolerance: 0,
+      justifyItems,
+    }),
+    [item(40, null), item(60, null), item(30, null)],
+    `justify-items:${justifyItems} in a brick layout`,
+    x == null ? undefined : stackingOverride(STACKING_ALIGN_DIVERGENCE, x, 'x'),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §5 Sizing grid containers
+//
+// The stacking axis is the longest lane unless the container was given a size
+// of its own. min-/max- are the interesting halves: a max that bites has to
+// clamp the container WITHOUT moving the items, and a min that bites has to
+// leave the lanes where they are and simply make the box taller.
+// ---------------------------------------------------------------------------
+
+for (const [key, value] of [
+  ['maxHeight', 60],
+  ['minHeight', 200],
+  ['maxWidth', 400],
+  ['minWidth', 800],
+]) {
+  add(
+    'lanes-container-min-max',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      [key]: value,
+    }),
+    [item(null, 40), item(null, 60), item(null, 30), item(null, 50)],
+    `${key}: ${value} on a lanes container`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §8 Absolute positioning
+//
+// An out-of-flow child takes no part in placement — the lanes must come out
+// exactly as if it were not there — but it still has to be laid out. Both
+// halves matter: the first is what the placement algorithm must ignore, the
+// second is what an implementation forgets, because skipping the child during
+// collection is the natural way to write the first.
+// ---------------------------------------------------------------------------
+
+for (const [top, left] of [
+  [20, 30],
+  [0, 0],
+]) {
+  add(
+    'lanes-absolute',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      positioned: true,
+    }),
+    [
+      item(null, 40),
+      item(null, 60),
+      item(null, 30),
+      item(50, 25, {absolute: true, top, left}),
+      item(null, 50),
+    ],
+    `an absolutely-positioned child at ${top},${left} is out of flow`,
+  );
+}
+
+// The same shape with `display: none` on a child, which must also be ignored
+// by placement — and left with no stale geometry of its own.
+add(
+  'lanes-display-none',
+  'B',
+  lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0}),
+  [
+    item(null, 40),
+    item(null, 60),
+    item(null, 30, {displayNone: true}),
+    item(null, 50),
+  ],
+  'a display:none child takes no lane',
+);
 
 module.exports = {cases, px, pct, fr, auto, minmax};
