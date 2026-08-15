@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <yoga/style/FlowTolerance.h>
 #include <yoga/style/GridAutoFlow.h>
 #include <yoga/style/GridTemplateAreas.h>
 #include <string>
@@ -34,6 +35,9 @@ struct GridStyle {
   GridTrackList autoRows{};
 
   GridAutoFlow autoFlow{GridAutoFlow::Row};
+
+  // css-grid-3: the lane placement tie threshold.
+  FlowTolerance flowTolerance{};
 
   // Container: the named areas. Item: the area it asked for by name.
   GridTemplateAreas templateAreas{};
