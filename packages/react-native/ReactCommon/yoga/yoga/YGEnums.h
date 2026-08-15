@@ -91,7 +91,9 @@ YG_ENUM_DECL(
     YGGridTrackTypePoints,
     YGGridTrackTypePercent,
     YGGridTrackTypeFr,
-    YGGridTrackTypeMinmax)
+    YGGridTrackTypeMinmax,
+    YGGridTrackTypeMaxContent,
+    YGGridTrackTypeFitContent)
 
 YG_ENUM_DECL(
     YGGutter,
