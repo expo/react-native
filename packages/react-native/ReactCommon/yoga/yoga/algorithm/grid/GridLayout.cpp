@@ -8,10 +8,54 @@
 #include <yoga/algorithm/AbsoluteLayout.h>
 #include <yoga/algorithm/BoundAxis.h>
 #include <yoga/algorithm/TrailingPosition.h>
+#include <yoga/algorithm/GridAutoRepeat.h>
 #include <yoga/algorithm/grid/GridLayout.h>
 #include <yoga/algorithm/grid/TrackSizing.h>
 
 namespace facebook::yoga {
+
+namespace {
+
+// What `auto-fill` and `auto-fit` repetitions are counted against
+// (css-grid-2 §7.2.3.2): the grid container's definite size, else its definite
+// maximum size, else its definite minimum size (the fewest repetitions that
+// fill it), else nothing, which repeats the pattern once. A container being
+// sized by its content, as a flex item that is not stretched is, has no
+// definite size yet; counting against the space it was offered let such a
+// grid claim every track that space could hold, and grow wide enough to hold
+// them. The layout that follows at the size it settles on counts again.
+struct AutoRepeatSpace {
+  float size;
+  bool coverMinimum;
+};
+
+AutoRepeatSpace autoRepeatSpace(
+    const yoga::Node* node,
+    Direction direction,
+    Dimension dimension,
+    bool isDefinite,
+    float availableInnerSize,
+    float paddingAndBorder,
+    float ownerSize,
+    float ownerWidth) {
+  if (isDefinite) {
+    return {availableInnerSize, false};
+  }
+  const auto& style = node->style();
+  const FloatOptional maxSize =
+      style.resolvedMaxDimension(direction, dimension, ownerSize, ownerWidth);
+  if (maxSize.isDefined()) {
+    return {std::max(0.0f, maxSize.unwrap() - paddingAndBorder), false};
+  }
+  const FloatOptional minSize =
+      style.resolvedMinDimension(direction, dimension, ownerSize, ownerWidth);
+  if (minSize.isDefined() && minSize.unwrap() > paddingAndBorder) {
+    return {minSize.unwrap() - paddingAndBorder, true};
+  }
+  return {YGUndefined, false};
+}
+
+} // namespace
 
 void calculateGridLayoutInternal(
     Node* node,
@@ -65,9 +109,218 @@ void calculateGridLayoutInternal(
   // 11. Grid Layout Algorithm
   // Step 1: Run the Grid Item Placement Algorithm to resolve the placement of
   // all grid items in the grid.
-  auto autoPlacement = ResolvedAutoPlacement::resolveGridItemPlacements(node);
+  // Expand repeat(auto-fill|auto-fit, ...) against the container's content
+  // box FIRST: line numbering, negative line resolution, placement and track
+  // sizing are all defined against the expanded explicit grid
+  // (css-grid-2 §7.2.3.1).
+  const float columnGap =
+      nodeStyle.computeGapForAxis(FlexDirection::Row, availableInnerWidth);
+  const float rowGap =
+      nodeStyle.computeGapForAxis(FlexDirection::Column, availableInnerHeight);
+  const AutoRepeatSpace repeatColumns = autoRepeatSpace(
+      node,
+      direction,
+      Dimension::Width,
+      widthIsDefinite,
+      availableInnerWidth,
+      paddingAndBorderInline,
+      ownerWidth,
+      ownerWidth);
+  const AutoRepeatSpace repeatRows = autoRepeatSpace(
+      node,
+      direction,
+      Dimension::Height,
+      heightIsDefinite,
+      availableInnerHeight,
+      paddingAndBorderBlock,
+      ownerHeight,
+      ownerWidth);
+  const GridTrackList expandedColumns = expandAutoRepeat(
+      nodeStyle.gridTemplateColumns(),
+      nodeStyle.gridTemplateColumnsAutoRepeat(),
+      repeatColumns.size,
+      columnGap,
+      repeatColumns.coverMinimum);
+  const GridTrackList expandedRows = expandAutoRepeat(
+      nodeStyle.gridTemplateRows(),
+      nodeStyle.gridTemplateRowsAutoRepeat(),
+      repeatRows.size,
+      rowGap,
+      repeatRows.coverMinimum);
+
+  auto autoPlacement = ResolvedAutoPlacement::resolveGridItemPlacements(
+      node, expandedColumns.size(), expandedRows.size());
+
+  // §7.2.3.1 auto-fit: after placement, repeated tracks that hold no item
+  // collapse. A collapsed track is 0px wide AND the gutters either side of it
+  // merge into one, so its total contribution — track plus one gutter — is
+  // nothing at all; dropping it from the list produces the same geometry. It
+  // is also safe against explicit placement, because a track that any item
+  // occupies or spans is by definition not empty, so no line an item refers to
+  // can be dropped.
+  auto collapseAutoFit = [&](const GridTrackList& expanded,
+                             const GridAutoRepeat& autoRepeat,
+                             const GridTrackList& authored,
+                             const AutoRepeatSpace& space,
+                             float gap,
+                             bool isColumnAxis) {
+    const auto range = autoRepeatRange(
+        authored, autoRepeat, space.size, gap, space.coverMinimum);
+    if (!range.collapsible || expanded.empty()) {
+      return expanded;
+    }
+    // Item track indices are offset by the implicit tracks that were added
+    // before the explicit grid.
+    const auto offset = static_cast<int64_t>(
+        isColumnAxis ? -autoPlacement.minColumnStart
+                     : -autoPlacement.minRowStart);
+    std::vector<bool> occupied(expanded.size(), false);
+    for (const auto& gridItem : autoPlacement.gridItems) {
+      const size_t start =
+          isColumnAxis ? gridItem.columnStart : gridItem.rowStart;
+      const size_t end = isColumnAxis ? gridItem.columnEnd : gridItem.rowEnd;
+      for (size_t track = start; track < end; track++) {
+        const int64_t index = static_cast<int64_t>(track) - offset;
+        if (index >= 0 && index < static_cast<int64_t>(expanded.size())) {
+          occupied[static_cast<size_t>(index)] = true;
+        }
+      }
+    }
+    GridTrackList collapsed;
+    collapsed.reserve(expanded.size());
+    for (size_t i = 0; i < expanded.size(); i++) {
+      const bool isRepeated = i >= range.begin && i < range.end;
+      if (isRepeated && !occupied[i]) {
+        continue;
+      }
+      collapsed.push_back(expanded[i]);
+    }
+    // An empty grid still has one track to place into.
+    if (collapsed.empty()) {
+      collapsed.push_back(expanded.front());
+    }
+    return collapsed;
+  };
+
+  const GridTrackList fittedColumns = collapseAutoFit(
+      expandedColumns,
+      nodeStyle.gridTemplateColumnsAutoRepeat(),
+      nodeStyle.gridTemplateColumns(),
+      repeatColumns,
+      columnGap,
+      /* isColumnAxis */ true);
+  const GridTrackList fittedRows = collapseAutoFit(
+      expandedRows,
+      nodeStyle.gridTemplateRowsAutoRepeat(),
+      nodeStyle.gridTemplateRows(),
+      repeatRows,
+      rowGap,
+      /* isColumnAxis */ false);
+
+  // Collapsing removes tracks, so the items' track indices have to be shifted
+  // to match the compacted list. Placement is deliberately NOT redone: a
+  // collapsed track keeps its grid line numbers (§7.2.3.1), so re-resolving an
+  // explicit `grid-column: 3` against the shorter list would move the item to
+  // a different track entirely.
+  auto remapPlacement = [&](const GridTrackList& expanded,
+                            const GridTrackList& fitted,
+                            bool isColumnAxis) {
+    if (fitted.size() == expanded.size()) {
+      return;
+    }
+    const auto offset = static_cast<int64_t>(
+        isColumnAxis ? -autoPlacement.minColumnStart
+                     : -autoPlacement.minRowStart);
+    const auto& gridItems = autoPlacement.gridItems;
+
+    // Which expanded explicit tracks survived, in full-track coordinates.
+    const size_t fullCount = static_cast<size_t>(
+        offset +
+        static_cast<int64_t>(
+            isColumnAxis ? autoPlacement.maxColumnEnd
+                         : autoPlacement.maxRowEnd));
+    std::vector<bool> kept(fullCount, true);
+    {
+      const auto range = isColumnAxis
+          ? autoRepeatRange(
+                nodeStyle.gridTemplateColumns(),
+                nodeStyle.gridTemplateColumnsAutoRepeat(),
+                repeatColumns.size,
+                columnGap,
+                repeatColumns.coverMinimum)
+          : autoRepeatRange(
+                nodeStyle.gridTemplateRows(),
+                nodeStyle.gridTemplateRowsAutoRepeat(),
+                repeatRows.size,
+                rowGap,
+                repeatRows.coverMinimum);
+      std::vector<bool> occupied(expanded.size(), false);
+      for (const auto& gridItem : gridItems) {
+        const size_t start =
+            isColumnAxis ? gridItem.columnStart : gridItem.rowStart;
+        const size_t end = isColumnAxis ? gridItem.columnEnd : gridItem.rowEnd;
+        for (size_t track = start; track < end; track++) {
+          const int64_t index = static_cast<int64_t>(track) - offset;
+          if (index >= 0 && index < static_cast<int64_t>(expanded.size())) {
+            occupied[static_cast<size_t>(index)] = true;
+          }
+        }
+      }
+      for (size_t i = 0; i < expanded.size(); i++) {
+        const bool isRepeated = i >= range.begin && i < range.end;
+        if (isRepeated && !occupied[i]) {
+          const auto full = static_cast<int64_t>(i) + offset;
+          if (full >= 0 && full < static_cast<int64_t>(kept.size())) {
+            kept[static_cast<size_t>(full)] = false;
+          }
+        }
+      }
+    }
+
+    // Prefix sums turn old line indices into new ones: newIndex[i] is how
+    // many tracks survive before line i.
+    std::vector<size_t> newIndex(kept.size() + 1, 0);
+    size_t running = 0;
+    for (size_t i = 0; i < kept.size(); i++) {
+      newIndex[i] = running;
+      if (kept[i]) {
+        running++;
+      }
+    }
+    newIndex[kept.size()] = running;
+
+    auto mapLine = [&](size_t line) {
+      return line < newIndex.size() ? newIndex[line] : running;
+    };
+    for (auto& gridItem : autoPlacement.gridItems) {
+      if (isColumnAxis) {
+        const size_t start = mapLine(gridItem.columnStart);
+        size_t end = mapLine(gridItem.columnEnd);
+        // An item never collapses to nothing: it kept at least its own track.
+        gridItem.columnStart = start;
+        gridItem.columnEnd = end > start ? end : start + 1;
+      } else {
+        const size_t start = mapLine(gridItem.rowStart);
+        size_t end = mapLine(gridItem.rowEnd);
+        gridItem.rowStart = start;
+        gridItem.rowEnd = end > start ? end : start + 1;
+      }
+    }
+    if (isColumnAxis) {
+      autoPlacement.maxColumnEnd = static_cast<int32_t>(
+          static_cast<int64_t>(running) - offset);
+    } else {
+      autoPlacement.maxRowEnd =
+          static_cast<int32_t>(static_cast<int64_t>(running) - offset);
+    }
+  };
+
+  remapPlacement(expandedColumns, fittedColumns, /* isColumnAxis */ true);
+  remapPlacement(expandedRows, fittedRows, /* isColumnAxis */ false);
+
   // Create the grid tracks (auto and explicit = implicit grid)
-  auto gridTracks = createGridTracks(node, autoPlacement);
+  auto gridTracks =
+      createGridTracks(node, autoPlacement, fittedColumns, fittedRows);
   // At this point, we have grid items final positions and implicit grid tracks
 
   // Step 2: Find the size of the grid container, per § 5.2 Sizing Grid
@@ -487,9 +740,13 @@ void calculateGridLayoutInternal(
 
 GridTracks createGridTracks(
     yoga::Node* node,
-    const ResolvedAutoPlacement& autoPlacement) {
-  auto gridExplicitColumns = node->style().gridTemplateColumns();
-  auto gridExplicitRows = node->style().gridTemplateRows();
+    const ResolvedAutoPlacement& autoPlacement,
+    const GridTrackList& expandedColumns,
+    const GridTrackList& expandedRows) {
+  // The EXPANDED explicit lists, not style's authored ones: any
+  // repeat(auto-fill|auto-fit, ...) was resolved by the caller.
+  const auto& gridExplicitColumns = expandedColumns;
+  const auto& gridExplicitRows = expandedRows;
 
   std::vector<GridTrack> columnTracks;
   std::vector<GridTrack> rowTracks;
