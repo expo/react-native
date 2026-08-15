@@ -30,6 +30,7 @@
 #include <yoga/enums/Unit.h>
 #include <yoga/enums/Wrap.h>
 #include <yoga/numeric/FloatOptional.h>
+#include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridLine.h>
 #include <yoga/style/GridStyle.h>
 #include <yoga/style/GridTrack.h>
@@ -276,6 +277,23 @@ class YG_EXPORT Style {
   }
   void setGridAutoRowAt(size_t index, GridTrackSize value) {
     grid_.ensure().autoRows[index] = value;
+  }
+
+  // https://www.w3.org/TR/css-grid-2/#auto-repeat — where the single
+  // `repeat(auto-fill|auto-fit, ...)` sits inside the authored track list, if
+  // there is one. Layout expands it once the container size is known.
+  const GridAutoRepeat& gridTemplateColumnsAutoRepeat() const {
+    return grid_.get().templateColumnsAutoRepeat;
+  }
+  void setGridTemplateColumnsAutoRepeat(GridAutoRepeat value) {
+    grid_.ensure().templateColumnsAutoRepeat = value;
+  }
+
+  const GridAutoRepeat& gridTemplateRowsAutoRepeat() const {
+    return grid_.get().templateRowsAutoRepeat;
+  }
+  void setGridTemplateRowsAutoRepeat(GridAutoRepeat value) {
+    grid_.ensure().templateRowsAutoRepeat = value;
   }
 
   // Grid Item Properties
