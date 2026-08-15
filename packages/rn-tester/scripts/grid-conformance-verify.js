@@ -35,7 +35,9 @@ const expected = require(
 const platform = process.argv[2];
 const lanesOnly = process.argv.includes('--lanes');
 if (platform !== 'ios' && platform !== 'android') {
-  console.error('usage: node grid-conformance-verify.js <ios|android> [--lanes]');
+  console.error(
+    'usage: node grid-conformance-verify.js <ios|android> [--lanes]',
+  );
   process.exit(2);
 }
 
@@ -167,8 +169,12 @@ async function main() {
         failures.push(`${c.id} item[${i}]: never measured`);
         return;
       }
-      check(`item[${i}].x`, r.x, e.x);
-      check(`item[${i}].y`, r.y, e.y);
+      // A display:none item has no box, so only its emptiness is assertable.
+      // That it takes no lane is proved by where the OTHER items landed.
+      if (!c.items[i]?.displayNone) {
+        check(`item[${i}].x`, r.x, e.x);
+        check(`item[${i}].y`, r.y, e.y);
+      }
       check(`item[${i}].w`, r.w, e.w);
       check(`item[${i}].h`, r.h, e.h);
     });
