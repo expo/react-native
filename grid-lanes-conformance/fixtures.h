@@ -36,7 +36,7 @@ struct Case {
   float width, height;
   float gap, rowGap, colGap;
   float padding, border;
-  int autoFlowDense;  // 1 when grid-auto-flow includes `dense`
+  int autoFlow;  // the YGGridAutoFlow enum value
   float minWidth, maxWidth, minHeight, maxHeight;  // kUnset when absent
   float gapPercent;  // kUnset when absent
   const Track* autoRows; size_t autoRowCount;
@@ -2095,6 +2095,118 @@ static const Item kItems298[] = {
   {kUnset, 24.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {406.66f, 0.0f, 193.34f, 24.0f}},
   {kUnset, 24.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 34.0f, 193.33f, 24.0f}}
 };
+static const Track kCols299[] = {{TrackKind::Points, 90.0f, {}, {}}, {TrackKind::Points, 90.0f, {}, {}}, {TrackKind::Points, 90.0f, {}, {}}};
+static const Track kRows299[] = {{TrackKind::Points, 40.0f, {}, {}}, {TrackKind::Points, 40.0f, {}, {}}};
+static const Item kItems299[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {200.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 50.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 50.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {200.0f, 50.0f, 90.0f, 40.0f}}
+};
+static const Track kCols300[] = {{TrackKind::Points, 80.0f, {}, {}}, {TrackKind::Points, 80.0f, {}, {}}, {TrackKind::Points, 80.0f, {}, {}}};
+static const Track kRows300[] = {{TrackKind::Points, 30.0f, {}, {}}, {TrackKind::Points, 30.0f, {}, {}}, {TrackKind::Points, 30.0f, {}, {}}};
+static const Item kItems300[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Span, 2}, -1, {0.0f, 0.0f, 80.0f, 68.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {88.0f, 0.0f, 80.0f, 30.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Span, 2}, -1, {176.0f, 0.0f, 80.0f, 68.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {88.0f, 38.0f, 80.0f, 30.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 76.0f, 80.0f, 30.0f}}
+};
+static const Track kCols301[] = {{TrackKind::Points, 70.0f, {}, {}}};
+static const Track kRows301[] = {{TrackKind::Points, 40.0f, {}, {}}, {TrackKind::Points, 40.0f, {}, {}}};
+static const Item kItems301[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 70.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 50.0f, 70.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 100.0f, 70.0f, 0.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 110.0f, 70.0f, 0.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 120.0f, 70.0f, 0.0f}}
+};
+static const Track kCols302[] = {{TrackKind::Points, 90.0f, {}, {}}, {TrackKind::Points, 90.0f, {}, {}}, {TrackKind::Points, 90.0f, {}, {}}};
+static const Track kRows302[] = {{TrackKind::Points, 40.0f, {}, {}}, {TrackKind::Points, 40.0f, {}, {}}};
+static const Item kItems302[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 50.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 50.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {200.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {200.0f, 50.0f, 90.0f, 40.0f}}
+};
+static const Track kCols303[] = {{TrackKind::Points, 80.0f, {}, {}}, {TrackKind::Points, 80.0f, {}, {}}, {TrackKind::Points, 80.0f, {}, {}}};
+static const Track kRows303[] = {{TrackKind::Points, 30.0f, {}, {}}, {TrackKind::Points, 30.0f, {}, {}}, {TrackKind::Points, 30.0f, {}, {}}};
+static const Item kItems303[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Span, 2}, -1, {0.0f, 0.0f, 80.0f, 68.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 76.0f, 80.0f, 30.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Span, 2}, -1, {88.0f, 0.0f, 80.0f, 68.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {88.0f, 76.0f, 80.0f, 30.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {176.0f, 0.0f, 80.0f, 30.0f}}
+};
+static const Track kCols304[] = {{TrackKind::Points, 70.0f, {}, {}}};
+static const Track kRows304[] = {{TrackKind::Points, 40.0f, {}, {}}, {TrackKind::Points, 40.0f, {}, {}}};
+static const Item kItems304[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 70.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 50.0f, 70.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {80.0f, 0.0f, 255.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {80.0f, 50.0f, 255.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {345.0f, 0.0f, 255.0f, 40.0f}}
+};
+static const Track kCols305[] = {{TrackKind::Points, 90.0f, {}, {}}, {TrackKind::Points, 90.0f, {}, {}}, {TrackKind::Points, 90.0f, {}, {}}};
+static const Track kRows305[] = {{TrackKind::Points, 40.0f, {}, {}}, {TrackKind::Points, 40.0f, {}, {}}};
+static const Item kItems305[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {200.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 50.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 50.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {200.0f, 50.0f, 90.0f, 40.0f}}
+};
+static const Track kCols306[] = {{TrackKind::Points, 80.0f, {}, {}}, {TrackKind::Points, 80.0f, {}, {}}, {TrackKind::Points, 80.0f, {}, {}}};
+static const Track kRows306[] = {{TrackKind::Points, 30.0f, {}, {}}, {TrackKind::Points, 30.0f, {}, {}}, {TrackKind::Points, 30.0f, {}, {}}};
+static const Item kItems306[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Span, 2}, -1, {0.0f, 0.0f, 80.0f, 68.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {88.0f, 0.0f, 80.0f, 30.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Span, 2}, -1, {176.0f, 0.0f, 80.0f, 68.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {88.0f, 38.0f, 80.0f, 30.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 76.0f, 80.0f, 30.0f}}
+};
+static const Track kCols307[] = {{TrackKind::Points, 70.0f, {}, {}}};
+static const Track kRows307[] = {{TrackKind::Points, 40.0f, {}, {}}, {TrackKind::Points, 40.0f, {}, {}}};
+static const Item kItems307[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 70.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 50.0f, 70.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 100.0f, 70.0f, 0.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 110.0f, 70.0f, 0.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 120.0f, 70.0f, 0.0f}}
+};
+static const Track kCols308[] = {{TrackKind::Points, 90.0f, {}, {}}, {TrackKind::Points, 90.0f, {}, {}}, {TrackKind::Points, 90.0f, {}, {}}};
+static const Track kRows308[] = {{TrackKind::Points, 40.0f, {}, {}}, {TrackKind::Points, 40.0f, {}, {}}};
+static const Item kItems308[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 50.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 50.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {200.0f, 0.0f, 90.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {200.0f, 50.0f, 90.0f, 40.0f}}
+};
+static const Track kCols309[] = {{TrackKind::Points, 80.0f, {}, {}}, {TrackKind::Points, 80.0f, {}, {}}, {TrackKind::Points, 80.0f, {}, {}}};
+static const Track kRows309[] = {{TrackKind::Points, 30.0f, {}, {}}, {TrackKind::Points, 30.0f, {}, {}}, {TrackKind::Points, 30.0f, {}, {}}};
+static const Item kItems309[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Span, 2}, -1, {0.0f, 0.0f, 80.0f, 68.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 76.0f, 80.0f, 30.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Span, 2}, -1, {88.0f, 0.0f, 80.0f, 68.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {88.0f, 76.0f, 80.0f, 30.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {176.0f, 0.0f, 80.0f, 30.0f}}
+};
+static const Track kCols310[] = {{TrackKind::Points, 70.0f, {}, {}}};
+static const Track kRows310[] = {{TrackKind::Points, 40.0f, {}, {}}, {TrackKind::Points, 40.0f, {}, {}}};
+static const Item kItems310[] = {
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 70.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 50.0f, 70.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {80.0f, 0.0f, 255.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {80.0f, 50.0f, 255.0f, 40.0f}},
+  {kUnset, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {345.0f, 0.0f, 255.0f, 40.0f}}
+};
 
 static const Case kCases[] = {
   {"tracks-px-0001", "tracks-px", "three identical px tracks", "A", nullptr, 600.0f, kUnset, kUnset, kUnset, kUnset, 0.0f, 0.0f, 0, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols0, 3, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems0, 3, 600.0f, 30.0f},
@@ -2395,8 +2507,20 @@ static const Case kCases[] = {
   {"auto-flow-dense-basic-0296", "auto-flow-dense-basic", "grid-auto-flow: row dense with two spanning items", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 1, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols295, 3, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems295, 4, 600.0f, 70.0f},
   {"auto-flow-dense-mixed-0297", "auto-flow-dense-mixed", "grid-auto-flow: row dense over four columns with mixed spans", "A", nullptr, 600.0f, kUnset, 8.0f, kUnset, kUnset, 0.0f, 0.0f, 1, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols296, 4, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems296, 6, 600.0f, 88.0f},
   {"auto-flow-dense-explicit-0298", "auto-flow-dense-explicit", "grid-auto-flow: row dense around an explicitly placed item", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 1, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols297, 3, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems297, 4, 600.0f, 58.0f},
-  {"auto-flow-dense-noop-0299", "auto-flow-dense-noop", "grid-auto-flow: row dense with no holes to fill", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 1, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols298, 3, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems298, 4, 600.0f, 58.0f}
+  {"auto-flow-dense-noop-0299", "auto-flow-dense-noop", "grid-auto-flow: row dense with no holes to fill", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 1, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols298, 3, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems298, 4, 600.0f, 58.0f},
+  {"auto-flow-column-basic-0300", "auto-flow-column-basic", "grid-auto-flow: row filling a 3x2 grid", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 0, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols299, 3, kRows299, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems299, 6, 600.0f, 90.0f},
+  {"auto-flow-column-spans-0301", "auto-flow-column-spans", "grid-auto-flow: row with row-spanning items", "A", nullptr, 600.0f, kUnset, 8.0f, kUnset, kUnset, 0.0f, 0.0f, 0, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols300, 3, kRows300, 3, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems300, 5, 600.0f, 106.0f},
+  {"auto-flow-column-implicit-0302", "auto-flow-column-implicit", "grid-auto-flow: row creating implicit tracks", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 0, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols301, 1, kRows301, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems301, 5, 600.0f, 120.0f},
+  {"auto-flow-column-basic-0303", "auto-flow-column-basic", "grid-auto-flow: column filling a 3x2 grid", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 2, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols302, 3, kRows302, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems302, 6, 600.0f, 90.0f},
+  {"auto-flow-column-spans-0304", "auto-flow-column-spans", "grid-auto-flow: column with row-spanning items", "A", nullptr, 600.0f, kUnset, 8.0f, kUnset, kUnset, 0.0f, 0.0f, 2, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols303, 3, kRows303, 3, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems303, 5, 600.0f, 106.0f},
+  {"auto-flow-column-implicit-0305", "auto-flow-column-implicit", "grid-auto-flow: column creating implicit tracks", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 2, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols304, 1, kRows304, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems304, 5, 600.0f, 90.0f},
+  {"auto-flow-column-basic-0306", "auto-flow-column-basic", "grid-auto-flow: row dense filling a 3x2 grid", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 1, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols305, 3, kRows305, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems305, 6, 600.0f, 90.0f},
+  {"auto-flow-column-spans-0307", "auto-flow-column-spans", "grid-auto-flow: row dense with row-spanning items", "A", nullptr, 600.0f, kUnset, 8.0f, kUnset, kUnset, 0.0f, 0.0f, 1, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols306, 3, kRows306, 3, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems306, 5, 600.0f, 106.0f},
+  {"auto-flow-column-implicit-0308", "auto-flow-column-implicit", "grid-auto-flow: row dense creating implicit tracks", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 1, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols307, 1, kRows307, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems307, 5, 600.0f, 120.0f},
+  {"auto-flow-column-basic-0309", "auto-flow-column-basic", "grid-auto-flow: column dense filling a 3x2 grid", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 3, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols308, 3, kRows308, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems308, 6, 600.0f, 90.0f},
+  {"auto-flow-column-spans-0310", "auto-flow-column-spans", "grid-auto-flow: column dense with row-spanning items", "A", nullptr, 600.0f, kUnset, 8.0f, kUnset, kUnset, 0.0f, 0.0f, 3, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols309, 3, kRows309, 3, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems309, 5, 600.0f, 106.0f},
+  {"auto-flow-column-implicit-0311", "auto-flow-column-implicit", "grid-auto-flow: column dense creating implicit tracks", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, 3, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols310, 1, kRows310, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems310, 5, 600.0f, 90.0f}
 };
-static const size_t kCaseCount = 299;
+static const size_t kCaseCount = 311;
 
 } // namespace gridconf
