@@ -43,8 +43,27 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
-// In Bridgeless mode, in dev, enable static view config validator
-if (global.RN$Bridgeless === true && __DEV__) {
+// In Bridgeless mode, in dev, enable the static view config validator — but
+// only when the NATIVE view configs it validates against can actually be
+// reached.
+//
+// `verify: true` makes NativeComponentRegistry fetch the native config for
+// every component so it can be compared with the static one. In bridgeless
+// mode that goes through UIManager.getViewManagerConfig, which is only
+// available when the legacy interop layer is turned on. Without it, every
+// component logs
+//
+//   [ReactNative Architecture][JS] 'getViewManagerConfig('RCTView')' is not
+//   available in the new React Native architecture...
+//
+// on every launch — seven errors before the app has rendered anything, and a
+// LogBox badge over whichever screen you opened. Nothing is validated in that
+// case either: the comparison has nothing to compare against.
+if (
+  global.RN$Bridgeless === true &&
+  __DEV__ &&
+  global.RN$LegacyInterop_UIManager_getConstants != null
+) {
   NativeComponentRegistry.setRuntimeConfigProvider(() => {
     return {
       native: false,

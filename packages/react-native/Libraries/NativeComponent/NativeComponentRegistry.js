@@ -149,7 +149,12 @@ export function getWithFallback_DEPRECATED<Config extends {...}>(
 
 function hasNativeViewConfig(name: string): boolean {
   invariant(getRuntimeConfig == null, 'Unexpected invocation!');
-  return UIManager.getViewManagerConfig(name) != null;
+  // `hasViewManagerConfig`, not `getViewManagerConfig(name) != null`: this is
+  // an existence check, and in the new architecture fetching the config to
+  // answer it logs a soft error advising exactly this call instead. The two
+  // are equivalent on the old architecture, where hasViewManagerConfig is
+  // defined as that same null check.
+  return UIManager.hasViewManagerConfig(name);
 }
 
 /**
