@@ -78,6 +78,10 @@ type ____LayoutStyle_Internal = Readonly<{
     // so authoring either was a type error even though it worked.
     | 'inline-flex'
     | 'inline-block'
+    // CSS Grid (css-grid-2). `grid` is block-level, `inline-grid` is the
+    // inline-level form; the inner display is grid either way.
+    | 'grid'
+    | 'inline-grid'
     | 'contents',
 
   /** `float` takes a box out of the normal flow and packs it against one side
@@ -554,7 +558,13 @@ type ____LayoutStyle_Internal = Readonly<{
   justifyContent?:
     | 'flex-start'
     | 'flex-end'
+    // css-align-3 `start`/`end`, the keywords CSS Grid is specified in terms
+    // of: they resolve against the writing mode rather than the flex
+    // direction. `stretch` is grid's initial behaviour for auto tracks.
+    | 'start'
+    | 'end'
     | 'center'
+    | 'stretch'
     | 'space-between'
     | 'space-around'
     | 'space-evenly',
@@ -566,7 +576,14 @@ type ____LayoutStyle_Internal = Readonly<{
    *  See https://developer.mozilla.org/en-US/docs/Web/CSS/align-items
    *  for more details.
    */
-  alignItems?: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline',
+  alignItems?:
+    | 'flex-start'
+    | 'flex-end'
+    | 'start'
+    | 'end'
+    | 'center'
+    | 'stretch'
+    | 'baseline',
 
   /** `alignSelf` controls how a child aligns in the cross direction,
    *  overriding the `alignItems` of the parent. It works like `align-self`
@@ -575,7 +592,14 @@ type ____LayoutStyle_Internal = Readonly<{
    *  for more details.
    */
   alignSelf?:
-    'auto' | 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline',
+    | 'auto'
+    | 'flex-start'
+    | 'flex-end'
+    | 'start'
+    | 'end'
+    | 'center'
+    | 'stretch'
+    | 'baseline',
 
   /** `alignContent` controls how rows align in the cross direction,
    *  overriding the `alignContent` of the parent.
@@ -585,6 +609,8 @@ type ____LayoutStyle_Internal = Readonly<{
   alignContent?:
     | 'flex-start'
     | 'flex-end'
+    | 'start'
+    | 'end'
     | 'center'
     | 'stretch'
     | 'space-between'
@@ -690,6 +716,48 @@ type ____LayoutStyle_Internal = Readonly<{
    * between children may be larger than the gap value.
    * See https://developer.mozilla.org/en-US/docs/Web/CSS/gap for more details.
    */
+  /**
+   * CSS Grid track lists (css-grid-2 §7). Written as CSS, so the syntax that
+   * works on the web works here:
+   *
+   *   gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))'
+   *   gridTemplateColumns: '100px 1fr 2fr'
+   *   gridTemplateRows: 'repeat(3, minmax(60px, auto))'
+   *
+   * Supported sizing functions: <length>, <percentage>, <flex> (fr), auto,
+   * max-content, minmax(), fit-content(), and repeat() including auto-fill
+   * and auto-fit.
+   *
+   * Not yet supported: min-content as a MAXIMUM (it behaves as auto), named
+   * grid lines, and grid-template-areas.
+   */
+  gridTemplateColumns?: number | string,
+  gridTemplateRows?: number | string,
+  /**
+   * Sizes for implicit tracks — those created by items placed outside the
+   * explicit grid (css-grid-2 §7.5).
+   */
+  gridAutoColumns?: number | string,
+  gridAutoRows?: number | string,
+  /**
+   * Grid item placement (css-grid-2 §8): a line number, which may be
+   * negative to count from the end, or `span <n>`.
+   *
+   *   gridColumnStart: 2          gridColumnEnd: -1
+   *   gridColumnEnd: 'span 2'
+   *
+   * Line 0 is invalid and behaves as `auto`; a span below 1 clamps to 1.
+   */
+  gridColumnStart?: number | string,
+  gridColumnEnd?: number | string,
+  gridRowStart?: number | string,
+  gridRowEnd?: number | string,
+  /**
+   * Default in-track alignment for a grid container's items, on the inline
+   * axis (css-align-3). `justifySelf` overrides it for one item.
+   */
+  justifyItems?: 'start' | 'end' | 'center' | 'stretch',
+  justifySelf?: 'start' | 'end' | 'center' | 'stretch',
   rowGap?: number | string,
   columnGap?: number | string,
   gap?: number | string,
