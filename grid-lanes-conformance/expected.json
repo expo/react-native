@@ -6,9 +6,9 @@
   "flowTolerance": true,
   "flowToleranceInfinite": true
  },
- "caseCount": 311,
+ "caseCount": 315,
  "byTier": {
-  "A": 188,
+  "A": 192,
   "B": 108,
   "C": 15
  },
@@ -24886,6 +24886,326 @@
       "y": 0,
       "w": 255,
       "h": 40
+     }
+    ]
+   }
+  },
+  {
+   "id": "template-areas-basic-0312",
+   "group": "template-areas-basic",
+   "tier": "A",
+   "note": "a classic header / sidebar / main template",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 120
+     },
+     {
+      "t": "px",
+      "v": 120
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 60
+     }
+    ],
+    "gap": 10,
+    "areas": [
+     "header header",
+     "sidebar main"
+    ]
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "area": "header"
+    },
+    {
+     "w": null,
+     "h": null,
+     "area": "sidebar"
+    },
+    {
+     "w": null,
+     "h": null,
+     "area": "main"
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 110
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 250,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 50,
+      "w": 120,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 130,
+      "y": 50,
+      "w": 120,
+      "h": 60
+     }
+    ]
+   }
+  },
+  {
+   "id": "template-areas-equivalent-lines-0313",
+   "group": "template-areas-equivalent-lines",
+   "tier": "A",
+   "note": "the same placement by line number",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 120
+     },
+     {
+      "t": "px",
+      "v": 120
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 60
+     }
+    ],
+    "gap": 10
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "col": 1,
+     "colEnd": 3,
+     "row": 1
+    },
+    {
+     "w": null,
+     "h": null,
+     "col": 1,
+     "row": 2
+    },
+    {
+     "w": null,
+     "h": null,
+     "col": 2,
+     "row": 2
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 110
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 250,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 50,
+      "w": 120,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 130,
+      "y": 50,
+      "w": 120,
+      "h": 60
+     }
+    ]
+   }
+  },
+  {
+   "id": "template-areas-null-cells-0314",
+   "group": "template-areas-null-cells",
+   "tier": "A",
+   "note": "null cells leave a hole in the template",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     },
+     {
+      "t": "px",
+      "v": 80
+     }
+    ],
+    "rows": [
+     {
+      "t": "px",
+      "v": 40
+     },
+     {
+      "t": "px",
+      "v": 40
+     }
+    ],
+    "gap": 8,
+    "areas": [
+     "nav . aside",
+     "nav main aside"
+    ]
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "area": "nav"
+    },
+    {
+     "w": null,
+     "h": null,
+     "area": "main"
+    },
+    {
+     "w": null,
+     "h": null,
+     "area": "aside"
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 88
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 80,
+      "h": 88
+     },
+     {
+      "i": 1,
+      "x": 88,
+      "y": 48,
+      "w": 80,
+      "h": 40
+     },
+     {
+      "i": 2,
+      "x": 176,
+      "y": 0,
+      "w": 80,
+      "h": 88
+     }
+    ]
+   }
+  },
+  {
+   "id": "template-areas-sizes-grid-0315",
+   "group": "template-areas-sizes-grid",
+   "tier": "A",
+   "note": "the template alone defines a 2x2 explicit grid",
+   "container": {
+    "display": "grid",
+    "width": 400,
+    "gap": 10,
+    "areas": [
+     "a b",
+     "c d"
+    ]
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 30,
+     "area": "a"
+    },
+    {
+     "w": null,
+     "h": 30,
+     "area": "b"
+    },
+    {
+     "w": null,
+     "h": 30,
+     "area": "c"
+    },
+    {
+     "w": null,
+     "h": 30,
+     "area": "d"
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 400,
+     "h": 70
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 195,
+      "h": 30
+     },
+     {
+      "i": 1,
+      "x": 205,
+      "y": 0,
+      "w": 195,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 0,
+      "y": 40,
+      "w": 195,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 205,
+      "y": 40,
+      "w": 195,
+      "h": 30
      }
     ]
    }
