@@ -9,6 +9,7 @@
 
 #include <yoga/node/Node.h>
 #include <yoga/style/GridAutoFlow.h>
+#include <yoga/style/GridTemplateAreas.h>
 #include <yoga/style/GridLine.h>
 #include <array>
 #include <cstdint>
@@ -211,16 +212,67 @@ struct AutoPlacement {
     // and the resulting placements are swapped back on the way out. Nothing
     // between here and the return knows which flow it is running.
     const bool transposed = isColumnFlow(node->style().gridAutoFlow());
+
+    // An item placed into a named area resolves to the grid lines that bound
+    // it (css-grid-2 §8.1), so from here down it is indistinguishable from an
+    // item whose lines were written out longhand. Resolving it here — at the
+    // same seam the transposition uses — is what keeps named areas out of the
+    // placement algorithm entirely.
+    const auto& templateAreas = node->style().gridTemplateAreas();
+    auto areaOf = [&](const yoga::Node* c) -> const GridAreaRect* {
+      return templateAreas.empty() ? nullptr
+                                   : templateAreas.find(c->style().gridArea());
+    };
+    // A name that matches no area places the item against the first implicit
+    // line after the explicit grid in each axis, since every implicit line is
+    // taken to carry the name (css-grid-2 §8.3), so it lands in a new track
+    // outside the grid rather than flowing into it
+    auto namesUnknownArea = [&](const yoga::Node* c) {
+      return !c->style().gridArea().empty() && areaOf(c) == nullptr;
+    };
+    const auto firstImplicitColumnLine = static_cast<int32_t>(
+        (transposed ? explicitRowCount : explicitColumnCount) + 2);
+    const auto firstImplicitRowLine = static_cast<int32_t>(
+        (transposed ? explicitColumnCount : explicitRowCount) + 2);
+
     auto itemColumnStart = [&](const yoga::Node* c) {
+      if (const auto* area = areaOf(c)) {
+        return GridLine::fromInteger(
+            transposed ? area->rowStart : area->columnStart);
+      }
+      if (namesUnknownArea(c)) {
+        return GridLine::fromInteger(firstImplicitColumnLine);
+      }
       return transposed ? c->style().gridRowStart() : c->style().gridColumnStart();
     };
     auto itemColumnEnd = [&](const yoga::Node* c) {
+      if (const auto* area = areaOf(c)) {
+        return GridLine::fromInteger(
+            transposed ? area->rowEnd : area->columnEnd);
+      }
+      if (namesUnknownArea(c)) {
+        return GridLine::fromInteger(firstImplicitColumnLine + 1);
+      }
       return transposed ? c->style().gridRowEnd() : c->style().gridColumnEnd();
     };
     auto itemRowStart = [&](const yoga::Node* c) {
+      if (const auto* area = areaOf(c)) {
+        return GridLine::fromInteger(
+            transposed ? area->columnStart : area->rowStart);
+      }
+      if (namesUnknownArea(c)) {
+        return GridLine::fromInteger(firstImplicitRowLine);
+      }
       return transposed ? c->style().gridColumnStart() : c->style().gridRowStart();
     };
     auto itemRowEnd = [&](const yoga::Node* c) {
+      if (const auto* area = areaOf(c)) {
+        return GridLine::fromInteger(
+            transposed ? area->columnEnd : area->rowEnd);
+      }
+      if (namesUnknownArea(c)) {
+        return GridLine::fromInteger(firstImplicitRowLine + 1);
+      }
       return transposed ? c->style().gridColumnEnd() : c->style().gridRowEnd();
     };
 

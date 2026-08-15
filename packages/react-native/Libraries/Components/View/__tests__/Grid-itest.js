@@ -21,7 +21,7 @@
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 194 cases; 117 corpus cases are not expressible as RN styles
+ * 198 cases; 117 corpus cases are not expressible as RN styles
  * (grid-lanes, min-content/max-content/fit-content tracks, rtl, order).
  */
 
@@ -11700,6 +11700,259 @@ describe("auto-flow-column-implicit", () => {
       expectClose(r.y - container.y, 0, 'auto-flow-column-implicit-0311 item[4].y');
       expectClose(r.width, 255, 'auto-flow-column-implicit-0311 item[4].w');
       expectClose(r.height, 40, 'auto-flow-column-implicit-0311 item[4].h');
+    }
+  });
+});
+
+describe("template-areas-basic", () => {
+  it("template-areas-basic-0312: a classic header / sidebar / main template", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"120px 120px","gridTemplateRows":"40px 60px","gap":10,"gridTemplateAreas":"\"header header\" \"sidebar main\""}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridArea":"header"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridArea":"sidebar"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridArea":"main"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'template-areas-basic-0312 container.width');
+    expectClose(container.height, 110, 'template-areas-basic-0312 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'template-areas-basic-0312 item[0].x');
+      expectClose(r.y - container.y, 0, 'template-areas-basic-0312 item[0].y');
+      expectClose(r.width, 250, 'template-areas-basic-0312 item[0].w');
+      expectClose(r.height, 40, 'template-areas-basic-0312 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'template-areas-basic-0312 item[1].x');
+      expectClose(r.y - container.y, 50, 'template-areas-basic-0312 item[1].y');
+      expectClose(r.width, 120, 'template-areas-basic-0312 item[1].w');
+      expectClose(r.height, 60, 'template-areas-basic-0312 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 130, 'template-areas-basic-0312 item[2].x');
+      expectClose(r.y - container.y, 50, 'template-areas-basic-0312 item[2].y');
+      expectClose(r.width, 120, 'template-areas-basic-0312 item[2].w');
+      expectClose(r.height, 60, 'template-areas-basic-0312 item[2].h');
+    }
+  });
+});
+
+describe("template-areas-equivalent-lines", () => {
+  it("template-areas-equivalent-lines-0313: the same placement by line number", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"120px 120px","gridTemplateRows":"40px 60px","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridColumnEnd":3,"gridColumnStart":1,"gridRowStart":1}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridColumnStart":1,"gridRowStart":2}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridColumnStart":2,"gridRowStart":2}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'template-areas-equivalent-lines-0313 container.width');
+    expectClose(container.height, 110, 'template-areas-equivalent-lines-0313 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'template-areas-equivalent-lines-0313 item[0].x');
+      expectClose(r.y - container.y, 0, 'template-areas-equivalent-lines-0313 item[0].y');
+      expectClose(r.width, 250, 'template-areas-equivalent-lines-0313 item[0].w');
+      expectClose(r.height, 40, 'template-areas-equivalent-lines-0313 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'template-areas-equivalent-lines-0313 item[1].x');
+      expectClose(r.y - container.y, 50, 'template-areas-equivalent-lines-0313 item[1].y');
+      expectClose(r.width, 120, 'template-areas-equivalent-lines-0313 item[1].w');
+      expectClose(r.height, 60, 'template-areas-equivalent-lines-0313 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 130, 'template-areas-equivalent-lines-0313 item[2].x');
+      expectClose(r.y - container.y, 50, 'template-areas-equivalent-lines-0313 item[2].y');
+      expectClose(r.width, 120, 'template-areas-equivalent-lines-0313 item[2].w');
+      expectClose(r.height, 60, 'template-areas-equivalent-lines-0313 item[2].h');
+    }
+  });
+});
+
+describe("template-areas-null-cells", () => {
+  it("template-areas-null-cells-0314: null cells leave a hole in the template", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"80px 80px 80px","gridTemplateRows":"40px 40px","gap":8,"gridTemplateAreas":"\"nav . aside\" \"nav main aside\""}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridArea":"nav"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridArea":"main"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"gridArea":"aside"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'template-areas-null-cells-0314 container.width');
+    expectClose(container.height, 88, 'template-areas-null-cells-0314 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'template-areas-null-cells-0314 item[0].x');
+      expectClose(r.y - container.y, 0, 'template-areas-null-cells-0314 item[0].y');
+      expectClose(r.width, 80, 'template-areas-null-cells-0314 item[0].w');
+      expectClose(r.height, 88, 'template-areas-null-cells-0314 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 88, 'template-areas-null-cells-0314 item[1].x');
+      expectClose(r.y - container.y, 48, 'template-areas-null-cells-0314 item[1].y');
+      expectClose(r.width, 80, 'template-areas-null-cells-0314 item[1].w');
+      expectClose(r.height, 40, 'template-areas-null-cells-0314 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 176, 'template-areas-null-cells-0314 item[2].x');
+      expectClose(r.y - container.y, 0, 'template-areas-null-cells-0314 item[2].y');
+      expectClose(r.width, 80, 'template-areas-null-cells-0314 item[2].w');
+      expectClose(r.height, 88, 'template-areas-null-cells-0314 item[2].h');
+    }
+  });
+});
+
+describe("template-areas-sizes-grid", () => {
+  it("template-areas-sizes-grid-0315: the template alone defines a 2x2 explicit grid", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":400,"gap":10,"gridTemplateAreas":"\"a b\" \"c d\""}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"gridArea":"a"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"gridArea":"b"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"gridArea":"c"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30,"gridArea":"d"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 400, 'template-areas-sizes-grid-0315 container.width');
+    expectClose(container.height, 70, 'template-areas-sizes-grid-0315 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'template-areas-sizes-grid-0315 item[0].x');
+      expectClose(r.y - container.y, 0, 'template-areas-sizes-grid-0315 item[0].y');
+      expectClose(r.width, 195, 'template-areas-sizes-grid-0315 item[0].w');
+      expectClose(r.height, 30, 'template-areas-sizes-grid-0315 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 205, 'template-areas-sizes-grid-0315 item[1].x');
+      expectClose(r.y - container.y, 0, 'template-areas-sizes-grid-0315 item[1].y');
+      expectClose(r.width, 195, 'template-areas-sizes-grid-0315 item[1].w');
+      expectClose(r.height, 30, 'template-areas-sizes-grid-0315 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 0, 'template-areas-sizes-grid-0315 item[2].x');
+      expectClose(r.y - container.y, 40, 'template-areas-sizes-grid-0315 item[2].y');
+      expectClose(r.width, 195, 'template-areas-sizes-grid-0315 item[2].w');
+      expectClose(r.height, 30, 'template-areas-sizes-grid-0315 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 205, 'template-areas-sizes-grid-0315 item[3].x');
+      expectClose(r.y - container.y, 40, 'template-areas-sizes-grid-0315 item[3].y');
+      expectClose(r.width, 195, 'template-areas-sizes-grid-0315 item[3].w');
+      expectClose(r.height, 30, 'template-areas-sizes-grid-0315 item[3].h');
     }
   });
 });
