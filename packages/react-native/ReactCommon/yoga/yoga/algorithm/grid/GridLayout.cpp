@@ -85,8 +85,24 @@ void calculateGridLayoutInternal(
       availableInnerHeight,
       rowGap);
 
+  // §7.3: `grid-template-areas` sizes the EXPLICIT grid too. Rows and columns
+  // the template describes but the track lists do not are auto-sized, so a
+  // template used on its own — the usual way — still produces a grid of the
+  // right shape rather than pushing everything into implicit tracks.
+  const auto& templateAreas = nodeStyle.gridTemplateAreas();
+  GridTrackList areaSizedColumns = expandedColumns;
+  GridTrackList areaSizedRows = expandedRows;
+  if (!templateAreas.empty()) {
+    while (areaSizedColumns.size() < templateAreas.columnCount) {
+      areaSizedColumns.push_back(GridTrackSize::auto_());
+    }
+    while (areaSizedRows.size() < templateAreas.rowCount) {
+      areaSizedRows.push_back(GridTrackSize::auto_());
+    }
+  }
+
   auto autoPlacement = ResolvedAutoPlacement::resolveGridItemPlacements(
-      node, expandedColumns.size(), expandedRows.size());
+      node, areaSizedColumns.size(), areaSizedRows.size());
 
   // §7.2.3.1 auto-fit: after placement, repeated tracks that hold no item
   // collapse. A collapsed track is 0px wide AND the gutters either side of it
@@ -140,14 +156,14 @@ void calculateGridLayoutInternal(
   };
 
   const GridTrackList fittedColumns = collapseAutoFit(
-      expandedColumns,
+      areaSizedColumns,
       nodeStyle.gridTemplateColumnsAutoRepeat(),
       nodeStyle.gridTemplateColumns(),
       availableInnerWidth,
       columnGap,
       /* isColumnAxis */ true);
   const GridTrackList fittedRows = collapseAutoFit(
-      expandedRows,
+      areaSizedRows,
       nodeStyle.gridTemplateRowsAutoRepeat(),
       nodeStyle.gridTemplateRows(),
       availableInnerHeight,
@@ -250,8 +266,8 @@ void calculateGridLayoutInternal(
     }
   };
 
-  remapPlacement(expandedColumns, fittedColumns, /* isColumnAxis */ true);
-  remapPlacement(expandedRows, fittedRows, /* isColumnAxis */ false);
+  remapPlacement(areaSizedColumns, fittedColumns, /* isColumnAxis */ true);
+  remapPlacement(areaSizedRows, fittedRows, /* isColumnAxis */ false);
 
   // Create the grid tracks (auto and explicit = implicit grid)
   auto gridTracks =
