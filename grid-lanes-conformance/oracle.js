@@ -22,6 +22,7 @@
 const {cases} = require('./cases.js');
 const {
   containerCss,
+  itemChildHtml,
   itemCss,
 } = require('./serialize.js');
 const {execSync, spawn} = require('node:child_process');
@@ -50,7 +51,9 @@ function buildHtml() {
       const items = c.items
         .map(
           (it, i) =>
-            `<i style="${escapeAttribute(itemCss(it))}" data-i="${i}"></i>`,
+            `<i style="${escapeAttribute(itemCss(it))}" data-i="${i}">${itemChildHtml(
+              it,
+            )}</i>`,
         )
         .join('');
       // Each case sits in its own fixed-width wrapper so that nothing about

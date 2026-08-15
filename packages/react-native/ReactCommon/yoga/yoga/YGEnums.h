@@ -48,7 +48,8 @@ YG_ENUM_DECL(
     YGDisplayNone,
     YGDisplayContents,
     YGDisplayGrid,
-    YGDisplayBlock)
+    YGDisplayBlock,
+    YGDisplayGridLanes)
 
 YG_ENUM_DECL(
     YGEdge,
