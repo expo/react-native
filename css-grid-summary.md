@@ -55,14 +55,14 @@ A fourth consumer runs the same list on real devices:
 `grid-conformance-verify.js` renders every case in RNTester and reads the
 measured rects back over CDP.
 
-**346 cases, zero mismatches everywhere:**
+**348 cases, zero mismatches everywhere:**
 
 | | cases | assertions |
 | --- | --- | --- |
-| Yoga (`replay.cpp`) | 338 | 5,870 |
-| React Native (Fantom) | 339 | — |
-| iOS simulator | 339 | 5,888 |
-| Android emulator | 339 | 5,888 |
+| Yoga (`replay.cpp`) | 340 | 5,898 |
+| React Native (Fantom) | 341 | — |
+| iOS simulator | 341 | 5,916 |
+| Android emulator | 341 | 5,916 |
 
 The full Fantom suite (3,508 tests) is unaffected. Section-by-section coverage
 of css-grid-3, including what is *not* implemented and why, is in
