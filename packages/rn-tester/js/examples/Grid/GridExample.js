@@ -166,6 +166,54 @@ function GridVerifyCase(): React.Node {
   );
 }
 
+/*
+ * A grid container with padding around a single fixed-height row.
+ *
+ * The correct height is padding + row + padding = 20 + 20 + 20 = 60. This is
+ * the MRE for a bug in the vendored track sizing (see
+ * yoga/algorithm/grid/README-VENDORED.md): the container's own track total is
+ * a CONTENT-box size, but it was being floored at the node's padding+border,
+ * which is only correct for a border-box size — so the container measured 80.
+ *
+ * It renders its own measured height so a screenshot carries the number.
+ */
+function ContainerPaddingMRE(): React.Node {
+  const [measured, setMeasured] = React.useState<number | null>(null);
+  return (
+    <View>
+      <View
+        onLayout={e => setMeasured(e.nativeEvent.layout.height)}
+        // $FlowExpectedError[incompatible-type] grid style keys
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 10,
+          padding: 20,
+          borderWidth: 1,
+          borderColor: DEMO_THEME.fg,
+          alignSelf: 'flex-start',
+          width: 300,
+        }}>
+        <View style={{height: 20, backgroundColor: SWATCHES[0]}} />
+        <View style={{height: 20, backgroundColor: SWATCHES[1]}} />
+      </View>
+      <Text
+        style={{
+          fontSize: 13,
+          marginTop: 8,
+          color: DEMO_THEME.fg,
+          fontWeight: '600',
+        }}>
+        measured height: {measured == null ? '…' : measured.toFixed(1)}pt
+        {'  '}
+        <Text style={{color: DEMO_THEME.muted, fontWeight: '400'}}>
+          (Safari: 62.0pt — 20 padding + 20 row + 20 padding + 2 border)
+        </Text>
+      </Text>
+    </View>
+  );
+}
+
 export default {
   title: 'Grid',
   category: 'Layout',
@@ -176,6 +224,7 @@ export default {
   examples: [
     {
       title: 'Three equal columns',
+      name: 'basic',
       description: 'The simplest grid: `1fr 1fr 1fr` with a gap.',
       render: (): React.Node => (
         <DemoContent
@@ -202,6 +251,7 @@ export default {
     },
     {
       title: 'Responsive gallery — repeat(auto-fill, minmax())',
+      name: 'autofill',
       description:
         'The idiom every WebKit demo uses. The track COUNT follows the ' +
         'container width; no breakpoint is declared anywhere. Rotate the ' +
@@ -227,6 +277,7 @@ export default {
     },
     {
       title: 'auto-fill vs auto-fit',
+      name: 'autofit',
       description:
         'Same tracks, three items. auto-fill KEEPS the empty tracks, so the ' +
         'items stay narrow; auto-fit COLLAPSES them, so the items share the ' +
@@ -274,6 +325,7 @@ export default {
     },
     {
       title: 'Newspaper — spanning items',
+      name: 'newspaper',
       description:
         'WebKit’s Newspaper demo: a lead article spanning three tracks, a ' +
         'secondary spanning two, the rest flowing around them.',
@@ -330,6 +382,7 @@ export default {
     },
     {
       title: 'Recipes — a full-bleed header',
+      name: 'recipes',
       description:
         'WebKit’s Recipes demo pins its header across every track with ' +
         '`grid-column: 1 / -1`. Line -1 counts from the end, so the header ' +
@@ -375,6 +428,7 @@ export default {
     },
     {
       title: 'Pinboard — mixed heights',
+      name: 'pinboard',
       description:
         'Items of differing height in a uniform grid. Rows are as tall as ' +
         'their tallest item, which is what distinguishes a grid from the ' +
@@ -398,6 +452,7 @@ export default {
     },
     {
       title: 'Mega menu — fixed sides around an auto-fill run',
+      name: 'megamenu',
       description:
         'A fixed rail on each side with the middle filled responsively: ' +
         '`60px repeat(auto-fill, minmax(70px, 1fr)) 60px`. The repetitions ' +
@@ -425,6 +480,7 @@ export default {
     },
     {
       title: 'Explicit rows and mixed track types',
+      name: 'explicit',
       description:
         'Rows can be sized too, and a track list can mix fixed, fractional ' +
         'and minmax() sizes.',
@@ -451,6 +507,7 @@ export default {
     },
     {
       title: 'Box alignment inside tracks',
+      name: 'alignment',
       description:
         'justify-items and align-items place an item within its track. ' +
         '`stretch` is the default and fills it.',
@@ -483,10 +540,34 @@ export default {
       ),
     },
     {
+      title: 'Container padding (regression guard)',
+      name: 'padding-mre',
+      description:
+        'A padded grid container around a single 20pt row. The height must ' +
+        'be padding + row + padding + borders. This guards a fixed bug where ' +
+        'the container was floored at its own padding+border and measured too ' +
+        'tall.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<View style={{\n" +
+            "  display: 'grid',\n" +
+            "  gridTemplateColumns: '1fr 1fr',\n" +
+            '  gap: 10,\n' +
+            '  padding: 20,\n' +
+            '  borderWidth: 1,\n' +
+            '}}>'
+          }>
+          <ContainerPaddingMRE />
+        </DemoContent>
+      ),
+    },
+    {
       // Read by packages/rn-tester/scripts/grid-cdp-verify.js on a real
       // device or simulator: the same relations the Fantom suite asserts,
       // re-checked through the actual platform layout pass.
       title: 'Track geometry (verified on device)',
+      name: 'verify',
       render: (): React.Node => (
         <View>
           <ThemingNote>
