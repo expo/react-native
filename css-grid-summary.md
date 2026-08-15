@@ -27,15 +27,16 @@ every width.
 | containers | `display: 'grid'`, `'inline-grid'` |
 | track sizes | lengths, percentages, `fr`, `auto`, `max-content`, `fit-content()`, `minmax()` |
 | repetition | `repeat(n, …)`, `repeat(auto-fill, …)`, `repeat(auto-fit, …)` |
-| placement | `gridColumnStart/End`, `gridRowStart/End`, line numbers incl. negatives, `span n` |
+| placement | `gridColumnStart/End`, `gridRowStart/End`, line numbers incl. negatives, `span n`, `gridTemplateAreas` + `gridArea` |
 | implicit tracks | `gridAutoRows`, `gridAutoColumns` |
 | flow | `gridAutoFlow: 'row'`, `'column'`, either with `dense` |
 | alignment | `justifyItems`, `alignItems`, `justifySelf`, `alignSelf`, `justifyContent`, `alignContent` |
 | gaps | `gap`, `rowGap`, `columnGap`, including percentages |
 
 **Not supported.** `min-content` as a *maximum*, the `x` ceiling in
-`fit-content(x)`, named grid lines, `grid-template-areas`, and `subgrid`. Each
-is in `dom-css-limitations.md` with the reason.
+`fit-content(x)`, named grid *lines*, and `subgrid`. An item naming an area
+that does not exist falls back to auto placement rather than creating implicit
+named lines. Each is in `dom-css-limitations.md` with the reason.
 
 ## How it is checked
 
@@ -50,7 +51,7 @@ One declarative list of cases feeds three consumers, so they cannot drift:
 - `gen-fantom-test.js` emits a Fantom suite that renders it as React Native
   and reads `getBoundingClientRect()`.
 
-**194 cases, 2,840 coordinate assertions, zero mismatches** — in the engine and
+**198 cases, 2,900 coordinate assertions, zero mismatches** — in the engine and
 through React Native. The full Fantom suite (3,342 tests) is unaffected. On a
 real simulator and emulator, `grid-cdp-verify.js` re-checks track geometry
 through the actual platform layout pass: 9 of 9 on each.
@@ -103,9 +104,9 @@ included. Compile-time assertions pin the sizes so the gain cannot erode.
 
 ## Where to look
 
-- `packages/rn-tester` → **Grid** — ten screens, each showing the CSS that
+- `packages/rn-tester` → **Grid** — twelve screens, each showing the CSS that
   produces it, ported from WebKit's demos: a responsive gallery, auto-fill vs
   auto-fit, a newspaper with spanning stories, a full-bleed header, a pinboard,
-  a mega menu, dense packing.
+  a mega menu, dense packing, and a page shell built from named areas.
 - `grid-lanes-conformance/` — the corpus and both harnesses.
 - `build-android-rntester.sh` — the Android build, with its two traps handled.

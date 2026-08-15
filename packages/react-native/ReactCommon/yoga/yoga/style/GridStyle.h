@@ -8,6 +8,8 @@
 #pragma once
 
 #include <yoga/style/GridAutoFlow.h>
+#include <yoga/style/GridTemplateAreas.h>
+#include <string>
 #include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridLine.h>
 #include <yoga/style/GridTrack.h>
@@ -36,6 +38,10 @@ struct GridStyle {
   GridTrackList gridAutoRows{};
 
   GridAutoFlow gridAutoFlow{GridAutoFlow::Row};
+
+  // Container: the named areas. Item: the area it asked for by name.
+  GridTemplateAreas gridTemplateAreas{};
+  std::string gridArea{};
 
   GridAutoRepeat gridTemplateColumnsAutoRepeat{};
   GridAutoRepeat gridTemplateRowsAutoRepeat{};
