@@ -157,7 +157,17 @@ YGConfigRef unroundedConfig() {
 
 YGNodeRef build(const Case& c) {
   YGNodeRef root = YGNodeNewWithConfig(unroundedConfig());
-  YGNodeStyleSetDisplay(root, YGDisplayGrid);
+  YGNodeStyleSetDisplay(
+      root, c.lanes != 0 ? YGDisplayGridLanes : YGDisplayGrid);
+  if (c.lanes != 0) {
+    // `normal` is 1em, so the case's font-size is what it resolves against;
+    // Yoga has no font model and takes the em size from the caller.
+    const float value = c.flowToleranceType == YGFlowToleranceNormal
+        ? (isSet(c.fontSize) ? c.fontSize : 0.0f)
+        : c.flowToleranceValue;
+    YGNodeStyleSetFlowTolerance(
+        root, (YGFlowToleranceType)c.flowToleranceType, value);
+  }
   // Every case is measured inside a 900px wrapper in the browser; a case that
   // does not state a width is shrink-to-fit against that, so give Yoga the
   // same containing block rather than an undefined one.
@@ -292,6 +302,13 @@ YGNodeRef build(const Case& c) {
     }
     if (it.rowEndLine != 0) {
       YGNodeStyleSetGridRowEnd(child, it.rowEndLine);
+    }
+    // An item with a nested child has no height of its own: its size comes
+    // from measuring that child, which is the content-sizing path.
+    if (isSet(it.childHeight)) {
+      YGNodeRef grandchild = YGNodeNewWithConfig(unroundedConfig());
+      YGNodeStyleSetHeight(grandchild, it.childHeight);
+      YGNodeInsertChild(child, grandchild, 0);
     }
     applyPlacement(child, /* isColumn */ true, it.col);
     applyPlacement(child, /* isColumn */ false, it.row);
