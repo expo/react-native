@@ -29,6 +29,7 @@
 #include <yoga/algorithm/PixelGrid.h>
 #include <yoga/algorithm/SizingMode.h>
 #include <yoga/algorithm/TrailingPosition.h>
+#include <yoga/algorithm/grid/GridLayout.h>
 #include <yoga/debug/AssertFatal.h>
 #include <yoga/debug/Log.h>
 #include <yoga/event/event.h>
@@ -2825,6 +2826,27 @@ static void calculateLayoutImpl(
   // Clean and update all display: contents nodes with a direct path to the
   // current node as they will not be traversed
   cleanupContentsNodesRecursively(node, performLayout);
+
+  // Grid formatting context: `display: grid` uses the dedicated grid layout
+  // path rather than the flex algorithm below. VENDORED — see
+  // algorithm/grid/README-VENDORED.md.
+  if (node->style().display() == Display::Grid) {
+    calculateGridLayoutInternal(
+        node,
+        availableWidth,
+        availableHeight,
+        ownerDirection,
+        widthSizingMode,
+        heightSizingMode,
+        ownerWidth,
+        ownerHeight,
+        performLayout,
+        reason,
+        layoutMarkerData,
+        depth,
+        generationCount);
+    return;
+  }
 
   // Block formatting context: `display: block` uses a dedicated block layout
   // path rather than the flex algorithm below (text-children-plan.md §3.A/§4.5).
