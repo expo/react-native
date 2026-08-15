@@ -203,6 +203,23 @@ typedef enum YGGridAutoFlow {
 
 YG_EXPORT void YGNodeStyleSetGridAutoFlow(YGNodeRef node, YGGridAutoFlow flow);
 
+// https://drafts.csswg.org/css-grid-3/#placement-tolerance
+//
+// The tie threshold for grid lanes placement: candidate positions within this
+// distance of the shortest one count as equally good, and tied positions fill
+// in document order. `normal` is 1em.
+typedef enum YGFlowToleranceType {
+  YGFlowToleranceNormal = 0,
+  YGFlowTolerancePoints = 1,
+  YGFlowTolerancePercent = 2,
+  YGFlowToleranceInfinite = 3,
+} YGFlowToleranceType;
+
+YG_EXPORT void YGNodeStyleSetFlowTolerance(
+    YGNodeRef node,
+    YGFlowToleranceType type,
+    float value);
+
 // https://www.w3.org/TR/css-grid-2/#grid-template-areas-property
 //
 // Set the row strings of the template, then the name an item is placed into:
