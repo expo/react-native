@@ -51,10 +51,22 @@ One declarative list of cases feeds three consumers, so they cannot drift:
 - `gen-fantom-test.js` emits a Fantom suite that renders it as React Native
   and reads `getBoundingClientRect()`.
 
-**198 cases, 2,900 coordinate assertions, zero mismatches** — in the engine and
-through React Native. The full Fantom suite (3,342 tests) is unaffected. On a
-real simulator and emulator, `grid-cdp-verify.js` re-checks track geometry
-through the actual platform layout pass: 9 of 9 on each.
+A fourth consumer runs the same list on real devices:
+`grid-conformance-verify.js` renders every case in RNTester and reads the
+measured rects back over CDP.
+
+**348 cases, zero mismatches everywhere:**
+
+| | cases | assertions |
+| --- | --- | --- |
+| Yoga (`replay.cpp`) | 340 | 5,898 |
+| React Native (Fantom) | 341 | — |
+| iOS simulator | 341 | 5,916 |
+| Android emulator | 341 | 5,916 |
+
+The full Fantom suite (3,508 tests) is unaffected. Section-by-section coverage
+of css-grid-3, including what is *not* implemented and why, is in
+`grid-lanes-spec-coverage.md`.
 
 Cases that an engine cannot express are reported as UNSUPPORTED with the
 reason rather than skipped, because coverage that shrinks quietly reads as a
