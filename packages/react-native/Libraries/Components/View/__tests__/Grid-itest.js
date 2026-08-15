@@ -24,7 +24,7 @@
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 339 cases; 7 corpus cases are not expressible as RN styles
+ * 341 cases; 7 corpus cases are not expressible as RN styles
  * (min-content as a maximum, inline-level containers, order, and the
  * percentage flow-tolerance Safari cannot adjudicate).
  */
@@ -8706,7 +8706,7 @@ describe("lanes-dense", () => {
 describe("lanes-empty", () => {
   it("lanes-empty-0124: no items", () => {
     const containerRef = createRef<HostInstance>();
-    const itemRefs = [];
+    const itemRefs: Array<{current: HostInstance | null}> = [];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
     Fantom.runTask(() => {
       root.render(
@@ -22968,8 +22968,125 @@ describe("lanes-stacking-align-stretch-auto", () => {
   });
 });
 
+describe("lanes-brick-stacking-align", () => {
+  it("lanes-brick-stacking-align-0340: justify-items:start in a brick layout", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateRows":"100px 100px","gap":10,"flowTolerance":0,"justifyItems":"start"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-brick-stacking-align-0340 container.width');
+    expectClose(container.height, 210, 'lanes-brick-stacking-align-0340 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-brick-stacking-align-0340 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-brick-stacking-align-0340 item[0].y');
+      expectClose(r.width, 40, 'lanes-brick-stacking-align-0340 item[0].w');
+      expectClose(r.height, 100, 'lanes-brick-stacking-align-0340 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'lanes-brick-stacking-align-0340 item[1].x');
+      expectClose(r.y - container.y, 110, 'lanes-brick-stacking-align-0340 item[1].y');
+      expectClose(r.width, 60, 'lanes-brick-stacking-align-0340 item[1].w');
+      expectClose(r.height, 100, 'lanes-brick-stacking-align-0340 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 50, 'lanes-brick-stacking-align-0340 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-brick-stacking-align-0340 item[2].y');
+      expectClose(r.width, 30, 'lanes-brick-stacking-align-0340 item[2].w');
+      expectClose(r.height, 100, 'lanes-brick-stacking-align-0340 item[2].h');
+    }
+  });
+  it("lanes-brick-stacking-align-0341: justify-items:end in a brick layout", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid-lanes","width":600,"gridTemplateRows":"100px 100px","gap":10,"flowTolerance":0,"justifyItems":"end"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-brick-stacking-align-0341 container.width');
+    expectClose(container.height, 210, 'lanes-brick-stacking-align-0341 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'lanes-brick-stacking-align-0341 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-brick-stacking-align-0341 item[0].y');
+      expectClose(r.width, 40, 'lanes-brick-stacking-align-0341 item[0].w');
+      expectClose(r.height, 100, 'lanes-brick-stacking-align-0341 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 20, 'lanes-brick-stacking-align-0341 item[1].x');
+      expectClose(r.y - container.y, 110, 'lanes-brick-stacking-align-0341 item[1].y');
+      expectClose(r.width, 60, 'lanes-brick-stacking-align-0341 item[1].w');
+      expectClose(r.height, 100, 'lanes-brick-stacking-align-0341 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 50, 'lanes-brick-stacking-align-0341 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-brick-stacking-align-0341 item[2].y');
+      expectClose(r.width, 30, 'lanes-brick-stacking-align-0341 item[2].w');
+      expectClose(r.height, 100, 'lanes-brick-stacking-align-0341 item[2].h');
+    }
+  });
+});
+
 describe("lanes-container-min-max", () => {
-  it("lanes-container-min-max-0340: maxHeight: 60 on a lanes container", () => {
+  it("lanes-container-min-max-0342: maxHeight: 60 on a lanes container", () => {
     const containerRef = createRef<HostInstance>();
     const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
@@ -23008,38 +23125,38 @@ describe("lanes-container-min-max", () => {
       );
     });
     const container = rectOf(containerRef);
-    expectClose(container.width, 600, 'lanes-container-min-max-0340 container.width');
-    expectClose(container.height, 60, 'lanes-container-min-max-0340 container.height');
+    expectClose(container.width, 600, 'lanes-container-min-max-0342 container.width');
+    expectClose(container.height, 60, 'lanes-container-min-max-0342 container.height');
     {
       const r = rectOf(itemRefs[0]);
-      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0340 item[0].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0340 item[0].y');
-      expectClose(r.width, 193.33, 'lanes-container-min-max-0340 item[0].w');
-      expectClose(r.height, 40, 'lanes-container-min-max-0340 item[0].h');
+      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0342 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-container-min-max-0342 item[0].w');
+      expectClose(r.height, 40, 'lanes-container-min-max-0342 item[0].h');
     }
     {
       const r = rectOf(itemRefs[1]);
-      expectClose(r.x - container.x, 203.33, 'lanes-container-min-max-0340 item[1].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0340 item[1].y');
-      expectClose(r.width, 193.33, 'lanes-container-min-max-0340 item[1].w');
-      expectClose(r.height, 60, 'lanes-container-min-max-0340 item[1].h');
+      expectClose(r.x - container.x, 203.33, 'lanes-container-min-max-0342 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-container-min-max-0342 item[1].w');
+      expectClose(r.height, 60, 'lanes-container-min-max-0342 item[1].h');
     }
     {
       const r = rectOf(itemRefs[2]);
-      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0340 item[2].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0340 item[2].y');
-      expectClose(r.width, 193.34, 'lanes-container-min-max-0340 item[2].w');
-      expectClose(r.height, 30, 'lanes-container-min-max-0340 item[2].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0342 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-container-min-max-0342 item[2].w');
+      expectClose(r.height, 30, 'lanes-container-min-max-0342 item[2].h');
     }
     {
       const r = rectOf(itemRefs[3]);
-      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0340 item[3].x');
-      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0340 item[3].y');
-      expectClose(r.width, 193.34, 'lanes-container-min-max-0340 item[3].w');
-      expectClose(r.height, 50, 'lanes-container-min-max-0340 item[3].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0342 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0342 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-container-min-max-0342 item[3].w');
+      expectClose(r.height, 50, 'lanes-container-min-max-0342 item[3].h');
     }
   });
-  it("lanes-container-min-max-0341: minHeight: 200 on a lanes container", () => {
+  it("lanes-container-min-max-0343: minHeight: 200 on a lanes container", () => {
     const containerRef = createRef<HostInstance>();
     const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
@@ -23078,38 +23195,38 @@ describe("lanes-container-min-max", () => {
       );
     });
     const container = rectOf(containerRef);
-    expectClose(container.width, 600, 'lanes-container-min-max-0341 container.width');
-    expectClose(container.height, 200, 'lanes-container-min-max-0341 container.height');
+    expectClose(container.width, 600, 'lanes-container-min-max-0343 container.width');
+    expectClose(container.height, 200, 'lanes-container-min-max-0343 container.height');
     {
       const r = rectOf(itemRefs[0]);
-      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0341 item[0].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0341 item[0].y');
-      expectClose(r.width, 193.33, 'lanes-container-min-max-0341 item[0].w');
-      expectClose(r.height, 40, 'lanes-container-min-max-0341 item[0].h');
+      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0343 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-container-min-max-0343 item[0].w');
+      expectClose(r.height, 40, 'lanes-container-min-max-0343 item[0].h');
     }
     {
       const r = rectOf(itemRefs[1]);
-      expectClose(r.x - container.x, 203.33, 'lanes-container-min-max-0341 item[1].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0341 item[1].y');
-      expectClose(r.width, 193.33, 'lanes-container-min-max-0341 item[1].w');
-      expectClose(r.height, 60, 'lanes-container-min-max-0341 item[1].h');
+      expectClose(r.x - container.x, 203.33, 'lanes-container-min-max-0343 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-container-min-max-0343 item[1].w');
+      expectClose(r.height, 60, 'lanes-container-min-max-0343 item[1].h');
     }
     {
       const r = rectOf(itemRefs[2]);
-      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0341 item[2].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0341 item[2].y');
-      expectClose(r.width, 193.34, 'lanes-container-min-max-0341 item[2].w');
-      expectClose(r.height, 30, 'lanes-container-min-max-0341 item[2].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0343 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-container-min-max-0343 item[2].w');
+      expectClose(r.height, 30, 'lanes-container-min-max-0343 item[2].h');
     }
     {
       const r = rectOf(itemRefs[3]);
-      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0341 item[3].x');
-      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0341 item[3].y');
-      expectClose(r.width, 193.34, 'lanes-container-min-max-0341 item[3].w');
-      expectClose(r.height, 50, 'lanes-container-min-max-0341 item[3].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-container-min-max-0343 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0343 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-container-min-max-0343 item[3].w');
+      expectClose(r.height, 50, 'lanes-container-min-max-0343 item[3].h');
     }
   });
-  it("lanes-container-min-max-0342: maxWidth: 400 on a lanes container", () => {
+  it("lanes-container-min-max-0344: maxWidth: 400 on a lanes container", () => {
     const containerRef = createRef<HostInstance>();
     const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
@@ -23148,38 +23265,38 @@ describe("lanes-container-min-max", () => {
       );
     });
     const container = rectOf(containerRef);
-    expectClose(container.width, 400, 'lanes-container-min-max-0342 container.width');
-    expectClose(container.height, 90, 'lanes-container-min-max-0342 container.height');
+    expectClose(container.width, 400, 'lanes-container-min-max-0344 container.width');
+    expectClose(container.height, 90, 'lanes-container-min-max-0344 container.height');
     {
       const r = rectOf(itemRefs[0]);
-      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0342 item[0].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[0].y');
-      expectClose(r.width, 126.66, 'lanes-container-min-max-0342 item[0].w');
-      expectClose(r.height, 40, 'lanes-container-min-max-0342 item[0].h');
+      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0344 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0344 item[0].y');
+      expectClose(r.width, 126.66, 'lanes-container-min-max-0344 item[0].w');
+      expectClose(r.height, 40, 'lanes-container-min-max-0344 item[0].h');
     }
     {
       const r = rectOf(itemRefs[1]);
-      expectClose(r.x - container.x, 136.66, 'lanes-container-min-max-0342 item[1].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[1].y');
-      expectClose(r.width, 126.67, 'lanes-container-min-max-0342 item[1].w');
-      expectClose(r.height, 60, 'lanes-container-min-max-0342 item[1].h');
+      expectClose(r.x - container.x, 136.66, 'lanes-container-min-max-0344 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0344 item[1].y');
+      expectClose(r.width, 126.67, 'lanes-container-min-max-0344 item[1].w');
+      expectClose(r.height, 60, 'lanes-container-min-max-0344 item[1].h');
     }
     {
       const r = rectOf(itemRefs[2]);
-      expectClose(r.x - container.x, 273.33, 'lanes-container-min-max-0342 item[2].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0342 item[2].y');
-      expectClose(r.width, 126.67, 'lanes-container-min-max-0342 item[2].w');
-      expectClose(r.height, 30, 'lanes-container-min-max-0342 item[2].h');
+      expectClose(r.x - container.x, 273.33, 'lanes-container-min-max-0344 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0344 item[2].y');
+      expectClose(r.width, 126.67, 'lanes-container-min-max-0344 item[2].w');
+      expectClose(r.height, 30, 'lanes-container-min-max-0344 item[2].h');
     }
     {
       const r = rectOf(itemRefs[3]);
-      expectClose(r.x - container.x, 273.33, 'lanes-container-min-max-0342 item[3].x');
-      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0342 item[3].y');
-      expectClose(r.width, 126.67, 'lanes-container-min-max-0342 item[3].w');
-      expectClose(r.height, 50, 'lanes-container-min-max-0342 item[3].h');
+      expectClose(r.x - container.x, 273.33, 'lanes-container-min-max-0344 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0344 item[3].y');
+      expectClose(r.width, 126.67, 'lanes-container-min-max-0344 item[3].w');
+      expectClose(r.height, 50, 'lanes-container-min-max-0344 item[3].h');
     }
   });
-  it("lanes-container-min-max-0343: minWidth: 800 on a lanes container", () => {
+  it("lanes-container-min-max-0345: minWidth: 800 on a lanes container", () => {
     const containerRef = createRef<HostInstance>();
     const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
@@ -23218,41 +23335,41 @@ describe("lanes-container-min-max", () => {
       );
     });
     const container = rectOf(containerRef);
-    expectClose(container.width, 800, 'lanes-container-min-max-0343 container.width');
-    expectClose(container.height, 90, 'lanes-container-min-max-0343 container.height');
+    expectClose(container.width, 800, 'lanes-container-min-max-0345 container.width');
+    expectClose(container.height, 90, 'lanes-container-min-max-0345 container.height');
     {
       const r = rectOf(itemRefs[0]);
-      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0343 item[0].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[0].y');
-      expectClose(r.width, 260, 'lanes-container-min-max-0343 item[0].w');
-      expectClose(r.height, 40, 'lanes-container-min-max-0343 item[0].h');
+      expectClose(r.x - container.x, 0, 'lanes-container-min-max-0345 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0345 item[0].y');
+      expectClose(r.width, 260, 'lanes-container-min-max-0345 item[0].w');
+      expectClose(r.height, 40, 'lanes-container-min-max-0345 item[0].h');
     }
     {
       const r = rectOf(itemRefs[1]);
-      expectClose(r.x - container.x, 270, 'lanes-container-min-max-0343 item[1].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[1].y');
-      expectClose(r.width, 260, 'lanes-container-min-max-0343 item[1].w');
-      expectClose(r.height, 60, 'lanes-container-min-max-0343 item[1].h');
+      expectClose(r.x - container.x, 270, 'lanes-container-min-max-0345 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0345 item[1].y');
+      expectClose(r.width, 260, 'lanes-container-min-max-0345 item[1].w');
+      expectClose(r.height, 60, 'lanes-container-min-max-0345 item[1].h');
     }
     {
       const r = rectOf(itemRefs[2]);
-      expectClose(r.x - container.x, 540, 'lanes-container-min-max-0343 item[2].x');
-      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0343 item[2].y');
-      expectClose(r.width, 260, 'lanes-container-min-max-0343 item[2].w');
-      expectClose(r.height, 30, 'lanes-container-min-max-0343 item[2].h');
+      expectClose(r.x - container.x, 540, 'lanes-container-min-max-0345 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-container-min-max-0345 item[2].y');
+      expectClose(r.width, 260, 'lanes-container-min-max-0345 item[2].w');
+      expectClose(r.height, 30, 'lanes-container-min-max-0345 item[2].h');
     }
     {
       const r = rectOf(itemRefs[3]);
-      expectClose(r.x - container.x, 540, 'lanes-container-min-max-0343 item[3].x');
-      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0343 item[3].y');
-      expectClose(r.width, 260, 'lanes-container-min-max-0343 item[3].w');
-      expectClose(r.height, 50, 'lanes-container-min-max-0343 item[3].h');
+      expectClose(r.x - container.x, 540, 'lanes-container-min-max-0345 item[3].x');
+      expectClose(r.y - container.y, 40, 'lanes-container-min-max-0345 item[3].y');
+      expectClose(r.width, 260, 'lanes-container-min-max-0345 item[3].w');
+      expectClose(r.height, 50, 'lanes-container-min-max-0345 item[3].h');
     }
   });
 });
 
 describe("lanes-absolute", () => {
-  it("lanes-absolute-0344: an absolutely-positioned child at 20,30 is out of flow", () => {
+  it("lanes-absolute-0346: an absolutely-positioned child at 20,30 is out of flow", () => {
     const containerRef = createRef<HostInstance>();
     const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
@@ -23297,45 +23414,45 @@ describe("lanes-absolute", () => {
       );
     });
     const container = rectOf(containerRef);
-    expectClose(container.width, 600, 'lanes-absolute-0344 container.width');
-    expectClose(container.height, 90, 'lanes-absolute-0344 container.height');
+    expectClose(container.width, 600, 'lanes-absolute-0346 container.width');
+    expectClose(container.height, 90, 'lanes-absolute-0346 container.height');
     {
       const r = rectOf(itemRefs[0]);
-      expectClose(r.x - container.x, 0, 'lanes-absolute-0344 item[0].x');
-      expectClose(r.y - container.y, 0, 'lanes-absolute-0344 item[0].y');
-      expectClose(r.width, 193.33, 'lanes-absolute-0344 item[0].w');
-      expectClose(r.height, 40, 'lanes-absolute-0344 item[0].h');
+      expectClose(r.x - container.x, 0, 'lanes-absolute-0346 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0346 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-absolute-0346 item[0].w');
+      expectClose(r.height, 40, 'lanes-absolute-0346 item[0].h');
     }
     {
       const r = rectOf(itemRefs[1]);
-      expectClose(r.x - container.x, 203.33, 'lanes-absolute-0344 item[1].x');
-      expectClose(r.y - container.y, 0, 'lanes-absolute-0344 item[1].y');
-      expectClose(r.width, 193.33, 'lanes-absolute-0344 item[1].w');
-      expectClose(r.height, 60, 'lanes-absolute-0344 item[1].h');
+      expectClose(r.x - container.x, 203.33, 'lanes-absolute-0346 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0346 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-absolute-0346 item[1].w');
+      expectClose(r.height, 60, 'lanes-absolute-0346 item[1].h');
     }
     {
       const r = rectOf(itemRefs[2]);
-      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0344 item[2].x');
-      expectClose(r.y - container.y, 0, 'lanes-absolute-0344 item[2].y');
-      expectClose(r.width, 193.34, 'lanes-absolute-0344 item[2].w');
-      expectClose(r.height, 30, 'lanes-absolute-0344 item[2].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0346 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0346 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-absolute-0346 item[2].w');
+      expectClose(r.height, 30, 'lanes-absolute-0346 item[2].h');
     }
     {
       const r = rectOf(itemRefs[3]);
-      expectClose(r.x - container.x, 30, 'lanes-absolute-0344 item[3].x');
-      expectClose(r.y - container.y, 20, 'lanes-absolute-0344 item[3].y');
-      expectClose(r.width, 50, 'lanes-absolute-0344 item[3].w');
-      expectClose(r.height, 25, 'lanes-absolute-0344 item[3].h');
+      expectClose(r.x - container.x, 30, 'lanes-absolute-0346 item[3].x');
+      expectClose(r.y - container.y, 20, 'lanes-absolute-0346 item[3].y');
+      expectClose(r.width, 50, 'lanes-absolute-0346 item[3].w');
+      expectClose(r.height, 25, 'lanes-absolute-0346 item[3].h');
     }
     {
       const r = rectOf(itemRefs[4]);
-      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0344 item[4].x');
-      expectClose(r.y - container.y, 40, 'lanes-absolute-0344 item[4].y');
-      expectClose(r.width, 193.34, 'lanes-absolute-0344 item[4].w');
-      expectClose(r.height, 50, 'lanes-absolute-0344 item[4].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0346 item[4].x');
+      expectClose(r.y - container.y, 40, 'lanes-absolute-0346 item[4].y');
+      expectClose(r.width, 193.34, 'lanes-absolute-0346 item[4].w');
+      expectClose(r.height, 50, 'lanes-absolute-0346 item[4].h');
     }
   });
-  it("lanes-absolute-0345: an absolutely-positioned child at 0,0 is out of flow", () => {
+  it("lanes-absolute-0347: an absolutely-positioned child at 0,0 is out of flow", () => {
     const containerRef = createRef<HostInstance>();
     const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
@@ -23380,48 +23497,48 @@ describe("lanes-absolute", () => {
       );
     });
     const container = rectOf(containerRef);
-    expectClose(container.width, 600, 'lanes-absolute-0345 container.width');
-    expectClose(container.height, 90, 'lanes-absolute-0345 container.height');
+    expectClose(container.width, 600, 'lanes-absolute-0347 container.width');
+    expectClose(container.height, 90, 'lanes-absolute-0347 container.height');
     {
       const r = rectOf(itemRefs[0]);
-      expectClose(r.x - container.x, 0, 'lanes-absolute-0345 item[0].x');
-      expectClose(r.y - container.y, 0, 'lanes-absolute-0345 item[0].y');
-      expectClose(r.width, 193.33, 'lanes-absolute-0345 item[0].w');
-      expectClose(r.height, 40, 'lanes-absolute-0345 item[0].h');
+      expectClose(r.x - container.x, 0, 'lanes-absolute-0347 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0347 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-absolute-0347 item[0].w');
+      expectClose(r.height, 40, 'lanes-absolute-0347 item[0].h');
     }
     {
       const r = rectOf(itemRefs[1]);
-      expectClose(r.x - container.x, 203.33, 'lanes-absolute-0345 item[1].x');
-      expectClose(r.y - container.y, 0, 'lanes-absolute-0345 item[1].y');
-      expectClose(r.width, 193.33, 'lanes-absolute-0345 item[1].w');
-      expectClose(r.height, 60, 'lanes-absolute-0345 item[1].h');
+      expectClose(r.x - container.x, 203.33, 'lanes-absolute-0347 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0347 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-absolute-0347 item[1].w');
+      expectClose(r.height, 60, 'lanes-absolute-0347 item[1].h');
     }
     {
       const r = rectOf(itemRefs[2]);
-      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0345 item[2].x');
-      expectClose(r.y - container.y, 0, 'lanes-absolute-0345 item[2].y');
-      expectClose(r.width, 193.34, 'lanes-absolute-0345 item[2].w');
-      expectClose(r.height, 30, 'lanes-absolute-0345 item[2].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0347 item[2].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0347 item[2].y');
+      expectClose(r.width, 193.34, 'lanes-absolute-0347 item[2].w');
+      expectClose(r.height, 30, 'lanes-absolute-0347 item[2].h');
     }
     {
       const r = rectOf(itemRefs[3]);
-      expectClose(r.x - container.x, 0, 'lanes-absolute-0345 item[3].x');
-      expectClose(r.y - container.y, 0, 'lanes-absolute-0345 item[3].y');
-      expectClose(r.width, 50, 'lanes-absolute-0345 item[3].w');
-      expectClose(r.height, 25, 'lanes-absolute-0345 item[3].h');
+      expectClose(r.x - container.x, 0, 'lanes-absolute-0347 item[3].x');
+      expectClose(r.y - container.y, 0, 'lanes-absolute-0347 item[3].y');
+      expectClose(r.width, 50, 'lanes-absolute-0347 item[3].w');
+      expectClose(r.height, 25, 'lanes-absolute-0347 item[3].h');
     }
     {
       const r = rectOf(itemRefs[4]);
-      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0345 item[4].x');
-      expectClose(r.y - container.y, 40, 'lanes-absolute-0345 item[4].y');
-      expectClose(r.width, 193.34, 'lanes-absolute-0345 item[4].w');
-      expectClose(r.height, 50, 'lanes-absolute-0345 item[4].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-absolute-0347 item[4].x');
+      expectClose(r.y - container.y, 40, 'lanes-absolute-0347 item[4].y');
+      expectClose(r.width, 193.34, 'lanes-absolute-0347 item[4].w');
+      expectClose(r.height, 50, 'lanes-absolute-0347 item[4].h');
     }
   });
 });
 
 describe("lanes-display-none", () => {
-  it("lanes-display-none-0346: a display:none child takes no lane", () => {
+  it("lanes-display-none-0348: a display:none child takes no lane", () => {
     const containerRef = createRef<HostInstance>();
     const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
@@ -23460,33 +23577,33 @@ describe("lanes-display-none", () => {
       );
     });
     const container = rectOf(containerRef);
-    expectClose(container.width, 600, 'lanes-display-none-0346 container.width');
-    expectClose(container.height, 60, 'lanes-display-none-0346 container.height');
+    expectClose(container.width, 600, 'lanes-display-none-0348 container.width');
+    expectClose(container.height, 60, 'lanes-display-none-0348 container.height');
     {
       const r = rectOf(itemRefs[0]);
-      expectClose(r.x - container.x, 0, 'lanes-display-none-0346 item[0].x');
-      expectClose(r.y - container.y, 0, 'lanes-display-none-0346 item[0].y');
-      expectClose(r.width, 193.33, 'lanes-display-none-0346 item[0].w');
-      expectClose(r.height, 40, 'lanes-display-none-0346 item[0].h');
+      expectClose(r.x - container.x, 0, 'lanes-display-none-0348 item[0].x');
+      expectClose(r.y - container.y, 0, 'lanes-display-none-0348 item[0].y');
+      expectClose(r.width, 193.33, 'lanes-display-none-0348 item[0].w');
+      expectClose(r.height, 40, 'lanes-display-none-0348 item[0].h');
     }
     {
       const r = rectOf(itemRefs[1]);
-      expectClose(r.x - container.x, 203.33, 'lanes-display-none-0346 item[1].x');
-      expectClose(r.y - container.y, 0, 'lanes-display-none-0346 item[1].y');
-      expectClose(r.width, 193.33, 'lanes-display-none-0346 item[1].w');
-      expectClose(r.height, 60, 'lanes-display-none-0346 item[1].h');
+      expectClose(r.x - container.x, 203.33, 'lanes-display-none-0348 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-display-none-0348 item[1].y');
+      expectClose(r.width, 193.33, 'lanes-display-none-0348 item[1].w');
+      expectClose(r.height, 60, 'lanes-display-none-0348 item[1].h');
     }
     {
       const r = rectOf(itemRefs[2]);
-      expectClose(r.width, 0, 'lanes-display-none-0346 item[2].w');
-      expectClose(r.height, 0, 'lanes-display-none-0346 item[2].h');
+      expectClose(r.width, 0, 'lanes-display-none-0348 item[2].w');
+      expectClose(r.height, 0, 'lanes-display-none-0348 item[2].h');
     }
     {
       const r = rectOf(itemRefs[3]);
-      expectClose(r.x - container.x, 406.66, 'lanes-display-none-0346 item[3].x');
-      expectClose(r.y - container.y, 0, 'lanes-display-none-0346 item[3].y');
-      expectClose(r.width, 193.34, 'lanes-display-none-0346 item[3].w');
-      expectClose(r.height, 50, 'lanes-display-none-0346 item[3].h');
+      expectClose(r.x - container.x, 406.66, 'lanes-display-none-0348 item[3].x');
+      expectClose(r.y - container.y, 0, 'lanes-display-none-0348 item[3].y');
+      expectClose(r.width, 193.34, 'lanes-display-none-0348 item[3].w');
+      expectClose(r.height, 50, 'lanes-display-none-0348 item[3].h');
     }
   });
 });
