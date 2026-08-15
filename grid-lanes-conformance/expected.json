@@ -6,10 +6,10 @@
   "flowTolerance": true,
   "flowToleranceInfinite": true
  },
- "caseCount": 346,
+ "caseCount": 348,
  "byTier": {
   "A": 192,
-  "B": 139,
+  "B": 141,
   "C": 15
  },
  "cases": [
@@ -26779,6 +26779,7 @@
    ],
    "oracleDivergence": {
     "reason": "Safari distributes the stacking axis as if the lanes had rows (52.5 for space-around, 70 for space-evenly); §6.3 has a single alignment subject, so both fall back to center — half of 300 - 90 = 105",
+    "axis": "y",
     "y": [
      105,
      105,
@@ -26870,6 +26871,7 @@
    ],
    "oracleDivergence": {
     "reason": "Safari distributes the stacking axis as if the lanes had rows (52.5 for space-around, 70 for space-evenly); §6.3 has a single alignment subject, so both fall back to center — half of 300 - 90 = 105",
+    "axis": "y",
     "y": [
      105,
      105,
@@ -27150,6 +27152,7 @@
    ],
    "oracleDivergence": {
     "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "axis": "y",
     "y": [
      0,
      15,
@@ -27252,6 +27255,7 @@
    ],
    "oracleDivergence": {
     "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "axis": "y",
     "y": [
      0,
      30,
@@ -27350,6 +27354,7 @@
    ],
    "oracleDivergence": {
     "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "axis": "y",
     "y": [
      50,
      0,
@@ -27440,6 +27445,7 @@
    ],
    "oracleDivergence": {
     "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "axis": "y",
     "y": [
      25,
      0,
@@ -27633,6 +27639,7 @@
    ],
    "oracleDivergence": {
     "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "axis": "y",
     "y": [
      20,
      0,
@@ -27772,7 +27779,149 @@
    }
   },
   {
-   "id": "lanes-container-min-max-0340",
+   "id": "lanes-brick-stacking-align-0340",
+   "group": "lanes-brick-stacking-align",
+   "tier": "B",
+   "note": "justify-items:start in a brick layout",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "rows": [
+     {
+      "t": "px",
+      "v": 100
+     },
+     {
+      "t": "px",
+      "v": 100
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "justifyItems": "start"
+   },
+   "items": [
+    {
+     "w": 40,
+     "h": null
+    },
+    {
+     "w": 60,
+     "h": null
+    },
+    {
+     "w": 30,
+     "h": null
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 210
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 40,
+      "h": 100
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 110,
+      "w": 60,
+      "h": 100
+     },
+     {
+      "i": 2,
+      "x": 50,
+      "y": 0,
+      "w": 30,
+      "h": 100
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-brick-stacking-align-0341",
+   "group": "lanes-brick-stacking-align",
+   "tier": "B",
+   "note": "justify-items:end in a brick layout",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "rows": [
+     {
+      "t": "px",
+      "v": 100
+     },
+     {
+      "t": "px",
+      "v": 100
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "justifyItems": "end"
+   },
+   "items": [
+    {
+     "w": 40,
+     "h": null
+    },
+    {
+     "w": 60,
+     "h": null
+    },
+    {
+     "w": 30,
+     "h": null
+    }
+   ],
+   "oracleDivergence": {
+    "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "axis": "x",
+    "x": [
+     0,
+     20,
+     50
+    ]
+   },
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 210
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 40,
+      "h": 100
+     },
+     {
+      "i": 1,
+      "x": 20,
+      "y": 110,
+      "w": 60,
+      "h": 100
+     },
+     {
+      "i": 2,
+      "x": 50,
+      "y": 0,
+      "w": 30,
+      "h": 100
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-container-min-max-0342",
    "group": "lanes-container-min-max",
    "tier": "B",
    "note": "maxHeight: 60 on a lanes container",
@@ -27854,7 +28003,7 @@
    }
   },
   {
-   "id": "lanes-container-min-max-0341",
+   "id": "lanes-container-min-max-0343",
    "group": "lanes-container-min-max",
    "tier": "B",
    "note": "minHeight: 200 on a lanes container",
@@ -27936,7 +28085,7 @@
    }
   },
   {
-   "id": "lanes-container-min-max-0342",
+   "id": "lanes-container-min-max-0344",
    "group": "lanes-container-min-max",
    "tier": "B",
    "note": "maxWidth: 400 on a lanes container",
@@ -28018,7 +28167,7 @@
    }
   },
   {
-   "id": "lanes-container-min-max-0343",
+   "id": "lanes-container-min-max-0345",
    "group": "lanes-container-min-max",
    "tier": "B",
    "note": "minWidth: 800 on a lanes container",
@@ -28100,7 +28249,7 @@
    }
   },
   {
-   "id": "lanes-absolute-0344",
+   "id": "lanes-absolute-0346",
    "group": "lanes-absolute",
    "tier": "B",
    "note": "an absolutely-positioned child at 20,30 is out of flow",
@@ -28196,7 +28345,7 @@
    }
   },
   {
-   "id": "lanes-absolute-0345",
+   "id": "lanes-absolute-0347",
    "group": "lanes-absolute",
    "tier": "B",
    "note": "an absolutely-positioned child at 0,0 is out of flow",
@@ -28292,7 +28441,7 @@
    }
   },
   {
-   "id": "lanes-display-none-0346",
+   "id": "lanes-display-none-0348",
    "group": "lanes-display-none",
    "tier": "B",
    "note": "a display:none child takes no lane",

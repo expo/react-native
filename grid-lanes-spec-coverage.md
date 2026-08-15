@@ -156,6 +156,11 @@ spec-derived value, declared in `cases.js` next to the reason. The derivations
 are written out step by step in
 `grid-lanes-conformance/stacking-alignment-test.cpp`.
 
+`lanes-brick-stacking-align` runs §6.4 in a brick layout, where the stacking
+axis is the *inline* one and the properties are `justify-*` rather than
+`align-*`. It has its own branch in the implementation, and a sign error there
+would show up nowhere else.
+
 On `normal` and `stretch` in the stacking axis: both are treated as `start`.
 §6.3's note says so outright for content distribution — "the behavior of normal
 and stretch is identical to start" — and self alignment gets the same reading.
@@ -201,14 +206,14 @@ lanes should do with the declaration.
 
 ## Where the numbers come from
 
-346 corpus cases, of which 146 are grid-lanes. Per harness:
+348 corpus cases, of which 148 are grid-lanes. Per harness:
 
 | | cases | assertions | mismatches |
 | --- | --- | --- | --- |
-| `replay.cpp` (Yoga) | 338 | 5,870 | 0 |
-| Fantom (React Native) | 339 | — | 0 |
-| iOS simulator | 339 | 5,888 | 0 |
-| Android emulator | 339 | 5,888 | 0 |
+| `replay.cpp` (Yoga) | 340 | 5,898 | 0 |
+| Fantom (React Native) | 341 | — | 0 |
+| iOS simulator | 341 | 5,916 | 0 |
+| Android emulator | 341 | 5,916 | 0 |
 
 The full Fantom suite is unaffected: 3,508 passing, nothing failing.
 
