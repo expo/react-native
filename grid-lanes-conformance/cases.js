@@ -1056,4 +1056,278 @@ for (const [name, track] of [
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// A. Areas the corpus did not reach — added specifically to hunt for bugs in
+// the vendored track sizing, rather than to cover features already believed
+// to work.
+// ---------------------------------------------------------------------------
+
+// Implicit tracks: more items than the explicit grid holds, sized by
+// grid-auto-rows rather than by content.
+for (const autoRows of [null, [px(50)], [px(30), px(60)]]) {
+  add(
+    'implicit-rows',
+    'A',
+    grid({
+      cols: [px(100), px(100)],
+      rows: [px(40)],
+      gap: 10,
+      ...(autoRows ? {autoRows} : {}),
+    }),
+    [item(30, 20), item(30, 20), item(30, 20), item(30, 20), item(30, 20)],
+    `implicit rows${autoRows ? ` sized by grid-auto-rows` : ' sized by content'}`,
+  );
+}
+
+// Percentage gaps resolve against the container's content box in that axis.
+for (const gapPct of ['2%', '5%', '10%']) {
+  add(
+    'percentage-gap',
+    'A',
+    grid({cols: [fr(1), fr(1), fr(1)], width: 600, gapPercent: gapPct}),
+    [item(null, 20), item(null, 30), item(null, 25)],
+    `percentage gap ${gapPct}`,
+  );
+}
+
+// Container min/max constraints interact with the track total, which is the
+// code path the content-box/border-box bug lived in.
+for (const [minWidth, maxWidth] of [
+  [null, 300],
+  [800, null],
+  [200, 400],
+]) {
+  add(
+    'container-min-max',
+    'A',
+    grid({
+      cols: [auto(), auto()],
+      gap: 10,
+      width: null,
+      ...(minWidth ? {minWidth} : {}),
+      ...(maxWidth ? {maxWidth} : {}),
+    }),
+    [item(150, 20), item(150, 30)],
+    `container min-width ${minWidth ?? '-'} max-width ${maxWidth ?? '-'}`,
+  );
+}
+for (const [minHeight, maxHeight] of [
+  [null, 40],
+  [200, null],
+]) {
+  add(
+    'container-min-max-block',
+    'A',
+    grid({
+      cols: [px(100), px(100)],
+      gap: 10,
+      ...(minHeight ? {minHeight} : {}),
+      ...(maxHeight ? {maxHeight} : {}),
+    }),
+    [item(30, 60), item(30, 80)],
+    `container min-height ${minHeight ?? '-'} max-height ${maxHeight ?? '-'}`,
+  );
+}
+
+// An item spanning intrinsic tracks must distribute its contribution across
+// them (css-grid-2 §12.5), which is the most intricate part of track sizing.
+for (const span of [2, 3]) {
+  add(
+    'span-across-intrinsic',
+    'A',
+    grid({cols: [auto(), auto(), auto()], gap: 10, width: null}),
+    [
+      item(40, 20),
+      item(40, 20),
+      item(40, 20),
+      item(300, 20, {col: {span}}),
+    ],
+    `a wide item spanning ${span} auto tracks distributes its size`,
+  );
+  add(
+    'span-across-minmax',
+    'A',
+    grid({
+      cols: [minmax(px(50), auto()), minmax(px(50), auto()), minmax(px(50), auto())],
+      gap: 10,
+      width: null,
+    }),
+    [item(40, 20), item(300, 20, {col: {span}})],
+    `a wide item spanning ${span} minmax(50px, auto) tracks`,
+  );
+}
+
+// An item bigger than its track overflows rather than shrinking the track.
+add(
+  'item-overflows-track',
+  'A',
+  grid({cols: [px(80), px(80)], gap: 10}),
+  [item(200, 20), item(30, 20)],
+  'an item wider than its fixed track overflows it',
+);
+
+// Percentage-sized items resolve against their track, not the container.
+for (const w of [50, 100]) {
+  add(
+    'item-percentage-size',
+    'A',
+    grid({cols: [px(200), px(200)], gap: 10}),
+    [item(null, 20, {widthPercent: w}), item(30, 20)],
+    `item width ${w}% of its track`,
+  );
+}
+
+// A grid nested inside a grid: the inner container is sized by the outer
+// track, and its own tracks resolve against that.
+add(
+  'nested-grid',
+  'A',
+  grid({cols: [fr(1), fr(2)], gap: 10, width: 600}),
+  [item(null, 40), item(null, 40)],
+  'baseline for the nested case',
+);
+
+// Rows sized by fr need a definite container height to divide up.
+for (const height of [200, 400]) {
+  add(
+    'fr-rows-definite-height',
+    'A',
+    grid({cols: [px(100)], rows: [fr(1), fr(2)], height, gap: 10}),
+    [item(30, null), item(30, null)],
+    `fr rows in a ${height}px-tall container`,
+  );
+}
+
+// fr rows with NO definite height: fr behaves as auto, since there is no free
+// space to distribute.
+add(
+  'fr-rows-indefinite-height',
+  'A',
+  grid({cols: [px(100)], rows: [fr(1), fr(2)], gap: 10}),
+  [item(30, 40), item(30, 60)],
+  'fr rows with an indefinite container height',
+);
+
+// Zero and negative-ish inputs, where clamping bugs live.
+add(
+  'zero-tracks',
+  'A',
+  grid({cols: [px(0), px(0), px(100)], gap: 10}),
+  [item(null, 20), item(null, 20), item(null, 20)],
+  'zero-width tracks still take part in gap accounting',
+);
+add(
+  'zero-gap-zero-tracks',
+  'A',
+  grid({cols: [px(0), fr(1)], gap: 0}),
+  [item(null, 20), item(null, 20)],
+  'a zero track next to an fr with no gap',
+);
+
+
+// ---------------------------------------------------------------------------
+// A. The intricate corners of §12: spanning items crossing flexible tracks,
+// baseline alignment, and fr floors that force overflow. These are the parts
+// of the track sizing algorithm most likely to be wrong.
+// ---------------------------------------------------------------------------
+
+// §12.6: a spanning item crossing FLEXIBLE tracks contributes to the flex
+// fraction rather than to the base sizes.
+for (const span of [2, 3]) {
+  for (const itemWidth of [100, 400, 700]) {
+    add(
+      'span-across-flexible',
+      'A',
+      grid({cols: [fr(1), fr(1), fr(2)], gap: 10, width: null}),
+      [item(40, 20), item(itemWidth, 20, {col: {span}})],
+      `a ${itemWidth}px item spanning ${span} flexible tracks`,
+    );
+  }
+}
+
+// A spanning item over a mix of fixed and flexible tracks: the fixed part is
+// subtracted before the flex fraction is found.
+for (const itemWidth of [200, 500]) {
+  add(
+    'span-mixed-tracks',
+    'A',
+    grid({cols: [px(80), fr(1), px(60), fr(2)], gap: 10, width: null}),
+    [item(itemWidth, 20, {col: {span: 3}}), item(40, 20)],
+    `a ${itemWidth}px item spanning fixed and flexible tracks`,
+  );
+}
+
+// An fr track with a floor larger than its share: the floor wins and the grid
+// overflows (§12.7.1).
+for (const floor of [100, 300, 500]) {
+  add(
+    'fr-floor-overflow',
+    'A',
+    grid({cols: [minmax(px(floor), fr(1)), fr(1), fr(1)], gap: 10, width: 600}),
+    [item(null, 20), item(null, 20), item(null, 20)],
+    `minmax(${floor}px, 1fr) floor against a 600px container`,
+  );
+}
+
+// Baseline alignment groups items across a row and shims them into line
+// (§12.4 / algo-baseline-shims).
+for (const alignItems of ['baseline', 'start']) {
+  add(
+    'baseline-alignment',
+    'A',
+    grid({
+      cols: [px(150), px(150), px(150)],
+      gap: 10,
+      alignItems,
+      rows: [auto()],
+    }),
+    [
+      item(40, 30, {p: 10}),
+      item(40, 60, {p: 20}),
+      item(40, 20, {p: 5}),
+    ],
+    `align-items:${alignItems} with items of differing height and padding`,
+  );
+}
+
+// Aspect ratio interacts with track sizing: the item's height follows from
+// the width the track gives it.
+for (const ratio of [1, 2]) {
+  add(
+    'item-aspect-ratio',
+    'A',
+    grid({cols: [fr(1), fr(1)], gap: 10, width: 600}),
+    [item(null, null, {aspectRatio: ratio}), item(null, null, {aspectRatio: ratio})],
+    `items with aspect-ratio ${ratio} in fr tracks`,
+  );
+}
+
+// Percentage tracks inside an indefinite container behave as auto (§7.2.1).
+add(
+  'pct-track-indefinite',
+  'A',
+  grid({cols: [pct(50), pct(50)], width: null, gap: 10}),
+  [item(120, 20), item(80, 20)],
+  'percentage tracks with an indefinite container width',
+);
+
+// A grid whose tracks total less than the container leaves free space that
+// align-content distributes in the BLOCK axis.
+for (const alignContent of ['start', 'center', 'end', 'space-between']) {
+  add(
+    'align-content-block',
+    'A',
+    grid({
+      cols: [px(100)],
+      rows: [px(40), px(40)],
+      height: 300,
+      gap: 10,
+      alignContent,
+    }),
+    [item(30, null), item(30, null)],
+    `align-content:${alignContent} with block-axis slack`,
+  );
+}
+
 module.exports = {cases, px, pct, fr, auto, minmax};
