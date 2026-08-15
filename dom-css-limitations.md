@@ -195,6 +195,11 @@ a real screen first. Background in `element-model-design.md`.
 
 ## CSS Grid
 
+- **`DOM-CSS-LIMITATION(grid-min-content)` — `min-content` as a MAXIMUM sizing
+  function behaves as `auto`.** Yoga has no min-content sizing function. Its
+  `auto` minimum IS the automatic minimum size, which is min-content for a
+  non-scrollable box, so `min-content` as a minimum is correct; only the
+  maximum position is approximated.
 - **`grid-auto-flow` is fully implemented** — `row`, `column`, and either with
   `dense`. Column flow runs the row algorithm in transposed space rather than
   duplicating it: every axis-specific read is swapped on the way in and the
@@ -251,6 +256,8 @@ rather than going quiet.
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `grid-fit-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
+- `grid-min-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
@@ -262,7 +269,6 @@ rather than going quiet.
 - `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
 - `no-font-on-a-control` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPElementTextAreaComponentView.mm`
 - `no-generic-font-families` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
-- `no-grid` — limitation, `ReactCommon/react/renderer/components/view/conversions.h`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
