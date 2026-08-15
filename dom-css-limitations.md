@@ -99,10 +99,13 @@ a real screen first. Background in `element-model-design.md`.
   `auto` minimum IS the automatic minimum size, which is min-content for a
   non-scrollable box, so `min-content` as a minimum is correct; only the
   maximum position is approximated.
-- **`grid-auto-flow` is not implemented.** Yoga's style has no field for it, so
-  there is no `column` flow and no `dense` packing; placement is always `row`.
-  Items still place in order, and `auto-fit` collapsing works, because that is
-  a track-list concern rather than a flow one.
+- **`DOM-CSS-LIMITATION(grid-auto-flow-column)` — `grid-auto-flow: column` is
+  not implemented.** `row` and `row dense` are. The column values are accepted
+  and behave as their row equivalents rather than being dropped, so a layout
+  written for the web still places its items — in the wrong order, but placed.
+  Column flow means transposing the placement cursor throughout the
+  auto-placement algorithm, which is a change to vendored code rather than a
+  flag.
 - **Named grid lines and `grid-template-areas` are not implemented.** Placement
   is by line number or span only.
 - **`subgrid` is not implemented.**

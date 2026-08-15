@@ -1353,4 +1353,64 @@ for (const [limit, itemWidth] of [
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// A. grid-auto-flow: dense — css-grid-2 §8.5
+//
+// A spanning item that does not fit the remaining columns leaves a hole. The
+// sparse cursor never moves backwards, so the hole stays; the dense algorithm
+// restarts the search for every item and backfills it. Each shape below is
+// run both ways, and the pair differing is the whole point.
+// ---------------------------------------------------------------------------
+
+for (const dense of [false, true]) {
+  const flow = dense ? 'row dense' : 'row';
+  add(
+    'auto-flow-dense-basic',
+    'A',
+    grid({cols: [fr(1), fr(1), fr(1)], gap: 10, autoFlow: flow}),
+    [
+      item(null, 30, {col: {span: 2}}),
+      item(null, 30, {col: {span: 2}}),
+      item(null, 30), // fits the hole beside the first item, if allowed back
+      item(null, 30),
+    ],
+    `grid-auto-flow: ${flow} with two spanning items`,
+  );
+  add(
+    'auto-flow-dense-mixed',
+    'A',
+    grid({cols: [fr(1), fr(1), fr(1), fr(1)], gap: 8, autoFlow: flow}),
+    [
+      item(null, 24, {col: {span: 3}}),
+      item(null, 24, {col: {span: 2}}),
+      item(null, 24),
+      item(null, 24, {col: {span: 2}}),
+      item(null, 24),
+      item(null, 24),
+    ],
+    `grid-auto-flow: ${flow} over four columns with mixed spans`,
+  );
+  add(
+    'auto-flow-dense-explicit',
+    'A',
+    grid({cols: [fr(1), fr(1), fr(1)], gap: 10, autoFlow: flow}),
+    [
+      item(null, 24, {col: 3}), // pinned, leaving columns 1-2 free
+      item(null, 24, {col: {span: 2}}),
+      item(null, 24),
+      item(null, 24),
+    ],
+    `grid-auto-flow: ${flow} around an explicitly placed item`,
+  );
+  // No holes to fill: dense and sparse must agree exactly.
+  add(
+    'auto-flow-dense-noop',
+    'A',
+    grid({cols: [fr(1), fr(1), fr(1)], gap: 10, autoFlow: flow}),
+    [item(null, 24), item(null, 24), item(null, 24), item(null, 24)],
+    `grid-auto-flow: ${flow} with no holes to fill`,
+  );
+}
+
 module.exports = {cases, px, pct, fr, auto, minmax};

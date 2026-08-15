@@ -14,6 +14,7 @@
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/components/view/GridTrackListParser.h>
+#include <yoga/style/GridAutoFlow.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/css/CSSAngle.h>
@@ -538,6 +539,38 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     return;
   }
   LOG(ERROR) << "Could not parse yoga::Display: " << stringValue;
+}
+
+inline void fromRawValue(
+    const PropsParserContext & /*context*/,
+    const RawValue &value,
+    yoga::GridAutoFlow &result)
+{
+  result = yoga::GridAutoFlow::Row;
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  const auto stringValue = (std::string)value;
+  if (stringValue == "row") {
+    result = yoga::GridAutoFlow::Row;
+    return;
+  }
+  if (stringValue == "row dense" || stringValue == "dense") {
+    result = yoga::GridAutoFlow::RowDense;
+    return;
+  }
+  // DOM-CSS-LIMITATION(grid-auto-flow-column): column flow is not implemented;
+  // the value is accepted and behaves as the row equivalent rather than being
+  // dropped, so a layout written for the web still places its items.
+  if (stringValue == "column") {
+    result = yoga::GridAutoFlow::Row;
+    return;
+  }
+  if (stringValue == "column dense") {
+    result = yoga::GridAutoFlow::RowDense;
+    return;
+  }
+  LOG(ERROR) << "Could not parse yoga::GridAutoFlow: " << stringValue;
 }
 
 inline void fromRawValue(
