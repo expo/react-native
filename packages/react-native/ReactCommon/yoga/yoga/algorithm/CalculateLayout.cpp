@@ -28,6 +28,7 @@
 #include <yoga/algorithm/PixelGrid.h>
 #include <yoga/algorithm/SizingMode.h>
 #include <yoga/algorithm/TrailingPosition.h>
+#include <yoga/algorithm/GridLanesLayout.h>
 #include <yoga/algorithm/grid/GridLayout.h>
 #include <yoga/debug/AssertFatal.h>
 #include <yoga/debug/Log.h>
@@ -2516,6 +2517,25 @@ static void calculateLayoutImpl(
   // Clean and update all display: contents nodes with a direct path to the
   // current node as they will not be traversed
   cleanupContentsNodesRecursively(node, performLayout);
+
+  // Grid lanes: tracks in one axis, a flowed stacking axis (css-grid-3).
+  if (node->style().display() == Display::GridLanes) {
+    calculateGridLanesLayoutInternal(
+        node,
+        availableWidth,
+        availableHeight,
+        ownerDirection,
+        widthSizingMode,
+        heightSizingMode,
+        ownerWidth,
+        ownerHeight,
+        performLayout,
+        reason,
+        layoutMarkerData,
+        depth,
+        generationCount);
+    return;
+  }
 
   // Grid formatting context: `display: grid` uses the dedicated grid layout
   // path rather than the flex algorithm below. VENDORED — see
