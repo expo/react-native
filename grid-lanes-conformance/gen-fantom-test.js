@@ -59,6 +59,17 @@ function rnStyle(container) {
     // be set for the width to apply.
     style.borderColor = 'transparent';
   }
+  if (container.autoRows) {
+    style.gridAutoRows = container.autoRows.map(trackToCss).join(' ');
+  }
+  if (container.autoColumns) {
+    style.gridAutoColumns = container.autoColumns.map(trackToCss).join(' ');
+  }
+  if (container.gapPercent) style.gap = container.gapPercent;
+  if (container.minWidth != null) style.minWidth = container.minWidth;
+  if (container.maxWidth != null) style.maxWidth = container.maxWidth;
+  if (container.minHeight != null) style.minHeight = container.minHeight;
+  if (container.maxHeight != null) style.maxHeight = container.maxHeight;
   if (container.justifyItems) style.justifyItems = container.justifyItems;
   if (container.alignItems) style.alignItems = container.alignItems;
   if (container.justifyContent) style.justifyContent = container.justifyContent;
@@ -76,6 +87,8 @@ function rnItemStyle(item) {
     style.borderWidth = item.b;
     style.borderColor = 'transparent';
   }
+  if (item.widthPercent != null) style.width = `${item.widthPercent}%`;
+  if (item.aspectRatio != null) style.aspectRatio = item.aspectRatio;
   if (item.justifySelf) style.justifySelf = item.justifySelf;
   if (item.col != null) {
     const css = placementToCss(item.col);

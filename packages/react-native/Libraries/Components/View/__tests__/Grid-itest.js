@@ -21,7 +21,7 @@
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 125 cases; 119 corpus cases are not expressible as RN styles
+ * 169 cases; 119 corpus cases are not expressible as RN styles
  * (grid-lanes, min-content/max-content/fit-content tracks, rtl, order).
  */
 
@@ -7508,6 +7508,2288 @@ describe("auto-fit-x-trailing-hole", () => {
       expectClose(r.y - container.y, 0, 'auto-fit-x-trailing-hole-0241 item[1].y');
       expectClose(r.width, 392, 'auto-fit-x-trailing-hole-0241 item[1].w');
       expectClose(r.height, 40, 'auto-fit-x-trailing-hole-0241 item[1].h');
+    }
+  });
+});
+
+describe("implicit-rows", () => {
+  it("implicit-rows-0245: implicit rows sized by content", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"100px 100px","gridTemplateRows":"40px","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'implicit-rows-0245 container.width');
+    expectClose(container.height, 100, 'implicit-rows-0245 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0245 item[0].x');
+      expectClose(r.y - container.y, 0, 'implicit-rows-0245 item[0].y');
+      expectClose(r.width, 30, 'implicit-rows-0245 item[0].w');
+      expectClose(r.height, 20, 'implicit-rows-0245 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 110, 'implicit-rows-0245 item[1].x');
+      expectClose(r.y - container.y, 0, 'implicit-rows-0245 item[1].y');
+      expectClose(r.width, 30, 'implicit-rows-0245 item[1].w');
+      expectClose(r.height, 20, 'implicit-rows-0245 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0245 item[2].x');
+      expectClose(r.y - container.y, 50, 'implicit-rows-0245 item[2].y');
+      expectClose(r.width, 30, 'implicit-rows-0245 item[2].w');
+      expectClose(r.height, 20, 'implicit-rows-0245 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 110, 'implicit-rows-0245 item[3].x');
+      expectClose(r.y - container.y, 50, 'implicit-rows-0245 item[3].y');
+      expectClose(r.width, 30, 'implicit-rows-0245 item[3].w');
+      expectClose(r.height, 20, 'implicit-rows-0245 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0245 item[4].x');
+      expectClose(r.y - container.y, 80, 'implicit-rows-0245 item[4].y');
+      expectClose(r.width, 30, 'implicit-rows-0245 item[4].w');
+      expectClose(r.height, 20, 'implicit-rows-0245 item[4].h');
+    }
+  });
+  it("implicit-rows-0246: implicit rows sized by grid-auto-rows", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"100px 100px","gridTemplateRows":"40px","gap":10,"gridAutoRows":"50px"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'implicit-rows-0246 container.width');
+    expectClose(container.height, 160, 'implicit-rows-0246 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0246 item[0].x');
+      expectClose(r.y - container.y, 0, 'implicit-rows-0246 item[0].y');
+      expectClose(r.width, 30, 'implicit-rows-0246 item[0].w');
+      expectClose(r.height, 20, 'implicit-rows-0246 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 110, 'implicit-rows-0246 item[1].x');
+      expectClose(r.y - container.y, 0, 'implicit-rows-0246 item[1].y');
+      expectClose(r.width, 30, 'implicit-rows-0246 item[1].w');
+      expectClose(r.height, 20, 'implicit-rows-0246 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0246 item[2].x');
+      expectClose(r.y - container.y, 50, 'implicit-rows-0246 item[2].y');
+      expectClose(r.width, 30, 'implicit-rows-0246 item[2].w');
+      expectClose(r.height, 20, 'implicit-rows-0246 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 110, 'implicit-rows-0246 item[3].x');
+      expectClose(r.y - container.y, 50, 'implicit-rows-0246 item[3].y');
+      expectClose(r.width, 30, 'implicit-rows-0246 item[3].w');
+      expectClose(r.height, 20, 'implicit-rows-0246 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0246 item[4].x');
+      expectClose(r.y - container.y, 110, 'implicit-rows-0246 item[4].y');
+      expectClose(r.width, 30, 'implicit-rows-0246 item[4].w');
+      expectClose(r.height, 20, 'implicit-rows-0246 item[4].h');
+    }
+  });
+  it("implicit-rows-0247: implicit rows sized by grid-auto-rows", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"100px 100px","gridTemplateRows":"40px","gap":10,"gridAutoRows":"30px 60px"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'implicit-rows-0247 container.width');
+    expectClose(container.height, 150, 'implicit-rows-0247 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0247 item[0].x');
+      expectClose(r.y - container.y, 0, 'implicit-rows-0247 item[0].y');
+      expectClose(r.width, 30, 'implicit-rows-0247 item[0].w');
+      expectClose(r.height, 20, 'implicit-rows-0247 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 110, 'implicit-rows-0247 item[1].x');
+      expectClose(r.y - container.y, 0, 'implicit-rows-0247 item[1].y');
+      expectClose(r.width, 30, 'implicit-rows-0247 item[1].w');
+      expectClose(r.height, 20, 'implicit-rows-0247 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0247 item[2].x');
+      expectClose(r.y - container.y, 50, 'implicit-rows-0247 item[2].y');
+      expectClose(r.width, 30, 'implicit-rows-0247 item[2].w');
+      expectClose(r.height, 20, 'implicit-rows-0247 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 110, 'implicit-rows-0247 item[3].x');
+      expectClose(r.y - container.y, 50, 'implicit-rows-0247 item[3].y');
+      expectClose(r.width, 30, 'implicit-rows-0247 item[3].w');
+      expectClose(r.height, 20, 'implicit-rows-0247 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 0, 'implicit-rows-0247 item[4].x');
+      expectClose(r.y - container.y, 90, 'implicit-rows-0247 item[4].y');
+      expectClose(r.width, 30, 'implicit-rows-0247 item[4].w');
+      expectClose(r.height, 20, 'implicit-rows-0247 item[4].h');
+    }
+  });
+});
+
+describe("percentage-gap", () => {
+  it("percentage-gap-0248: percentage gap 2%", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":"2%"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":25}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'percentage-gap-0248 container.width');
+    expectClose(container.height, 30, 'percentage-gap-0248 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'percentage-gap-0248 item[0].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0248 item[0].y');
+      expectClose(r.width, 192, 'percentage-gap-0248 item[0].w');
+      expectClose(r.height, 20, 'percentage-gap-0248 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 204, 'percentage-gap-0248 item[1].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0248 item[1].y');
+      expectClose(r.width, 192, 'percentage-gap-0248 item[1].w');
+      expectClose(r.height, 30, 'percentage-gap-0248 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 408, 'percentage-gap-0248 item[2].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0248 item[2].y');
+      expectClose(r.width, 192, 'percentage-gap-0248 item[2].w');
+      expectClose(r.height, 25, 'percentage-gap-0248 item[2].h');
+    }
+  });
+  it("percentage-gap-0249: percentage gap 5%", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":"5%"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":25}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'percentage-gap-0249 container.width');
+    expectClose(container.height, 30, 'percentage-gap-0249 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'percentage-gap-0249 item[0].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0249 item[0].y');
+      expectClose(r.width, 180, 'percentage-gap-0249 item[0].w');
+      expectClose(r.height, 20, 'percentage-gap-0249 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 210, 'percentage-gap-0249 item[1].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0249 item[1].y');
+      expectClose(r.width, 180, 'percentage-gap-0249 item[1].w');
+      expectClose(r.height, 30, 'percentage-gap-0249 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 420, 'percentage-gap-0249 item[2].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0249 item[2].y');
+      expectClose(r.width, 180, 'percentage-gap-0249 item[2].w');
+      expectClose(r.height, 25, 'percentage-gap-0249 item[2].h');
+    }
+  });
+  it("percentage-gap-0250: percentage gap 10%", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr 1fr","gap":"10%"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":25}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'percentage-gap-0250 container.width');
+    expectClose(container.height, 30, 'percentage-gap-0250 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'percentage-gap-0250 item[0].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0250 item[0].y');
+      expectClose(r.width, 160, 'percentage-gap-0250 item[0].w');
+      expectClose(r.height, 20, 'percentage-gap-0250 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 220, 'percentage-gap-0250 item[1].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0250 item[1].y');
+      expectClose(r.width, 160, 'percentage-gap-0250 item[1].w');
+      expectClose(r.height, 30, 'percentage-gap-0250 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 440, 'percentage-gap-0250 item[2].x');
+      expectClose(r.y - container.y, 0, 'percentage-gap-0250 item[2].y');
+      expectClose(r.width, 160, 'percentage-gap-0250 item[2].w');
+      expectClose(r.height, 25, 'percentage-gap-0250 item[2].h');
+    }
+  });
+});
+
+describe("container-min-max", () => {
+  it("container-min-max-0251: container min-width - max-width 300", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"auto auto","gap":10,"maxWidth":300}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":150,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":150,"height":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 300, 'container-min-max-0251 container.width');
+    expectClose(container.height, 30, 'container-min-max-0251 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'container-min-max-0251 item[0].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-0251 item[0].y');
+      expectClose(r.width, 150, 'container-min-max-0251 item[0].w');
+      expectClose(r.height, 20, 'container-min-max-0251 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 160, 'container-min-max-0251 item[1].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-0251 item[1].y');
+      expectClose(r.width, 150, 'container-min-max-0251 item[1].w');
+      expectClose(r.height, 30, 'container-min-max-0251 item[1].h');
+    }
+  });
+  it("container-min-max-0252: container min-width 800 max-width -", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"auto auto","gap":10,"minWidth":800}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":150,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":150,"height":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'container-min-max-0252 container.width');
+    expectClose(container.height, 30, 'container-min-max-0252 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'container-min-max-0252 item[0].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-0252 item[0].y');
+      expectClose(r.width, 150, 'container-min-max-0252 item[0].w');
+      expectClose(r.height, 20, 'container-min-max-0252 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 455, 'container-min-max-0252 item[1].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-0252 item[1].y');
+      expectClose(r.width, 150, 'container-min-max-0252 item[1].w');
+      expectClose(r.height, 30, 'container-min-max-0252 item[1].h');
+    }
+  });
+  it("container-min-max-0253: container min-width 200 max-width 400", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"auto auto","gap":10,"minWidth":200,"maxWidth":400}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":150,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":150,"height":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 400, 'container-min-max-0253 container.width');
+    expectClose(container.height, 30, 'container-min-max-0253 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'container-min-max-0253 item[0].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-0253 item[0].y');
+      expectClose(r.width, 150, 'container-min-max-0253 item[0].w');
+      expectClose(r.height, 20, 'container-min-max-0253 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 205, 'container-min-max-0253 item[1].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-0253 item[1].y');
+      expectClose(r.width, 150, 'container-min-max-0253 item[1].w');
+      expectClose(r.height, 30, 'container-min-max-0253 item[1].h');
+    }
+  });
+});
+
+describe("container-min-max-block", () => {
+  it("container-min-max-block-0254: container min-height - max-height 40", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"100px 100px","gap":10,"maxHeight":40}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":80}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'container-min-max-block-0254 container.width');
+    expectClose(container.height, 40, 'container-min-max-block-0254 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'container-min-max-block-0254 item[0].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-block-0254 item[0].y');
+      expectClose(r.width, 30, 'container-min-max-block-0254 item[0].w');
+      expectClose(r.height, 60, 'container-min-max-block-0254 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 110, 'container-min-max-block-0254 item[1].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-block-0254 item[1].y');
+      expectClose(r.width, 30, 'container-min-max-block-0254 item[1].w');
+      expectClose(r.height, 80, 'container-min-max-block-0254 item[1].h');
+    }
+  });
+  it("container-min-max-block-0255: container min-height 200 max-height -", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"100px 100px","gap":10,"minHeight":200}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":80}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'container-min-max-block-0255 container.width');
+    expectClose(container.height, 200, 'container-min-max-block-0255 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'container-min-max-block-0255 item[0].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-block-0255 item[0].y');
+      expectClose(r.width, 30, 'container-min-max-block-0255 item[0].w');
+      expectClose(r.height, 60, 'container-min-max-block-0255 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 110, 'container-min-max-block-0255 item[1].x');
+      expectClose(r.y - container.y, 0, 'container-min-max-block-0255 item[1].y');
+      expectClose(r.width, 30, 'container-min-max-block-0255 item[1].w');
+      expectClose(r.height, 80, 'container-min-max-block-0255 item[1].h');
+    }
+  });
+});
+
+describe("span-across-intrinsic", () => {
+  it("span-across-intrinsic-0256: a wide item spanning 2 auto tracks distributes its size", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"auto auto auto","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":300,"height":20,"gridColumnEnd":"span 2"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-intrinsic-0256 container.width');
+    expectClose(container.height, 50, 'span-across-intrinsic-0256 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-intrinsic-0256 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-intrinsic-0256 item[0].y');
+      expectClose(r.width, 40, 'span-across-intrinsic-0256 item[0].w');
+      expectClose(r.height, 20, 'span-across-intrinsic-0256 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 338.33, 'span-across-intrinsic-0256 item[1].x');
+      expectClose(r.y - container.y, 0, 'span-across-intrinsic-0256 item[1].y');
+      expectClose(r.width, 40, 'span-across-intrinsic-0256 item[1].w');
+      expectClose(r.height, 20, 'span-across-intrinsic-0256 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 676.66, 'span-across-intrinsic-0256 item[2].x');
+      expectClose(r.y - container.y, 0, 'span-across-intrinsic-0256 item[2].y');
+      expectClose(r.width, 40, 'span-across-intrinsic-0256 item[2].w');
+      expectClose(r.height, 20, 'span-across-intrinsic-0256 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'span-across-intrinsic-0256 item[3].x');
+      expectClose(r.y - container.y, 30, 'span-across-intrinsic-0256 item[3].y');
+      expectClose(r.width, 300, 'span-across-intrinsic-0256 item[3].w');
+      expectClose(r.height, 20, 'span-across-intrinsic-0256 item[3].h');
+    }
+  });
+  it("span-across-intrinsic-0258: a wide item spanning 3 auto tracks distributes its size", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"auto auto auto","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":300,"height":20,"gridColumnEnd":"span 3"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-intrinsic-0258 container.width');
+    expectClose(container.height, 50, 'span-across-intrinsic-0258 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-intrinsic-0258 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-intrinsic-0258 item[0].y');
+      expectClose(r.width, 40, 'span-across-intrinsic-0258 item[0].w');
+      expectClose(r.height, 20, 'span-across-intrinsic-0258 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 303.33, 'span-across-intrinsic-0258 item[1].x');
+      expectClose(r.y - container.y, 0, 'span-across-intrinsic-0258 item[1].y');
+      expectClose(r.width, 40, 'span-across-intrinsic-0258 item[1].w');
+      expectClose(r.height, 20, 'span-across-intrinsic-0258 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 606.66, 'span-across-intrinsic-0258 item[2].x');
+      expectClose(r.y - container.y, 0, 'span-across-intrinsic-0258 item[2].y');
+      expectClose(r.width, 40, 'span-across-intrinsic-0258 item[2].w');
+      expectClose(r.height, 20, 'span-across-intrinsic-0258 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'span-across-intrinsic-0258 item[3].x');
+      expectClose(r.y - container.y, 30, 'span-across-intrinsic-0258 item[3].y');
+      expectClose(r.width, 300, 'span-across-intrinsic-0258 item[3].w');
+      expectClose(r.height, 20, 'span-across-intrinsic-0258 item[3].h');
+    }
+  });
+});
+
+describe("span-across-minmax", () => {
+  it("span-across-minmax-0257: a wide item spanning 2 minmax(50px, auto) tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"minmax(50px, auto) minmax(50px, auto) minmax(50px, auto)","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":300,"height":20,"gridColumnEnd":"span 2"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-minmax-0257 container.width');
+    expectClose(container.height, 20, 'span-across-minmax-0257 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-minmax-0257 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-minmax-0257 item[0].y');
+      expectClose(r.width, 40, 'span-across-minmax-0257 item[0].w');
+      expectClose(r.height, 20, 'span-across-minmax-0257 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 240, 'span-across-minmax-0257 item[1].x');
+      expectClose(r.y - container.y, 0, 'span-across-minmax-0257 item[1].y');
+      expectClose(r.width, 300, 'span-across-minmax-0257 item[1].w');
+      expectClose(r.height, 20, 'span-across-minmax-0257 item[1].h');
+    }
+  });
+  it("span-across-minmax-0259: a wide item spanning 3 minmax(50px, auto) tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"minmax(50px, auto) minmax(50px, auto) minmax(50px, auto)","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":300,"height":20,"gridColumnEnd":"span 3"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-minmax-0259 container.width');
+    expectClose(container.height, 50, 'span-across-minmax-0259 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-minmax-0259 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-minmax-0259 item[0].y');
+      expectClose(r.width, 40, 'span-across-minmax-0259 item[0].w');
+      expectClose(r.height, 20, 'span-across-minmax-0259 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'span-across-minmax-0259 item[1].x');
+      expectClose(r.y - container.y, 30, 'span-across-minmax-0259 item[1].y');
+      expectClose(r.width, 300, 'span-across-minmax-0259 item[1].w');
+      expectClose(r.height, 20, 'span-across-minmax-0259 item[1].h');
+    }
+  });
+});
+
+describe("item-overflows-track", () => {
+  it("item-overflows-track-0260: an item wider than its fixed track overflows it", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"80px 80px","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":200,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'item-overflows-track-0260 container.width');
+    expectClose(container.height, 20, 'item-overflows-track-0260 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'item-overflows-track-0260 item[0].x');
+      expectClose(r.y - container.y, 0, 'item-overflows-track-0260 item[0].y');
+      expectClose(r.width, 200, 'item-overflows-track-0260 item[0].w');
+      expectClose(r.height, 20, 'item-overflows-track-0260 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 90, 'item-overflows-track-0260 item[1].x');
+      expectClose(r.y - container.y, 0, 'item-overflows-track-0260 item[1].y');
+      expectClose(r.width, 30, 'item-overflows-track-0260 item[1].w');
+      expectClose(r.height, 20, 'item-overflows-track-0260 item[1].h');
+    }
+  });
+});
+
+describe("item-percentage-size", () => {
+  it("item-percentage-size-0261: item width 50% of its track", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"200px 200px","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20,"width":"50%"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'item-percentage-size-0261 container.width');
+    expectClose(container.height, 20, 'item-percentage-size-0261 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'item-percentage-size-0261 item[0].x');
+      expectClose(r.y - container.y, 0, 'item-percentage-size-0261 item[0].y');
+      expectClose(r.width, 100, 'item-percentage-size-0261 item[0].w');
+      expectClose(r.height, 20, 'item-percentage-size-0261 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 210, 'item-percentage-size-0261 item[1].x');
+      expectClose(r.y - container.y, 0, 'item-percentage-size-0261 item[1].y');
+      expectClose(r.width, 30, 'item-percentage-size-0261 item[1].w');
+      expectClose(r.height, 20, 'item-percentage-size-0261 item[1].h');
+    }
+  });
+  it("item-percentage-size-0262: item width 100% of its track", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"200px 200px","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20,"width":"100%"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'item-percentage-size-0262 container.width');
+    expectClose(container.height, 20, 'item-percentage-size-0262 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'item-percentage-size-0262 item[0].x');
+      expectClose(r.y - container.y, 0, 'item-percentage-size-0262 item[0].y');
+      expectClose(r.width, 200, 'item-percentage-size-0262 item[0].w');
+      expectClose(r.height, 20, 'item-percentage-size-0262 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 210, 'item-percentage-size-0262 item[1].x');
+      expectClose(r.y - container.y, 0, 'item-percentage-size-0262 item[1].y');
+      expectClose(r.width, 30, 'item-percentage-size-0262 item[1].w');
+      expectClose(r.height, 20, 'item-percentage-size-0262 item[1].h');
+    }
+  });
+});
+
+describe("nested-grid", () => {
+  it("nested-grid-0263: baseline for the nested case", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'nested-grid-0263 container.width');
+    expectClose(container.height, 40, 'nested-grid-0263 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'nested-grid-0263 item[0].x');
+      expectClose(r.y - container.y, 0, 'nested-grid-0263 item[0].y');
+      expectClose(r.width, 196.66, 'nested-grid-0263 item[0].w');
+      expectClose(r.height, 40, 'nested-grid-0263 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 206.66, 'nested-grid-0263 item[1].x');
+      expectClose(r.y - container.y, 0, 'nested-grid-0263 item[1].y');
+      expectClose(r.width, 393.34, 'nested-grid-0263 item[1].w');
+      expectClose(r.height, 40, 'nested-grid-0263 item[1].h');
+    }
+  });
+});
+
+describe("fr-rows-definite-height", () => {
+  it("fr-rows-definite-height-0264: fr rows in a 200px-tall container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"height":200,"gridTemplateColumns":"100px","gridTemplateRows":"1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fr-rows-definite-height-0264 container.width');
+    expectClose(container.height, 200, 'fr-rows-definite-height-0264 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fr-rows-definite-height-0264 item[0].x');
+      expectClose(r.y - container.y, 0, 'fr-rows-definite-height-0264 item[0].y');
+      expectClose(r.width, 30, 'fr-rows-definite-height-0264 item[0].w');
+      expectClose(r.height, 63.33, 'fr-rows-definite-height-0264 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'fr-rows-definite-height-0264 item[1].x');
+      expectClose(r.y - container.y, 73.33, 'fr-rows-definite-height-0264 item[1].y');
+      expectClose(r.width, 30, 'fr-rows-definite-height-0264 item[1].w');
+      expectClose(r.height, 126.67, 'fr-rows-definite-height-0264 item[1].h');
+    }
+  });
+  it("fr-rows-definite-height-0265: fr rows in a 400px-tall container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"height":400,"gridTemplateColumns":"100px","gridTemplateRows":"1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fr-rows-definite-height-0265 container.width');
+    expectClose(container.height, 400, 'fr-rows-definite-height-0265 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fr-rows-definite-height-0265 item[0].x');
+      expectClose(r.y - container.y, 0, 'fr-rows-definite-height-0265 item[0].y');
+      expectClose(r.width, 30, 'fr-rows-definite-height-0265 item[0].w');
+      expectClose(r.height, 130, 'fr-rows-definite-height-0265 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'fr-rows-definite-height-0265 item[1].x');
+      expectClose(r.y - container.y, 140, 'fr-rows-definite-height-0265 item[1].y');
+      expectClose(r.width, 30, 'fr-rows-definite-height-0265 item[1].w');
+      expectClose(r.height, 260, 'fr-rows-definite-height-0265 item[1].h');
+    }
+  });
+});
+
+describe("fr-rows-indefinite-height", () => {
+  it("fr-rows-indefinite-height-0266: fr rows with an indefinite container height", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"100px","gridTemplateRows":"1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30,"height":60}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fr-rows-indefinite-height-0266 container.width');
+    expectClose(container.height, 130, 'fr-rows-indefinite-height-0266 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fr-rows-indefinite-height-0266 item[0].x');
+      expectClose(r.y - container.y, 0, 'fr-rows-indefinite-height-0266 item[0].y');
+      expectClose(r.width, 30, 'fr-rows-indefinite-height-0266 item[0].w');
+      expectClose(r.height, 40, 'fr-rows-indefinite-height-0266 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'fr-rows-indefinite-height-0266 item[1].x');
+      expectClose(r.y - container.y, 50, 'fr-rows-indefinite-height-0266 item[1].y');
+      expectClose(r.width, 30, 'fr-rows-indefinite-height-0266 item[1].w');
+      expectClose(r.height, 60, 'fr-rows-indefinite-height-0266 item[1].h');
+    }
+  });
+});
+
+describe("zero-tracks", () => {
+  it("zero-tracks-0267: zero-width tracks still take part in gap accounting", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"0px 0px 100px","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'zero-tracks-0267 container.width');
+    expectClose(container.height, 20, 'zero-tracks-0267 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'zero-tracks-0267 item[0].x');
+      expectClose(r.y - container.y, 0, 'zero-tracks-0267 item[0].y');
+      expectClose(r.width, 0, 'zero-tracks-0267 item[0].w');
+      expectClose(r.height, 20, 'zero-tracks-0267 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 10, 'zero-tracks-0267 item[1].x');
+      expectClose(r.y - container.y, 0, 'zero-tracks-0267 item[1].y');
+      expectClose(r.width, 0, 'zero-tracks-0267 item[1].w');
+      expectClose(r.height, 20, 'zero-tracks-0267 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 20, 'zero-tracks-0267 item[2].x');
+      expectClose(r.y - container.y, 0, 'zero-tracks-0267 item[2].y');
+      expectClose(r.width, 100, 'zero-tracks-0267 item[2].w');
+      expectClose(r.height, 20, 'zero-tracks-0267 item[2].h');
+    }
+  });
+});
+
+describe("zero-gap-zero-tracks", () => {
+  it("zero-gap-zero-tracks-0268: a zero track next to an fr with no gap", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"0px 1fr","gap":0}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'zero-gap-zero-tracks-0268 container.width');
+    expectClose(container.height, 20, 'zero-gap-zero-tracks-0268 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'zero-gap-zero-tracks-0268 item[0].x');
+      expectClose(r.y - container.y, 0, 'zero-gap-zero-tracks-0268 item[0].y');
+      expectClose(r.width, 0, 'zero-gap-zero-tracks-0268 item[0].w');
+      expectClose(r.height, 20, 'zero-gap-zero-tracks-0268 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'zero-gap-zero-tracks-0268 item[1].x');
+      expectClose(r.y - container.y, 0, 'zero-gap-zero-tracks-0268 item[1].y');
+      expectClose(r.width, 600, 'zero-gap-zero-tracks-0268 item[1].w');
+      expectClose(r.height, 20, 'zero-gap-zero-tracks-0268 item[1].h');
+    }
+  });
+});
+
+describe("span-across-flexible", () => {
+  it("span-across-flexible-0269: a 100px item spanning 2 flexible tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"1fr 1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":100,"height":20,"gridColumnEnd":"span 2"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-flexible-0269 container.width');
+    expectClose(container.height, 20, 'span-across-flexible-0269 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0269 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0269 item[0].y');
+      expectClose(r.width, 40, 'span-across-flexible-0269 item[0].w');
+      expectClose(r.height, 20, 'span-across-flexible-0269 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 230, 'span-across-flexible-0269 item[1].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0269 item[1].y');
+      expectClose(r.width, 100, 'span-across-flexible-0269 item[1].w');
+      expectClose(r.height, 20, 'span-across-flexible-0269 item[1].h');
+    }
+  });
+  it("span-across-flexible-0270: a 400px item spanning 2 flexible tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"1fr 1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":400,"height":20,"gridColumnEnd":"span 2"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-flexible-0270 container.width');
+    expectClose(container.height, 20, 'span-across-flexible-0270 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0270 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0270 item[0].y');
+      expectClose(r.width, 40, 'span-across-flexible-0270 item[0].w');
+      expectClose(r.height, 20, 'span-across-flexible-0270 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 230, 'span-across-flexible-0270 item[1].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0270 item[1].y');
+      expectClose(r.width, 400, 'span-across-flexible-0270 item[1].w');
+      expectClose(r.height, 20, 'span-across-flexible-0270 item[1].h');
+    }
+  });
+  it("span-across-flexible-0271: a 700px item spanning 2 flexible tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"1fr 1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":700,"height":20,"gridColumnEnd":"span 2"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-flexible-0271 container.width');
+    expectClose(container.height, 20, 'span-across-flexible-0271 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0271 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0271 item[0].y');
+      expectClose(r.width, 40, 'span-across-flexible-0271 item[0].w');
+      expectClose(r.height, 20, 'span-across-flexible-0271 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 200, 'span-across-flexible-0271 item[1].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0271 item[1].y');
+      expectClose(r.width, 700, 'span-across-flexible-0271 item[1].w');
+      expectClose(r.height, 20, 'span-across-flexible-0271 item[1].h');
+    }
+  });
+  it("span-across-flexible-0272: a 100px item spanning 3 flexible tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"1fr 1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":100,"height":20,"gridColumnEnd":"span 3"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-flexible-0272 container.width');
+    expectClose(container.height, 50, 'span-across-flexible-0272 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0272 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0272 item[0].y');
+      expectClose(r.width, 40, 'span-across-flexible-0272 item[0].w');
+      expectClose(r.height, 20, 'span-across-flexible-0272 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0272 item[1].x');
+      expectClose(r.y - container.y, 30, 'span-across-flexible-0272 item[1].y');
+      expectClose(r.width, 100, 'span-across-flexible-0272 item[1].w');
+      expectClose(r.height, 20, 'span-across-flexible-0272 item[1].h');
+    }
+  });
+  it("span-across-flexible-0273: a 400px item spanning 3 flexible tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"1fr 1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":400,"height":20,"gridColumnEnd":"span 3"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-flexible-0273 container.width');
+    expectClose(container.height, 50, 'span-across-flexible-0273 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0273 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0273 item[0].y');
+      expectClose(r.width, 40, 'span-across-flexible-0273 item[0].w');
+      expectClose(r.height, 20, 'span-across-flexible-0273 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0273 item[1].x');
+      expectClose(r.y - container.y, 30, 'span-across-flexible-0273 item[1].y');
+      expectClose(r.width, 400, 'span-across-flexible-0273 item[1].w');
+      expectClose(r.height, 20, 'span-across-flexible-0273 item[1].h');
+    }
+  });
+  it("span-across-flexible-0274: a 700px item spanning 3 flexible tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"1fr 1fr 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":700,"height":20,"gridColumnEnd":"span 3"}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-across-flexible-0274 container.width');
+    expectClose(container.height, 50, 'span-across-flexible-0274 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0274 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-across-flexible-0274 item[0].y');
+      expectClose(r.width, 40, 'span-across-flexible-0274 item[0].w');
+      expectClose(r.height, 20, 'span-across-flexible-0274 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'span-across-flexible-0274 item[1].x');
+      expectClose(r.y - container.y, 30, 'span-across-flexible-0274 item[1].y');
+      expectClose(r.width, 700, 'span-across-flexible-0274 item[1].w');
+      expectClose(r.height, 20, 'span-across-flexible-0274 item[1].h');
+    }
+  });
+});
+
+describe("span-mixed-tracks", () => {
+  it("span-mixed-tracks-0275: a 200px item spanning fixed and flexible tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"80px 1fr 60px 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":200,"height":20,"gridColumnEnd":"span 3"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-mixed-tracks-0275 container.width');
+    expectClose(container.height, 20, 'span-mixed-tracks-0275 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-mixed-tracks-0275 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-mixed-tracks-0275 item[0].y');
+      expectClose(r.width, 200, 'span-mixed-tracks-0275 item[0].w');
+      expectClose(r.height, 20, 'span-mixed-tracks-0275 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 413.33, 'span-mixed-tracks-0275 item[1].x');
+      expectClose(r.y - container.y, 0, 'span-mixed-tracks-0275 item[1].y');
+      expectClose(r.width, 40, 'span-mixed-tracks-0275 item[1].w');
+      expectClose(r.height, 20, 'span-mixed-tracks-0275 item[1].h');
+    }
+  });
+  it("span-mixed-tracks-0276: a 500px item spanning fixed and flexible tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"80px 1fr 60px 2fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":500,"height":20,"gridColumnEnd":"span 3"}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'span-mixed-tracks-0276 container.width');
+    expectClose(container.height, 20, 'span-mixed-tracks-0276 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'span-mixed-tracks-0276 item[0].x');
+      expectClose(r.y - container.y, 0, 'span-mixed-tracks-0276 item[0].y');
+      expectClose(r.width, 500, 'span-mixed-tracks-0276 item[0].w');
+      expectClose(r.height, 20, 'span-mixed-tracks-0276 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 510, 'span-mixed-tracks-0276 item[1].x');
+      expectClose(r.y - container.y, 0, 'span-mixed-tracks-0276 item[1].y');
+      expectClose(r.width, 40, 'span-mixed-tracks-0276 item[1].w');
+      expectClose(r.height, 20, 'span-mixed-tracks-0276 item[1].h');
+    }
+  });
+});
+
+describe("fr-floor-overflow", () => {
+  it("fr-floor-overflow-0277: minmax(100px, 1fr) floor against a 600px container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"minmax(100px, 1fr) 1fr 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fr-floor-overflow-0277 container.width');
+    expectClose(container.height, 20, 'fr-floor-overflow-0277 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fr-floor-overflow-0277 item[0].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0277 item[0].y');
+      expectClose(r.width, 193.33, 'fr-floor-overflow-0277 item[0].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0277 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 203.33, 'fr-floor-overflow-0277 item[1].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0277 item[1].y');
+      expectClose(r.width, 193.33, 'fr-floor-overflow-0277 item[1].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0277 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 406.66, 'fr-floor-overflow-0277 item[2].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0277 item[2].y');
+      expectClose(r.width, 193.34, 'fr-floor-overflow-0277 item[2].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0277 item[2].h');
+    }
+  });
+  it("fr-floor-overflow-0278: minmax(300px, 1fr) floor against a 600px container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"minmax(300px, 1fr) 1fr 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fr-floor-overflow-0278 container.width');
+    expectClose(container.height, 20, 'fr-floor-overflow-0278 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fr-floor-overflow-0278 item[0].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0278 item[0].y');
+      expectClose(r.width, 300, 'fr-floor-overflow-0278 item[0].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0278 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 310, 'fr-floor-overflow-0278 item[1].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0278 item[1].y');
+      expectClose(r.width, 140, 'fr-floor-overflow-0278 item[1].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0278 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 460, 'fr-floor-overflow-0278 item[2].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0278 item[2].y');
+      expectClose(r.width, 140, 'fr-floor-overflow-0278 item[2].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0278 item[2].h');
+    }
+  });
+  it("fr-floor-overflow-0279: minmax(500px, 1fr) floor against a 600px container", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"minmax(500px, 1fr) 1fr 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'fr-floor-overflow-0279 container.width');
+    expectClose(container.height, 20, 'fr-floor-overflow-0279 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'fr-floor-overflow-0279 item[0].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0279 item[0].y');
+      expectClose(r.width, 500, 'fr-floor-overflow-0279 item[0].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0279 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 510, 'fr-floor-overflow-0279 item[1].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0279 item[1].y');
+      expectClose(r.width, 40, 'fr-floor-overflow-0279 item[1].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0279 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 560, 'fr-floor-overflow-0279 item[2].x');
+      expectClose(r.y - container.y, 0, 'fr-floor-overflow-0279 item[2].y');
+      expectClose(r.width, 40, 'fr-floor-overflow-0279 item[2].w');
+      expectClose(r.height, 20, 'fr-floor-overflow-0279 item[2].h');
+    }
+  });
+});
+
+describe("baseline-alignment", () => {
+  it("baseline-alignment-0280: align-items:baseline with items of differing height and padding", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"150px 150px 150px","gridTemplateRows":"auto","gap":10,"alignItems":"baseline"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":30,"padding":10}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":60,"padding":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20,"padding":5}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'baseline-alignment-0280 container.width');
+    expectClose(container.height, 60, 'baseline-alignment-0280 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'baseline-alignment-0280 item[0].x');
+      expectClose(r.y - container.y, 30, 'baseline-alignment-0280 item[0].y');
+      expectClose(r.width, 40, 'baseline-alignment-0280 item[0].w');
+      expectClose(r.height, 30, 'baseline-alignment-0280 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 160, 'baseline-alignment-0280 item[1].x');
+      expectClose(r.y - container.y, 0, 'baseline-alignment-0280 item[1].y');
+      expectClose(r.width, 40, 'baseline-alignment-0280 item[1].w');
+      expectClose(r.height, 60, 'baseline-alignment-0280 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 320, 'baseline-alignment-0280 item[2].x');
+      expectClose(r.y - container.y, 40, 'baseline-alignment-0280 item[2].y');
+      expectClose(r.width, 40, 'baseline-alignment-0280 item[2].w');
+      expectClose(r.height, 20, 'baseline-alignment-0280 item[2].h');
+    }
+  });
+  it("baseline-alignment-0281: align-items:start with items of differing height and padding", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"150px 150px 150px","gridTemplateRows":"auto","gap":10,"alignItems":"start"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":30,"padding":10}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":60,"padding":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":40,"height":20,"padding":5}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'baseline-alignment-0281 container.width');
+    expectClose(container.height, 60, 'baseline-alignment-0281 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'baseline-alignment-0281 item[0].x');
+      expectClose(r.y - container.y, 0, 'baseline-alignment-0281 item[0].y');
+      expectClose(r.width, 40, 'baseline-alignment-0281 item[0].w');
+      expectClose(r.height, 30, 'baseline-alignment-0281 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 160, 'baseline-alignment-0281 item[1].x');
+      expectClose(r.y - container.y, 0, 'baseline-alignment-0281 item[1].y');
+      expectClose(r.width, 40, 'baseline-alignment-0281 item[1].w');
+      expectClose(r.height, 60, 'baseline-alignment-0281 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 320, 'baseline-alignment-0281 item[2].x');
+      expectClose(r.y - container.y, 0, 'baseline-alignment-0281 item[2].y');
+      expectClose(r.width, 40, 'baseline-alignment-0281 item[2].w');
+      expectClose(r.height, 20, 'baseline-alignment-0281 item[2].h');
+    }
+  });
+});
+
+describe("item-aspect-ratio", () => {
+  it("item-aspect-ratio-0282: items with aspect-ratio 1 in fr tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"aspectRatio":1}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"aspectRatio":1}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'item-aspect-ratio-0282 container.width');
+    expectClose(container.height, 295, 'item-aspect-ratio-0282 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'item-aspect-ratio-0282 item[0].x');
+      expectClose(r.y - container.y, 0, 'item-aspect-ratio-0282 item[0].y');
+      expectClose(r.width, 295, 'item-aspect-ratio-0282 item[0].w');
+      expectClose(r.height, 295, 'item-aspect-ratio-0282 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 305, 'item-aspect-ratio-0282 item[1].x');
+      expectClose(r.y - container.y, 0, 'item-aspect-ratio-0282 item[1].y');
+      expectClose(r.width, 295, 'item-aspect-ratio-0282 item[1].w');
+      expectClose(r.height, 295, 'item-aspect-ratio-0282 item[1].h');
+    }
+  });
+  it("item-aspect-ratio-0283: items with aspect-ratio 2 in fr tracks", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"gridTemplateColumns":"1fr 1fr","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"aspectRatio":2}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"aspectRatio":2}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'item-aspect-ratio-0283 container.width');
+    expectClose(container.height, 147.5, 'item-aspect-ratio-0283 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'item-aspect-ratio-0283 item[0].x');
+      expectClose(r.y - container.y, 0, 'item-aspect-ratio-0283 item[0].y');
+      expectClose(r.width, 295, 'item-aspect-ratio-0283 item[0].w');
+      expectClose(r.height, 147.5, 'item-aspect-ratio-0283 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 305, 'item-aspect-ratio-0283 item[1].x');
+      expectClose(r.y - container.y, 0, 'item-aspect-ratio-0283 item[1].y');
+      expectClose(r.width, 295, 'item-aspect-ratio-0283 item[1].w');
+      expectClose(r.height, 147.5, 'item-aspect-ratio-0283 item[1].h');
+    }
+  });
+});
+
+describe("pct-track-indefinite", () => {
+  it("pct-track-indefinite-0284: percentage tracks with an indefinite container width", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","gridTemplateColumns":"50% 50%","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":120,"height":20}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":80,"height":20}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 900, 'pct-track-indefinite-0284 container.width');
+    expectClose(container.height, 20, 'pct-track-indefinite-0284 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'pct-track-indefinite-0284 item[0].x');
+      expectClose(r.y - container.y, 0, 'pct-track-indefinite-0284 item[0].y');
+      expectClose(r.width, 120, 'pct-track-indefinite-0284 item[0].w');
+      expectClose(r.height, 20, 'pct-track-indefinite-0284 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 460, 'pct-track-indefinite-0284 item[1].x');
+      expectClose(r.y - container.y, 0, 'pct-track-indefinite-0284 item[1].y');
+      expectClose(r.width, 80, 'pct-track-indefinite-0284 item[1].w');
+      expectClose(r.height, 20, 'pct-track-indefinite-0284 item[1].h');
+    }
+  });
+});
+
+describe("align-content-block", () => {
+  it("align-content-block-0285: align-content:start with block-axis slack", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"height":300,"gridTemplateColumns":"100px","gridTemplateRows":"40px 40px","gap":10,"alignContent":"start"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'align-content-block-0285 container.width');
+    expectClose(container.height, 300, 'align-content-block-0285 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'align-content-block-0285 item[0].x');
+      expectClose(r.y - container.y, 0, 'align-content-block-0285 item[0].y');
+      expectClose(r.width, 30, 'align-content-block-0285 item[0].w');
+      expectClose(r.height, 40, 'align-content-block-0285 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'align-content-block-0285 item[1].x');
+      expectClose(r.y - container.y, 50, 'align-content-block-0285 item[1].y');
+      expectClose(r.width, 30, 'align-content-block-0285 item[1].w');
+      expectClose(r.height, 40, 'align-content-block-0285 item[1].h');
+    }
+  });
+  it("align-content-block-0286: align-content:center with block-axis slack", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"height":300,"gridTemplateColumns":"100px","gridTemplateRows":"40px 40px","gap":10,"alignContent":"center"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'align-content-block-0286 container.width');
+    expectClose(container.height, 300, 'align-content-block-0286 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'align-content-block-0286 item[0].x');
+      expectClose(r.y - container.y, 105, 'align-content-block-0286 item[0].y');
+      expectClose(r.width, 30, 'align-content-block-0286 item[0].w');
+      expectClose(r.height, 40, 'align-content-block-0286 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'align-content-block-0286 item[1].x');
+      expectClose(r.y - container.y, 155, 'align-content-block-0286 item[1].y');
+      expectClose(r.width, 30, 'align-content-block-0286 item[1].w');
+      expectClose(r.height, 40, 'align-content-block-0286 item[1].h');
+    }
+  });
+  it("align-content-block-0287: align-content:end with block-axis slack", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"height":300,"gridTemplateColumns":"100px","gridTemplateRows":"40px 40px","gap":10,"alignContent":"end"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'align-content-block-0287 container.width');
+    expectClose(container.height, 300, 'align-content-block-0287 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'align-content-block-0287 item[0].x');
+      expectClose(r.y - container.y, 210, 'align-content-block-0287 item[0].y');
+      expectClose(r.width, 30, 'align-content-block-0287 item[0].w');
+      expectClose(r.height, 40, 'align-content-block-0287 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'align-content-block-0287 item[1].x');
+      expectClose(r.y - container.y, 260, 'align-content-block-0287 item[1].y');
+      expectClose(r.width, 30, 'align-content-block-0287 item[1].w');
+      expectClose(r.height, 40, 'align-content-block-0287 item[1].h');
+    }
+  });
+  it("align-content-block-0288: align-content:space-between with block-axis slack", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"grid","width":600,"height":300,"gridTemplateColumns":"100px","gridTemplateRows":"40px 40px","gap":10,"alignContent":"space-between"}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"width":30}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'align-content-block-0288 container.width');
+    expectClose(container.height, 300, 'align-content-block-0288 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'align-content-block-0288 item[0].x');
+      expectClose(r.y - container.y, 0, 'align-content-block-0288 item[0].y');
+      expectClose(r.width, 30, 'align-content-block-0288 item[0].w');
+      expectClose(r.height, 40, 'align-content-block-0288 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 0, 'align-content-block-0288 item[1].x');
+      expectClose(r.y - container.y, 260, 'align-content-block-0288 item[1].y');
+      expectClose(r.width, 30, 'align-content-block-0288 item[1].w');
+      expectClose(r.height, 40, 'align-content-block-0288 item[1].h');
     }
   });
 });
