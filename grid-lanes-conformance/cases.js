@@ -433,13 +433,27 @@ for (const fontSize of [8, 16, 24, 32]) {
   );
 }
 
-// A percentage tolerance resolves against the container's size in the lane
-// axis, which is a different basis from the em form.
+// A percentage tolerance resolves against the grid-axis content box size.
+//
+// Safari cannot adjudicate these: it PARSES `flow-tolerance: 5%` — CSS.supports
+// returns true — but does not resolve it, and 5%, 10% and 25% all produce the
+// identical layout, which they could not if the percentage were being applied
+// (5% of 600 is 30; 25% is 150). They are marked as an oracle limitation so
+// the harness reports them rather than asserting Safari's fallback as if it
+// were the spec. The behaviour is covered instead by
+// percentage-tolerance-test.cpp, which derives its expectations from §4.4.
 for (const flowTolerance of ['5%', '10%', '25%']) {
   add(
     'lanes-flow-tolerance-pct',
     'B',
-    lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance, height: 400}),
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance,
+      height: 400,
+      oracleLimitation:
+        'Safari parses percentage flow-tolerance but does not resolve it',
+    }),
     staircase,
     `percentage flow-tolerance ${flowTolerance}`,
   );
@@ -1564,5 +1578,128 @@ add(
 // outside the grid rather than flowing into it. We fall back to auto
 // placement instead. See DOM-CSS-LIMITATION(grid-unknown-area-name); a case
 // asserting our behaviour would be asserting the divergence, not the spec.
+
+
+// ---------------------------------------------------------------------------
+// B. Lanes over CONTENT-SIZED items
+//
+// Every case above gives its items an explicit height, deliberately: that
+// keeps the corpus independent of any font. But a lanes container exists for
+// items whose height comes from their CONTENT — photos, cards, articles — and
+// nothing above exercises that path at all. The visual pass on device made
+// that obvious: the demos look like real galleries, and the tests did not.
+//
+// Content-sizing is reachable without a font by nesting a fixed-size child:
+// the item itself has no height, so it must measure its child, and the lane's
+// running position then depends on a measurement rather than on a style.
+// ---------------------------------------------------------------------------
+
+// `childHeight` gives the item a child of that height instead of a height of
+// its own.
+const contentItem = (childHeight, extra) => ({
+  w: null,
+  h: null,
+  childHeight,
+  ...(extra ?? {}),
+});
+
+for (const flowTolerance of [0, 'normal']) {
+  add(
+    'lanes-content-sized',
+    'B',
+    lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance}),
+    [
+      contentItem(50),
+      contentItem(30),
+      contentItem(70),
+      contentItem(40),
+      contentItem(60),
+      contentItem(20),
+    ],
+    `content-sized items at flow-tolerance ${flowTolerance}`,
+  );
+}
+
+// Content-sized items whose own padding adds to the measured height — the
+// card case, where the box is its content plus its padding.
+add(
+  'lanes-content-sized-padded',
+  'B',
+  lanes({cols: [fr(1), fr(1)], gap: 10, flowTolerance: 0}),
+  [
+    contentItem(40, {p: 8}),
+    contentItem(20, {p: 8}),
+    contentItem(60, {p: 8}),
+    contentItem(30, {p: 8}),
+  ],
+  'content-sized items with padding',
+);
+
+// A photo gallery: aspect-ratio items, whose height follows the lane width.
+// This is the shape every WebKit lanes demo actually uses.
+//
+// The container is 620 wide rather than the usual 600 so that (620 - 2*10) / 3
+// is exactly 200: at 600 the tracks come out 193.33/193.33/193.34, and at
+// flow-tolerance 0 that one-hundredth of a pixel decides which lane counts as
+// shortest. The case would then be measuring the engines' rounding rather than
+// their placement, for a reason having nothing to do with aspect ratio.
+for (const ratio of [1, 1.5]) {
+  add(
+    'lanes-aspect-ratio',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      width: 620,
+      gap: 10,
+      flowTolerance: 0,
+    }),
+    [
+      item(null, null, {aspectRatio: ratio}),
+      item(null, null, {aspectRatio: ratio * 2}),
+      item(null, null, {aspectRatio: ratio}),
+      item(null, null, {aspectRatio: ratio / 2}),
+      item(null, null, {aspectRatio: ratio}),
+    ],
+    `aspect-ratio items around ${ratio} in lanes`,
+  );
+}
+
+// Mixed: some items sized, some content-sized. A real feed is never uniform,
+// and the running position has to come out the same either way.
+add(
+  'lanes-mixed-sizing',
+  'B',
+  lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0}),
+  [
+    item(null, 50),
+    contentItem(30),
+    item(null, 70),
+    contentItem(40),
+    item(null, 20),
+    contentItem(60),
+  ],
+  'explicit and content-sized items in one container',
+);
+
+
+// Aspect-ratio items that ALSO have content and padding — which is what a real
+// gallery tile is, and what the demo screen actually renders. The visual pass
+// showed every tile coming out the same height there despite ratios varying
+// two-fold, which the aspect-ratio cases above did not catch because their
+// items are empty.
+for (const ratio of [1.5, 0.75]) {
+  add(
+    'lanes-aspect-ratio-with-content',
+    'B',
+    lanes({cols: [fr(1), fr(1), fr(1)], width: 620, gap: 10, flowTolerance: 0}),
+    [
+      item(null, null, {aspectRatio: ratio, p: 6, childHeight: 12}),
+      item(null, null, {aspectRatio: ratio * 2, p: 6, childHeight: 12}),
+      item(null, null, {aspectRatio: ratio, p: 6, childHeight: 12}),
+      item(null, null, {aspectRatio: ratio / 2, p: 6, childHeight: 12}),
+    ],
+    `aspect-ratio ${ratio} tiles with padding and content`,
+  );
+}
 
 module.exports = {cases, px, pct, fr, auto, minmax};

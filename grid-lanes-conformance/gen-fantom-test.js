@@ -218,12 +218,20 @@ for (const [group, groupCases] of byGroup) {
     w(`          /* $FlowExpectedError[incompatible-type] grid style keys */`);
     w(`          style={${json(c.style)}}>`);
     c.itemStyles.forEach((s, i) => {
+      const childHeight = c.items[i].childHeight;
       w('          <View');
       w('            collapsable={false}');
       w(`            ref={itemRefs[${i}]}`);
       w(`            /* $FlowExpectedError[incompatible-type] grid style keys */`);
-      w(`            style={${json(s)}}`);
-      w('          />');
+      if (childHeight == null) {
+        w(`            style={${json(s)}}`);
+        w('          />');
+      } else {
+        // The item has no height of its own: it must measure this child.
+        w(`            style={${json(s)}}>`);
+        w(`            <View style={{height: ${childHeight}}} />`);
+        w('          </View>');
+      }
     });
     w('        </View>,');
     w('      );');
