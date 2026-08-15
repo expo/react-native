@@ -1330,4 +1330,27 @@ for (const alignContent of ['start', 'center', 'end', 'space-between']) {
   );
 }
 
+
+// fit-content(x) is max(min-content, min(max-content, x)).
+//
+// These pass, but they do NOT discriminate the `x` ceiling, and it would be
+// dishonest to read them as proving it works: every item here is a
+// fixed-width box, whose min-content equals its max-content, so the outer
+// max() wins and the ceiling can never bind. Catching a dropped ceiling needs
+// content that reflows — which the corpus deliberately avoids, so that no case
+// depends on a font. See DOM-CSS-LIMITATION(grid-fit-content-limit).
+for (const [limit, itemWidth] of [
+  [140, 90],  // limit does not bind: expect the content width
+  [50, 90],   // limit binds: expect the limit
+  [200, 240], // limit binds against a wider item
+]) {
+  add(
+    'fit-content-limit',
+    'A',
+    grid({cols: [fitContent(px(limit)), fr(1)], gap: 10}),
+    [item(itemWidth, 20), item(40, 20)],
+    `fit-content(${limit}px) around a ${itemWidth}px item`,
+  );
+}
+
 module.exports = {cases, px, pct, fr, auto, minmax};

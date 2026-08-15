@@ -9,7 +9,7 @@ namespace gridconf {
 
 constexpr float kUnset = -1e9f;
 
-enum class TrackKind { Points, Percent, Fr, Auto, Minmax };
+enum class TrackKind { Points, Percent, Fr, Auto, Minmax, MaxContent, FitContent };
 enum class PlacementKind { Auto, Line, Span };
 
 struct SimpleTrack { TrackKind kind; float value; };
@@ -1753,10 +1753,12 @@ static const Item kItems241[] = {
   {90.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 20.0f}},
   {40.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 40.0f, 20.0f}}
 };
+static const Track kCols242[] = {{TrackKind::MaxContent, 0.0f, {}, {}}, {TrackKind::Fr, 1.0f, {}, {}}};
 static const Item kItems242[] = {
   {90.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 20.0f}},
   {40.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 40.0f, 20.0f}}
 };
+static const Track kCols243[] = {{TrackKind::FitContent, 0.0f, {}, {}}, {TrackKind::Fr, 1.0f, {}, {}}};
 static const Item kItems243[] = {
   {90.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 20.0f}},
   {40.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 40.0f, 20.0f}}
@@ -2017,6 +2019,21 @@ static const Item kItems287[] = {
   {30.0f, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 30.0f, 40.0f}},
   {30.0f, kUnset, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 260.0f, 30.0f, 40.0f}}
 };
+static const Track kCols288[] = {{TrackKind::FitContent, 0.0f, {}, {}}, {TrackKind::Fr, 1.0f, {}, {}}};
+static const Item kItems288[] = {
+  {90.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 20.0f}},
+  {40.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 40.0f, 20.0f}}
+};
+static const Track kCols289[] = {{TrackKind::FitContent, 0.0f, {}, {}}, {TrackKind::Fr, 1.0f, {}, {}}};
+static const Item kItems289[] = {
+  {90.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 90.0f, 20.0f}},
+  {40.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {100.0f, 0.0f, 40.0f, 20.0f}}
+};
+static const Track kCols290[] = {{TrackKind::FitContent, 0.0f, {}, {}}, {TrackKind::Fr, 1.0f, {}, {}}};
+static const Item kItems290[] = {
+  {240.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {0.0f, 0.0f, 240.0f, 20.0f}},
+  {40.0f, 20.0f, 0.0f, 0.0f, 0.0f, kUnset, kUnset, {PlacementKind::Auto, 0}, {PlacementKind::Auto, 0}, -1, {250.0f, 0.0f, 40.0f, 20.0f}}
+};
 
 static const Case kCases[] = {
   {"tracks-px-0001", "tracks-px", "three identical px tracks", "A", nullptr, 600.0f, kUnset, kUnset, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols0, 3, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems0, 3, 600.0f, 30.0f},
@@ -2261,8 +2278,8 @@ static const Case kCases[] = {
   {"auto-fit-x-full-bleed-0240", "auto-fit-x-full-bleed", "auto-fit with a spanning item at width 800", "A", nullptr, 800.0f, kUnset, 16.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols239, 1, nullptr, 0, -1, -1, -1, -1, YGGridAutoRepeatAutoFit, 0, 1, 0, 0, 0, kItems239, 2, 800.0f, 40.0f},
   {"auto-fit-x-trailing-hole-0241", "auto-fit-x-trailing-hole", "auto-fit with an interior hole at width 800", "A", nullptr, 800.0f, kUnset, 16.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols240, 1, nullptr, 0, -1, -1, -1, -1, YGGridAutoRepeatAutoFit, 0, 1, 0, 0, 0, kItems240, 2, 800.0f, 40.0f},
   {"intrinsic-min-content-0242", "intrinsic-min-content", "min-content track sizing", "C", "track min-content", 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, nullptr, 0, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems241, 2, 600.0f, 20.0f},
-  {"intrinsic-max-content-0243", "intrinsic-max-content", "max-content track sizing", "C", "track max-content", 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, nullptr, 0, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems242, 2, 600.0f, 20.0f},
-  {"intrinsic-fit-content-0244", "intrinsic-fit-content", "fit-content track sizing", "C", "track fit-content", 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, nullptr, 0, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems243, 2, 600.0f, 20.0f},
+  {"intrinsic-max-content-0243", "intrinsic-max-content", "max-content track sizing", "C", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols242, 2, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems242, 2, 600.0f, 20.0f},
+  {"intrinsic-fit-content-0244", "intrinsic-fit-content", "fit-content track sizing", "C", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols243, 2, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems243, 2, 600.0f, 20.0f},
   {"implicit-rows-0245", "implicit-rows", "implicit rows sized by content", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols244, 2, kRows244, 1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems244, 5, 600.0f, 100.0f},
   {"implicit-rows-0246", "implicit-rows", "implicit rows sized by grid-auto-rows", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, kAutoRows245, 1, kCols245, 2, kRows245, 1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems245, 5, 600.0f, 160.0f},
   {"implicit-rows-0247", "implicit-rows", "implicit rows sized by grid-auto-rows", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, kAutoRows246, 2, kCols246, 2, kRows246, 1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems246, 5, 600.0f, 150.0f},
@@ -2306,8 +2323,11 @@ static const Case kCases[] = {
   {"align-content-block-0285", "align-content-block", "align-content:start with block-axis slack", "A", nullptr, 600.0f, 300.0f, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols284, 1, kRows284, 2, -1, -1, -1, YGAlignStart, 0, 0, 0, 0, 0, 0, kItems284, 2, 600.0f, 300.0f},
   {"align-content-block-0286", "align-content-block", "align-content:center with block-axis slack", "A", nullptr, 600.0f, 300.0f, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols285, 1, kRows285, 2, -1, -1, -1, YGAlignCenter, 0, 0, 0, 0, 0, 0, kItems285, 2, 600.0f, 300.0f},
   {"align-content-block-0287", "align-content-block", "align-content:end with block-axis slack", "A", nullptr, 600.0f, 300.0f, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols286, 1, kRows286, 2, -1, -1, -1, YGAlignEnd, 0, 0, 0, 0, 0, 0, kItems286, 2, 600.0f, 300.0f},
-  {"align-content-block-0288", "align-content-block", "align-content:space-between with block-axis slack", "A", nullptr, 600.0f, 300.0f, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols287, 1, kRows287, 2, -1, -1, -1, YGAlignSpaceBetween, 0, 0, 0, 0, 0, 0, kItems287, 2, 600.0f, 300.0f}
+  {"align-content-block-0288", "align-content-block", "align-content:space-between with block-axis slack", "A", nullptr, 600.0f, 300.0f, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols287, 1, kRows287, 2, -1, -1, -1, YGAlignSpaceBetween, 0, 0, 0, 0, 0, 0, kItems287, 2, 600.0f, 300.0f},
+  {"fit-content-limit-0289", "fit-content-limit", "fit-content(140px) around a 90px item", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols288, 2, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems288, 2, 600.0f, 20.0f},
+  {"fit-content-limit-0290", "fit-content-limit", "fit-content(50px) around a 90px item", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols289, 2, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems289, 2, 600.0f, 20.0f},
+  {"fit-content-limit-0291", "fit-content-limit", "fit-content(200px) around a 240px item", "A", nullptr, 600.0f, kUnset, 10.0f, kUnset, kUnset, 0.0f, 0.0f, kUnset, kUnset, kUnset, kUnset, kUnset, nullptr, 0, kCols290, 2, nullptr, 0, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, kItems290, 2, 600.0f, 20.0f}
 };
-static const size_t kCaseCount = 288;
+static const size_t kCaseCount = 291;
 
 } // namespace gridconf
