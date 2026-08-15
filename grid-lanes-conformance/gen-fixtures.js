@@ -148,6 +148,7 @@ function unsupportedReason(c) {
   for (const it of c.items) {
     if (it.order != null) return 'order';
     if (Array.isArray(it.col) || Array.isArray(it.row)) return 'two-line placement';
+    if (it.colEnd != null && typeof it.colEnd !== 'number') return 'colEnd form';
   }
   return null;
 }
@@ -186,6 +187,8 @@ w('  float widthPercent;  // kUnset when absent');
 w('  float aspectRatio;   // kUnset when absent');
 w('  Placement col, row;');
 w('  int justifySelf;       // -1 when unset');
+w('  const char* area;      // nullptr when the item names no area');
+w('  int colEndLine, rowEndLine;  // 0 when unset');
 w('  Rect expected;');
 w('};');
 w('');
@@ -199,6 +202,7 @@ w('  float width, height;');
 w('  float gap, rowGap, colGap;');
 w('  float padding, border;');
 w('  int autoFlow;  // the YGGridAutoFlow enum value');
+w('  const char* const* areas; size_t areaRowCount;');
 w('  float minWidth, maxWidth, minHeight, maxHeight;  // kUnset when absent');
 w('  float gapPercent;  // kUnset when absent');
 w('  const Track* autoRows; size_t autoRowCount;');
@@ -236,6 +240,12 @@ expected.cases.forEach((c, idx) => {
     w(`static const Track kAutoRows${idx}[] = {${autoRows.join(', ')}};`);
   }
 
+  if (k.areas != null && k.areas.length) {
+    w(`static const char* const kAreas${idx}[] = {${k.areas
+      .map(r => JSON.stringify(r))
+      .join(', ')}};`);
+  }
+
   const items = c.items.map((it, i) => {
     const e = c.expected.items[i] ?? {x: 0, y: 0, w: 0, h: 0};
     const js = it.justifySelf != null ? JUSTIFY[it.justifySelf] : null;
@@ -243,7 +253,9 @@ expected.cases.forEach((c, idx) => {
       `  {${optF(it.w)}, ${optF(it.h)}, ${f(it.m ?? 0)}, ${f(it.p ?? 0)}, ` +
       `${f(it.b ?? 0)}, ${optF(it.widthPercent)}, ${optF(it.aspectRatio)}, ` +
       `${placementToCpp(it.col)}, ${placementToCpp(it.row)}, ` +
-      `${js ?? -1}, {${f(e.x)}, ${f(e.y)}, ${f(e.w)}, ${f(e.h)}}}`
+      `${js ?? -1}, ${it.area != null ? JSON.stringify(it.area) : 'nullptr'}, ` +
+      `${typeof it.colEnd === 'number' ? it.colEnd : 0}, ${typeof it.rowEnd === 'number' ? it.rowEnd : 0}, ` +
+      `{${f(e.x)}, ${f(e.y)}, ${f(e.w)}, ${f(e.h)}}}`
     );
   });
   if (items.length) {
@@ -260,6 +272,7 @@ expected.cases.forEach((c, idx) => {
       `${optF(k.gap)}, ${optF(k.rowGap)}, ${optF(k.colGap)}, ` +
       `${f(k.padding ?? 0)}, ${f(k.border ?? 0)}, ` +
       `${{'row': 0, 'row dense': 1, 'column': 2, 'column dense': 3}[k.autoFlow ?? 'row'] ?? 0}, ` +
+      `${k.areas != null && k.areas.length ? `kAreas${idx}` : 'nullptr'}, ${k.areas?.length ?? 0}, ` +
       `${optF(k.minWidth)}, ${optF(k.maxWidth)}, ${optF(k.minHeight)}, ${optF(k.maxHeight)}, ` +
       `${k.gapPercent ? f(parseFloat(k.gapPercent)) : 'kUnset'}, ` +
       `${autoRowsOk && autoRows.length ? `kAutoRows${idx}` : 'nullptr'}, ${autoRowsOk ? autoRows.length : 0}, ` +
