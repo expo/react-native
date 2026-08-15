@@ -120,6 +120,8 @@ convertRawProp(const PropsParserContext &context, const RawProps &rawProps, cons
   yogaStyle.setGridRowStart(convertRawProp(context, rawProps, "gridRowStart", sourceValue.gridRowStart(), yogaStyle.gridRowStart()));
   yogaStyle.setGridRowEnd(convertRawProp(context, rawProps, "gridRowEnd", sourceValue.gridRowEnd(), yogaStyle.gridRowEnd()));
 
+  yogaStyle.setGridAutoFlow(convertRawProp(context, rawProps, "gridAutoFlow", sourceValue.gridAutoFlow(), yogaStyle.gridAutoFlow()));
+
   // Grid box alignment.
   yogaStyle.setJustifyItems(convertRawProp(context, rawProps, "justifyItems", sourceValue.justifyItems(), yogaStyle.justifyItems()));
   yogaStyle.setJustifySelf(convertRawProp(context, rawProps, "justifySelf", sourceValue.justifySelf(), yogaStyle.justifySelf()));

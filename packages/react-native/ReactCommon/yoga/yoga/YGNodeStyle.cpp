@@ -8,6 +8,7 @@
 #include <yoga/Yoga.h>
 #include <yoga/debug/AssertFatal.h>
 #include <yoga/node/Node.h>
+#include <yoga/style/GridAutoFlow.h>
 #include <yoga/style/GridAutoRepeat.h>
 #include <yoga/style/GridTrack.h>
 
@@ -683,6 +684,13 @@ GridAutoRepeat toGridAutoRepeat(
       static_cast<uint16_t>(trackCount)};
 }
 } // namespace
+
+void YGNodeStyleSetGridAutoFlow(YGNodeRef node, YGGridAutoFlow flow) {
+  resolveRef(node)->style().setGridAutoFlow(
+      flow == YGGridAutoFlowRowDense ? GridAutoFlow::RowDense
+                                     : GridAutoFlow::Row);
+  resolveRef(node)->markDirtyAndPropagate();
+}
 
 void YGNodeStyleSetGridTemplateColumnsAutoRepeat(
     YGNodeRef node,
