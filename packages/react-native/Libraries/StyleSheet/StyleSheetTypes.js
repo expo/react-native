@@ -727,12 +727,11 @@ type ____LayoutStyle_Internal = Readonly<{
   gridTemplateColumns?: number | string,
   gridTemplateRows?: number | string,
   /**
-   * How auto-placed items flow (css-grid-2 §8.5). `dense` lets a later item
-   * backfill a hole an earlier spanning item left behind.
-   *
-   * Column flow is not implemented and behaves as the row equivalent.
+   * How auto-placed items flow (css-grid-2 §8.5). `column` fills down a
+   * column before moving to the next; `dense` lets a later item backfill a
+   * hole an earlier spanning item left behind.
    */
-  gridAutoFlow?: 'row' | 'row dense',
+  gridAutoFlow?: 'row' | 'row dense' | 'column' | 'column dense',
   /**
    * Sizes for implicit tracks — those created by items placed outside the
    * explicit grid (css-grid-2 §7.5).

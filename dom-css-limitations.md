@@ -99,13 +99,11 @@ a real screen first. Background in `element-model-design.md`.
   `auto` minimum IS the automatic minimum size, which is min-content for a
   non-scrollable box, so `min-content` as a minimum is correct; only the
   maximum position is approximated.
-- **`DOM-CSS-LIMITATION(grid-auto-flow-column)` — `grid-auto-flow: column` is
-  not implemented.** `row` and `row dense` are. The column values are accepted
-  and behave as their row equivalents rather than being dropped, so a layout
-  written for the web still places its items — in the wrong order, but placed.
-  Column flow means transposing the placement cursor throughout the
-  auto-placement algorithm, which is a change to vendored code rather than a
-  flag.
+- **`grid-auto-flow` is fully implemented** — `row`, `column`, and either with
+  `dense`. Column flow runs the row algorithm in transposed space rather than
+  duplicating it: every axis-specific read is swapped on the way in and the
+  resulting placements swapped back on the way out, so nothing in between knows
+  which flow it is running.
 - **Named grid lines and `grid-template-areas` are not implemented.** Placement
   is by line number or span only.
 - **`subgrid` is not implemented.**
