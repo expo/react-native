@@ -149,18 +149,18 @@ know which declared property moved it, so a page that waits on `transitionend`
 for a `height` transition waits on its own fallback timer.
 
 **`layout-transition-endpoints`** — `ReactCommon/.../animationbackend/CSSLayoutTransitions.h`
-A transition of a layout property (`height`, `padding-bottom`) lays out ONCE at
-the destination and glides the mounted views between the two real layouts —
-the model `UIView animateWithDuration:` and Android's `ChangeBounds` share.
-css-transitions-1 instead re-lays-out every frame. Three observable
-divergences: content whose layout would change at an intermediate value (text
-rewrapping at an in-between height) keeps its endpoint geometry throughout;
-`getBoundingClientRect` mid-flight reads the target, not the interpolated
-value; and knock-on movement — views moved by the transition without declaring
-one — rides the declaring node's clock, with the LONGEST clock governing when
-several start in one commit. In exchange a transition costs no commits at
-all beyond the author's own — attribution comes from a scratch Yoga pass that
-never enters the tree — rather than a tree clone, Yoga pass, diff and
+A transition of a layout property (`height`, `padding-bottom`,
+`grid-template-rows`) lays out ONCE at the destination and glides the mounted
+views between the two real layouts — the model `UIView animateWithDuration:` and
+Android's `ChangeBounds` share. css-transitions-1 instead re-lays-out every
+frame. Three observable divergences: content whose layout would change at an
+intermediate value (text rewrapping at an in-between height) keeps its endpoint
+geometry throughout; `getBoundingClientRect` mid-flight reads the target, not
+the interpolated value; and knock-on movement — views moved by the transition
+without declaring one — rides the declaring node's clock, with the LONGEST clock
+governing when several start in one commit. In exchange a transition costs no
+commits at all beyond the author's own — attribution comes from a scratch Yoga
+pass that never enters the tree — rather than a tree clone, Yoga pass, diff and
 mounting transaction per frame, and a view that a mixed commit moved only for
 unrelated reasons lands instantly, per node.
 
@@ -241,6 +241,11 @@ a real screen first. Background in `element-model-design.md`.
 
 ## CSS Grid
 
+- **`DOM-CSS-LIMITATION(grid-min-content)` — `min-content` as a MAXIMUM sizing
+  function behaves as `auto`.** Yoga has no min-content sizing function. Its
+  `auto` minimum IS the automatic minimum size, which is min-content for a
+  non-scrollable box, so `min-content` as a minimum is correct; only the
+  maximum position is approximated.
 - **`grid-auto-flow` is fully implemented** — `row`, `column`, and either with
   `dense`. Column flow runs the row algorithm in transposed space rather than
   duplicating it: every axis-specific read is swapped on the way in and the
@@ -298,6 +303,8 @@ rather than going quiet.
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `grid-fit-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
+- `grid-min-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`

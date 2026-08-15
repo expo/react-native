@@ -28,12 +28,12 @@ namespace facebook::react {
 class UIManager;
 
 /*
- * Transitions of layout properties, run at the mounting layer. A `height` or
- * `padding-bottom` transition moves other views, so interpolating the property
- * would cost a commit (clone, Yoga pass, diff, transaction) per frame. Instead,
- * as both platforms do for their own layout animations, the tree is laid out
- * once at the destination and the mounted views glide between two real
- * layouts:
+ * Transitions of layout properties, run at the mounting layer. A `height`,
+ * `padding-bottom` or `grid-template-rows` transition moves other views, so
+ * interpolating the property would cost a commit (clone, Yoga pass, diff,
+ * transaction) per frame. Instead, as both platforms do for their own layout
+ * animations, the tree is laid out once at the destination and the mounted
+ * views glide between two real layouts:
  *
  *   - the commit hook lets the author's commit through untouched (committed
  *     trees carry only author values) and lays out a scratch clone with the
@@ -71,17 +71,21 @@ class CSSLayoutTransitions : public MountingOverrideDelegate {
   /*
    * From the commit hook, for a commit that starts or re-aims layout
    * transitions. `timelines` carries each declaring node's own clock;
-   * `scratchMetrics` is every node's metrics from the scratch layout. The
-   * transaction that consumes this is the one carrying a declaring node's
-   * metric change; transactions that mount in between pass by untouched. Any
-   * other view the consuming transaction moves rides the longest clock, since
-   * a knock-on has no declaration of its own; see
+   * `scratchMetrics` is every node's metrics from the scratch layout;
+   * `declaringProps` is each declaring node's props as they will mount. The
+   * transaction that consumes this is the one that mounts a declaring node's
+   * change: an update that moves the node, or one carrying those props, since
+   * a grid's tracks inside a box of fixed size move only its items.
+   * Transactions that mount in between pass by untouched. Any other view the
+   * consuming transaction moves rides the longest clock, since a knock-on has
+   * no declaration of its own; see
    * DOM-CSS-LIMITATION(layout-transition-endpoints).
    */
   void beginCapture(
       SurfaceId surfaceId,
       std::unordered_map<Tag, Timeline> timelines,
-      std::unordered_map<Tag, LayoutMetrics> scratchMetrics);
+      std::unordered_map<Tag, LayoutMetrics> scratchMetrics,
+      std::unordered_map<Tag, Props::Shared> declaringProps);
 
   /*
    * The per-frame step, on the UI thread: a mount pass for every surface
@@ -121,6 +125,7 @@ class CSSLayoutTransitions : public MountingOverrideDelegate {
     std::unordered_map<Tag, Timeline> timelines;
     Timeline governing{};
     std::unordered_map<Tag, LayoutMetrics> scratchMetrics;
+    std::unordered_map<Tag, Props::Shared> declaringProps;
     double startTime{0.0};
   };
 

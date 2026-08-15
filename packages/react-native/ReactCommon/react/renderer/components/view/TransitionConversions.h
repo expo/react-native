@@ -86,6 +86,9 @@ inline std::optional<TransitionProperty> parseTransitionProperty(const std::stri
   if (value == "padding-bottom" || value == "paddingBottom") {
     return TransitionProperty::PaddingBottom;
   }
+  if (value == "grid-template-rows" || value == "gridTemplateRows") {
+    return TransitionProperty::GridTemplateRows;
+  }
   // `none`, and every property this cannot interpolate; CSS says such a
   // property does not transition and the value applies immediately
   return std::nullopt;

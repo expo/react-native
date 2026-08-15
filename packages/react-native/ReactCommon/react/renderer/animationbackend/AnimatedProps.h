@@ -69,7 +69,8 @@ enum PropName {
   CURSOR,
   BOX_SHADOW,
   MIX_BLEND_MODE,
-  BACKFACE_VISIBILITY
+  BACKFACE_VISIBILITY,
+  GRID_TEMPLATE_ROWS
 };
 
 struct AnimatedPropBase {
@@ -425,6 +426,10 @@ inline void cloneProp(BaseViewProps &viewProps, const AnimatedPropBase &animated
 
     case BACKFACE_VISIBILITY:
       viewProps.backfaceVisibility = get<BackfaceVisibility>(animatedProp);
+      break;
+
+    case GRID_TEMPLATE_ROWS:
+      viewProps.yogaStyle.setGridTemplateRows(get<yoga::GridTrackList>(animatedProp));
       break;
 
     default:
