@@ -165,6 +165,10 @@ const char* YGGridTrackTypeToString(const YGGridTrackType value) {
       return "fr";
     case YGGridTrackTypeMinmax:
       return "minmax";
+    case YGGridTrackTypeMaxContent:
+      return "max-content";
+    case YGGridTrackTypeFitContent:
+      return "fit-content";
   }
   return "unknown";
 }

@@ -32,6 +32,10 @@ function trackToCpp(t) {
       return `{TrackKind::Fr, ${f(t.v)}, {}, {}}`;
     case 'auto':
       return `{TrackKind::Auto, 0.0f, {}, {}}`;
+    case 'max-content':
+      return `{TrackKind::MaxContent, 0.0f, {}, {}}`;
+    case 'fit-content':
+      return `{TrackKind::FitContent, 0.0f, {}, {}}`;
     case 'minmax': {
       const min = simpleTrack(t.min);
       const max = simpleTrack(t.max);
@@ -53,6 +57,8 @@ function simpleTrack(t) {
       return `{TrackKind::Fr, ${f(t.v)}}`;
     case 'auto':
       return `{TrackKind::Auto, 0.0f}`;
+    case 'max-content':
+      return `{TrackKind::MaxContent, 0.0f}`;
     default:
       return null;
   }
@@ -163,7 +169,7 @@ w('namespace gridconf {');
 w('');
 w('constexpr float kUnset = -1e9f;');
 w('');
-w('enum class TrackKind { Points, Percent, Fr, Auto, Minmax };');
+w('enum class TrackKind { Points, Percent, Fr, Auto, Minmax, MaxContent, FitContent };');
 w('enum class PlacementKind { Auto, Line, Span };');
 w('');
 w('struct SimpleTrack { TrackKind kind; float value; };');
