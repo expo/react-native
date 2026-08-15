@@ -20,10 +20,18 @@ namespace facebook::yoga {
 enum class GridAutoFlow : uint8_t {
   Row = 0,
   RowDense = 1,
+  Column = 2,
+  ColumnDense = 3,
 };
 
 constexpr bool isDense(GridAutoFlow flow) {
-  return flow == GridAutoFlow::RowDense;
+  return flow == GridAutoFlow::RowDense || flow == GridAutoFlow::ColumnDense;
+}
+
+// Column flow fills down a column before moving to the next, which is the row
+// algorithm with the two axes exchanged.
+constexpr bool isColumnFlow(GridAutoFlow flow) {
+  return flow == GridAutoFlow::Column || flow == GridAutoFlow::ColumnDense;
 }
 
 } // namespace facebook::yoga

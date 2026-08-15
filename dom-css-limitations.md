@@ -244,7 +244,6 @@ rather than going quiet.
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
-- `grid-auto-flow-column` — limitation, `ReactCommon/react/renderer/components/view/conversions.h`
 - `grid-fit-content-limit` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `grid-min-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
