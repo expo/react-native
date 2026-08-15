@@ -6,9 +6,9 @@
   "flowTolerance": true,
   "flowToleranceInfinite": true
  },
- "caseCount": 291,
+ "caseCount": 299,
  "byTier": {
-  "A": 168,
+  "A": 176,
   "B": 108,
   "C": 15
  },
@@ -22892,6 +22892,736 @@
       "y": 0,
       "w": 40,
       "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-dense-basic-0292",
+   "group": "auto-flow-dense-basic",
+   "tier": "A",
+   "note": "grid-auto-flow: row with two spanning items",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 30,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 30,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 30
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 110
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 396.66,
+      "h": 30
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 40,
+      "w": 396.66,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 80,
+      "w": 193.33,
+      "h": 30
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-dense-mixed-0293",
+   "group": "auto-flow-dense-mixed",
+   "tier": "A",
+   "note": "grid-auto-flow: row over four columns with mixed spans",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 8,
+    "autoFlow": "row"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 24,
+     "col": {
+      "span": 3
+     }
+    },
+    {
+     "w": null,
+     "h": 24,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 88
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 448,
+      "h": 24
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 32,
+      "w": 296,
+      "h": 24
+     },
+     {
+      "i": 2,
+      "x": 304,
+      "y": 32,
+      "w": 144,
+      "h": 24
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 64,
+      "w": 296,
+      "h": 24
+     },
+     {
+      "i": 4,
+      "x": 304,
+      "y": 64,
+      "w": 144,
+      "h": 24
+     },
+     {
+      "i": 5,
+      "x": 456,
+      "y": 64,
+      "w": 144,
+      "h": 24
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-dense-explicit-0294",
+   "group": "auto-flow-dense-explicit",
+   "tier": "A",
+   "note": "grid-auto-flow: row around an explicitly placed item",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 24,
+     "col": 3
+    },
+    {
+     "w": null,
+     "h": 24,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 92
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 24
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 34,
+      "w": 396.66,
+      "h": 24
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 34,
+      "w": 193.34,
+      "h": 24
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 68,
+      "w": 193.33,
+      "h": 24
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-dense-noop-0295",
+   "group": "auto-flow-dense-noop",
+   "tier": "A",
+   "note": "grid-auto-flow: row with no holes to fill",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 58
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 24
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 24
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 24
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 34,
+      "w": 193.33,
+      "h": 24
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-dense-basic-0296",
+   "group": "auto-flow-dense-basic",
+   "tier": "A",
+   "note": "grid-auto-flow: row dense with two spanning items",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 30,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 30,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 30
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 70
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 396.66,
+      "h": 30
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 40,
+      "w": 396.66,
+      "h": 30
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 30
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-dense-mixed-0297",
+   "group": "auto-flow-dense-mixed",
+   "tier": "A",
+   "note": "grid-auto-flow: row dense over four columns with mixed spans",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 8,
+    "autoFlow": "row dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 24,
+     "col": {
+      "span": 3
+     }
+    },
+    {
+     "w": null,
+     "h": 24,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 88
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 448,
+      "h": 24
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 32,
+      "w": 296,
+      "h": 24
+     },
+     {
+      "i": 2,
+      "x": 456,
+      "y": 0,
+      "w": 144,
+      "h": 24
+     },
+     {
+      "i": 3,
+      "x": 304,
+      "y": 32,
+      "w": 296,
+      "h": 24
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 64,
+      "w": 144,
+      "h": 24
+     },
+     {
+      "i": 5,
+      "x": 152,
+      "y": 64,
+      "w": 144,
+      "h": 24
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-dense-explicit-0298",
+   "group": "auto-flow-dense-explicit",
+   "tier": "A",
+   "note": "grid-auto-flow: row dense around an explicitly placed item",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 24,
+     "col": 3
+    },
+    {
+     "w": null,
+     "h": 24,
+     "col": {
+      "span": 2
+     }
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 58
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 24
+     },
+     {
+      "i": 1,
+      "x": 0,
+      "y": 0,
+      "w": 396.66,
+      "h": 24
+     },
+     {
+      "i": 2,
+      "x": 0,
+      "y": 34,
+      "w": 193.33,
+      "h": 24
+     },
+     {
+      "i": 3,
+      "x": 203.33,
+      "y": 34,
+      "w": 193.33,
+      "h": 24
+     }
+    ]
+   }
+  },
+  {
+   "id": "auto-flow-dense-noop-0299",
+   "group": "auto-flow-dense-noop",
+   "tier": "A",
+   "note": "grid-auto-flow: row dense with no holes to fill",
+   "container": {
+    "display": "grid",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "autoFlow": "row dense"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    },
+    {
+     "w": null,
+     "h": 24
+    }
+   ],
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 58
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 24
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 24
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 24
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 34,
+      "w": 193.33,
+      "h": 24
      }
     ]
    }
