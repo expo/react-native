@@ -200,6 +200,9 @@ YGNodeRef build(const Case& c) {
   if (c.autoFlow != 0) {
     YGNodeStyleSetGridAutoFlow(root, (YGGridAutoFlow)c.autoFlow);
   }
+  if (c.areaRowCount > 0) {
+    YGNodeStyleSetGridTemplateAreas(root, c.areas, c.areaRowCount);
+  }
   if (c.padding > 0) {
     YGNodeStyleSetPadding(root, YGEdgeAll, c.padding);
   }
@@ -278,6 +281,17 @@ YGNodeRef build(const Case& c) {
     }
     if (it.justifySelf >= 0) {
       YGNodeStyleSetJustifySelf(child, (YGJustify)it.justifySelf);
+    }
+    if (it.area != nullptr) {
+      YGNodeStyleSetGridArea(child, it.area);
+    }
+    // An explicit END line, which the `col`/`row` placements above cannot
+    // express: those carry a start or a span, never both ends.
+    if (it.colEndLine != 0) {
+      YGNodeStyleSetGridColumnEnd(child, it.colEndLine);
+    }
+    if (it.rowEndLine != 0) {
+      YGNodeStyleSetGridRowEnd(child, it.rowEndLine);
     }
     applyPlacement(child, /* isColumn */ true, it.col);
     applyPlacement(child, /* isColumn */ false, it.row);

@@ -71,6 +71,9 @@ function rnStyle(container) {
     style.gridAutoColumns = container.autoColumns.map(trackToCss).join(' ');
   }
   if (container.autoFlow) style.gridAutoFlow = container.autoFlow;
+  if (container.areas) {
+    style.gridTemplateAreas = container.areas.map(r => `"${r}"`).join(' ');
+  }
   if (container.gapPercent) style.gap = container.gapPercent;
   if (container.minWidth != null) style.minWidth = container.minWidth;
   if (container.maxWidth != null) style.maxWidth = container.maxWidth;
@@ -95,6 +98,8 @@ function rnItemStyle(item) {
   }
   if (item.widthPercent != null) style.width = `${item.widthPercent}%`;
   if (item.aspectRatio != null) style.aspectRatio = item.aspectRatio;
+  if (item.area != null) style.gridArea = item.area;
+  if (item.colEnd != null) style.gridColumnEnd = item.colEnd;
   if (item.justifySelf) style.justifySelf = item.justifySelf;
   if (item.col != null) {
     const css = placementToCss(item.col);
