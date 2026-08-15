@@ -6,10 +6,10 @@
   "flowTolerance": true,
   "flowToleranceInfinite": true
  },
- "caseCount": 323,
+ "caseCount": 346,
  "byTier": {
   "A": 192,
-  "B": 116,
+  "B": 139,
   "C": 15
  },
  "cases": [
@@ -50,6 +50,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -117,6 +118,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -184,6 +186,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -248,6 +251,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -336,6 +340,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -424,6 +429,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -509,6 +515,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -597,6 +604,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -664,6 +672,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -731,6 +740,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -798,6 +808,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -861,6 +872,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -928,6 +940,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -995,6 +1008,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1058,6 +1072,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1128,6 +1143,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1198,6 +1214,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1266,6 +1283,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1334,6 +1352,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1402,6 +1421,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1470,6 +1490,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1532,6 +1553,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1587,6 +1609,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1642,6 +1665,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1697,6 +1721,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1750,6 +1775,7 @@
      "m": 0
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1803,6 +1829,7 @@
      "m": 8
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1856,6 +1883,7 @@
      "m": -6
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -1916,6 +1944,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 400,
@@ -1983,6 +2012,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2050,6 +2080,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 777,
@@ -2121,6 +2152,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2192,6 +2224,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2260,6 +2293,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2331,6 +2365,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2402,6 +2437,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2470,6 +2506,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2539,6 +2576,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2608,6 +2646,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2677,6 +2716,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2746,6 +2786,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2815,6 +2856,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2894,6 +2936,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -2980,6 +3023,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3066,6 +3110,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3152,6 +3197,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3239,6 +3285,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3326,6 +3373,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3413,6 +3461,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3500,6 +3549,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3587,6 +3637,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3674,6 +3725,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3761,6 +3813,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3848,6 +3901,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -3935,6 +3989,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4022,6 +4077,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4109,6 +4165,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4196,6 +4253,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4283,6 +4341,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4370,6 +4429,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4457,6 +4517,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4544,6 +4605,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4611,6 +4673,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -4664,6 +4727,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -4717,6 +4781,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -4770,6 +4835,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -4823,6 +4889,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -4876,6 +4943,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -4931,6 +4999,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -4986,6 +5055,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5041,6 +5111,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5115,6 +5186,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5213,6 +5285,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5322,6 +5395,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5435,6 +5509,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5552,6 +5627,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5673,6 +5749,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5783,6 +5860,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5881,6 +5959,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -5972,6 +6051,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6063,6 +6143,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6164,6 +6245,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6255,6 +6337,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6343,6 +6426,7 @@
      "h": 45
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6438,6 +6522,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6540,6 +6625,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6642,6 +6728,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6744,6 +6831,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6846,6 +6934,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -6948,6 +7037,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7050,6 +7140,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7152,6 +7243,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7254,6 +7346,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7356,6 +7449,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7458,6 +7552,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7560,6 +7655,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7658,6 +7754,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7749,6 +7846,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7840,6 +7938,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -7936,6 +8035,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8039,6 +8139,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8142,6 +8243,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8245,6 +8347,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8349,6 +8452,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8453,6 +8557,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8557,6 +8662,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8662,6 +8768,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8767,6 +8874,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8872,6 +8980,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -8971,6 +9080,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9063,6 +9173,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9155,6 +9266,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9250,6 +9362,7 @@
      "h": 60
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9345,6 +9458,7 @@
      "h": 10
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9447,6 +9561,7 @@
      "h": 10
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9549,6 +9664,7 @@
      "h": 10
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9651,6 +9767,7 @@
      "h": 10
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9754,6 +9871,7 @@
      "m": 0
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9850,6 +9968,7 @@
      "m": 10
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -9946,6 +10065,7 @@
      "m": -8
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10033,6 +10153,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10124,6 +10245,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10222,6 +10344,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10287,6 +10410,7 @@
     "gap": 10
    },
    "items": [],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10325,6 +10449,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10380,6 +10505,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10446,6 +10572,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10526,6 +10653,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10606,6 +10734,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10686,6 +10815,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10766,6 +10896,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10846,6 +10977,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -10926,6 +11058,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11006,6 +11139,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11086,6 +11220,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11166,6 +11301,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11246,6 +11382,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11326,6 +11463,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11406,6 +11544,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11486,6 +11625,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11566,6 +11706,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11646,6 +11787,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11726,6 +11868,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11806,6 +11949,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11886,6 +12030,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -11966,6 +12111,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12046,6 +12192,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12126,6 +12273,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12206,6 +12354,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12293,6 +12442,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12384,6 +12534,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12471,6 +12622,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12562,6 +12714,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12649,6 +12802,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12740,6 +12894,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12822,6 +12977,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12904,6 +13060,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -12986,6 +13143,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13068,6 +13226,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13156,6 +13315,7 @@
      "b": 0
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13244,6 +13404,7 @@
      "b": 0
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13332,6 +13493,7 @@
      "b": 3
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13420,6 +13582,7 @@
      "b": 2
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13501,6 +13664,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13582,6 +13746,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13663,6 +13828,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13744,6 +13910,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13825,6 +13992,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13906,6 +14074,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -13987,6 +14156,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14068,6 +14238,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14152,6 +14323,7 @@
      "h": 10.3
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14247,6 +14419,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14328,6 +14501,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14407,6 +14581,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14475,6 +14650,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14552,6 +14728,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14723,6 +14900,7 @@
      "h": 37
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -14939,6 +15117,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15014,6 +15193,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 320,
@@ -15082,6 +15262,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 320,
@@ -15156,6 +15337,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15237,6 +15419,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15310,6 +15493,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15381,6 +15565,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15458,6 +15643,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15533,6 +15719,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15613,6 +15800,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15691,6 +15879,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15771,6 +15960,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15849,6 +16039,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -15933,6 +16124,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 200,
@@ -16017,6 +16209,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 200,
@@ -16101,6 +16294,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 320,
@@ -16185,6 +16379,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 320,
@@ -16269,6 +16464,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 480,
@@ -16353,6 +16549,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 480,
@@ -16437,6 +16634,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -16521,6 +16719,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -16605,6 +16804,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 720,
@@ -16689,6 +16889,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 720,
@@ -16773,6 +16974,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -16857,6 +17059,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -16941,6 +17144,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1000,
@@ -17025,6 +17229,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1000,
@@ -17097,6 +17302,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 480,
@@ -17148,6 +17354,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 480,
@@ -17203,6 +17410,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 480,
@@ -17265,6 +17473,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 480,
@@ -17343,6 +17552,7 @@
      "h": 55
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 480,
@@ -17449,6 +17659,7 @@
      "h": 55
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 480,
@@ -17535,6 +17746,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 720,
@@ -17586,6 +17798,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 720,
@@ -17641,6 +17854,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 720,
@@ -17703,6 +17917,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 720,
@@ -17781,6 +17996,7 @@
      "h": 55
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 720,
@@ -17887,6 +18103,7 @@
      "h": 55
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 720,
@@ -17973,6 +18190,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1000,
@@ -18024,6 +18242,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1000,
@@ -18079,6 +18298,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1000,
@@ -18141,6 +18361,7 @@
      "h": 35
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1000,
@@ -18219,6 +18440,7 @@
      "h": 55
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1000,
@@ -18325,6 +18547,7 @@
      "h": 55
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1000,
@@ -18412,6 +18635,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -18482,6 +18706,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -18548,6 +18773,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -18633,6 +18859,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -18725,6 +18952,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 800,
@@ -18817,6 +19045,7 @@
      "h": 50
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 1100,
@@ -18916,6 +19145,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -19022,6 +19252,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -19105,6 +19336,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 300,
@@ -19164,6 +19396,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 300,
@@ -19230,6 +19463,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -19296,6 +19530,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 630,
@@ -19366,6 +19601,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -19431,6 +19667,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -19494,6 +19731,7 @@
      "col": 2
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 500,
@@ -19557,6 +19795,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 800,
@@ -19622,6 +19861,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 800,
@@ -19685,6 +19925,7 @@
      "col": 2
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 800,
@@ -19737,6 +19978,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -19789,6 +20031,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -19845,6 +20088,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -19916,6 +20160,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -20014,6 +20259,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -20116,6 +20362,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -20198,6 +20445,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -20266,6 +20514,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -20334,6 +20583,7 @@
      "h": 25
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -20393,6 +20643,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 300,
@@ -20445,6 +20696,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -20498,6 +20750,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 400,
@@ -20552,6 +20805,7 @@
      "h": 80
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -20606,6 +20860,7 @@
      "h": 80
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -20671,6 +20926,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -20763,6 +21019,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -20828,6 +21085,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -20920,6 +21178,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -20973,6 +21232,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21027,6 +21287,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21081,6 +21342,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21134,6 +21396,7 @@
      "h": 40
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21194,6 +21457,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21254,6 +21518,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21313,6 +21578,7 @@
      "h": 60
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21374,6 +21640,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21434,6 +21701,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -21494,6 +21762,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -21554,6 +21823,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -21614,6 +21884,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -21674,6 +21945,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -21734,6 +22006,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -21794,6 +22067,7 @@
      }
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -21858,6 +22132,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -21922,6 +22197,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -21990,6 +22266,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22065,6 +22342,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22140,6 +22418,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22217,6 +22496,7 @@
      "p": 5
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22294,6 +22574,7 @@
      "p": 5
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22356,6 +22637,7 @@
      "aspectRatio": 1
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22411,6 +22693,7 @@
      "aspectRatio": 2
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22464,6 +22747,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 900,
@@ -22525,6 +22809,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22586,6 +22871,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22647,6 +22933,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22708,6 +22995,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22764,6 +23052,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22820,6 +23109,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22876,6 +23166,7 @@
      "h": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -22948,6 +23239,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23049,6 +23341,7 @@
      "h": 24
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23147,6 +23440,7 @@
      "h": 24
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23227,6 +23521,7 @@
      "h": 24
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23313,6 +23608,7 @@
      "h": 30
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23414,6 +23710,7 @@
      "h": 24
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23512,6 +23809,7 @@
      "h": 24
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23592,6 +23890,7 @@
      "h": 24
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23690,6 +23989,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23808,6 +24108,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -23901,6 +24202,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24006,6 +24308,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24124,6 +24427,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24217,6 +24521,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24322,6 +24627,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24440,6 +24746,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24533,6 +24840,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24638,6 +24946,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24756,6 +25065,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24849,6 +25159,7 @@
      "h": null
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -24944,6 +25255,7 @@
      "area": "main"
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -25025,6 +25337,7 @@
      "row": 2
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -25110,6 +25423,7 @@
      "area": "aside"
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -25176,6 +25490,7 @@
      "area": "d"
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 400,
@@ -25270,6 +25585,7 @@
      "childHeight": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -25378,6 +25694,7 @@
      "childHeight": 20
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -25476,6 +25793,7 @@
      "p": 8
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -25565,6 +25883,7 @@
      "aspectRatio": 1
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 620,
@@ -25661,6 +25980,7 @@
      "aspectRatio": 1.5
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 620,
@@ -25759,6 +26079,7 @@
      "childHeight": 60
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 600,
@@ -25865,6 +26186,7 @@
      "childHeight": 12
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 620,
@@ -25957,6 +26279,7 @@
      "childHeight": 12
     }
    ],
+   "oracleDivergence": null,
    "expected": {
     "container": {
      "w": 620,
@@ -25990,6 +26313,2062 @@
       "y": 143.33,
       "w": 200,
       "h": 533.33
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-content-0324",
+   "group": "lanes-stacking-content",
+   "tier": "B",
+   "note": "align-content:start in the stacking axis",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "height": 300,
+    "alignContent": "start"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 300
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-content-0325",
+   "group": "lanes-stacking-content",
+   "tier": "B",
+   "note": "align-content:center in the stacking axis",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "height": 300,
+    "alignContent": "center"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 300
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 105,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 105,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 105,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 145,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-content-0326",
+   "group": "lanes-stacking-content",
+   "tier": "B",
+   "note": "align-content:end in the stacking axis",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "height": 300,
+    "alignContent": "end"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 300
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 210,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 210,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 210,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 250,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-content-0327",
+   "group": "lanes-stacking-content",
+   "tier": "B",
+   "note": "align-content:stretch in the stacking axis",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "height": 300,
+    "alignContent": "stretch"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 300
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-content-0328",
+   "group": "lanes-stacking-content",
+   "tier": "B",
+   "note": "align-content:space-between in the stacking axis",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "height": 300,
+    "alignContent": "space-between"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 300
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-content-distributed-0329",
+   "group": "lanes-stacking-content-distributed",
+   "tier": "B",
+   "note": "align-content:space-around falls back to center",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "height": 300,
+    "alignContent": "space-around"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": {
+    "reason": "Safari distributes the stacking axis as if the lanes had rows (52.5 for space-around, 70 for space-evenly); §6.3 has a single alignment subject, so both fall back to center — half of 300 - 90 = 105",
+    "y": [
+     105,
+     105,
+     105,
+     145
+    ]
+   },
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 300
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 105,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 105,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 105,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 145,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-content-distributed-0330",
+   "group": "lanes-stacking-content-distributed",
+   "tier": "B",
+   "note": "align-content:space-evenly falls back to center",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "height": 300,
+    "alignContent": "space-evenly"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": {
+    "reason": "Safari distributes the stacking axis as if the lanes had rows (52.5 for space-around, 70 for space-evenly); §6.3 has a single alignment subject, so both fall back to center — half of 300 - 90 = 105",
+    "y": [
+     105,
+     105,
+     105,
+     145
+    ]
+   },
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 300
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 105,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 105,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 105,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 145,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-0331",
+   "group": "lanes-stacking-align",
+   "tier": "B",
+   "note": "align-items:start on lanes ending at different depths",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "alignItems": "start"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    },
+    {
+     "w": null,
+     "h": 20
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 50,
+      "w": 193.33,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-0332",
+   "group": "lanes-stacking-align",
+   "tier": "B",
+   "note": "align-items:stretch on lanes ending at different depths",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "alignItems": "stretch"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    },
+    {
+     "w": null,
+     "h": 20
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 50,
+      "w": 193.33,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-0333",
+   "group": "lanes-stacking-align",
+   "tier": "B",
+   "note": "align-items:center on lanes ending at different depths",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "alignItems": "center"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    },
+    {
+     "w": null,
+     "h": 20
+    }
+   ],
+   "oracleDivergence": {
+    "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "y": [
+     0,
+     15,
+     0,
+     40,
+     60
+    ]
+   },
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 15,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 60,
+      "w": 193.33,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-0334",
+   "group": "lanes-stacking-align",
+   "tier": "B",
+   "note": "align-items:end on lanes ending at different depths",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "alignItems": "end"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    },
+    {
+     "w": null,
+     "h": 20
+    }
+   ],
+   "oracleDivergence": {
+    "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "y": [
+     0,
+     30,
+     0,
+     40,
+     70
+    ]
+   },
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 30,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 70,
+      "w": 193.33,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-self-0335",
+   "group": "lanes-stacking-align-self",
+   "tier": "B",
+   "note": "align-self:end on one item only",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40,
+     "alignSelf": "end"
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": {
+    "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "y": [
+     50,
+     0,
+     0,
+     40
+    ]
+   },
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 50,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-self-0336",
+   "group": "lanes-stacking-align-self",
+   "tier": "B",
+   "note": "align-self:center on one item only",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40,
+     "alignSelf": "center"
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": {
+    "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "y": [
+     25,
+     0,
+     0,
+     40
+    ]
+   },
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 25,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-span-0337",
+   "group": "lanes-stacking-align-span",
+   "tier": "B",
+   "note": "align-items:start with a spanning item leaving a void",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "alignItems": "start"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 25,
+     "col": {
+      "span": 3
+     }
+    },
+    {
+     "w": null,
+     "h": 20
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 125
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 70,
+      "w": 600,
+      "h": 25
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 105,
+      "w": 193.33,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-span-0338",
+   "group": "lanes-stacking-align-span",
+   "tier": "B",
+   "note": "align-items:end with a spanning item leaving a void",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "alignItems": "end"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 25,
+     "col": {
+      "span": 3
+     }
+    },
+    {
+     "w": null,
+     "h": 20
+    }
+   ],
+   "oracleDivergence": {
+    "reason": "Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: every value lays out identically there",
+    "y": [
+     20,
+     0,
+     30,
+     70,
+     105
+    ]
+   },
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 125
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 20,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 30,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 70,
+      "w": 600,
+      "h": 25
+     },
+     {
+      "i": 4,
+      "x": 0,
+      "y": 105,
+      "w": 193.33,
+      "h": 20
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-stacking-align-stretch-auto-0339",
+   "group": "lanes-stacking-align-stretch-auto",
+   "tier": "B",
+   "note": "align-items:stretch on auto-height items in lanes",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "alignItems": "stretch"
+   },
+   "items": [
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 40
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 60
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 30
+    },
+    {
+     "w": null,
+     "h": null,
+     "childHeight": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-container-min-max-0340",
+   "group": "lanes-container-min-max",
+   "tier": "B",
+   "note": "maxHeight: 60 on a lanes container",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "maxHeight": 60
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 60
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-container-min-max-0341",
+   "group": "lanes-container-min-max",
+   "tier": "B",
+   "note": "minHeight: 200 on a lanes container",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "minHeight": 200
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 200
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-container-min-max-0342",
+   "group": "lanes-container-min-max",
+   "tier": "B",
+   "note": "maxWidth: 400 on a lanes container",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "maxWidth": 400
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 400,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 126.66,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 136.66,
+      "y": 0,
+      "w": 126.67,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 273.33,
+      "y": 0,
+      "w": 126.67,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 273.33,
+      "y": 40,
+      "w": 126.67,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-container-min-max-0343",
+   "group": "lanes-container-min-max",
+   "tier": "B",
+   "note": "minWidth: 800 on a lanes container",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "minWidth": 800
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 800,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 260,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 270,
+      "y": 0,
+      "w": 260,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 540,
+      "y": 0,
+      "w": 260,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 540,
+      "y": 40,
+      "w": 260,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-absolute-0344",
+   "group": "lanes-absolute",
+   "tier": "B",
+   "note": "an absolutely-positioned child at 20,30 is out of flow",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "positioned": true
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": 50,
+     "h": 25,
+     "absolute": true,
+     "top": 20,
+     "left": 30
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 30,
+      "y": 20,
+      "w": 50,
+      "h": 25
+     },
+     {
+      "i": 4,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-absolute-0345",
+   "group": "lanes-absolute",
+   "tier": "B",
+   "note": "an absolutely-positioned child at 0,0 is out of flow",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0,
+    "positioned": true
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30
+    },
+    {
+     "w": 50,
+     "h": 25,
+     "absolute": true,
+     "top": 0,
+     "left": 0
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 90
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 30
+     },
+     {
+      "i": 3,
+      "x": 0,
+      "y": 0,
+      "w": 50,
+      "h": 25
+     },
+     {
+      "i": 4,
+      "x": 406.66,
+      "y": 40,
+      "w": 193.34,
+      "h": 50
+     }
+    ]
+   }
+  },
+  {
+   "id": "lanes-display-none-0346",
+   "group": "lanes-display-none",
+   "tier": "B",
+   "note": "a display:none child takes no lane",
+   "container": {
+    "display": "grid-lanes",
+    "width": 600,
+    "cols": [
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     },
+     {
+      "t": "fr",
+      "v": 1
+     }
+    ],
+    "gap": 10,
+    "flowTolerance": 0
+   },
+   "items": [
+    {
+     "w": null,
+     "h": 40
+    },
+    {
+     "w": null,
+     "h": 60
+    },
+    {
+     "w": null,
+     "h": 30,
+     "displayNone": true
+    },
+    {
+     "w": null,
+     "h": 50
+    }
+   ],
+   "oracleDivergence": null,
+   "expected": {
+    "container": {
+     "w": 600,
+     "h": 60
+    },
+    "items": [
+     {
+      "i": 0,
+      "x": 0,
+      "y": 0,
+      "w": 193.33,
+      "h": 40
+     },
+     {
+      "i": 1,
+      "x": 203.33,
+      "y": 0,
+      "w": 193.33,
+      "h": 60
+     },
+     {
+      "i": 2,
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
+     },
+     {
+      "i": 3,
+      "x": 406.66,
+      "y": 0,
+      "w": 193.34,
+      "h": 50
      }
     ]
    }

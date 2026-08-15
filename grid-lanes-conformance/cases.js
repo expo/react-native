@@ -49,7 +49,7 @@ const item = (w, h, extra) => ({w, h, ...(extra ?? {})});
 const cases = [];
 let seq = 0;
 
-function add(group, tier, container, items, note) {
+function add(group, tier, container, items, note, extra) {
   seq++;
   cases.push({
     id: `${group}-${String(seq).padStart(4, '0')}`,
@@ -58,8 +58,21 @@ function add(group, tier, container, items, note) {
     note: note ?? null,
     container,
     items,
+    ...(extra ?? {}),
   });
 }
+
+// A case where Safari is wrong about ONE axis and right about the rest.
+//
+// Marking the whole case an oracle limitation would throw away the good half
+// — the grid axis, where Safari is authoritative — and drop the case out of
+// every consumer. Instead the oracle keeps Safari's measurements and replaces
+// just the stacking-axis positions with values derived from the spec, so the
+// case still runs everywhere and only the disputed number is hand-supplied.
+//
+// The derivations are written out in full in stacking-alignment-test.cpp;
+// `reason` says why Safari cannot be believed here.
+const stackingOverride = (reason, y) => ({oracleDivergence: {reason, y}});
 
 // A container with sensible defaults; every case states only what it varies.
 const grid = o => ({display: 'grid', width: 600, ...o});
@@ -1701,5 +1714,275 @@ for (const ratio of [1.5, 0.75]) {
     `aspect-ratio ${ratio} tiles with padding and content`,
   );
 }
+
+// ---------------------------------------------------------------------------
+// §6.3 Stacking-axis content distribution
+//
+// The stacking axis has exactly one alignment subject — the whole stacking
+// range — so align-content moves all the items together, like a block. The
+// spec says the distributed values collapse to their fallbacks here, which is
+// the part an implementation is most likely to get wrong: space-between in a
+// lanes container must NOT spread the lanes out.
+//
+// The container is taller than its content so there is free space to move
+// into; without that every value would look identical and the case would
+// prove nothing.
+// ---------------------------------------------------------------------------
+
+// Safari agrees on the positional values. It does NOT agree on the
+// distributed ones: for space-around it shifts the content by 52.5 and for
+// space-evenly by 70, where a single alignment subject can only give the
+// fallback — center, i.e. 105. Those two numbers are what you get by treating
+// the deepest lane's item COUNT as the number of subjects, which is the grid
+// row-distribution rule leaking into an axis that has no rows. The spec is
+// unambiguous that there is only ever one subject here, so the corpus follows
+// the spec and marks Safari as unable to adjudicate.
+for (const alignContent of [
+  'start',
+  'center',
+  'end',
+  'stretch',
+  'space-between',
+]) {
+  add(
+    'lanes-stacking-content',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      height: 300,
+      alignContent,
+    }),
+    [item(null, 40), item(null, 60), item(null, 30), item(null, 50)],
+    `align-content:${alignContent} in the stacking axis`,
+  );
+}
+
+const DISTRIBUTED_DIVERGENCE =
+  'Safari distributes the stacking axis as if the lanes had rows (52.5 for ' +
+  'space-around, 70 for space-evenly); §6.3 has a single alignment subject, ' +
+  'so both fall back to center — half of 300 - 90 = 105';
+
+for (const alignContent of ['space-around', 'space-evenly']) {
+  add(
+    'lanes-stacking-content-distributed',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      height: 300,
+      alignContent,
+    }),
+    [item(null, 40), item(null, 60), item(null, 30), item(null, 50)],
+    `align-content:${alignContent} falls back to center`,
+    stackingOverride(DISTRIBUTED_DIVERGENCE, [105, 105, 105, 145]),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §6.4 Stacking-axis self alignment
+//
+// Only items adjacent to a "gap" respond: the last item in a track, whose
+// alignment container reaches down to the lowest bottom edge among all the
+// tracks' last items, and an item immediately before a spanning one, whose
+// container is its own box plus the void the span leaves behind.
+//
+// Three lanes ending at different heights give every value something to do:
+// with `end`, the short lanes' last items drop to the deepest lane's bottom;
+// with `start` they stay put.
+//
+// Safari implements none of this — every value below produces identical
+// geometry there, including `align-self` on a single item — so the oracle
+// cannot adjudicate the section and these are pinned by
+// stacking-alignment-test.cpp instead, derived from §6.4 directly.
+// ---------------------------------------------------------------------------
+
+const STACKING_ALIGN_DIVERGENCE =
+  'Safari does not implement css-grid-3 §6.4 stacking-axis self alignment: ' +
+  'every value lays out identically there';
+
+// The five items settle at y = 0, 0, 0, 40, 50, and only two of them have a
+// void to move into — item1 is last in lane 1 with 30 to spare, item4 is last
+// in lane 0 with 20. `start` and `stretch` leave both where they are, which
+// happens to be what Safari produces for every value, so those two cases can
+// still be pinned to it.
+for (const [alignItems, y] of [
+  ['start', null],
+  ['stretch', null],
+  ['center', [0, 15, 0, 40, 60]],
+  ['end', [0, 30, 0, 40, 70]],
+]) {
+  add(
+    'lanes-stacking-align',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      alignItems,
+    }),
+    [
+      item(null, 40),
+      item(null, 60),
+      item(null, 30),
+      item(null, 50),
+      item(null, 20),
+    ],
+    `align-items:${alignItems} on lanes ending at different depths`,
+    y == null ? undefined : stackingOverride(STACKING_ALIGN_DIVERGENCE, y),
+  );
+}
+
+// align-self overrides align-items for one item only. The other lanes' last
+// items must not move: "alignment of an item does not affect the size or
+// position of other items' alignment containers".
+// Without a fifth item, item0 is the last in lane 0 and has the whole
+// 90 - 40 = 50 to itself; the other three must not budge.
+for (const [alignSelf, y] of [
+  ['end', [50, 0, 0, 40]],
+  ['center', [25, 0, 0, 40]],
+]) {
+  add(
+    'lanes-stacking-align-self',
+    'B',
+    lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0}),
+    [
+      item(null, 40, {alignSelf}),
+      item(null, 60),
+      item(null, 30),
+      item(null, 50),
+    ],
+    `align-self:${alignSelf} on one item only`,
+    stackingOverride(STACKING_ALIGN_DIVERGENCE, y),
+  );
+}
+
+// A spanning item creates the interior gap: the lanes it covers must all be
+// clear before it can start, so whichever lane was shortest is left with a
+// void between its last item and the span. That item — not just the final one
+// in the track — is what §6.4 says responds to alignment.
+// The span waits for the deepest lane, max(50, 70, 40) = 70, so items 0 and 2
+// are left 20 and 30 short of it. Under `end` they drop to meet it; the item
+// already flush against it, and the span itself, cannot move.
+for (const [alignItems, y] of [
+  ['start', null],
+  ['end', [20, 0, 30, 70, 105]],
+]) {
+  add(
+    'lanes-stacking-align-span',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      alignItems,
+    }),
+    [
+      item(null, 40),
+      item(null, 60),
+      item(null, 30),
+      item(null, 25, {col: {span: 3}}),
+      item(null, 20),
+    ],
+    `align-items:${alignItems} with a spanning item leaving a void`,
+    y == null ? undefined : stackingOverride(STACKING_ALIGN_DIVERGENCE, y),
+  );
+}
+
+// Content-sized items under `stretch`: whether the alignment container's
+// extra room grows the item or only moves it is the one question the
+// fixed-height cases above cannot answer.
+add(
+  'lanes-stacking-align-stretch-auto',
+  'B',
+  lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0, alignItems: 'stretch'}),
+  [
+    contentItem(40),
+    contentItem(60),
+    contentItem(30),
+    contentItem(50),
+  ],
+  'align-items:stretch on auto-height items in lanes',
+);
+
+// ---------------------------------------------------------------------------
+// §5 Sizing grid containers
+//
+// The stacking axis is the longest lane unless the container was given a size
+// of its own. min-/max- are the interesting halves: a max that bites has to
+// clamp the container WITHOUT moving the items, and a min that bites has to
+// leave the lanes where they are and simply make the box taller.
+// ---------------------------------------------------------------------------
+
+for (const [key, value] of [
+  ['maxHeight', 60],
+  ['minHeight', 200],
+  ['maxWidth', 400],
+  ['minWidth', 800],
+]) {
+  add(
+    'lanes-container-min-max',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      [key]: value,
+    }),
+    [item(null, 40), item(null, 60), item(null, 30), item(null, 50)],
+    `${key}: ${value} on a lanes container`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §8 Absolute positioning
+//
+// An out-of-flow child takes no part in placement — the lanes must come out
+// exactly as if it were not there — but it still has to be laid out. Both
+// halves matter: the first is what the placement algorithm must ignore, the
+// second is what an implementation forgets, because skipping the child during
+// collection is the natural way to write the first.
+// ---------------------------------------------------------------------------
+
+for (const [top, left] of [
+  [20, 30],
+  [0, 0],
+]) {
+  add(
+    'lanes-absolute',
+    'B',
+    lanes({
+      cols: [fr(1), fr(1), fr(1)],
+      gap: 10,
+      flowTolerance: 0,
+      positioned: true,
+    }),
+    [
+      item(null, 40),
+      item(null, 60),
+      item(null, 30),
+      item(50, 25, {absolute: true, top, left}),
+      item(null, 50),
+    ],
+    `an absolutely-positioned child at ${top},${left} is out of flow`,
+  );
+}
+
+// The same shape with `display: none` on a child, which must also be ignored
+// by placement — and left with no stale geometry of its own.
+add(
+  'lanes-display-none',
+  'B',
+  lanes({cols: [fr(1), fr(1), fr(1)], gap: 10, flowTolerance: 0}),
+  [
+    item(null, 40),
+    item(null, 60),
+    item(null, 30, {displayNone: true}),
+    item(null, 50),
+  ],
+  'a display:none child takes no lane',
+);
 
 module.exports = {cases, px, pct, fr, auto, minmax};

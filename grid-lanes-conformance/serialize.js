@@ -66,6 +66,7 @@ function containerCss(c) {
   if (c.border) d.push(`border: ${c.border}px solid #0000`);
   if (c.fontSize) d.push(`font-size: ${c.fontSize}px`);
   if (c.direction) d.push(`direction: ${c.direction}`);
+  if (c.positioned) d.push('position: relative');
   // oracleLimitation is metadata, not CSS.
   if (c.gapPercent) d.push(`gap: ${c.gapPercent}`);
   if (c.minWidth != null) d.push(`min-width: ${c.minWidth}px`);
@@ -88,6 +89,16 @@ function itemCss(it) {
   if (it.p != null) d.push(`padding: ${it.p}px`);
   if (it.b != null) d.push(`border: ${it.b}px solid #0000`);
   if (it.order != null) d.push(`order: ${it.order}`);
+  // An out-of-flow item (§8). The container is given `position: relative` so
+  // that it is the containing block in the browser too — Yoga has no static
+  // position, so without that the two would be measuring against different
+  // boxes.
+  if (it.displayNone) d.push('display: none');
+  if (it.absolute) {
+    d.push('position: absolute');
+    if (it.top != null) d.push(`top: ${it.top}px`);
+    if (it.left != null) d.push(`left: ${it.left}px`);
+  }
   if (it.justifySelf) d.push(`justify-self: ${it.justifySelf}`);
   if (it.alignSelf) d.push(`align-self: ${it.alignSelf}`);
   if (it.area != null) d.push(`grid-area: ${it.area}`);
