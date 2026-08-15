@@ -302,6 +302,13 @@ class YG_EXPORT Style {
     ensureGrid().gridArea = std::move(value);
   }
 
+  const FlowTolerance& flowTolerance() const {
+    return grid().flowTolerance;
+  }
+  void setFlowTolerance(FlowTolerance value) {
+    ensureGrid().flowTolerance = value;
+  }
+
   GridAutoFlow gridAutoFlow() const {
     return grid().gridAutoFlow;
   }

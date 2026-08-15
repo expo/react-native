@@ -66,6 +66,7 @@ function containerCss(c) {
   if (c.border) d.push(`border: ${c.border}px solid #0000`);
   if (c.fontSize) d.push(`font-size: ${c.fontSize}px`);
   if (c.direction) d.push(`direction: ${c.direction}`);
+  // oracleLimitation is metadata, not CSS.
   if (c.gapPercent) d.push(`gap: ${c.gapPercent}`);
   if (c.minWidth != null) d.push(`min-width: ${c.minWidth}px`);
   if (c.maxWidth != null) d.push(`max-width: ${c.maxWidth}px`);
@@ -119,4 +120,13 @@ function placementToCss(p) {
 }
 
 
-module.exports = {trackToCss, toleranceToCss, containerCss, itemCss, placementToCss};
+// An item with `childHeight` contains a fixed-size child instead of having a
+// height of its own, which is how a case exercises CONTENT sizing without
+// depending on a font.
+function itemChildHtml(it) {
+  return it.childHeight != null
+    ? `<b style="display: block; height: ${it.childHeight}px"></b>`
+    : '';
+}
+
+module.exports = {trackToCss, toleranceToCss, containerCss, itemCss, placementToCss, itemChildHtml};
