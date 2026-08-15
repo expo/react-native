@@ -540,6 +540,66 @@ export default {
       ),
     },
     {
+      title: 'grid-auto-flow: dense — backfilling holes',
+      name: 'dense',
+      description:
+        'A spanning item that does not fit the remaining columns leaves a ' +
+        'hole. The default flow never looks backwards, so the hole stays; ' +
+        '`dense` restarts the search for every item and fills it. Same items, ' +
+        'same tracks, both ways.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "gridTemplateColumns: '1fr 1fr 1fr'\n" +
+            "// item 1 and 2: gridColumnEnd: 'span 2'\n" +
+            "gridAutoFlow: 'row'   // vs   'row dense'"
+          }>
+          {(['row', 'row dense']: Array<'row' | 'row dense'>).map(flow => (
+            <View key={flow}>
+              <Text
+                style={{
+                  color: DEMO_THEME.muted,
+                  fontSize: 12,
+                  marginBottom: 4,
+                  marginTop: flow === 'row' ? 0 : 12,
+                }}>
+                gridAutoFlow: '{flow}'
+              </Text>
+              <View
+                // $FlowExpectedError[incompatible-type] grid style keys
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: 8,
+                  gridAutoFlow: flow,
+                }}>
+                <View
+                  // $FlowExpectedError[incompatible-type] grid style keys
+                  style={{
+                    gridColumnEnd: 'span 2',
+                    height: 32,
+                    borderRadius: 6,
+                    backgroundColor: SWATCHES[0],
+                  }}
+                />
+                <View
+                  // $FlowExpectedError[incompatible-type] grid style keys
+                  style={{
+                    gridColumnEnd: 'span 2',
+                    height: 32,
+                    borderRadius: 6,
+                    backgroundColor: SWATCHES[1],
+                  }}
+                />
+                <Cell index={2} height={32} label="3" />
+                <Cell index={3} height={32} label="4" />
+              </View>
+            </View>
+          ))}
+        </DemoContent>
+      ),
+    },
+    {
       title: 'Container padding (regression guard)',
       name: 'padding-mre',
       description:
