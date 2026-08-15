@@ -9,6 +9,8 @@
 
 #include <react/renderer/attributedstring/TextRoleMetrics.h>
 
+#include <cmath>
+
 #include <react/renderer/components/view/TransitionConversions.h>
 
 #include <algorithm>
@@ -577,6 +579,18 @@ BaseViewProps::BaseViewProps(
           motion.animationFillModeRaw);
       cssMotion = std::make_shared<const CssMotion>(std::move(motion));
     }
+  }
+
+  // `flow-tolerance: normal` is 1em (css-grid-3 §4.2). Yoga has no font model,
+  // so the em size is supplied here, where the element's own font-size has
+  // just been parsed. Without this, `normal` would always mean 16 and a lanes
+  // container with a larger font would tie lanes too tightly.
+  if (yogaStyle.display() == yoga::Display::GridLanes &&
+      yogaStyle.flowTolerance().kind == yoga::FlowToleranceKind::Normal &&
+      !std::isnan(inheritedFontSize) && inheritedFontSize > 0) {
+    auto tolerance = yogaStyle.flowTolerance();
+    tolerance.emSize = inheritedFontSize;
+    yogaStyle.setFlowTolerance(tolerance);
   }
 
   // `all` — parsed by hand: its value space here is tiny and a boundary is

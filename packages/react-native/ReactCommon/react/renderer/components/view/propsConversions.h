@@ -121,6 +121,7 @@ convertRawProp(const PropsParserContext &context, const RawProps &rawProps, cons
   yogaStyle.setGridRowEnd(convertRawProp(context, rawProps, "gridRowEnd", sourceValue.gridRowEnd(), yogaStyle.gridRowEnd()));
 
   yogaStyle.setGridAutoFlow(convertRawProp(context, rawProps, "gridAutoFlow", sourceValue.gridAutoFlow(), yogaStyle.gridAutoFlow()));
+  yogaStyle.setFlowTolerance(convertRawProp(context, rawProps, "flowTolerance", sourceValue.flowTolerance(), yogaStyle.flowTolerance()));
   yogaStyle.setGridTemplateAreas(convertRawProp(context, rawProps, "gridTemplateAreas", sourceValue.gridTemplateAreas(), yogaStyle.gridTemplateAreas()));
   yogaStyle.setGridArea(convertRawProp(context, rawProps, "gridArea", sourceValue.gridArea(), yogaStyle.gridArea()));
 
@@ -134,7 +135,8 @@ convertRawProp(const PropsParserContext &context, const RawProps &rawProps, cons
   // to the flex value, flex-start, so without this an auto track shrink-wraps
   // instead of filling. Only applied when the author said nothing, so an
   // explicit `justifyContent: 'flex-start'` still means flex-start.
-  if (yogaStyle.display() == yoga::Display::Grid) {
+  if (yogaStyle.display() == yoga::Display::Grid ||
+      yogaStyle.display() == yoga::Display::GridLanes) {
     if (rawProps.at("justifyContent", nullptr, nullptr) == nullptr) {
       yogaStyle.setJustifyContent(yoga::Justify::Stretch);
     }
