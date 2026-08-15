@@ -166,16 +166,62 @@ function GridVerifyCase(): React.Node {
 }
 
 /*
- * A grid container with padding around a single fixed-height row.
- *
- * The correct height is padding + row + padding = 20 + 20 + 20 = 60. This is
- * the MRE for a bug in the vendored track sizing (see
- * yoga/algorithm/grid/README-VENDORED.md): the container's own track total is
- * a CONTENT-box size, but it was being floored at the node's padding+border,
- * which is only correct for a border-box size — so the container measured 80.
- *
- * It renders its own measured height so a screenshot carries the number.
+ * A grid container with padding around a single fixed-height row. The correct
+ * height is padding + row + padding = 20 + 20 + 20 = 60: the container's track
+ * total is a content-box size and must not be floored at the node's padding +
+ * border, which is a border-box floor. It renders its own measured height so a
+ * screenshot carries the number.
  */
+function UnknownAreaCase(): React.Node {
+  const unknownGridRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const unknownItemRef = useRef<React.ElementRef<typeof View> | null>(null);
+  usePublishRects({unknownGrid: unknownGridRef, unknownItem: unknownItemRef});
+  return (
+    <View
+      ref={unknownGridRef}
+      // $FlowExpectedError[incompatible-type] grid style keys
+      style={{
+        display: 'grid',
+        width: 300,
+        gridTemplateColumns: '80px 80px',
+        gridTemplateRows: '40px',
+        gap: 10,
+        gridTemplateAreas: '"a b"',
+        alignItems: 'flex-start',
+        justifyItems: 'flex-start',
+      }}>
+      <View
+        // $FlowExpectedError[incompatible-type] grid style keys
+        style={{
+          gridArea: 'a',
+          width: 80,
+          height: 30,
+          backgroundColor: SWATCHES[0],
+        }}
+      />
+      <View
+        ref={unknownItemRef}
+        // $FlowExpectedError[incompatible-type] grid style keys
+        style={{
+          gridArea: 'missing',
+          width: 50,
+          height: 20,
+          backgroundColor: SWATCHES[2],
+        }}
+      />
+      <View
+        // $FlowExpectedError[incompatible-type] grid style keys
+        style={{
+          gridArea: 'b',
+          width: 80,
+          height: 30,
+          backgroundColor: SWATCHES[1],
+        }}
+      />
+    </View>
+  );
+}
+
 function ContainerPaddingMRE(): React.Node {
   const [measured, setMeasured] = React.useState<number | null>(null);
   return (
@@ -535,6 +581,75 @@ export default {
               />
             ))}
           </View>
+        </DemoContent>
+      ),
+    },
+    {
+      title: 'grid-template-areas — a page shell by name',
+      name: 'areas',
+      description:
+        'Items are placed by naming an area rather than counting lines. The ' +
+        'template is the layout, readable as a picture of itself.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "gridTemplateAreas:\n" +
+            "  '\"header header\" \"sidebar main\" \"footer footer\"'\n" +
+            "gridTemplateColumns: '90px 1fr'\n" +
+            "// then:  gridArea: 'header'"
+          }>
+          <View
+            // $FlowExpectedError[incompatible-type] grid style keys
+            style={{
+              display: 'grid',
+              gridTemplateAreas:
+                '"header header" "sidebar main" "footer footer"',
+              gridTemplateColumns: '90px 1fr',
+              gridTemplateRows: '40px 72px 32px',
+              gap: 8,
+            }}>
+            {[
+              ['header', SWATCHES[0]],
+              ['sidebar', SWATCHES[1]],
+              ['main', SWATCHES[2]],
+              ['footer', SWATCHES[3]],
+            ].map(([area, color]) => (
+              <View
+                key={area}
+                // $FlowExpectedError[incompatible-type] grid style keys
+                style={{
+                  gridArea: area,
+                  backgroundColor: color,
+                  borderRadius: 6,
+                  justifyContent: 'center',
+                  paddingHorizontal: 8,
+                }}>
+                <Text
+                  style={{fontSize: 12, fontWeight: '600', color: '#1a1a1a'}}>
+                  {area}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </DemoContent>
+      ),
+    },
+    {
+      title: 'An unknown area name — outside the grid',
+      name: 'unknownArea',
+      description:
+        'An item naming an area the template does not have is placed against ' +
+        'the first implicit line after the explicit grid in each axis ' +
+        '(css-grid-2 §8.3), so it lands in a new track outside the grid, ' +
+        'after an empty one, rather than flowing into it. In a 300pt-wide ' +
+        'grid that is x=220, y=60, as in Chrome.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            '\'"a b"\' areas, 80px 80px columns, 40px row\n' +
+            "// then:  gridArea: 'missing'  // lands outside the grid"
+          }>
+          <UnknownAreaCase />
         </DemoContent>
       ),
     },

@@ -279,6 +279,20 @@ class YG_EXPORT Style {
     grid_.ensure().autoRows[index] = value;
   }
 
+  const GridTemplateAreas& gridTemplateAreas() const {
+    return grid_.get().templateAreas;
+  }
+  void setGridTemplateAreas(GridTemplateAreas value) {
+    grid_.ensure().templateAreas = std::move(value);
+  }
+
+  const std::string& gridArea() const {
+    return grid_.get().area;
+  }
+  void setGridArea(std::string value) {
+    grid_.ensure().area = std::move(value);
+  }
+
   GridAutoFlow gridAutoFlow() const {
     return grid_.get().autoFlow;
   }
