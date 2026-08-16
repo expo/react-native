@@ -1059,6 +1059,19 @@ export type ____ViewStyle_InternalBase = Readonly<{
     ReadonlyArray<BackgroundPositionValue> | string,
   experimental_backgroundRepeat?: ReadonlyArray<BackgroundRepeatValue> | string,
   isolation?: 'auto' | 'isolate',
+  /**
+   * Whether the text an element paints can be selected and copied
+   * (css-ui-4 §5.1).
+   *
+   * Unlike the web, `auto` means *not* selectable: nothing in React Native has
+   * ever been selectable without asking, and this property is not the place to
+   * change that. `text`, `contain` and `all` all opt in.
+   *
+   * On `<Text>` this is the long-standing `selectable` prop under its CSS
+   * name. On any other element it applies to the text the element paints
+   * directly, and it does not cascade to descendants — same as `selectable`.
+   */
+  userSelect?: 'auto' | 'text' | 'none' | 'contain' | 'all',
 }>;
 
 export type ____ViewStyle_InternalCore = Readonly<{
@@ -1218,7 +1231,9 @@ type ____TextStyle_InternalBase = Readonly<{
    */
   whiteSpace?:
     'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',
-  userSelect?: 'auto' | 'text' | 'none' | 'contain' | 'all',
+  // `userSelect` moved to ____ViewStyle_InternalBase: it now applies to any
+  // element that paints text, not just <Text>. A TextStyle is a ViewStyle, so
+  // it remains valid on <Text> with the same meaning.
   verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
   writingDirection?: 'auto' | 'ltr' | 'rtl',
 }>;

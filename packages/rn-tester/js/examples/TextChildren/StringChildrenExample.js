@@ -365,5 +365,28 @@ export default {
         </DemoContent>
       ),
     },
+    {
+      title: 'Selectable text (userSelect)',
+      description:
+        'Long-press the first block to get the Copy menu; the second opts out. ' +
+        'Matches <Text selectable> on this platform.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<View style={{userSelect: 'text'}}>long-press to copy me</View>\n" +
+            '<View>long-press does nothing here</View>'
+          }>
+          <View style={{userSelect: 'text', marginBottom: 8}}>
+            long-press to copy me
+          </View>
+          <View style={{marginBottom: 8}}>long-press does nothing here</View>
+          <View style={{userSelect: 'text'}}>
+            two runs
+            <View style={{height: 8, backgroundColor: DEMO_BAR_COLOR}} />
+            copy takes both, in reading order
+          </View>
+        </DemoContent>
+      ),
+    },
   ],
 } as RNTesterModule;
