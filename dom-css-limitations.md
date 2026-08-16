@@ -71,6 +71,21 @@ to be compatible with. Listed so its absence reads as deliberate.
 expects a different `source` shape — so an `<img>` lays out but draws nothing
 there. iOS renders it through the Image machinery.
 
+## DOM APIs
+
+**`client-coordinates-are-not-rect-coordinates`** — `.../uimanager/events/PointerEvent.kt`
+On Android a pointer event's `clientX`/`clientY` are relative to the React root
+view — the file says so out loud — while `getBoundingClientRect()` is relative
+to the screen. CSSOM-View has both in the same space, and code that mixes them
+(hit-testing a rect against a pointer, positioning something under the finger)
+is off by wherever the root view sits, which on a phone is the status bar and
+anything above the surface. They agree on iOS only because the root view is at
+the window origin there, so the bug is invisible on the platform most people
+develop on. The event also carries `screenX`/`screenY`, which DO match the
+rects, so the mismatch is reachable-around but not obvious. Fixing it means
+changing the coordinate space of one of two shipped APIs, which is a decision
+about every app rather than about this feature.
+
 ## Text selection
 
 **`user-select-auto-is-none`** — `ReactCommon/.../components/view/primitives.h`

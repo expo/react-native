@@ -36,6 +36,11 @@ const Components: Array<RNTesterModuleInfo> = [
     pinned: true,
   },
   {
+    key: 'TextEventTargetsExample',
+    module: require('../examples/TextConformance/TextEventTargetsExample').default,
+    category: 'Basic',
+  },
+  {
     key: 'TextConformanceExample',
     module: require('../examples/TextConformance/TextConformanceExample').default,
     category: 'Basic',
