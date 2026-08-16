@@ -36,6 +36,11 @@ const Components: Array<RNTesterModuleInfo> = [
     pinned: true,
   },
   {
+    key: 'TextConformanceExample',
+    module: require('../examples/TextConformance/TextConformanceExample').default,
+    category: 'Basic',
+  },
+  {
     key: 'StringChildrenExample',
     module: require('../examples/TextChildren/StringChildrenExample').default,
     category: 'Basic',

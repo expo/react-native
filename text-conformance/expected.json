@@ -1,0 +1,1288 @@
+{
+ "generatedBy": "text-conformance/oracle.js",
+ "oracle": "Safari via safaridriver",
+ "containerWidth": 320,
+ "caseCount": 40,
+ "cases": [
+  {
+   "name": "block-splits-run",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "Text either side of a block child lands on separate lines, with the block between them.",
+   "baseline": null,
+   "signature": "after|before=below after|blk=below before|blk=above",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 48
+    },
+    "probes": {
+     "before": {
+      "x": 0,
+      "y": 0,
+      "w": 46.984375,
+      "h": 18
+     },
+     "blk": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 12
+     },
+     "after": {
+      "x": 0,
+      "y": 30,
+      "w": 33.984375,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "block-first-then-text",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "A leading block generates no empty anonymous block above it.",
+   "baseline": null,
+   "signature": "after|blk=below",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 30
+    },
+    "probes": {
+     "blk": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 12
+     },
+     "after": {
+      "x": 0,
+      "y": 12,
+      "w": 33.984375,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "text-then-block-last",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "A trailing block generates no empty anonymous block below it.",
+   "baseline": null,
+   "signature": "before|blk=above",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 30
+    },
+    "probes": {
+     "before": {
+      "x": 0,
+      "y": 0,
+      "w": 46.984375,
+      "h": 18
+     },
+     "blk": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 12
+     }
+    }
+   }
+  },
+  {
+   "name": "two-blocks-three-runs",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "Every in-flow block boundary starts a new anonymous block; three runs, three lines.",
+   "baseline": null,
+   "signature": "b1|b2=above b1|t1=below b1|t2=above b1|t3=above b2|t1=below b2|t2=below b2|t3=above t1|t2=above t1|t3=above t2|t3=above",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 70
+    },
+    "probes": {
+     "t1": {
+      "x": 0,
+      "y": 0,
+      "w": 26.9921875,
+      "h": 18
+     },
+     "b1": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 8
+     },
+     "t2": {
+      "x": 0,
+      "y": 26,
+      "w": 26.40625,
+      "h": 18
+     },
+     "b2": {
+      "x": 0,
+      "y": 44,
+      "w": 320,
+      "h": 8
+     },
+     "t3": {
+      "x": 0,
+      "y": 52,
+      "w": 37.8046875,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-siblings-survive-the-split",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "Inline elements adjacent to the split stay with their own side of it.",
+   "baseline": null,
+   "signature": "a|b=line-before a|blk=above a|c=above b|blk=above b|c=above blk|c=above",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 44
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 34.2265625,
+      "h": 18
+     },
+     "b": {
+      "x": 76.96875,
+      "y": 0,
+      "w": 21.421875,
+      "h": 18
+     },
+     "blk": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 8
+     },
+     "c": {
+      "x": 0,
+      "y": 26,
+      "w": 21.390625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "display-none-does-not-split",
+   "spec": "css-display-3 §3.2",
+   "why": "`display: none` generates no box at all, so the run either side stays one run.",
+   "baseline": null,
+   "signature": "a|b=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 23.5390625,
+      "h": 18
+     },
+     "b": {
+      "x": 23.5390625,
+      "y": 0,
+      "w": 33.4609375,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "absolute-child-does-not-split-a-block",
+   "spec": "CSS2 §9.2.1.1 (in-flow only)",
+   "why": "Anonymous blocks form around IN-FLOW block-level boxes; an out-of-flow child is not one.",
+   "baseline": null,
+   "signature": "a|b=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 23.5390625,
+      "h": 18
+     },
+     "b": {
+      "x": 23.5390625,
+      "y": 0,
+      "w": 33.4609375,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-padding-baseline",
+   "spec": "css-inline-3 §2",
+   "why": "Control for the two differential cases below: no decorations at all.",
+   "baseline": null,
+   "signature": "mid|tail=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "mid": {
+      "x": 12.265625,
+      "y": 0,
+      "w": 75.8671875,
+      "h": 18
+     },
+     "tail": {
+      "x": 88.1328125,
+      "y": 0,
+      "w": 12.5625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-padding-inline-axis",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "Inline-axis padding on an inline box advances the line: the text after it moves right by exactly the padding.",
+   "baseline": "inline-padding-baseline",
+   "signature": "mid|tail=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "mid": {
+      "x": 12.265625,
+      "y": 0,
+      "w": 95.8671875,
+      "h": 18
+     },
+     "tail": {
+      "x": 108.1328125,
+      "y": 0,
+      "w": 12.5625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-padding-left-only",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "Only the leading edge: everything from the element onwards moves right by exactly it.",
+   "baseline": "inline-padding-baseline",
+   "signature": "mid|tail=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "mid": {
+      "x": 12.265625,
+      "y": 0,
+      "w": 85.8671875,
+      "h": 18
+     },
+     "tail": {
+      "x": 98.1328125,
+      "y": 0,
+      "w": 12.5625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-padding-right-only",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "Only the trailing edge: the element keeps its position and only what follows moves.",
+   "baseline": "inline-padding-baseline",
+   "signature": "mid|tail=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "mid": {
+      "x": 12.265625,
+      "y": 0,
+      "w": 85.8671875,
+      "h": 18
+     },
+     "tail": {
+      "x": 98.1328125,
+      "y": 0,
+      "w": 12.5625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-padding-inline-axis-large",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "The same as the 10pt case at 40pt: an engine that gets a FRACTION of the padding shows it here as a proportionally larger error.",
+   "baseline": "inline-padding-baseline",
+   "signature": "mid|tail=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "mid": {
+      "x": 12.265625,
+      "y": 0,
+      "w": 155.8671875,
+      "h": 18
+     },
+     "tail": {
+      "x": 168.1328125,
+      "y": 0,
+      "w": 12.5625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-border-inline-axis",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "Inline-axis borders advance the line the same way padding does.",
+   "baseline": "inline-padding-baseline",
+   "signature": "mid|tail=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "mid": {
+      "x": 12.265625,
+      "y": 0,
+      "w": 83.8671875,
+      "h": 18
+     },
+     "tail": {
+      "x": 96.1328125,
+      "y": 0,
+      "w": 12.5625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-block-axis-padding-does-not-grow-the-line",
+   "spec": "CSS2 §10.6.1",
+   "why": "Block-axis padding on a non-replaced inline overflows the line box instead of growing it: the CONTAINER height does not change.",
+   "baseline": "inline-padding-baseline",
+   "signature": "mid|tail=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "mid": {
+      "x": 12.265625,
+      "y": -12,
+      "w": 75.8671875,
+      "h": 42
+     },
+     "tail": {
+      "x": 88.1328125,
+      "y": 0,
+      "w": 12.5625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "nested-inlines",
+   "spec": "css-inline-3 §2",
+   "why": "A nested inline reports its own box, contained by its parent inline, both on the same line.",
+   "baseline": null,
+   "signature": "inner|outer=inside",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "outer": {
+      "x": 0,
+      "y": 0,
+      "w": 69.70703125,
+      "h": 18
+     },
+     "inner": {
+      "x": 27.8515625,
+      "y": 0,
+      "w": 14.00390625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-wrapping-across-lines",
+   "spec": "css-inline-3 §2, CSSOM-View getBoundingClientRect",
+   "why": "An inline that wraps reports the UNION of its fragments — taller than one line, and wider than either fragment.",
+   "baseline": null,
+   "signature": "lead|wrapped=inside",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 36
+    },
+    "probes": {
+     "lead": {
+      "x": 0,
+      "y": 0,
+      "w": 34.78125,
+      "h": 18
+     },
+     "wrapped": {
+      "x": 0,
+      "y": 0,
+      "w": 295.5,
+      "h": 36
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-block-sized-stays-in-the-line",
+   "spec": "css-display-3 §2.2",
+   "why": "A sized inline-block is exactly its declared size and shares the line with the text either side.",
+   "baseline": null,
+   "signature": "a|b=line-before a|box=line-before b|box=line-after",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 51.171875,
+      "h": 18
+     },
+     "box": {
+      "x": 51.171875,
+      "y": 3,
+      "w": 24,
+      "h": 12
+     },
+     "b": {
+      "x": 75.171875,
+      "y": 0,
+      "w": 38.171875,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-flex-sized-stays-in-the-line",
+   "spec": "css-display-3 §2.2",
+   "why": "Same as inline-block: the OUTER display is inline, so the line is unaffected by the inner formatting context.",
+   "baseline": null,
+   "signature": "a|b=line-before a|box=line-before b|box=line-after",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 51.171875,
+      "h": 18
+     },
+     "box": {
+      "x": 51.171875,
+      "y": 3,
+      "w": 24,
+      "h": 12
+     },
+     "b": {
+      "x": 75.171875,
+      "y": 0,
+      "w": 38.171875,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-flex-lays-out-its-children-as-flex-items",
+   "spec": "css-display-3 §2.2, css-flexbox-1 §4",
+   "why": "Inner display is flex: two sized children sit side by side inside a box that is itself in the line.",
+   "baseline": null,
+   "signature": "a|b=line-before a|box=line-before a|f1=line-before a|f2=line-before b|box=line-after b|f1=line-after b|f2=line-after box|f1=contains box|f2=contains f1|f2=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 19
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 51.171875,
+      "h": 18
+     },
+     "box": {
+      "x": 51.171875,
+      "y": 5,
+      "w": 20,
+      "h": 14
+     },
+     "f1": {
+      "x": 51.171875,
+      "y": 5,
+      "w": 10,
+      "h": 10
+     },
+     "f2": {
+      "x": 61.171875,
+      "y": 5,
+      "w": 10,
+      "h": 10
+     },
+     "b": {
+      "x": 71.171875,
+      "y": 0,
+      "w": 38.171875,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-block-wraps-its-own-text",
+   "spec": "css-display-3 §2.2",
+   "why": "The inner display is flow-root: a width-constrained inline-block wraps internally rather than widening the outer line.",
+   "baseline": null,
+   "signature": "a|box=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 144
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 126,
+      "w": 51.171875,
+      "h": 18
+     },
+     "box": {
+      "x": 51.171875,
+      "y": 0,
+      "w": 80,
+      "h": 144
+     }
+    }
+   }
+  },
+  {
+   "name": "atomic-inline-between-two-runs-does-not-split-them",
+   "spec": "css-display-3 §2.2",
+   "why": "An atomic inline is inline-LEVEL, so unlike a block it never generates anonymous blocks around the text.",
+   "baseline": null,
+   "signature": "a|b=line-before a|box=line-before b|box=line-after",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 27.7265625,
+      "h": 18
+     },
+     "box": {
+      "x": 27.71875,
+      "y": 3,
+      "w": 12,
+      "h": 12
+     },
+     "b": {
+      "x": 39.7265625,
+      "y": 0,
+      "w": 37.6484375,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-row-items-sit-side-by-side",
+   "spec": "css-flexbox-1 §4, css-display-3 §2.7",
+   "why": "Inline children of a flex container are blockified into flex items, so in a row they sit beside each other rather than joining one line box.",
+   "baseline": null,
+   "signature": "a|b=line-before a|mid=line-before b|mid=line-after",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 27,
+      "h": 18
+     },
+     "mid": {
+      "x": 27,
+      "y": 0,
+      "w": 12,
+      "h": 12
+     },
+     "b": {
+      "x": 39,
+      "y": 0,
+      "w": 26.40625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-column-stacks-items",
+   "spec": "css-flexbox-1 §4, css-display-3 §2.7",
+   "why": "The same three children in a column stack instead.",
+   "baseline": null,
+   "signature": "a|b=above a|mid=above b|mid=below",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 48
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 18
+     },
+     "mid": {
+      "x": 0,
+      "y": 18,
+      "w": 12,
+      "h": 12
+     },
+     "b": {
+      "x": 0,
+      "y": 30,
+      "w": 320,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-anonymous-item-baseline",
+   "spec": "css-flexbox-1 §4",
+   "why": "Two adjacent bare strings are contiguous text, so they generate ONE anonymous flex item. The marker records where that leaves the next item.",
+   "baseline": null,
+   "signature": "",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 28
+    },
+    "probes": {
+     "marker": {
+      "x": 0,
+      "y": 18,
+      "w": 10,
+      "h": 10
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-display-none-does-not-split-a-run",
+   "spec": "css-display-3 §3.2",
+   "why": "A `display: none` child generates no box, so the text either side is still contiguous and still one item — the marker does not move.",
+   "baseline": "flex-anonymous-item-baseline",
+   "signature": "",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 28
+    },
+    "probes": {
+     "marker": {
+      "x": 0,
+      "y": 18,
+      "w": 10,
+      "h": 10
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-block-child-splits-a-run",
+   "spec": "css-flexbox-1 §4",
+   "why": "A real in-flow child between the strings makes them two anonymous items with an item between: the marker drops by a whole line.",
+   "baseline": "flex-anonymous-item-baseline",
+   "signature": "marker|sep=below",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 52
+    },
+    "probes": {
+     "sep": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 6
+     },
+     "marker": {
+      "x": 0,
+      "y": 42,
+      "w": 10,
+      "h": 10
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-absolute-child-splits-a-run-sequence",
+   "spec": "css-flexbox-1 §4",
+   "why": "Unlike a block container, a flex container ends a text-run sequence at an out-of-flow child: the strings become TWO anonymous items, so the marker drops by a line even though the absolute child occupies none.",
+   "baseline": "flex-anonymous-item-baseline",
+   "signature": "",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 46
+    },
+    "probes": {
+     "marker": {
+      "x": 0,
+      "y": 36,
+      "w": 10,
+      "h": 10
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-blockifies-an-inline-child",
+   "spec": "css-display-3 §2.7",
+   "why": "An `inline` child of a flex container is blockified into a flex item, so it no longer shares a line with the text beside it.",
+   "baseline": null,
+   "signature": "a|b=above",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 36
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 18
+     },
+     "b": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-blockifies-inline-flex-to-flex",
+   "spec": "css-display-3 §2.7",
+   "why": "`inline-flex` blockifies to `flex` as a flex item: outer display becomes block, inner stays flex.",
+   "baseline": null,
+   "signature": "a|box=above a|f1=above a|f2=above box|f1=contains box|f2=contains f1|f2=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 32
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 18
+     },
+     "box": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 14
+     },
+     "f1": {
+      "x": 0,
+      "y": 18,
+      "w": 10,
+      "h": 10
+     },
+     "f2": {
+      "x": 10,
+      "y": 18,
+      "w": 10,
+      "h": 10
+     }
+    }
+   }
+  },
+  {
+   "name": "flex-inside-block-between-two-runs",
+   "spec": "CSS2 §9.2.1.1 + css-flexbox-1 §4",
+   "why": "A flex container is block-level, so it splits the surrounding text like any block.",
+   "baseline": null,
+   "signature": "a|b=above a|f1=above a|f2=above a|flex=above b|f1=below b|f2=below b|flex=below f1|f2=line-before f1|flex=inside f2|flex=inside",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 50
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 43.734375,
+      "h": 18
+     },
+     "flex": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 14
+     },
+     "f1": {
+      "x": 0,
+      "y": 18,
+      "w": 10,
+      "h": 10
+     },
+     "f2": {
+      "x": 10,
+      "y": 18,
+      "w": 10,
+      "h": 10
+     },
+     "b": {
+      "x": 0,
+      "y": 32,
+      "w": 42.984375,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "block-inside-block-with-text-either-side",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "The nested block is a block-level child like any other and splits the run.",
+   "baseline": null,
+   "signature": "a|b=above a|inner=above a|outer=above b|inner=below b|outer=below inner|outer=inside",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 54
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 43.734375,
+      "h": 18
+     },
+     "outer": {
+      "x": 0,
+      "y": 18,
+      "w": 320,
+      "h": 18
+     },
+     "inner": {
+      "x": 0,
+      "y": 18,
+      "w": 49.5625,
+      "h": 18
+     },
+     "b": {
+      "x": 0,
+      "y": 36,
+      "w": 42.984375,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-flex-inside-an-inline",
+   "spec": "css-display-3 §2.2",
+   "why": "An atomic inline nested inside an inline flow box stays in the same line as the text around it.",
+   "baseline": null,
+   "signature": "box|outer=inside",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "outer": {
+      "x": 0,
+      "y": 0,
+      "w": 40.40625,
+      "h": 18
+     },
+     "box": {
+      "x": 12.703125,
+      "y": 5,
+      "w": 14,
+      "h": 10
+     }
+    }
+   }
+  },
+  {
+   "name": "three-runs-around-two-atomic-inlines",
+   "spec": "css-display-3 §2.2",
+   "why": "Atomic inlines never split a run; all five probes share one line while it still fits.",
+   "baseline": null,
+   "signature": "a|b=line-before a|c=line-before a|x=line-before a|y=line-before b|c=line-before b|x=line-after b|y=line-before c|x=line-after c|y=line-after x|y=line-before",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 12.703125,
+      "h": 18
+     },
+     "x": {
+      "x": 12.703125,
+      "y": 5,
+      "w": 10,
+      "h": 10
+     },
+     "b": {
+      "x": 22.703125,
+      "y": 0,
+      "w": 17.890625,
+      "h": 18
+     },
+     "y": {
+      "x": 40.59375,
+      "y": 5,
+      "w": 10,
+      "h": 10
+     },
+     "c": {
+      "x": 50.59375,
+      "y": 0,
+      "w": 12.828125,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "block-splits-a-run-that-was-already-wrapping",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "The split applies to the run, not to the line: wrapped text before the block still ends above it.",
+   "baseline": null,
+   "signature": "a|b=above a|blk=above b|blk=below",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 62
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 301.1015625,
+      "h": 36
+     },
+     "blk": {
+      "x": 0,
+      "y": 36,
+      "w": 320,
+      "h": 8
+     },
+     "b": {
+      "x": 0,
+      "y": 44,
+      "w": 21.390625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "inline-block-containing-a-block",
+   "spec": "css-display-3 §2.2",
+   "why": "inline-block establishes a block formatting context, so a block child inside it fills its content width.",
+   "baseline": null,
+   "signature": "a|box=line-before a|inner=line-before box|inner=line-overlap",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "a": {
+      "x": 0,
+      "y": 0,
+      "w": 51.171875,
+      "h": 18
+     },
+     "box": {
+      "x": 51.171875,
+      "y": 7,
+      "w": 60,
+      "h": 8
+     },
+     "inner": {
+      "x": 51.171875,
+      "y": 7,
+      "w": 60,
+      "h": 8
+     }
+    }
+   }
+  },
+  {
+   "name": "rect-of-an-inline-with-no-decorations",
+   "spec": "CSSOM-View §4",
+   "why": "A bare inline still has a box: non-zero size, inside its container.",
+   "baseline": null,
+   "signature": "",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "probe": {
+      "x": 34.78125,
+      "y": 0,
+      "w": 71.9296875,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "rect-of-an-empty-inline",
+   "spec": "CSSOM-View §4",
+   "why": "An inline with no text has a zero-width box, not a missing one — it still has a position on the line.",
+   "baseline": null,
+   "signature": "lead|probe=contains lead|tail=line-before probe|tail=inside",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "lead": {
+      "x": 0,
+      "y": 0,
+      "w": 30.59375,
+      "h": 18
+     },
+     "probe": {
+      "x": 30.59375,
+      "y": 0,
+      "w": 0,
+      "h": 18
+     },
+     "tail": {
+      "x": 30.59375,
+      "y": 0,
+      "w": 21.390625,
+      "h": 18
+     }
+    }
+   }
+  },
+  {
+   "name": "rect-of-a-padded-inline-is-the-border-box",
+   "spec": "CSSOM-View §4",
+   "why": "getBoundingClientRect returns the BORDER box, so padding is included in both axes.",
+   "baseline": "rect-of-an-inline-with-no-decorations",
+   "signature": "",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 18
+    },
+    "probes": {
+     "probe": {
+      "x": 34.78125,
+      "y": -3,
+      "w": 83.9296875,
+      "h": 24
+     }
+    }
+   }
+  },
+  {
+   "name": "rect-of-a-block-is-the-content-width",
+   "spec": "CSSOM-View §4",
+   "why": "The plainest possible check that container-relative coordinates are right.",
+   "baseline": null,
+   "signature": "",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 10
+    },
+    "probes": {
+     "probe": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 10
+     }
+    }
+   }
+  },
+  {
+   "name": "rect-inside-a-padded-container",
+   "spec": "CSSOM-View §4",
+   "why": "Probes are reported relative to the container BORDER box, so the container padding shows up as an offset.",
+   "baseline": null,
+   "signature": "",
+   "measured": {
+    "container": {
+     "x": 0,
+     "y": 0,
+     "w": 320,
+     "h": 34
+    },
+    "probes": {
+     "probe": {
+      "x": 12,
+      "y": 12,
+      "w": 296,
+      "h": 10
+     }
+    }
+   }
+  }
+ ]
+}

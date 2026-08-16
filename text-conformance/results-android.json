@@ -1,0 +1,245 @@
+{
+ "platform": "android",
+ "report": [
+  {
+   "name": "block-splits-run",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "Text either side of a block child lands on separate lines, with the block between them.",
+   "problems": []
+  },
+  {
+   "name": "block-first-then-text",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "A leading block generates no empty anonymous block above it.",
+   "problems": []
+  },
+  {
+   "name": "text-then-block-last",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "A trailing block generates no empty anonymous block below it.",
+   "problems": []
+  },
+  {
+   "name": "two-blocks-three-runs",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "Every in-flow block boundary starts a new anonymous block; three runs, three lines.",
+   "problems": []
+  },
+  {
+   "name": "inline-siblings-survive-the-split",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "Inline elements adjacent to the split stay with their own side of it.",
+   "problems": []
+  },
+  {
+   "name": "display-none-does-not-split",
+   "spec": "css-display-3 §3.2",
+   "why": "`display: none` generates no box at all, so the run either side stays one run.",
+   "problems": []
+  },
+  {
+   "name": "absolute-child-does-not-split-a-block",
+   "spec": "CSS2 §9.2.1.1 (in-flow only)",
+   "why": "Anonymous blocks form around IN-FLOW block-level boxes; an out-of-flow child is not one.",
+   "problems": []
+  },
+  {
+   "name": "inline-padding-baseline",
+   "spec": "css-inline-3 §2",
+   "why": "Control for the two differential cases below: no decorations at all.",
+   "problems": []
+  },
+  {
+   "name": "inline-padding-inline-axis",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "Inline-axis padding on an inline box advances the line: the text after it moves right by exactly the padding.",
+   "problems": []
+  },
+  {
+   "name": "inline-padding-left-only",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "Only the leading edge: everything from the element onwards moves right by exactly it.",
+   "problems": []
+  },
+  {
+   "name": "inline-padding-right-only",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "Only the trailing edge: the element keeps its position and only what follows moves.",
+   "problems": []
+  },
+  {
+   "name": "inline-padding-inline-axis-large",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "The same as the 10pt case at 40pt: an engine that gets a FRACTION of the padding shows it here as a proportionally larger error.",
+   "problems": []
+  },
+  {
+   "name": "inline-border-inline-axis",
+   "spec": "css-inline-3 §2, CSS2 §10.6.1",
+   "why": "Inline-axis borders advance the line the same way padding does.",
+   "problems": []
+  },
+  {
+   "name": "inline-block-axis-padding-does-not-grow-the-line",
+   "spec": "CSS2 §10.6.1",
+   "why": "Block-axis padding on a non-replaced inline overflows the line box instead of growing it: the CONTAINER height does not change.",
+   "problems": []
+  },
+  {
+   "name": "nested-inlines",
+   "spec": "css-inline-3 §2",
+   "why": "A nested inline reports its own box, contained by its parent inline, both on the same line.",
+   "problems": []
+  },
+  {
+   "name": "inline-wrapping-across-lines",
+   "spec": "css-inline-3 §2, CSSOM-View getBoundingClientRect",
+   "why": "An inline that wraps reports the UNION of its fragments — taller than one line, and wider than either fragment.",
+   "problems": []
+  },
+  {
+   "name": "inline-block-sized-stays-in-the-line",
+   "spec": "css-display-3 §2.2",
+   "why": "A sized inline-block is exactly its declared size and shares the line with the text either side.",
+   "problems": []
+  },
+  {
+   "name": "inline-flex-sized-stays-in-the-line",
+   "spec": "css-display-3 §2.2",
+   "why": "Same as inline-block: the OUTER display is inline, so the line is unaffected by the inner formatting context.",
+   "problems": []
+  },
+  {
+   "name": "inline-flex-lays-out-its-children-as-flex-items",
+   "spec": "css-display-3 §2.2, css-flexbox-1 §4",
+   "why": "Inner display is flex: two sized children sit side by side inside a box that is itself in the line.",
+   "problems": []
+  },
+  {
+   "name": "inline-block-wraps-its-own-text",
+   "spec": "css-display-3 §2.2",
+   "why": "The inner display is flow-root: a width-constrained inline-block wraps internally rather than widening the outer line.",
+   "problems": []
+  },
+  {
+   "name": "atomic-inline-between-two-runs-does-not-split-them",
+   "spec": "css-display-3 §2.2",
+   "why": "An atomic inline is inline-LEVEL, so unlike a block it never generates anonymous blocks around the text.",
+   "problems": []
+  },
+  {
+   "name": "flex-row-items-sit-side-by-side",
+   "spec": "css-flexbox-1 §4, css-display-3 §2.7",
+   "why": "Inline children of a flex container are blockified into flex items, so in a row they sit beside each other rather than joining one line box.",
+   "problems": []
+  },
+  {
+   "name": "flex-column-stacks-items",
+   "spec": "css-flexbox-1 §4, css-display-3 §2.7",
+   "why": "The same three children in a column stack instead.",
+   "problems": []
+  },
+  {
+   "name": "flex-anonymous-item-baseline",
+   "spec": "css-flexbox-1 §4",
+   "why": "Two adjacent bare strings are contiguous text, so they generate ONE anonymous flex item. The marker records where that leaves the next item.",
+   "problems": []
+  },
+  {
+   "name": "flex-display-none-does-not-split-a-run",
+   "spec": "css-display-3 §3.2",
+   "why": "A `display: none` child generates no box, so the text either side is still contiguous and still one item — the marker does not move.",
+   "problems": []
+  },
+  {
+   "name": "flex-block-child-splits-a-run",
+   "spec": "css-flexbox-1 §4",
+   "why": "A real in-flow child between the strings makes them two anonymous items with an item between: the marker drops by a whole line.",
+   "problems": []
+  },
+  {
+   "name": "flex-absolute-child-splits-a-run-sequence",
+   "spec": "css-flexbox-1 §4",
+   "why": "Unlike a block container, a flex container ends a text-run sequence at an out-of-flow child: the strings become TWO anonymous items, so the marker drops by a line even though the absolute child occupies none.",
+   "problems": []
+  },
+  {
+   "name": "flex-blockifies-an-inline-child",
+   "spec": "css-display-3 §2.7",
+   "why": "An `inline` child of a flex container is blockified into a flex item, so it no longer shares a line with the text beside it.",
+   "problems": []
+  },
+  {
+   "name": "flex-blockifies-inline-flex-to-flex",
+   "spec": "css-display-3 §2.7",
+   "why": "`inline-flex` blockifies to `flex` as a flex item: outer display becomes block, inner stays flex.",
+   "problems": []
+  },
+  {
+   "name": "flex-inside-block-between-two-runs",
+   "spec": "CSS2 §9.2.1.1 + css-flexbox-1 §4",
+   "why": "A flex container is block-level, so it splits the surrounding text like any block.",
+   "problems": []
+  },
+  {
+   "name": "block-inside-block-with-text-either-side",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "The nested block is a block-level child like any other and splits the run.",
+   "problems": []
+  },
+  {
+   "name": "inline-flex-inside-an-inline",
+   "spec": "css-display-3 §2.2",
+   "why": "An atomic inline nested inside an inline flow box stays in the same line as the text around it.",
+   "problems": []
+  },
+  {
+   "name": "three-runs-around-two-atomic-inlines",
+   "spec": "css-display-3 §2.2",
+   "why": "Atomic inlines never split a run; all five probes share one line while it still fits.",
+   "problems": []
+  },
+  {
+   "name": "block-splits-a-run-that-was-already-wrapping",
+   "spec": "CSS2 §9.2.1.1",
+   "why": "The split applies to the run, not to the line: wrapped text before the block still ends above it.",
+   "problems": []
+  },
+  {
+   "name": "inline-block-containing-a-block",
+   "spec": "css-display-3 §2.2",
+   "why": "inline-block establishes a block formatting context, so a block child inside it fills its content width.",
+   "problems": []
+  },
+  {
+   "name": "rect-of-an-inline-with-no-decorations",
+   "spec": "CSSOM-View §4",
+   "why": "A bare inline still has a box: non-zero size, inside its container.",
+   "problems": []
+  },
+  {
+   "name": "rect-of-an-empty-inline",
+   "spec": "CSSOM-View §4",
+   "why": "An inline with no text has a zero-width box, not a missing one — it still has a position on the line.",
+   "problems": []
+  },
+  {
+   "name": "rect-of-a-padded-inline-is-the-border-box",
+   "spec": "CSSOM-View §4",
+   "why": "getBoundingClientRect returns the BORDER box, so padding is included in both axes.",
+   "problems": []
+  },
+  {
+   "name": "rect-of-a-block-is-the-content-width",
+   "spec": "CSSOM-View §4",
+   "why": "The plainest possible check that container-relative coordinates are right.",
+   "problems": []
+  },
+  {
+   "name": "rect-inside-a-padded-container",
+   "spec": "CSSOM-View §4",
+   "why": "Probes are reported relative to the container BORDER box, so the container padding shows up as an offset.",
+   "problems": []
+  }
+ ]
+}
