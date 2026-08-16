@@ -73,6 +73,7 @@ import com.facebook.react.views.view.CanvasUtil.enableZ
 import java.util.ArrayList
 import kotlin.concurrent.Volatile
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Backing for a React View. Has support for borders, but since borders aren't common, lazy
@@ -214,6 +215,10 @@ public open class ReactViewGroup public constructor(context: Context?) :
     initView()
     overflowInset.setEmpty()
 
+    // A recycled View keeps neither the selection nor a toolbar over text that is about to be
+    // something else.
+    textIsSelectable = false
+
     // Remove any children
     removeAllViews()
 
@@ -290,6 +295,9 @@ public open class ReactViewGroup public constructor(context: Context?) :
     // We do not accept the touch event if this view is not supposed to receive it.
     if (!canBeTouchTarget(pointerEvents)) {
       return false
+    }
+    if (textIsSelectable) {
+      trackTextSelectionLongPress(event)
     }
     // The root view always assumes any view that was tapped wants the touch
     // and sends the event to JS as such.
@@ -961,6 +969,168 @@ public open class ReactViewGroup public constructor(context: Context?) :
     invalidate()
   }
 
+  /**
+   * `user-select` (css-ui-4 §5.1) on the text this View paints itself.
+   *
+   * A View is not a `TextView`, so the drag handles and range selection that `<Text selectable>`
+   * gets on Android are not available here — those belong to `TextView` and its `Editor`. What is
+   * available, and what this does, is the other half of selection: a long press offers **Copy**,
+   * and copies the View's text. That is exactly what `<Text selectable>` does on iOS, so bare
+   * strings behave the same way on both platforms.
+   *
+   * DOM-CSS-LIMITATION(no-range-selection-on-runs): the web selects a range; this copies all of
+   * the element's text. Range selection would mean hosting a real `TextView` per run — a bigger
+   * change than it looks, because hosted views land in the same child list Fabric mounts into, so
+   * every index it uses would need translating. That is the bug class that already bit the iOS run
+   * views once.
+   */
+  internal var textIsSelectable: Boolean = false
+    set(value) {
+      if (field == value) {
+        return
+      }
+      field = value
+      if (!value) {
+        cancelTextSelectionLongPress()
+        textSelectionActionMode?.finish()
+      }
+    }
+
+  /** `internal` so [ReactViewGroupTextSelectionTest] can see that a long press offered Copy. */
+  internal var textSelectionActionMode: android.view.ActionMode? = null
+    private set
+
+  private var textSelectionLongPress: Runnable? = null
+  private var textSelectionDownX = 0f
+  private var textSelectionDownY = 0f
+
+  private fun trackTextSelectionLongPress(event: MotionEvent) {
+    when (event.actionMasked) {
+      MotionEvent.ACTION_DOWN -> {
+        textSelectionDownX = event.x
+        textSelectionDownY = event.y
+        cancelTextSelectionLongPress()
+        // `onTouchEvent` above always consumes, so View's own long-press detection never runs on a
+        // React view — the timing has to be kept here.
+        val pending = Runnable { startTextSelectionActionMode() }
+        textSelectionLongPress = pending
+        postDelayed(pending, android.view.ViewConfiguration.getLongPressTimeout().toLong())
+      }
+      MotionEvent.ACTION_MOVE -> {
+        val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+        if (Math.abs(event.x - textSelectionDownX) > slop ||
+            Math.abs(event.y - textSelectionDownY) > slop) {
+          cancelTextSelectionLongPress()
+        }
+      }
+      MotionEvent.ACTION_UP,
+      MotionEvent.ACTION_CANCEL -> cancelTextSelectionLongPress()
+    }
+  }
+
+  private fun cancelTextSelectionLongPress() {
+    textSelectionLongPress?.let { removeCallbacks(it) }
+    textSelectionLongPress = null
+  }
+
+  /**
+   * Every run this View paints, in authored document order, joined by newlines — the text a reader
+   * sees, in the order they see it. `documentOrder` counts the mounted children before a run, which
+   * is exactly the key that puts runs interleaved with child views back into reading order.
+   *
+   * `internal` rather than private so the ordering can be asserted directly; going through the
+   * clipboard to check it would test the platform instead.
+   */
+  internal fun selectableText(): CharSequence? {
+    val runs = textRunLayouts ?: return null
+    val ordered = runs.sortedBy { it.documentOrder }
+    val builder = StringBuilder()
+    for (run in ordered) {
+      val text = run.layout.text ?: continue
+      if (text.isEmpty()) {
+        continue
+      }
+      if (builder.isNotEmpty()) {
+        builder.append('\n')
+      }
+      builder.append(text)
+    }
+    return if (builder.isEmpty()) null else builder
+  }
+
+  private fun startTextSelectionActionMode() {
+    textSelectionLongPress = null
+    val text = selectableText() ?: return
+    textSelectionActionMode?.finish()
+    val callback =
+        object : android.view.ActionMode.Callback2() {
+          override fun onCreateActionMode(
+              mode: android.view.ActionMode,
+              menu: android.view.Menu,
+          ): Boolean {
+            menu.add(0, TEXT_SELECTION_COPY_ITEM, 0, android.R.string.copy)
+            return true
+          }
+
+          override fun onPrepareActionMode(
+              mode: android.view.ActionMode,
+              menu: android.view.Menu,
+          ): Boolean = false
+
+          override fun onActionItemClicked(
+              mode: android.view.ActionMode,
+              item: android.view.MenuItem,
+          ): Boolean {
+            if (item.itemId != TEXT_SELECTION_COPY_ITEM) {
+              return false
+            }
+            val clipboard =
+                context.getSystemService(Context.CLIPBOARD_SERVICE)
+                    as? android.content.ClipboardManager
+            clipboard?.setPrimaryClip(android.content.ClipData.newPlainText(null, text))
+            mode.finish()
+            return true
+          }
+
+          override fun onDestroyActionMode(mode: android.view.ActionMode) {
+            if (textSelectionActionMode === mode) {
+              textSelectionActionMode = null
+            }
+          }
+
+          // A floating action mode anchors to this rect; without it the toolbar lands at the top of
+          // the window instead of over the text.
+          override fun onGetContentRect(
+              mode: android.view.ActionMode,
+              view: View,
+              outRect: Rect,
+          ) {
+            val runs = textRunLayouts
+            if (runs.isNullOrEmpty()) {
+              outRect.set(0, 0, width, height)
+              return
+            }
+            var left = Int.MAX_VALUE
+            var top = Int.MAX_VALUE
+            var right = Int.MIN_VALUE
+            var bottom = Int.MIN_VALUE
+            for (run in runs) {
+              left = min(left, run.left.toInt())
+              top = min(top, run.top.toInt())
+              right = max(right, run.left.toInt() + run.layout.width)
+              bottom = max(bottom, run.top.toInt() + run.layout.height)
+            }
+            outRect.set(left, top, right, bottom)
+          }
+        }
+    textSelectionActionMode =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+          startActionMode(callback, android.view.ActionMode.TYPE_FLOATING)
+        } else {
+          startActionMode(callback)
+        }
+  }
+
   private fun drawTextRun(canvas: Canvas, run: TextRunLayout) {
     canvas.save()
     canvas.translate(run.left, run.top)
@@ -1235,6 +1405,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
 
   private companion object {
     private const val ARRAY_CAPACITY_INCREMENT = 12
+    private const val TEXT_SELECTION_COPY_ITEM = 1
     private val defaultLayoutParam = LayoutParams(0, 0)
 
     private fun setViewClipped(view: View, clipped: Boolean) {

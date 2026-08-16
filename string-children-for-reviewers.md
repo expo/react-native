@@ -138,25 +138,32 @@ node, 2,176 bytes of props, a component instance and a state object.
 
 ## Text selection
 
-**It does not work on bare strings, on either platform.** This is the largest
-gap and should be decided before the flag goes past experimental.
+Text in a view is selectable when it asks to be:
 
-`<Text selectable>` is not the same feature on the two platforms today:
-Android routes it to a real `TextView` and gets drag handles and a partial
-range; iOS has no selection at all — a long press offers **Copy**, which takes
-the entire string. A bare string is painted by the view itself, which on
-neither platform is a text view, so neither behaviour happens. `selectable`
-and `userSelect` on a view are inert.
+```jsx
+<View style={{userSelect: 'text'}}>long-press to copy me</View>
+```
 
-React Native already solves this shape elsewhere: `enablePreparedTextLayout`
-has the same problem and routes selectable text to a different view. A view
-whose text is marked selectable would opt out of the run path and render
-through the existing text view, losing the speed for that subtree and keeping
-correct behaviour.
+A long press offers **Copy**, which copies that view's text — every run of it,
+in reading order, even when a child view sits between two runs. Both
+platforms, same behaviour.
 
-No pull request in the sequence is blocked by this. Text that cannot be
-selected today could not be written at all, so it is a missing feature rather
-than a regression.
+Two things to know:
+
+- **`auto` means not selectable.** On the web everything is selectable unless
+  told otherwise. Making that true here would make every string in every
+  existing app selectable, so `auto` keeps React Native's answer and
+  `text`/`contain`/`all` opt in. The value is read on the element that paints
+  the text; it does not inherit, which is also how `<Text selectable>` works.
+- **Copy takes the whole element, not a dragged range.** On iOS that is
+  precisely what `<Text selectable>` does, so nothing is missing there. On
+  Android `<Text selectable>` does better — it is a real `TextView`, with drag
+  handles. Matching that means hosting a `TextView` per run, and those views
+  land in the same child list the renderer mounts into, so every index it uses
+  would need translating. Worth doing; not worth doing first.
+
+`<Text selectable>` is untouched — `userSelect` on a `<Text>` still becomes
+the `selectable` prop, exactly as before.
 
 ## Backwards compatibility
 
@@ -192,8 +199,8 @@ A flag's `ossReleaseStage` is the rollout, and this needs no new mechanism:
 
 Land at `none` and nobody is affected. Each promotion is a one-line change,
 revertible in a one-line change. `experimental` needs only the sequence landed
-and green; `canary` needs selection decided and screen-reader behaviour checked
-by hand, since no test can hear what VoiceOver says; `stable` needs a large app
+and green; `canary` needs screen-reader behaviour checked by hand, since no
+test can hear what VoiceOver says; `stable` needs a large app
 running on it and the `RawText` deletion sequenced. A second flag,
 `enableYogaDisplayBlock`, covers the Yoga block mode separately, because that
 one changes an existing layout path rather than adding a new one.

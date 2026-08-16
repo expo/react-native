@@ -107,6 +107,17 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
     view.isFocusable = accessible
   }
 
+  /**
+   * `user-select` (css-ui-4 §5.1) on the View's own text. `auto` is NOT the web's auto: React
+   * Native has never made text selectable without being asked, so only `text`, `contain` and `all`
+   * opt in. `<Text>` never reaches here — Text.js maps this style onto the `selectable` prop.
+   */
+  @ReactProp(name = "userSelect")
+  public open fun setUserSelect(view: ReactViewGroup, userSelect: String?) {
+    view.textIsSelectable =
+        userSelect == "text" || userSelect == "contain" || userSelect == "all"
+  }
+
   @ReactProp(name = ViewProps.ACCESSIBILITY_ORDER)
   public open fun setAccessibilityOrder(view: ReactViewGroup, nativeIds: ReadableArray?) {
     if (!ReactNativeFeatureFlags.enableAccessibilityOrder()) {

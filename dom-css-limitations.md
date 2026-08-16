@@ -71,6 +71,26 @@ to be compatible with. Listed so its absence reads as deliberate.
 expects a different `source` shape — so an `<img>` lays out but draws nothing
 there. iOS renders it through the Image machinery.
 
+## Text selection
+
+**`user-select-auto-is-none`** — `ReactCommon/.../components/view/primitives.h`
+On the web, text is selectable everywhere unless something says otherwise, and
+`user-select: auto` resolves against the parent's used value. Here `auto` means
+*not* selectable, and the value is read on the element that paints the text
+rather than inherited. Both deviations exist for the same reason: React Native
+has never made text selectable without being asked, and `<Text selectable>` is
+per-element too, so this matches what already ships. Turning `auto` into the
+web's auto would make every string in every existing app selectable.
+
+**`no-range-selection-on-runs`** — `.../views/view/ReactViewGroup.kt`
+A long press on selectable text offers **Copy**, which copies all of the
+element's text; the web selects the range you drag over. On iOS this is exactly
+what `<Text selectable>` does, so there is no gap there. On Android
+`<Text selectable>` does better — it routes to a real `TextView` and gets drag
+handles — and matching that here means hosting a `TextView` per run, whose
+views land in the child list Fabric mounts into and would need every index
+translated.
+
 ## Performance
 
 **`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`

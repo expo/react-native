@@ -106,13 +106,15 @@ struct CornerRadii {
  * never sees this value: Text.js maps it onto the `selectable` prop and
  * removes it from the style, which is the behaviour that already shipped.
  *
- * `Auto` is NOT the web's auto. On the web text is selectable everywhere
- * unless something says otherwise; in React Native nothing has ever been
- * selectable unless it asked to be, and flipping that under an existing app
- * is not a change this feature gets to make. So `Auto` means "not
- * selectable", exactly as `<Text>` without `selectable` behaves, and `Text`
- * / `All` / `Contain` opt in. Recorded as a deviation in
- * dom-css-limitations.md.
+ * DOM-CSS-LIMITATION(user-select-auto-is-none): `Auto` is NOT the web's auto.
+ * On the web text is selectable everywhere unless something says otherwise,
+ * and `auto` resolves against the parent's used value; in React Native
+ * nothing has ever been selectable unless it asked to be, and flipping that
+ * under an existing app is not a change this feature gets to make. So `Auto`
+ * means "not selectable", exactly as `<Text>` without `selectable` behaves,
+ * and `Text` / `All` / `Contain` opt in. It also does not resolve against the
+ * parent — the value is read on the element that paints the text, matching
+ * `selectable`, which is per-element too.
  */
 enum class UserSelect : uint8_t {
   Auto,
