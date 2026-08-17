@@ -1,5 +1,11 @@
 # Text strings in React Native — what changed, and what it costs
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. The speed table below is [device-absolute]
+> against the branch's own `<Text>`, measured before that baseline's
+> regression was found.
+
 A short summary. The long version, with the reasoning and the dead ends, is in
 `string-children-report.md`.
 
@@ -35,11 +41,17 @@ Native's older ones:
 > strings with the *branch's own* `<Text>` — which at the time was carrying a
 > regression that made every `<Text>` run a second full text layout, since
 > fixed. Against **upstream `main`**, which is the comparison that matters to
-> anyone deciding whether to adopt this, bare text is 9% faster than `<Text>` on
-> 1,000 settings rows, 37% faster on 100 message bodies and 50% faster on one
-> 1,000-line article — smaller than the numbers here. See
+> anyone deciding whether to adopt this, bare text is **16% faster than `<Text>`**
+> and **7% faster than `NativeText`** on 1,000 settings rows and **40% faster**
+> on 100 message bodies; the article shape is not comparable across the two
+> builds. All smaller than the numbers here. See
 > `text-vs-upstream-benchmarks.md`, which also explains what makes two different
 > binaries comparable at all.
+>
+> **On a physical iPhone**, in the branch's own build (so against the branch's
+> `<Text>`, not upstream's), bare text is 10.7% cheaper on the row shape, 24%
+> faster on the message shape and 25.5% faster on the article shape —
+> `text-vs-upstream-benchmarks.md`, "On a physical iPhone".
 
 
 Measured on an iPhone, release build. Bare strings are faster than `<Text>` in
@@ -79,7 +91,11 @@ they cannot drift unnoticed.
 | each run or `<Text>` | +8–16 bytes (its inherited style) |
 | a View that actually sets a text style | +168 bytes (one style object) |
 
-About **84 bytes per View** in the common case.
+About **84 bytes per View** in the common case — that is the feature's own
+cost, measured by removing its fields and recompiling. Against upstream `main`
+the branch nonetheless comes out **48 bytes per View smaller**, because other
+work on the same branch removed more than the feature added. See
+`text-vs-upstream-benchmarks.md` for the compiled per-node table.
 
 **What it saves**
 
@@ -111,9 +127,11 @@ instance, and a state object.
 
 ## How it was checked
 
-- **3,173 renderer tests** across 212 suites, including cases derived from
-  web-platform-tests and layout numbers pinned against real Safari.
-- **30 checks on each platform, on real devices**, reading geometry back out of
-  a running app through the actual text engines — CoreText on iOS,
-  `android.text.Layout` on Android — covering inheritance, block and inline
-  layout, inline element boxes, and white-space processing.
+- **3,515 renderer tests** across 213 suites — 465 across 33 for text
+  specifically — including cases derived from web-platform-tests and layout
+  numbers pinned against real Safari. All passing; re-measured 2026-08-16.
+- **40 layout cases on each platform**, reading geometry back out of a running
+  app through the actual text engines — CoreText on iOS, `android.text.Layout`
+  on Android — covering inheritance, block and inline layout, inline element
+  boxes, and white-space processing, plus 7 event-target checks. Clean on both.
+  These run against a simulator and an emulator, not physical devices.

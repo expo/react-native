@@ -1,5 +1,9 @@
 # iOS run performance designs (correctness-first)
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. [device-absolute], iOS simulator.
+
 Context: with fair tiers, bare strings win every head-to-head on the engine
 and on Android, but trail `<Text>` by ~2µs/line on iOS hardware in the two
 tall-block shapes (messages 53.2 vs 51.1ms, article 43.4 vs 41.4ms). Both

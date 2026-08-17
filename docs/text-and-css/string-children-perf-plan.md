@@ -1,5 +1,11 @@
 # String children: performance optimization plan
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. Mostly [engine] and [sizeof], measured
+> flag-on against flag-off inside ONE binary — which isolates this feature's
+> own cost, and is a different question from comparing two branches.
+
 > The Rounds below are the lab record — each cites the numbers measured AT
 > THE TIME, and later rounds changed them. Canonical current numbers live in
 > `string-children-perf-memo.md` and `upstream-pr-verification.md`, measured

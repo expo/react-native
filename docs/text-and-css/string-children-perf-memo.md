@@ -1,5 +1,13 @@
 # String children: performance and memory results
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. Everything below is [engine] (Fantom,
+> deterministic measurer) or [device-absolute] on a physical iPhone, and every comparison is
+> against the BRANCH's own `<Text>`, which was then carrying a second-text-
+> layout regression that inflated it. The against-upstream figures are
+> smaller, and are the ones to quote.
+
 String children is a flag (`enableStringChildren`) that lets you put text
 directly inside any component:
 
@@ -81,7 +89,11 @@ resolve differences below about 0.6%. Anyone continuing should build a
 props-construction microbenchmark first; the mount benchmark is too blunt for
 what is left.
 
-**Memory: about 84 bytes per View.** Each View pays +68 bytes on its props
+**Memory: about 84 bytes per View — the feature's own cost, not the branch's
+net.** Measured against upstream `main`, a View on this branch is 48 bytes
+*smaller* than upstream's; the figures below isolate what this feature adds,
+which is the honest way to price it, but it is not what an adopter's memory
+bill actually changes by. Each View pays +68 bytes on its props
 object (the inheritable style fields) and +16 bytes on its shadow node (a
 change-tracking pointer). These numbers are measured, not estimated: we
 removed the feature's fields, recompiled, and compared sizes. The full
@@ -113,11 +125,19 @@ Why is there no speed cost? Three reasons, all in the code:
 > strings with the *branch's own* `<Text>` — which at the time was carrying a
 > regression that made every `<Text>` run a second full text layout, since
 > fixed. Against **upstream `main`**, which is the comparison that matters to
-> anyone deciding whether to adopt this, bare text is 9% faster than `<Text>` on
-> 1,000 settings rows, 37% faster on 100 message bodies and 50% faster on one
-> 1,000-line article — smaller than the numbers here. See
+> anyone deciding whether to adopt this, bare text is **16% faster than `<Text>`**
+> and **7% faster than `NativeText`** on 1,000 settings rows and **40% faster**
+> on 100 message bodies; the article shape is not comparable across the two
+> builds. All smaller than the numbers here. See
 > `text-vs-upstream-benchmarks.md`, which also explains what makes two different
 > binaries comparable at all.
+>
+> **On a physical iPhone**, in the branch's own build (so against the branch's
+> `<Text>`, not upstream's), bare text is 10.7% cheaper on the row shape, 24%
+> faster on the message shape and 25.5% faster on the article shape —
+> `text-vs-upstream-benchmarks.md`, "On a physical iPhone". The device runs
+> 1.1–1.35× the simulator's times, and not by a constant factor — `NativeText`
+> is what slows down most on real hardware.
 
 
 Replacing `<Text>` with bare strings makes the same content mount much

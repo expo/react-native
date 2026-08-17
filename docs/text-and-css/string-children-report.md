@@ -1,5 +1,10 @@
 # Text as a first-class child in React Native
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. Mixed [engine] and [device-absolute], against the
+> branch's own `<Text>`.
+
 *A plain-language report on the string-children project: what changed, what
 it looks like in code at each stage, and what it costs and saves. No prior
 context assumed. All performance numbers are medians from optimized (-O3)

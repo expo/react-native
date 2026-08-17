@@ -4,7 +4,30 @@ Working documents for putting text directly in a view and giving the renderer a
 CSS box model. They lived in the repository root; a reviewer opening the project
 should see React Native's own README and CHANGELOG there, not two dozen of ours.
 
-Start here depending on what you came for.
+**New here?** [string-children-explained.md](string-children-explained.md) — what
+the feature is, how much faster and smaller it makes a screen, in plain words and
+no jargon. Two pages.
+
+Then, depending on what you came for.
+
+## Reading the performance numbers
+
+Figures in these documents come from **five different measurements**, on
+different scales, and they are not a series. Two of them differ by roughly 5×
+for reasons that have nothing to do with which is faster.
+
+| tag | measures | scale |
+| --- | --- | --- |
+| `[engine]` | the C++ renderer only, deterministic text measurer | µs per row |
+| `[device-absolute]` | a Release build end to end, whole tier | ms per tier |
+| `[device-marginal]` | the same, minus a text-free floor of the same shape | ms per 1,000 rows |
+| `[sizeof]` | compiled struct sizes — exact | bytes per node |
+| `[rss]` | the app's resident set | MiB per process |
+
+Every document carrying numbers says at the top which of these it is, and
+against which baseline — our own `<Text>` or upstream's, simulator or device.
+[text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) defines them
+and explains what each one cannot tell you.
 
 ## If you are reviewing the feature
 

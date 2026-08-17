@@ -1,5 +1,10 @@
 # Per-PR verification matrix
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. Test counts and [engine] timings, per
+> pull request in the sequence.
+
 Evidence that each PR in `upstream-pr-sequence.md` is correct and costs what
 it claims, on both platforms. Two kinds of evidence:
 

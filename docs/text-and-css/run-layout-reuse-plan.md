@@ -1,5 +1,9 @@
 # Run layout reuse: measure→mount handoff
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. [device-absolute].
+
 Goal: make bare strings faster than NativeText by eliminating the quantified
 bottleneck (string-children-perf-plan.md, bottleneck findings d9d9ea697b8):
 Android rebuilds each run's spannable + StaticLayout **on the UI thread at

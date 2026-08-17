@@ -1,5 +1,10 @@
 # String children: the upstream PR sequence
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. Sizes here are lines of diff,
+> not timings.
+
 The plan for landing string children in react-native/main, split for the
 smallest reviewable units. Grounded in the actual delta against the merge
 base (upstream 2026-07-23): the relevant subset is ~6k lines across ~70
@@ -26,8 +31,8 @@ Three principles:
   `string-children-perf-plan.md`; upstream only ever sees the corrected
   form.
 
-Twenty-one PRs in eight themes. The largest is ~800 lines; the median is
-~250.
+Twenty-one numbered PRs in eight themes, plus the three unnumbered follow-ups
+of theme 8 — twenty-four in all. The largest is ~800 lines; the median is ~250.
 
 ---
 
@@ -188,8 +193,15 @@ the revert-vs-initial contrast on both Views and Text. *~400 lines.*
 
 ## Theme 8 — DOM surface for inline elements *(after theme 4)*
 
-Two follow-ups, either order: fragment-rect `getBoundingClientRect`
-(*~250*), and pointer events resolving to fragment emitters (*~200*).
+Three follow-ups, any order: fragment-rect `getBoundingClientRect` (*~250*),
+pointer events resolving to fragment emitters (*~200*), and **`user-select` on a
+View's own text** (*~200 across the property, iOS and Android*). The last one
+depends on the platform painting of theme 5 and nothing depends on it, so it can
+land last or be dropped without disturbing the rest. It is what makes a bare
+string selectable the way the text inside a `<Text>` is, and it carries the
+`user-select-auto-is-none` limitation: CSS `auto` computes to `none` here rather
+than to "inherit unless it is a text control", because the renderer has no
+notion of which elements are text controls.
 
 The geometry one ships with three properties that are easy to get wrong and
 were all found the hard way, so upstream only ever sees the corrected form.

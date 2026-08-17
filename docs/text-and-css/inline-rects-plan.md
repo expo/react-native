@@ -1,5 +1,10 @@
 # getBoundingClientRect for every inline-level element — IMPLEMENTED
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. [engine]; most numbers here are
+> layout geometry rather than timings.
+
 > Both plans below shipped: the stamp gate is widened (tests flipped and
 > extended, atomic/blockified controls green) and the SWAR white-space
 > fast path landed (article bare at statistical parity with <Text>:

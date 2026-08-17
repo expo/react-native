@@ -1,5 +1,9 @@
 # Should `<span>` be a Yoga node?
 
+> **Which benchmark these numbers are.** Performance figures in this directory
+> come from five different measurements on different scales — see [text-vs-upstream-benchmarks.md](text-vs-upstream-benchmarks.md) for the
+> tags and what each can and cannot tell you. [sizeof].
+
 Short answer: **not in its common case — and "is `<span>` a Yoga node" is the
 wrong axis.** In CSS, box generation is driven by computed `display`, not by
 the tag. The same `<span>` is a Yoga box or isn't, depending on how it is

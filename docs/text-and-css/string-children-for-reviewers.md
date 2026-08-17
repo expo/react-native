@@ -64,54 +64,64 @@ no extra native view per line.
 
 ## Speed
 
-> **Measured against upstream, 2026-08-16.** The figures below compare bare
-> strings with the *branch's own* `<Text>` — which at the time was carrying a
-> regression that made every `<Text>` run a second full text layout, since
-> fixed. Against **upstream `main`**, which is the comparison that matters to
-> anyone deciding whether to adopt this, bare text is 9% faster than `<Text>` on
-> 1,000 settings rows, 37% faster on 100 message bodies and 50% faster on one
-> 1,000-line article — smaller than the numbers here. See
-> `text-vs-upstream-benchmarks.md`, which also explains what makes two different
-> binaries comparable at all.
+Against **upstream `main`** — the comparison an adopter is actually asking
+about. iOS simulator, Release builds of both, one session, alternating builds,
+with every tier's laid-out height recorded and identical so the two are known
+to have done the same work. **[device-marginal]**: each tier's time minus a
+text-free floor tier of the same shape, so what differs between two binaries
+but not between tiers cancels.
 
+| | bare text | `<Text>` | `NativeText` |
+| --- | ---: | ---: | ---: |
+| 1,000 settings rows | **90.5ms** | 107.9ms | 97.4ms |
+| 100 message bodies of 10 lines | **19.0ms** | 31.5ms | — |
 
-Release builds of RNTester, medians of 10 after warm-up, two sessions:
-
-| | bare strings | `<Text>` | |
-| --- | --- | --- | --- |
-| 1,000-row list, iOS | **150ms** | 206ms | 1.37× faster |
-| 1,000-row list, Android | **47ms** | 95ms | ~1.9× faster |
-| 100 message bodies of 10 lines, iOS | **56ms** | 91ms | 1.63× faster |
-| one 1,000-line article, iOS | **47ms** | 77ms | 1.65× faster |
+Bare text is **16% faster than `<Text>`** and **7% faster than `NativeText`** on
+the row shape, and **40% faster than `<Text>`** where each element holds more
+text.
 
 **The win is removing a component, not faster text.** Where text already sits
-inside something — a row, a card, a cell — putting it on that container
-deletes a component and everything attached to it. Where it has no container,
-a view holding a string costs the same as a `<Text>`: 1,000 unstyled lines
-measure 20.85ms either way. Real screens are the first case.
+inside something — a row, a card, a cell — putting it on that container deletes
+a component and everything attached to it. That is also why the row shape shows
+the smallest gain: every row mounts a view either way, and the text is one
+short line.
 
-In the engine alone, putting a line of text into a row you already have costs
-**5.2µs** as a bare string, 9.3µs as a `NativeText`, 19.4µs as a `<Text>`.
+`NativeText` is the floor of what today's architecture can do — the host
+component `<Text>` compiles to, with the JS wrapper removed. Bare text is ahead
+of it while keeping the press handling, accessibility and layout events
+`NativeText` gives up to get there.
 
-**Why you can believe these numbers.** Variants interleave rather than running
-one after another, so drift cancels instead of landing on whichever ran last;
-each uses its own strings, so none warms the caches for the next; row
-containers are pinned against flattening, which otherwise lets the `<Text>`
-variants skip a view mount per row. Every run reports its drift and a spread
-per variant — the two sessions above drifted +0.2% and −2.1%.
+**Two numbers that are not on this scale.** In the engine alone
+(**[engine]**: the C++ renderer under Fantom with a deterministic text
+measurer, no platform views and no real shaping) a row's text costs 19.3µs as a
+bare string, 32.0µs as a `NativeText` and 63.8µs as a `<Text>`. Those are not
+the device numbers divided by a thousand and they should never be quoted beside
+them: the engine benchmark had bare text 1.7× ahead of `NativeText` while the
+device had it 2% behind, and the entire difference was iOS view mounting, which
+the engine cannot see. See `text-vs-upstream-benchmarks.md` for the tags and
+what each can and cannot tell you.
+
+**Why you can believe these.** Tiers interleave rather than running one after
+another, so drift cancels instead of landing on whichever ran last; each uses
+its own strings, so none warms the caches for the next; row containers are
+pinned against flattening, which otherwise lets the `<Text>` tiers skip a view
+mount per row. Every run reports its drift and a spread per tier, and every
+tier reports the height it laid out — which is what caught a 2.4× figure that
+turned out to be a partial layout rather than a speedup.
 
 **Against fast-text and react-native-boost.** Both swap `<Text>` for
 `NativeText` and report 40–50%, measured on thousands of sibling text
-components with no containers — a shape that only exists because text could
-not be a child. In shapes apps do render, a bare string beats `NativeText`
-anyway (5.2µs against 9.3µs in the same row; 150ms against 177ms for 1,000
-rows on device) while keeping the press handling, accessibility and layout
-events that `NativeText` gives up to be fast.
+components with no containers — a shape that only exists because text could not
+be a child. In shapes apps do render, bare text beats `NativeText` anyway,
+while keeping what `NativeText` gives up to be fast.
 
 ## What it costs an app that never uses it
 
 **Mount: about 1.5%** on a tree with no text, roughly 0.15µs per view. Style
-updates and `<Text>` mounts show no measurable difference.
+updates and `<Text>` mounts show no measurable difference. **[engine]**, and
+measured as flag-on against flag-off inside ONE binary — which is the only way
+to isolate this feature's own cost, and a different question from the
+`[device-marginal]` figures above.
 
 That cost is prop parsing, not layout. React Native's classic props path asks
 for every key a struct might have, one at a time, so twelve new keys cost every
@@ -127,11 +137,31 @@ feature already supports it:
 The overhead halves, and that path is 21% faster to mount regardless of this
 feature.
 
-**Memory: about 84 bytes per view** — 68 on the props object, 16 on the node.
-Work done alongside removed 448 bytes from every view and 64 from every piece
-of text, so apps end up smaller than before: a 1,365-view benchmark tree went
-from about 2.15 MB of nodes per copy to about 1.54 MB, feature included.
-Compile-time assertions pin all three structures.
+**Memory, against upstream `main`** — **[sizeof]**, compiled from each tree's
+own headers, so exact:
+
+| per node | upstream | this branch |
+| --- | ---: | ---: |
+| `ViewProps` | 1424 | **1400** |
+| `ViewShadowNode` | 1040 | **1016** |
+| `TextAttributes` | 224 | **168** |
+| `ParagraphProps` | 1704 | 1728 |
+| `ParagraphShadowNode` | 1424 | **1360** |
+
+Every one of those but `ParagraphProps` is SMALLER than upstream, carrying the
+whole feature set. `TextAttributes` shrinking 56 bytes reaches every fragment
+and every measure-cache entry in every app, whether or not it uses this.
+
+That is the state after moving the CSS transition and animation longhands
+behind one pointer; before that, `ViewProps` was 1752. The feature's own share
+of the growth is about 68 bytes — the eleven inherited text properties — which
+an earlier flag-on/flag-off measurement isolated; the rest belonged to the
+motion stack and is now gone.
+
+Whole-process resident set is **+21.2 MiB** (**[rss]**, 18 paired samples),
+flat across every tier including a text-free one, so it is a fixed cost of the
+larger binary rather than a per-node cost. Compile-time assertions pin the
+structures so none of this drifts unnoticed.
 
 Every `<Text>` replaced by a bare string also drops a 1,472-byte paragraph
 node, 2,176 bytes of props, a component instance and a state object.
@@ -253,12 +283,15 @@ and animations, which are a separate stack.
 
 ## How it was checked
 
-- **172 tests across 15 suites** for the feature; **3,514 renderer tests
-  across 213 suites** on the branch, including cases derived from
-  web-platform-tests and layout numbers pinned against real Safari.
-- **About 30 checks per platform against a running app**, reading geometry
-  back through the real text engines — the only way to check what a stub
-  measurer cannot model.
+- **465 tests across 33 suites** for text; **3,515 renderer tests across 213
+  suites** on the branch, including cases derived from web-platform-tests and
+  layout numbers pinned against real Safari. All passing; counts re-measured
+  2026-08-16.
+- **40 layout cases per platform against a running app**, reading geometry back
+  through the real text engines — the only way to check what a stub measurer
+  cannot model — plus **7 event-target checks** that tap an inline element and
+  assert the target and the bubble chain. Clean on both iOS and Android. These
+  run against a simulator and an emulator, not physical devices.
 - **Compile-time size assertions** on all three changed structures, and the
   benchmark suites run as ordinary tests, so a regression fails a test rather
   than surprising someone later.
