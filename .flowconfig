@@ -10,6 +10,46 @@
 <PROJECT_ROOT>/node_modules/expo-image/.*
 <PROJECT_ROOT>/node_modules/expo-modules-core/.*
 <PROJECT_ROOT>/node_modules/expo-modules-autolinking/.*
+; The symlink ENTRIES themselves, not only what is under them, plus `@expo`
+; which the four patterns above do not cover — `@expo` is a different path from
+; `expo*`.
+<PROJECT_ROOT>/node_modules/expo
+<PROJECT_ROOT>/node_modules/expo-image
+<PROJECT_ROOT>/node_modules/expo-modules-core
+<PROJECT_ROOT>/node_modules/expo-modules-autolinking
+<PROJECT_ROOT>/node_modules/@expo/.*
+; Any pnpm store, anywhere. `~/Developer/expo` is a pnpm workspace and
+; `.pnpm` is a symlink FARM — 2,231 package directories that link to one
+; another, so a traversal that follows them does not terminate. Measured with
+; `find -L`: 28.7M "files" reachable under `node_modules/expo`, 36.5M under
+; `node_modules/expo-image`, and the walk had still not finished after ten
+; minutes. A general guard rather than a path-specific one, because the next
+; linked pnpm workspace will not be at this path.
+.*/\.pnpm/.*
+
+; THE SAME GENERATED TREES, REACHED A SECOND TIME THROUGH A WORKSPACE SYMLINK.
+;
+; This monorepo links ~20 of its own packages into `node_modules/@react-native/*`,
+; so every path ignored above as `<PROJECT_ROOT>/private/...` or
+; `<PROJECT_ROOT>/packages/...` has a second spelling that none of those
+; patterns match. Measured: 2,012 files under
+; `node_modules/@react-native/fantom/.out` and 6,908 under its `build` — the
+; former being exactly the Metro bundle cache the note below calls "gigabytes of
+; generated multi-megabyte bundles… what turns a cold check from minutes into
+; hours". Ignored once, parsed anyway.
+;
+; The BUILD OUTPUT only, not the packages themselves: those are real sources and
+; Flow resolves imports through these very paths. The same trick as the
+; `node_modules/react-native` entry below, applied to the packages that entry
+; does not cover.
+<PROJECT_ROOT>/node_modules/@react-native/.*/\.out/.*
+<PROJECT_ROOT>/node_modules/@react-native/.*/build/.*
+
+; react-native itself, through its node_modules symlink. Every `react-native`
+; import is already redirected to <PROJECT_ROOT>/packages/react-native by the
+; module.name_mapper rules below, so the symlinked spelling resolves nothing
+; extra — it only offers Flow a second path to the same ~6,500 files.
+<PROJECT_ROOT>/node_modules/react-native/.*
 
 ; The Fantom runner's per-test Metro bundle cache: gigabytes of generated
 ; multi-megabyte bundles that grow with every suite run. Parsing them is what
@@ -18,6 +58,52 @@
 
 ; Ignore build cache folder
 <PROJECT_ROOT>/packages/react-native/sdks/.*
+
+; Native build output. Gradle and CocoaPods write continuously into these
+; while an Android or iOS build runs, and Flow watches the project root — so a
+; build daemon left alive in the background retriggers the check forever. That
+; presents as a server stuck "initializing" with memory sawtoothing while the
+; CPU stays pegged, which reads like a hang and is not one.
+<PROJECT_ROOT>/packages/react-native/ReactAndroid/build/.*
+<PROJECT_ROOT>/packages/react-native/ReactAndroid/\.cxx/.*
+; The same thing, for the build outputs the list above missed. Together these
+; are ~10,500 files and 3.2GB that Flow was crawling and, worse, being woken by:
+; they are rewritten by every Android build and every Fantom tester rebuild,
+; which is precisely the "background process retriggers the check forever"
+; failure described above.
+;
+; They are not empty of things Flow parses, which is why leaving them in was not
+; free — `module.file_ext=.json` means every `compile_commands.json`,
+; `prefab.json` and `annotationProcessors.json` in there was being read, plus a
+; generated `InternalBytecode.js`. Nothing imports from any of them.
+; Babel's on-disk cache — 21MB of generated JSON across three of these, and
+; every one of them is a file Flow PARSES (`module.file_ext=.json`). Worse, they
+; are rewritten by every jest run: `.babel.7.28.0.test.json` alone is 6.6MB and
+; its mtime moves whenever the suite runs, so a check racing a test run is woken
+; by a multi-megabyte edit it then has to re-read.
+.*/node_modules/\.cache/.*
+<PROJECT_ROOT>/private/react-native-fantom/build/.*
+<PROJECT_ROOT>/packages/react-native/ReactAndroid/hermes-engine/build/.*
+<PROJECT_ROOT>/packages/gradle-plugin/.*/build/.*
+<PROJECT_ROOT>/packages/rn-tester/android/.*/build/.*
+<PROJECT_ROOT>/packages/rn-tester/Pods/.*
+<PROJECT_ROOT>/packages/react-native-popup-menu-android/android/build/.*
+.*/\.gradle/.*
+.*/\.cxx/.*
+
+; Lint tooling in node_modules. Nothing here is imported by anything Flow
+; checks, and it dominates the crawl: eslint-plugin-react and
+; eslint-plugin-import are ~2,500 files each, and the `es-abstract` shim family
+; (`array.prototype.*`, `string.prototype.*`, `reflect.getprototypeof`, …) adds
+; ~2,300 more apiece. Excluding them takes the parse set from ~24,000 files to
+; ~6,000.
+.*/node_modules/eslint.*
+.*/node_modules/@eslint/.*
+.*/node_modules/es-abstract/.*
+.*/node_modules/es-to-primitive/.*
+.*/node_modules/[a-z]+\.prototype\..*
+.*/node_modules/arraybuffer\.prototype\..*
+.*/node_modules/reflect\.getprototypeof/.*
 
 ; Ignore fb_internal modules
 <PROJECT_ROOT>/packages/react-native/src/fb_internal/.*
@@ -67,6 +153,10 @@ packages/react-native/flow/
 
 [options]
 emoji=true
+
+; Use watchman rather than Flow's built-in crawler. On a repo this size the
+; built-in watcher is what makes a cold start pathological here.
+file_watcher=watchman
 
 format.bracket_spacing=false
 
