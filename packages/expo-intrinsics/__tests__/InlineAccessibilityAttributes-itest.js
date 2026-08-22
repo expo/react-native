@@ -31,7 +31,8 @@ const SEMANTIC_ATTRIBUTES = [
   'importantForAccessibility',
 ];
 
-for (const tag of ['span', 'b', 'strong']) {
+// `element-a` is the host `<a>` renders; the others are registered under their tag
+for (const tag of ['span', 'b', 'strong', 'element-a']) {
   for (const attribute of SEMANTIC_ATTRIBUTES) {
     test(`<${tag}> declares ${attribute}`, () => {
       expect(getViewConfig(tag).validAttributes[attribute]).toBe(true);

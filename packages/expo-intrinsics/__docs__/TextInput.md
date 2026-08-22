@@ -1,5 +1,56 @@
 # `<input>` and `<textarea>`: doing better than React Native's TextInput
 
+## `onBeforeInput`: deciding before the character is drawn
+
+A controlled input that transforms or refuses a keystroke must do it _before_
+the character appears. Letting it land and correcting a frame later shows the
+rejected character — a flicker, and exactly the detail that makes a field feel
+unlike every other field on the device.
+
+`onBeforeInput` runs on each platform's own pre-commit hook —
+`textField:shouldChangeCharactersInRange:` on iOS, `InputFilter` on Android —
+and answers through the event:
+
+```jsx
+<input
+  value={value}
+  mostRecentEventCount={eventCount}
+  onBeforeInput={e => {
+    const next = e.nativeEvent.value; // the text as it *would* be
+    if (/[0-9]/.test(next)) {
+      e.nativeEvent.preventDefault(); // refuse: nothing is drawn
+      return;
+    }
+    const upper = next.toUpperCase();
+    if (upper !== next) {
+      e.nativeEvent.setValue(upper); // substitute: only this is drawn
+    }
+  }}
+  onInput={e => {
+    setValue(e.nativeEvent.value);
+    setEventCount(e.nativeEvent.eventCount);
+  }}
+/>
+```
+
+`setValue` is the part the DOM does not have. On the web, cancelling an edit and
+substituting a different one are two steps — `preventDefault()` and then writing
+to the element. A platform control asks a single question inside a callback that
+wants one answer, so the substitution _is_ the answer, and the control applies
+it directly rather than being corrected afterwards.
+
+**This is the only synchronous event here.** It blocks both threads for the
+duration of the handler, which is the price of an answer before the platform
+commits, and the same trade a browser makes. The native side only takes that
+path when a handler is present — a field without one types exactly as it did
+before — so keep the handler cheap, and use `onInput` for anything that only
+observes.
+
+**You usually do not need it.** A controlled input already works the way it does
+on the web: the character lands, `onInput` runs, and the value is written back
+if it disagrees. `onBeforeInput` is for the stricter requirement that nothing
+incorrect is drawn even for a frame.
+
 The brief is a text input that is both **synchronous** and **controlled** — the
 two properties RN's `TextInput` cannot deliver together, and the reason masked,
 formatted or limited inputs feel wrong in React Native apps.

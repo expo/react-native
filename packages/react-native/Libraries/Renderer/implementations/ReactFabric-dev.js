@@ -16740,7 +16740,23 @@ __DEV__ &&
       var resolvedType = resolveTypeForHotReloading(type);
       if ("function" === typeof resolvedType)
         shouldConstruct(resolvedType) && (fiberTag = 1);
-      else if ("string" === typeof resolvedType) fiberTag = 5;
+      else if ("string" === typeof resolvedType) {
+        // An element tag may resolve to a JavaScript component rather than to a
+        // native view. `<select>` is the case that needs it: its `<option>`
+        // children are a list handed to a control, not boxes to lay out, so the
+        // element reads its own children and passes them down as a prop.
+        //
+        // The original tag stays as `elementType` while the component becomes
+        // `type` — the same split React already uses for lazy and forwardRef.
+        // That is what keeps updates reconciling: the comparison on re-render is
+        // `current.elementType === element.type`, so leaving the string there is
+        // what lets the fiber be reused instead of torn down every render.
+        var elementComponent = getElementComponentForType(resolvedType);
+        if (null != elementComponent) {
+          resolvedType = elementComponent;
+          fiberTag = shouldConstruct(elementComponent) ? 1 : 0;
+        } else fiberTag = 5;
+      }
       else
         a: switch (resolvedType) {
           case REACT_ACTIVITY_TYPE:
@@ -17275,7 +17291,14 @@ __DEV__ &&
       // between two unmerged props objects would drop the UA value the moment
       // an author removed the property that had been overriding it.
       var uaStyle = viewConfig && viewConfig.uaStyle;
-      if (!uaStyle || props == null) return props;
+      if (props == null) return props;
+      // A UA style may be a function of the element's props. Browsers do not
+      // style every `<a>`: the link colour and underline come from `a:link` and
+      // `a:visited`, which only match an anchor that has an `href`. Expressing
+      // that needs the props, so an element may supply a function instead of a
+      // fixed object.
+      if (typeof uaStyle === "function") uaStyle = uaStyle(props);
+      if (!uaStyle) return props;
       var merged = Object.assign({}, props);
       merged.style = props.style == null ? uaStyle : [uaStyle, props.style];
       return merged;
@@ -20217,6 +20240,8 @@ __DEV__ &&
       },
       getViewConfigForType =
         reactPrivateInterface.ReactNativeViewConfigRegistry.get,
+      getElementComponentForType =
+        reactPrivateInterface.ReactNativeViewConfigRegistry.getElementComponent,
       nextReactTag = 2;
     registerEventHandler && registerEventHandler(dispatchEvent);
     var currentUpdatePriority = 0,

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<8cc3f39806c4b8a3709f40e8abc5848c>>
+ * @generated SignedSource<<426a36d87b0e1637a0f60e9eb4d0a64a>>
  */
 
 /**
@@ -79,6 +79,7 @@ class ReactNativeFeatureFlagsAccessor {
   bool enableMountingCoordinatorPullModelAndroid();
   bool enableMutationObserverByDefault();
   bool enableNativeCSSParsing();
+  bool enableNativeGestureRecognizers();
   bool enablePreparedTextLayout();
   bool enablePropsUpdateReconciliationAndroid();
   bool enableResizeObserverByDefault();
@@ -137,7 +138,7 @@ class ReactNativeFeatureFlagsAccessor {
   std::unique_ptr<ReactNativeFeatureFlagsProvider> currentProvider_;
   bool wasOverridden_;
 
-  std::array<std::atomic<const char*>, 92> accessedFeatureFlags_;
+  std::array<std::atomic<const char*>, 93> accessedFeatureFlags_;
 
   std::atomic<std::optional<bool>> commonTestFlag_;
   std::atomic<std::optional<bool>> cdpInteractionMetricsEnabled_;
@@ -184,6 +185,7 @@ class ReactNativeFeatureFlagsAccessor {
   std::atomic<std::optional<bool>> enableMountingCoordinatorPullModelAndroid_;
   std::atomic<std::optional<bool>> enableMutationObserverByDefault_;
   std::atomic<std::optional<bool>> enableNativeCSSParsing_;
+  std::atomic<std::optional<bool>> enableNativeGestureRecognizers_;
   std::atomic<std::optional<bool>> enablePreparedTextLayout_;
   std::atomic<std::optional<bool>> enablePropsUpdateReconciliationAndroid_;
   std::atomic<std::optional<bool>> enableResizeObserverByDefault_;

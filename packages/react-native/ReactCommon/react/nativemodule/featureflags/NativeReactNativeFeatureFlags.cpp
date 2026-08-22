@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<d478f0b578a3377cecb2cb0421ecec6d>>
+ * @generated SignedSource<<45984278ce3955f79b99282b72edef06>>
  */
 
 /**
@@ -267,6 +267,11 @@ bool NativeReactNativeFeatureFlags::enableMutationObserverByDefault(
 bool NativeReactNativeFeatureFlags::enableNativeCSSParsing(
     jsi::Runtime& /*runtime*/) {
   return ReactNativeFeatureFlags::enableNativeCSSParsing();
+}
+
+bool NativeReactNativeFeatureFlags::enableNativeGestureRecognizers(
+    jsi::Runtime& /*runtime*/) {
+  return ReactNativeFeatureFlags::enableNativeGestureRecognizers();
 }
 
 bool NativeReactNativeFeatureFlags::enablePreparedTextLayout(
