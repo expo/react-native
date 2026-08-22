@@ -29,13 +29,15 @@ import type {ViewStyleProp} from 'react-native/Libraries/StyleSheet/StyleSheet';
 import * as React from 'react';
 import {Platform, PlatformColor, Text, View} from 'react-native';
 
-// iOS exposes UIKit semantic colors via PlatformColor; those names don't
-// resolve on Android, so fall back to matching light-theme hex there.
-export const semanticColor = (
-  iosName: string,
-  androidHex: string,
-): ColorValue =>
-  Platform.select({ios: PlatformColor(iosName), default: androidHex});
+// Each platform's own named colour, so a demo follows light and dark: a UIKit
+// semantic colour on iOS, a theme attribute (`?android:attr/...`) or a literal
+// on Android
+export const semanticColor = (iosName: string, android: string): ColorValue =>
+  Platform.select({
+    ios: PlatformColor(iosName),
+    android: android.startsWith('?') ? PlatformColor(android) : android,
+    default: android,
+  });
 
 // Base font size for demo text (matches the web mirror).
 export const BASE_FONT_SIZE = 15;
@@ -48,10 +50,15 @@ export type DemoTheme = {
 };
 
 export const DEMO_THEME: DemoTheme = {
-  bg: semanticColor('systemBackgroundColor', '#ffffff'),
-  fg: semanticColor('labelColor', '#000000'),
-  border: semanticColor('separatorColor', '#c6c6c8'),
-  muted: semanticColor('secondaryLabelColor', '#8e8e93'),
+  bg: semanticColor('systemBackgroundColor', '?android:attr/colorBackground'),
+  fg: semanticColor('labelColor', '?android:attr/textColorPrimary'),
+  // Android has no colour attribute for a divider, only drawables; this is the
+  // same translucent hairline the user-agent sheet uses for `<hr>`
+  border: semanticColor('separatorColor', '#0000001f'),
+  muted: semanticColor(
+    'secondaryLabelColor',
+    '?android:attr/textColorSecondary',
+  ),
 };
 
 // Accent colors for layout demos (bars/boxes whose sizes carry the meaning).
@@ -227,7 +234,10 @@ export function tappableAreaStyle(): {...} {
     borderWidth: 1,
     borderColor: DEMO_THEME.border,
     borderRadius: 8,
-    backgroundColor: semanticColor('secondarySystemBackgroundColor', '#f2f2f7'),
+    backgroundColor: semanticColor(
+      'secondarySystemBackgroundColor',
+      '?android:attr/colorBackgroundFloating',
+    ),
     padding: 12,
     minHeight: 44,
   };
