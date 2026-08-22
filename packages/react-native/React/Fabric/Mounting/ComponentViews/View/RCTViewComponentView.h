@@ -64,6 +64,18 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) UIEdgeInsets hitTestEdgeInsets;
 
 /**
+ * A subclass hook for subviews the HOST inserts rather than the mutation
+ * stream — platform chrome like the real `UIButton` behind `<button>`. Such
+ * subviews must be excluded from mount-index bookkeeping, exactly as painted
+ * text runs are: counting them as mounted children shifts every mutation index
+ * after them. A subclass that installs chrome returns YES from
+ * `hasHostChromeSubviews` and identifies its views in `isHostChromeSubview:`.
+ * Defaults: NO / NO.
+ */
+@property (nonatomic, readonly) BOOL hasHostChromeSubviews;
+- (BOOL)isHostChromeSubview:(UIView *_Nonnull)view;
+
+/**
  * Enforcing `call super` semantic for overridden methods from `RCTComponentViewProtocol`.
  * The methods update the instance variables.
  */

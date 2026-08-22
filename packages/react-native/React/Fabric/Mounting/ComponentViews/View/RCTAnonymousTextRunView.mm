@@ -197,6 +197,15 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
       RCTRunGeometryMatchesYogaFrame(frame, _run.frame, self.traitCollection.displayScale ?: 3.0),
       @"text-children run paint geometry must be the run's Yoga frame, pixel-aligned");
 
+  // The measured box RESERVES baseline-shift ink at its edges
+  // (InlineContentShadowNode::measureContent): the first baseline sits a
+  // reserve lower, so a superscript's ink lands inside this view instead of
+  // painting over whatever is above it. Same accessor on both sides, so the
+  // reserve and the offset cannot disagree.
+  const auto shiftInk = _run.attributedString.baselineShiftInkOverflow();
+  frame.origin.y += shiftInk.top;
+  frame.size.height -= shiftInk.top + shiftInk.bottom;
+
   /*
    * `white-space: pre` / `nowrap`: lay the PAINT out at unbounded width, the
    * same constraint the measurement used (`constraintsForWhiteSpace`).
@@ -503,6 +512,11 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   RCTAssert(
       RCTRunGeometryMatchesYogaFrame(frame, _run.frame, self.traitCollection.displayScale ?: 3.0),
       @"text-children run hit-test geometry must be the run's Yoga frame, pixel-aligned");
+  // The same baseline-shift reserve the draw applies — a tap maps to glyphs
+  // exactly where they were painted.
+  const auto hitShiftInk = _run.attributedString.baselineShiftInkOverflow();
+  frame.origin.y += hitShiftInk.top;
+  frame.size.height -= hitShiftInk.top + hitShiftInk.bottom;
   if (!CGRectContainsPoint(frame, point)) {
     return nullptr;
   }

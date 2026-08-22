@@ -15,8 +15,74 @@
 #include <react/renderer/components/image/ImageShadowNode.h>
 #include <react/renderer/components/text/InlineTextTagShadowNodes.h>
 #include <react/renderer/components/view/ElementBoxShadowNode.h>
+#include <react/renderer/components/view/ElementButtonShadowNode.h>
+#include <react/renderer/components/view/ElementCheckboxShadowNode.h>
+#include <react/renderer/components/view/ElementRangeShadowNode.h>
+#include <react/renderer/components/view/ElementColorInputShadowNode.h>
+#include <react/renderer/components/view/ElementDateInputShadowNode.h>
+#include <react/renderer/components/view/ElementFileInputShadowNode.h>
+#include <react/renderer/components/view/ElementProgressShadowNode.h>
+#include <react/renderer/components/view/ElementRadioShadowNode.h>
+#include <react/renderer/components/view/ElementSelectShadowNode.h>
+#include <react/renderer/components/view/ElementTextAreaShadowNode.h>
+#include <react/renderer/components/view/ElementTextInputShadowNode.h>
+
+#include <react/renderer/attributedstring/AttributedString.h>
+#include <react/renderer/attributedstring/AttributedStringBox.h>
+#include <react/renderer/attributedstring/ParagraphAttributes.h>
+#include <react/renderer/textlayoutmanager/TextLayoutContext.h>
+#include <react/renderer/textlayoutmanager/TextLayoutManager.h>
 
 namespace facebook::react::dom {
+
+/*
+ * `<select>`'s descriptor with the label measurer injected.
+ *
+ * The shadow node (view layer) shrink-to-fits its widest option but cannot
+ * include the text layout manager — the same layering that keeps
+ * InlineTextContentAccessor abstract — so the TEXT side owns the descriptor
+ * and hands the node a measuring function on adopt. The label renders in the
+ * platform control's own font (kElementSelectLabelFontSize, pinned against
+ * the real control by EXPElementSelectGeometryTests), so that is what the
+ * measure uses; the option strings never flow through the text cascade.
+ */
+class ElementSelectMeasuredComponentDescriptor final
+    : public ConcreteComponentDescriptor<ElementSelectShadowNode> {
+ public:
+  explicit ElementSelectMeasuredComponentDescriptor(const ComponentDescriptorParameters& parameters)
+      : ConcreteComponentDescriptor(parameters),
+        textLayoutManager_(std::make_shared<const TextLayoutManager>(contextContainer_))
+  {
+  }
+
+ protected:
+  void adopt(ShadowNode& shadowNode) const override
+  {
+    ConcreteComponentDescriptor::adopt(shadowNode);
+    auto& node = static_cast<ElementSelectShadowNode&>(shadowNode);
+    auto textLayoutManager = textLayoutManager_;
+    node.setLabelWidthMeasurer(
+        [textLayoutManager](const std::string& label, Float pointScaleFactor, Float fontSizeMultiplier) -> Float {
+          auto attributedString = AttributedString{};
+          auto fragment = AttributedString::Fragment{};
+          fragment.string = label;
+          auto textAttributes = TextAttributes::defaultTextAttributes();
+          textAttributes.fontSize = kElementSelectLabelFontSize;
+          textAttributes.fontSizeMultiplier = fontSizeMultiplier;
+          fragment.textAttributes = textAttributes;
+          attributedString.appendFragment(std::move(fragment));
+          const auto measurement = textLayoutManager->measure(
+              AttributedStringBox{attributedString},
+              ParagraphAttributes{},
+              TextLayoutContext{.pointScaleFactor = pointScaleFactor},
+              LayoutConstraints{});
+          return measurement.size.width;
+        });
+  }
+
+ private:
+  std::shared_ptr<const TextLayoutManager> textLayoutManager_;
+};
 
 /*
  * Registration entry point for the intrinsic DOM elements — the native half of
@@ -62,6 +128,45 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders() {
   // context.
   providers.push_back(
       concreteComponentDescriptorProvider<ElementBoxComponentDescriptor>());
+  // The interactive box: `<button>`, and anything else whose behavior is a
+  // pressable box. Separate from the plain box because it carries a press
+  // event emitter.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementButtonComponentDescriptor>());
+  // `<input type="range">`: a real platform slider, and the first element whose
+  // gesture is a drag it owns rather than a press a scroll may steal.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementRangeComponentDescriptor>());
+  // `<input type="checkbox">`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementCheckboxComponentDescriptor>());
+  // `<input>` in its textual forms — text, password, email, number, tel, url,
+  // search — which share one control and differ by keyboard and masking.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementTextInputComponentDescriptor>());
+  // `<textarea>`, which shares `<input>`'s events but not its control.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementTextAreaComponentDescriptor>());
+  // `<progress>` and `<meter>` — readouts rather than controls, so they never
+  // claim a gesture.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementProgressComponentDescriptor>());
+  // `<select>`, whose `<option>` children are flattened onto it as a prop —
+  // the MEASURED descriptor, so the control shrink-to-fits its widest option.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementSelectMeasuredComponentDescriptor>());
+  // `<input type="radio">`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementRadioComponentDescriptor>());
+  // `<input type="date">`, `"time"` and `"datetime-local"`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementDateInputComponentDescriptor>());
+  // `<input type="color">`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementColorInputComponentDescriptor>());
+  // `<input type="file">`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementFileInputComponentDescriptor>());
   return providers;
 }
 
