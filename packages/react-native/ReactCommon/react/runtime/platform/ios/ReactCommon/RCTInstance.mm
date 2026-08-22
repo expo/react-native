@@ -22,6 +22,7 @@
 #import <React/RCTComponentViewFactory.h>
 #import <React/RCTConstants.h>
 #import <React/RCTCxxUtils.h>
+#import <React/EXPElementControlMetricsProbe.h>
 #import <React/RCTDevMenu.h>
 #import <React/RCTDevMenuConfigurationDecorator.h>
 #import <React/RCTDevSettings.h>
@@ -400,6 +401,12 @@ __attribute__((deprecated(
     RCTScreenSize();
     RCTScreenScale();
     RCTSwitchSize();
+    // The HTML form elements are drawn by platform controls, and layout needs
+    // their intrinsic sizes from the shadow thread where UIKit cannot be
+    // touched. Asked here for the same reason `RCTSwitchSize` is, and here
+    // rather than anywhere earlier because the JavaScript thread waits on this
+    // block: nothing is laid out yet, so nothing can already be asking.
+    EXPPrewarmElementControlMetrics();
 
     dispatch_semaphore_signal(moduleSetupComplete);
   });
