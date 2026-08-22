@@ -13,6 +13,7 @@ import type {Props} from './AppContainer';
 import View from '../Components/View/View';
 import StyleSheet from '../StyleSheet/StyleSheet';
 import {RootTagContext, createRootTag} from './RootTag';
+import SurfaceErrorBoundary from './SurfaceErrorBoundary';
 import * as React from 'react';
 
 const AppContainer = ({
@@ -22,7 +23,9 @@ const AppContainer = ({
   WrapperComponent,
   rootViewStyle,
 }: Props): React.Node => {
-  let innerView = children;
+  let innerView: React.Node = (
+    <SurfaceErrorBoundary>{children}</SurfaceErrorBoundary>
+  );
 
   if (WrapperComponent != null) {
     innerView = (
