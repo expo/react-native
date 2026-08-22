@@ -287,6 +287,10 @@ const UIManagerJS: UIManagerJSInterface & {[string]: any} = {
   hasViewManagerConfig: (viewManagerName: string): boolean => {
     return unstable_hasComponent(viewManagerName);
   },
+  // Native view configs are reachable only through the legacy interop layer,
+  // and `getUIManagerConstants` is exactly the hook that layer installs.
+  unstable_hasNativeViewConfigInterop: (): boolean =>
+    getUIManagerConstants != null,
   getConstants: (): Object => {
     if (getUIManagerConstants) {
       return getUIManagerConstantsCached();
