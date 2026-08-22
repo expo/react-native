@@ -20,8 +20,19 @@ const Components: Array<RNTesterModuleInfo> = [
   // features under active development.
   {
     key: 'SharedTextBenchmarkExample',
-    module: require('../examples/DeviceBench/SharedTextBenchmarkExample').default,
+    module: require('../examples/DeviceBench/SharedTextBenchmarkExample')
+      .default,
     category: 'Basic',
+  },
+  {
+    key: 'NativeButtonExample',
+    module: require('../examples/NativeGestures/NativeButtonExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'ExpoUISmokeExample',
+    module: require('../examples/ExpoUI/ExpoUISmokeExample').default,
+    category: 'UI',
   },
   {
     key: 'AstryxExample',
@@ -47,6 +58,37 @@ const Components: Array<RNTesterModuleInfo> = [
     module: require('../examples/TextChildren/IntrinsicElementsExample')
       .default,
     category: 'Basic',
+  },
+  {
+    key: 'HTMLConformanceExample',
+    module: require('../examples/HTMLElements/HTMLConformanceExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLFormsExample',
+    module: require('../examples/HTMLElements/HTMLFormsExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLTextLevelExample',
+    module: require('../examples/HTMLElements/HTMLTextLevelExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLGroupingExample',
+    module: require('../examples/HTMLElements/HTMLGroupingExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLEmbeddedExample',
+    module: require('../examples/HTMLElements/HTMLEmbeddedExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLIntrinsicsDocExample',
+    module: require('../examples/HTMLElements/HTMLIntrinsicsDocExample')
+      .default,
+    category: 'UI',
   },
   {
     key: 'DisplayBlockExample',
