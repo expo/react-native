@@ -79,6 +79,33 @@ class EventEmitter {
   }
 
   /*
+   * Dispatches and then blocks until JavaScript has handled it, so the caller
+   * can read what JavaScript decided.
+   *
+   * `experimental_flushSync` is not enough for that: it marks the *next* beat
+   * as synchronous, and the beat still waits for whatever drives it, so a
+   * caller reading a result immediately after would read it before the handler
+   * ran. Use this only where an answer is needed before a platform callback
+   * returns — a control asking whether an edit may be applied — and never per
+   * frame; both threads are blocked for the duration.
+   *
+   * Returns false when there is no dispatcher, in which case nothing ran and
+   * the caller should fall back to its default.
+   */
+  template <typename Lambda>
+  bool experimental_dispatchSyncNow(Lambda syncFunc) const
+  {
+    auto eventDispatcher = eventDispatcher_.lock();
+    if (!eventDispatcher) {
+      return false;
+    }
+
+    syncFunc();
+    eventDispatcher->experimental_flushSyncNow();
+    return true;
+  }
+
+  /*
    * Initiates an event delivery process.
    * Is used by particular subclasses only.
    */
