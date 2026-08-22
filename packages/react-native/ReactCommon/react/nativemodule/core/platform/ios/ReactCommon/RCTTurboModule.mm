@@ -767,9 +767,19 @@ void ObjCTurboModule::setInvocationArg(
     NSString *methodNameNSString = @(methodName);
 
     /**
+     * An ArrayBuffer is already an NSData holding a copy of its bytes, so
+     * RCTConvert must not run on it: `+[RCTConvert NSData:]` is
+     * `[json dataUsingEncoding:]`, for a JSON string, and NSData does not
+     * respond to that selector (under RCT_DEBUG the exception becomes a nil
+     * argument; without it nothing catches it). RCTConvert applies only to
+     * top-level arguments, so a nested buffer never reaches this.
+     */
+    const bool argIsArrayBuffer = arg.isObject() && arg.getObject(runtime).isArrayBuffer(runtime);
+
+    /**
      * Convert objects using RCTConvert.
      */
-    if (objCArgType == @encode(id)) {
+    if (objCArgType == @encode(id) && !argIsArrayBuffer) {
       NSString *argumentType = getArgumentTypeName(runtime, methodNameNSString, static_cast<int>(i));
       if (argumentType != nil) {
         NSString *rctConvertMethodName = [NSString stringWithFormat:@"%@:", argumentType];
