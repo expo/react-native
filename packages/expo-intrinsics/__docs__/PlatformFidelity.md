@@ -11,7 +11,7 @@ move the fork has already made once for a different feature.**
 
 ---
 
-## Finding 1 — a real platform control keeps its platform behaviour. This part works.
+## Finding 1 — a real platform control keeps its platform behaviour, and this part works
 
 `RCTSwitchComponentView` is not an imitation of a switch. It owns a `UISwitch`
 and wires it up the way any UIKit app would:

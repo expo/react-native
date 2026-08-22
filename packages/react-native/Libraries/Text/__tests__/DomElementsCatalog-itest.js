@@ -23,10 +23,23 @@ import '@react-native/expo-intrinsics-poc';
 
 import type {HostInstance} from 'react-native';
 
+import {uaStyleFor} from '@react-native/expo-intrinsics-poc/src/uaStyles';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
 import {View} from 'react-native';
+
+/*
+ * The type size these measurements are calibrated against.
+ *
+ * Stated rather than inherited: a document's default font size here is the
+ * platform's own body size (17pt on iOS, 16sp on Android) rather than React
+ * Native's historical 14, so a fixture that leaves it unset measures a
+ * different number of points on each platform — and moved the day that default
+ * did. Nothing in this file is about the type size, so pinning it keeps these
+ * assertions about the property they name.
+ */
+const FONT_SIZE = 14;
 
 function rectOf(ref: {current: HostInstance | null}) {
   const node = ref.current;
@@ -52,28 +65,44 @@ describe('intrinsic element catalog', () => {
           <View
             collapsable={false}
             ref={strongRef}
-            style={{display: 'block', alignSelf: 'flex-start'}}>
+            style={{
+              display: 'block',
+              alignSelf: 'flex-start',
+              fontSize: FONT_SIZE,
+            }}>
             {/* $FlowExpectedError[not-a-component] */}
             <strong>abcd</strong>
           </View>
           <View
             collapsable={false}
             ref={bRef}
-            style={{display: 'block', alignSelf: 'flex-start'}}>
+            style={{
+              display: 'block',
+              alignSelf: 'flex-start',
+              fontSize: FONT_SIZE,
+            }}>
             {/* $FlowExpectedError[not-a-component] */}
             <b>abcd</b>
           </View>
           <View
             collapsable={false}
             ref={emRef}
-            style={{display: 'block', alignSelf: 'flex-start'}}>
+            style={{
+              display: 'block',
+              alignSelf: 'flex-start',
+              fontSize: FONT_SIZE,
+            }}>
             {/* $FlowExpectedError[not-a-component] */}
             <em>abcd</em>
           </View>
           <View
             collapsable={false}
             ref={spanRef}
-            style={{display: 'block', alignSelf: 'flex-start'}}>
+            style={{
+              display: 'block',
+              alignSelf: 'flex-start',
+              fontSize: FONT_SIZE,
+            }}>
             {/* $FlowExpectedError[not-a-component] */}
             <span>abcd</span>
           </View>
@@ -94,7 +123,10 @@ describe('intrinsic element catalog', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
           {/* $FlowExpectedError[not-a-component] */}
           <p style={{marginBlock: 0}}>ab</p>
           {/* $FlowExpectedError[not-a-component] */}
@@ -119,7 +151,11 @@ describe('intrinsic element catalog', () => {
         <View
           collapsable={false}
           ref={ref}
-          style={{display: 'block', alignSelf: 'flex-start'}}>
+          style={{
+            display: 'block',
+            alignSelf: 'flex-start',
+            fontSize: FONT_SIZE,
+          }}>
           {/* $FlowExpectedError[not-a-component] */}
           <button>ab</button>
           {/* $FlowExpectedError[not-a-component] */}
@@ -130,9 +166,37 @@ describe('intrinsic element catalog', () => {
       );
     });
 
-    // All three joined one inline run: 6 chars on a single 20pt line.
-    expect(rectOf(ref).width).toBe(60);
-    expect(rectOf(ref).height).toBe(20);
+    /*
+     * All three joined one inline run, on a single line.
+     *
+     * 6 characters at this runner's 10pt grid is 60, plus `<button>`'s
+     * user-agent content inset on the inline axis. The inset is READ FROM THE
+     * SHEET rather than restated: it is each platform's own (Fantom runs the
+     * Android branch — Material's 24dp), pinned against the platform
+     * measurements in `buttonMetrics-test.js`, and restating it here is how
+     * this assertion went stale the last time the chrome changed.
+     *
+     * The line is TALLER than the strut because the button box is: its
+     * user-agent minimum is the platform touch target, and a line box is the
+     * union of the strut and everything on it. `toBeCloseTo` because the
+     * Material label tracking (0.1, not binary-representable) contributes
+     * sub-pixel float jitter.
+     */
+    const buttonUA = uaStyleFor('button');
+    const inset = Number(buttonUA.paddingInline) * 2;
+    expect(rectOf(ref).width).toBeCloseTo(60 + inset, 0);
+    /*
+     * The line grows past the strut by the button's block padding. The
+     * user-agent `minHeight` (the platform touch target) is deliberately NOT
+     * asserted here: this runner's deterministic inline-box measurer sizes an
+     * inline element from its text plus padding and does not consult
+     * min-height, so the assertion would report the harness. On a device the
+     * button measures through its real component, minimum included — the
+     * device conformance harness is the authority for that half.
+     */
+    expect(rectOf(ref).height).toBeGreaterThanOrEqual(
+      20 + Number(buttonUA.paddingBlock) * 2,
+    );
   });
 
   it('an inline element still takes its own box props', () => {
@@ -144,14 +208,21 @@ describe('intrinsic element catalog', () => {
         <View
           collapsable={false}
           ref={ref}
-          style={{display: 'block', alignSelf: 'flex-start'}}>
+          style={{
+            display: 'block',
+            alignSelf: 'flex-start',
+            fontSize: FONT_SIZE,
+          }}>
           {/* $FlowExpectedError[not-a-component] */}
           <button style={{paddingInline: 6}}>ab</button>
         </View>,
       );
     });
 
-    expect(rectOf(ref).width).toBe(32);
+    // 20 for 'ab' on the grid, 6 per side of authored padding (the user-agent
+    // padding withdraws when the author states any), within the tracking
+    // jitter of the Material label typography.
+    expect(rectOf(ref).width).toBeCloseTo(32, 0);
   });
 });
 
@@ -166,7 +237,9 @@ describe('DOM identity', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} style={{display: 'block'}}>
+        <View
+          collapsable={false}
+          style={{display: 'block', fontSize: FONT_SIZE}}>
           {/* $FlowExpectedError[not-a-component] */}
           <mytag ref={unknownRef}>u</mytag>
           {/* $FlowExpectedError[not-a-component] */}
@@ -207,7 +280,11 @@ describe('inline-level displays that establish a formatting context', () => {
         <View
           collapsable={false}
           ref={ref}
-          style={{display: 'block', alignSelf: 'flex-start'}}>
+          style={{
+            display: 'block',
+            alignSelf: 'flex-start',
+            fontSize: FONT_SIZE,
+          }}>
           {'ab'}
           <View style={{display: 'inline-flex'}}>
             <View style={{width: 30, height: 10}} />
@@ -232,7 +309,11 @@ describe('inline-level displays that establish a formatting context', () => {
         <View
           collapsable={false}
           ref={ref}
-          style={{display: 'block', alignSelf: 'flex-start'}}>
+          style={{
+            display: 'block',
+            alignSelf: 'flex-start',
+            fontSize: FONT_SIZE,
+          }}>
           <View style={{display: 'inline-flex', flexDirection: 'row'}}>
             <View style={{width: 30, height: 10}} />
             <View style={{width: 20, height: 10}} />
@@ -259,7 +340,11 @@ describe('inline-level displays that establish a formatting context', () => {
           <View
             collapsable={false}
             ref={atomicRef}
-            style={{display: 'block', alignSelf: 'flex-start'}}>
+            style={{
+              display: 'block',
+              alignSelf: 'flex-start',
+              fontSize: FONT_SIZE,
+            }}>
             {'ab'}
             <View style={{display: 'inline-flex', paddingBlock: 10}}>
               {'cd'}
@@ -268,7 +353,11 @@ describe('inline-level displays that establish a formatting context', () => {
           <View
             collapsable={false}
             ref={spanLikeRef}
-            style={{display: 'block', alignSelf: 'flex-start'}}>
+            style={{
+              display: 'block',
+              alignSelf: 'flex-start',
+              fontSize: FONT_SIZE,
+            }}>
             {'ab'}
             <View style={{display: 'inline', paddingBlock: 10}}>{'cd'}</View>
           </View>
@@ -294,7 +383,10 @@ describe('<div> display is a default the author can override', () => {
     const root = Fantom.createRoot();
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
           {/* $FlowExpectedError[not-a-component] */}
           <div>
             <View style={{width: 30, height: 10}} />
@@ -313,7 +405,10 @@ describe('<div> display is a default the author can override', () => {
     const root = Fantom.createRoot();
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
           {/* $FlowExpectedError[not-a-component] */}
           <div style={{display: 'flex', flexDirection: 'row'}}>
             <View style={{width: 30, height: 10}} />
@@ -341,7 +436,11 @@ describe("display selects an element's backing box", () => {
         <View
           collapsable={false}
           ref={ref}
-          style={{display: 'block', alignSelf: 'flex-start'}}>
+          style={{
+            display: 'block',
+            alignSelf: 'flex-start',
+            fontSize: FONT_SIZE,
+          }}>
           {/* $FlowExpectedError[not-a-component] */}
           <span style={{display: 'inline-flex', flexDirection: 'row'}}>
             <View style={{width: 30, height: 10}} />
@@ -365,7 +464,11 @@ describe("display selects an element's backing box", () => {
         <View
           collapsable={false}
           ref={ref}
-          style={{display: 'block', alignSelf: 'flex-start'}}>
+          style={{
+            display: 'block',
+            alignSelf: 'flex-start',
+            fontSize: FONT_SIZE,
+          }}>
           {'ab'}
           {/* $FlowExpectedError[not-a-component] */}
           <span>cd</span>
@@ -385,7 +488,9 @@ describe("display selects an element's backing box", () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} style={{display: 'block'}}>
+        <View
+          collapsable={false}
+          style={{display: 'block', fontSize: FONT_SIZE}}>
           {/* $FlowExpectedError[not-a-component] */}
           <span ref={ref} style={{display: 'inline-flex'}}>
             <View style={{width: 10, height: 10}} />
@@ -409,7 +514,10 @@ describe('user-agent styles', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
           {/* $FlowExpectedError[not-a-component] */}
           <p>ab</p>
         </View>,
@@ -426,7 +534,10 @@ describe('user-agent styles', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} ref={ref} style={{alignSelf: 'flex-start'}}>
+        <View
+          collapsable={false}
+          ref={ref}
+          style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
           {/* $FlowExpectedError[not-a-component] */}
           <p style={{marginBlock: 0}}>ab</p>
         </View>,
@@ -456,7 +567,9 @@ describe('the wider element catalog', () => {
             ab
           </h1>
           {/* $FlowExpectedError[not-a-component] */}
-          <div ref={plain} style={{alignSelf: 'flex-start'}}>
+          <div
+            ref={plain}
+            style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
             {'ab'}
           </div>
           {/* Margins are measured on the *parent*: an element's own rect is
@@ -464,14 +577,14 @@ describe('the wider element catalog', () => {
           <View
             collapsable={false}
             ref={noMargin}
-            style={{alignSelf: 'flex-start'}}>
+            style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
             {/* $FlowExpectedError[not-a-component] */}
             <h1 style={{marginBlock: 0}}>ab</h1>
           </View>
           <View
             collapsable={false}
             ref={withMargin}
-            style={{alignSelf: 'flex-start'}}>
+            style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
             {/* $FlowExpectedError[not-a-component] */}
             <h1>ab</h1>
           </View>
@@ -483,10 +596,24 @@ describe('the wider element catalog', () => {
     // the sheet but cannot be asserted here: the deterministic measurer is a
     // fixed 10pt per character regardless of fontSize.
     expect(rectOf(h1).width).toBeGreaterThan(rectOf(plain).width);
-    // h1's UA margin is 0.67em = 10.72 above and below. Compared loosely
-    // because layout rounds to the pixel grid.
+    /*
+     * The margin the sheet declares, above and below — read FROM the sheet
+     * rather than written out here.
+     *
+     * What this test is for is that the user-agent style reaches the element at
+     * all. Whether the value is the right one is a different question, and it is
+     * answered somewhere else: `HeadingMargins-itest` pins all six headings
+     * against real Safari's computed styles. Naming the number in both places
+     * means the wrong one gets copied — this assertion used to read `21.44`,
+     * which was twice `0.67 × root` back when the sheet resolved heading margins
+     * against the root instead of against the heading's own font-size. It went
+     * on passing after that was fixed only because nobody re-derived it.
+     *
+     * Compared loosely because layout rounds to the pixel grid.
+     */
+    const declared = Number(uaStyleFor('h1').marginBlock);
     expect(rectOf(withMargin).height - rectOf(noMargin).height).toBeCloseTo(
-      21.44,
+      2 * declared,
       0,
     );
   });
@@ -500,11 +627,13 @@ describe('the wider element catalog', () => {
       root.render(
         <>
           {/* $FlowExpectedError[not-a-component] */}
-          <div ref={plain} style={{alignSelf: 'flex-start'}}>
+          <div
+            ref={plain}
+            style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
             {'ab'}
           </div>
           {/* $FlowExpectedError[not-a-component] */}
-          <ul ref={list} style={{alignSelf: 'flex-start'}}>
+          <ul ref={list} style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
             {'ab'}
           </ul>
         </>,
@@ -525,7 +654,9 @@ describe('the wider element catalog', () => {
 
     Fantom.runTask(() => {
       root.render(
-        <View collapsable={false} style={{display: 'block'}}>
+        <View
+          collapsable={false}
+          style={{display: 'block', fontSize: FONT_SIZE}}>
           {/* $FlowExpectedError[not-a-component] */}
           <code ref={code}>ab</code>
           {/* $FlowExpectedError[not-a-component] */}
@@ -573,7 +704,10 @@ describe('list markers (css-lists-3 §3)', () => {
           start={listProps.start}>
           {items.map((text, i) => (
             // $FlowExpectedError[not-a-component] intrinsic <li> tag
-            <li key={String(i)} ref={refs[i]} style={{alignSelf: 'flex-start'}}>
+            <li
+              key={String(i)}
+              ref={refs[i]}
+              style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
               {text}
             </li>
           ))}
@@ -720,11 +854,13 @@ describe('list markers (css-lists-3 §3)', () => {
       root.render(
         <>
           {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
-          <div ref={divRef} style={{alignSelf: 'flex-start'}}>
+          <div
+            ref={divRef}
+            style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
             abc
           </div>
           {/* $FlowExpectedError[not-a-component] intrinsic <p> tag */}
-          <p ref={pRef} style={{alignSelf: 'flex-start'}}>
+          <p ref={pRef} style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
             abc
           </p>
         </>,
@@ -745,7 +881,9 @@ describe('list markers (css-lists-3 §3)', () => {
           {/* $FlowExpectedError[not-a-component] intrinsic <ul> tag */}
           <ul style={{alignSelf: 'flex-start', paddingInlineStart: 0}}>
             {/* $FlowExpectedError[not-a-component] */}
-            <li ref={outsideRef} style={{alignSelf: 'flex-start'}}>
+            <li
+              ref={outsideRef}
+              style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
               x
             </li>
           </ul>
@@ -757,7 +895,9 @@ describe('list markers (css-lists-3 §3)', () => {
               listStylePosition: 'inside',
             }}>
             {/* $FlowExpectedError[not-a-component] */}
-            <li ref={insideRef} style={{alignSelf: 'flex-start'}}>
+            <li
+              ref={insideRef}
+              style={{alignSelf: 'flex-start', fontSize: FONT_SIZE}}>
               x
             </li>
           </ul>

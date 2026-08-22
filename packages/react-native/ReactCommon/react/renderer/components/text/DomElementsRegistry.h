@@ -15,6 +15,17 @@
 #include <react/renderer/components/image/ImageShadowNode.h>
 #include <react/renderer/components/text/InlineTextTagShadowNodes.h>
 #include <react/renderer/components/view/ElementBoxShadowNode.h>
+#include <react/renderer/components/view/ElementButtonShadowNode.h>
+#include <react/renderer/components/view/ElementCheckboxShadowNode.h>
+#include <react/renderer/components/view/ElementRangeShadowNode.h>
+#include <react/renderer/components/view/ElementColorInputShadowNode.h>
+#include <react/renderer/components/view/ElementDateInputShadowNode.h>
+#include <react/renderer/components/view/ElementFileInputShadowNode.h>
+#include <react/renderer/components/view/ElementProgressShadowNode.h>
+#include <react/renderer/components/view/ElementRadioShadowNode.h>
+#include <react/renderer/components/view/ElementSelectShadowNode.h>
+#include <react/renderer/components/view/ElementTextAreaShadowNode.h>
+#include <react/renderer/components/view/ElementTextInputShadowNode.h>
 
 namespace facebook::react::dom {
 
@@ -62,6 +73,44 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders() {
   // context.
   providers.push_back(
       concreteComponentDescriptorProvider<ElementBoxComponentDescriptor>());
+  // The interactive box: `<button>`, and anything else whose behavior is a
+  // pressable box. Separate from the plain box because it carries a press
+  // event emitter.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementButtonComponentDescriptor>());
+  // `<input type="range">`: a real platform slider, and the first element whose
+  // gesture is a drag it owns rather than a press a scroll may steal.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementRangeComponentDescriptor>());
+  // `<input type="checkbox">`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementCheckboxComponentDescriptor>());
+  // `<input>` in its textual forms — text, password, email, number, tel, url,
+  // search — which share one control and differ by keyboard and masking.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementTextInputComponentDescriptor>());
+  // `<textarea>`, which shares `<input>`'s events but not its control.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementTextAreaComponentDescriptor>());
+  // `<progress>` and `<meter>` — readouts rather than controls, so they never
+  // claim a gesture.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementProgressComponentDescriptor>());
+  // `<select>`, whose `<option>` children are flattened onto it as a prop.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementSelectComponentDescriptor>());
+  // `<input type="radio">`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementRadioComponentDescriptor>());
+  // `<input type="date">`, `"time"` and `"datetime-local"`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementDateInputComponentDescriptor>());
+  // `<input type="color">`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementColorInputComponentDescriptor>());
+  // `<input type="file">`.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ElementFileInputComponentDescriptor>());
   return providers;
 }
 

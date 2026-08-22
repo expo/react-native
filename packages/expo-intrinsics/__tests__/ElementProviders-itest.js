@@ -13,13 +13,13 @@ import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 
 import type {HostInstance} from 'react-native';
 
+// The framework's catalog: bare tags, the unknown fallback, and the registry.
+import {defineReactElement} from '@react-native/expo-intrinsics-poc';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
 import {View} from 'react-native';
 import {createViewConfig} from 'react-native/Libraries/NativeComponent/ViewConfig';
-// The framework's catalog: bare tags, the unknown fallback, and the registry.
-import {defineReactElement} from '@react-native/expo-intrinsics-poc';
 
 /*
  * The precedence ruleset for element providers: the framework owns the bare

@@ -13,17 +13,19 @@ internal object FabricNameComponentMapping {
       // TODO T97384889: unify component names between JS - Android - iOS - C++
       "View" to "RCTView",
       "Image" to "RCTImageView",
-      // Intrinsic DOM elements (expo-intrinsics). <div> is a block View.
-      // DOM-CSS-LIMITATION(android-img-is-a-plain-view): <img> mounts as a
-      // plain View on Android rather than RCTImageView, which expects a
-      // different `source` shape — so an <img> lays out but draws nothing
-      // there. iOS renders it through the Image machinery.
+      // Intrinsic DOM elements (expo-intrinsics).
       // <div> is an ordinary block element now, backed by the generic box.
       // The box-backed flavor an element is swapped onto when its display
       // generates a box (ElementBoxShadowNode.h). A plain view: everything
       // that distinguishes it is layout, not drawing.
       "element-box" to "RCTView",
-      "img" to "RCTView",
+      // <img> shares `ImageShadowNode` in C++ (see `ImgTagComponentName`), so it
+      // mounts the same view the framework's own <Image> does. It was a plain
+      // "RCTView" until the element's view config learned to send `source` as a
+      // list — `RCTImageView.setSource` takes a `ReadableArray`, and a bare
+      // object reached it as the wrong shape, so an <img> laid out correctly and
+      // drew nothing at all on Android.
+      "img" to "RCTImageView",
       // The inline text intrinsics. Their content is absorbed into the
       // container's text runs and the mounted view draws nothing — but Android
       // still needs one, because `TextShadowNode` sets `FormsView` under

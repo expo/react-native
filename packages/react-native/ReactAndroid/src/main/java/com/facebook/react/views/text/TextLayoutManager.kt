@@ -42,6 +42,8 @@ import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.ReactAccessibilityDelegate
+import android.text.style.SubscriptSpan
+import android.text.style.SuperscriptSpan
 import com.facebook.react.views.text.internal.span.CustomLetterSpacingSpan
 import com.facebook.react.views.text.internal.span.CustomLineHeightSpan
 import com.facebook.react.views.text.internal.span.CustomStyleSpan
@@ -628,6 +630,20 @@ internal object TextLayoutManager {
           ops.add(
               SetSpanOperation(start, end, CustomLetterSpacingSpan(textAttributes.letterSpacing))
           )
+        }
+        /*
+         * `<sup>` / `<sub>`, through Android's own spans.
+         *
+         * `SuperscriptSpan` and `SubscriptSpan` derive the shift from the font,
+         * the same way CoreText's superscript attribute does on iOS, so both
+         * platforms follow the typeface rather than a shared guess at an em
+         * fraction. The size reduction is the user-agent sheet's
+         * `font-size: 0.83em`, which is what a browser applies too.
+         */
+        when (textAttributes.verticalAlign) {
+          "super" -> ops.add(SetSpanOperation(start, end, SuperscriptSpan()))
+          "sub" -> ops.add(SetSpanOperation(start, end, SubscriptSpan()))
+          else -> Unit
         }
         ops.add(SetSpanOperation(start, end, ReactAbsoluteSizeSpan(textAttributes.fontSize)))
         if (

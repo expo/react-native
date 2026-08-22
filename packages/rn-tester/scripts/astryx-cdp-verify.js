@@ -58,10 +58,48 @@ function check(ok, name, actual, expected, tolerance = 0.67) {
   return ok && pass;
 }
 
+/*
+ * For a MINIMUM, which is a floor and not a value.
+ *
+ * Asserting equality against a min-height only works while the element's
+ * intrinsic content is shorter than the floor, and that is an accident of the
+ * platform rather than the contract. The `<input>` field is 36 on iOS and 44 on
+ * Android, whose text field is intrinsically taller — both satisfy
+ * `--size-element-lg`. Equality reported the Android number as a failure the
+ * first time this ran there, which is the check being wrong, not the layout.
+ *
+ * `>=` still catches the regression that matters: a dropped minimum shows up as
+ * a field shorter than the floor on either platform.
+ */
+function checkAtLeast(ok, name, actual, floor) {
+  const pass = actual >= floor - 0.67;
+  console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}: ${actual} >= ${floor}`);
+  return ok && pass;
+}
+
 async function main() {
-  execSync(`xcrun simctl terminate booted ${BUNDLE_ID} 2>/dev/null || true`);
-  await sleep(1000);
-  execSync(`xcrun simctl launch booted ${BUNDLE_ID} -route Astryx`);
+  const ANDROID = process.env.ASTRYX_VERIFY_PLATFORM === 'android';
+  if (ANDROID) {
+    // The iOS RNTester here is a Release build and registers no CDP target, so
+    // the same assertions run against the emulator, which does.
+    const adb =
+      '/opt/homebrew/share/android-commandlinetools/platform-tools/adb';
+    execSync(`${adb} shell am force-stop com.facebook.react.uiapp`);
+    await sleep(1000);
+    execSync(
+      `${adb} shell am start -n com.facebook.react.uiapp/.RNTesterActivity`,
+      {stdio: 'ignore'},
+    );
+    await sleep(14000);
+    execSync(
+      `${adb} shell am start -a android.intent.action.VIEW -d "rntester://example/AstryxExample"`,
+      {stdio: 'ignore'},
+    );
+  } else {
+    execSync(`xcrun simctl terminate booted ${BUNDLE_ID} 2>/dev/null || true`);
+    await sleep(1000);
+    execSync(`xcrun simctl launch booted ${BUNDLE_ID} -route Astryx`);
+  }
   let v = null;
   for (let attempt = 0; attempt < 15 && v == null; attempt++) {
     await sleep(3000);
@@ -100,11 +138,27 @@ async function main() {
     v.buttonLabel.x - v.button.x,
     18,
   );
+  /*
+   * Vertically the authored metrics are a FLOOR, not the value: the element
+   * button keeps Material's 48dp touch-target minimum even under an author
+   * surface (DOM-CSS-DEVIATION — the platform's accessibility floor outranks
+   * the stylesheet's arithmetic), and the label centres in the slack that
+   * minimum adds. So three properties hold instead of one exact number: the
+   * button is at least 48 tall, the label sits at least padding+border from
+   * the top, and the slack is symmetric. The old exact-10 expectation
+   * predated the OS-API button work and failed by exactly the centring
+   * (measured 14.48 = 10 + (48 - content) / 2).
+   */
+  const labelTopInset = v.buttonLabel.y - v.button.y;
+  const labelBottomInset =
+    v.button.y + v.button.h - (v.buttonLabel.y + v.buttonLabel.h);
+  ok = checkAtLeast(ok, 'button meets the 48dp touch minimum', v.button.h, 48);
+  ok = checkAtLeast(ok, 'button label inset y floor (8 + 2 border)', labelTopInset, 10);
   ok = check(
     ok,
-    'button label inset y (8 + 2 border)',
-    v.buttonLabel.y - v.button.y,
-    10,
+    'button label is vertically centred (top slack == bottom slack)',
+    labelTopInset - labelBottomInset,
+    0,
   );
 
   // M3 — custom-property inheritance across elements. The ancestor declares
@@ -135,12 +189,11 @@ async function main() {
   // <input> mapped onto TextInput: the field's box comes from Astryx tokens
   // (--size-element-lg minimum height), proving the StyleX runtime styles a
   // behavior-mapped element the same as a container.
-  ok = check(
+  ok = checkAtLeast(
     ok,
-    'input field height (--size-element-lg = 36)',
+    'input field height (--size-element-lg minimum of 36)',
     v.inputField.h,
     36,
-    1.5,
   );
 
   // T14 platform half: an inline <b> must report a real box from the iOS

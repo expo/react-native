@@ -38,7 +38,7 @@
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
 
-// The generic-box component view (RCTElementBoxComponentView) self-registers
+// The generic-box component view (EXPElementBoxComponentView) self-registers
 // with the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
 #import <react/renderer/components/view/ElementBoxShadowNode.h>
@@ -69,6 +69,9 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   BOOL _needsInvalidateLayer;
   BOOL _isJSResponder;
   BOOL _removeClippedSubviews;
+  // Set by -prepareForRecycle, consumed by the next -updateProps: — the
+  // cleared visuals diff against defaults exactly once. See both sites.
+  BOOL _propsAreStaleFromRecycle;
   NSMutableArray<UIView *> *_reactSubviews;
   NSSet<NSString *> *_Nullable _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN;
   UIView *_containerView;
@@ -190,15 +193,31 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 // the wrong z-position and trips the unmount assertions on perfectly valid
 // removals. This maps a mutation's index to the UIKit position of that slot,
 // counting only non-run subviews.
+- (BOOL)hasHostChromeSubviews
+{
+  return NO;
+}
+
+- (BOOL)isHostChromeSubview:(UIView *)view
+{
+  return NO;
+}
+
 - (NSInteger)_containerIndexForMountIndex:(NSInteger)index
 {
-  if (_textRunViews.count == 0) {
+  if (_textRunViews.count == 0 && !self.hasHostChromeSubviews) {
     return index;
   }
   NSArray<UIView *> *subviews = self.currentContainerView.subviews;
   NSInteger mountedSeen = 0;
   for (NSUInteger position = 0; position < subviews.count; position++) {
-    if ([subviews[position] isKindOfClass:[RCTAnonymousTextRunView class]]) {
+    // Skips the subviews the HOST put there rather than the mutation stream:
+    // painted text runs, and a subclass's platform chrome (`<button>`'s
+    // UIButton layer). Counting either as a mounted child shifts every
+    // mutation index after it, which lands children at the wrong z-position
+    // and trips the unmount assertions on valid removals.
+    if ([subviews[position] isKindOfClass:[RCTAnonymousTextRunView class]] ||
+        [self isHostChromeSubview:subviews[position]]) {
       continue;
     }
     if (mountedSeen == index) {
@@ -364,6 +383,21 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       [_textRunViews addObject:runView];
       [self.currentContainerView addSubview:runView];
     }
+    // Host chrome stays BELOW the content it is chrome for. Props and state
+    // interleave differently across mount, re-paint and recycle reuse, so
+    // "insert the chrome at index 0 once" does not survive: a run attached in
+    // a later state update appends above it in one ordering and below it in
+    // another. Found as a `<button>`'s label compositing UNDER its opaque
+    // filled chrome — invisible — while translucent gray chrome let labels
+    // show through and *look* correct. Reasserting after every attach makes
+    // the z-order a stated invariant rather than an accident of ordering.
+    if (self.hasHostChromeSubviews) {
+      for (UIView *subview in self.currentContainerView.subviews) {
+        if ([self isHostChromeSubview:subview]) {
+          [self.currentContainerView sendSubviewToBack:subview];
+        }
+      }
+    }
     runView->_run = data.textRuns[i];
     runView->_layoutManager = data.layoutManager;
     [runView setContainerBounds:self.currentContainerView.bounds];
@@ -403,7 +437,15 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 
   NSMutableArray<UIView *> *mountedChildren = [NSMutableArray new];
   for (UIView *subview in container.subviews) {
-    if (![subview isKindOfClass:[RCTAnonymousTextRunView class]]) {
+    // Host chrome is not a mounted child and must be invisible to document
+    // order: counting it made `documentOrder == 0` mean "just below the
+    // chrome", which filed a <button>'s label UNDER its own platform surface —
+    // invisible under the opaque filled style, and under the translucent gray
+    // one the labels showed through dimmed and *looked* correct, which is why
+    // it survived the first screenshots. Chrome keeps its place at the very
+    // back through the attach-time invariant instead.
+    if (![subview isKindOfClass:[RCTAnonymousTextRunView class]] &&
+        ![self isHostChromeSubview:subview]) {
       [mountedChildren addObject:subview];
     }
   }
@@ -558,7 +600,31 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       NSStringFromClass([self class]));
 #endif
 
-  const auto &oldViewProps = static_cast<const ViewProps &>(*_props);
+  /*
+   * The first update after a recycle diffs the BASE view props against
+   * DEFAULTS, not against `_props`.
+   *
+   * `-prepareForRecycle` clears pixels — background, border, outline, filter
+   * layers — while `_props` keeps describing the old element, and this method
+   * diffs against `_props`: a view recycled between two elements with EQUAL
+   * styling diffed equal, skipped re-applying, and kept the cleared state
+   * (two of five identical dark code boxes rendered bare; which two depended
+   * on pooling). Diffing against defaults here makes every cleared property
+   * re-apply; each branch below assigns absolutely, so an occasional
+   * extra apply is idempotent.
+   *
+   * `_props` itself is deliberately NOT reset. Subclasses static_cast it to
+   * their own props type — resetting it to plain ViewProps defaults sent
+   * `RCTParagraphComponentView` a garbage `isSelectable`, whose stale-diff
+   * called `removeInteraction:` with nothing installed and aborted in an
+   * NSAssert on the first recycled paragraph. Their UIKit state survives
+   * recycling untouched, so old props stay the consistent baseline for THEIR
+   * diffs; only the base's cleared visuals need the default baseline.
+   */
+  const auto &oldViewProps = _propsAreStaleFromRecycle
+      ? static_cast<const ViewProps &>(*ViewShadowNode::defaultSharedProps())
+      : static_cast<const ViewProps &>(*_props);
+  _propsAreStaleFromRecycle = NO;
   const auto &newViewProps = static_cast<const ViewProps &>(*props);
 
   BOOL needsInvalidateLayer = NO;
@@ -1037,6 +1103,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // Clean up other visual layers
   [_backgroundColorLayer removeFromSuperlayer];
   _backgroundColorLayer = nil;
+  // The plain background too, not only its layer object: a view recycled out
+  // of an author-styled `<button style={{backgroundColor}}>` kept drawing that
+  // author's colour under the next button's platform chrome. Verified exactly
+  // that way: a form's Reset button showed the "Filled" demo's blue through
+  // its gray capsule after navigating between the two screens.
+  _backgroundColor = nil;
+  self.layer.backgroundColor = nil;
   [_borderLayer removeFromSuperlayer];
   _borderLayer = nil;
   [_outlineLayer removeFromSuperlayer];
@@ -1051,6 +1124,12 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   _removeClippedSubviews = NO;
   _reactSubviews = [NSMutableArray new];
   _layoutMetrics = EmptyLayoutMetrics;
+
+  // The cleared visuals above no longer match `_props`; the first
+  // -updateProps: after this reconciles by diffing the base view props
+  // against DEFAULTS (see there for why `_props` itself must keep the old
+  // element's type).
+  _propsAreStaleFromRecycle = YES;
 }
 
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(NSSet<NSString *> *_Nullable)props
@@ -2231,10 +2310,10 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
  * renderer swaps an element onto this component when its display generates a
  * box — see ElementBoxShadowNode.h.
  */
-@interface RCTElementBoxComponentView : RCTViewComponentView
+@interface EXPElementBoxComponentView : RCTViewComponentView
 @end
 
-@implementation RCTElementBoxComponentView
+@implementation EXPElementBoxComponentView
 
 - (instancetype)initWithFrame:(CGRect)frame
 {

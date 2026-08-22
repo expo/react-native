@@ -55,6 +55,9 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   letterSpacing = !std::isnan(textAttributes.letterSpacing)
       ? textAttributes.letterSpacing
       : letterSpacing;
+  verticalAlign = textAttributes.verticalAlign.has_value()
+      ? textAttributes.verticalAlign
+      : verticalAlign;
   textTransform = textAttributes.textTransform.has_value()
       ? textAttributes.textTransform
       : textTransform;
@@ -178,6 +181,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
       floatEquality(fontSize, rhs.fontSize) &&
       floatEquality(fontSizeMultiplier, rhs.fontSizeMultiplier) &&
       floatEquality(letterSpacing, rhs.letterSpacing) &&
+      verticalAlign == rhs.verticalAlign &&
       floatEquality(lineHeight, rhs.lineHeight) &&
       floatEquality(textShadowRadius, rhs.textShadowRadius);
 }
@@ -264,6 +268,8 @@ SharedDebugStringConvertibleList TextAttributes::getDebugProps() const {
           "dynamicTypeRamp", dynamicTypeRamp, textAttributes.dynamicTypeRamp),
       debugStringConvertibleItem(
           "letterSpacing", letterSpacing, textAttributes.letterSpacing),
+      debugStringConvertibleItem(
+          "verticalAlign", verticalAlign, textAttributes.verticalAlign),
 
       // Paragraph Styles
       debugStringConvertibleItem(

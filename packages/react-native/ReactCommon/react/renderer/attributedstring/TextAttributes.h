@@ -31,6 +31,24 @@ struct TextEffectInfo {
   bool operator==(const TextEffectInfo &) const = default;
 };
 
+/*
+ * `vertical-align` as it applies to TEXT, which is a different thing from the
+ * box-level `AtomicInlineVerticalAlign` next door: that one places a whole
+ * atomic inline on a line, this one shifts glyphs off the baseline within a
+ * run.
+ *
+ * Deliberately an enum rather than an offset in points. Both platforms have
+ * first-class superscript support that derives the shift AND the size
+ * reduction from the font's own metrics — `NSSuperscriptAttributeName` on iOS,
+ * `SuperscriptSpan`/`SubscriptSpan` on Android. A hand-computed `0.33em` would
+ * be a guess that goes wrong on every font whose designer chose otherwise.
+ */
+enum class TextVerticalAlign : uint8_t {
+  Baseline,
+  Super,
+  Sub,
+};
+
 class TextAttributes;
 
 using SharedTextAttributes = std::shared_ptr<const TextAttributes>;
@@ -67,6 +85,8 @@ class TextAttributes : public DebugStringConvertible {
   Float fontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   Float maxFontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   Float letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
+  // `<sup>`/`<sub>`: a baseline shift the platform's text engine computes.
+  std::optional<TextVerticalAlign> verticalAlign{};
   Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
   Float textShadowRadius{std::numeric_limits<Float>::quiet_NaN()};
   // TODO: Use `Point` type instead of `Size` for `textShadowOffset` attribute.

@@ -95,6 +95,19 @@ static TextAttributes convertRawProp(
       "letterSpacing",
       sourceTextAttributes.letterSpacing,
       defaultTextAttributes.letterSpacing);
+  /*
+   * `vertical-align` is ONE CSS property with two homes here: `super`/`sub`
+   * shift glyphs within a run and are a text attribute, while `top`/`bottom`/
+   * `middle` place a whole atomic inline on a line and are a Yoga box value.
+   * Reading both from the same prop name is what keeps it one property to an
+   * author, as CSS has it.
+   */
+  textAttributes.verticalAlign = convertRawProp(
+      context,
+      rawProps,
+      "verticalAlign",
+      sourceTextAttributes.verticalAlign,
+      defaultTextAttributes.verticalAlign);
   textAttributes.textTransform = convertRawProp(
       context,
       rawProps,

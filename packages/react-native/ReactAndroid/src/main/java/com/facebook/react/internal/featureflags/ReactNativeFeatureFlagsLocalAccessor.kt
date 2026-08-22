@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<11e05639d7fa5dd5cf14445533854413>>
+ * @generated SignedSource<<05d681230f6c5d1959f4e0257659e8b0>>
  */
 
 /**
@@ -63,6 +63,7 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
   private var enableModuleArgumentNSNullConversionIOSCache: Boolean? = null
   private var enableMutationObserverByDefaultCache: Boolean? = null
   private var enableNativeCSSParsingCache: Boolean? = null
+  private var enableNativeGestureRecognizersCache: Boolean? = null
   private var enablePreparedTextLayoutCache: Boolean? = null
   private var enablePropsUpdateReconciliationAndroidCache: Boolean? = null
   private var enableRuntimeSchedulerQueueClearingOnErrorCache: Boolean? = null
@@ -498,6 +499,16 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
       cached = currentProvider.enableNativeCSSParsing()
       accessedFeatureFlags.add("enableNativeCSSParsing")
       enableNativeCSSParsingCache = cached
+    }
+    return cached
+  }
+
+  override fun enableNativeGestureRecognizers(): Boolean {
+    var cached = enableNativeGestureRecognizersCache
+    if (cached == null) {
+      cached = currentProvider.enableNativeGestureRecognizers()
+      accessedFeatureFlags.add("enableNativeGestureRecognizers")
+      enableNativeGestureRecognizersCache = cached
     }
     return cached
   }

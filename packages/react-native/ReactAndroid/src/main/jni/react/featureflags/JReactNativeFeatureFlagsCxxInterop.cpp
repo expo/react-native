@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<7230de8200dde79176e31b0ec7ab2f0b>>
+ * @generated SignedSource<<4b9d4f61d5f70aed78ea1ecf1367fe0b>>
  */
 
 /**
@@ -270,6 +270,12 @@ class ReactNativeFeatureFlagsJavaProvider
   bool enableNativeCSSParsing() override {
     static const auto method =
         getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableNativeCSSParsing");
+    return method(javaProvider_);
+  }
+
+  bool enableNativeGestureRecognizers() override {
+    static const auto method =
+        getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableNativeGestureRecognizers");
     return method(javaProvider_);
   }
 
@@ -760,6 +766,11 @@ bool JReactNativeFeatureFlagsCxxInterop::enableNativeCSSParsing(
   return ReactNativeFeatureFlags::enableNativeCSSParsing();
 }
 
+bool JReactNativeFeatureFlagsCxxInterop::enableNativeGestureRecognizers(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
+  return ReactNativeFeatureFlags::enableNativeGestureRecognizers();
+}
+
 bool JReactNativeFeatureFlagsCxxInterop::enablePreparedTextLayout(
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
   return ReactNativeFeatureFlags::enablePreparedTextLayout();
@@ -1148,6 +1159,9 @@ void JReactNativeFeatureFlagsCxxInterop::registerNatives() {
       makeNativeMethod(
         "enableNativeCSSParsing",
         JReactNativeFeatureFlagsCxxInterop::enableNativeCSSParsing),
+      makeNativeMethod(
+        "enableNativeGestureRecognizers",
+        JReactNativeFeatureFlagsCxxInterop::enableNativeGestureRecognizers),
       makeNativeMethod(
         "enablePreparedTextLayout",
         JReactNativeFeatureFlagsCxxInterop::enablePreparedTextLayout),
