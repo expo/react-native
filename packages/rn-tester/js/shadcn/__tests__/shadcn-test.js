@@ -210,9 +210,7 @@ describe('cn', () => {
       cn('focus-visible:ring-2 focus-visible:ring-ring').split(' ').sort(),
     ).toEqual(['focus-visible:ring-2', 'focus-visible:ring-ring']);
     expect(
-      cn(
-        'focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-      )
+      cn('focus-visible:ring-offset-2 focus-visible:ring-offset-background')
         .split(' ')
         .sort(),
     ).toEqual([

@@ -283,7 +283,10 @@ function ProgressSection(): React.Node {
       <div className="flex flex-row flex-wrap items-center gap-3">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-4 w-16" />
-        <Toggle className={TOUCH} pressed={pressed} onPressedChange={setPressed}>
+        <Toggle
+          className={TOUCH}
+          pressed={pressed}
+          onPressedChange={setPressed}>
           Bold
         </Toggle>
       </div>
@@ -305,7 +308,13 @@ function TabsSection(): React.Node {
   <TabsContent value="password">Password settings panel.</TabsContent>
 </Tabs>`}>
       <Tabs defaultValue="account">
-        <TabsList>
+        {/* `h-auto` because the triggers carry a 44pt minimum: shadcn's list is
+            a fixed `h-10` (40pt), and a 44pt child inside it is centred and
+            overflows the muted background by 2pt top and bottom — correctly,
+            and identically in a browser, but it reads as a control falling out
+            of its container. The container is what should grow when the target
+            does; padding then puts the pill back inside it. */}
+        <TabsList className="h-auto">
           <TabsTrigger className={TOUCH} value="account">
             Account
           </TabsTrigger>
@@ -419,14 +428,14 @@ function AccordionSection(): React.Node {
   </AccordionItem>
 </Accordion>`}>
       {/*
-        * `text-foreground` because the accordion is the one component here that
-        * INHERITS its colour instead of setting one. On the web it inherits from
-        * `body`, which shadcn's base layer gives `bg-background text-foreground`
-        * — and that layer is deliberately not installed here, because its
-        * preflight reset fights the user-agent styles. So the trigger fell back
-        * to a colour that does not follow the scheme, and in dark mode it was
-        * dark text on a dark page: the rows were there, and invisible.
-        */}
+       * `text-foreground` because the accordion is the one component here that
+       * INHERITS its colour instead of setting one. On the web it inherits from
+       * `body`, which shadcn's base layer gives `bg-background text-foreground`
+       * — and that layer is deliberately not installed here, because its
+       * preflight reset fights the user-agent styles. So the trigger fell back
+       * to a colour that does not follow the scheme, and in dark mode it was
+       * dark text on a dark page: the rows were there, and invisible.
+       */}
       <Accordion className="text-foreground" type="single" collapsible={true}>
         <AccordionItem value="a">
           <AccordionTrigger className="min-h-11">
@@ -448,7 +457,6 @@ function AccordionSection(): React.Node {
     </DemoSection>
   );
 }
-
 
 /*
  * shadcn's base layer applies `bg-background text-foreground` to <body>. There
