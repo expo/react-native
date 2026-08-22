@@ -76,6 +76,20 @@ export function get<Config extends {...}>(
     );
 
     if (verify) {
+      /*
+       * Verification compares the static view config with the native one, so
+       * when native view configs are not obtainable at all (the new
+       * architecture with the legacy ViewConfig interop layer off) the check is
+       * skipped rather than attempted, and the skip is reported once so "no
+       * validation errors" is known to mean "no validation". Depending on a
+       * native view config (`native: true`) while they are unobtainable still
+       * raises the per-component error from `getNativeComponentAttributes`.
+       */
+      if (!native && !canObtainNativeViewConfigs()) {
+        warnOnceThatVerificationIsUnavailable();
+        return viewConfig;
+      }
+
       const nativeViewConfig = native
         ? viewConfig
         : getNativeComponentAttributes(name);
@@ -147,9 +161,47 @@ export function getWithFallback_DEPRECATED<Config extends {...}>(
   return FallbackNativeComponent;
 }
 
+/*
+ * Whether native view configs can be obtained in this runtime at all.
+ * `UIManager` has implementations outside this repository, so a missing
+ * capability method means "obtainable" rather than a crash.
+ */
+function canObtainNativeViewConfigs(): boolean {
+  return UIManager.unstable_hasNativeViewConfigInterop?.() ?? true;
+}
+
+let hasWarnedAboutUnavailableVerification = false;
+
+function warnOnceThatVerificationIsUnavailable(): void {
+  if (hasWarnedAboutUnavailableVerification) {
+    return;
+  }
+  hasWarnedAboutUnavailableVerification = true;
+  /*
+   * A log, not a warning: on the new architecture without the interop layer
+   * this is the app's permanent configuration, which nobody can act on from
+   * inside the app. A `native: true` component with no native counterpart
+   * still fails loudly on its own path.
+   */
+  console.log(
+    'NativeComponentRegistry: static view config verification is enabled but ' +
+      'cannot run, because native view configs are not obtainable in the new ' +
+      'architecture without the legacy ViewConfig interop layer. Static view ' +
+      'configs are being used as-is and are NOT being checked against native ' +
+      'ones. Turn on the interop layer to restore the check.',
+  );
+}
+
 function hasNativeViewConfig(name: string): boolean {
   invariant(getRuntimeConfig == null, 'Unexpected invocation!');
-  return UIManager.getViewManagerConfig(name) != null;
+  /*
+   * `hasViewManagerConfig` rather than `getViewManagerConfig(name) != null`:
+   * on the new architecture fetching the config to answer an existence check
+   * logs a soft error advising this call; on the old architecture the two are
+   * the same null check. Reached only when static view configs are disabled
+   * entirely (`getRuntimeConfig == null`).
+   */
+  return UIManager.hasViewManagerConfig(name);
 }
 
 /**
