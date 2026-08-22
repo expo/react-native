@@ -81,6 +81,13 @@ public class TextAttributeProps private constructor() {
   private var lineHeightInput: Float = ReactConstants.UNSET.toFloat()
   private var letterSpacingInput: Float = Float.NaN
 
+  /**
+   * `super`, `sub`, or null. Applied as a [android.text.style.SuperscriptSpan] or
+   * [android.text.style.SubscriptSpan], which take the shift from the font's own
+   * metrics — the counterpart of CoreText's superscript attribute on iOS.
+   */
+  public var verticalAlign: String? = null
+
   /** Numeric baseline shift in dp; positive raises the glyphs. NaN = unset. */
   public var baselineShift: Float = Float.NaN
 
@@ -386,6 +393,8 @@ public class TextAttributeProps private constructor() {
     public const val TA_KEY_FONT_VARIANT: Int = 8
     public const val TA_KEY_ALLOW_FONT_SCALING: Int = 9
     public const val TA_KEY_LETTER_SPACING: Int = 10
+    /** `<sup>`/`<sub>`; must match TA_KEY_VERTICAL_ALIGN in conversions.h. */
+    public const val TA_KEY_VERTICAL_ALIGN: Int = 32
     /** Numeric baseline shift in dp (positive raises); must match conversions.h. */
     public const val TA_KEY_BASELINE_SHIFT: Int = 33
     public const val TA_KEY_LINE_HEIGHT: Int = 11
@@ -449,6 +458,7 @@ public class TextAttributeProps private constructor() {
               result.fontVariationSettings = parseFontVariationSettings(entry.stringValue)
           TA_KEY_ALLOW_FONT_SCALING -> result.allowFontScaling = entry.booleanValue
           TA_KEY_LETTER_SPACING -> result.letterSpacing = entry.doubleValue.toFloat()
+          TA_KEY_VERTICAL_ALIGN -> result.verticalAlign = entry.stringValue
           TA_KEY_BASELINE_SHIFT -> result.baselineShift = entry.doubleValue.toFloat()
           TA_KEY_LINE_HEIGHT -> result.lineHeight = entry.doubleValue.toFloat()
           TA_KEY_ALIGNMENT -> {}
