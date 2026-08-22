@@ -71,7 +71,6 @@ function CascadeCases(): React.Node {
     cascBare30Control: bare30Control,
   });
 
-  /* eslint-disable react-native/no-inline-styles */
   return (
     <View>
       <ThemingNote>
@@ -149,7 +148,7 @@ function CascadeCases(): React.Node {
   );
 }
 
-export default ({
+export default {
   title: 'Cascade',
   description:
     "Text inheritance and `all` boundaries: root <Text>'s UA boundary, " +
@@ -162,4 +161,4 @@ export default ({
       render: (): React.Node => <CascadeCases />,
     },
   ],
-}: RNTesterModule);
+} as RNTesterModule;

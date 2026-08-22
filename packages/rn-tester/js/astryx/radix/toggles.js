@@ -16,7 +16,7 @@
  * attributes and aria state — exactly what the stylesheet engine matches.
  */
 
-import {dataState, useControllableState} from './internals';
+import {useControllableState} from './internals';
 import {Slot} from './slot';
 import * as React from 'react';
 

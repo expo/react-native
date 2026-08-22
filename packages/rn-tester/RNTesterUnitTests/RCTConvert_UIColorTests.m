@@ -29,6 +29,35 @@ static BOOL CGColorsAreEqual(CGColorRef color1, CGColorRef color2)
 
 @implementation RCTConvert_NSColorTests
 
+/*
+ * The semantic colours the user-agent stylesheet ships.
+ *
+ * The DOM elements theme by naming a platform colour rather than stating a
+ * value, so an element follows light and dark without being asked. Kept in step
+ * with `CANVAS_TEXT` in `expo-intrinsics/src/uaStyles.js`. That side asserts the
+ * stylesheet hands these exact names down (`ThemedDefaults-itest`); this side
+ * asserts UIKit accepts them, and the Android half is
+ * `ColorPropConverterTest.theAttributesTheUserAgentStylesheetAsksForAllResolve`.
+ *
+ * Neither half is sufficient alone: a stylesheet test would pass on a name
+ * UIKit rejects, and this test would not notice the stylesheet asking for a
+ * different one. A rejected name is not a crash — it resolves to nil and the
+ * text draws with no colour at all, which is how the Android equivalent of this
+ * bug reached a device unnoticed.
+ */
+- (void)testUserAgentStylesheetSemanticColorsResolve
+{
+  for (NSString *name in @[ @"labelColor" ]) {
+    id json = RCTJSONParse([NSString stringWithFormat:@"{ \"semantic\": \"%@\" }", name], nil);
+    UIColor *value = [RCTConvert UIColor:json];
+    XCTAssertNotNil(value, @"%@ resolved to nil", name);
+  }
+  // Named explicitly as well as in the loop, so the expectation is a value
+  // rather than merely "something".
+  id labelJson = RCTJSONParse(@"{ \"semantic\": \"labelColor\" }", nil);
+  XCTAssertEqualObjects([RCTConvert UIColor:labelJson], [UIColor labelColor]);
+}
+
 - (void)testColor
 {
   id json = RCTJSONParse(@"{ \"semantic\": \"lightTextColor\" }", nil);

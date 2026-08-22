@@ -20,8 +20,19 @@ const Components: Array<RNTesterModuleInfo> = [
   // these are the features under active development. Mirrors the iOS list.
   {
     key: 'SharedTextBenchmarkExample',
-    module: require('../examples/DeviceBench/SharedTextBenchmarkExample').default,
+    module: require('../examples/DeviceBench/SharedTextBenchmarkExample')
+      .default,
     category: 'Basic',
+  },
+  {
+    key: 'NativeButtonExample',
+    module: require('../examples/NativeGestures/NativeButtonExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'ExpoUISmokeExample',
+    module: require('../examples/ExpoUI/ExpoUISmokeExample').default,
+    category: 'UI',
   },
   {
     key: 'AstryxExample',
@@ -50,6 +61,43 @@ const Components: Array<RNTesterModuleInfo> = [
     module: require('../examples/TextChildren/IntrinsicElementsExample')
       .default,
     category: 'Basic',
+    pinned: true,
+  },
+  {
+    key: 'HTMLConformanceExample',
+    module: require('../examples/HTMLElements/HTMLConformanceExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  {
+    key: 'HTMLFormsExample',
+    module: require('../examples/HTMLElements/HTMLFormsExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  {
+    key: 'HTMLTextLevelExample',
+    module: require('../examples/HTMLElements/HTMLTextLevelExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  {
+    key: 'HTMLGroupingExample',
+    module: require('../examples/HTMLElements/HTMLGroupingExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  {
+    key: 'HTMLEmbeddedExample',
+    module: require('../examples/HTMLElements/HTMLEmbeddedExample').default,
+    category: 'UI',
+    pinned: true,
+  },
+  {
+    key: 'HTMLIntrinsicsDocExample',
+    module: require('../examples/HTMLElements/HTMLIntrinsicsDocExample')
+      .default,
+    category: 'UI',
     pinned: true,
   },
   {

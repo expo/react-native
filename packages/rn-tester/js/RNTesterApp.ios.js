@@ -8,6 +8,8 @@
  * @format
  */
 
+import './expo-env';
+
 import type {RNTesterModuleInfo} from './types/RNTesterTypes';
 import type {Node} from 'react';
 
