@@ -11,17 +11,204 @@
 #import <React/RCTConversions.h>
 #import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
 #import <react/renderer/animationbackend/CSSTransitionsTrace.h>
+#import <react/renderer/components/view/BaseViewEventEmitter.h>
 #import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
 #import <react/utils/ManagedObjectWrapper.h>
 
+#include <algorithm>
 #include <limits>
 
 using namespace facebook::react;
 
+/*
+ * One authored accessibility leaf of a run: static text, or a semantic inline
+ * element such as a link.
+ *
+ * The run's `InlineAccessibilityContent` is the single source for these, so a
+ * link is exactly one element here and never a second, role-derived one.
+ * Activation and actions go to the authored element's own event emitter.
+ *
+ * Its container is the view that owns the run, because that view presents the
+ * leaves interleaved with its mounted children in reading order. Its geometry
+ * stays the run's: a rect in the run view's space, converted to the screen on
+ * every query, so moving or resizing the run can never leave a stale frame.
+ */
+@interface RCTInlineAccessibilityElement : UIAccessibilityElement
+- (instancetype)initWithAccessibilityContainer:(id)container
+                                         model:(const InlineAccessibilityElement &)model
+                                       runView:(UIView *)runView
+                                     rectInRun:(CGRect)rectInRun;
+@end
+
+@implementation RCTInlineAccessibilityElement {
+  InlineAccessibilityElement _model;
+  __weak UIView *_runView;
+  CGRect _rectInRun;
+}
+
+- (instancetype)initWithAccessibilityContainer:(id)container
+                                         model:(const InlineAccessibilityElement &)model
+                                       runView:(UIView *)runView
+                                     rectInRun:(CGRect)rectInRun
+{
+  if (self = [super initWithAccessibilityContainer:container]) {
+    _model = model;
+    _runView = runView;
+    _rectInRun = rectInRun;
+  }
+  return self;
+}
+
+- (CGRect)accessibilityFrame
+{
+  UIView *runView = _runView;
+  return runView != nil ? UIAccessibilityConvertFrameToScreenCoordinates(_rectInRun, runView) : CGRectZero;
+}
+
+- (CGPoint)accessibilityActivationPoint
+{
+  const CGRect frame = self.accessibilityFrame;
+  return CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
+}
+
+/*
+ * An author's `onAccessibilityTap` wins. A link dispatches `click` to its own
+ * emitter, which is the event `<a>` performs its navigation on, so a link
+ * activates even when its fragment rects are not a rectangle UIKit's
+ * synthesized tap could hit. Everything else returns NO, and VoiceOver falls
+ * back to a tap at the activation point, which the run's hit-testing resolves
+ * exactly as it does a finger.
+ */
+- (BOOL)accessibilityActivate
+{
+  if (_model.disabled || _model.eventEmitter == nullptr) {
+    return NO;
+  }
+  if (_model.onAccessibilityTap) {
+    if (auto emitter = std::dynamic_pointer_cast<const BaseViewEventEmitter>(_model.eventEmitter)) {
+      emitter->onAccessibilityTap();
+      return YES;
+    }
+  }
+  if (_model.role == "link") {
+    if (auto emitter = std::dynamic_pointer_cast<const TouchEventEmitter>(_model.eventEmitter)) {
+      emitter->onClick(PointerEvent{});
+      return YES;
+    }
+  }
+  return NO;
+}
+
+- (NSArray<UIAccessibilityCustomAction *> *)accessibilityCustomActions
+{
+  if (_model.actions.empty()) {
+    return nil;
+  }
+  NSMutableArray<UIAccessibilityCustomAction *> *actions = [NSMutableArray new];
+  for (const auto &action : _model.actions) {
+    NSString *label = RCTNSStringFromString(action.label.value_or(action.name));
+    [actions addObject:[[UIAccessibilityCustomAction alloc] initWithName:label
+                                                                  target:self
+                                                                selector:@selector(activateCustomAction:)]];
+  }
+  return actions;
+}
+
+- (BOOL)activateCustomAction:(UIAccessibilityCustomAction *)customAction
+{
+  if (_model.disabled || !_model.onAccessibilityAction) {
+    return NO;
+  }
+  auto emitter = std::dynamic_pointer_cast<const BaseViewEventEmitter>(_model.eventEmitter);
+  if (emitter == nullptr) {
+    return NO;
+  }
+  // iOS names a custom action by its localized label, so map it back to the
+  // authored action name that JS expects
+  for (const auto &action : _model.actions) {
+    if ([RCTNSStringFromString(action.label.value_or(action.name)) isEqualToString:customAction.name]) {
+      emitter->onAccessibilityAction(action.name);
+      return YES;
+    }
+  }
+  return NO;
+}
+
+- (void)accessibilityIncrement
+{
+  [self performAdjustableAction:"increment"];
+}
+
+- (void)accessibilityDecrement
+{
+  [self performAdjustableAction:"decrement"];
+}
+
+- (void)performAdjustableAction:(const char *)name
+{
+  if (_model.disabled || !_model.onAccessibilityAction) {
+    return;
+  }
+  if (auto emitter = std::dynamic_pointer_cast<const BaseViewEventEmitter>(_model.eventEmitter)) {
+    emitter->onAccessibilityAction(name);
+  }
+}
+
+@end
+
+static UIAccessibilityTraits RCTInlineAccessibilityTraits(const InlineAccessibilityElement &model)
+{
+  UIAccessibilityTraits traits = RCTUIAccessibilityTraitsFromAccessibilityTraits(model.traits);
+  if (model.kind == InlineAccessibilityElement::Kind::StaticText || model.role == "text") {
+    traits |= UIAccessibilityTraitStaticText;
+  } else if (model.role == "link") {
+    traits |= UIAccessibilityTraitLink;
+  } else if (model.role == "button") {
+    traits |= UIAccessibilityTraitButton;
+  } else if (model.role == "image" || model.role == "img") {
+    traits |= UIAccessibilityTraitImage;
+  } else if (model.role == "heading" || model.role == "header") {
+    traits |= UIAccessibilityTraitHeader;
+  } else if (model.role == "adjustable" || model.role == "slider") {
+    traits |= UIAccessibilityTraitAdjustable;
+  }
+  if (model.disabled) {
+    traits |= UIAccessibilityTraitNotEnabled;
+  }
+  if (model.state.selected) {
+    traits |= UIAccessibilityTraitSelected;
+  }
+  return traits;
+}
+
+static NSString *_Nullable RCTInlineAccessibilityValue(const InlineAccessibilityElement &model)
+{
+  if (model.value.text.has_value()) {
+    return RCTNSStringFromString(*model.value.text);
+  }
+  if (model.value.now.has_value()) {
+    return [NSString stringWithFormat:@"%d", *model.value.now];
+  }
+  switch (model.state.checked) {
+    case AccessibilityState::CheckedState::Checked:
+      return @"checked";
+    case AccessibilityState::CheckedState::Unchecked:
+      return @"unchecked";
+    case AccessibilityState::CheckedState::Mixed:
+      return @"mixed";
+    case AccessibilityState::CheckedState::None:
+      return nil;
+  }
+  return nil;
+}
+
 @implementation RCTAnonymousTextRunView {
   // Rebuilt when the run changes; walking the layout for every accessibility
-  // query would re-lay-out the text on each one.
-  NSArray<UIAccessibilityElement *> *_cachedAccessibilityElements;
+  // query would re-lay-out the text on each one. An empty array is a cached
+  // answer too, so a run with nothing to expose is not re-laid-out either.
+  NSArray *_Nullable _cachedAccessibilityElements;
+  // The container the cached elements were made for; they name it as theirs
+  __weak id _cachedAccessibilityContainer;
   // The link rects, and which of them a finger is currently on.
   NSArray<NSValue *> *_cachedLinkRects;
   NSArray<NSValue *> *_pressedLinkRects;
@@ -265,19 +452,55 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 // View's own emitter. Uses the same `containerFrame` as painting, so a tap
 // always hits exactly where the glyphs were drawn.
 /*
+ * Takes a new run from the owning View's state, announcing live-region
+ * changes.
+ *
+ * A leaf with `accessibilityLiveRegion` is announced when its label differs
+ * from the one the same authored element had in the previous run. The first
+ * run a view receives is never announced: that is content appearing, not an
+ * update to it.
+ */
+- (void)updateRun:(const ViewState::TextRun &)run
+{
+  const auto previous = std::move(_run.accessibilityContent);
+  _run = run;
+  if (previous.elements.empty()) {
+    return;
+  }
+  for (const auto &element : _run.accessibilityContent.elements) {
+    if (element.liveRegion == AccessibilityLiveRegion::None) {
+      continue;
+    }
+    const auto previousElement =
+        std::find_if(previous.elements.begin(), previous.elements.end(), [&](const auto &candidate) {
+          return candidate.tag == element.tag && candidate.kind == element.kind;
+        });
+    if (previousElement == previous.elements.end() || previousElement->label == element.label) {
+      continue;
+    }
+    NSDictionary *attributes = @{
+      UIAccessibilitySpeechAttributeQueueAnnouncement : @(element.liveRegion == AccessibilityLiveRegion::Polite)
+    };
+    UIAccessibilityPostNotification(
+        UIAccessibilityAnnouncementNotification,
+        [[NSAttributedString alloc] initWithString:RCTNSStringFromString(element.label) attributes:attributes]);
+  }
+}
+
+/*
  * The run's text, so assistive technology can read it.
  *
  * Text children are *painted* by this view rather than mounted as subviews, so
- * nothing in the view tree carries the string: a `<div>Hello</div>` was
- * invisible to VoiceOver entirely, and `<button>Save</button>` announced as a
- * button with no label. `RCTViewComponentView` builds a container's label by
- * walking its subviews and collecting theirs
- * (`RCTRecursiveAccessibilityLabel`), so exposing it here is what puts painted
- * text back into that walk.
+ * nothing in the view tree carries the string. `RCTViewComponentView` builds an
+ * accessible container's label by walking its subviews and collecting theirs
+ * (`RCTRecursiveAccessibilityLabel`), so exposing it here is what names a
+ * `<button>Save</button>`.
  *
- * Deliberately not an accessibility *element*: a text run is not focusable on
- * its own, exactly as a DOM text node is not an event target. It contributes
- * its string to the element that contains it.
+ * Joined from the same model leaves the owning view presents, so a container
+ * is named by exactly what VoiceOver would otherwise read inside it: hidden
+ * subtrees contribute nothing, an attachment names itself through its own
+ * mounted view, and an authored `accessibilityLabel` replaces its element's
+ * text.
  */
 - (NSString *)accessibilityLabel
 {
@@ -285,30 +508,31 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   if (label != nil) {
     return label;
   }
-  auto text = _run.attributedString.getString();
-  return text.empty() ? nil : RCTNSStringFromString(text);
+  NSMutableString *joined = nil;
+  for (const auto &element : _run.accessibilityContent.elements) {
+    // An attachment names itself through its own mounted view
+    if (element.kind == InlineAccessibilityElement::Kind::Attachment || element.label.empty()) {
+      continue;
+    }
+    if (joined == nil) {
+      joined = [NSMutableString string];
+    }
+    [joined appendString:RCTNSStringFromString(element.label)];
+  }
+  return joined;
 }
 
 /*
- * The one kind of text run that *is* focusable: a link.
+ * Discards everything laid out from the previous run: the accessibility
+ * leaves, the link rects and the link views.
  *
- * The rule above — a run contributes its string to whatever contains it and is
- * not an element itself — is right for text, and wrong for exactly one case. A
- * DOM text node is not an event target, but an `<a href>` is: it is reachable,
- * it is announced as a link, and it is activated on its own. In Safari every
- * link inside a paragraph is a separate accessibility element, and a link that
- * assistive technology cannot land on is not a link.
- *
- * So a run publishes an element per fragment that carries a role, positioned on
- * that fragment's own rects rather than the whole run's. That is what makes a
- * link *inside a sentence* reachable: the anchor has no view — it is a range of
- * glyphs in this run — so there is nothing else that could carry it.
- *
- * `RCTParagraphComponentAccessibilityProvider` does the same for React Native's
- * own `<Text>`; this is the text-children path arriving at the same place.
- *
- * A run with no roles in it returns nothing and stays exactly as it was: not an
- * element, contributing its label upward.
+ * The run view itself is never an accessibility element. Its leaves come from
+ * the run's `InlineAccessibilityContent`: static text, and each semantic inline
+ * element — a link inside a sentence included — as one element of its own,
+ * positioned on its fragments' rects, and presented by the owning view.
+ * That is what makes a link reachable at all: the anchor has no view, it is a
+ * range of glyphs in this run. `RCTParagraphComponentAccessibilityProvider`
+ * does the same for React Native's own `<Text>`.
  */
 - (void)invalidateAccessibilityElements
 {
@@ -320,12 +544,26 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 }
 
 /*
+ * Where the run's text layout origin sits in this view's own coordinate space.
+ *
+ * Text-engine rects are relative to the laid-out string's origin. Link
+ * hit-testing, link views and accessibility leaves all place those rects
+ * through this one offset, so what a finger can reach is exactly what
+ * VoiceOver lands on.
+ */
+- (CGPoint)textOriginInRunView
+{
+  const CGRect frame = self.containerFrame;
+  return CGPointMake(frame.origin.x - self.frame.origin.x, frame.origin.y - self.frame.origin.y);
+}
+
+/*
  * The on-screen rects of every link in this run, in the run view's own
  * coordinate space.
  *
- * Shared by accessibility and by press feedback so the two can never disagree
- * about where a link is: what lights up under a finger is exactly what
- * VoiceOver lands on.
+ * Shared by press feedback, and placed through the same
+ * `-textOriginInRunView` as the accessibility leaves, so the two can never
+ * disagree about where a link is.
  */
 - (NSArray<NSValue *> *)linkRects
 {
@@ -339,8 +577,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 
   NSMutableArray<NSValue *> *rects = [NSMutableArray array];
   const CGRect frame = self.containerFrame;
-  const CGPoint offset =
-      CGPointMake(frame.origin.x - self.frame.origin.x, frame.origin.y - self.frame.origin.y);
+  const CGPoint offset = [self textOriginInRunView];
 
   [nativeTextLayoutManager
       getRectWithAttributedString:_run.attributedString
@@ -441,57 +678,87 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   [super touchesCancelled:touches withEvent:event];
 }
 
+/*
+ * Not a container of its own: the owning view presents this run's leaves, in
+ * the model's order, interleaved with its mounted children, which is the only
+ * way an inline `<button>` or `<img>` can be read where it stands in the
+ * sentence rather than after it. See `-accessibilityLeavesInContainer:`.
+ *
+ * Empty rather than nil, so UIKit does not walk into the link glyph views.
+ */
 - (NSArray *)accessibilityElements
 {
-  if (_cachedAccessibilityElements != nil) {
+  return @[];
+}
+
+- (NSArray *)accessibilityLeavesInContainer:(id)container
+{
+  if (_cachedAccessibilityElements != nil && _cachedAccessibilityContainer == container) {
     return _cachedAccessibilityElements;
   }
-
+  const auto &models = _run.accessibilityContent.elements;
+  if (models.empty()) {
+    _cachedAccessibilityElements = @[];
+    _cachedAccessibilityContainer = container;
+    return _cachedAccessibilityElements;
+  }
+  // Placed on the text engine's own per-fragment rects, the same layout that
+  // paints the run, so a leaf's frame follows wrapping, RTL and font scaling.
+  // Without a layout manager there are no rects: every leaf falls back to the
+  // whole run, and the result is not cached so the next query can do better.
   RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
-  if (nativeTextLayoutManager == nil) {
-    return nil;
+  const CGRect frame = self.containerFrame;
+  const CGPoint origin = [self textOriginInRunView];
+  const auto fragmentRects = nativeTextLayoutManager != nil
+      ? [nativeTextLayoutManager getFragmentRectsWithAttributedString:_run.attributedString
+                                                  paragraphAttributes:ParagraphAttributes{}
+                                                                 size:frame.size
+                                                           exclusions:std::vector<FloatExclusion>{}]
+      : std::vector<facebook::react::Rect>{};
+
+  NSMutableArray *leaves = [NSMutableArray arrayWithCapacity:models.size()];
+  for (const auto &model : models) {
+    // Presented by the attachment's own mounted view, which the container resolves
+    if (model.kind == InlineAccessibilityElement::Kind::Attachment) {
+      [leaves addObject:NSNull.null];
+      continue;
+    }
+    CGRect bounds = CGRectNull;
+    for (const auto index : model.fragmentIndices) {
+      if (index >= fragmentRects.size()) {
+        continue;
+      }
+      const CGRect rect = CGRectOffset(RCTCGRectFromRect(fragmentRects[index]), origin.x, origin.y);
+      bounds = CGRectIsNull(bounds) ? rect : CGRectUnion(bounds, rect);
+    }
+    // Clip to the text box the run draws in, because the engine's fragment rects span the whole
+    // line and the font's own ascent and descent: a wrapped balloon's text read 289 points wide
+    // around 241 of hugged text, and 40.95 tall where its two line boxes are 40
+    const CGRect textBox = CGRectMake(origin.x, origin.y, frame.size.width, frame.size.height);
+    if (!CGRectIsNull(bounds)) {
+      bounds = CGRectIntersection(bounds, textBox);
+    }
+    RCTInlineAccessibilityElement *element = [[RCTInlineAccessibilityElement alloc]
+        initWithAccessibilityContainer:container
+                                 model:model
+                               runView:self
+                             rectInRun:CGRectIsNull(bounds)
+                                 ? CGRectMake(origin.x, origin.y, frame.size.width, frame.size.height)
+                                 : bounds];
+    element.isAccessibilityElement = YES;
+    element.accessibilityLabel = model.label.empty() ? nil : RCTNSStringFromString(model.label);
+    element.accessibilityHint = model.hint.empty() ? nil : RCTNSStringFromString(model.hint);
+    element.accessibilityLanguage = model.language.empty() ? nil : RCTNSStringFromString(model.language);
+    element.accessibilityTraits = RCTInlineAccessibilityTraits(model);
+    element.accessibilityValue = RCTInlineAccessibilityValue(model);
+    [leaves addObject:element];
   }
 
-  NSMutableArray<UIAccessibilityElement *> *elements = [NSMutableArray array];
-  __weak __typeof(self) weakSelf = self;
-  const CGRect frame = self.containerFrame;
-
-  [nativeTextLayoutManager
-      getRectWithAttributedString:_run.attributedString
-              paragraphAttributes:facebook::react::ParagraphAttributes{}
-               enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
-                            frame:CGRectMake(0, 0, frame.size.width, frame.size.height)
-                       usingBlock:^(CGRect fragmentRect, NSString *_Nonnull fragmentText, NSString *value) {
-                         UIAccessibilityTraits traits;
-                         if ([value isEqualToString:@"link"]) {
-                           traits = UIAccessibilityTraitLink;
-                         } else if ([value isEqualToString:@"button"]) {
-                           traits = UIAccessibilityTraitButton;
-                         } else {
-                           // Every other role is a description of text, not a
-                           // thing to land on.
-                           return;
-                         }
-
-                         __typeof(self) strongSelf = weakSelf;
-                         if (strongSelf == nil) {
-                           return;
-                         }
-                         UIAccessibilityElement *element =
-                             [[UIAccessibilityElement alloc] initWithAccessibilityContainer:strongSelf];
-                         element.isAccessibilityElement = YES;
-                         element.accessibilityTraits = traits;
-                         element.accessibilityLabel = fragmentText;
-                         // Offset by the run's own frame: the enumeration lays
-                         // the string out at the origin, the same convention
-                         // `-touchEventEmitterAtContainerPoint:` compensates for
-                         // below, and the frame has to be in this view's space.
-                         element.accessibilityFrameInContainerSpace = CGRectOffset(
-                             fragmentRect, frame.origin.x - self.frame.origin.x, frame.origin.y - self.frame.origin.y);
-                         [elements addObject:element];
-                       }];
-
-  _cachedAccessibilityElements = elements.count > 0 ? elements : nil;
+  if (nativeTextLayoutManager == nil) {
+    return leaves;
+  }
+  _cachedAccessibilityElements = leaves;
+  _cachedAccessibilityContainer = container;
   return _cachedAccessibilityElements;
 }
 

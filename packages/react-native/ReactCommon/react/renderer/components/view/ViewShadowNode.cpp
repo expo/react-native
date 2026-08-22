@@ -668,6 +668,8 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
         i < childIndices.size() ? childIndices[i] : static_cast<int>(i);
     const auto contentFrame = box->getLayoutMetrics().frame;
     auto contentString = contentAccessor->getContentAttributedString(fontSizeMultiplier);
+    auto accessibilityContent =
+        contentAccessor->getInlineAccessibilityContent(contentString);
 
     // An `outside` list marker (css-lists-3 §3.2) is painted rather than
     // measured with the content, which is what lets the content hang past it:
@@ -699,6 +701,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
       textRuns.push_back(
           ViewState::TextRun{
               .attributedString = marker.attributedString,
+              .accessibilityContent = {},
               .frame =
                   Rect{
                       .origin =
@@ -710,6 +713,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     textRuns.push_back(
         ViewState::TextRun{
             .attributedString = std::move(contentString),
+            .accessibilityContent = std::move(accessibilityContent),
             .frame = contentFrame,
             .documentOrder = documentOrder,
             // The marker run above deliberately stays untagged: it shares

@@ -10,6 +10,7 @@
 #include <string>
 
 #include <react/renderer/components/text/TextShadowNode.h>
+#include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/ConcreteShadowNode.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -45,7 +46,7 @@ extern const char InlineTextComponentName[];
  * case core falls back to the component name — see DOM.cpp's use of
  * NodeNameProvider.
  */
-class InlineTagProps : public TextProps, public NodeNameProvider {
+class InlineTagProps : public TextProps, public AccessibilityProps, public NodeNameProvider {
  public:
   InlineTagProps() = default;
   InlineTagProps(
@@ -53,7 +54,21 @@ class InlineTagProps : public TextProps, public NodeNameProvider {
       const InlineTagProps &sourceProps,
       const RawProps &rawProps)
       : TextProps(context, sourceProps, rawProps),
+        AccessibilityProps(context, sourceProps, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})) {}
+
+  void setProp(
+      const PropsParserContext &context,
+      RawPropsPropNameHash hash,
+      const char *propName,
+      const RawValue &value)
+  {
+    TextProps::setProp(context, hash, propName, value);
+    AccessibilityProps::setProp(context, hash, propName, value);
+    if (hash == CONSTEXPR_RAW_PROPS_KEY_HASH("nodeName")) {
+      fromRawValue(context, value, nodeName);
+    }
+  }
 
   std::string domNodeName() const override
   {

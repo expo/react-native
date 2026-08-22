@@ -42,7 +42,7 @@ public abstract class ReactClippingViewManager<T : ReactViewGroup> : ViewGroupMa
     return if (removeClippedSubviews) {
       parent.allChildrenCount
     } else {
-      parent.childCount
+      parent.reactChildCount
     }
   }
 
@@ -76,7 +76,7 @@ public abstract class ReactClippingViewManager<T : ReactViewGroup> : ViewGroupMa
     if (removeClippedSubviews) {
       parent.removeAllViewsWithSubviewClippingEnabled()
     } else {
-      parent.removeAllViews()
+      parent.removeAllReactChildren()
     }
   }
 }
