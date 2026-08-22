@@ -7,6 +7,8 @@
 
 #include "EventEmitterWrapper.h"
 #include <fbjni/fbjni.h>
+#include <jsi/JSIDynamic.h>
+#include <react/renderer/core/CancelableEventDecision.h>
 #include <react/timing/primitives.h>
 
 #include <utility>
@@ -63,6 +65,42 @@ void EventEmitterWrapper::dispatchEventSynchronously(
   }
 }
 
+jni::local_ref<jstring> EventEmitterWrapper::dispatchCancelableEventSynchronously(
+    std::string eventName,
+    NativeMap* params,
+    jlong eventTimestamp) {
+  if (eventEmitter == nullptr) {
+    return nullptr;
+  }
+
+  auto decision = std::make_shared<CancelableEventDecision>();
+  auto payload = (params != nullptr) ? params->consume() : folly::dynamic::object();
+  auto timestamp = highResTimeStampFromMillis(eventTimestamp);
+
+  // `experimental_dispatchSyncNow` rather than the older flush: the older one
+  // only marks the *next* beat as synchronous, so this would read the decision
+  // before any handler had run.
+  const bool ran = eventEmitter->experimental_dispatchSyncNow([&]() {
+    eventEmitter->dispatchEvent(
+        std::move(eventName),
+        [payload, decision](jsi::Runtime& runtime) {
+          auto object = jsi::valueFromDynamic(runtime, payload).asObject(runtime);
+          decorateCancelablePayload(runtime, object, decision);
+          return object;
+        },
+        RawEvent::Category::Discrete,
+        timestamp);
+  });
+
+  if (!ran || (!decision->defaultPrevented && !decision->hasReplacement)) {
+    return nullptr;
+  }
+  if (decision->defaultPrevented) {
+    return jni::make_jstring(std::string(1, '\x01'));
+  }
+  return jni::make_jstring(decision->replacement);
+}
+
 void EventEmitterWrapper::dispatchUniqueEvent(
     std::string eventName,
     NativeMap* payload,
@@ -86,6 +124,9 @@ void EventEmitterWrapper::registerNatives() {
       makeNativeMethod(
           "dispatchEventSynchronously",
           EventEmitterWrapper::dispatchEventSynchronously),
+      makeNativeMethod(
+          "dispatchCancelableEventSynchronously",
+          EventEmitterWrapper::dispatchCancelableEventSynchronously),
   });
 }
 
