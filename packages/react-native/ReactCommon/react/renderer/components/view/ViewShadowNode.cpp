@@ -18,6 +18,21 @@
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/BaseViewProps.h>
 #include <react/renderer/components/view/ElementBoxShadowNode.h>
+// Included for its `extern` declaration, not just for the type: a `const` at
+// namespace scope has internal linkage unless a prior `extern` declaration is
+// visible, so without this the component name below would not be exported and
+// the component view would fail to link against it.
+#include <react/renderer/components/view/ElementButtonShadowNode.h>
+#include <react/renderer/components/view/ElementCheckboxShadowNode.h>
+#include <react/renderer/components/view/ElementRangeShadowNode.h>
+#include <react/renderer/components/view/ElementColorInputShadowNode.h>
+#include <react/renderer/components/view/ElementDateInputShadowNode.h>
+#include <react/renderer/components/view/ElementFileInputShadowNode.h>
+#include <react/renderer/components/view/ElementProgressShadowNode.h>
+#include <react/renderer/components/view/ElementRadioShadowNode.h>
+#include <react/renderer/components/view/ElementSelectShadowNode.h>
+#include <react/renderer/components/view/ElementTextAreaShadowNode.h>
+#include <react/renderer/components/view/ElementTextInputShadowNode.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
@@ -35,6 +50,61 @@ const char ViewComponentName[] = "View";
 // Not JSX-addressable: the renderer swaps an element onto this component when
 // its display generates a box (ElementBoxShadowNode.h).
 const char ElementBoxComponentName[] = "element-box";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// The interactive flavor of the box, carrying a press event emitter that the
+// plain box deliberately does not (ElementButtonShadowNode.h).
+const char ElementButtonComponentName[] = "element-button";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<input type="range">`: the platform slider (ElementRangeShadowNode.h).
+const char ElementRangeComponentName[] = "element-range";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<input type="checkbox">`: a UISwitch on iOS, a CheckBox on Android — each
+// platform's own control for a boolean (ElementCheckboxShadowNode.h).
+const char ElementCheckboxComponentName[] = "element-checkbox";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<input>` in its textual forms: a UITextField on iOS, an EditText on Android
+// (ElementTextInputShadowNode.h).
+const char ElementTextInputComponentName[] = "element-text-input";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<textarea>`: a UITextView on iOS, a multi-line EditText on Android
+// (ElementTextAreaShadowNode.h).
+const char ElementTextAreaComponentName[] = "element-textarea";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<progress>` and `<meter>`, which share one control
+// (ElementProgressShadowNode.h).
+const char ElementProgressComponentName[] = "element-progress";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<select>`: a pop-up UIMenu on iOS, a Spinner on Android
+// (ElementSelectShadowNode.h).
+const char ElementSelectComponentName[] = "element-select";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<input type="radio">`: a RadioButton on Android, drawn on iOS because UIKit
+// has no radio (ElementRadioShadowNode.h).
+const char ElementRadioComponentName[] = "element-radio";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<input type="date">`, `"time"` and `"datetime-local"`: a compact
+// UIDatePicker on iOS, the platform picker dialogs on Android
+// (ElementDateInputShadowNode.h).
+const char ElementDateInputComponentName[] = "element-date-input";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<input type="color">`: the system picker on iOS, a swatch grid on Android,
+// which has none (ElementColorInputShadowNode.h).
+const char ElementColorInputComponentName[] = "element-color-input";
+
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// `<input type="file">`: the system document picker on both
+// (ElementFileInputShadowNode.h).
+const char ElementFileInputComponentName[] = "element-file-input";
 
 #if defined(__APPLE__) && defined(__aarch64__) && defined(NDEBUG)
 #include <TargetConditionals.h>
@@ -91,8 +161,8 @@ static_assert(
 #endif
 #endif
 
-template <const char* concreteComponentName, typename ViewPropsT>
-void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::
     initialize() noexcept {
   auto& viewProps = static_cast<const ViewProps&>(*this->props_);
 
@@ -168,16 +238,16 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
   }
 }
 
-template <const char* concreteComponentName, typename ViewPropsT>
-void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::layout(
+template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::layout(
     LayoutContext layoutContext) {
   YogaLayoutableShadowNode::layout(layoutContext);
   layoutInlineAttachments(layoutContext);
   updateTextRunStateIfNeeded(layoutContext.fontSizeMultiplier);
 }
 
-template <const char* concreteComponentName, typename ViewPropsT>
-void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::
     layoutInlineAttachments(LayoutContext layoutContext) {
   if (!ReactNativeFeatureFlags::enableStringChildren()) {
     return;
@@ -580,8 +650,8 @@ bool subtreeHasLineBox(
 
 } // namespace
 
-template <const char* concreteComponentName, typename ViewPropsT>
-Float AbstractViewShadowNode<concreteComponentName, ViewPropsT>::baseline(
+template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
+Float AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::baseline(
     const LayoutContext& layoutContext,
     Size size) const {
   // CSS2 §10.8.1: an inline-block's baseline is the baseline of its last
@@ -627,8 +697,8 @@ Float AbstractViewShadowNode<concreteComponentName, ViewPropsT>::baseline(
   return baseline.has_value() ? *baseline : size.height;
 }
 
-template <const char* concreteComponentName, typename ViewPropsT>
-void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::
     updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
   if (!ReactNativeFeatureFlags::enableStringChildren()) {
     return;
@@ -681,7 +751,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
       // ::baseline) already includes the box's baseline-shift reserve, so
       // nothing else is added; when either baseline is unavailable, fall
       // back to the old top alignment plus that reserve.
-      const auto markerShiftInk = Float{0};
+      const auto markerShiftInk = contentString.baselineShiftInkOverflow().top;
       Float markerY = contentFrame.origin.y + markerShiftInk;
       if (marker.baseline > 0) {
         if (const auto* layoutable =
@@ -734,5 +804,9 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
 // units): `<View>` and the intrinsic `<div>`.
 template class AbstractViewShadowNode<ViewComponentName, ViewProps>;
 template class AbstractViewShadowNode<ElementBoxComponentName, ElementBoxProps>;
+template class AbstractViewShadowNode<
+    ElementButtonComponentName,
+    ElementButtonProps,
+    ElementButtonEventEmitter>;
 
 } // namespace facebook::react

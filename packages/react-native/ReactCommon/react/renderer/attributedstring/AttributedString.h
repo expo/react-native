@@ -176,6 +176,14 @@ class AttributedString : public Sealable, public DebugStringConvertible {
   RectangleEdges<Float> inlineBoxBlockAxisOverflow() const;
 
   /*
+   * The share of the block-axis ink overflow that comes from baseline-shifted
+   * fragments (<sup>/<sub>) alone. Reserved in the run box's measured height
+   * (see the definition) — unlike the box-decoration share, which overflows
+   * without growing anything.
+   */
+  RectangleEdges<Float> baselineShiftInkOverflow() const;
+
+  /*
    * Returns a reference to a list of fragments.
    */
   Fragments &getFragments();

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<6e3eae3b1cb7da5adc34c4d99ec9c554>>
+ * @generated SignedSource<<fd321822a3c680609b0fba4fae920490>>
  */
 
 /**
@@ -263,6 +263,12 @@ public object ReactNativeFeatureFlags {
    */
   @JvmStatic
   public fun enableNativeCSSParsing(): Boolean = accessor.enableNativeCSSParsing()
+
+  /**
+   * Route interaction for the DOM element catalog's own elements through native gesture recognizers (UIGestureRecognizer dependencies on iOS, ViewGroup interception on Android) instead of the JS responder system, so arbitration happens in the platform's arena and a scroll can claim a gesture without a round trip through JavaScript. Scoped to the new elements: nothing already shipping changes behaviour.
+   */
+  @JvmStatic
+  public fun enableNativeGestureRecognizers(): Boolean = accessor.enableNativeGestureRecognizers()
 
   /**
    * Enables caching text layout artifacts for later reuse

@@ -901,6 +901,13 @@ export type ____InheritableTextStyle_Internal = Readonly<{
   color?: ____ColorValue_Internal,
   fontFamily?: string,
   fontSize?: number,
+  /**
+   * A font size in `em`: a multiple of the inherited font size, as CSS
+   * defines `em` (css-values-4 5.1.1). Resolved against the parent's computed
+   * size, so it composes through nesting the way the web does. Use `fontSize`
+   * for an absolute size.
+   */
+  fontSizeEm?: number,
   fontStyle?: 'normal' | 'italic',
   /**
    * Specifies font weight. The values 'normal' and 'bold' are supported
