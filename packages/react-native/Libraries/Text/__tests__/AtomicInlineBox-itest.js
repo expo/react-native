@@ -29,6 +29,71 @@ function rectOf(ref: {current: HostInstance | null}) {
 }
 
 describe('inline-flex chip (css-display-3 §2)', () => {
+  it('lays its children out like a flex row', () => {
+    const inlineRef = createRef<HostInstance>();
+    const inlineDotRef = createRef<HostInstance>();
+    const viewRef = createRef<HostInstance>();
+    const viewDotRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    // `flexDirection: 'row'` is explicit because React Native defaults a flex
+    // container to `column` where CSS defaults to `row` — worth knowing, and
+    // not what this test is about.
+    const style = {
+      display: 'inline-flex' as const,
+      flexDirection: 'row' as const,
+      gap: 4,
+      alignItems: 'center' as const,
+      paddingHorizontal: 6,
+    };
+
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{display: 'block', width: 300}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <inline ref={inlineRef} style={style}>
+            <View
+              ref={inlineDotRef}
+              style={{width: 8, height: 8}}
+              collapsable={false}
+            />
+            {'ready'}
+          </inline>
+          {/* The same children in a plain flex row, as the control. */}
+          <View
+            ref={viewRef}
+            collapsable={false}
+            style={{
+              ...style,
+              display: 'flex' as const,
+              alignSelf: 'flex-start' as const,
+            }}>
+            <View
+              ref={viewDotRef}
+              style={{width: 8, height: 8}}
+              collapsable={false}
+            />
+            {'ready'}
+          </View>
+        </View>,
+      );
+    });
+
+    const inlineRect = rectOf(inlineRef);
+    const inlineDot = rectOf(inlineDotRef);
+    const view = rectOf(viewRef);
+    const viewDot = rectOf(viewDotRef);
+    console.log(
+      `inline w=${inlineRect.width} h=${inlineRect.height} dot@(${inlineDot.x - inlineRect.x},${inlineDot.y - inlineRect.y}) | ` +
+        `view w=${view.width} h=${view.height} dot@(${viewDot.x - view.x},${viewDot.y - view.y})`,
+    );
+    // Its children ARE laid out as flex items — the offsets match the control.
+    expect(inlineDot.x - inlineRect.x).toBe(viewDot.x - view.x);
+    expect(inlineDot.y - inlineRect.y).toBe(viewDot.y - view.y);
+
+    // An inline-level box is shrink-to-fit, so it matches the control exactly
+    // rather than stretching across the line.
+    expect(inlineRect.width).toBe(view.width);
+  });
 
   it('bare text vs <Text> as a flex sibling', () => {
     const bareDot = createRef<HostInstance>();
@@ -76,6 +141,31 @@ describe('inline-flex chip (css-display-3 §2)', () => {
         `text box w=${tb.width} h=${tb.height} dot@(${td.x - tb.x},${td.y - tb.y})`,
     );
     expect(bb.width).toBe(tb.width);
+  });
+
+  it('atomic inline boxes shrink to fit', () => {
+    const flexRef = createRef<HostInstance>();
+    const blockRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{display: 'block', width: 300}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <inline ref={flexRef} style={{display: 'inline-flex'}}>
+            {'ab'}
+          </inline>
+          {/* $FlowExpectedError[not-a-component] */}
+          <inline ref={blockRef} style={{display: 'inline-block'}}>
+            {'ab'}
+          </inline>
+        </View>,
+      );
+    });
+    console.log(
+      `inline-flex w=${rectOf(flexRef).width} inline-block w=${rectOf(blockRef).width} (content is 20)`,
+    );
+    expect(rectOf(blockRef).width).toBe(20);
+    expect(rectOf(flexRef).width).toBe(20);
   });
 
   it('contains its children', () => {
@@ -160,6 +250,8 @@ describe('outer display (css-display-3 §2)', () => {
   for (const display of [
     'inline-block',
     'inline-flex',
+    'inline-grid',
+    'inline-grid-lanes',
   ]) {
     it(`display:${display} is inline-level, so it sits on the line after the text`, () => {
       expect(xOfBoxAfterText(display)).toBe(TEXT_WIDTH);
@@ -223,4 +315,9 @@ describe('inline-level boxes and their formatting context', () => {
     expect(box.width).toBe(300);
   });
 
+  it('keeps the width of its content in a block container', () => {
+    const {box} = layOut({display: 'block', width: 300});
+    expect(box.width).toBeGreaterThan(0);
+    expect(box.width).toBeLessThan(100);
+  });
 });
