@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<5f21f6d48c1c9bbe2346678044844c29>>
+ * @generated SignedSource<<395d1ef3b4f745e52fc777bf8fbdea19>>
  */
 
 /**
@@ -394,6 +394,15 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     }
 
     return ReactNativeFeatureFlagsDefaults::enableNativeCSSParsing();
+  }
+
+  bool enableNativeGestureRecognizers() override {
+    auto value = values_["enableNativeGestureRecognizers"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::enableNativeGestureRecognizers();
   }
 
   bool enablePreparedTextLayout() override {

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<8ba5c6baaeafdee99cc59753a7f0ebd5>>
+ * @generated SignedSource<<ec4c441f45f5e62f074c4a2d4579d7da>>
  */
 
 /**
@@ -233,6 +233,11 @@ class ReactNativeFeatureFlags {
    * Parse CSS strings using the Fabric CSS parser instead of ViewConfig processing
    */
   RN_EXPORT static bool enableNativeCSSParsing();
+
+  /**
+   * Route interaction for the DOM element catalog's own elements through native gesture recognizers (UIGestureRecognizer dependencies on iOS, ViewGroup interception on Android) instead of the JS responder system, so arbitration happens in the platform's arena and a scroll can claim a gesture without a round trip through JavaScript. Scoped to the new elements: nothing already shipping changes behaviour.
+   */
+  RN_EXPORT static bool enableNativeGestureRecognizers();
 
   /**
    * Enables caching text layout artifacts for later reuse

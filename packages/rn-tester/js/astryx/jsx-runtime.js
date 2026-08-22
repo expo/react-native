@@ -255,8 +255,18 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   );
 
   const mapped = ELEMENT_COMPONENTS[__astryxTag];
-  const mergedStyle =
+  const entryMerged =
     entryStyle != null ? [resolvedStyle, entryStyle] : resolvedStyle;
+  // Astryx's reset, applied to Astryx's own elements only — see ASTRYX_RESET.
+  // Underneath everything, so it is a floor the sources can still override,
+  // which is what a reset is.
+  const reset = ASTRYX_RESET[__astryxTag];
+  const mergedStyle =
+    reset == null
+      ? entryMerged
+      : entryMerged != null
+        ? [reset, entryMerged]
+        : reset;
   // Interaction handlers attach only when a candidate rule gates on state,
   // composing WITH any handlers the author passed rather than replacing
   // them.
@@ -377,6 +387,31 @@ function composeInteractionHandlers(
   }
   return out;
 }
+
+/**
+ * Astryx's CSS reset, scoped to Astryx's own elements.
+ *
+ * Astryx on the web ships a reset and styles from scratch on top of it: its
+ * Card computes an exact 16px inset and expects nothing else to contribute, so
+ * the user-agent `<p>` margins — correct per the web — would make it measure
+ * 32. The vendored slice here does not include that reset, so it lives here.
+ *
+ * It used to be `overrideUAStyle('p', {marginBlock: 0})` at module scope in
+ * `dom.js`, and that was a bug with a long tail. `overrideUAStyle` mutates the
+ * SHARED user-agent style object, so importing this demo silently zeroed
+ * paragraph margins for **every** screen in the app — and because RNTester
+ * loads example modules lazily, whether `<p>` had margins depended on which
+ * screens had been visited. It presented as a native, tag-specific, sometimes
+ * platform-specific renderer bug: `<p>` lost its margin while `<dl>`,
+ * `<blockquote>` and `<h1>`–`<h6>` kept theirs, with a byte-identical entry,
+ * and `marginInline` on `<p>` worked while `marginBlock` did not.
+ *
+ * The reset belongs to the consumer, exactly as it does in a browser — but a
+ * consumer's reset must not reach outside the consumer.
+ */
+const ASTRYX_RESET: {[string]: {[string]: unknown}} = {
+  p: {marginBlock: 0},
+};
 
 /**
  * Elements that need *behavioral* translation rather than a view-config

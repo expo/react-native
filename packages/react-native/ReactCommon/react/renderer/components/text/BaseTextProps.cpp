@@ -47,6 +47,35 @@ static TextAttributes convertRawProp(
       "fontSize",
       sourceTextAttributes.fontSize,
       defaultTextAttributes.fontSize);
+  textAttributes.fontSizeEm = convertRawProp(
+      context,
+      rawProps,
+      "fontSizeEm",
+      sourceTextAttributes.fontSizeEm,
+      defaultTextAttributes.fontSizeEm);
+  /*
+   * Read only when the feature is on. Neither key can appear without it —
+   * `uaFontSizeEm` is written only by the user-agent sheet and `fontSizeRem`
+   * only by an author using the feature — so a `<Text>` in an app that does
+   * not use it reads neither.
+   */
+  if (ReactNativeFeatureFlags::enableStringChildren()) {
+    textAttributes.fontSizeRem = convertRawProp(
+        context,
+        rawProps,
+        "fontSizeRem",
+        sourceTextAttributes.fontSizeRem,
+        defaultTextAttributes.fontSizeRem);
+    textAttributes.uaFontSizeEm = convertRawProp(
+        context,
+        rawProps,
+        "uaFontSizeEm",
+        sourceTextAttributes.uaFontSizeEm,
+        defaultTextAttributes.uaFontSizeEm);
+  } else {
+    textAttributes.fontSizeRem = sourceTextAttributes.fontSizeRem;
+    textAttributes.uaFontSizeEm = sourceTextAttributes.uaFontSizeEm;
+  }
   textAttributes.fontSizeMultiplier = convertRawProp(
       context,
       rawProps,
@@ -95,6 +124,19 @@ static TextAttributes convertRawProp(
       "letterSpacing",
       sourceTextAttributes.letterSpacing,
       defaultTextAttributes.letterSpacing);
+  /*
+   * `vertical-align` is ONE CSS property with two homes here: `super`/`sub`
+   * shift glyphs within a run and are a text attribute, while `top`/`bottom`/
+   * `middle` place a whole atomic inline on a line and are a Yoga box value.
+   * Reading both from the same prop name is what keeps it one property to an
+   * author, as CSS has it.
+   */
+  textAttributes.verticalAlign = convertRawProp(
+      context,
+      rawProps,
+      "verticalAlign",
+      sourceTextAttributes.verticalAlign,
+      defaultTextAttributes.verticalAlign);
   textAttributes.textTransform = convertRawProp(
       context,
       rawProps,

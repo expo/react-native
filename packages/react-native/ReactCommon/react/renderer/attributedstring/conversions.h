@@ -652,6 +652,41 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   result = TextTransform::None;
 }
 
+inline void fromRawValue(
+    const PropsParserContext& context,
+    const RawValue& value,
+    TextVerticalAlign& result) {
+  react_native_expect(value.hasType<std::string>());
+  if (value.hasType<std::string>()) {
+    auto string = (std::string)value;
+    // Only the two that mean "shift the glyphs". `top`/`bottom`/`middle` are
+    // box placement and are read by the Yoga side of the same property; they
+    // must not become a baseline shift here.
+    if (string == "super") {
+      result = TextVerticalAlign::Super;
+      return;
+    }
+    if (string == "sub") {
+      result = TextVerticalAlign::Sub;
+      return;
+    }
+    result = TextVerticalAlign::Baseline;
+    return;
+  }
+  result = TextVerticalAlign::Baseline;
+}
+
+inline std::string toString(const TextVerticalAlign& value) {
+  switch (value) {
+    case TextVerticalAlign::Baseline:
+      return "baseline";
+    case TextVerticalAlign::Super:
+      return "super";
+    case TextVerticalAlign::Sub:
+      return "sub";
+  }
+}
+
 inline std::string toString(const TextTransform &textTransform)
 {
   switch (textTransform) {
@@ -1233,6 +1268,8 @@ constexpr static MapBuffer::Key TA_KEY_FONT_STYLE = 7;
 constexpr static MapBuffer::Key TA_KEY_FONT_VARIANT = 8;
 constexpr static MapBuffer::Key TA_KEY_ALLOW_FONT_SCALING = 9;
 constexpr static MapBuffer::Key TA_KEY_LETTER_SPACING = 10;
+// `<sup>`/`<sub>`: the platform text engine computes the shift from the font.
+constexpr static MapBuffer::Key TA_KEY_VERTICAL_ALIGN = 32;
 // The numeric baseline shift (points; positive raises) — symbolic list
 // markers centre their ink with it. Must match TextAttributeProps.kt.
 constexpr static MapBuffer::Key TA_KEY_BASELINE_SHIFT = 33;
@@ -1411,6 +1448,10 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   }
   if (!std::isnan(textAttributes.maxFontSizeMultiplier)) {
     builder.putDouble(TA_KEY_MAX_FONT_SIZE_MULTIPLIER, textAttributes.maxFontSizeMultiplier);
+  }
+  if (textAttributes.verticalAlign.has_value()) {
+    builder.putString(
+        TA_KEY_VERTICAL_ALIGN, toString(*textAttributes.verticalAlign));
   }
   if (!std::isnan(textAttributes.letterSpacing)) {
     builder.putDouble(TA_KEY_LETTER_SPACING, textAttributes.letterSpacing);

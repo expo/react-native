@@ -96,7 +96,16 @@ export type ViewConfig = Readonly<{
    * no per-property special-casing. Applied by the renderer, so author code
    * never sees it, the way a browser consults its own stylesheet.
    */
-  uaStyle?: {[string]: unknown},
+  /**
+   * The element's user-agent style, merged beneath the author's.
+   *
+   * A function when the style depends on the element's own props: browsers do
+   * not style every `<a>`, only one with an `href` (`a:link`), so the anchor's
+   * colour and underline cannot be a fixed object.
+   */
+  uaStyle?:
+    | {[string]: unknown}
+    | ((props: {[string]: unknown}) => ?{[string]: unknown}),
 }>;
 
 export type PartialViewConfig = Readonly<{
