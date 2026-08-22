@@ -41,7 +41,7 @@
 #import <react/renderer/textlayoutmanager/TextLayoutManager.h>
 #import <react/utils/ManagedObjectWrapper.h>
 
-// The generic-box component view (RCTElementBoxComponentView) self-registers
+// The generic-box component view (EXPElementBoxComponentView) self-registers
 // with the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
 #import <react/renderer/components/view/ElementBoxShadowNode.h>
@@ -139,6 +139,13 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   BOOL _needsInvalidateLayer;
   BOOL _isJSResponder;
   BOOL _removeClippedSubviews;
+  // Set by the recycle pixel clear, consumed by the next -updateProps:'s
+  // unconditional pixel restore, asserted spent in -finalizeUpdates. See the
+  // RECYCLE PIXEL CONTRACT comment on the clear/restore pair.
+  BOOL _propsAreStaleFromRecycle;
+  // The props a recycle left in place, so the next -updateProps: can assert it still diffs against
+  // them; see the assertion there
+  Props::Shared _propsKeptByRecycle;
   NSMutableArray<UIView *> *_reactSubviews;
   NSSet<NSString *> *_Nullable _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN;
   UIView *_containerView;
@@ -260,15 +267,31 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 // the wrong z-position and trips the unmount assertions on perfectly valid
 // removals. This maps a mutation's index to the UIKit position of that slot,
 // counting only non-run subviews.
+- (BOOL)hasHostChromeSubviews
+{
+  return NO;
+}
+
+- (BOOL)isHostChromeSubview:(UIView *)view
+{
+  return NO;
+}
+
 - (NSInteger)_containerIndexForMountIndex:(NSInteger)index
 {
-  if (_textRunViews.count == 0) {
+  if (_textRunViews.count == 0 && !self.hasHostChromeSubviews) {
     return index;
   }
   NSArray<UIView *> *subviews = self.currentContainerView.subviews;
   NSInteger mountedSeen = 0;
   for (NSUInteger position = 0; position < subviews.count; position++) {
-    if ([subviews[position] isKindOfClass:[RCTAnonymousTextRunView class]]) {
+    // Skips the subviews the HOST put there rather than the mutation stream:
+    // painted text runs, and a subclass's platform chrome (`<button>`'s
+    // UIButton layer). Counting either as a mounted child shifts every
+    // mutation index after it, which lands children at the wrong z-position
+    // and trips the unmount assertions on valid removals.
+    if ([subviews[position] isKindOfClass:[RCTAnonymousTextRunView class]] ||
+        [self isHostChromeSubview:subviews[position]]) {
       continue;
     }
     if (mountedSeen == index) {
@@ -436,6 +459,20 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       [_textRunViews addObject:runView];
       [self.currentContainerView addSubview:runView];
     }
+    // Host chrome stays BELOW the content it is chrome for. Props and state
+    // interleave differently across mount, re-paint and recycle reuse, so
+    // "insert the chrome at index 0 once" does not survive: a run attached in
+    // a later state update appends above it in one ordering and below it in
+    // another, and a label under opaque chrome is invisible. Reasserting after
+    // every attach makes the z-order a stated invariant rather than an
+    // accident of ordering.
+    if (self.hasHostChromeSubviews) {
+      for (UIView *subview in self.currentContainerView.subviews) {
+        if ([self isHostChromeSubview:subview]) {
+          [self.currentContainerView sendSubviewToBack:subview];
+        }
+      }
+    }
     [runView updateRun:data.textRuns[i]];
     runView->_layoutManager = data.layoutManager;
     [runView setContainerBounds:self.currentContainerView.bounds];
@@ -472,7 +509,14 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 
   NSMutableArray<UIView *> *mountedChildren = [NSMutableArray new];
   for (UIView *subview in container.subviews) {
-    if (![subview isKindOfClass:[RCTAnonymousTextRunView class]]) {
+    // Host chrome is not a mounted child and must be invisible to document
+    // order: counting it made `documentOrder == 0` mean "just below the
+    // chrome", which filed a <button>'s label UNDER its own platform surface —
+    // invisible under the opaque filled style, and under the translucent gray
+    // one the labels showed through dimmed and *looked* correct, which is why
+    // it survived the first screenshots. Chrome keeps its place at the very
+    // back through the attach-time invariant instead.
+    if (![subview isKindOfClass:[RCTAnonymousTextRunView class]] && ![self isHostChromeSubview:subview]) {
       [mountedChildren addObject:subview];
     }
   }
@@ -618,10 +662,41 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       NSStringFromClass([self class]));
 #endif
 
+  /*
+   * The old props are the real previous props: the diffs below reason about
+   * UIKit state `prepareForRecycle` does not touch (transform, opacity,
+   * accessibility, hit slop), and substituting defaults after a recycle would
+   * leave any stale value that equals its default unreset. The cleared pixels
+   * are restored by `-_restorePixelStateClearedByRecycleWith:` instead. Nor
+   * is `_props` replaced on recycle: subclasses static_cast it to their own
+   * props type.
+   */
+  /*
+   * Diff against the baseline the recycle left, whatever a subclass did to `_props` in between.
+   * A subclass that replaces `_props` in its own -prepareForRecycle, or that assigns the new
+   * props to `_props` before calling up (react-native-screens' header config does, in both
+   * versions this repository carries), breaks every diff below without failing any of them: a
+   * value the next element leaves at its default diffs equal to the default and keeps what the
+   * previous element set. That is how a recycled `<button>accept</button>` went on announcing
+   * the previous button's `accessibilityLabel` while drawing "accept".
+   */
+  if (_propsKeptByRecycle != nullptr && _props != _propsKeptByRecycle) {
+    _props = std::static_pointer_cast<const ViewProps>(_propsKeptByRecycle);
+  }
+  _propsKeptByRecycle = nullptr;
   const auto &oldViewProps = static_cast<const ViewProps &>(*_props);
   const auto &newViewProps = static_cast<const ViewProps &>(*props);
 
+
   BOOL needsInvalidateLayer = NO;
+  if (_propsAreStaleFromRecycle) {
+    _propsAreStaleFromRecycle = NO;
+    [self _restorePixelStateClearedByRecycleWith:newViewProps];
+    // Every layer family the clear removed is rebuilt from the new props by
+    // -invalidateLayer, which runs in -finalizeUpdates after `_props` below
+    // has been swapped to `props`.
+    needsInvalidateLayer = YES;
+  }
 
   // `opacity`
   if (oldViewProps.opacity != newViewProps.opacity &&
@@ -752,8 +827,9 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     self.accessibilityElement.isAccessibilityElement = newViewProps.accessible;
   }
 
-  // `accessibilityLabel`
-  if (oldViewProps.accessibilityLabel != newViewProps.accessibilityLabel) {
+  // `accessibilityLabel`, stored only on an accessibility element that is not this view; this view
+  // reads its own from `_props` when asked (see `-exp_propsAccessibilityLabel`)
+  if (oldViewProps.accessibilityLabel != newViewProps.accessibilityLabel && self.accessibilityElement != self) {
     self.accessibilityElement.accessibilityLabel = RCTNSStringFromStringNilIfEmpty(newViewProps.accessibilityLabel);
   }
 
@@ -1111,6 +1187,15 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask
 {
   [super finalizeUpdates:updateMask];
+  // RECYCLE PIXEL CONTRACT invariant (see the clear/restore pair below): by
+  // the time an update batch finalizes, a recycled view must have had
+  // -updateProps: run its unconditional pixel restore. A stale flag here
+  // means some mount path skipped it, and the view would reach the screen
+  // with its background/border/outline layers cleared.
+  RCTAssert(
+      !_propsAreStaleFromRecycle || (updateMask & RNComponentViewUpdateMaskProps) == 0,
+      @"%@ finalized a props update without restoring recycle-cleared pixels.",
+      self.class);
   _useCustomContainerView = [self styleWouldClipOverflowInk];
   if (!_needsInvalidateLayer) {
     return;
@@ -1151,7 +1236,44 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   // No runs left, so this tears the selection interaction down with them.
   [self _updateTextSelectionInteraction];
 
-  // Clean up box shadow layers to prevent cross-component contamination
+  [self _clearPixelStateForRecycle];
+
+  [self _setLastSentSafeAreaInsets:nil];
+  _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN = nil;
+  _eventEmitter.reset();
+  _isJSResponder = NO;
+  _reactSubviews = [NSMutableArray new];
+  _layoutMetrics = EmptyLayoutMetrics;
+}
+
+/*
+ * RECYCLE PIXEL CONTRACT — these two methods are a PAIR.
+ *
+ * `_clearPixelStateForRecycle` destroys props-derived pixels while `_props`
+ * keeps describing the old element, so the value diffs in -updateProps:
+ * cannot see the loss: a view recycled between two elements with EQUAL
+ * styling diffs equal, skips re-applying, and would keep the cleared state
+ * (two of five identical dark code boxes rendered bare; which two depended on
+ * pooling). `_restorePixelStateClearedByRecycleWith:` is the inverse the
+ * first -updateProps: after a recycle applies UNCONDITIONALLY — restoration
+ * must not depend on a diff, for the same reason the diff cannot see the
+ * clear.
+ *
+ * The invariant that keeps this correct as it grows: everything the first
+ * method clears, the second restores (directly, or via the forced
+ * -invalidateLayer rebuild its caller schedules — the layer families:
+ * background color, border, outline, filter, box shadow, background image).
+ * Nothing else belongs in either: state prepareForRecycle does NOT clear is
+ * restored by the ordinary old-vs-new diffs and must NOT be force-applied
+ * here from a defaults baseline — that variant broke transform/opacity for
+ * every recycled view whose incoming prop equalled the default.
+ * -finalizeUpdates asserts the flag was consumed, so a recycled view can
+ * never reach the screen with its pixels cleared and no restore run.
+ */
+- (void)_clearPixelStateForRecycle
+{
+  // Box shadow layers, then every other visual layer family, to prevent
+  // cross-component contamination.
   if (_boxShadowLayers != nullptr) {
     for (CALayer *boxShadowLayer in _boxShadowLayers) {
       [boxShadowLayer removeFromSuperlayer];
@@ -1159,10 +1281,13 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
     [_boxShadowLayers removeAllObjects];
     _boxShadowLayers = nil;
   }
-
-  // Clean up other visual layers
   [_backgroundColorLayer removeFromSuperlayer];
   _backgroundColorLayer = nil;
+  // The plain background too, not only its layer object, or a view recycled
+  // out of an author-styled `<button style={{backgroundColor}}>` keeps drawing
+  // that author's colour under the next button's platform chrome
+  _backgroundColor = nil;
+  self.layer.backgroundColor = nil;
   [_borderLayer removeFromSuperlayer];
   _borderLayer = nil;
   [_outlineLayer removeFromSuperlayer];
@@ -1170,14 +1295,21 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   [_filterLayer removeFromSuperlayer];
   _filterLayer = nil;
   [self clearExistingBackgroundImageLayers];
-
-  [self _setLastSentSafeAreaInsets:nil];
-  _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN = nil;
-  _eventEmitter.reset();
-  _isJSResponder = NO;
   _removeClippedSubviews = NO;
-  _reactSubviews = [NSMutableArray new];
-  _layoutMetrics = EmptyLayoutMetrics;
+
+  _propsAreStaleFromRecycle = YES;
+  _propsKeptByRecycle = _props;
+}
+
+- (void)_restorePixelStateClearedByRecycleWith:(const ViewProps &)newViewProps
+{
+  self.backgroundColor = RCTUIColorFromSharedColor(newViewProps.backgroundColor);
+  if (!ReactNativeFeatureFlags::enableViewCulling()) {
+    _removeClippedSubviews = newViewProps.removeClippedSubviews;
+    [self _updateRemoveClippedSubviewsState];
+  }
+  // The removed layers are rebuilt from the new props by -invalidateLayer;
+  // the caller forces that by setting `needsInvalidateLayer`.
 }
 
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(NSSet<NSString *> *_Nullable)props
@@ -1914,7 +2046,12 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     if ([child isKindOfClass:[RCTAnonymousTextRunView class]]) {
       continue;
     }
-    if ([runAttachmentTags containsObject:@(child.tag)]) {
+    if ([self isHostChromeSubview:child]) {
+      // Chrome sits behind everything it is chrome for, so it reads first, as UIKit would read it
+      if (!child.hidden) {
+        [elements addObject:child];
+      }
+    } else if ([runAttachmentTags containsObject:@(child.tag)]) {
       attachmentsByTag[@(child.tag)] = child;
     } else {
       [blockChildren addObject:child];
@@ -2016,9 +2153,23 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
   return result;
 }
 
+/**
+ * The name the props give this view, read from the props every time it is asked for.
+ *
+ * Never a copy kept beside them. A copy is written when a props diff says the name changed, and a
+ * recycled view whose diff baseline was reset kept the name of the element it last showed: a
+ * `<button>accept</button>` announced itself as the previous button's "Increment update count"
+ * while drawing "accept". A name read from the current props, or else from the painted text below,
+ * cannot drift from what is on screen.
+ */
+- (nullable NSString *)exp_propsAccessibilityLabel
+{
+  return _props != nullptr ? RCTNSStringFromStringNilIfEmpty(_props->accessibilityLabel) : nil;
+}
+
 - (NSString *)accessibilityLabel
 {
-  NSString *label = super.accessibilityLabel;
+  NSString *label = [self exp_propsAccessibilityLabel] ?: super.accessibilityLabel;
   if (label) {
     return label;
   }
@@ -2031,12 +2182,12 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 
 - (NSString *)accessibilityLabelForCoopting
 {
-  return super.accessibilityLabel;
+  return [self exp_propsAccessibilityLabel] ?: super.accessibilityLabel;
 }
 
 - (BOOL)wantsToCooptLabel
 {
-  return !super.accessibilityLabel && super.isAccessibilityElement;
+  return !self.accessibilityLabelForCoopting && super.isAccessibilityElement;
 }
 
 - (BOOL)canBecomeFocused
@@ -2482,10 +2633,10 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
  * renderer swaps an element onto this component when its display generates a
  * box — see ElementBoxShadowNode.h.
  */
-@interface RCTElementBoxComponentView : RCTViewComponentView
+@interface EXPElementBoxComponentView : RCTViewComponentView
 @end
 
-@implementation RCTElementBoxComponentView
+@implementation EXPElementBoxComponentView
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
