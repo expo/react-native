@@ -41,6 +41,10 @@ void EventDispatcher::experimental_flushSync() const {
   eventQueue_.experimental_flushSync();
 }
 
+void EventDispatcher::experimental_flushSyncNow() const {
+  eventQueue_.experimental_flushSyncNow();
+}
+
 void EventDispatcher::dispatchStateUpdate(
     StateUpdate&& stateUpdate,
     EventQueue::UpdateMode updateMode) const {

@@ -47,6 +47,11 @@ class EventDispatcher {
   void experimental_flushSync() const;
 
   /*
+   * Flushes now and does not return until JavaScript has handled the queue.
+   */
+  void experimental_flushSyncNow() const;
+
+  /*
    * Dispatches a raw event with asynchronous batched priority. Before the
    * dispatch we make sure that no other RawEvent of same type and same target
    * is on the queue.
