@@ -10,6 +10,7 @@
 #import <memory>
 
 #import <FBReactNativeSpec/FBReactNativeSpec.h>
+#import <React/EXPElementControlMetricsProbe.h>
 #import <React/NSDataBigString.h>
 #import <React/RCTAssert.h>
 #import <React/RCTBridge+Inspector.h>
@@ -363,6 +364,12 @@ using namespace facebook::react;
     RCTScreenSize();
     RCTScreenScale();
     RCTSwitchSize();
+    // The HTML form elements are drawn by platform controls, and layout needs
+    // their intrinsic sizes from the shadow thread where UIKit cannot be
+    // touched. Asked here for the same reason `RCTSwitchSize` is, and here
+    // rather than anywhere earlier because the JavaScript thread waits on this
+    // block: nothing is laid out yet, so nothing can already be asking.
+    EXPPrewarmElementControlMetrics();
 
     dispatch_semaphore_signal(moduleSetupComplete);
   });
