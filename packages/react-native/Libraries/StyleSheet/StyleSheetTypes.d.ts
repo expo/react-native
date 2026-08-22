@@ -482,11 +482,7 @@ export interface ViewStyle extends FlexStyle, ShadowStyleIOS, TransformsStyle {
   animationTimingFunction?: string | undefined;
   animationIterationCount?: string | number | undefined;
   animationDirection?:
-    | 'normal'
-    | 'reverse'
-    | 'alternate'
-    | 'alternate-reverse'
-    | undefined;
+    'normal' | 'reverse' | 'alternate' | 'alternate-reverse' | undefined;
   animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both' | undefined;
   /**
    * `white-space` (css-text-3 §3): how white space and newlines in text
