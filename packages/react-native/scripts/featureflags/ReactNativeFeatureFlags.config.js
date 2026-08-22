@@ -464,6 +464,17 @@ const definitions: FeatureFlagDefinitions = {
       },
       ossReleaseStage: 'none',
     },
+    enableNativeGestureRecognizers: {
+      defaultValue: false,
+      metadata: {
+        dateAdded: '2026-08-19',
+        description:
+          "Route interaction for the DOM element catalog's own elements through native gesture recognizers (UIGestureRecognizer dependencies on iOS, ViewGroup interception on Android) instead of the JS responder system, so arbitration happens in the platform's arena and a scroll can claim a gesture without a round trip through JavaScript. Scoped to the new elements: nothing already shipping changes behaviour.",
+        expectedReleaseValue: true,
+        purpose: 'experimentation',
+      },
+      ossReleaseStage: 'none',
+    },
     enablePreparedTextLayout: {
       defaultValue: false,
       metadata: {
