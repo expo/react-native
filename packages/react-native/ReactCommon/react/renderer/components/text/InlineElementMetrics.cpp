@@ -119,31 +119,21 @@ void stampSubtree(
                   contentOrigin.y + box.origin.y},
         .size = box.size};
 
-    // Stamping metrics on a node of the committed tree is the same mutation
-    // the owning View already performs for inline `<img>` attachments, and it
-    // happens during the owner's layout pass.
+    // These metrics cannot be written onto the node here. Layout runs again on
+    // subtrees that were not re-cloned — a state update anywhere in the surface
+    // re-lays out this run while its children still belong to the previous
+    // generation — so the node reached here is usually part of the committed
+    // tree, and writing to it would mutate the wrong revision. They are handed
+    // to the owner instead, which clones the path to each one.
     //
-    // A sealed node cannot be mutated here: layout runs again on subtrees that
-    // were not re-cloned — a state update anywhere in the surface re-lays out
-    // this run while its children still belong to the previous generation —
-    // and `setLayoutMetrics` would trip `ensureUnsealed`, aborting the process
-    // in any build with assertions on. It is handed to the owner instead,
-    // which can clone the path to it. Dropping it is NOT safe: these metrics
-    // come from the run's layout, not its content, so an element that did not
-    // change still moves whenever the run rewraps around it.
-    if (!node.getSealed()) {
-      if (textNode != nullptr) {
-        const_cast<TextShadowNode*>(textNode)->setLayoutMetrics(metrics);
-      } else {
-        const_cast<YogaLayoutableShadowNode*>(
-            static_cast<const YogaLayoutableShadowNode*>(&node))
-            ->setLayoutMetrics(metrics);
-      }
-    } else if (
-        static_cast<const LayoutableShadowNode&>(node).getLayoutMetrics() !=
+    // Dropping them is NOT safe: these metrics come from the run's layout, not
+    // its content, so an element that did not change still moves whenever the
+    // run rewraps around it.
+    //
+    // Only when they actually differ: cloning is the expensive path, and an
+    // unchanged element is the overwhelmingly common case.
+    if (static_cast<const LayoutableShadowNode&>(node).getLayoutMetrics() !=
         metrics) {
-      // Only when they actually differ: cloning is the expensive path, and an
-      // unchanged element is the overwhelmingly common case.
       pending.push_back(
           PendingInlineElementMetrics{
               .family = &node.getFamily(), .metrics = metrics});

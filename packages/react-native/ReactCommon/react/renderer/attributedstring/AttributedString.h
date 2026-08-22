@@ -51,6 +51,20 @@ class AttributedString : public Sealable, public DebugStringConvertible {
     Float atomicInlineBaseline{0};
 
     /*
+     * Where this atomic inline sits on the line — CSS `vertical-align`
+     * (CSS2 §10.8.1).
+     *
+     * Carried here rather than read from the node at placement time because the
+     * platform layout managers see fragments, not shadow nodes, and each one
+     * has to make this decision itself: the position it wants is relative to
+     * the line box, which only the engine that built the line knows.
+     *
+     * 0 = baseline (the initial value), 1 = top, 2 = bottom, 3 = middle. A
+     * plain integer so this header keeps no dependency on the view props.
+     */
+    uint8_t atomicInlineVerticalAlign{0};
+
+    /*
      * A forced line break from `<br>` (HTML §4.5.28).
      *
      * Marked explicitly rather than inferred from the fragment's element,
