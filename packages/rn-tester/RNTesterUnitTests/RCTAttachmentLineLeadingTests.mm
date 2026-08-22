@@ -238,3 +238,113 @@ static NSArray<NSValue *> *LineFragments(const AttributedString &string, CGFloat
 }
 
 @end
+
+/*
+ * The half-leading a run with an ATTACHMENT was losing.
+ *
+ * `RCTUnclampLineHeightForAtomicInlines` lifts `maximumLineHeight` to 0 — the
+ * TextKit spelling of "no ceiling" — so a box taller than the strut can grow
+ * its line (CSS2 §10.8). The line height moves to the MINIMUM and stays there.
+ * `RCTApplyBaselineOffset` read only the maximum, saw 0, concluded no line
+ * height had been asked for, and returned: every such run lost the offset that
+ * centres its glyphs, and the text sat high by exactly that amount.
+ */
+@interface RCTUnclampedStrutLeadingTests : XCTestCase
+@end
+
+@implementation RCTUnclampedStrutLeadingTests
+
+extern void RCTApplyBaselineOffset(NSMutableAttributedString *attributedText);
+
+- (NSMutableAttributedString *)_stringWithMinimum:(CGFloat)minimum maximum:(CGFloat)maximum font:(UIFont *)font
+{
+  NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
+  paragraphStyle.minimumLineHeight = minimum;
+  paragraphStyle.maximumLineHeight = maximum;
+  return [[NSMutableAttributedString alloc]
+      initWithString:@"Save"
+          attributes:@{NSFontAttributeName : font, NSParagraphStyleAttributeName : paragraphStyle}];
+}
+
+- (CGFloat)_offsetOf:(NSAttributedString *)string
+{
+  NSNumber *offset = [string attribute:NSBaselineOffsetAttributeName atIndex:0 effectiveRange:NULL];
+  return offset != nil ? offset.doubleValue : 0;
+}
+
+static AttributedString ParagraphWithAttachmentOfHeight(CGFloat lineHeight, CGFloat attachmentHeight)
+{
+  auto textAttributes = TextAttributes::defaultTextAttributes();
+  textAttributes.fontSize = 14;
+  textAttributes.lineHeight = lineHeight;
+
+  auto string = AttributedString{};
+  auto text = AttributedString::Fragment{};
+  text.string = "Save";
+  text.textAttributes = textAttributes;
+  string.appendFragment(std::move(text));
+
+  auto attachment = AttributedString::Fragment{};
+  attachment.string = AttributedString::Fragment::AttachmentCharacter();
+  attachment.textAttributes = textAttributes;
+  auto metrics = LayoutMetrics{};
+  metrics.frame.size = {attachmentHeight, attachmentHeight};
+  attachment.parentShadowView.layoutMetrics = metrics;
+  attachment.atomicInlineBaseline = attachmentHeight;
+  string.appendFragment(std::move(attachment));
+
+  string.setBaseTextAttributes(textAttributes);
+  return string;
+}
+
+static CGFloat CeilingOf(const AttributedString &string)
+{
+  NSAttributedString *converted = RCTNSAttributedStringFromAttributedString(string);
+  NSParagraphStyle *paragraphStyle = [converted attribute:NSParagraphStyleAttributeName
+                                                  atIndex:0
+                                           effectiveRange:NULL];
+  return paragraphStyle.maximumLineHeight;
+}
+
+- (void)testAnICONThatFitsKeepsTheLinesCeiling
+{
+  /*
+   * A 16pt icon on a 20pt line needs nothing lifted — the strut is already as
+   * tall as the line has to be. Keeping the ceiling is what lets
+   * `RCTApplyBaselineOffset` centre the glyphs in it; without it the text drew
+   * high, which is what shadcn's buttons and tabs showed.
+   */
+  XCTAssertEqualWithAccuracy(CeilingOf(ParagraphWithAttachmentOfHeight(20, 16)), 20, 0.01);
+}
+
+- (void)testABOXTallerThanTheLineStillLiftsIt
+{
+  // The case the unclamping was written for: a 50pt box on a 20pt line has to
+  // be able to push the line open (CSS2 §10.8) rather than overflow upwards.
+  XCTAssertEqual(CeilingOf(ParagraphWithAttachmentOfHeight(20, 50)), 0);
+}
+
+- (void)testAClampedLineIsUnchanged
+{
+  // Text-only runs pin both bounds to the same number, and must keep exactly
+  // the offset they had — `<Text>` does not move.
+  UIFont *font = [UIFont systemFontOfSize:14];
+  NSMutableAttributedString *string = [self _stringWithMinimum:30 maximum:30 font:font];
+
+  RCTApplyBaselineOffset(string);
+
+  XCTAssertEqualWithAccuracy([self _offsetOf:string], (30 - font.lineHeight) / 2, 0.01);
+}
+
+- (void)testNoLineHeightStillMeansNoOffset
+{
+  UIFont *font = [UIFont systemFontOfSize:14];
+  NSMutableAttributedString *string = [self _stringWithMinimum:0 maximum:0 font:font];
+
+  RCTApplyBaselineOffset(string);
+
+  XCTAssertEqual([self _offsetOf:string], 0, @"nothing was asked for, so nothing is applied");
+}
+
+@end
+

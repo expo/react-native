@@ -14,12 +14,12 @@ import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 import type {HostInstance} from 'react-native';
 
 import ensureInstance from '../../../src/private/__tests__/utilities/ensureInstance';
-import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
-import ReadOnlyText from 'react-native/src/private/webapis/dom/nodes/ReadOnlyText';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
 import {View} from 'react-native';
+import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
+import ReadOnlyText from 'react-native/src/private/webapis/dom/nodes/ReadOnlyText';
 // The element catalog, for the intrinsic <span> in the fragment-rect case.
 import '@react-native/expo-intrinsics-poc';
 

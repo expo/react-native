@@ -7,7 +7,10 @@
 
 #include "ParagraphShadowNode.h"
 
+#include <react/renderer/components/view/CloneWithLayoutMetrics.h>
+
 #include <react/renderer/components/text/InlineElementMetrics.h>
+#include <react/renderer/components/text/WhiteSpaceConstraints.h>
 
 #include <cmath>
 
@@ -242,7 +245,14 @@ Size ParagraphShadowNode::rawContentSize() {
 
 Size ParagraphShadowNode::measureContent(
     const LayoutContext& layoutContext,
-    const LayoutConstraints& layoutConstraints) const {
+    const LayoutConstraints& outerLayoutConstraints) const {
+  // `white-space: nowrap` and `pre` mean the line breaker gets unbounded width
+  // and the paragraph overflows instead of reflowing. Applied before the cache
+  // key is taken, so a paragraph never serves a wrapped measurement to a
+  // `nowrap` request or the reverse.
+  const auto layoutConstraints = constraintsForWhiteSpace(
+      getConcreteProps().inheritedWhiteSpace, outerLayoutConstraints);
+
   if constexpr (TextLayoutManagerExtended::supportsPreparedTextLayout()) {
     for (const auto& layout : measuredLayouts_) {
       if (layout.layoutConstraints == layoutConstraints) {
@@ -347,7 +357,11 @@ void ParagraphShadowNode::layout(LayoutContext layoutContext) {
   // against upstream's 13.9ms, and 1,000 single-line `<Text>` rows 177.7ms
   // against 127.7ms. The predicate is the same one the anonymous-run path
   // already applies, and it is a scan of the fragments rather than a layout.
-  if (hasStampableInlineElements(*this, content.attributedString)) {
+  // Behind the flag: reporting per-element boxes costs a second text layout of
+  // the whole paragraph, and upstream <Text> offers no such boxes at all. An
+  // app that has not opted into string children gets upstream's cost.
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      hasStampableInlineElements(*this, content.attributedString)) {
     TextLayoutContext inlineMetricsContext{
         .pointScaleFactor = layoutContext.pointScaleFactor,
         .surfaceId = getSurfaceId(),
@@ -358,7 +372,7 @@ void ParagraphShadowNode::layout(LayoutContext layoutContext) {
         content.paragraphAttributes,
         inlineMetricsContext,
         layoutConstraints);
-    stampInlineElementMetrics(
+    auto pending = stampInlineElementMetrics(
         *this,
         content.attributedString,
         measurement.fragmentRects,
@@ -366,6 +380,27 @@ void ParagraphShadowNode::layout(LayoutContext layoutContext) {
             ? Point{layoutMetrics.contentInsets.left, layoutMetrics.contentInsets.top}
             : Point{0, 0},
         layoutMetrics);
+
+    // An element whose node is sealed cannot be stamped in place; it comes
+    // back here to be applied by cloning the path to it, the same way
+    // `ViewShadowNode` applies the ones from an anonymous run. Sealed is the
+    // ordinary case — a node is unsealed only on the layout that follows its
+    // own clone — so dropping these leaves a nested `<Text>` or `<b>`
+    // reporting an all-zero box from `getBoundingClientRect()`.
+    // One pass for all of them: `cloneTree` searches the subtree for its
+    // family and rebuilds the spine down to it, so a call per element is
+    // quadratic in the number of elements in the paragraph.
+    LayoutMetricsByFamily stampsByFamily;
+    for (const auto& stamp : pending) {
+      stampsByFamily[stamp.family] = stamp.metrics;
+    }
+    if (!stampsByFamily.empty()) {
+      auto replaced = cloneWithLayoutMetrics(*this, stampsByFamily);
+      if (replaced != nullptr) {
+        this->children_ =
+            static_cast<ParagraphShadowNode*>(replaced.get())->children_;
+      }
+    }
   }
 
   auto measuredLayout = findUsableLayout();

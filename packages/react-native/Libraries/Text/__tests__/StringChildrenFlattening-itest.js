@@ -236,7 +236,10 @@ test('a nested <Text> inside a flattened ancestor still isolates by default', ()
  */
 
 function rectOf(ref: {current: HostInstance | null}) {
-  return ensureInstance(ref.current, ReactNativeElement).getBoundingClientRect();
+  return ensureInstance(
+    ref.current,
+    ReactNativeElement,
+  ).getBoundingClientRect();
 }
 
 test('bounding rects are unchanged by flattening', () => {
@@ -289,9 +292,7 @@ test('bounding rects are unchanged by flattening', () => {
   // The element has a real box at all — guards the geometry pass skipping a
   // run that DOES carry an element.
   expect(flat.width).toBeGreaterThan(0);
-  expect(flat.x - rectOf(flatOuter).x).toBe(
-    pinned.x - rectOf(pinnedOuter).x,
-  );
+  expect(flat.x - rectOf(flatOuter).x).toBe(pinned.x - rectOf(pinnedOuter).x);
   expect(flat.width).toBe(pinned.width);
   expect(flat.height).toBe(pinned.height);
 });

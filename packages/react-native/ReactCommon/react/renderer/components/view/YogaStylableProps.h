@@ -15,6 +15,17 @@
 
 namespace facebook::react {
 
+/*
+ * `vertical-align` as it applies to an atomic inline. `Baseline` is CSS's
+ * initial value and the behaviour everything had before this existed.
+ */
+enum class AtomicInlineVerticalAlign : uint8_t {
+  Baseline,
+  Top,
+  Bottom,
+  Middle,
+};
+
 class YogaStylableProps : public Props {
  public:
   YogaStylableProps() = default;
@@ -85,6 +96,22 @@ class YogaStylableProps : public Props {
    * same state as no display at all.
    */
   bool displayAuthored{false};
+
+  /*
+   * `vertical-align`, for an inline-level box.
+   *
+   * How an atomic inline sits on its line (CSS2 §10.8.1): `baseline` — the
+   * initial value — puts the box's own baseline on the line's, `top` and
+   * `bottom` align it with the line box's edges, `middle` centres it on the
+   * line's middle.
+   *
+   * A property of the BOX rather than of the text, which is why it lives here
+   * and not in `TextAttributes`: it says where this box goes, not how any
+   * glyph is drawn. It reaches the line through the fragment the box
+   * contributes (`AttributedString::Fragment::atomicInlineVerticalAlign`) and
+   * is honoured by each engine when it places the attachment.
+   */
+  AtomicInlineVerticalAlign verticalAlign{AtomicInlineVerticalAlign::Baseline};
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 

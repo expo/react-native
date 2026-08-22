@@ -12,13 +12,16 @@
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 
 import type {HostInstance} from 'react-native';
+import type {ViewStyleProp} from 'react-native/Libraries/StyleSheet/StyleSheet';
+import type DOMRect from 'react-native/src/private/webapis/geometry/DOMRect';
 
 import ensureInstance from '../../../src/private/__tests__/utilities/ensureInstance';
-import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
 import {Text, View} from 'react-native';
+import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
+
 // The element catalog, for intrinsic tags in the cross-element cases.
 import '@react-native/expo-intrinsics-poc';
 
@@ -46,15 +49,15 @@ const FONT_SIZE = 14;
 
 const CHAR = 10;
 const LINE = 20;
-const SHRINK = {alignSelf: 'flex-start'};
+const SHRINK: ViewStyleProp = {alignSelf: 'flex-start'};
 
-function rectOfBox(children: React.Node, style: {...} = {}): ClientRect {
+function rectOfBox(children: React.Node, style: ViewStyleProp = null): DOMRect {
   const ref = createRef<HostInstance>();
   const root = Fantom.createRoot();
   Fantom.runTask(() => {
     root.render(
       <View collapsable={false} style={{width: 400, fontSize: FONT_SIZE}}>
-        <View ref={ref} style={{...SHRINK, ...style}}>
+        <View ref={ref} style={[SHRINK, style]}>
           {children}
         </View>
       </View>,
@@ -129,7 +132,7 @@ test('collapsing crosses inline element boundaries (WPT white-space boundary sha
   Fantom.runTask(() => {
     root.render(
       <View collapsable={false} style={{width: 400, fontSize: FONT_SIZE}}>
-        <View ref={ref} style={{...SHRINK, display: 'block'}}>
+        <View ref={ref} style={[SHRINK, {display: 'block'}]}>
           {'a '}
           {/* $FlowExpectedError[not-a-component] catalog element */}
           <span> b</span>
