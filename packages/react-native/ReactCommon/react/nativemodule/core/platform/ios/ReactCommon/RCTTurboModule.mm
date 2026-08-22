@@ -699,9 +699,26 @@ void ObjCTurboModule::setInvocationArg(
     NSString *methodNameNSString = @(methodName);
 
     /**
+     * An ArrayBuffer has already been converted to exactly the type the method
+     * takes — an NSData holding a copy of its bytes — so RCTConvert has nothing
+     * left to do here. Letting it run is not merely redundant, it destroys the
+     * argument: `+[RCTConvert NSData:]` is defined as
+     * `[json dataUsingEncoding:NSUTF8StringEncoding]`, for turning a JSON
+     * *string* into bytes, and NSData does not respond to that selector. Under
+     * RCT_DEBUG the exception is caught and nil is returned, so the module is
+     * called with a nil buffer and no error reaches the caller; with RCT_DEBUG
+     * off nothing catches it.
+     *
+     * A buffer nested inside a dictionary or array never reached this code,
+     * because RCTConvert is only applied to top-level arguments — which is why
+     * nested buffers worked while a top-level one silently arrived empty.
+     */
+    const bool argIsArrayBuffer = arg.isObject() && arg.getObject(runtime).isArrayBuffer(runtime);
+
+    /**
      * Convert objects using RCTConvert.
      */
-    if (objCArgType == @encode(id)) {
+    if (objCArgType == @encode(id) && !argIsArrayBuffer) {
       NSString *argumentType = getArgumentTypeName(runtime, methodNameNSString, static_cast<int>(i));
       if (argumentType != nil) {
         NSString *rctConvertMethodName = [NSString stringWithFormat:@"%@:", argumentType];
