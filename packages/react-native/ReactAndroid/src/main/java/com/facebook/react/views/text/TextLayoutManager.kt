@@ -101,6 +101,9 @@ internal object TextLayoutManager {
   // An inline element that contributed no text of its own — `<span></span>`.
   // Its fragment is empty on purpose and still has a box on the line.
   const val FR_KEY_IS_EMPTY_ELEMENT: Int = 10
+  // CSS `vertical-align` for an atomic inline: 0 baseline, 1 top, 2 bottom,
+  // 3 middle.
+  const val FR_KEY_ATOMIC_INLINE_VERTICAL_ALIGN: Int = 11
 
   const val IB_KEY_MARGIN_LEFT: Int = 0
   const val IB_KEY_MARGIN_RIGHT: Int = 1
@@ -612,9 +615,31 @@ internal object TextLayoutManager {
                     width.toInt(),
                     height.toInt(),
                     baselineFromTop.toInt(),
+                    if (fragment.contains(FR_KEY_ATOMIC_INLINE_VERTICAL_ALIGN))
+                        fragment.getInt(FR_KEY_ATOMIC_INLINE_VERTICAL_ALIGN)
+                    else 0,
+                    leadingInlineSpace(fragment).total.toInt(),
+                    trailingInlineSpace(fragment).total.toInt(),
                 ),
             )
         )
+        // The strut. Every line box has one, whether or not text sits on it
+        // (CSS2 §10.8), but the line-height span is applied in the text branch
+        // below — so a line of only atomic inlines had none and collapsed to
+        // its tallest box: a 10pt box on a 20pt line measured 10.
+        //
+        // Expand-only, because unlike text an atomic inline may legitimately be
+        // taller than the strut and must then define the line rather than be
+        // clamped into it.
+        if (!textAttributes.lineHeight.isNaN()) {
+          ops.add(
+              SetSpanOperation(
+                  start,
+                  end,
+                  CustomLineHeightSpan(textAttributes.lineHeight, expandOnly = true),
+              )
+          )
+        }
       } else if (end >= start) {
         val roleIsLink =
             if (textAttributes.role != null)
@@ -788,6 +813,8 @@ internal object TextLayoutManager {
       val height: Double,
       // The box's own baseline, from its top, in the same units as `height`.
       val atomicInlineBaseline: Double,
+      // CSS `vertical-align`: 0 baseline, 1 top, 2 bottom, 3 middle.
+      val atomicInlineVerticalAlign: Int,
       // box-model-scope.md G3, in px.
       val leadingInlineSpace: InlineReserve,
       val trailingInlineSpace: InlineReserve,
@@ -839,6 +866,12 @@ internal object TextLayoutManager {
                     fragment.getDouble(FR_KEY_HEIGHT)
                   } else {
                     Double.NaN
+                  },
+              atomicInlineVerticalAlign =
+                  if (fragment.contains(FR_KEY_ATOMIC_INLINE_VERTICAL_ALIGN)) {
+                    fragment.getInt(FR_KEY_ATOMIC_INLINE_VERTICAL_ALIGN)
+                  } else {
+                    0
                   },
               atomicInlineBaseline =
                   if (fragment.contains(FR_KEY_ATOMIC_INLINE_BASELINE)) {
@@ -920,11 +953,26 @@ internal object TextLayoutManager {
                 PixelUtil.toPixelFromSP(fragment.width).toInt(),
                 PixelUtil.toPixelFromSP(fragment.height).toInt(),
                 PixelUtil.toPixelFromSP(fragment.atomicInlineBaseline).toInt(),
+                fragment.atomicInlineVerticalAlign,
+                fragment.leadingInlineSpace.total.toInt(),
+                fragment.trailingInlineSpace.total.toInt(),
             ),
             start,
             end,
             spanFlags,
         )
+        // The strut, expand-only — see the other construction site. This is the
+        // path `enablePreparedTextLayout` takes, and it builds the Spannable the
+        // final Layout is made from, so anything applied only to the other one
+        // is invisible on screen.
+        if (!fragment.props.lineHeight.isNaN()) {
+          spannable.setSpan(
+              CustomLineHeightSpan(fragment.props.lineHeight, expandOnly = true),
+              start,
+              end,
+              spanFlags,
+          )
+        }
       } else {
         val roleIsLink =
             if (fragment.props.role != null)
@@ -2237,6 +2285,7 @@ internal object TextLayoutManager {
     } else {
       val placeholderWidth = placeholder.width.toFloat()
       val placeholderHeight = placeholder.height.toFloat()
+      val leadingSpace = placeholder.leadingSpace.toFloat()
 
       // Calculate if the direction of the placeholder character is Right-To-Left.
       val isRtlChar = layout.isRtlCharAt(start)
@@ -2259,12 +2308,30 @@ internal object TextLayoutManager {
       // for a box with no line boxes of its own — for one containing text it
       // floated the whole box up by its descent, so its text sat above the
       // text around it.
+      // `vertical-align` (CSS2 §10.8.1). Resolved here because `top` and
+      // `bottom` are relative to the line box, which only exists once the
+      // Layout has been built.
       val placeholderTopPosition =
-          layout.getLineBaseline(line) - placeholder.baselineFromTop.toFloat()
+          when (placeholder.verticalAlign) {
+            1 -> layout.getLineTop(line).toFloat()
+            2 -> layout.getLineBottom(line).toFloat() - placeholderHeight
+            3 -> {
+              // Centred on the baseline raised by half the parent's x-height —
+              // not on the middle of the line box. Measured from the font
+              // rather than approximated, since that is what CSS names.
+              val bounds = android.graphics.Rect()
+              layout.paint.getTextBounds("x", 0, 1, bounds)
+              val xHeight = bounds.height().toFloat()
+              layout.getLineBaseline(line) - xHeight / 2f - placeholderHeight / 2f
+            }
+            else -> layout.getLineBaseline(line) - placeholder.baselineFromTop.toFloat()
+          }
 
       // The attachment array returns the positions of each of the attachments as
       metrics.top = placeholderTopPosition
-      metrics.left = placeholderLeftPosition
+      // The advance includes the enclosing inline box's leading space; the BOX
+      // starts after it.
+      metrics.left = placeholderLeftPosition + leadingSpace
     }
 
     // The text may be vertically aligned to the top, center, or bottom of the container. This is

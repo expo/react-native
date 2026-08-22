@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include <react/debug/react_native_assert.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 
@@ -29,6 +30,16 @@ constexpr Float kDeterministicCharacterWidth = 10;
 // the baseline" and "aligned to the bottom edge" are distinguishable — with a
 // zero descent every baseline rule looks identical and nothing can be tested.
 constexpr Float kDeterministicDescentRatio = 0.2;
+
+// A stand-in x-height, as a fraction of the FONT SIZE — x-height is a font
+// metric, and deriving it from the line height instead makes `middle` drift
+// whenever `line-height` changes, which is not how CSS behaves. `vertical-align:
+// middle` is defined against the parent's x-height (CSS2 §10.8.1), which a
+// deterministic measurer has no font to ask — so it is declared, like the
+// descent above. It makes `middle` land between `top` and `bottom` and move
+// with the font size, which is what a headless test can meaningfully assert;
+// the exact offset is a fact about a real font and is checked on a device.
+constexpr Float kDeterministicXHeightRatio = 0.5;
 
 Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
   // Line height is layout-observable so text-attribute inheritance can be
@@ -50,6 +61,26 @@ Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
 // Per-character advance, layout-observable so inheritance of weight/style/
 // letterSpacing can be asserted headlessly. Contract: base 10pt, +2pt when
 // bold, +1pt when italic, plus `letterSpacing` verbatim.
+/*
+ * How many cells of the deterministic grid an atomic inline occupies.
+ *
+ * This measurer models a monospace grid of `kDeterministicCharacterWidth` cells
+ * and wraps by counting cells, which is what makes it reproducible. An
+ * attachment used to count as ONE cell no matter how wide it was, so a row of
+ * 100pt boxes in a 300pt container never wrapped — the grid said three cells of
+ * thirty. Real engines break between adjacent atomic inlines (there is a break
+ * opportunity there even with no whitespace, which is why `<span/><span/>` wraps
+ * in a browser), so the count has to follow the box's width.
+ *
+ * Rounded up: a box that does not fill its last cell still occupies it, which
+ * keeps the grid the conservative approximation of a width-based break rather
+ * than one that occasionally over-fills a line.
+ */
+Float attachmentColumns(const AttributedString::Fragment& fragment) {
+  const auto width = fragment.parentShadowView.layoutMetrics.frame.size.width;
+  return std::max<Float>(1, std::ceil(width / kDeterministicCharacterWidth));
+}
+
 Float perCharacterAdvance(const AttributedString::Fragment& fragment) {
   const auto& ta = fragment.textAttributes;
   Float perCharacter = kDeterministicCharacterWidth;
@@ -86,32 +117,68 @@ struct DeterministicLineBox {
   }
 };
 
+
+/**
+ * How one atomic inline grows the line box it is on.
+ *
+ * Extracted so the whole-run box and the per-line boxes cannot drift: they used
+ * to be one computation, and a second copy of these rules is exactly how a
+ * `vertical-align` case ends up correct in one and wrong in the other.
+ */
+void growLineBoxForAttachment(
+    DeterministicLineBox& box,
+    const AttributedString::Fragment& fragment,
+    Float height,
+    const DeterministicLineBox& strut) {
+  if (fragment.atomicInlineVerticalAlign == 3) {
+    // `middle` is positioned relative to the BASELINE (half the parent's
+    // x-height above it), so its contribution is exact: half the box above that
+    // point and half below.
+    const auto xHeight = (strut.ascent + strut.descent) * kDeterministicXHeightRatio;
+    box.ascent = std::max(box.ascent, xHeight / 2 + height / 2);
+    box.descent = std::max(box.descent, height / 2 - xHeight / 2);
+    return;
+  }
+  if (fragment.atomicInlineVerticalAlign != 0) {
+    // `top`/`bottom` align to the line box's own edges, so they cannot
+    // contribute an ascent or a descent — where they sit depends on the line's
+    // height, which is what is being computed. They still have to FIT, so the
+    // line grows downward without moving the baseline.
+    if (height > box.height()) {
+      box.descent += height - box.height();
+    }
+    return;
+  }
+  const auto baseline = fragment.atomicInlineBaseline;
+  box.ascent = std::max(box.ascent, baseline);
+  box.descent = std::max(box.descent, height - baseline);
+}
+
 DeterministicLineBox deterministicLineBox(const AttributedStringBox &attributedStringBox)
 {
   const auto textHeight = deterministicLineHeight(attributedStringBox);
   const auto textDescent = textHeight * kDeterministicDescentRatio;
 
   auto box = DeterministicLineBox{};
-  bool hasText = false;
+
+  // The strut first: a zero-width inline box with the block container's font
+  // and `line-height`, present on every line whether or not text sits on it
+  // (CSS2 §10.8). It is baseline-aligned like any other inline box, and being
+  // usually the only thing that is on a line of boxes, it is what fixes where
+  // the baseline sits — which is what `vertical-align: middle` is measured
+  // against.
+  box.ascent = textHeight - textDescent;
+  box.descent = textDescent;
+  const auto strut = box;
 
   for (const auto &fragment : attributedStringBox.getValue().getFragments()) {
     if (fragment.isAttachment()) {
-      // An atomic inline contributes its own baseline as ascent, and whatever
-      // hangs below that baseline as descent. `atomicInlineBaseline` is how far
-      // its baseline sits from its top, which the shadow node computed per
-      // CSS2 §10.8.1.
-      const auto height = fragment.parentShadowView.layoutMetrics.frame.size.height;
-      const auto baseline = fragment.atomicInlineBaseline;
-      box.ascent = std::max(box.ascent, baseline);
-      box.descent = std::max(box.descent, height - baseline);
-    } else if (!fragment.string.empty()) {
-      hasText = true;
+      growLineBoxForAttachment(
+          box,
+          fragment,
+          fragment.parentShadowView.layoutMetrics.frame.size.height,
+          strut);
     }
-  }
-
-  if (hasText) {
-    box.ascent = std::max(box.ascent, textHeight - textDescent);
-    box.descent = std::max(box.descent, textDescent);
   }
 
   if (box.height() == 0) {
@@ -130,7 +197,12 @@ DeterministicLineBox deterministicLineBox(const AttributedStringBox &attributedS
 std::vector<Rect> measureFragmentRectsDeterministically(
     const AttributedStringBox& attributedStringBox,
     const LayoutConstraints& layoutConstraints,
-    Float lineHeight) {
+    Float lineHeight,
+    // Where each line starts and how tall it is, when the run's lines differ.
+    // Null on the first pass, which only needs line INDICES — that is what
+    // determines the tops in the first place.
+    const std::vector<Float>* lineTops = nullptr,
+    const std::vector<Float>* lineHeights = nullptr) {
   const auto& fragments = attributedStringBox.getValue().getFragments();
   std::vector<Rect> rects;
   rects.reserve(fragments.size());
@@ -162,7 +234,7 @@ std::vector<Rect> measureFragmentRectsDeterministically(
 
     // The leading edge is part of the element's box, so the pen advances
     // before the glyphs and the rect starts at the box edge, not the text.
-    const Float startLine = line;
+    Float startLine = line;
     Float minX = penX;
     penX += fragment.leadingInlineSpace();
     Float maxX = penX;
@@ -176,14 +248,27 @@ std::vector<Rect> measureFragmentRectsDeterministically(
     // newlines are found with memchr instead of a byte-wise branch.
     const bool fragmentIsAttachment = fragment.isAttachment();
     if (fragmentIsAttachment) {
-      if (column >= charactersPerLine) {
+      const auto columns = attachmentColumns(fragment);
+      // A box moves to the next line when it does not fit in what remains of
+      // this one — not merely when the line is already full. `column > 0`
+      // keeps a box wider than the whole container on the line it starts,
+      // rather than looping onto an empty line it also cannot fit.
+      if (column > 0 && column + columns > charactersPerLine) {
         column = 0;
         line += 1;
         penX = 0;
         minX = 0;
+        // The rect's origin is taken from `startLine`, which was captured
+        // before this wrap could be known. A text fragment spanning several
+        // lines genuinely starts on the earlier one — its rect is the union —
+        // but an attachment that wraps starts wholly on the NEW line, and
+        // leaving the stale value put the box at the previous line's y while
+        // its x had already reset to 0: exactly on top of whatever began that
+        // line.
+        startLine = line;
       }
       penX += advance;
-      column += 1;
+      column += columns;
       maxX = std::max(maxX, penX);
     } else {
       const auto& string = fragment.string;
@@ -239,15 +324,90 @@ std::vector<Rect> measureFragmentRectsDeterministically(
     // but they are still inside the box the element reports.
     const auto blockAxis = fragment.blockAxisBoxEdges();
 
+    // Per-line geometry when the caller supplied it; otherwise the uniform
+    // grid, which is all the index pass needs.
+    Float rectTop = startLine * lineHeight;
+    Float rectHeight = (line - startLine + 1) * lineHeight;
+    if (lineTops != nullptr && lineHeights != nullptr && !lineTops->empty()) {
+      const auto first =
+          std::min(static_cast<size_t>(startLine), lineTops->size() - 1);
+      const auto last = std::min(static_cast<size_t>(line), lineTops->size() - 1);
+      rectTop = (*lineTops)[first];
+      rectHeight = (*lineTops)[last] + (*lineHeights)[last] - rectTop;
+    }
+
     rects.push_back(Rect{
-        .origin = {minX, startLine * lineHeight - blockAxis.top},
-        .size = {
-            maxX - minX,
-            (line - startLine + 1) * lineHeight + blockAxis.top +
-                blockAxis.bottom}});
+        .origin = {minX, rectTop - blockAxis.top},
+        .size = {maxX - minX, rectHeight + blockAxis.top + blockAxis.bottom}});
   }
 
   return rects;
+}
+
+
+/**
+ * Per-line boxes for a run.
+ *
+ * The measurer used to give every line in a run the SAME height — the tallest
+ * thing anywhere in it. That is right for text, where the strut dominates every
+ * line equally, and wrong the moment different lines carry different-sized
+ * boxes: a 50pt box on line one and a 20pt box on line two produced two 50pt
+ * lines and a 100pt block where every browser reports 70.
+ *
+ * Line ASSIGNMENT depends only on widths, so it can be recovered by running the
+ * existing walk with a unit line height — the y it reports is then the line
+ * index. That keeps one implementation of wrapping rather than a second copy
+ * that can disagree with the first, which is the kind of duplication this file
+ * has been bitten by before.
+ */
+struct DeterministicLines {
+  std::vector<DeterministicLineBox> boxes;
+  std::vector<Float> tops;
+  Float totalHeight{0};
+};
+
+DeterministicLines deterministicLines(
+    const AttributedStringBox& attributedStringBox,
+    const LayoutConstraints& layoutConstraints,
+    const DeterministicLineBox& strutOnlyBox) {
+  const auto& fragments = attributedStringBox.getValue().getFragments();
+  // Unit line height: the reported y IS the line index.
+  const auto indexRects =
+      measureFragmentRectsDeterministically(attributedStringBox, layoutConstraints, 1);
+
+  size_t lineCount = 1;
+  std::vector<size_t> startLines(fragments.size(), 0);
+  for (size_t i = 0; i < fragments.size() && i < indexRects.size(); i++) {
+    const auto blockAxis = fragments[i].blockAxisBoxEdges();
+    const auto start =
+        static_cast<size_t>(std::llround(indexRects[i].origin.y + blockAxis.top));
+    startLines[i] = start;
+    const auto span = static_cast<size_t>(
+        std::llround(indexRects[i].size.height - blockAxis.top - blockAxis.bottom));
+    lineCount = std::max(lineCount, start + std::max<size_t>(span, 1));
+  }
+
+  DeterministicLines lines;
+  // Every line starts from the strut and grows for what lands on it.
+  lines.boxes.assign(lineCount, strutOnlyBox);
+  for (size_t i = 0; i < fragments.size(); i++) {
+    const auto& fragment = fragments[i];
+    if (!fragment.isAttachment()) {
+      continue;
+    }
+    auto& box = lines.boxes[std::min(startLines[i], lineCount - 1)];
+    const auto height = fragment.parentShadowView.layoutMetrics.frame.size.height;
+    growLineBoxForAttachment(box, fragment, height, strutOnlyBox);
+  }
+
+  lines.tops.reserve(lineCount);
+  Float top = 0;
+  for (const auto& box : lines.boxes) {
+    lines.tops.push_back(top);
+    top += box.height();
+  }
+  lines.totalHeight = top;
+  return lines;
 }
 
 /**
@@ -265,7 +425,7 @@ std::vector<Rect> measureFragmentRectsDeterministically(
 void placeAttachments(
     const AttributedStringBox &attributedStringBox,
     const std::vector<Rect> &fragmentRects,
-    const DeterministicLineBox &lineBox,
+    const DeterministicLines &lines,
     TextMeasurement::Attachments &attachments)
 {
   const auto &fragments = attributedStringBox.getValue().getFragments();
@@ -285,11 +445,77 @@ void placeAttachments(
     // The fragment rect spans the whole line box; the baseline sits at the
     // line's ascent below its top, and the box hangs from there by its own
     // baseline (CSS2 §10.8.1).
+    // Which line this box is on, and that line's own box — not the run's.
+    // Using one box for the whole run put a 20pt box on the second line at the
+    // first line's baseline.
     const auto lineTop = rect.origin.y;
-    const auto baselineY = lineTop + lineBox.ascent;
+    size_t lineIndex = 0;
+    for (size_t l = 0; l < lines.tops.size(); l++) {
+      if (lines.tops[l] <= lineTop + 0.01) {
+        lineIndex = l;
+      }
+    }
+    const auto& lineBox = lines.boxes[lineIndex];
+    const auto baselineY = lines.tops[lineIndex] + lineBox.ascent;
 
+    // `vertical-align` (CSS2 §10.8.1). The engine that built the line is the
+    // only thing that knows where the line's edges are, so each one applies
+    // this itself; the fragment only carries what the box asked for.
+    const auto lineBottom = lines.tops[lineIndex] + lineBox.height();
+    Float boxTop = baselineY - fragment.atomicInlineBaseline;
+    switch (fragment.atomicInlineVerticalAlign) {
+      case 1: // top
+        boxTop = lines.tops[lineIndex];
+        break;
+      case 2: // bottom
+        boxTop = lineBottom - size.height;
+        break;
+      case 3: {
+        // `middle` is NOT the middle of the line box, which is the intuitive
+        // reading and the wrong one. CSS centres the box on the baseline raised
+        // by half the parent's x-height (CSS2 §10.8.1) — so it sits slightly
+        // above the baseline, near the visual centre of lowercase text, and
+        // moves with the font rather than with the line.
+        // The SAME x-height `growLineBoxForAttachment` used when it decided how
+        // much of the line this box needs. Deriving it from the line box here
+        // instead made the two disagree — the box was positioned for one
+        // x-height and the line grown for another — and it fell outside the
+        // line it had just been given room in. The containment assertion below
+        // is what caught it.
+        const auto xHeight =
+            deterministicLineHeight(attributedStringBox) * kDeterministicXHeightRatio;
+        boxTop = baselineY - xHeight / 2 - size.height / 2;
+        break;
+      }
+      default: // baseline — the box's own baseline on the line's
+        break;
+    }
+
+    // Structural invariant: a line box is the UNION of everything on it
+    // (CSS2 §9.4.2), so a box may never be placed outside the line it belongs
+    // to. Any alignment that positions against the line — `top`, `bottom`,
+    // `middle` — has to be matched by a contribution to the line's height, and
+    // forgetting one is invisible in the numbers until something overlaps.
+    // This caught exactly that: `middle` was positioned correctly and
+    // contributed nothing, putting a 20pt box at y=25 on a 40pt line.
+    react_native_assert(
+        boxTop >= lines.tops[lineIndex] - 0.01 &&
+        boxTop + size.height <= lines.tops[lineIndex] + lineBox.height() + 0.01 &&
+        "an atomic inline must be placed inside its own line box");
+    react_native_assert(
+        fragment.atomicInlineVerticalAlign <= 3 &&
+        "unknown vertical-align; the enum and the fragment encoding disagree");
+
+    // The fragment rect starts at the enclosing inline element's BOX edge,
+    // which is before its leading margin/border/padding (that is what makes it
+    // the right rect to report for the element itself). The attachment's own
+    // content starts after that space, so it has to be stepped over here —
+    // otherwise `<span style="padding-left:10px"><img></span>` draws the image
+    // where the padding should be, while the advance after it is still correct,
+    // which reads as the image being 10pt too far left rather than as padding
+    // being ignored.
     attachments[attachmentIndex].frame = Rect{
-        .origin = {rect.origin.x, baselineY - fragment.atomicInlineBaseline},
+        .origin = {rect.origin.x + fragment.leadingInlineSpace(), boxTop},
         .size = size};
     attachmentIndex++;
   }
@@ -317,7 +543,7 @@ TextMeasurement measureDeterministically(
           fragment.parentShadowView.layoutMetrics.frame.size;
       intrinsicWidth += attachmentSize.width;
       maxAttachmentHeight = std::max(maxAttachmentHeight, attachmentSize.height);
-      characterCount += 1;
+      characterCount += static_cast<size_t>(attachmentColumns(fragment));
     } else {
       characterCount += fragment.string.size();
       intrinsicWidth +=
@@ -331,7 +557,12 @@ TextMeasurement measureDeterministically(
   if (characterCount == 0) {
     auto emptyRects = measureFragmentRectsDeterministically(
         attributedStringBox, layoutConstraints, lineHeight);
-    placeAttachments(attributedStringBox, emptyRects, lineBox, attachments);
+    // A single line, which is what an empty run is.
+    auto emptyLines = DeterministicLines{};
+    emptyLines.boxes.push_back(lineBox);
+    emptyLines.tops.push_back(0);
+    emptyLines.totalHeight = lineBox.height();
+    placeAttachments(attributedStringBox, emptyRects, emptyLines, attachments);
     return TextMeasurement{
         .size = layoutConstraints.clamp({0, 0}),
         .attachments = std::move(attachments),
@@ -355,7 +586,7 @@ TextMeasurement measureDeterministically(
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
     segmentWidth += fragment.leadingInlineSpace() + fragment.trailingInlineSpace();
     if (fragment.isAttachment()) {
-      segmentLength += 1;
+      segmentLength += static_cast<size_t>(attachmentColumns(fragment));
       segmentWidth += fragment.parentShadowView.layoutMetrics.frame.size.width;
       continue;
     }
@@ -381,27 +612,44 @@ TextMeasurement measureDeterministically(
   }
 
   Float width = longestSegment;
-  Float lineCount = 0;
   const auto charactersPerLine = std::isfinite(maximumWidth)
       ? std::max<Float>(1, std::floor(maximumWidth / kDeterministicCharacterWidth))
       : std::numeric_limits<Float>::infinity();
-  for (auto length : segmentLengths) {
-    // An empty segment is still a line: two consecutive breaks leave a blank
-    // one, exactly as they do on the web.
-    lineCount += std::isfinite(charactersPerLine)
-        ? std::max<Float>(1, std::ceil(static_cast<Float>(length) / charactersPerLine))
-        : 1;
-  }
+  // The line COUNT is no longer needed here: the height is the sum of the
+  // per-line boxes below, which knows how many there are and how tall each one
+  // is. Counting lines and multiplying by one height is what made a run whose
+  // lines carry different-sized boxes measure wrong.
   if (std::isfinite(maximumWidth) && intrinsicWidth > maximumWidth) {
     width = charactersPerLine * kDeterministicCharacterWidth;
   }
 
+  // Per-line boxes: a run whose lines carry different-sized boxes has
+  // different-sized lines, and the block is their sum rather than the tallest
+  // one multiplied by the count.
+  auto strutOnly = DeterministicLineBox{};
+  {
+    const auto textHeight = deterministicLineHeight(attributedStringBox);
+    strutOnly.ascent = textHeight - textHeight * kDeterministicDescentRatio;
+    strutOnly.descent = textHeight * kDeterministicDescentRatio;
+  }
+  const auto lines =
+      deterministicLines(attributedStringBox, layoutConstraints, strutOnly);
+
+  std::vector<Float> lineHeightsByLine;
+  lineHeightsByLine.reserve(lines.boxes.size());
+  for (const auto& b : lines.boxes) {
+    lineHeightsByLine.push_back(b.height());
+  }
   auto rects = measureFragmentRectsDeterministically(
-      attributedStringBox, layoutConstraints, lineHeight);
-  placeAttachments(attributedStringBox, rects, lineBox, attachments);
+      attributedStringBox,
+      layoutConstraints,
+      lineHeight,
+      &lines.tops,
+      &lineHeightsByLine);
+  placeAttachments(attributedStringBox, rects, lines, attachments);
 
   return TextMeasurement{
-      .size = layoutConstraints.clamp({width, lineHeight * lineCount}),
+      .size = layoutConstraints.clamp({width, lines.totalHeight}),
       .attachments = std::move(attachments),
       .fragmentRects = std::move(rects)};
 }
