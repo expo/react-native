@@ -25,10 +25,17 @@ using ViewShadowNodeProps = ViewProps;
  * share one copy of the text-children layout/paint machinery; the only
  * difference is the concrete props default (`<div>` forces `displayBlock`).
  */
-template <const char *concreteComponentName, typename ViewPropsT = ViewProps>
+template <
+    const char *concreteComponentName,
+    typename ViewPropsT = ViewProps,
+    // Interactive elements carry a richer emitter than a plain view: `<button>`
+    // reports press state. Templated rather than fixed so they can do that
+    // without giving up the text-children layout and paint machinery below,
+    // which is what makes `<button>Save</button>` render its own text.
+    typename ViewEventEmitterT = ViewEventEmitter>
 class AbstractViewShadowNode
-    : public ConcreteViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitter, ViewState> {
-  using BaseShadowNode = ConcreteViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitter, ViewState>;
+    : public ConcreteViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT, ViewState> {
+  using BaseShadowNode = ConcreteViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT, ViewState>;
 
  public:
   AbstractViewShadowNode(

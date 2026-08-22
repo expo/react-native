@@ -197,6 +197,27 @@ function InlineMetricsCase(): React.Node {
   );
 }
 
+/*
+ * Astryx's paragraph reset, applied where this demo uses a CORE `<p>` inside an
+ * Astryx `Card`.
+ *
+ * Astryx on the web ships a reset and styles from scratch on top of it: a Card
+ * computes an exact 16px inset and expects nothing else to contribute, which is
+ * what `astryx-cdp-verify.js` asserts. The user-agent `<p>` margins are correct
+ * per the web, so a consumer of Astryx has to reset them — exactly as it would
+ * in a browser.
+ *
+ * Applied here, at the point of use, rather than through `overrideUAStyle`.
+ * That call mutates the SHARED user-agent style object, so doing it at module
+ * scope zeroed `<p>` margins for every screen in the app the moment this demo
+ * was imported — including the example two screens down whose whole purpose is
+ * to show what the user-agent sheet does. `ASTRYX_RESET` in
+ * `js/astryx/jsx-runtime.js` covers Astryx's OWN elements; these paragraphs are
+ * core intrinsics (the babel override only compiles `js/astryx` against the
+ * Astryx JSX runtime), so they carry it themselves.
+ */
+const ASTRYX_CARD_P = {marginBlock: 0} as const;
+
 function CardCases(): React.Node {
   const cardDefaultRef = useRef<React.ElementRef<typeof View> | null>(null);
   const cardDefaultPRef = useRef<React.ElementRef<typeof View> | null>(null);
@@ -217,7 +238,7 @@ function CardCases(): React.Node {
     <View style={{gap: 12}}>
       <Card ref={cardDefaultRef}>
         {/* $FlowFixMe[not-a-component] intrinsic <p> tag (Astryx element) */}
-        <p ref={cardDefaultPRef}>
+        <p ref={cardDefaultPRef} style={ASTRYX_CARD_P}>
           A default Astryx Card: token background, emphasized 1px border, 12px
           radius, and 16px padding inset (border subtracted via calc).
         </p>
@@ -226,17 +247,21 @@ function CardCases(): React.Node {
 
       <Card ref={cardBlueRef} variant="blue" width={300}>
         {/* $FlowFixMe[not-a-component] intrinsic <p> tag */}
-        <p>variant="blue" width=300 — tinted token background.</p>
+        <p style={ASTRYX_CARD_P}>
+          variant="blue" width=300 — tinted token background.
+        </p>
       </Card>
 
       <Card variant="muted" elevation="med">
         {/* $FlowFixMe[not-a-component] intrinsic <p> tag */}
-        <p>variant="muted" elevation="med" — shadow tokens via boxShadow.</p>
+        <p style={ASTRYX_CARD_P}>
+          variant="muted" elevation="med" — shadow tokens via boxShadow.
+        </p>
       </Card>
 
       <Card ref={cardPad2Ref} padding={2}>
         {/* $FlowFixMe[not-a-component] intrinsic <p> tag */}
-        <p ref={cardPad2PRef}>
+        <p ref={cardPad2PRef} style={ASTRYX_CARD_P}>
           padding=2 — 8px spacing step (total inset stays 8: border +
           calc-reduced padding).
         </p>
@@ -244,7 +269,7 @@ function CardCases(): React.Node {
 
       <Card variant="teal" elevation="low" xstyle={consumerStyles.fancy}>
         {/* $FlowFixMe[not-a-component] intrinsic <p> tag */}
-        <p>
+        <p style={ASTRYX_CARD_P}>
           xstyle override from the consumer: page radius token, dashed warning
           border, light-dark() background.
         </p>
