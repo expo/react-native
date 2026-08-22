@@ -97,6 +97,33 @@ internal class CompositeBackgroundDrawable(
     )
   }
 
+  /**
+   * A copy wearing a different non-react-managed background — the drawable a view had before React
+   * took its background over, kept underneath every layer React draws.
+   *
+   * A view that installs platform chrome of its own has to put it HERE rather than in
+   * `View.background`, and take it out the same way. Assigning `View.background` directly replaces
+   * this whole composite, and assigning `null` destroys it: the author's background colour, border,
+   * shadows and radii all go with it, and nothing rebuilds them because no prop changed. That is
+   * exactly how an `<button>` styled through a stylesheet lost its fill on Android — the style
+   * arrives a render after the chrome, and swapping the chrome out took the fill with it.
+   */
+  fun withNewOriginalBackground(originalBackground: Drawable?): CompositeBackgroundDrawable {
+    return CompositeBackgroundDrawable(
+        context,
+        originalBackground,
+        outerShadows,
+        background,
+        backgroundImage,
+        border,
+        feedbackUnderlay,
+        innerShadows,
+        outline,
+        borderInsets,
+        borderRadius,
+    )
+  }
+
   fun withNewBackground(background: BackgroundDrawable?): CompositeBackgroundDrawable {
     return CompositeBackgroundDrawable(
         context,
