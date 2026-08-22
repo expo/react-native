@@ -226,7 +226,25 @@ public object ColorPropConverter {
     val theme = context.theme
 
     if (theme.resolveAttribute(resourceId, outValue, true)) {
-      return outValue.data
+      /*
+       * `outValue.data` is only the colour when the attribute resolves to a
+       * literal one. Most of the platform's text colours — `textColorPrimary`,
+       * `textColorTertiary` and the rest — are ColorStateLists, and for those
+       * `data` holds a RESOURCE ID. Returning it verbatim reinterprets that id
+       * as ARGB, which lands on an almost fully transparent colour: the text is
+       * laid out, and invisible.
+       *
+       * So the type is checked. A literal colour is used directly; anything
+       * else is resolved through its resource id, which is what turns a
+       * ColorStateList into the colour for its default state.
+       */
+      if (outValue.type >= TypedValue.TYPE_FIRST_COLOR_INT &&
+          outValue.type <= TypedValue.TYPE_LAST_COLOR_INT) {
+        return outValue.data
+      }
+      if (outValue.resourceId != 0) {
+        return ResourcesCompat.getColor(context.resources, outValue.resourceId, theme)
+      }
     }
 
     throw Resources.NotFoundException()
