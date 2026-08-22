@@ -21,8 +21,8 @@
 
 import {DismissableLayer} from './dismissable-layer';
 import {dataState, useControllableState} from './internals';
-import {Portal as LayerPortal} from './portal';
 import {PopperAnchor, PopperContent, PopperContext, PopperRoot} from './popper';
+import {Portal as LayerPortal} from './portal';
 import {Presence} from './presence';
 import {Slot} from './slot';
 import * as React from 'react';

@@ -30,6 +30,7 @@
 import type {PathCommands} from './pathData';
 
 import AstryxVectorShape from './AstryxVectorShapeNativeComponent';
+import {CurrentColorContext} from './CurrentColor';
 import {
   circleCommands,
   lineCommands,
@@ -37,7 +38,6 @@ import {
   rectCommands,
   scaleCommands,
 } from './pathData';
-import {CurrentColorContext} from './CurrentColor';
 import * as React from 'react';
 import {createContext, useContext, useMemo} from 'react';
 import {StyleSheet, processColor} from 'react-native';

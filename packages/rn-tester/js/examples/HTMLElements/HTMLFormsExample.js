@@ -40,16 +40,23 @@ import {ScrollView, Text, View} from 'react-native';
 
 import '@react-native/expo-intrinsics-poc';
 
+/*
+ * Label sits TIGHT to what it labels: iOS grouped forms hold a caption ~4pt
+ * off its row, Material puts a field label 4dp off its field — both nearer
+ * than the note text is to the next case. Group-internal spacing smaller
+ * than group-external is what makes the label read as belonging to the
+ * control below it rather than floating between two.
+ */
 const LABEL = {
   fontSize: 12,
   color: SECONDARY_COLOR,
   marginTop: 16,
-  marginBottom: 4,
+  marginBottom: 2,
 };
 const NOTE = {
   fontSize: 11,
   color: TERTIARY_COLOR,
-  marginBottom: 6,
+  marginBottom: 4,
   lineHeight: 15,
 };
 const READOUT = {
@@ -769,10 +776,16 @@ function Buttons() {
       <Case
         title="disabled"
         note="Greyed by the user-agent stylesheet rather than by the control: a button's label is whatever elements it contains, so the colour is inherited by them. An author colour still wins.">
-        <button type="button" disabled>
-          Disabled
-        </button>
-        <button type="button">Enabled — compare</button>
+        {/* One inline flow, exactly as HTML lays out adjacent buttons: two
+            inline-blocks separated by a word space, sharing a line. The Case
+            frame is a flex column, which had been stacking them edge-to-edge
+            with no gap at all — a layout no platform's forms would show. */}
+        <div>
+          <button type="button" disabled>
+            Disabled
+          </button>{' '}
+          <button type="button">Enabled — compare</button>
+        </div>
       </Case>
 
       <Case
