@@ -2064,9 +2064,11 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   protected facebook::react::SharedViewEventEmitter _eventEmitter;
   protected facebook::react::SharedViewProps _props;
   public @property (assign) UIEdgeInsets hitTestEdgeInsets;
+  public @property (assign, readonly) BOOL hasHostChromeSubviews;
   public @property (strong) NSString* nativeId;
   public @property (strong) UIView* contentView;
   public @property (strong, readonly) NSObject* accessibilityElement;
+  public virtual BOOL isHostChromeSubview:(UIView* _Nonnull view);
   public virtual BOOL wantsToCooptLabel();
   public virtual NSString* accessibilityLabelForCoopting();
   public virtual UIView* betterHitTest:withEvent:(CGPoint point, UIEvent* event);
