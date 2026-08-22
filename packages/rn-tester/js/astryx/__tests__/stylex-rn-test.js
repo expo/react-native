@@ -12,6 +12,24 @@
 
 import * as stylex from '../stylex-rn';
 
+/**
+ * The resolved style from `props()`, or a loud failure.
+ *
+ * `StyleXProps.style` is optional — a declaration set that resolves to nothing
+ * returns no style object at all — so reading a property off it needs the
+ * absent case handled. Handling it by throwing keeps the assertions below
+ * about the value of a property rather than about whether there was one, and
+ * turns "props() silently returned nothing" into a named failure instead of a
+ * confusing `undefined` mismatch further down.
+ */
+function styleOf(props: stylex.StyleXProps): {[string]: unknown} {
+  const {style} = props;
+  if (style == null) {
+    throw new Error('props() resolved to no style object');
+  }
+  return style;
+}
+
 // The scenarios below are lifted from the vendored Astryx Card slice —
 // they are the exact value shapes the runtime must resolve.
 
@@ -280,9 +298,9 @@ describe('stylex-rn', () => {
     // ProgressBar's determinate fill lost its height and color exactly this
     // way. props() must expose the same resolved object under a key the
     // attribute cannot collide with; the JSX runtime layers the override.
-    const resolved = stylex.props({height: '8px', backgroundColor: '#1570ef'});
-    expect(resolved.__stylexStyle).toBe(resolved.style);
-    expect(resolved.__stylexStyle).toMatchObject({height: 8});
+    const fill = stylex.props({height: '8px', backgroundColor: '#1570ef'});
+    expect(fill.__stylexStyle).toBe(fill.style);
+    expect(fill.__stylexStyle).toMatchObject({height: 8});
   });
 
   it('still drops transition-behavior, quietly', () => {
@@ -543,10 +561,12 @@ describe('CSS Grid', () => {
   });
 
   it('resolves tokens and calc() inside a track list', () => {
-    const {style} = stylex.props({
-      '--col': '90px',
-      gridTemplateColumns: 'var(--col) 1fr',
-    });
+    const style = styleOf(
+      stylex.props({
+        '--col': '90px',
+        gridTemplateColumns: 'var(--col) 1fr',
+      }),
+    );
     expect(style.gridTemplateColumns).toBe('90px 1fr');
   });
 
@@ -554,11 +574,13 @@ describe('CSS Grid', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     // A supported longhand rides along so `style` exists at all: when every
     // declaration is dropped, props() returns no style object to inspect.
-    const {style} = stylex.props({
-      gridColumn: '1 / 3',
-      gridGap: '8px',
-      gridColumnStart: '1',
-    });
+    const style = styleOf(
+      stylex.props({
+        gridColumn: '1 / 3',
+        gridGap: '8px',
+        gridColumnStart: '1',
+      }),
+    );
     expect(style.gridColumnStart).toBe(1);
     expect(style.gridColumn).toBeUndefined();
     expect(style.gridGap).toBeUndefined();

@@ -11,9 +11,9 @@
 'use strict';
 
 import type {RNTesterModule} from '../../types/RNTesterTypes';
+import type {LayoutChangeEvent} from 'react-native';
 
 import {DEMO_THEME, ThemingNote} from '../TextChildren/TextChildrenShared';
-
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {ScrollView, Text, View} from 'react-native';
@@ -282,67 +282,70 @@ function BenchRunner(): React.Node {
   // partial layout looks like, and nothing else in the harness could say so.
   const heightsRef = useRef<{[string]: number}>({});
 
-  const onTierLayout = useCallback((event: any) => {
-    if (startRef.current === 0) {
-      return;
-    }
-    const elapsed = global.performance.now() - startRef.current;
-    const laidOut = event?.nativeEvent?.layout?.height;
-    if (laidOut != null) {
-      heightsRef.current[TIERS[tierIndex][0]] = laidOut;
-    }
-    startRef.current = 0;
-    if (round >= WARMUP) {
-      samplesRef.current[tierIndex].push(elapsed);
-    }
+  const onTierLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      if (startRef.current === 0) {
+        return;
+      }
+      const elapsed = global.performance.now() - startRef.current;
+      const laidOut = event?.nativeEvent?.layout?.height;
+      if (laidOut != null) {
+        heightsRef.current[TIERS[tierIndex][0]] = laidOut;
+      }
+      startRef.current = 0;
+      if (round >= WARMUP) {
+        samplesRef.current[tierIndex].push(elapsed);
+      }
 
-    const lastSlot = slot + 1 >= TIERS.length;
-    const nextRound = lastSlot ? round + 1 : round;
-    const nextSlot = lastSlot ? 0 : slot + 1;
+      const lastSlot = slot + 1 >= TIERS.length;
+      const nextRound = lastSlot ? round + 1 : round;
+      const nextSlot = lastSlot ? 0 : slot + 1;
 
-    if (lastSlot) {
-      // Publish what is known so far, so the screen fills in as it goes
-      // rather than staying blank until the end.
-      setResults(prev => {
-        const next = {...prev};
-        for (let t = 0; t < TIERS.length; t++) {
-          if (samplesRef.current[t].length > 0) {
-            next[TIERS[t][0]] = median(samplesRef.current[t]);
+      if (lastSlot) {
+        // Publish what is known so far, so the screen fills in as it goes
+        // rather than staying blank until the end.
+        setResults(prev => {
+          const next = {...prev};
+          for (let t = 0; t < TIERS.length; t++) {
+            if (samplesRef.current[t].length > 0) {
+              next[TIERS[t][0]] = median(samplesRef.current[t]);
+            }
+          }
+          return next;
+        });
+        setSpreads(prev => {
+          const next = {...prev};
+          for (let t = 0; t < TIERS.length; t++) {
+            if (samplesRef.current[t].length > 0) {
+              next[TIERS[t][0]] = spreadPercent(samplesRef.current[t]);
+            }
+          }
+          return next;
+        });
+      }
+
+      if (nextRound >= ROUNDS) {
+        // Drift control: the same tiers, first half of the session vs second.
+        // If the order mattered, this is where it shows up.
+        const firsts: Array<number> = [];
+        const lasts: Array<number> = [];
+        for (const perTier of samplesRef.current) {
+          const half = Math.floor(perTier.length / 2);
+          if (half > 0) {
+            firsts.push(median(perTier.slice(0, half)));
+            lasts.push(median(perTier.slice(half)));
           }
         }
-        return next;
-      });
-      setSpreads(prev => {
-        const next = {...prev};
-        for (let t = 0; t < TIERS.length; t++) {
-          if (samplesRef.current[t].length > 0) {
-            next[TIERS[t][0]] = spreadPercent(samplesRef.current[t]);
-          }
-        }
-        return next;
-      });
-    }
-
-    if (nextRound >= ROUNDS) {
-      // Drift control: the same tiers, first half of the session vs second.
-      // If the order mattered, this is where it shows up.
-      const firsts: Array<number> = [];
-      const lasts: Array<number> = [];
-      for (const perTier of samplesRef.current) {
-        const half = Math.floor(perTier.length / 2);
-        if (half > 0) {
-          firsts.push(median(perTier.slice(0, half)));
-          lasts.push(median(perTier.slice(half)));
+        if (firsts.length > 0) {
+          const a = firsts.reduce((x, y) => x + y, 0);
+          const b = lasts.reduce((x, y) => x + y, 0);
+          setDrift(((b - a) / a) * 100);
         }
       }
-      if (firsts.length > 0) {
-        const a = firsts.reduce((x, y) => x + y, 0);
-        const b = lasts.reduce((x, y) => x + y, 0);
-        setDrift(((b - a) / a) * 100);
-      }
-    }
-    scheduleNext(nextRound, nextSlot);
-  }, [round, slot, tierIndex, scheduleNext]);
+      scheduleNext(nextRound, nextSlot);
+    },
+    [round, slot, tierIndex, scheduleNext],
+  );
 
   useEffect(() => {
     scheduleNext(0, 0);
@@ -443,7 +446,7 @@ function BenchRunner(): React.Node {
   );
 }
 
-export default ({
+export default {
   title: 'DeviceTextBenchmark',
   description:
     'End-to-end text mount benchmark: Text vs NativeText vs bare strings, ' +
@@ -456,4 +459,4 @@ export default ({
       render: (): React.Node => <BenchRunner />,
     },
   ],
-}: RNTesterModule);
+} as RNTesterModule;

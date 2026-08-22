@@ -17,6 +17,11 @@ import {
   rootVariables,
 } from '../../astryx/css';
 import {resolveInherited} from '../../astryx/stylex-rn';
+// $FlowFixMe[untyped-import]
+import globalsCss from '../globals.css';
+import {cn} from '../lib/utils';
+// $FlowFixMe[untyped-import]
+import tailwindCss from '../tailwind.generated.css';
 // The REAL vendored sources, resolved through the jest alias mirror of the
 // Metro aliases. Nothing here is a shim of shadcn itself.
 // $FlowFixMe[cannot-resolve-module]
@@ -25,11 +30,6 @@ import {Badge} from '../ui/badge';
 import {Button} from '../ui/button';
 // $FlowFixMe[cannot-resolve-module]
 import {Switch} from '../ui/switch';
-// $FlowFixMe[untyped-import]
-import globalsCss from '../globals.css';
-// $FlowFixMe[untyped-import]
-import tailwindCss from '../tailwind.generated.css';
-import {cn} from '../lib/utils';
 import * as React from 'react';
 import TestRenderer from 'react-test-renderer';
 
