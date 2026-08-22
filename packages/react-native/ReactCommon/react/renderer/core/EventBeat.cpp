@@ -41,6 +41,29 @@ void EventBeat::unstable_setInduceCallback(std::function<void()> callback) {
   induceCallback_ = std::move(callback);
 }
 
+void EventBeat::flushSynchronouslyNow() const {
+  if (!beatCallback_) {
+    return;
+  }
+  isEventBeatRequested_ = false;
+  isSynchronousRequested_ = false;
+  runtimeScheduler_.executeNowOnTheSameThread(makeBeat());
+}
+
+std::function<void(jsi::Runtime&)> EventBeat::makeBeat() const {
+  return [this, ownerBox = ownerBox_](jsi::Runtime& runtime) {
+    auto owner = ownerBox->owner.lock();
+    if (!owner) {
+      return;
+    }
+
+    isBeatCallbackScheduled_ = false;
+    if (beatCallback_) {
+      beatCallback_(runtime);
+    }
+  };
+}
+
 void EventBeat::induce() const {
   if (!isEventBeatRequested_) {
     return;
@@ -58,18 +81,7 @@ void EventBeat::induce() const {
 
   isBeatCallbackScheduled_ = true;
 
-  auto beat = std::function<void(jsi::Runtime&)>(
-      [this, ownerBox = ownerBox_](jsi::Runtime& runtime) {
-        auto owner = ownerBox->owner.lock();
-        if (!owner) {
-          return;
-        }
-
-        isBeatCallbackScheduled_ = false;
-        if (beatCallback_) {
-          beatCallback_(runtime);
-        }
-      });
+  auto beat = makeBeat();
 
   if (isSynchronousRequested_) {
     isSynchronousRequested_ = false;
