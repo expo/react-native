@@ -23,7 +23,12 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewStructure
+import android.text.Spanned
+import android.text.style.ClickableSpan
 import android.view.accessibility.AccessibilityManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.customview.widget.ExploreByTouchHelper
 import com.facebook.common.logging.FLog
 import com.facebook.react.R
 import com.facebook.react.bridge.ReactNoCrashSoftException
@@ -291,6 +296,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (!canBeTouchTarget(pointerEvents)) {
       return false
     }
+    updatePressedLinkForTouch(event)
     // The root view always assumes any view that was tapped wants the touch
     // and sends the event to JS as such.
     // We don't need to do bubbling in native (it's already happening in JS).
@@ -926,6 +932,82 @@ public open class ReactViewGroup public constructor(context: Context?) :
     super.dispatchDraw(canvas)
     // Safety: any run whose document order exceeds the drawn child count paints above everything.
     drawTextRunsAboveDocumentOrder(canvas, drawnChildCount)
+    drawPressedLinkWash(canvas)
+  }
+
+  /** The link a finger is currently on, if any. */
+  private var pressedLink: TextRunLink? = null
+
+  private val pressedLinkPaint: Paint by
+      lazy(LazyThreadSafetyMode.NONE) {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+          // The theme's own press highlight — the colour every other pressable thing on this
+          // device uses — rather than a grey chosen here, so it follows light and dark and any
+          // theme the app sets. Falls back to a translucent black only if the theme has none.
+          val typedValue = android.util.TypedValue()
+          val themeContext = context
+          color =
+              if (themeContext != null &&
+                  themeContext.theme.resolveAttribute(
+                      android.R.attr.colorControlHighlight, typedValue, true)) {
+                if (typedValue.resourceId != 0) {
+                  androidx.core.content.ContextCompat.getColor(themeContext, typedValue.resourceId)
+                } else {
+                  typedValue.data
+                }
+              } else {
+                0x2E000000
+              }
+        }
+      }
+
+  /**
+   * `:active` for a link, drawn where the link is.
+   *
+   * A browser paints a translucent wash over a link's own glyphs while it is held — not the line,
+   * not the paragraph. The anchor has no view of its own, so this is the only place that knows
+   * which glyphs to cover, exactly as on iOS.
+   */
+  private fun drawPressedLinkWash(canvas: Canvas) {
+    val link = pressedLink ?: return
+    val radius = 3f * resources.displayMetrics.density
+    val bounds = link.bounds
+    canvas.drawRoundRect(
+        bounds.left - 2f,
+        bounds.top - 1f,
+        bounds.right + 2f,
+        bounds.bottom + 1f,
+        radius,
+        radius,
+        pressedLinkPaint,
+    )
+  }
+
+  private fun linkAt(x: Float, y: Float): TextRunLink? =
+      textRunLinks.firstOrNull { it.bounds.contains(x.toInt(), y.toInt()) }
+
+  /**
+   * Press feedback for links, which is all this adds to touch handling.
+   *
+   * Deliberately does not consume anything or change what the view returns: the press is a *visual*
+   * consequence of a touch that still belongs to whatever would otherwise have handled it — the
+   * scroll container above, or React Native's own dispatch. That is what lets a scroll take the
+   * gesture and the highlight disappear with it, rather than a link holding a gesture hostage.
+   */
+  private fun updatePressedLinkForTouch(event: MotionEvent) {
+    if (textRunLinks.isEmpty()) {
+      return
+    }
+    val next =
+        when (event.actionMasked) {
+          MotionEvent.ACTION_DOWN,
+          MotionEvent.ACTION_MOVE -> linkAt(event.x, event.y)
+          else -> null
+        }
+    if (next !== pressedLink) {
+      pressedLink = next
+      invalidate()
+    }
   }
 
   /**
@@ -956,9 +1038,171 @@ public open class ReactViewGroup public constructor(context: Context?) :
       @JvmField public val documentOrder: Int,
   )
 
+  /**
+   * The content description this view derived from its own painted text, so an author-supplied one
+   * is never clobbered.
+   */
+  private var textRunContentDescription: CharSequence? = null
+
   public fun setTextRunLayouts(runs: List<TextRunLayout>?) {
     textRunLayouts = runs
+
+    // Expose painted text to TalkBack. Text children are *drawn* by this view rather than mounted
+    // as child views, so nothing in the view tree carries the string and the text was invisible to
+    // accessibility entirely — a `<button>Save</button>` announced as a button with no label.
+    // The iOS counterpart is `RCTAnonymousTextRunView.accessibilityLabel`.
+    val painted =
+        runs
+            ?.joinToString(" ") { it.layout.text.toString().trim() }
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    val current = contentDescription
+    if (current == null || current === textRunContentDescription) {
+      contentDescription = painted
+      textRunContentDescription = painted
+    }
+
+    // Links inside the painted text get nodes of their own; see
+    // TextRunLinkAccessibilityHelper for why the container's description is not enough.
+    textRunLinks = collectTextRunLinks(runs)
+    if (textRunLinks.isNotEmpty() && textRunLinkHelper == null) {
+      val helper = TextRunLinkAccessibilityHelper()
+      textRunLinkHelper = helper
+      ViewCompat.setAccessibilityDelegate(this, helper)
+    }
+    textRunLinkHelper?.invalidateRoot()
+
     invalidate()
+  }
+
+  /**
+   * One focusable link inside the painted text: which run it is in, the glyph range, and the span
+   * that activates it.
+   */
+  private class TextRunLink(
+      val bounds: Rect,
+      val text: CharSequence,
+      val span: ClickableSpan,
+  )
+
+  private var textRunLinks: List<TextRunLink> = emptyList()
+
+  /**
+   * Makes links inside painted text reachable by TalkBack.
+   *
+   * Text children are *drawn* onto this view's canvas rather than mounted as child views, so an
+   * `<a href>` in a sentence has no view of its own — it is a range of glyphs. The container's
+   * content description (set in [setTextRunLayouts]) carries the words, which is right for text,
+   * but a link is not text: it is focusable, announced as a link, and activated on its own. Without
+   * a node of its own there is nothing for TalkBack to land on.
+   *
+   * [ExploreByTouchHelper] is the platform's answer for exactly this — virtual nodes for parts of a
+   * view that are not views — and it is what `ReactTextView` uses for the same purpose inside a
+   * normal `<Text>`. iOS reaches the same place through `accessibilityElements` on the run view.
+   *
+   * Installed only when there is a link to expose, so a view of plain text behaves exactly as before.
+   */
+  private inner class TextRunLinkAccessibilityHelper : ExploreByTouchHelper(this) {
+
+    override fun getVirtualViewAt(x: Float, y: Float): Int {
+      textRunLinks.forEachIndexed { index, link ->
+        if (link.bounds.contains(x.toInt(), y.toInt())) {
+          return index
+        }
+      }
+      return HOST_ID
+    }
+
+    override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
+      textRunLinks.indices.forEach { virtualViewIds.add(it) }
+    }
+
+    override fun onPopulateNodeForVirtualView(
+        virtualViewId: Int,
+        node: AccessibilityNodeInfoCompat
+    ) {
+      val link = textRunLinks.getOrNull(virtualViewId)
+      if (link == null) {
+        // The helper can ask about a node that has gone away between updates; an empty node is
+        // better than a crash, and the next update replaces it.
+        node.contentDescription = ""
+        node.setBoundsInParent(Rect())
+        return
+      }
+      node.contentDescription = link.text
+      // The same pair React Native uses for a link elsewhere: the generic view
+      // class plus the "link" role description, which is what TalkBack reads
+      // out. Not `Button` — that would announce it as the wrong control.
+      node.className = "android.view.View"
+      node.roleDescription = context.getString(R.string.link_description)
+      node.isClickable = true
+      node.isFocusable = true
+      node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
+      node.setBoundsInParent(link.bounds)
+    }
+
+    override fun onPerformActionForVirtualView(
+        virtualViewId: Int,
+        action: Int,
+        arguments: android.os.Bundle?
+    ): Boolean {
+      if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) {
+        return false
+      }
+      val link = textRunLinks.getOrNull(virtualViewId) ?: return false
+      // The span is the same one a touch would activate, so an assisted activation and a tap take
+      // the identical path to JavaScript.
+      link.span.onClick(this@ReactViewGroup)
+      return true
+    }
+  }
+
+  private var textRunLinkHelper: TextRunLinkAccessibilityHelper? = null
+
+  /**
+   * Finds the links in the painted runs and their on-screen rects.
+   *
+   * A link that wraps across lines is given the union of its line rects rather than one node per
+   * line: TalkBack reads it as a single destination, which is what it is.
+   */
+  private fun collectTextRunLinks(runs: List<TextRunLayout>?): List<TextRunLink> {
+    if (runs.isNullOrEmpty()) {
+      return emptyList()
+    }
+    val links = mutableListOf<TextRunLink>()
+    for (run in runs) {
+      val spanned = run.layout.text as? Spanned ?: continue
+      for (span in spanned.getSpans(0, spanned.length, ClickableSpan::class.java)) {
+        val start = spanned.getSpanStart(span)
+        val end = spanned.getSpanEnd(span)
+        if (start < 0 || end <= start) {
+          continue
+        }
+        val layout = run.layout
+        val firstLine = layout.getLineForOffset(start)
+        val lastLine = layout.getLineForOffset(end - 1)
+        var left = Float.MAX_VALUE
+        var right = Float.MIN_VALUE
+        for (line in firstLine..lastLine) {
+          val lineStart = if (line == firstLine) layout.getPrimaryHorizontal(start) else layout.getLineLeft(line)
+          val lineEnd = if (line == lastLine) layout.getPrimaryHorizontal(end) else layout.getLineRight(line)
+          left = minOf(left, minOf(lineStart, lineEnd))
+          right = maxOf(right, maxOf(lineStart, lineEnd))
+        }
+        val bounds =
+            Rect(
+                (run.left + left).toInt(),
+                (run.top + layout.getLineTop(firstLine)).toInt(),
+                (run.left + right).toInt(),
+                (run.top + layout.getLineBottom(lastLine)).toInt(),
+            )
+        if (bounds.isEmpty) {
+          continue
+        }
+        links.add(TextRunLink(bounds, spanned.subSequence(start, end).toString(), span))
+      }
+    }
+    return links
   }
 
   private fun drawTextRun(canvas: Canvas, run: TextRunLayout) {

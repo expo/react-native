@@ -203,6 +203,7 @@ inline bool areAttributedStringFragmentsEquivalentLayoutWise(
       // not affect layout — comparing them would only cost cache misses.
       lhs.leadingInlineSpace() == rhs.leadingInlineSpace() &&
       lhs.trailingInlineSpace() == rhs.trailingInlineSpace() &&
+      lhs.atomicInlineVerticalAlign == rhs.atomicInlineVerticalAlign &&
       // LayoutMetrics of an attachment fragment affects the size of a measured
       // attributed string.
       (!lhs.isAttachment() || (lhs.parentShadowView.layoutMetrics == rhs.parentShadowView.layoutMetrics));
@@ -230,7 +231,8 @@ inline size_t attributedStringFragmentHashLayoutWise(const AttributedString::Fra
       fragment.string,
       textAttributesHashLayoutWise(fragment.textAttributes),
       fragment.leadingInlineSpace(),
-      fragment.trailingInlineSpace());
+      fragment.trailingInlineSpace(),
+      fragment.atomicInlineVerticalAlign);
 }
 
 inline size_t attributedStringFragmentHashDisplayWise(const AttributedString::Fragment &fragment)

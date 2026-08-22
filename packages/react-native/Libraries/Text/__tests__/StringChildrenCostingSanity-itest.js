@@ -14,11 +14,11 @@ import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 import type {HostInstance} from 'react-native';
 
 import ensureInstance from '../../../src/private/__tests__/utilities/ensureInstance';
-import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
 import {ScrollView, Text, View} from 'react-native';
+import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 
 /*
  * The type size these measurements are calibrated against.

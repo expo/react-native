@@ -1347,7 +1347,26 @@ void drawInlineBoxDecorations(
                 if (isOutsideVisibleRange || isInTruncatedRange) {
                   attachments.push_back(TextMeasurement::Attachment{.isClipped = true});
                 } else {
-                  CGSize attachmentSize = attachment.bounds.size;
+                  // The bounds carry the enclosing inline box's leading and
+                  // trailing space so that it occupies advance (see
+                  // RCTNSAttributedStringFragmentFromFragment). The BOX is only
+                  // the part between them, so both are backed out here — the
+                  // reservation is a layout concern, not part of the picture.
+                  NSNumber *leadingSpace = [textStorage attribute:RCTAtomicInlineLeadingSpaceAttributeName
+                                                          atIndex:range.location
+                                                   effectiveRange:NULL];
+                  NSNumber *trailingSpace = [textStorage attribute:RCTAtomicInlineTrailingSpaceAttributeName
+                                                           atIndex:range.location
+                                                    effectiveRange:NULL];
+                  CGFloat leading = leadingSpace.doubleValue;
+                  // The bounds also carry any extra descent added so the line
+                  // keeps the strut's — the BOX is the height without it.
+                  NSNumber *extraDescent = [textStorage attribute:RCTAtomicInlineExtraDescentAttributeName
+                                                          atIndex:range.location
+                                                   effectiveRange:NULL];
+                  CGSize attachmentSize = CGSizeMake(
+                      attachment.bounds.size.width - leading - trailingSpace.doubleValue,
+                      attachment.bounds.size.height - extraDescent.doubleValue);
                   CGRect glyphRect = [layoutManager boundingRectForGlyphRange:range inTextContainer:textContainer];
 
                   CGRect frame;
@@ -1392,10 +1411,45 @@ void drawInlineBoxDecorations(
                   // actually draws the box. Setting the bounds alone moved the
                   // placeholder and left the view behind, which is why an
                   // inline-block's text still sat above the line around it.
-                  CGFloat baselineFromTop = attachmentSize.height + attachment.bounds.origin.y;
-                  frame = {
-                      .origin = {glyphRect.origin.x, lineBaseline - baselineFromTop},
-                      .size = attachmentSize};
+                  // Computed from the INFLATED bounds, where the two adjustments cancel:
+                  // the height gained exactly what the origin lost, so this is
+                  // the same distance from the box's top to its baseline.
+                  CGFloat baselineFromTop =
+                      attachment.bounds.size.height + attachment.bounds.origin.y;
+                  CGFloat boxTop = lineBaseline - baselineFromTop;
+
+                  // `vertical-align` (CSS2 §10.8.1). Applied here rather than
+                  // through the attachment's bounds because this is the pass
+                  // that positions the child VIEW, and because `top`/`bottom`
+                  // are relative to the line box — which only exists once
+                  // TextKit has laid the line out, and is exactly what
+                  // `lineFragment` is.
+                  NSNumber *verticalAlign = [textStorage attribute:RCTAtomicInlineVerticalAlignAttributeName
+                                                           atIndex:range.location
+                                                    effectiveRange:NULL];
+                  switch (verticalAlign.integerValue) {
+                    case 1: // top
+                      boxTop = lineFragment.origin.y;
+                      break;
+                    case 2: // bottom
+                      boxTop = lineFragment.origin.y + lineFragment.size.height - attachmentSize.height;
+                      break;
+                    case 3: { // middle
+                      // Centred on the baseline raised by half the parent's
+                      // x-height — NOT on the middle of the line box, which is
+                      // the intuitive reading and the wrong one.
+                      UIFont *font = [textStorage attribute:NSFontAttributeName
+                                                    atIndex:range.location
+                                             effectiveRange:NULL];
+                      CGFloat xHeight = font != nil ? font.xHeight : 0;
+                      boxTop = lineBaseline - xHeight / 2 - attachmentSize.height / 2;
+                      break;
+                    }
+                    default: // baseline — the box's own baseline on the line's
+                      break;
+                  }
+
+                  frame = {.origin = {glyphRect.origin.x + leading, boxTop}, .size = attachmentSize};
 
                   auto rect = facebook::react::Rect{
                       .origin = facebook::react::Point{.x = frame.origin.x, .y = frame.origin.y},

@@ -186,3 +186,55 @@ describe('white-space: every value is understood', () => {
     });
   }
 });
+
+describe('a segment break and the space before it', () => {
+  /*
+   * css-text-3 §4.1.1 removes a collapsible space next to a segment break, and
+   * it says so about the inline formatting context, not about a text node. The
+   * space and the break can therefore sit in different fragments — `a ` followed
+   * by an inline element whose text starts with a newline — and the space still
+   * goes.
+   *
+   * Measured against the same markup with no space to remove, because an inline
+   * element contributes width of its own and only the DIFFERENCE is the space.
+   * Safari renders both of these at one character wide.
+   */
+  function widthOf(children: React.Node): number {
+    const ref = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <View collapsable={false} style={{width: 400, fontSize: FONT_SIZE}}>
+          {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+          <div ref={ref} style={{...SHRINK, whiteSpace: 'pre-line'}}>
+            {children}
+          </div>
+        </View>,
+      );
+    });
+    const width = ensureInstance(
+      ref.current,
+      ReactNativeElement,
+    ).getBoundingClientRect().width;
+    root.destroy();
+    return width;
+  }
+
+  it('removes it when both are in one text node', () => {
+    expect(widthOf('a \nb') / CHAR_WIDTH).toBe(1);
+  });
+
+  it('removes it when the break is in a later fragment', () => {
+    // $FlowExpectedError[not-a-component] intrinsic <b> tag
+    const withSpace = widthOf([
+      <React.Fragment key="a">{'a '}</React.Fragment>,
+      <b key="b">{'\nb'}</b>,
+    ]);
+    // $FlowExpectedError[not-a-component] intrinsic <b> tag
+    const without = widthOf([
+      <React.Fragment key="a">{'a'}</React.Fragment>,
+      <b key="b">{'\nb'}</b>,
+    ]);
+    expect(withSpace).toBe(without);
+  });
+});

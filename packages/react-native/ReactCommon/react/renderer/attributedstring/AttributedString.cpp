@@ -53,6 +53,7 @@ bool Fragment::isContentEqual(const Fragment& rhs) const {
              isInlineBoxStart,
              isInlineBoxEnd,
              atomicInlineBaseline,
+             atomicInlineVerticalAlign,
              forcedBreak) ==
       std::tie(
           rhs.string,
@@ -61,6 +62,7 @@ bool Fragment::isContentEqual(const Fragment& rhs) const {
           rhs.isInlineBoxStart,
           rhs.isInlineBoxEnd,
           rhs.atomicInlineBaseline,
+          rhs.atomicInlineVerticalAlign,
           rhs.forcedBreak);
 }
 

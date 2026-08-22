@@ -9,13 +9,23 @@
 
 #import <React/RCTAssert.h>
 #import <React/RCTConversions.h>
+#import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
 #import <react/renderer/animationbackend/CSSTransitionsTrace.h>
 #import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
 #import <react/utils/ManagedObjectWrapper.h>
 
+#include <limits>
+
 using namespace facebook::react;
 
-@implementation RCTAnonymousTextRunView
+@implementation RCTAnonymousTextRunView {
+  // Rebuilt when the run changes; walking the layout for every accessibility
+  // query would re-lay-out the text on each one.
+  NSArray<UIAccessibilityElement *> *_cachedAccessibilityElements;
+  // The link rects, and which of them a finger is currently on.
+  NSArray<NSValue *> *_cachedLinkRects;
+  NSArray<NSValue *> *_pressedLinkRects;
+}
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
@@ -95,10 +105,41 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   // marker away entirely — the list rendered with no bullets at all on iOS
   // while Android, which does not clip the same way, showed them.
   CGFloat leading = MAX(0, -RCTCGRectFromRect(_run.frame).origin.x);
+  /*
+   * And past the content box's END: `white-space: pre` keeps lines exactly as
+   * authored, and CSS's initial `overflow: visible` means a line longer than
+   * the container DRAWS past it (probed in real Safari, which paints the
+   * overhang; Android agrees because its container does not clip text
+   * drawing). This canvas was sized to the container, so iOS clipped the
+   * overhang away — read as "iOS clips, Android doesn't" in the three-way
+   * comparison, with the device disagreement being nothing but this view's
+   * width. Measured from the same TextKit layout the paint uses, so the canvas
+   * and the pixels cannot disagree.
+   */
+  CGFloat trailing = 0;
+  /*
+   * Only a run that DOES NOT WRAP can overflow its end edge, so only those pay
+   * for the measurement: an ordinary run's lines end at the container by
+   * construction and `trailing` stays 0 without any text work.
+   */
+  const bool wraps = facebook::react::wrapsText(
+      _run.attributedString.getBaseTextAttributes().whiteSpace.value_or(facebook::react::WhiteSpace::Normal));
+  RCTTextLayoutManager *layoutManager = self.nativeTextLayoutManager;
+  if (!wraps && layoutManager != nil) {
+    CGRect runFrame = RCTCGRectFromRect(_run.frame);
+    auto measurement = [layoutManager
+        measureAttributedString:_run.attributedString
+            paragraphAttributes:facebook::react::ParagraphAttributes{}
+                  layoutContext:facebook::react::TextLayoutContext{}
+              layoutConstraints:facebook::react::LayoutConstraints{
+                  .maximumSize = {std::numeric_limits<facebook::react::Float>::infinity(),
+                                  std::numeric_limits<facebook::react::Float>::infinity()}}];
+    trailing = MAX(0, ceil(measurement.size.width) - runFrame.size.width);
+  }
   self.frame = CGRectMake(
       containerBounds.origin.x - leading,
       containerBounds.origin.y - overflow.top,
-      containerBounds.size.width + leading,
+      containerBounds.size.width + leading + trailing,
       containerBounds.size.height + overflow.top + overflow.bottom);
   // The compensating origin keeps this view's coordinate space identical to
   // the owning View's, in both axes, so `containerFrame` — the one geometry
@@ -156,6 +197,23 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
       RCTRunGeometryMatchesYogaFrame(frame, _run.frame, self.traitCollection.displayScale ?: 3.0),
       @"text-children run paint geometry must be the run's Yoga frame, pixel-aligned");
 
+  /*
+   * `white-space: pre` / `nowrap`: lay the PAINT out at unbounded width, the
+   * same constraint the measurement used (`constraintsForWhiteSpace`).
+   *
+   * Yoga clamps the run box to its container, so `frame.size.width` here is
+   * the container's — and TextKit, asked to draw into that width, re-broke the
+   * lines the measurement deliberately did not break: a long `<pre>` line came
+   * out WRAPPED on iOS (then clipped by the canvas), while Android and Safari
+   * let it overflow, per CSS's `overflow: visible` initial value. Widening
+   * only the draw width keeps geometry, hit-testing and the tripwire above on
+   * the Yoga frame; the canvas is grown to fit in `setContainerBounds`.
+   */
+  if (!facebook::react::wrapsText(_run.attributedString.getBaseTextAttributes().whiteSpace.value_or(
+          facebook::react::WhiteSpace::Normal))) {
+    frame.size.width = CGFLOAT_MAX;
+  }
+
   // Draw from the TextKit stack measurement already built and laid out for
   // this run (ios-run-draw-reuse-plan.md) instead of converting,
   // rebuilding, and re-shaping it here on the main thread. Content-keyed:
@@ -171,6 +229,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
                             attributedString:_run.attributedString
                                        frame:frame
                            drawHighlightPath:nil];
+    [self drawPressedLinkWash];
     return;
   }
 
@@ -178,6 +237,26 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
                             paragraphAttributes:facebook::react::ParagraphAttributes{}
                                           frame:frame
                               drawHighlightPath:nil];
+  [self drawPressedLinkWash];
+}
+
+/*
+ * Painted over the glyphs rather than under them, and rounded, which is what a
+ * browser's link highlight looks like on both platforms. `labelColor` at a low
+ * alpha rather than a fixed grey so it stays visible in dark mode.
+ */
+- (void)drawPressedLinkWash
+{
+  if (_pressedLinkRects.count == 0) {
+    return;
+  }
+  [[[UIColor labelColor] colorWithAlphaComponent:0.18] setFill];
+  for (NSValue *value in _pressedLinkRects) {
+    // Grown slightly so the wash covers ascenders and descenders rather than
+    // clipping the text it is meant to sit behind.
+    CGRect rect = CGRectInset(value.CGRectValue, -2, -1);
+    [[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:3] fill];
+  }
 }
 
 // Resolves a touch (in the owning View's coordinate space) to an inline
@@ -185,6 +264,237 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 // this run or lands on emitter-less bare text, so the tap falls through to the
 // View's own emitter. Uses the same `containerFrame` as painting, so a tap
 // always hits exactly where the glyphs were drawn.
+/*
+ * The run's text, so assistive technology can read it.
+ *
+ * Text children are *painted* by this view rather than mounted as subviews, so
+ * nothing in the view tree carries the string: a `<div>Hello</div>` was
+ * invisible to VoiceOver entirely, and `<button>Save</button>` announced as a
+ * button with no label. `RCTViewComponentView` builds a container's label by
+ * walking its subviews and collecting theirs
+ * (`RCTRecursiveAccessibilityLabel`), so exposing it here is what puts painted
+ * text back into that walk.
+ *
+ * Deliberately not an accessibility *element*: a text run is not focusable on
+ * its own, exactly as a DOM text node is not an event target. It contributes
+ * its string to the element that contains it.
+ */
+- (NSString *)accessibilityLabel
+{
+  NSString *label = super.accessibilityLabel;
+  if (label != nil) {
+    return label;
+  }
+  auto text = _run.attributedString.getString();
+  return text.empty() ? nil : RCTNSStringFromString(text);
+}
+
+/*
+ * The one kind of text run that *is* focusable: a link.
+ *
+ * The rule above — a run contributes its string to whatever contains it and is
+ * not an element itself — is right for text, and wrong for exactly one case. A
+ * DOM text node is not an event target, but an `<a href>` is: it is reachable,
+ * it is announced as a link, and it is activated on its own. In Safari every
+ * link inside a paragraph is a separate accessibility element, and a link that
+ * assistive technology cannot land on is not a link.
+ *
+ * So a run publishes an element per fragment that carries a role, positioned on
+ * that fragment's own rects rather than the whole run's. That is what makes a
+ * link *inside a sentence* reachable: the anchor has no view — it is a range of
+ * glyphs in this run — so there is nothing else that could carry it.
+ *
+ * `RCTParagraphComponentAccessibilityProvider` does the same for React Native's
+ * own `<Text>`; this is the text-children path arriving at the same place.
+ *
+ * A run with no roles in it returns nothing and stays exactly as it was: not an
+ * element, contributing its label upward.
+ */
+- (void)invalidateAccessibilityElements
+{
+  _cachedAccessibilityElements = nil;
+  _cachedLinkRects = nil;
+  _pressedLinkRects = nil;
+  // A run only claims touches when it has a link in it; see `-pointInside:`.
+  self.userInteractionEnabled = [self linkRects].count > 0;
+}
+
+/*
+ * The on-screen rects of every link in this run, in the run view's own
+ * coordinate space.
+ *
+ * Shared by accessibility and by press feedback so the two can never disagree
+ * about where a link is: what lights up under a finger is exactly what
+ * VoiceOver lands on.
+ */
+- (NSArray<NSValue *> *)linkRects
+{
+  if (_cachedLinkRects != nil) {
+    return _cachedLinkRects;
+  }
+  RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
+  if (nativeTextLayoutManager == nil) {
+    return @[];
+  }
+
+  NSMutableArray<NSValue *> *rects = [NSMutableArray array];
+  const CGRect frame = self.containerFrame;
+  const CGPoint offset =
+      CGPointMake(frame.origin.x - self.frame.origin.x, frame.origin.y - self.frame.origin.y);
+
+  [nativeTextLayoutManager
+      getRectWithAttributedString:_run.attributedString
+              paragraphAttributes:facebook::react::ParagraphAttributes{}
+               enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
+                            frame:CGRectMake(0, 0, frame.size.width, frame.size.height)
+                       usingBlock:^(CGRect fragmentRect, NSString *_Nonnull fragmentText, NSString *value) {
+                         if (![value isEqualToString:@"link"]) {
+                           return;
+                         }
+                         [rects addObject:[NSValue valueWithCGRect:CGRectOffset(
+                                                                       fragmentRect, offset.x, offset.y)]];
+                       }];
+
+  _cachedLinkRects = rects;
+  return _cachedLinkRects;
+}
+
+/*
+ * A run claims a touch only where a link actually is.
+ *
+ * The view covers the whole content box, so claiming everything would make it
+ * the hit-test target for taps meant for sibling views. Answering only inside a
+ * link's glyphs keeps the run invisible to every other touch, which is what lets
+ * press feedback exist at all without disturbing the gesture arbitration around
+ * it.
+ */
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
+{
+  for (NSValue *value in [self linkRects]) {
+    if (CGRectContainsPoint(value.CGRectValue, point)) {
+      return YES;
+    }
+  }
+  return NO;
+}
+
+#pragma mark - Press feedback
+
+/*
+ * `:active` for a link, drawn where the link is.
+ *
+ * A browser on either platform paints a translucent wash over a link's own rects
+ * while it is held — not over the line, and not over the paragraph. Because the
+ * anchor has no view, this is the only place that knows which glyphs to cover.
+ *
+ * The press releases on cancel as well as on lift, which is what makes a link
+ * inside a scroll view behave: the scroll claims the gesture, UIKit cancels the
+ * touch, and the highlight goes away without JavaScript being asked.
+ */
+- (void)setPressedLinkRectsForPoint:(CGPoint)point
+{
+  NSMutableArray<NSValue *> *pressed = [NSMutableArray array];
+  for (NSValue *value in [self linkRects]) {
+    if (CGRectContainsPoint(value.CGRectValue, point)) {
+      [pressed addObject:value];
+    }
+  }
+  if (pressed.count == 0 && _pressedLinkRects == nil) {
+    return;
+  }
+  _pressedLinkRects = pressed.count > 0 ? pressed : nil;
+  [self setNeedsDisplay];
+}
+
+- (void)clearPressedLink
+{
+  if (_pressedLinkRects == nil) {
+    return;
+  }
+  _pressedLinkRects = nil;
+  [self setNeedsDisplay];
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+  [self setPressedLinkRectsForPoint:[touches.anyObject locationInView:self]];
+  [super touchesBegan:touches withEvent:event];
+}
+
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+  // Sliding off the link un-highlights it and sliding back on restores it, as a
+  // held control does.
+  [self setPressedLinkRectsForPoint:[touches.anyObject locationInView:self]];
+  [super touchesMoved:touches withEvent:event];
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+  [self clearPressedLink];
+  [super touchesEnded:touches withEvent:event];
+}
+
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+  [self clearPressedLink];
+  [super touchesCancelled:touches withEvent:event];
+}
+
+- (NSArray *)accessibilityElements
+{
+  if (_cachedAccessibilityElements != nil) {
+    return _cachedAccessibilityElements;
+  }
+
+  RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
+  if (nativeTextLayoutManager == nil) {
+    return nil;
+  }
+
+  NSMutableArray<UIAccessibilityElement *> *elements = [NSMutableArray array];
+  __weak __typeof(self) weakSelf = self;
+  const CGRect frame = self.containerFrame;
+
+  [nativeTextLayoutManager
+      getRectWithAttributedString:_run.attributedString
+              paragraphAttributes:facebook::react::ParagraphAttributes{}
+               enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
+                            frame:CGRectMake(0, 0, frame.size.width, frame.size.height)
+                       usingBlock:^(CGRect fragmentRect, NSString *_Nonnull fragmentText, NSString *value) {
+                         UIAccessibilityTraits traits;
+                         if ([value isEqualToString:@"link"]) {
+                           traits = UIAccessibilityTraitLink;
+                         } else if ([value isEqualToString:@"button"]) {
+                           traits = UIAccessibilityTraitButton;
+                         } else {
+                           // Every other role is a description of text, not a
+                           // thing to land on.
+                           return;
+                         }
+
+                         __typeof(self) strongSelf = weakSelf;
+                         if (strongSelf == nil) {
+                           return;
+                         }
+                         UIAccessibilityElement *element =
+                             [[UIAccessibilityElement alloc] initWithAccessibilityContainer:strongSelf];
+                         element.isAccessibilityElement = YES;
+                         element.accessibilityTraits = traits;
+                         element.accessibilityLabel = fragmentText;
+                         // Offset by the run's own frame: the enumeration lays
+                         // the string out at the origin, the same convention
+                         // `-touchEventEmitterAtContainerPoint:` compensates for
+                         // below, and the frame has to be in this view's space.
+                         element.accessibilityFrameInContainerSpace = CGRectOffset(
+                             fragmentRect, frame.origin.x - self.frame.origin.x, frame.origin.y - self.frame.origin.y);
+                         [elements addObject:element];
+                       }];
+
+  _cachedAccessibilityElements = elements.count > 0 ? elements : nil;
+  return _cachedAccessibilityElements;
+}
+
 - (facebook::react::SharedTouchEventEmitter)touchEventEmitterAtContainerPoint:(CGPoint)point
 {
   CGRect frame = self.containerFrame;

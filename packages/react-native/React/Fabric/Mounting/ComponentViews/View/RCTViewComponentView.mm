@@ -367,6 +367,9 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     runView->_run = data.textRuns[i];
     runView->_layoutManager = data.layoutManager;
     [runView setContainerBounds:self.currentContainerView.bounds];
+    // The run's accessibility elements are laid out from this text; a new run
+    // invalidates them for the same reason it invalidates the drawing.
+    [runView invalidateAccessibilityElements];
     [runView setNeedsDisplay];
   }
   // Re-establish authored paint order relative to mounted children.
