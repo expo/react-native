@@ -22,13 +22,37 @@ import com.facebook.react.uimanager.events.EventCategoryDef
  */
 @DoNotStripAny
 @SuppressLint("MissingNativeLoadLibrary")
+/** What JavaScript decided about an event dispatched through [EventEmitterWrapper.dispatchCancelable]. */
+internal sealed interface CancelableResult {
+  /** Nobody objected; carry on. */
+  object Proceed : CancelableResult
+
+  /** `preventDefault()` — the default action must not happen. */
+  object Prevented : CancelableResult
+
+  /** `setValue(text)` — the default action happens with this value instead. */
+  data class Replace(val value: String) : CancelableResult
+}
+
 internal class EventEmitterWrapper private constructor() : HybridClassBase() {
+
+
   private external fun dispatchEvent(
       eventName: String,
       params: NativeMap?,
       @EventCategoryDef category: Int,
       eventTimestamp: Long,
   )
+
+  /*
+   * Returns the decision, encoded: null means proceed unchanged, "\u0001" means
+   * refused, and anything else is the value to use instead. See the C++ side.
+   */
+  private external fun dispatchCancelableEventSynchronously(
+      eventName: String,
+      params: NativeMap?,
+      eventTimestamp: Long,
+  ): String?
 
   private external fun dispatchEventSynchronously(
       eventName: String,
@@ -64,6 +88,30 @@ internal class EventEmitterWrapper private constructor() : HybridClassBase() {
   }
 
   @Synchronized
+  /**
+   * Asks JavaScript about something that has not happened yet, and waits.
+   *
+   * Only for a platform callback that must answer before it returns — a control
+   * asking whether an edit may be applied. Blocks both threads for the duration
+   * of the handler.
+   */
+  fun dispatchCancelable(
+      eventName: String,
+      params: WritableMap?,
+      eventTimestamp: Long,
+  ): CancelableResult {
+    if (!isValid) {
+      return CancelableResult.Proceed
+    }
+    val encoded =
+        dispatchCancelableEventSynchronously(eventName, params as NativeMap?, eventTimestamp)
+    return when {
+      encoded == null -> CancelableResult.Proceed
+      encoded == PREVENTED -> CancelableResult.Prevented
+      else -> CancelableResult.Replace(encoded)
+    }
+  }
+
   fun dispatchEventSynchronously(eventName: String, params: WritableMap?, eventTimestamp: Long) {
     if (!isValid) {
       return
@@ -96,6 +144,9 @@ internal class EventEmitterWrapper private constructor() : HybridClassBase() {
   }
 
   private companion object {
+    /** Matches the marker the C++ side writes; see its comment for why a control character. */
+    const val PREVENTED: String = "\u0001"
+
     init {
       staticInit()
     }

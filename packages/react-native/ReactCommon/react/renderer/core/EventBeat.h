@@ -112,6 +112,27 @@ class EventBeat {
   virtual void requestSynchronous() const;
 
   /*
+   * Runs the beat *now*, on the calling thread, and does not return until the
+   * JavaScript side has finished with it.
+   *
+   * `requestSynchronous` alone is not enough for a caller that needs an answer
+   * before it returns. It only marks the *next* beat as synchronous, and the
+   * beat still waits for whatever drives it — a run-loop observer on iOS — so
+   * the handler runs after the caller has already had to decide. Measured
+   * exactly that way: a `beforeinput` handler ran, but only once the text field
+   * delegate had returned and the character was already committed.
+   *
+   * This pairs the request with the induce that would otherwise arrive later,
+   * and deliberately ignores an already-scheduled beat: that one will simply
+   * find an empty queue when it arrives.
+   *
+   * Both threads block for the duration. Only worth it when the answer is
+   * needed before a platform callback returns — a control asking whether an
+   * edit may be applied — and never on a path that runs per frame.
+   */
+  void flushSynchronouslyNow() const;
+
+  /*
    * The callback will be executed once a consumer (for example EventQueue)
    * calls either `EventBeat::request` or `EventBeat::requestSynchronous`. The
    * callback will be executed on the proper thread.
@@ -133,6 +154,9 @@ class EventBeat {
    * Receiver might ignore the call if a beat was not requested.
    */
   void induce() const;
+
+  /* The beat callback, wrapped so it can be run now or scheduled. */
+  std::function<void(jsi::Runtime &)> makeBeat() const;
 
   BeatCallback beatCallback_;
   std::function<void()> induceCallback_;
