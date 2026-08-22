@@ -17,6 +17,42 @@
 
 namespace facebook::react {
 
+std::optional<Float> TextAttributes::resolveFontSize(
+    Float declaredFontSize,
+    Float declaredFontSizeEm,
+    Float declaredFontSizeRem,
+    Float userAgentFontSizeEm,
+    bool platformSuppliesSize,
+    Float inheritedFontSize) {
+  // The size a relative unit multiplies is never allowed to be absent: an
+  // element with no inherited size would otherwise turn a valid `0.8em` into
+  // NaN and take the crash a long way from here.
+  const Float inherited = !std::isnan(inheritedFontSize)
+      ? inheritedFontSize
+      : TextAttributes::initialFontSize();
+  // The root's size IS font-size's initial value here: React Native's root
+  // element is the surface root, which an app cannot state a size on. See the
+  // declaration for why that is a constant rather than a value to carry.
+  const Float root = TextAttributes::initialFontSize();
+
+  if (!std::isnan(declaredFontSizeEm)) {
+    return declaredFontSizeEm * inherited;
+  }
+  if (!std::isnan(declaredFontSizeRem)) {
+    return declaredFontSizeRem * root;
+  }
+  if (!std::isnan(declaredFontSize)) {
+    return declaredFontSize;
+  }
+  if (platformSuppliesSize) {
+    return std::numeric_limits<Float>::quiet_NaN();
+  }
+  if (!std::isnan(userAgentFontSizeEm)) {
+    return userAgentFontSizeEm * inherited;
+  }
+  return std::nullopt;
+}
+
 void TextAttributes::apply(TextAttributes textAttributes) {
   // Color
   foregroundColor = textAttributes.foregroundColor
@@ -31,8 +67,36 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   // Font
   fontFamily = !textAttributes.fontFamily.empty() ? textAttributes.fontFamily
                                                   : fontFamily;
-  fontSize =
-      !std::isnan(textAttributes.fontSize) ? textAttributes.fontSize : fontSize;
+  // `em` multiplies what was inherited; an absolute size replaces it. At this
+  // point `fontSize` still holds the parent's computed size, which is exactly
+  // what `em` resolves against.
+  /*
+   * `fontSize` still holds the INHERITED size at this point, which is what an
+   * `em` resolves against — and the assignment below is what ends that, so
+   * everything the decision needs is read before it is made.
+   *
+   * A text node is never the thing a platform text ROLE resolves for: that
+   * happens on the element, in `BaseViewProps::applyInheritedTextAttributes`,
+   * which passes the answer down as a cleared size. Saying so here rather than
+   * plumbing a flag keeps `<Text>` on exactly the path it was on.
+   */
+  if (const auto resolved = resolveFontSize(
+          textAttributes.fontSize,
+          textAttributes.fontSizeEm,
+          textAttributes.fontSizeRem,
+          textAttributes.uaFontSizeEm,
+          /* platformSuppliesSize */ false,
+          fontSize)) {
+    fontSize = *resolved;
+  }
+  fontSizeEm = !std::isnan(textAttributes.fontSizeEm) ? textAttributes.fontSizeEm
+                                                     : fontSizeEm;
+  fontSizeRem = !std::isnan(textAttributes.fontSizeRem)
+      ? textAttributes.fontSizeRem
+      : fontSizeRem;
+  uaFontSizeEm = !std::isnan(textAttributes.uaFontSizeEm)
+      ? textAttributes.uaFontSizeEm
+      : uaFontSizeEm;
   fontSizeMultiplier = !std::isnan(textAttributes.fontSizeMultiplier)
       ? textAttributes.fontSizeMultiplier
       : fontSizeMultiplier;
@@ -55,6 +119,9 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   letterSpacing = !std::isnan(textAttributes.letterSpacing)
       ? textAttributes.letterSpacing
       : letterSpacing;
+  verticalAlign = textAttributes.verticalAlign.has_value()
+      ? textAttributes.verticalAlign
+      : verticalAlign;
   baselineShift = !std::isnan(textAttributes.baselineShift)
       ? textAttributes.baselineShift
       : baselineShift;
@@ -179,8 +246,12 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
       floatEquality(maxFontSizeMultiplier, rhs.maxFontSizeMultiplier) &&
       floatEquality(opacity, rhs.opacity) &&
       floatEquality(fontSize, rhs.fontSize) &&
+      floatEquality(fontSizeEm, rhs.fontSizeEm) &&
+      floatEquality(fontSizeRem, rhs.fontSizeRem) &&
+      floatEquality(uaFontSizeEm, rhs.uaFontSizeEm) &&
       floatEquality(fontSizeMultiplier, rhs.fontSizeMultiplier) &&
       floatEquality(letterSpacing, rhs.letterSpacing) &&
+      verticalAlign == rhs.verticalAlign &&
       floatEquality(baselineShift, rhs.baselineShift) &&
       floatEquality(lineHeight, rhs.lineHeight) &&
       floatEquality(textShadowRadius, rhs.textShadowRadius);
@@ -216,13 +287,17 @@ static constexpr Float kDefaultFontSize = 17.0;
 static constexpr Float kDefaultFontSize = 16.0;
 #endif
 
+Float TextAttributes::initialFontSize() {
+  return kDefaultFontSize;
+}
+
 TextAttributes TextAttributes::defaultTextAttributes() {
   static auto textAttributes = [] {
     auto defaultAttrs = TextAttributes{};
     // Non-obvious (can be different among platforms) default text attributes.
     defaultAttrs.foregroundColor = blackColor();
     defaultAttrs.backgroundColor = clearColor();
-    defaultAttrs.fontSize = kDefaultFontSize;
+    defaultAttrs.fontSize = initialFontSize();
     defaultAttrs.fontSizeMultiplier = 1.0;
     return defaultAttrs;
   }();
@@ -268,6 +343,8 @@ SharedDebugStringConvertibleList TextAttributes::getDebugProps() const {
           "dynamicTypeRamp", dynamicTypeRamp, textAttributes.dynamicTypeRamp),
       debugStringConvertibleItem(
           "letterSpacing", letterSpacing, textAttributes.letterSpacing),
+      debugStringConvertibleItem(
+          "verticalAlign", verticalAlign, textAttributes.verticalAlign),
 
       // Paragraph Styles
       debugStringConvertibleItem(

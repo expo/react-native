@@ -16,6 +16,7 @@ import type {HostInstance} from 'react-native';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
+
 import '@react-native/expo-intrinsics-poc';
 
 /*

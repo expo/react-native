@@ -27,6 +27,7 @@ import type {HostInstance} from 'react-native';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
+
 import '@react-native/expo-intrinsics-poc';
 
 function rectOf(ref: {current: HostInstance | null}) {
@@ -191,7 +192,7 @@ test('each tag reports itself, not the component backing it', () => {
   }
 });
 
-test('<fieldset> carries the UA border and asymmetric block padding', () => {
+test('<fieldset> carries the native group surface metrics', () => {
   const child = createRef<HostInstance>();
   const outer = createRef<HostInstance>();
   const root = Fantom.createRoot();
@@ -209,32 +210,48 @@ test('<fieldset> carries the UA border and asymmetric block padding', () => {
     );
   });
 
-  // padding-block is 0.35em over 0.625em against a 16px root, plus the 1px
-  // border — so the content does NOT start at the padding box's top the way a
-  // symmetric shorthand would put it. Asserting the start edge specifically is
-  // what catches `paddingBlock` having been written as a single value.
+  // DOM-CSS-DEVIATION(fieldset-native-surface): the platform's group
+  // surface, not html.css's 0.35em/0.625em web-control metrics — Material's
+  // outlined card gives 16dp of block padding (Fantom resolves the android
+  // table), inside the 1px outline.
   const inset = rectOf(child).y - rectOf(outer).y;
-  expect(inset).toBeCloseTo(0.35 * 16 + 1, 1);
+  expect(inset).toBeCloseTo(16 + 1, 1);
 
-  // marginInline: 2 on each side, and 0.75em inline padding inside the border.
+  // marginInline: 2 on each side.
   expect(rectOf(outer).width).toBe(200 - 4);
 });
 
-test('<legend> is inline-level inside its fieldset', () => {
+test('<legend> hoists above the bordered box as the group label', () => {
+  // DOM-CSS-DEVIATION(fieldset-legend-position): a browser notches the legend
+  // into the top border; the platforms' form convention — iOS grouped
+  // settings, Material subheads — sets the label ABOVE the surface, so
+  // Fieldset.js hoists it. The legend must sit entirely above the box the
+  // controls live in, separated by its UA block-end margin.
   const legend = createRef<HostInstance>();
+  const control = createRef<HostInstance>();
+  const outer = createRef<HostInstance>();
   const root = Fantom.createRoot();
 
   Fantom.runTask(() => {
     root.render(
       // $FlowFixMe[prop-missing] element from the catalog
-      <fieldset style={{width: 200}}>
+      <fieldset ref={outer} style={{width: 200}}>
         {/* $FlowFixMe[prop-missing] */}
         <legend ref={legend}>Details</legend>
+        {/* $FlowFixMe[prop-missing] */}
+        <div ref={control} style={{height: 10}} />
       </fieldset>,
     );
   });
 
-  // The legend renders; its border-notch positioning is a documented gap
-  // (DOM-CSS-LIMITATION), so this asserts only that it lays out inside the box.
-  expect(rectOf(legend).width).toBeGreaterThan(0);
+  const legendRect = rectOf(legend);
+  const controlRect = rectOf(control);
+  expect(legendRect.width).toBeGreaterThan(0);
+  // The control sits in the bordered box BELOW the whole legend: legend
+  // bottom + its 6px margin + the box's 1px border + 0.35em padding.
+  expect(controlRect.y).toBeGreaterThanOrEqual(
+    legendRect.y + legendRect.height + 6,
+  );
+  // And the element's overall box still honours the author's width.
+  expect(rectOf(outer).width).toBe(200);
 });
