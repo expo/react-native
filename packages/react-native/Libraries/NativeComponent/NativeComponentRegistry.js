@@ -76,6 +76,35 @@ export function get<Config extends {...}>(
     );
 
     if (verify) {
+      /*
+       * Verification compares the static view config with the native one. When
+       * native view configs are not obtainable at all — the new architecture
+       * with the legacy ViewConfig interop layer off — there is nothing to
+       * compare against, for any component.
+       *
+       * Asking anyway produced one soft error per component resolved, which is
+       * wrong in three ways: the comparison was never going to happen, the
+       * message described a per-component problem when the cause is a runtime
+       * setting, and a library defining its own elements with static view
+       * configs (and deliberately no native view manager) was told each one
+       * was broken. Seven of these appeared on a stock RNTester launch.
+       *
+       * So the capability is asked about directly, and the check that cannot
+       * run is skipped rather than attempted. It is reported ONCE — silently
+       * disabling an integrity check is its own hazard, and the reader needs to
+       * know that "no validation errors" currently means "no validation".
+       *
+       * Note this is only the `verify` path. Actually *depending* on native
+       * view configs (`native: true`) while they are unobtainable is a real
+       * problem and still raises the original error, per component, from
+       * `getNativeComponentAttributes` above — that is what that message was
+       * written for.
+       */
+      if (!native && !canObtainNativeViewConfigs()) {
+        warnOnceThatVerificationIsUnavailable();
+        return viewConfig;
+      }
+
       const nativeViewConfig = native
         ? viewConfig
         : getNativeComponentAttributes(name);
@@ -147,9 +176,58 @@ export function getWithFallback_DEPRECATED<Config extends {...}>(
   return FallbackNativeComponent;
 }
 
+/*
+ * Whether native view configs can be obtained in this runtime at all.
+ *
+ * Defensive about the method's absence: `UIManager` is an interface with more
+ * than one implementation, including ones outside this repository, and a
+ * missing capability method must not become a crash. Absent, we assume configs
+ * ARE obtainable, which preserves the previous behaviour exactly.
+ */
+function canObtainNativeViewConfigs(): boolean {
+  return UIManager.unstable_hasNativeViewConfigInterop?.() ?? true;
+}
+
+let hasWarnedAboutUnavailableVerification = false;
+
+function warnOnceThatVerificationIsUnavailable(): void {
+  if (hasWarnedAboutUnavailableVerification) {
+    return;
+  }
+  hasWarnedAboutUnavailableVerification = true;
+  /*
+   * A LOG, not a warning. On the new architecture without the interop layer
+   * this branch is the app's permanent, expected configuration — every dev
+   * launch took the LogBox warnings banner for a condition nobody can act on
+   * from inside the app. The message stays discoverable in the console for
+   * someone auditing verification coverage; the boundary that deserves noise —
+   * a `native: true` component with no native counterpart — still fails loudly
+   * on its own path.
+   */
+  console.log(
+    'NativeComponentRegistry: static view config verification is enabled but ' +
+      'cannot run, because native view configs are not obtainable in the new ' +
+      'architecture without the legacy ViewConfig interop layer. Static view ' +
+      'configs are being used as-is and are NOT being checked against native ' +
+      'ones. Turn on the interop layer to restore the check.',
+  );
+}
+
 function hasNativeViewConfig(name: string): boolean {
   invariant(getRuntimeConfig == null, 'Unexpected invocation!');
-  return UIManager.getViewManagerConfig(name) != null;
+  /*
+   * `hasViewManagerConfig`, not `getViewManagerConfig(name) != null`: this is an
+   * existence check, and on the new architecture fetching the config to answer
+   * it logs a soft error advising exactly this call instead. The two are
+   * equivalent on the old architecture, where `hasViewManagerConfig` is defined
+   * as that same null check.
+   *
+   * A separate path from the verification above, and separately wrong: this one
+   * is only reachable when static view configs are disabled entirely
+   * (`getRuntimeConfig == null`), which is why fixing it alone does not quiet an
+   * app that has them enabled.
+   */
+  return UIManager.hasViewManagerConfig(name);
 }
 
 /**
