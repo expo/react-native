@@ -67,6 +67,66 @@ class ReactViewGroupTextRunPaintOrderTest {
     assertThat(hasRunInk(render(documentOrder = 1))).isTrue()
   }
 
+  @Test
+  fun accessibilityHostDoesNotChangeReactChildIndices() {
+    val rvg = ReactViewGroup(context)
+    val box = View(context)
+    rvg.addView(box)
+    val manager = ReactViewManager()
+
+    rvg.setTextRunLayouts(
+        listOf(
+            ReactViewGroup.TextRunLayout(
+                solidBlackRunLayout(),
+                0f,
+                0f,
+                0,
+                listOf(accessibilityItem()),
+            )
+        )
+    )
+
+    assertThat(rvg.childCount).isEqualTo(2) // React child + private host.
+    assertThat(manager.getChildCount(rvg)).isEqualTo(1)
+    assertThat(manager.getChildAt(rvg, 0)).isSameAs(box)
+
+    rvg.setTextRunLayouts(null)
+    assertThat(rvg.childCount).isEqualTo(1)
+    assertThat(manager.getChildCount(rvg)).isEqualTo(1)
+  }
+
+  @Test
+  fun legacyRunWithoutSemanticPayloadDoesNotCreateAccessibilityHost() {
+    val rvg = ReactViewGroup(context)
+    rvg.setTextRunLayouts(
+        listOf(ReactViewGroup.TextRunLayout(solidBlackRunLayout(), 0f, 0f, 0)))
+
+    assertThat(rvg.childCount).isZero()
+  }
+
+  @Test
+  fun accessibilityHostStaysOutsideClippingChildManagement() {
+    val rvg = ReactViewGroup(context)
+    val box = View(context)
+    rvg.addView(box)
+    rvg.setTextRunLayouts(
+        listOf(
+            ReactViewGroup.TextRunLayout(
+                solidBlackRunLayout(), 0f, 0f, 0, listOf(accessibilityItem())
+            )
+        )
+    )
+    val manager = ReactViewManager()
+
+    manager.setRemoveClippedSubviews(rvg, true)
+    assertThat(manager.getChildCount(rvg)).isEqualTo(1)
+    assertThat(manager.getChildAt(rvg, 0)).isSameAs(box)
+
+    manager.removeAllViews(rvg)
+    assertThat(manager.getChildCount(rvg)).isZero()
+    assertThat(rvg.childCount).isEqualTo(1) // Private accessibility host remains.
+  }
+
   private fun render(documentOrder: Int): Bitmap {
     val rvg = ReactViewGroup(context)
 
@@ -93,6 +153,28 @@ class ReactViewGroupTextRunPaintOrderTest {
     text.setSpan(SolidBlockSpan(size), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     return StaticLayout.Builder.obtain(text, 0, text.length, TextPaint(), size).build()
   }
+
+  private fun accessibilityItem(): InlineAccessibilityItem =
+      InlineAccessibilityItem(
+          kind = 0,
+          tag = 0,
+          label = "hello",
+          role = "text",
+          hint = "",
+          language = "",
+          disabled = false,
+          selected = false,
+          checked = 3,
+          fragmentIndices = intArrayOf(0),
+          liveRegion = 0,
+          busy = false,
+          expanded = null,
+          valueMin = null,
+          valueMax = null,
+          valueNow = null,
+          valueText = null,
+          actions = emptyList(),
+      )
 
   /** True if any pixel is black-ish (the run) rather than red (the box) or transparent. */
   private fun hasRunInk(bitmap: Bitmap): Boolean {

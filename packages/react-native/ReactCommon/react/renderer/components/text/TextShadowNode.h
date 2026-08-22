@@ -11,6 +11,7 @@
 
 #include <react/renderer/components/text/BaseTextShadowNode.h>
 #include <react/renderer/components/text/TextProps.h>
+#include <react/renderer/components/view/BaseViewEventEmitter.h>
 #include <react/renderer/components/view/ViewEventEmitter.h>
 #include <react/renderer/core/ConcreteShadowNode.h>
 #include <react/renderer/core/LayoutConstraints.h>
@@ -21,7 +22,9 @@ namespace facebook::react {
 
 extern const char TextComponentName[];
 
-using TextEventEmitter = TouchEventEmitter;
+// Inline authored elements participate in the complete accessibility event
+// contract even though they do not mount a native text view of their own.
+using TextEventEmitter = BaseViewEventEmitter;
 
 /**
  * Inline text elements — authored `<Text>` and every intrinsic derived from it

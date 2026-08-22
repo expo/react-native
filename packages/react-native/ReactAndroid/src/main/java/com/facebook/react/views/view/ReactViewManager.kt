@@ -23,6 +23,7 @@ import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.common.ReactConstants
+import com.facebook.react.common.mapbuffer.MapBuffer
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.BackgroundStyleApplicator
@@ -455,7 +456,8 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
   ): Any? {
     val state = stateWrapper.stateDataMapBuffer
     // ViewState MapBuffer keys (mirror ViewState.getMapBuffer): 0 = list of runs; per run,
-    // 0 = attributed string, 1..3 = left/top/width (dips), 5 = document order.
+    // 0 = attributed string, 1..3 = left/top/width (dips), 5 = document order, 6 = accessibility
+    // leaves (see readInlineAccessibilityItems).
     if (state == null || !state.contains(0)) {
       view.mountedTextRunsState = null
       view.setTextRunLayouts(null)
@@ -543,10 +545,72 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       if (canvasText != null) {
         layout.paint.color = canvasText
       }
-      runs.add(ReactViewGroup.TextRunLayout(layout, left, top, documentOrder))
+      val accessibilityItems = readInlineAccessibilityItems(runMb)
+      runs.add(
+          ReactViewGroup.TextRunLayout(
+              layout,
+              left,
+              top,
+              documentOrder,
+              accessibilityItems,
+              accessibilityAttachmentTags =
+                  if (runMb.contains(7)) runMb.getIntBuffer(7) else null,
+              // Only a run with leaves needs to place them; the offsets are checked against the
+              // text they are about to index, so a builder that ever diverges costs geometry
+              // rather than a wrong rectangle
+              fragmentOffsets =
+                  if (accessibilityItems.isNullOrEmpty()) null
+                  else
+                      TextLayoutManager.getFragmentOffsets(attributedString)?.takeIf {
+                        it.last() == layout.text.length
+                      },
+          ))
     }
     view.setTextRunLayouts(runs)
     return null
+  }
+
+  /**
+   * The run's authored accessibility leaves, or null when the run carries no model.
+   *
+   * Keys mirror `ViewState::getMapBuffer` in C++: per leaf, 0 kind, 1 tag, 2 label, 3 role, 4 hint,
+   * 5 language, 6 disabled, 7 selected, 8 checked, 9 fragment indices, 10 live region, 11 busy,
+   * 12 expanded (0 unset, 1 collapsed, 2 expanded), 13..15 value min/max/now and 16 value text when
+   * set, 17 actions as (0 name, 1 label), 18 the tags of the attachments the leaf presents. The
+   * run's key 7, every attachment it lays out, is read beside this.
+   */
+  private fun readInlineAccessibilityItems(run: MapBuffer): List<InlineAccessibilityItem>? {
+    if (!run.contains(6)) {
+      return null
+    }
+    return run.getMapBufferList(6).map { item ->
+      InlineAccessibilityItem(
+          kind = item.getInt(0),
+          tag = item.getInt(1),
+          label = item.getString(2),
+          role = item.getString(3),
+          hint = item.getString(4),
+          language = item.getString(5),
+          disabled = item.getBoolean(6),
+          selected = item.getBoolean(7),
+          checked = item.getInt(8),
+          fragmentIndices = item.getIntBuffer(9),
+          liveRegion = item.getInt(10),
+          busy = item.getBoolean(11),
+          expanded =
+              when (item.getInt(12)) {
+                1 -> false
+                2 -> true
+                else -> null
+              },
+          valueMin = if (item.contains(13)) item.getInt(13) else null,
+          valueMax = if (item.contains(14)) item.getInt(14) else null,
+          valueNow = if (item.contains(15)) item.getInt(15) else null,
+          valueText = if (item.contains(16)) item.getString(16) else null,
+          actions = item.getMapBufferList(17).map { action -> action.getString(0) to action.getString(1) },
+          attachmentTags = if (item.contains(18)) item.getIntBuffer(18) else IntArray(0),
+      )
+    }
   }
 
   override fun getCommandsMap(): MutableMap<String, Int> =

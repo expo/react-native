@@ -294,6 +294,34 @@ internal object TextLayoutManager {
     return alignment
   }
 
+  /**
+   * Where each fragment of [attributedString] starts in the text [getOrCreateSpannableForText]
+   * builds from it, with the text's length appended: fragment `i` is the character range
+   * `[offsets[i], offsets[i + 1])`. Null when the attributed string carries no fragments.
+   *
+   * The spannable builders append each fragment's transformed string in order and nothing else, so
+   * this is that same sum. It is what maps an accessibility leaf's fragment indices onto the painted
+   * run's own [Layout] whether or not the builder also marked fragments with spans, which it does
+   * only under `enablePreparedTextLayout`.
+   */
+  @JvmStatic
+  public fun getFragmentOffsets(attributedString: MapBuffer): IntArray? {
+    if (!attributedString.contains(AS_KEY_FRAGMENTS)) {
+      return null
+    }
+    val fragments = attributedString.getMapBuffer(AS_KEY_FRAGMENTS)
+    val offsets = IntArray(fragments.count + 1)
+    for (i in 0 until fragments.count) {
+      val fragment = fragments.getMapBuffer(i)
+      val textTransform =
+          TextAttributeProps.fromMapBuffer(fragment.getMapBuffer(FR_KEY_TEXT_ATTRIBUTES))
+              .textTransform
+      offsets[i + 1] =
+          offsets[i] + TextTransform.apply(fragment.getString(FR_KEY_STRING), textTransform).length
+    }
+    return offsets
+  }
+
   @JvmStatic
   fun getTextGravity(attributedString: MapBuffer, spanned: Spannable): Int {
     val alignmentAttr = getTextAlignmentAttr(attributedString)
