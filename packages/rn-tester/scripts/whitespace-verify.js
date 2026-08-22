@@ -119,7 +119,6 @@ function check(name, pass, detail) {
   return pass;
 }
 
-const PADDING = 10;
 // Layout is rounded to the pixel grid, so a dp delta can land a fraction off.
 const TOLERANCE = 1.0;
 

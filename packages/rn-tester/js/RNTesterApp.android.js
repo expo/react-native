@@ -8,6 +8,8 @@
  * @format
  */
 
+import './expo-env';
+
 import RNTesterApp from './RNTesterAppShared';
 import {AppRegistry} from 'react-native';
 

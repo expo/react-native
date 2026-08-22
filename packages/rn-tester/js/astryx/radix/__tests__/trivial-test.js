@@ -10,6 +10,7 @@
 
 'use strict';
 
+import {jsx} from '../../jsx-runtime';
 import {useControllableState} from '../internals';
 import {Slot} from '../slot';
 import {
@@ -20,7 +21,6 @@ import {
   ProgressRoot,
   SeparatorRoot,
 } from '../trivial';
-import {jsx} from '../../jsx-runtime';
 import * as React from 'react';
 import TestRenderer from 'react-test-renderer';
 
