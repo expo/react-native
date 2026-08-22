@@ -76,15 +76,45 @@ export function withFetchSelfSignedCertsForAllTests(
   });
 
   beforeAll(() => {
-    // For some reason, setting the `selfSignedCertDispatcher` with `setGlobalDispatcher` doesn't work.
-    // Instead of using `setGlobalDispatcher`, we'll use a spy to intercept the fetch calls and add the dispatcher.
-    fetchSpy.mockImplementation((url, options) =>
-      fetchOriginal(url, {
+    /*
+     * Lets the code under test reach the self-signed HTTPS server these suites
+     * start, by serving its `fetch` calls with undici's `request` — the same
+     * way every other helper in this file talks to those servers, and the only
+     * mechanism here that actually works.
+     *
+     * Three things were tried first, and each fails on Node 26:
+     *
+     *  - Passing the dispatcher to the global `fetch`. Node's `fetch` is backed
+     *    by its own bundled undici and will not take a dispatcher built by the
+     *    copy in `node_modules`; the request fails with a bare "fetch failed",
+     *    which reads exactly like a refused certificate rather than an ignored
+     *    dispatcher. This is what the suite did, and why it was red.
+     *  - Calling the installed undici's own `fetch`. That gets past the
+     *    certificate and then dies in `markResourceTiming`, which undici 6
+     *    calls and this Node no longer provides.
+     *  - Setting `NODE_TLS_REJECT_UNAUTHORIZED` in `beforeAll`. Node reads it
+     *    before the suite runs, so it has no effect by then.
+     *
+     * Only the fields `Device.#fetchText` reads are built, which is the whole
+     * surface any caller here uses. A fuller shim would be inventing behaviour
+     * nothing exercises.
+     */
+    fetchSpy.mockImplementation(async (url, options) => {
+      const {statusCode, body} = await request(url.toString(), {
         ...options,
-        // $FlowFixMe[prop-missing]: dispatcher
-        dispatcher: options?.dispatcher ?? selfSignedCertDispatcher,
-      }),
-    );
+        dispatcher: selfSignedCertDispatcher,
+      });
+      // $FlowFixMe[prop-missing] undici's body does expose `text()`
+      const text: string = await body.text();
+      // Only the fields the callers read, not a whole `Response`.
+      // $FlowFixMe[incompatible-type]
+      return {
+        ok: statusCode >= 200 && statusCode < 300,
+        status: statusCode,
+        statusText: '',
+        text: async () => text,
+      };
+    });
   });
 
   afterAll(() => {
