@@ -24,6 +24,7 @@ import RCTDeviceEventEmitter from '../EventEmitter/RCTDeviceEventEmitter';
 import LogBoxNotificationContainer from '../LogBox/LogBoxNotificationContainer';
 import StyleSheet from '../StyleSheet/StyleSheet';
 import {RootTagContext, createRootTag} from './RootTag';
+import SurfaceErrorBoundary from './SurfaceErrorBoundary';
 import * as React from 'react';
 import {useRef} from 'react';
 
@@ -160,7 +161,10 @@ const AppContainer = ({
       key={key}
       style={rootViewStyle || styles.container}
       ref={innerViewRef}>
-      {children}
+      {/* Inside the inspected view, and inside LogBox and the overlays below,
+          so that when the app's tree fails the tools that report it are still
+          mounted to say so. */}
+      <SurfaceErrorBoundary>{children}</SurfaceErrorBoundary>
     </View>
   );
 
