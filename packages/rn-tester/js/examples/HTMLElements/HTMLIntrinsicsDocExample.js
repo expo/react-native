@@ -11,18 +11,21 @@
 'use strict';
 
 /**
- * HTML sections and grouping content — §4.3 and §4.4.
+ * The static half of the intrinsic-elements demo, as a document a browser can
+ * be given too.
  *
- * The demo content lives in `docs/groupingDocs.js` as a SHARED DOCUMENT: the
- * same module renders here through the fork's element catalog and, unchanged,
+ * The content lives in `docs/intrinsicsDocs.js` as a SHARED DOCUMENT: the same
+ * module renders here through the fork's element catalog and, unchanged,
  * through `text-conformance/render-docs.js` into the comparison report's web
- * column. This file is only the RNTester chrome around it — the scroll view
- * and the screen registration. Anything demonstrative belongs in the document,
- * where both engines will render it; anything interactive or platform-aware
- * belongs here, where the comparison will never pretend the browser ran it.
+ * column. This file is only the RNTester chrome around it.
+ *
+ * `examples/TextChildren/IntrinsicElementsExample.js` keeps the rest of the
+ * screen — the measured-rect cases, the external-module intrinsic, and the
+ * click and event.target demos — and keeps them unchanged, because other
+ * tooling reads the rects those cases publish.
  */
 
-import {DOC_SECTIONS, INTRO} from './docs/groupingDocs';
+import {DOC_SECTIONS, INTRO} from './docs/intrinsicsDocs';
 import {SECONDARY_COLOR} from './themed';
 import * as React from 'react';
 import {ScrollView, Text} from 'react-native';
@@ -39,11 +42,12 @@ function Section({children}) {
 }
 
 export default {
-  title: 'HTML: sections & grouping',
+  title: 'HTML: intrinsics document',
   category: 'UI',
   description:
-    'Block-level elements — §4.3 sections and §4.4 grouping content: headings, ' +
-    'paragraphs, lists, quotes, figures and the sectioning elements.',
+    'The static intrinsics cases — inline highlights, box decorations and ' +
+    'inline flow inside a <div> — rendered from the document the browser ' +
+    'column is rendered from.',
   examples: DOC_SECTIONS.map(([name, title, Component]) => ({
     name,
     title,

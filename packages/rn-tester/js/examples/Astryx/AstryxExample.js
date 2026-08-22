@@ -825,7 +825,7 @@ const gridStyles = stylex.create({
   },
 });
 
-function GridCell({children, extra}: {children: React.Node, extra?: mixed}) {
+function GridCell({children, extra}: {children: React.Node, extra?: unknown}) {
   const {state, handlers} = useInteractionState();
   return (
     <div
