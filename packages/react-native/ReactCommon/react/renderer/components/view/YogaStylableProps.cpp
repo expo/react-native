@@ -46,10 +46,38 @@ YogaStylableProps::YogaStylableProps(
     // and an inline-block only stacked its children because React Native's
     // flex direction happens to default to column.
     displayBlock = displayValue == "block" || displayValue == "inline-block";
+    // Outer display. Every `inline-*` value is inline-level, and plain
+    // `inline` is the only one of them that does not establish a formatting
+    // context of its own — so it is the only non-atomic member
+    // (css-display-3 §2).
     displayInline = displayValue == "inline" ||
-        displayValue == "inline-flex" || displayValue == "inline-block";
-    displayInlineAtomic =
-        displayValue == "inline-flex" || displayValue == "inline-block";
+        displayValue == "inline-flex" || displayValue == "inline-block" ||
+        displayValue == "inline-grid" || displayValue == "inline-grid-lanes";
+    displayInlineAtomic = displayInline && displayValue != "inline";
+  }
+
+  // `vertical-align`. Inherited from the source props so it survives a clone
+  // that does not re-state it, exactly like the display fields above.
+  verticalAlign = sourceProps.verticalAlign;
+  if (const auto* rawVerticalAlign =
+          rawProps.at("verticalAlign", nullptr, nullptr)) {
+    const auto value = rawVerticalAlign->hasValue() &&
+            rawVerticalAlign->hasType<std::string>()
+        ? (std::string)*rawVerticalAlign
+        : std::string{};
+    if (value == "top") {
+      verticalAlign = AtomicInlineVerticalAlign::Top;
+    } else if (value == "bottom") {
+      verticalAlign = AtomicInlineVerticalAlign::Bottom;
+    } else if (value == "middle") {
+      verticalAlign = AtomicInlineVerticalAlign::Middle;
+    } else {
+      // `baseline`, `auto` (React Native's spelling of the default) and
+      // anything unrecognised: the initial value. Falling back rather than
+      // rejecting keeps an unsupported keyword rendering like a browser's
+      // default instead of not rendering.
+      verticalAlign = AtomicInlineVerticalAlign::Baseline;
+    }
   }
 };
 
@@ -163,10 +191,14 @@ void YogaStylableProps::setProp(
     // and an inline-block only stacked its children because React Native's
     // flex direction happens to default to column.
     displayBlock = displayValue == "block" || displayValue == "inline-block";
+    // Outer display. Every `inline-*` value is inline-level, and plain
+    // `inline` is the only one of them that does not establish a formatting
+    // context of its own — so it is the only non-atomic member
+    // (css-display-3 §2).
     displayInline = displayValue == "inline" ||
-        displayValue == "inline-flex" || displayValue == "inline-block";
-    displayInlineAtomic =
-        displayValue == "inline-flex" || displayValue == "inline-block";
+        displayValue == "inline-flex" || displayValue == "inline-block" ||
+        displayValue == "inline-grid" || displayValue == "inline-grid-lanes";
+    displayInlineAtomic = displayInline && displayValue != "inline";
   }
 
   // NOTE: this switch is the *per-prop update* path. It is NOT where `style`

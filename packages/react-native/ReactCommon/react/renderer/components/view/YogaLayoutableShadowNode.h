@@ -87,6 +87,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   void layout(LayoutContext layoutContext) override;
 
+  Size measureContent(
+      const LayoutContext &layoutContext,
+      const LayoutConstraints &layoutConstraints) const override;
+
+  Float baseline(const LayoutContext &layoutContext, Size size) const override;
+
   Rect getContentBounds() const;
 
   /*
@@ -154,6 +160,14 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * document order. Used to interleave per-run paint views with mounted children
    * in authored order (text-children-plan.md §3.B).
    */
+  /*
+   * Whether this container measures its own inline run, its single anonymous
+   * box having been elided from the Yoga tree.
+   */
+  bool measuresOwnInlineRun() const {
+    return measuresOwnInlineRun_;
+  }
+
   const std::vector<int> &getAnonymousTextContentChildIndices() const
   {
     return anonymousTextContentChildIndices_;
@@ -302,13 +316,20 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
 #pragma mark - Text children content helpers
 
+ public:
   /*
    * True when `child` is inline-level content (a text node or an inline text
    * element) that participates in anonymous box generation under this node.
+   *
+   * Public alongside the two below because they are one classification, asked
+   * as one question: an inline formatting context is built from all three, and
+   * `ViewShadowNode` needs this one to walk *into* an inline text element when
+   * collecting the run's atomic inlines. An `<img>` inside an `<a>` is on the
+   * same line as the `<a>`, so the recursion has to see that an `<a>` is an
+   * inline box rather than a leaf.
    */
   static bool isInlineTextContent(const ShadowNode &child);
 
- public:
   /*
    * True when `child` is an atomic inline-level box: an otherwise block-level
    * element (`View`, `Image`, …) opted inline via `display:'inline'` that is
@@ -327,6 +348,42 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * exactly like a <span>. Mutually exclusive with `isAtomicInline`.
    */
   static bool isInlineFlowContent(const ShadowNode &child);
+
+  /*
+   * True when `child` is inline-level content of ANY kind — the union of the
+   * two above.
+   *
+   * ## Read this before writing a new test for "is this inline?"
+   *
+   * Inline-level content in this renderer comes in two unrelated shapes, and
+   * nothing in their representation makes them look alike:
+   *
+   *   - inline *text* content — `#text`, `<Text>`, `<span>`, `<a>`, `<b>`,
+   *     `<label>`: `TextShadowNode` subclasses carrying the `InlineText` trait;
+   *   - an inline-level *box* — `inline-block`, `inline-flex`, a sized
+   *     `display: inline` View: a Yoga node whose `displayInline` is set.
+   *
+   * A predicate that names only one of them is wrong, and wrong in a way that
+   * is very hard to see: the layout looks correct for every tree that happens
+   * to contain a text node, and collapses for trees that do not. Three separate
+   * defects came from exactly that mistake —
+   *
+   *   - `appendChild` tested only `isInlineTextContent` when deciding whether a
+   *     container needed its inline rebuild, so a run made *only* of atomic
+   *     inlines was laid out as block children and stacked vertically. A single
+   *     space anywhere in the run fixed it, which is why it was mistaken for a
+   *     bug about text;
+   *   - `ViewShadowNode::layoutInlineAttachments` tested only
+   *     `isInlineFlowContent` when recursing for attachments, so an `<img>`
+   *     inside an `<a>` was never placed and simply vanished;
+   *   - `InlineElementMetrics` had the union right, which is what showed the
+   *     other two were wrong rather than the design being unclear.
+   *
+   * So the union has a name, and callers ask for it rather than assembling it.
+   * If you are about to write `isInlineTextContent(x) || something`, this is
+   * the function you want.
+   */
+  static bool isInlineLevelContent(const ShadowNode &child);
 
  private:
 
@@ -350,6 +407,13 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * `yogaLayoutableChildren_` and the Yoga node, never in `children_`.
    */
   std::vector<std::shared_ptr<YogaLayoutableShadowNode>> anonymousTextContentChildren_;
+
+  /*
+   * This container measures its own inline run: its single anonymous box is
+   * not a Yoga child, because a block container whose children are all inline
+   * needs no anonymous box (CSS2 §9.2.1.1).
+   */
+  bool measuresOwnInlineRun_{false};
 
   /*
    * Parallel to `anonymousTextContentChildren_`: preceding mounted-child count
