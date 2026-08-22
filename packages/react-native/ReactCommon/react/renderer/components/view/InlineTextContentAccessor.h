@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <react/renderer/attributedstring/AttributedString.h>
+#include <react/renderer/components/view/InlineAccessibilityContent.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/graphics/Rect.h>
 
@@ -66,6 +67,8 @@ class InlineTextContentAccessor {
    * what measurement laid out; the cascade itself stores no multiplier.
    */
   virtual AttributedString getContentAttributedString(Float fontSizeMultiplier) const = 0;
+
+  virtual InlineAccessibilityContent getInlineAccessibilityContent(const AttributedString &attributedString) const = 0;
 
   virtual std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const = 0;
 

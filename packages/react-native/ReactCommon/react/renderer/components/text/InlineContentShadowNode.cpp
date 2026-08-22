@@ -8,6 +8,11 @@
 #include "InlineContentShadowNode.h"
 
 #include <string_view>
+#include <unordered_set>
+
+#include <react/debug/react_native_assert.h>
+#include <react/renderer/components/view/AccessibilityProps.h>
+#include <react/renderer/components/view/accessibilityPropsConversions.h>
 
 #include <react/renderer/dom/NodeNameProvider.h>
 
@@ -16,6 +21,7 @@
 #include <react/renderer/components/text/InlineElementMetrics.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -23,7 +29,9 @@
 
 #include <react/renderer/attributedstring/AttributedStringBox.h>
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
+#include <react/renderer/components/text/BaseTextProps.h>
 #include <react/renderer/components/text/BaseTextShadowNode.h>
+#include <react/renderer/components/text/TextShadowNode.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
@@ -32,6 +40,115 @@
 #include <react/renderer/textlayoutmanager/TextLayoutManagerExtended.h>
 
 namespace facebook::react {
+
+namespace {
+
+struct AccessibilityCandidate {
+  Tag tag{0};
+  const AccessibilityProps* props{nullptr};
+  EventEmitter::Shared eventEmitter{};
+  std::string defaultRole{};
+  std::unordered_set<Tag> subtreeTags{};
+};
+
+std::string defaultRoleForNode(const ShadowNode& node) {
+  const auto* provider =
+      dynamic_cast<const NodeNameProvider*>(node.getProps().get());
+  const auto name = provider != nullptr && !provider->domNodeName().empty()
+      ? provider->domNodeName()
+      : std::string{node.getComponentName()};
+  if (name == "a") {
+    return "link";
+  }
+  if (name == "button") {
+    return "button";
+  }
+  if (name == "img") {
+    return "image";
+  }
+  return {};
+}
+
+bool hasAuthoredSemantics(
+    const AccessibilityProps& props,
+    const std::string& defaultRole) {
+  return props.accessible || !defaultRole.empty() || props.role != Role::None ||
+      !props.accessibilityRole.empty() || !props.accessibilityLabel.empty() ||
+      !props.accessibilityHint.empty() ||
+      !props.accessibilityLanguage.empty() ||
+      props.accessibilityState.has_value() ||
+      props.accessibilityLiveRegion != AccessibilityLiveRegion::None ||
+      props.accessibilityValue.min.has_value() ||
+      props.accessibilityValue.max.has_value() ||
+      props.accessibilityValue.now.has_value() ||
+      props.accessibilityValue.text.has_value() ||
+      !props.accessibilityActions.empty() || props.onAccessibilityTap ||
+      props.onAccessibilityAction || props.accessibilityElementsHidden ||
+      props.importantForAccessibility ==
+      ImportantForAccessibility::NoHideDescendants;
+}
+
+// Whether a child flows its content into this run's string. Anything else is
+// an attachment: one fragment of its own, with its content laid out in a run
+// of its own, so its subtree has nothing to contribute here.
+bool isInlineTextNode(const ShadowNode& node) {
+  return dynamic_cast<const TextShadowNode*>(&node) != nullptr;
+}
+
+void collectSubtreeTags(const ShadowNode& node, std::unordered_set<Tag>& tags) {
+  tags.insert(node.getFamily().getTag());
+  if (!isInlineTextNode(node)) {
+    return;
+  }
+  for (const auto& child : node.getChildren()) {
+    collectSubtreeTags(*child, tags);
+  }
+}
+
+void collectAccessibilityCandidates(
+    const ShadowNode& node,
+    std::vector<AccessibilityCandidate>& candidates) {
+  for (const auto& child : node.getChildren()) {
+    const auto* props =
+        dynamic_cast<const AccessibilityProps*>(child->getProps().get());
+    const auto defaultRole = defaultRoleForNode(*child);
+    if (props != nullptr &&
+        props->importantForAccessibility == ImportantForAccessibility::No) {
+      if (isInlineTextNode(*child)) {
+        collectAccessibilityCandidates(*child, candidates);
+      }
+      continue;
+    }
+    if (props != nullptr && hasAuthoredSemantics(*props, defaultRole)) {
+      auto candidate = AccessibilityCandidate{
+          .tag = child->getFamily().getTag(),
+          .props = props,
+          .eventEmitter = child->getEventEmitter(),
+          .defaultRole = defaultRole};
+      collectSubtreeTags(*child, candidate.subtreeTags);
+      candidates.push_back(std::move(candidate));
+      // Native accessibility leaves cannot contain independently focusable
+      // virtual descendants. HTML forbids nested interactive content too; the
+      // outer authored semantic boundary wins deterministically.
+      continue;
+    }
+    if (isInlineTextNode(*child)) {
+      collectAccessibilityCandidates(*child, candidates);
+    }
+  }
+}
+
+std::string resolvedRole(const AccessibilityCandidate& candidate) {
+  if (candidate.props->role != Role::None) {
+    return toString(candidate.props->role);
+  }
+  if (!candidate.props->accessibilityRole.empty()) {
+    return candidate.props->accessibilityRole;
+  }
+  return candidate.defaultRole;
+}
+
+} // namespace
 
 // NOLINTNEXTLINE(facebook-hte-CArray, modernize-avoid-c-arrays)
 const char InlineContentComponentName[] = "InlineContent";
@@ -590,6 +707,191 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
       .attributedString =
           attachments.empty() ? attributedString : AttributedString{}});
   return attributedString;
+}
+
+#ifdef REACT_NATIVE_DEBUG
+/*
+ * Asserts that each accessibility leaf speaks the text it covers, which is the
+ * text the run draws.
+ *
+ * The two are one fact: what a screen reader announces for a run and what the
+ * run paints must not drift apart. So every drawn fragment belongs to at most
+ * one leaf, and a leaf the author has not named carries exactly the text of its
+ * fragments (attachments excluded, since they are not text).
+ *
+ * Attachments are drawn by mounted views rather than by the run, and the same
+ * holds for them: a leaf presents exactly the attachments among its fragments,
+ * in order, and an `Attachment` leaf is exactly one of them, its own. Static
+ * text is never empty, so every leaf is something to say.
+ */
+static void assertLeavesSpeakTheDrawnText(
+    const InlineAccessibilityContent& content,
+    const AttributedString::Fragments& fragments,
+    const std::vector<bool>& labelIsAuthored) {
+  auto covered = std::vector<bool>(fragments.size(), false);
+  auto attachmentTags = std::vector<Tag>{};
+  for (const auto& fragment : fragments) {
+    if (fragment.isAttachment()) {
+      attachmentTags.push_back(fragment.parentShadowView.tag);
+    }
+  }
+  react_native_assert(content.attachmentTags == attachmentTags);
+  for (size_t i = 0; i < content.elements.size(); i++) {
+    const auto& element = content.elements[i];
+    auto drawn = std::string{};
+    auto presented = std::vector<Tag>{};
+    for (auto index : element.fragmentIndices) {
+      react_native_assert(index < fragments.size() && !covered[index]);
+      covered[index] = true;
+      if (fragments[index].isAttachment()) {
+        presented.push_back(fragments[index].parentShadowView.tag);
+      } else {
+        drawn += fragments[index].string;
+      }
+    }
+    react_native_assert(labelIsAuthored[i] || element.label == drawn);
+    react_native_assert(element.attachmentTags == presented);
+    react_native_assert(
+        element.kind != InlineAccessibilityElement::Kind::Attachment ||
+        (presented.size() == 1 && presented.front() == element.tag));
+    react_native_assert(
+        element.kind != InlineAccessibilityElement::Kind::StaticText ||
+        !element.label.empty());
+  }
+}
+#endif
+
+InlineAccessibilityContent
+InlineContentShadowNode::getInlineAccessibilityContent(
+    const AttributedString& attributedString) const {
+  auto candidates = std::vector<AccessibilityCandidate>{};
+  collectAccessibilityCandidates(*this, candidates);
+
+  const auto& fragments = attributedString.getFragments();
+  auto ownerByFragment = std::vector<int>(fragments.size(), -1);
+  for (size_t candidateIndex = 0; candidateIndex < candidates.size();
+       candidateIndex++) {
+    for (size_t fragmentIndex = 0; fragmentIndex < fragments.size();
+         fragmentIndex++) {
+      if (candidates[candidateIndex].subtreeTags.contains(
+              fragments[fragmentIndex].parentShadowView.tag)) {
+        ownerByFragment[fragmentIndex] = static_cast<int>(candidateIndex);
+      }
+    }
+  }
+
+  auto result = InlineAccessibilityContent{};
+  // Parallel to `result.elements`: whether a leaf's label is the author's
+  // rather than its text
+  auto labelIsAuthored = std::vector<bool>{};
+  auto emittedCandidates = std::unordered_set<int>{};
+  for (size_t fragmentIndex = 0; fragmentIndex < fragments.size();
+       fragmentIndex++) {
+    const auto& fragment = fragments[fragmentIndex];
+    if (fragment.isAttachment()) {
+      result.attachmentTags.push_back(fragment.parentShadowView.tag);
+    }
+    const auto owner = ownerByFragment[fragmentIndex];
+    if (owner >= 0) {
+      if (!emittedCandidates.insert(owner).second) {
+        continue;
+      }
+      const auto& candidate = candidates[owner];
+      if (candidate.props->accessibilityElementsHidden ||
+          candidate.props->importantForAccessibility ==
+              ImportantForAccessibility::NoHideDescendants) {
+        continue;
+      }
+      auto element = InlineAccessibilityElement{};
+      // An attachment that is itself the authored element (an inline-block
+      // `<button>`, an `<img>`) is a mounted view; an element that merely
+      // wraps one (`<a href><img></a>`) is not, and stays an element
+      element.kind = fragment.isAttachment() &&
+              fragment.parentShadowView.tag == candidate.tag
+          ? InlineAccessibilityElement::Kind::Attachment
+          : InlineAccessibilityElement::Kind::Element;
+      element.tag = candidate.tag;
+      element.role = resolvedRole(candidate);
+      element.hint = candidate.props->accessibilityHint;
+      element.language = candidate.props->accessibilityLanguage;
+      element.traits = candidate.props->accessibilityTraits;
+      element.state =
+          candidate.props->accessibilityState.value_or(AccessibilityState{});
+      element.value = candidate.props->accessibilityValue;
+      element.liveRegion = candidate.props->accessibilityLiveRegion;
+      element.actions = candidate.props->accessibilityActions;
+      element.disabled = element.state.disabled;
+      element.onAccessibilityTap = candidate.props->onAccessibilityTap;
+      element.onAccessibilityAction = candidate.props->onAccessibilityAction;
+      element.eventEmitter = candidate.eventEmitter;
+      for (size_t i = 0; i < fragments.size(); i++) {
+        if (ownerByFragment[i] != owner) {
+          continue;
+        }
+        element.fragmentIndices.push_back(i);
+        if (fragments[i].isAttachment()) {
+          element.attachmentTags.push_back(fragments[i].parentShadowView.tag);
+        } else {
+          element.label += fragments[i].string;
+        }
+      }
+      if (!candidate.props->accessibilityLabel.empty()) {
+        element.label = candidate.props->accessibilityLabel;
+      }
+      labelIsAuthored.push_back(!candidate.props->accessibilityLabel.empty());
+      result.elements.push_back(std::move(element));
+      continue;
+    }
+
+    if (fragment.isAttachment()) {
+      auto element = InlineAccessibilityElement{};
+      element.kind = InlineAccessibilityElement::Kind::Attachment;
+      element.tag = fragment.parentShadowView.tag;
+      element.role = "image";
+      element.fragmentIndices.push_back(fragmentIndex);
+      element.attachmentTags.push_back(element.tag);
+      labelIsAuthored.push_back(false);
+      result.elements.push_back(std::move(element));
+      continue;
+    }
+
+    // Adjacent unowned fragments are one static-text leaf. Formatting-only
+    // spans therefore do not manufacture extra accessibility stops.
+    if (!result.elements.empty() &&
+        result.elements.back().kind ==
+            InlineAccessibilityElement::Kind::StaticText) {
+      result.elements.back().label += fragment.string;
+      result.elements.back().fragmentIndices.push_back(fragmentIndex);
+    } else {
+      auto element = InlineAccessibilityElement{};
+      element.tag = fragment.parentShadowView.tag;
+      element.label = fragment.string;
+      element.role = "text";
+      element.fragmentIndices.push_back(fragmentIndex);
+      labelIsAuthored.push_back(false);
+      result.elements.push_back(std::move(element));
+    }
+  }
+  // Drop static text that is only whitespace, which draws nothing a reader
+  // could say: the space between two inline boxes would otherwise be a blank
+  // stop of its own
+  for (size_t i = result.elements.size(); i-- > 0;) {
+    const auto& element = result.elements[i];
+    if (element.kind == InlineAccessibilityElement::Kind::StaticText &&
+        std::all_of(
+            element.label.begin(), element.label.end(), [](unsigned char c) {
+              return std::isspace(c) != 0;
+            })) {
+      result.elements.erase(
+          result.elements.begin() + static_cast<std::ptrdiff_t>(i));
+      labelIsAuthored.erase(
+          labelIsAuthored.begin() + static_cast<std::ptrdiff_t>(i));
+    }
+  }
+#ifdef REACT_NATIVE_DEBUG
+  assertLeavesSpeakTheDrawnText(result, fragments, labelIsAuthored);
+#endif
+  return result;
 }
 
 std::vector<InlineAttachmentPlacement>

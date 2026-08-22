@@ -431,7 +431,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       [_textRunViews addObject:runView];
       [self.currentContainerView addSubview:runView];
     }
-    runView->_run = data.textRuns[i];
+    [runView updateRun:data.textRuns[i]];
     runView->_layoutManager = data.layoutManager;
     [runView setContainerBounds:self.currentContainerView.bounds];
     // The run's accessibility elements are laid out from this text; a new run
@@ -1783,6 +1783,100 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   if (ReactNativeFeatureFlags::enableAccessibilityOrder()) {
     [self updateAccessibilityElements];
   }
+}
+
+/*
+ * The reading order of a view that paints text: its runs' accessibility leaves interleaved with its
+ * mounted children, in document order.
+ *
+ * Only an explicit order does this. Left to UIKit, the run views and the mounted children are
+ * sibling containers read one after another, so an inline `<button>` or `<img>` — a mounted child
+ * laid out inside the sentence — was read after the whole paragraph instead of where it stands.
+ * Each run's `InlineAccessibilityContent` already lists its attachments at their positions, so it
+ * is the single source of that order: an attachment's mounted view is presented where its element
+ * stands and nowhere else, which is also what keeps it from being announced twice.
+ *
+ * An authored order (`accessibilityOrder`, which sets `accessibilityElements`) and a view that is
+ * itself the accessibility element keep UIKit's behaviour.
+ */
+- (NSArray *)accessibilityElements
+{
+  NSArray *elements = super.accessibilityElements;
+  if (elements != nil || _textRunViews.count == 0 || self.isAccessibilityElement) {
+    return elements;
+  }
+  return [self _textRunReadingOrder];
+}
+
+- (NSArray *)_textRunReadingOrder
+{
+  UIView *container = self.currentContainerView;
+  NSMutableArray<RCTAnonymousTextRunView *> *runViews = [NSMutableArray arrayWithCapacity:_textRunViews.count];
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    // A pooled run view detached by a recycle has nothing to present
+    if (runView.superview == container) {
+      [runViews addObject:runView];
+    }
+  }
+  // Stable, so runs that share a position keep their state order
+  [runViews sortWithOptions:NSSortStable
+            usingComparator:^NSComparisonResult(RCTAnonymousTextRunView *a, RCTAnonymousTextRunView *b) {
+              return [@(a->_run.documentOrder) compare:@(b->_run.documentOrder)];
+            }];
+
+  NSMutableSet<NSNumber *> *runAttachmentTags = [NSMutableSet set];
+  for (RCTAnonymousTextRunView *runView in runViews) {
+    for (const auto tag : runView->_run.accessibilityContent.attachmentTags) {
+      [runAttachmentTags addObject:@(tag)];
+    }
+  }
+
+  // Mounted children in React order: the mutation stream inserts them in it, and z-index is a
+  // layer property that leaves the subview order alone
+  NSArray<UIView *> *mountedChildren = _removeClippedSubviews ? [_reactSubviews copy] : container.subviews;
+  NSMutableArray *elements = [NSMutableArray array];
+  NSMutableDictionary<NSNumber *, UIView *> *attachmentsByTag = [NSMutableDictionary dictionary];
+  NSMutableArray<UIView *> *blockChildren = [NSMutableArray array];
+  for (UIView *child in mountedChildren) {
+    if ([child isKindOfClass:[RCTAnonymousTextRunView class]]) {
+      continue;
+    }
+    if ([runAttachmentTags containsObject:@(child.tag)]) {
+      attachmentsByTag[@(child.tag)] = child;
+    } else {
+      [blockChildren addObject:child];
+    }
+  }
+
+  // `documentOrder` counts the block-level children before a run; inline attachments are the
+  // run's own and are not counted
+  NSUInteger nextBlockChild = 0;
+  void (^presentView)(UIView *_Nullable) = ^(UIView *_Nullable view) {
+    // A clipped or hidden view is not on screen to be read
+    if (view != nil && view.superview != nil && !view.hidden) {
+      [elements addObject:view];
+    }
+  };
+  for (RCTAnonymousTextRunView *runView in runViews) {
+    for (; nextBlockChild < blockChildren.count && (int)nextBlockChild < runView->_run.documentOrder;
+         nextBlockChild++) {
+      presentView(blockChildren[nextBlockChild]);
+    }
+    const auto &models = runView->_run.accessibilityContent.elements;
+    NSArray *leaves = [runView accessibilityLeavesInContainer:self];
+    for (size_t i = 0; i < models.size() && i < leaves.count; i++) {
+      if (leaves[i] != NSNull.null) {
+        [elements addObject:leaves[i]];
+      }
+      for (const auto tag : models[i].attachmentTags) {
+        presentView(attachmentsByTag[@(tag)]);
+      }
+    }
+  }
+  for (; nextBlockChild < blockChildren.count; nextBlockChild++) {
+    presentView(blockChildren[nextBlockChild]);
+  }
+  return elements;
 }
 
 - (void)updateAccessibilityElements

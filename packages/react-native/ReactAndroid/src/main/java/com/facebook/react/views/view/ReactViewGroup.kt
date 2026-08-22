@@ -265,7 +265,9 @@ public open class ReactViewGroup public constructor(context: Context?) :
   }
 
   override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-    // No-op since UIManager handles actually laying out children.
+    // UIManager lays out React children. The accessibility hosts are private to
+    // this ViewGroup, so they follow the owner's bounds here.
+    inlineTextAccessibilityHosts.forEach { it.layout(0, 0, right - left, bottom - top) }
   }
 
   @SuppressLint("MissingSuperCall")
@@ -474,6 +476,10 @@ public open class ReactViewGroup public constructor(context: Context?) :
       _removeClippedSubviews = newValue
       childrenRemovedWhileTransitioning = null
       if (newValue) {
+        // The anonymous-text accessibility hosts are platform implementation
+        // children, not React children. Keep them out of the clipping child
+        // array, whose indices are part of ViewGroupManager's React contract.
+        detachInlineTextAccessibilityHosts()
         val clippingRect = Rect()
         calculateClippingRect(this, clippingRect)
         this.clippingRect = clippingRect
@@ -489,6 +495,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
         }
         this.allChildren = allChildren
         updateClippingRect()
+        attachInlineTextAccessibilityHosts()
       } else {
         // Add all clipped views back, deallocate additional arrays, remove layoutChangeListener
         val childArray = checkNotNull(allChildren)
@@ -827,12 +834,14 @@ public open class ReactViewGroup public constructor(context: Context?) :
 
   internal fun removeAllViewsWithSubviewClippingEnabled() {
     check(_removeClippedSubviews)
+    detachInlineTextAccessibilityHosts()
     val allChildren = checkNotNull(allChildren)
     for (i in 0..<allChildrenCount) {
       allChildren[i]?.removeOnLayoutChangeListener(childrenLayoutChangeListener)
     }
     removeAllViewsInLayout()
     allChildrenCount = 0
+    attachInlineTextAccessibilityHosts()
   }
 
   /**
@@ -1114,13 +1123,27 @@ public open class ReactViewGroup public constructor(context: Context?) :
   /**
    * A single laid-out text run: an Android [Layout] positioned at [left]/[top] in pixels.
    * [documentOrder] is the number of mounted child views that precede the run, so it can be painted
-   * in the correct z-order relative to those children.
+   * in the correct z-order relative to those children. [accessibilityItems] are the run's authored
+   * accessibility leaves (`InlineAccessibilityContent`), or null when the state carried no model; an
+   * empty list is a model that exposes nothing, e.g. text that is entirely hidden.
    */
   public class TextRunLayout(
       @JvmField public val layout: android.text.Layout,
       @JvmField public val left: Float,
       @JvmField public val top: Float,
       @JvmField public val documentOrder: Int,
+      @JvmField public val accessibilityItems: List<InlineAccessibilityItem>? = null,
+      /**
+       * Every inline attachment the run lays out (the model's `attachmentTags`). Those mounted
+       * children belong to the run's place in the reading order, and are presented only where a
+       * leaf in [accessibilityItems] presents them.
+       */
+      @JvmField public val accessibilityAttachmentTags: IntArray? = null,
+      /**
+       * Where each fragment of the run's attributed string starts in [layout]'s text, with the
+       * text's length appended, so a leaf's fragment indices resolve to characters of this layout.
+       */
+      @JvmField public val fragmentOffsets: IntArray? = null,
   )
 
   /**
@@ -1129,18 +1152,78 @@ public open class ReactViewGroup public constructor(context: Context?) :
    */
   private var textRunContentDescription: CharSequence? = null
 
+  /**
+   * The private children that expose the runs' authored accessibility leaves as virtual views, one
+   * per segment of the reading order (the leaves between two inline attachments), in that order.
+   *
+   * Separate, childless views rather than a delegate on this one: [ExploreByTouchHelper] must not
+   * be installed on a view that also owns real children, and this view owns React's. They are
+   * never React children — see [reactChildCount] — they sit after all of them, and they draw
+   * nothing. Where they are READ is decided by [addChildrenForAccessibility], not by their index.
+   */
+  private val inlineTextAccessibilityHosts = ArrayList<InlineTextAccessibilityHost>()
+
+  /** The runs' reading order, by document order: each run with its stops. */
+  private var textRunReadingOrder: List<Pair<TextRunLayout, List<InlineTextReadingStop>>> =
+      emptyList()
+
+  /** The number of children React manages, which excludes the private accessibility hosts. */
+  internal val reactChildCount: Int
+    get() = childCount - inlineTextAccessibilityHosts.count { it.parent === this }
+
+  internal fun removeAllReactChildren() {
+    val count = reactChildCount
+    if (count > 0) {
+      removeViews(0, count)
+    }
+  }
+
+  private fun detachInlineTextAccessibilityHosts() {
+    inlineTextAccessibilityHosts.forEach {
+      if (it.parent === this) {
+        removeViewInLayout(it)
+      }
+    }
+  }
+
+  /** Appends the hosts after every React child, which leaves React's child indices untouched. */
+  private fun attachInlineTextAccessibilityHosts() {
+    inlineTextAccessibilityHosts.forEach { host ->
+      if (host.parent !== this) {
+        addViewInLayout(
+            host,
+            childCount,
+            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT),
+            true,
+        )
+        host.layout(0, 0, width, height)
+      }
+    }
+  }
+
   public fun setTextRunLayouts(runs: List<TextRunLayout>?) {
     textRunLayouts = runs
+    val hasAccessibilityModel = runs?.any { it.accessibilityItems != null } == true
+    updateInlineTextAccessibilityHosts(runs)
 
-    // Expose painted text to TalkBack. Text children are *drawn* by this view rather than mounted
-    // as child views, so nothing in the view tree carries the string and the text was invisible to
-    // accessibility entirely — a `<button>Save</button>` announced as a button with no label.
-    // The iOS counterpart is `RCTAnonymousTextRunView.accessibilityLabel`.
+    /*
+     * Expose painted text to TalkBack. Text children are *drawn* by this view rather than mounted
+     * as child views, so nothing in the view tree carries the string.
+     *
+     * With an accessibility model the host's leaves carry it. Its static text is unfocusable, so
+     * TalkBack folds it into the name of a focusable box such as `<button>Save</button>`, the way
+     * it names a `Pressable` around a `<Text>`, and reads it leaf by leaf in a plain box. A
+     * description derived here as well would be read in addition to those leaves, and would expose
+     * text the model hid. So the painted text only becomes the description when no model arrived.
+     * The iOS counterpart of both paths is `RCTAnonymousTextRunView.accessibilityLabel`.
+     */
     val painted =
-        runs
-            ?.joinToString(" ") { it.layout.text.toString().trim() }
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
+        if (hasAccessibilityModel) null
+        else
+            runs
+                ?.joinToString(" ") { it.layout.text.toString().trim() }
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
     /*
      * By VALUE, not by identity.
      *
@@ -1156,10 +1239,12 @@ public open class ReactViewGroup public constructor(context: Context?) :
       textRunContentDescription = painted
     }
 
-    // Links inside the painted text get nodes of their own; see
-    // TextRunLinkAccessibilityHelper for why the container's description is not enough.
+    // Links are always collected, for the press wash. Their virtual nodes come from the
+    // accessibility model's own link leaves when there is one, so this helper only serves runs
+    // without a model; see TextRunLinkAccessibilityHelper.
     textRunLinks = collectTextRunLinks(runs)
-    if (textRunLinks.isNotEmpty() && textRunLinkHelper == null) {
+    accessibleTextRunLinks = if (hasAccessibilityModel) emptyList() else textRunLinks
+    if (accessibleTextRunLinks.isNotEmpty() && textRunLinkHelper == null) {
       val helper = TextRunLinkAccessibilityHelper()
       textRunLinkHelper = helper
       ViewCompat.setAccessibilityDelegate(this, helper)
@@ -1167,6 +1252,112 @@ public open class ReactViewGroup public constructor(context: Context?) :
     textRunLinkHelper?.invalidateRoot()
 
     invalidate()
+  }
+
+  /**
+   * Keeps one accessibility host per segment of the runs' reading order, so a view of plain
+   * unmodelled text or of hidden text gains no child at all, and records that order for
+   * [addChildrenForAccessibility].
+   */
+  private fun updateInlineTextAccessibilityHosts(runs: List<TextRunLayout>?) {
+    textRunReadingOrder =
+        runs
+            .orEmpty()
+            .filter { it.accessibilityItems != null }
+            .sortedBy { it.documentOrder }
+            .map { it to inlineTextReadingOrder(it) }
+    val segments =
+        textRunReadingOrder.flatMap { (_, stops) ->
+          stops.filterIsInstance<InlineTextReadingStop.Segment>()
+        }
+    while (inlineTextAccessibilityHosts.size > segments.size) {
+      val host = inlineTextAccessibilityHosts.removeAt(inlineTextAccessibilityHosts.lastIndex)
+      if (host.parent === this) {
+        removeViewInLayout(host)
+      }
+    }
+    while (inlineTextAccessibilityHosts.size < segments.size) {
+      inlineTextAccessibilityHosts.add(InlineTextAccessibilityHost(context))
+    }
+    attachInlineTextAccessibilityHosts()
+    segments.forEachIndexed { index, segment -> inlineTextAccessibilityHosts[index].update(segment.leaves) }
+  }
+
+  /**
+   * Puts the children [super.addChildrenForAccessibility] listed from [from] onwards into the runs'
+   * reading order, the way a sentence is read.
+   *
+   * Left to the platform, the hosts come after every React child, so an inline `<button>` or
+   * `<img>` — a mounted child laid out inside the sentence — was read before the text around it,
+   * and the rest of the sentence after. The model lists each attachment where it stands, so the
+   * order is: the block children before a run (its `documentOrder` counts them), then the run's
+   * stops — each host, and each attachment view where its leaf presents it — then the block
+   * children after the last run. An attachment view is listed there and nowhere else, which is also
+   * what keeps it from being read twice; one the model presents nowhere is in a hidden subtree.
+   *
+   * Entries are regrouped by the direct child they belong to, so a child that is not itself
+   * important for accessibility still contributes its descendants, in the place the child has.
+   */
+  private fun orderTextRunAccessibilityChildren(outChildren: ArrayList<View>, from: Int) {
+    if (textRunReadingOrder.isEmpty() || from >= outChildren.size) {
+      return
+    }
+    val added = outChildren.subList(from, outChildren.size)
+    val entriesByChild = LinkedHashMap<View, MutableList<View>>()
+    for (entry in added) {
+      entriesByChild.getOrPut(directChildOf(entry) ?: entry) { ArrayList() }.add(entry)
+    }
+    val attachmentTags = HashSet<Int>()
+    textRunReadingOrder.forEach { (run, _) ->
+      run.accessibilityAttachmentTags?.forEach { attachmentTags.add(it) }
+    }
+    val reactChildren =
+        if (_removeClippedSubviews) checkNotNull(allChildren).take(allChildrenCount).filterNotNull()
+        else (0 until reactChildCount).map { getChildAt(it) }
+    val blockChildren = reactChildren.filter { it.id !in attachmentTags }
+    val attachmentsById = reactChildren.filter { it.id in attachmentTags }.associateBy { it.id }
+
+    val ordered = ArrayList<View>(added.size)
+    fun present(child: View?) {
+      child?.let { entriesByChild.remove(it)?.let(ordered::addAll) }
+    }
+    var nextBlockChild = 0
+    var nextSegment = 0
+    for ((run, stops) in textRunReadingOrder) {
+      while (nextBlockChild < blockChildren.size && nextBlockChild < run.documentOrder) {
+        present(blockChildren[nextBlockChild++])
+      }
+      for (stop in stops) {
+        when (stop) {
+          is InlineTextReadingStop.Segment ->
+              present(inlineTextAccessibilityHosts.getOrNull(nextSegment++))
+          is InlineTextReadingStop.Attachment -> present(attachmentsById[stop.tag])
+        }
+      }
+    }
+    while (nextBlockChild < blockChildren.size) {
+      present(blockChildren[nextBlockChild++])
+    }
+    // Anything else keeps its relative order at the end, except an attachment no leaf presents
+    entriesByChild.forEach { (child, entries) ->
+      if (child.id !in attachmentTags) {
+        ordered.addAll(entries)
+      }
+    }
+    added.clear()
+    outChildren.addAll(ordered)
+  }
+
+  /** The child of this view that [view] is, or is inside of; null when it is not a descendant. */
+  private fun directChildOf(view: View): View? {
+    var current = view
+    while (true) {
+      val parent = current.parent ?: return null
+      if (parent === this) {
+        return current
+      }
+      current = parent as? View ?: return null
+    }
   }
 
   /**
@@ -1180,6 +1371,9 @@ public open class ReactViewGroup public constructor(context: Context?) :
   )
 
   private var textRunLinks: List<TextRunLink> = emptyList()
+
+  /** The links [TextRunLinkAccessibilityHelper] exposes: none while an accessibility model does. */
+  private var accessibleTextRunLinks: List<TextRunLink> = emptyList()
 
   /**
    * Makes links inside painted text reachable by TalkBack.
@@ -1195,11 +1389,14 @@ public open class ReactViewGroup public constructor(context: Context?) :
    * normal `<Text>`. iOS reaches the same place through `accessibilityElements` on the run view.
    *
    * Installed only when there is a link to expose, so a view of plain text behaves exactly as before.
+   * Runs that carry an accessibility model expose their links through [InlineTextAccessibilityHost]
+   * instead, one node per authored link, so this helper exposes nothing for them and no link is
+   * announced twice.
    */
   private inner class TextRunLinkAccessibilityHelper : ExploreByTouchHelper(this) {
 
     override fun getVirtualViewAt(x: Float, y: Float): Int {
-      textRunLinks.forEachIndexed { index, link ->
+      accessibleTextRunLinks.forEachIndexed { index, link ->
         if (link.bounds.contains(x.toInt(), y.toInt())) {
           return index
         }
@@ -1208,14 +1405,14 @@ public open class ReactViewGroup public constructor(context: Context?) :
     }
 
     override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
-      textRunLinks.indices.forEach { virtualViewIds.add(it) }
+      accessibleTextRunLinks.indices.forEach { virtualViewIds.add(it) }
     }
 
     override fun onPopulateNodeForVirtualView(
         virtualViewId: Int,
         node: AccessibilityNodeInfoCompat
     ) {
-      val link = textRunLinks.getOrNull(virtualViewId)
+      val link = accessibleTextRunLinks.getOrNull(virtualViewId)
       if (link == null) {
         // The helper can ask about a node that has gone away between updates; an empty node is
         // better than a crash, and the next update replaces it.
@@ -1243,7 +1440,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
       if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) {
         return false
       }
-      val link = textRunLinks.getOrNull(virtualViewId) ?: return false
+      val link = accessibleTextRunLinks.getOrNull(virtualViewId) ?: return false
       // The span is the same one a touch would activate, so an assisted activation and a tap take
       // the identical path to JavaScript.
       link.span.onClick(this@ReactViewGroup)
@@ -1414,6 +1611,9 @@ public open class ReactViewGroup public constructor(context: Context?) :
       reactTagForTextRunTouch(touchX, touchY) != null
 
   override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {
+    if (child is InlineTextAccessibilityHost) {
+      return true
+    }
     val drawWithZ = child.elevation > 0
 
     if (drawWithZ) {
@@ -1543,7 +1743,9 @@ public open class ReactViewGroup public constructor(context: Context?) :
         return
       }
     } else {
+      val from = outChildren.size
       safeAddChildrenForAccessibility(outChildren)
+      orderTextRunAccessibilityChildren(outChildren, from)
     }
   }
 
