@@ -12,6 +12,7 @@
 #include <limits>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/BaseViewProps.h>
@@ -34,13 +35,26 @@ const char ViewComponentName[] = "View";
 // its display generates a box (ElementBoxShadowNode.h).
 const char ElementBoxComponentName[] = "element-box";
 
-#if defined(__APPLE__) && defined(__aarch64__)
+#if defined(__APPLE__) && defined(__aarch64__) && defined(NDEBUG)
 #include <TargetConditionals.h>
 // Memory regression guards (string-children-perf-plan.md). Every View in
 // every shadow-tree generation is one of these; the copy-on-write cascade
 // change took ViewShadowNode from 1576 to 1144 bytes, and growth here is a
 // per-node tax on whole trees. If a legitimate change trips one, re-measure
 // with ./bench-string-children.sh --sizes and move the bound consciously.
+//
+// OPTIMISED BUILDS ONLY (`NDEBUG`), and that is not a loophole. A debug build's
+// standard-library types are larger — hardened containers, no empty-base
+// collapsing — so a ceiling measured in Release is not a fact about a Debug
+// build and holding one to it measures the configuration rather than the code.
+//
+// It was not guarded, and the cost was not a false alarm but a broken build:
+// `sizeof(TextAttributes) <= 288` fails outright under `-configuration Debug`,
+// so RNTester could not be built in Debug for iOS at all. That is the
+// configuration the ObjC test suite uses, which is how a stale app from a
+// previous day stayed installed on the simulator and served results for hours.
+// A guard that stops the build in a configuration nobody measured is worse
+// than no guard.
 //
 // The ceilings are per-OS: iOS types are legitimately larger (SharedColor
 // carries a platform color object there, not a packed int32), so the same
@@ -185,6 +199,32 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     // from getBoundingClientRect(). Purely additive — no effect on layout or
     // paint; routed through the accessor seam so this module keeps no text
     // dependency.
+    /*
+     * The origin each inline box was just stamped with, for the attachment
+     * pass below.
+     *
+     * That pass subtracts an attachment's inline-element ancestors' offsets to
+     * make its origin parent-relative, and it reads those offsets off the
+     * ancestor nodes. That only works for an ancestor stamped IN PLACE. A
+     * sealed one is stamped by cloning the path to it, which leaves the node
+     * this loop walks — `*box`, from before the clone — still reporting the
+     * zero origin it had at mount. The subtraction then subtracts nothing and
+     * the attachment keeps run-space coordinates, which the mounting layer
+     * composes onto the ancestor a second time.
+     *
+     * Sealed is the ordinary case, not the exotic one: a node is unsealed only
+     * on the layout that follows its own clone, so any run that lays out again
+     * without re-cloning its inline boxes — a re-measure, a state update
+     * elsewhere in the surface — takes this path. A box inside a `<span>`
+     * after a 40pt box reported x=80 against Safari's 40, and one inside a
+     * `<span>` on a wrapped line reported y=40 against 20.
+     *
+     * Recording the origins here rather than re-reading them keeps the two
+     * passes on one source of truth: this is the number the stamp used, so the
+     * subtraction cannot disagree with it.
+     */
+    std::unordered_map<const ShadowNodeFamily*, Point> stampedOrigins;
+
     if (accessor != nullptr) {
       // Elements whose nodes are unsealed are stamped in place; the rest come
       // back here to be applied by cloning the path to them, exactly as the
@@ -193,6 +233,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
       // a resize rewrapped the run around it.
       for (const auto& stamp : accessor->stampInlineElementMetrics(
                layoutContext, boxFrame.origin, this->getLayoutMetrics())) {
+        stampedOrigins[stamp.family] = stamp.metrics.frame.origin;
         owning = current->cloneTree(
             *stamp.family, [&](const ShadowNode& oldShadowNode) {
               auto cloned = oldShadowNode.clone({});
@@ -210,21 +251,110 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
         ? accessor->getInlineAttachmentPlacements(layoutContext)
         : std::vector<InlineAttachmentPlacement>{};
 
-    // Attachment candidates are the run's direct children plus descendants
-    // reached through span-like inline boxes (whose contents flow into this
-    // run rather than forming their own).
-    std::vector<std::shared_ptr<const ShadowNode>> attachmentCandidates;
-    const std::function<void(const ShadowNode&)> collectCandidates =
-        [&](const ShadowNode& parent) {
+    // Attachment candidates are every atomic inline in this inline formatting
+    // context, at any depth.
+    //
+    // Depth is the point. An inline box does not establish a formatting context
+    // of its own — its children participate in the *same* IFC as the box (CSS2
+    // §9.4.2, css-inline-3 §2.1) — so `<a><img></a>` puts the image on this
+    // run's line exactly as a bare `<img>` does, and `<label><input> …</label>`
+    // puts the control on the label's line. The text side already agrees:
+    // `BaseTextShadowNode::buildAttributedString` recurses through nested
+    // inline elements, so a nested `<img>` is measured, reserved and given an
+    // attachment frame. Only the collection below stopped short of it, so the
+    // frame existed and nothing was ever moved to it — the image simply never
+    // appeared.
+    //
+    // Two kinds of inline box flow their contents into this run, and both have
+    // to be descended into:
+    //
+    //  - an inline *text* element — `<a>`, `<span>`, `<b>`, `<label>`, `<q>`, a
+    //    nested `<Text>` — which is a `TextShadowNode` carrying the `InlineText`
+    //    trait, and is what this used to miss;
+    //  - a *span-like* `display: inline` Yoga box, which `isInlineFlowContent`
+    //    already recognised.
+    //
+    // That union is not new here: `InlineElementMetrics` decides what is
+    // stampable with the same disjunction, for the same reason. This was the
+    // one place carrying half of it.
+    //
+    // What must NOT be descended into is anything that is itself an atomic
+    // inline: a replaced element or a box that establishes its own formatting
+    // context. Those are leaves — they get placed, and their contents are their
+    // own business. `<img>` carries `InlineText` as well, so it is the
+    // `InlineReplaced` check rather than the trait that keeps it a leaf.
+    /*
+     * Each candidate carries the offset its inline-element ancestors already
+     * contribute.
+     *
+     * The text layout reports an attachment's frame relative to the run, but an
+     * attachment is *mounted* where it sits in the tree — inside the `<a>` or
+     * `<span>` that contains it — and those elements have just been given
+     * stamped metrics of their own by `stampInlineElementMetrics`. The mounting
+     * layer composes a child's origin onto its parent's, so writing the
+     * run-relative origin onto a nested attachment counts the ancestors twice:
+     * an `<img>` after a 40pt run inside a `<span>` landed at x=80 where Safari
+     * puts it at 40.
+     *
+     * (The stamp's comment calls itself "purely additive — no effect on layout
+     * or paint". That is true of an inline element with no box children, which
+     * is what it was written for, and false as soon as one contains an
+     * attachment.)
+     *
+     * So the chain is accumulated on the way down and subtracted at the end,
+     * leaving each attachment's origin relative to its own parent. This mirrors
+     * what `InlineElementMetrics` does for the elements themselves with its
+     * `stampedAncestorOrigin`.
+     */
+    struct Candidate {
+      std::shared_ptr<const ShadowNode> node;
+      Point ancestorOffset;
+    };
+    std::vector<Candidate> attachmentCandidates;
+    const auto flowsIntoThisRun = [](const ShadowNode& node) {
+      if (node.getTraits().check(ShadowNodeTraits::Trait::InlineReplaced) ||
+          YogaLayoutableShadowNode::isAtomicInline(node)) {
+        return false;
+      }
+      const auto flows = YogaLayoutableShadowNode::isInlineLevelContent(node);
+      // Structural invariant: "flows its contents into this run" and "is itself
+      // an atomic inline" are exclusive and exhaustive over inline-level
+      // content. If a node were both, its contents would be placed on this line
+      // *and* it would be placed as a box — the same content laid out twice.
+      react_native_assert(
+          !(flows && YogaLayoutableShadowNode::isAtomicInline(node)) &&
+          "an inline box cannot both flow its contents and be an atomic inline");
+      return flows;
+    };
+    const std::function<void(const ShadowNode&, Point)> collectCandidates =
+        [&](const ShadowNode& parent, Point offset) {
           for (const auto& child : parent.getChildren()) {
-            if (YogaLayoutableShadowNode::isInlineFlowContent(*child)) {
-              collectCandidates(*child);
+            if (flowsIntoThisRun(*child)) {
+              auto childOffset = offset;
+              // Only a box that was actually stamped contributes an offset; a
+              // `#text` node has no frame for the mounting layer to compose.
+              //
+              // Prefer the origin the stamp above just assigned: when that
+              // element was sealed, the stamp went to a clone and this node
+              // still carries its pre-stamp frame. Falling back to the node
+              // covers an element this run did not stamp on this pass.
+              if (const auto* layoutableChild =
+                      dynamic_cast<const LayoutableShadowNode*>(child.get())) {
+                const auto stamped =
+                    stampedOrigins.find(&child->getFamily());
+                const auto childOrigin = stamped != stampedOrigins.end()
+                    ? stamped->second
+                    : layoutableChild->getLayoutMetrics().frame.origin;
+                childOffset.x += childOrigin.x;
+                childOffset.y += childOrigin.y;
+              }
+              collectCandidates(*child, childOffset);
             } else {
-              attachmentCandidates.push_back(child);
+              attachmentCandidates.push_back(Candidate{child, offset});
             }
           }
         };
-    collectCandidates(*box);
+    collectCandidates(*box, Point{0, 0});
 
     // One attachment can be looked up per candidate; a linear scan per
     // candidate is O(attachments²) in an attachment-heavy run.
@@ -234,7 +364,8 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
       placementsByFamily.emplace(placement.family, &placement.frame);
     }
 
-    for (const auto& runChild : attachmentCandidates) {
+    for (const auto& candidate : attachmentCandidates) {
+      const auto& runChild = candidate.node;
       if (!runChild->getTraits().check(
               ShadowNodeTraits::Trait::InlineReplaced) &&
           !YogaLayoutableShadowNode::isAtomicInline(*runChild)) {
@@ -276,6 +407,9 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
         attachmentOrigin.x += attachmentFrame->origin.x;
         attachmentOrigin.y += attachmentFrame->origin.y;
       }
+      // Relative to this attachment's own parent — see `Candidate`.
+      attachmentOrigin.x -= candidate.ancestorOffset.x;
+      attachmentOrigin.y -= candidate.ancestorOffset.y;
 
       owning = current->cloneTree(
           runChild->getFamily(), [&](const ShadowNode& oldShadowNode) {

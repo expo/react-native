@@ -15,6 +15,7 @@
 #include <react/renderer/textlayoutmanager/RCTTextPrimitivesConversions.h>
 #include <react/utils/ManagedObjectWrapper.h>
 #include <array>
+#include <cmath>
 
 using namespace facebook::react;
 
@@ -412,15 +413,155 @@ static NSMutableAttributedString *RCTNSAttributedStringFragmentFromFragment(
     // lands on the line's (CSS2 §10.8.1).
     //
     CGFloat descentBelowBaseline = layoutMetrics.frame.size.height - fragment.atomicInlineBaseline;
+
+    // An enclosing inline box's leading/trailing space has to occupy advance,
+    // and for an attachment it has to do so HERE.
+    //
+    // Everywhere else that space is expressed as kerning on the neighbouring
+    // character (see RCTApplyInlineBoxSpacing, which explains why no spacer is
+    // injected). An `NSTextAttachment` takes its advance from `bounds` and
+    // ignores kerning, so `<span style="padding-left:10px"><img></span>` lost
+    // the padding entirely: the image sat where the padding should be and
+    // everything after it was short by both edges. Folding the space into the
+    // attachment's own width is the one way it survives.
+    //
+    // The box is then drawn inset by the leading edge — see the placement in
+    // RCTTextLayoutManager, which steps over it — so the space is reserved
+    // without the picture growing into it.
+    CGFloat leadingSpace = fragment.leadingInlineSpace();
+    CGFloat trailingSpace = fragment.trailingInlineSpace();
+    CGFloat boundsOffsetY = -descentBelowBaseline;
+
+    // A box aligned to an EDGE of the line must not move the line's baseline.
+    //
+    // TextKit derives a line's baseline from the maximum ascent on it, and an
+    // attachment's ascent is whatever its bounds put above the baseline. Left
+    // hanging from the baseline like a baseline-aligned box, a 40pt
+    // `vertical-align: top` box dragged the baseline down to 40 — which placed
+    // the box itself correctly (it is repositioned against the line fragment
+    // later) but corrupted the baseline everything else on the line is measured
+    // from. `middle`, which is defined relative to that baseline, came out 24pt
+    // low.
+    //
+    // So an edge-aligned box is given bounds that reach exactly the strut's
+    // ascent and hang the remainder below: the line still grows to fit it, and
+    // the baseline stays where the strut put it. This is the same model the C++
+    // measurer uses, where edge-aligned boxes contribute to the line's height
+    // without contributing ascent.
+    if (fragment.atomicInlineVerticalAlign != 0) {
+      UIFont *font = RCTEffectiveFontFromTextAttributes(fragment.textAttributes);
+      CGFloat height = layoutMetrics.frame.size.height;
+      if (fragment.atomicInlineVerticalAlign == 3) {
+        // `middle` IS positioned relative to the baseline — half the parent's
+        // x-height above it — so its contribution is exact: half the box above
+        // that point, half below. Left baseline-aligned it claimed its whole
+        // height as ascent and pushed the baseline down by the difference,
+        // which inflated the line by the font's descent and took the box with
+        // it.
+        CGFloat xHeight = font != nil ? font.xHeight : 0;
+        boundsOffsetY = -(height / 2 - xHeight / 2);
+      } else {
+        // `top` and `bottom` are positioned against the line's edges, so they
+        // must not claim ascent at all: reaching exactly the strut's ascent and
+        // hanging the rest below lets the line grow to fit without moving the
+        // baseline.
+        CGFloat ascent = font != nil ? std::abs(font.ascender) : 0;
+        CGFloat descent = font != nil ? std::abs(font.descender) : 0;
+        CGFloat strutAscent = ascent;
+        if (!isnan(fragment.textAttributes.lineHeight)) {
+          CGFloat lineHeight = fragment.textAttributes.lineHeight *
+              RCTEffectiveFontSizeMultiplierFromTextAttributes(fragment.textAttributes);
+          // Half-leading above the font's ascent, as CSS distributes it.
+          strutAscent = ascent + (lineHeight - (ascent + descent)) / 2;
+        }
+        boundsOffsetY = strutAscent - height;
+      }
+    }
+
+    // A BASELINE-aligned box has to leave room for the strut's descent below
+    // it.
+    //
+    // TextKit takes an attachment's line metrics entirely from its bounds, so a
+    // line carrying only this box had the box's own ascent and NO descent — a
+    // 40pt box made a 40pt line where a browser makes it 44, because the box
+    // sits on the baseline and the strut still hangs below it. (That gap under
+    // an image is the familiar one `vertical-align: top` removes.)
+    //
+    // The strut's descent is added to the bounds and the origin moved down by
+    // the same amount: the ascent is unchanged, so the box does not move, and
+    // the line gains exactly the descent it was missing. The addition is
+    // recorded so the placement can report the real box rather than the
+    // inflated one.
+    CGFloat extraDescent = 0;
+    if (fragment.atomicInlineVerticalAlign == 0) {
+      UIFont *font = RCTEffectiveFontFromTextAttributes(fragment.textAttributes);
+      CGFloat fontDescent = font != nil ? std::abs(font.descender) : 0;
+      CGFloat strutDescent = fontDescent;
+      if (font != nil && !isnan(fragment.textAttributes.lineHeight)) {
+        CGFloat ascent = std::abs(font.ascender);
+        CGFloat lineHeight = fragment.textAttributes.lineHeight *
+            RCTEffectiveFontSizeMultiplierFromTextAttributes(fragment.textAttributes);
+        strutDescent = fontDescent + (lineHeight - (ascent + fontDescent)) / 2;
+      }
+      extraDescent = std::max<CGFloat>(0, strutDescent - descentBelowBaseline);
+      boundsOffsetY -= extraDescent;
+    }
+
     CGRect bounds = {
-        .origin = {.x = layoutMetrics.frame.origin.x, .y = -descentBelowBaseline},
-        .size = {.width = layoutMetrics.frame.size.width, .height = layoutMetrics.frame.size.height}};
+        .origin = {.x = layoutMetrics.frame.origin.x, .y = boundsOffsetY},
+        .size = {
+            .width = layoutMetrics.frame.size.width + leadingSpace + trailingSpace,
+            .height = layoutMetrics.frame.size.height + extraDescent}};
 
     NSTextAttachment *attachment = [NSTextAttachment new];
     attachment.image = placeholderImage;
     attachment.bounds = bounds;
 
-    return [[NSMutableAttributedString attributedStringWithAttachment:attachment] mutableCopy];
+    NSMutableAttributedString *attachmentString =
+        [[NSMutableAttributedString attributedStringWithAttachment:attachment] mutableCopy];
+
+    // An attachment character carries the run's text attributes like any other
+    // character.
+    //
+    // It looks like it should not need them — nothing about it is drawn from a
+    // font. But the PARAGRAPH STYLE lives in those attributes, and that is what
+    // gives the line its strut: `minimumLineHeight` is what makes a line with a
+    // 10pt box on it still occupy the 20pt its `line-height` asks for (CSS2
+    // §10.8). Without them a line containing only atomic inlines had no strut
+    // at all and collapsed to the height of its tallest box — a `<div>` of 10pt
+    // boxes measured 10pt where every browser reports 20.
+    //
+    // Only lines made *entirely* of attachments were affected, because a single
+    // text fragment anywhere on the line brought the paragraph style with it —
+    // the same shape as the other inline bugs this month, where the box path
+    // quietly lacked what the text path had.
+    [attachmentString addAttributes:RCTNSTextAttributesFromTextAttributes(fragment.textAttributes)
+                              range:NSMakeRange(0, attachmentString.length)];
+
+    if (extraDescent > 0) {
+      [attachmentString addAttribute:RCTAtomicInlineExtraDescentAttributeName
+                               value:@(extraDescent)
+                               range:NSMakeRange(0, attachmentString.length)];
+    }
+    if (leadingSpace > 0) {
+      [attachmentString addAttribute:RCTAtomicInlineLeadingSpaceAttributeName
+                               value:@(leadingSpace)
+                               range:NSMakeRange(0, attachmentString.length)];
+    }
+    if (trailingSpace > 0) {
+      [attachmentString addAttribute:RCTAtomicInlineTrailingSpaceAttributeName
+                               value:@(trailingSpace)
+                               range:NSMakeRange(0, attachmentString.length)];
+    }
+
+    // Where this box asked to sit on the line — see the attribute's declaration.
+    if (fragment.atomicInlineVerticalAlign != 0) {
+      [attachmentString addAttribute:RCTAtomicInlineVerticalAlignAttributeName
+                               value:@(fragment.atomicInlineVerticalAlign)
+                               range:NSMakeRange(0, attachmentString.length)];
+    }
+
+    return attachmentString;
   } else {
     NSString *string = [NSString stringWithUTF8String:fragment.string.c_str()];
 
@@ -527,6 +668,54 @@ void RCTApplyInlineBoxSpacing(NSMutableAttributedString *string, const Attribute
   }
 }
 
+/*
+ * `line-height` is the strut's height, not a ceiling on the line box.
+ *
+ * React Native normally emulates `line-height` by pinning `minimumLineHeight`
+ * AND `maximumLineHeight` to it, which is exactly right for text: every line
+ * ends up that tall. It is wrong the moment an atomic inline is on the line,
+ * because a box taller than the strut must GROW the line box (CSS2 §10.8 — the
+ * line box is the union of everything on it, and the strut is only one of them).
+ *
+ * With the clamp left in place a 50pt box on a 20pt line did not make the line
+ * 50pt: the line stayed 20 and the box overflowed *upwards* out of it, landing
+ * at y = -30 and painting over whatever preceded it.
+ *
+ * So the ceiling is lifted for any string containing an attachment, while the
+ * floor stays — which is what `line-height` actually means. Text-only strings
+ * are untouched and keep the exact emulation they had.
+ */
+static void RCTUnclampLineHeightForAtomicInlines(
+    NSMutableAttributedString *string,
+    const AttributedString &attributedString)
+{
+  bool hasAttachment = false;
+  for (const auto &fragment : attributedString.getFragments()) {
+    if (fragment.isAttachment()) {
+      hasAttachment = true;
+      break;
+    }
+  }
+  if (!hasAttachment || string.length == 0) {
+    return;
+  }
+
+  [string enumerateAttribute:NSParagraphStyleAttributeName
+                     inRange:NSMakeRange(0, string.length)
+                     options:0
+                  usingBlock:^(NSParagraphStyle *paragraphStyle, NSRange range, BOOL *stop) {
+                    if (paragraphStyle == nil || paragraphStyle.maximumLineHeight == 0) {
+                      return;
+                    }
+                    NSMutableParagraphStyle *unclamped = [paragraphStyle mutableCopy];
+                    // 0 means "no maximum" to TextKit. The minimum is left
+                    // alone: that is the strut, and it is what keeps a line of
+                    // short boxes as tall as `line-height` asks.
+                    unclamped.maximumLineHeight = 0;
+                    [string addAttribute:NSParagraphStyleAttributeName value:unclamped range:range];
+                  }];
+}
+
 NSAttributedString *RCTNSAttributedStringFromAttributedString(const AttributedString &attributedString)
 {
   static UIImage *placeholderImage;
@@ -546,6 +735,7 @@ NSAttributedString *RCTNSAttributedStringFromAttributedString(const AttributedSt
     [nsAttributedString appendAttributedString:nsAttributedStringFragment];
   }
   RCTApplyInlineBoxSpacing(nsAttributedString, attributedString);
+  RCTUnclampLineHeightForAtomicInlines(nsAttributedString, attributedString);
   [nsAttributedString endEditing];
 
   return nsAttributedString;

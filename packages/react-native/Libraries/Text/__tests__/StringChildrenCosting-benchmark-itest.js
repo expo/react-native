@@ -138,8 +138,11 @@ function messagesWithBareBodies(): Array<React.Node> {
   const rows: Array<React.Node> = [];
   for (let m = 0; m < MESSAGES; m++) {
     rows.push(
-      // $FlowFixMe[incompatible-type] whiteSpace is a new style key
-      <View key={String(m)} collapsable={false} style={{whiteSpace: 'pre-line'}}>
+      <View
+        key={String(m)}
+        collapsable={false}
+        // $FlowFixMe[incompatible-type] whiteSpace is a new style key
+        style={{whiteSpace: 'pre-line'}}>
         {messageBody(m)}
       </View>,
     );

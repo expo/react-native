@@ -672,7 +672,9 @@ describe('list markers (css-lists-3 §3)', () => {
     expect(zeroPadded[9]).toBe(zeroPadded[0]); // "10." is the same width
 
     // "一、" — a 3-byte digit AND a 3-byte ideographic comma.
-    const [cjk] = widthOfItems({tag: 'ol', listStyleType: 'cjk-decimal'}, ['x']);
+    const [cjk] = widthOfItems({tag: 'ol', listStyleType: 'cjk-decimal'}, [
+      'x',
+    ]);
     expect(cjk).toBe(TEXT + GAP + 60);
   });
 

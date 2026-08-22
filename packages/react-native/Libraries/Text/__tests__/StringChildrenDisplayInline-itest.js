@@ -117,7 +117,20 @@ describe("display:'inline' — atomic inline boxes in block containers", () => {
     });
 
     expect(rectOf(blockRef).width).toBe(30);
-    expect(rectOf(blockRef).height).toBe(40);
+    // 44, not 40, and the extra 4 is the strut's descent.
+    //
+    // This box is BASELINE-aligned (no `vertical-align`), so its bottom edge
+    // sits on the line's baseline — and the strut, which every line box
+    // contains whether or not text is on it (CSS2 §10.8), still hangs its
+    // descent below that baseline. The line is therefore taller than the box.
+    //
+    // This expectation was 40 while the strut was only applied to lines that
+    // carried text. Checked against real Safari for the identical markup
+    // through the text-conformance harness, which reports 44 — see
+    // `baseline-aligned-box-alone` in `text-conformance/cases.js`. A box that
+    // wants the line to be exactly its own height asks for
+    // `vertical-align: top`.
+    expect(rectOf(blockRef).height).toBe(44);
   });
 
   it('an inline View with flex content lays out its own subtree (inner display stays flex)', () => {

@@ -411,7 +411,18 @@ void YogaLayoutableShadowNode::appendChild(
 
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       getAnonymousTextContentFactory() != nullptr &&
-      (isInlineTextContent(*childNode) ||
+      // Inline-level content of EITHER kind means this container's Yoga
+      // children need rebuilding with anonymous boxes. Testing only
+      // `isInlineTextContent` here meant a run made *entirely* of atomic
+      // inlines never flagged the rebuild, so the boxes were appended as
+      // ordinary block-level children and stacked vertically; a single space
+      // anywhere in the run flipped the condition and fixed the whole run,
+      // which is why it read as a bug about text.
+      //
+      // In a flex container an inline-level box is blockified instead
+      // (css-display-3 §2.7). Flagging the rebuild there is harmless:
+      // `configureYogaTree` re-runs and takes the same blockifying path.
+      (isInlineLevelContent(*childNode) ||
        !anonymousTextContentChildren_.empty())) {
     // Inline-level content joined (or its runs may have shifted). The Yoga
     // children need rebuilding with fresh anonymous boxes — but doing it per
@@ -635,6 +646,17 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
   std::vector<std::shared_ptr<const ShadowNode>> inlineRun;
   auto flushInlineRun = [&]() {
     if (!inlineRun.empty()) {
+      // Structural invariant: a run contains inline-level content and nothing
+      // else. A block-level child in here would be laid out by the text engine
+      // as though it were part of a line, which produces geometry that looks
+      // plausible and is wrong — and it is the shape a mis-written
+      // "is this inline?" test creates, which is the mistake this whole
+      // classification has made three times.
+      for (const auto& runChild : inlineRun) {
+        react_native_assert(
+            isInlineLevelContent(*runChild) &&
+            "only inline-level content may join an inline run");
+      }
       appendAnonymousTextContentChild(std::move(inlineRun), mountedChildCount);
       inlineRun.clear();
       isClean = false;
@@ -832,6 +854,12 @@ static bool isInlineLevelBox(const ShadowNode& child) {
 
 bool YogaLayoutableShadowNode::isAtomicInline(const ShadowNode& child) {
   return isInlineLevelBox(child) && !isInlineFlowContent(child);
+}
+
+bool YogaLayoutableShadowNode::isInlineLevelContent(const ShadowNode& child) {
+  // The union, in one place. See the header for why asking for half of this is
+  // the mistake that produced three separate layout bugs.
+  return isInlineTextContent(child) || isInlineLevelBox(child);
 }
 
 bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {

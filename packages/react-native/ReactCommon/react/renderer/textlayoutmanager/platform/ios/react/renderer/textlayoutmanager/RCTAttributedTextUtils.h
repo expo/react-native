@@ -31,6 +31,32 @@ NSString *const RCTTextAttributesAccessibilityRoleAttributeName = @"Accessibilit
 NSString *const RCTCustomDecorationAttributeName = @"RCTCustomDecoration";
 
 /*
+ * `vertical-align` for an atomic inline, carried on the attachment character.
+ *
+ * The layout manager decides where a box goes relative to the LINE, and by then
+ * it is enumerating attributed-string attributes rather than fragments — so the
+ * box's request has to travel with it. Values match
+ * `AtomicInlineVerticalAlign`: 0 baseline, 1 top, 2 bottom, 3 middle.
+ */
+NSString *const RCTAtomicInlineVerticalAlignAttributeName = @"RCTAtomicInlineVerticalAlign";
+
+/*
+ * The enclosing inline box's leading/trailing space, folded into an
+ * attachment's advance because kerning cannot attach to one. Recorded so the
+ * layout manager can back it out and report the BOX rather than the box plus
+ * its padding.
+ */
+NSString *const RCTAtomicInlineLeadingSpaceAttributeName = @"RCTAtomicInlineLeadingSpace";
+NSString *const RCTAtomicInlineTrailingSpaceAttributeName = @"RCTAtomicInlineTrailingSpace";
+
+/*
+ * Extra descent folded into a baseline-aligned attachment's bounds so the
+ * line keeps the strut's descent. Recorded so the layout manager can report the
+ * box's real height rather than the inflated one.
+ */
+NSString *const RCTAtomicInlineExtraDescentAttributeName = @"RCTAtomicInlineExtraDescent";
+
+/*
  * Creates `NSTextAttributes` from given `facebook::react::TextAttributes`
  */
 NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttributes(

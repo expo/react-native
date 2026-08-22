@@ -1184,6 +1184,10 @@ constexpr static MapBuffer::Key FR_KEY_IS_INLINE_BOX_END = 8;
 // the platform can sit that baseline on the line's instead of dropping the
 // box's bottom onto it.
 constexpr static MapBuffer::Key FR_KEY_ATOMIC_INLINE_BASELINE = 9;
+// CSS `vertical-align` for an atomic inline: 0 baseline, 1 top, 2 bottom,
+// 3 middle. Where the box sits on the line is resolved on the Android side,
+// which is the only place the line box is known.
+constexpr static MapBuffer::Key FR_KEY_ATOMIC_INLINE_VERTICAL_ALIGN = 11;
 // An inline element that contributed no text of its own. Its fragment is empty
 // on purpose, and the platform has to build its zero-width box from the line it
 // sits on rather than from glyphs it does not have.
@@ -1525,6 +1529,8 @@ inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
   }
   if (fragment.isAttachment()) {
     builder.putDouble(FR_KEY_ATOMIC_INLINE_BASELINE, fragment.atomicInlineBaseline);
+    builder.putInt(
+        FR_KEY_ATOMIC_INLINE_VERTICAL_ALIGN, fragment.atomicInlineVerticalAlign);
   }
   if (fragment.isEmptyElement) {
     builder.putBool(FR_KEY_IS_EMPTY_ELEMENT, true);

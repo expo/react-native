@@ -51,6 +51,30 @@ YogaStylableProps::YogaStylableProps(
     displayInlineAtomic =
         displayValue == "inline-flex" || displayValue == "inline-block";
   }
+
+  // `vertical-align`. Inherited from the source props so it survives a clone
+  // that does not re-state it, exactly like the display fields above.
+  verticalAlign = sourceProps.verticalAlign;
+  if (const auto* rawVerticalAlign =
+          rawProps.at("verticalAlign", nullptr, nullptr)) {
+    const auto value = rawVerticalAlign->hasValue() &&
+            rawVerticalAlign->hasType<std::string>()
+        ? (std::string)*rawVerticalAlign
+        : std::string{};
+    if (value == "top") {
+      verticalAlign = AtomicInlineVerticalAlign::Top;
+    } else if (value == "bottom") {
+      verticalAlign = AtomicInlineVerticalAlign::Bottom;
+    } else if (value == "middle") {
+      verticalAlign = AtomicInlineVerticalAlign::Middle;
+    } else {
+      // `baseline`, `auto` (React Native's spelling of the default) and
+      // anything unrecognised: the initial value. Falling back rather than
+      // rejecting keeps an unsupported keyword rendering like a browser's
+      // default instead of not rendering.
+      verticalAlign = AtomicInlineVerticalAlign::Baseline;
+    }
+  }
 };
 
 template <typename T>
