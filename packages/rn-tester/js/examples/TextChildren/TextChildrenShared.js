@@ -24,6 +24,7 @@
  */
 
 import type {ColorValue} from 'react-native';
+import type {ViewStyleProp} from 'react-native/Libraries/StyleSheet/StyleSheet';
 
 import * as React from 'react';
 import {Platform, PlatformColor, Text, View} from 'react-native';
@@ -190,7 +191,7 @@ export function DemoContent({
  * `DemoContent` already cascades `DEMO_THEME.fg` onto its content, bare text
  * included.
  */
-export function pinnedLightSurface(): {...} {
+export function pinnedLightSurface(): ViewStyleProp {
   return {
     backgroundColor: '#ffffff',
     borderWidth: 1,

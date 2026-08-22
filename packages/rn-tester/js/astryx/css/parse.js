@@ -572,6 +572,11 @@ export function compileSelector(raw: string): ComplexSelector {
   return {
     raw,
     parts,
+    // CSS specificity IS a packed tuple — (id, class, type) compared
+    // lexicographically — and packing it into one integer is what makes
+    // comparison a single `>`. The bit widths cap each count at 1023, far
+    // above anything a real selector reaches.
+    // eslint-disable-next-line no-bitwise
     specificity: (A << 20) | (B << 10) | C,
     unsupported: unsupported || parts.length === 0,
   };

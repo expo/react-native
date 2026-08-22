@@ -13,6 +13,8 @@
 import type {RNTesterModule} from '../../types/RNTesterTypes';
 
 import {installStylesheet} from '../../astryx/css';
+import {DemoHeader, DemoSection} from './DemoSection';
+import radixCss from './radix-demo.css';
 // The point of this screen: these imports go through the '@radix-ui/*'
 // Metro aliases, exactly as vendored shadcn sources do.
 // $FlowFixMe[cannot-resolve-module] resolved by metro.config.js
@@ -31,8 +33,6 @@ import * as Switch from '@radix-ui/react-switch';
 import * as Tabs from '@radix-ui/react-tabs';
 // $FlowFixMe[cannot-resolve-module]
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import {DemoHeader, DemoSection} from './DemoSection';
-import radixCss from './radix-demo.css';
 import * as React from 'react';
 import {useState} from 'react';
 import {ScrollView} from 'react-native';

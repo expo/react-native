@@ -35,6 +35,8 @@ describe('compileSelector', () => {
     expect(sel.unsupported).toBe(false);
     expect(sel.parts).toHaveLength(1);
     expect(sel.parts[0].compound.classes).toEqual(['rounded-md']);
+    // The class column of the packed specificity tuple; see `compileSelector`.
+    // eslint-disable-next-line no-bitwise
     expect(sel.specificity).toBe(1 << 10);
   });
 
@@ -44,6 +46,7 @@ describe('compileSelector', () => {
     const [part] = sel.parts;
     expect(part.compound.classes).toEqual(['hover:bg-primary/90']);
     expect(part.compound.pseudoClasses).toEqual(['hover']);
+    // eslint-disable-next-line no-bitwise
     expect(sel.specificity).toBe(2 << 10);
   });
 

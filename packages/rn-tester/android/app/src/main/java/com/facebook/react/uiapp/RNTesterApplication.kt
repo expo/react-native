@@ -164,6 +164,14 @@ internal class RNTesterApplication : Application(), ReactApplication {
               override fun useSharedAnimatedBackend(): Boolean = true
 
               override fun cxxNativeAnimatedEnabled(): Boolean = true
+
+              // The DOM element catalog's elements track presses through
+              // Android's own touch dispatch rather than the JS responder
+              // system, so an ancestor scroll container intercepting the
+              // gesture cancels the press directly (ACTION_CANCEL) instead of
+              // after a round trip through JavaScript. Matches the iOS
+              // AppDelegate.
+              override fun enableNativeGestureRecognizers(): Boolean = true
             }
         )
     if (accessedEarly != null) {
