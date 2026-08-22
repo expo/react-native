@@ -204,7 +204,10 @@ describe('atomic inline vertical alignment', () => {
   // system font's metrics differ between Safari and this engine. Safari's own
   // numbers are quoted per case as the source of the relation.
   describe('the last in-flow line box (CSS2 §10.8.1)', () => {
-    type Case = {name: string, node: React.Node};
+    // `MixedElement`, not `Node`: every case below is a JSX element, and
+    // `cloneElement` needs one — `React.Node` also admits strings, arrays and
+    // undefined, none of which can be cloned.
+    type Case = {name: string, node: React.MixedElement};
 
     function measure(cases: Array<Case>): {[string]: number} {
       const lineRefs: {[string]: {current: HostInstance | null}} = {};
@@ -221,14 +224,14 @@ describe('atomic inline vertical alignment', () => {
                   key={c.name}
                   ref={lineRefs[c.name]}
                   collapsable={false}
-                  // $FlowExpectedError[incompatible-type] inheritable text prop
                   style={{display: 'block', width: 400, fontSize: 60}}>
                   {'before '}
-                  {React.cloneElement(
-                    // $FlowExpectedError[incompatible-type]
-                    c.node,
-                    {ref: boxRefs[c.name]},
-                  )}
+                  {/* The cases are catalog intrinsics — `<inline>` is a string
+                      element Flow has no component type for, same as the
+                      `not-a-component` suppressions on each case below. The
+                      clone itself is ordinary. */}
+                  {/* $FlowExpectedError[incompatible-type] */}
+                  {React.cloneElement(c.node, {ref: boxRefs[c.name]})}
                   {' after'}
                 </View>
               );
@@ -238,8 +241,7 @@ describe('atomic inline vertical alignment', () => {
       });
       const out: {[string]: number} = {};
       for (const c of cases) {
-        out[c.name] =
-          rectOf(boxRefs[c.name]).y - rectOf(lineRefs[c.name]).y;
+        out[c.name] = rectOf(boxRefs[c.name]).y - rectOf(lineRefs[c.name]).y;
       }
       console.log('§10.8.1 box tops: ' + JSON.stringify(out));
       return out;
@@ -252,34 +254,46 @@ describe('atomic inline vertical alignment', () => {
       //         direct 29, one level 29, two levels 29 (30pt).
       const tops = measure([
         // $FlowExpectedError[not-a-component]
-        {name: 'direct10', node: <inline style={{...BOX, fontSize: 10}}>{'x'}</inline>},
+        {
+          name: 'direct10',
+          node: <inline style={{...BOX, fontSize: 10}}>{'x'}</inline>,
+        },
         {
           name: 'nested10',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 10}}>{'x'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 10}}>{'x'}</View>
+            </inline>
+          ),
         },
         {
           name: 'deep10',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            <View>
-              {/* $FlowExpectedError[incompatible-type] */}
-              <View style={{fontSize: 10}}>{'x'}</View>
-            </View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              <View>
+                {/* $FlowExpectedError[incompatible-type] */}
+                <View style={{fontSize: 10}}>{'x'}</View>
+              </View>
+            </inline>
+          ),
         },
         // $FlowExpectedError[not-a-component]
-        {name: 'direct30', node: <inline style={{...BOX, fontSize: 30}}>{'y'}</inline>},
+        {
+          name: 'direct30',
+          node: <inline style={{...BOX, fontSize: 30}}>{'y'}</inline>,
+        },
         {
           name: 'nested30',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 30}}>{'y'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 30}}>{'y'}</View>
+            </inline>
+          ),
         },
       ]);
       expect(tops.nested10).toBe(tops.direct10);
@@ -301,37 +315,45 @@ describe('atomic inline vertical alignment', () => {
         {
           name: 'absoluteOnly',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{position: 'absolute', fontSize: 30}}>{'y'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{position: 'absolute', fontSize: 30}}>{'y'}</View>
+            </inline>
+          ),
         },
         {
           name: 'twoBlocks',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 30}}>{'y'}</View>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 10}}>{'x'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 30}}>{'y'}</View>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 10}}>{'x'}</View>
+            </inline>
+          ),
         },
         {
           name: 'trailingEmpty',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 30}}>{'y'}</View>
-            <View />
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 30}}>{'y'}</View>
+              <View />
+            </inline>
+          ),
         },
         {
           name: 'nested30',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 30}}>{'y'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 30}}>{'y'}</View>
+            </inline>
+          ),
         },
       ]);
       // An absolutely positioned child is not in the flow, so the box has no
@@ -352,25 +374,31 @@ describe('atomic inline vertical alignment', () => {
         {
           name: 'clippedWithText',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 30, overflow: 'hidden'}}>{'y'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 30, overflow: 'hidden'}}>{'y'}</View>
+            </inline>
+          ),
         },
         {
           name: 'clippedEmpty',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            <View style={{overflow: 'hidden', height: 0}} />
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              <View style={{overflow: 'hidden', height: 0}} />
+            </inline>
+          ),
         },
         {
           name: 'nested30',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 30}}>{'y'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 30}}>{'y'}</View>
+            </inline>
+          ),
         },
       ]);
       // Clipping hides the line box, so the child aligns by its own bottom
@@ -388,18 +416,22 @@ describe('atomic inline vertical alignment', () => {
         {
           name: 'plain',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 10}}>{'x'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 10}}>{'x'}</View>
+            </inline>
+          ),
         },
         {
           name: 'margin12',
           // $FlowExpectedError[not-a-component]
-          node: <inline style={BOX}>
-            {/* $FlowExpectedError[incompatible-type] */}
-            <View style={{fontSize: 10, marginTop: 12}}>{'x'}</View>
-          </inline>,
+          node: (
+            <inline style={BOX}>
+              {/* $FlowExpectedError[incompatible-type] */}
+              <View style={{fontSize: 10, marginTop: 12}}>{'x'}</View>
+            </inline>
+          ),
         },
       ]);
       expect(tops.plain - tops.margin12).toBe(12);

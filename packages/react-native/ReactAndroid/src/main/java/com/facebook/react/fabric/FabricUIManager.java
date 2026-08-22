@@ -183,6 +183,21 @@ public class FabricUIManager
 
   private final TextEffectRegistry mTextEffectRegistry = new TextEffectRegistry();
 
+  /**
+   * The event emitter for a mounted view, or null if it has none.
+   *
+   * Exposed so a view can ask JavaScript a question it needs answered before a
+   * platform callback returns — a text field asking whether an edit may be
+   * applied. The ordinary event path is the {@link
+   * com.facebook.react.uimanager.events.EventDispatcher}, which is asynchronous
+   * by design; this is the narrow exception, and callers should treat it as one.
+   */
+  @Nullable
+  public com.facebook.react.fabric.events.EventEmitterWrapper getEventEmitter(
+      int surfaceId, int reactTag) {
+    return mMountingManager.getEventEmitter(surfaceId, reactTag);
+  }
+
   private final BatchEventDispatchedListener mBatchEventDispatchedListener;
 
   private final List<UIManagerListener> mListeners = new CopyOnWriteArrayList<>();
