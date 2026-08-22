@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<2ef902dce8884b94dde76480c92733a4>>
+ * @generated SignedSource<<ab28131349e2da977c70de1f6f7a8673>>
  * @flow strict
  * @noformat
  */
@@ -87,6 +87,7 @@ export type ReactNativeFeatureFlags = Readonly<{
   enableModuleArgumentNSNullConversionIOS: Getter<boolean>,
   enableMutationObserverByDefault: Getter<boolean>,
   enableNativeCSSParsing: Getter<boolean>,
+  enableNativeGestureRecognizers: Getter<boolean>,
   enablePreparedTextLayout: Getter<boolean>,
   enablePropsUpdateReconciliationAndroid: Getter<boolean>,
   enableRuntimeSchedulerQueueClearingOnError: Getter<boolean>,
@@ -362,6 +363,10 @@ export const enableMutationObserverByDefault: Getter<boolean> = createNativeFlag
  * Parse CSS strings using the Fabric CSS parser instead of ViewConfig processing
  */
 export const enableNativeCSSParsing: Getter<boolean> = createNativeFlagGetter('enableNativeCSSParsing', false);
+/**
+ * Route interaction for the DOM element catalog's own elements through native gesture recognizers (UIGestureRecognizer dependencies on iOS, ViewGroup interception on Android) instead of the JS responder system, so arbitration happens in the platform's arena and a scroll can claim a gesture without a round trip through JavaScript. Scoped to the new elements: nothing already shipping changes behaviour.
+ */
+export const enableNativeGestureRecognizers: Getter<boolean> = createNativeFlagGetter('enableNativeGestureRecognizers', false);
 /**
  * Enables caching text layout artifacts for later reuse
  */

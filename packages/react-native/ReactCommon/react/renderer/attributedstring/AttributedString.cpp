@@ -114,6 +114,51 @@ RectangleEdges<Float> AttributedString::inlineBoxBlockAxisOverflow() const {
     overflow.bottom = std::max(
         overflow.bottom, box.padding.bottom + box.borderWidth.bottom + outline);
   }
+  // Deliberately EXCLUDES the baseline-shift share: that ink is RESERVED in
+  // the run box's measured height (baselineShiftInkOverflow below), so it
+  // needs no canvas beyond the box. This function is the box-decoration
+  // overflow only — the part that paints outside without growing anything
+  // (CSS2 §10.6.1).
+  return overflow;
+}
+
+RectangleEdges<Float> AttributedString::baselineShiftInkOverflow() const {
+  /*
+   * `<sup>`/`<sub>` shift GLYPH INK past the line box without growing the
+   * LINE — the keep-the-rhythm deviation (SpecDeviations.md): Safari grows
+   * the line for a superscript, we keep interior rhythm. The ink still has
+   * to PAINT (CSS's initial `overflow: visible`; a line box never clips),
+   * and it must never escape the RUN'S BOX either: measured height reserves
+   * exactly this at the box's edges (InlineContentShadowNode::measureContent),
+   * because ink past the box's top painted OVER whatever sat above it — a
+   * demo's superscript rode into the title of the case before it.
+   *
+   * Separate from `inlineBoxBlockAxisOverflow` because the box-decoration
+   * share (an inline box's block padding/border/outline) deliberately
+   * overflows WITHOUT growing anything (CSS2 §10.6.1) — only the shift ink
+   * is reserved in the box.
+   *
+   * The shift each platform applies is half the ascent of the already-
+   * reduced font; ascent is under one em, so HALF THE FRAGMENT'S FONT SIZE
+   * bounds it. A slightly generous reserve costs a couple of points of
+   * height on the rare run that contains a shifted fragment.
+   */
+  auto overflow = RectangleEdges<Float>{};
+  for (const auto& fragment : fragments_) {
+    const auto& attrs = fragment.textAttributes;
+    if (attrs.verticalAlign.has_value() &&
+        *attrs.verticalAlign != TextVerticalAlign::Baseline) {
+      Float size = !std::isnan(attrs.fontSize)
+          ? attrs.fontSize
+          : TextAttributes::initialFontSize();
+      auto inkReach = size / 2;
+      if (*attrs.verticalAlign == TextVerticalAlign::Super) {
+        overflow.top = std::max(overflow.top, inkReach);
+      } else {
+        overflow.bottom = std::max(overflow.bottom, inkReach);
+      }
+    }
+  }
   return overflow;
 }
 

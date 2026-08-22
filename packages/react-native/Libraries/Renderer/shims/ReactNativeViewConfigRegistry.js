@@ -112,6 +112,40 @@ export function setFallbackViewConfigResolver(
   fallbackViewConfigResolver = resolver;
 }
 
+/**
+ * Installs a resolver consulted by the reconciler when it is about to treat a
+ * tag as a host component. Returning a component means "this tag is that
+ * component"; returning `null` means "not handled" and the tag stays a host
+ * component as before.
+ *
+ * The sibling of `setFallbackViewConfigResolver`, and for the same reason: some
+ * elements are not a native view at all. `<select>` is the clear case — its
+ * `<option>` children are a *list handed to a control*, not boxes to lay out,
+ * so the element has to read its own children and pass them down as a prop.
+ * That is a JavaScript job, and it needs the tag to resolve to a component.
+ *
+ * This belongs in the reconciler rather than in a JSX transform. A JSX shim
+ * would decide an element's identity at *creation*, which means the answer
+ * depends on how the element was made — `React.createElement('select')`,
+ * `cloneElement`, or a tree built by something other than the JSX runtime would
+ * all miss it. The reconciler sees every path. It is also where this project
+ * already resolves what a tag means, next to the view-config fallback.
+ *
+ * Core stays agnostic, as with the fallback resolver: it neither names nor
+ * knows any element, it only offers the hook.
+ */
+let elementComponentResolver: ?(name: string) => unknown = null;
+
+export function setElementComponentResolver(
+  resolver: (name: string) => unknown,
+): void {
+  elementComponentResolver = resolver;
+}
+
+export function getElementComponent(name: string): unknown {
+  return elementComponentResolver == null ? null : elementComponentResolver(name);
+}
+
 export function get(name: string): ViewConfig {
   let viewConfig = viewConfigs.get(name);
   if (viewConfig == null) {

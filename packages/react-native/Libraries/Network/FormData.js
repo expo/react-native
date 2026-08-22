@@ -79,6 +79,82 @@ class FormData {
       .map(([, value]) => value);
   }
 
+  /*
+   * The rest of the `FormData` interface.
+   *
+   * These are not conveniences. `<form action={fn}>` — React 19's form action —
+   * hands this object to application code, and the first thing that code writes
+   * is `formData.get('email')`. Without these, every form action written
+   * against the web API fails at runtime on `undefined is not a function`,
+   * which is how this gap was found.
+   */
+
+  /* The FIRST value for a name, or null — not an empty string, which the spec
+   * is careful to distinguish so that "absent" and "present but blank" can be
+   * told apart. */
+  get(key: string): FormDataValue | null {
+    for (const [name, value] of this._parts) {
+      if (name === key) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  has(key: string): boolean {
+    return this._parts.some(([name]) => name === key);
+  }
+
+  /* Replaces every existing entry for the name with one, keeping the position
+   * of the first — the spec's rule, and what stops `set` from reordering a
+   * form. */
+  set(key: string, value: FormDataValue): void {
+    const next: Array<FormDataNameValuePair> = [];
+    let replaced = false;
+    for (const part of this._parts) {
+      if (part[0] !== key) {
+        next.push(part);
+      } else if (!replaced) {
+        next.push([key, value]);
+        replaced = true;
+      }
+      // Later entries for the same name are dropped.
+    }
+    if (!replaced) {
+      next.push([key, value]);
+    }
+    this._parts = next;
+  }
+
+  delete(key: string): void {
+    this._parts = this._parts.filter(([name]) => name !== key);
+  }
+
+  *entries(): Iterator<[string, FormDataValue]> {
+    for (const [name, value] of this._parts) {
+      yield [name, value];
+    }
+  }
+
+  *keys(): Iterator<string> {
+    for (const [name] of this._parts) {
+      yield name;
+    }
+  }
+
+  *values(): Iterator<FormDataValue> {
+    for (const [, value] of this._parts) {
+      yield value;
+    }
+  }
+
+  // Iterating a `FormData` directly yields its entries, which is what
+  // `for (const [name, value] of formData)` and `[...formData]` rely on.
+  // $FlowFixMe[unsupported-syntax] computed key on a class
+  *[Symbol.iterator](): Iterator<[string, FormDataValue]> {
+    yield* this.entries();
+  }
+
   getParts(): Array<FormDataPart> {
     return this._parts.map(([name, value]) => {
       const contentDisposition = 'form-data; name="' + name + '"';

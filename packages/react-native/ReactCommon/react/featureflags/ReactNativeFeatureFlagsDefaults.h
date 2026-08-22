@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<1d2658cb59165201230173d705a0dbd3>>
+ * @generated SignedSource<<f4d4294ccb6bb083866a628916952e60>>
  */
 
 /**
@@ -180,6 +180,10 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enableNativeCSSParsing() override {
+    return false;
+  }
+
+  bool enableNativeGestureRecognizers() override {
     return false;
   }
 
