@@ -10,6 +10,7 @@
 #import <React/RCTAssert.h>
 #import <React/RCTBridge+Private.h>
 #import <React/RCTConstants.h>
+#import <React/EXPElementDragOwnership.h>
 #import <React/RCTScrollEvent.h>
 
 #import <react/featureflags/ReactNativeFeatureFlags.h>
@@ -142,7 +143,22 @@ RCTSendScrollEventForNativeAnimations_DEPRECATED(UIScrollView *scrollView, NSInt
     _scrollView = [[RCTEnhancedScrollView alloc] initWithFrame:self.bounds];
     _scrollView.clipsToBounds = _props->getClipsContentToBounds();
     _scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    _scrollView.delaysContentTouches = NO;
+    // UIKit's default here is YES, and it is the reason a fast swipe across a
+    // button in a native app never flashes it: a touch that lands on content is
+    // held briefly while the scroll view works out whether a scroll was meant,
+    // and is only delivered onward if one was not.
+    //
+    // React Native turns it off because its JavaScript touchables re-implement
+    // the same delay themselves, in `delayPressIn`. Doing it twice would double
+    // the wait, so one of the two has to go, and the platform's is the one that
+    // can be switched off.
+    //
+    // With the native recognizers there is no second implementation to collide
+    // with, and leaving it off is actively wrong: the press would be delivered
+    // at touch-down, highlight, and then be cancelled a moment later when the
+    // pan wins — a flicker on every scroll that begins over a control, which is
+    // exactly the tell that a UI was not built with the platform's gestures.
+    _scrollView.delaysContentTouches = ReactNativeFeatureFlags::enableNativeGestureRecognizers();
     ((RCTEnhancedScrollView *)_scrollView).overridingDelegate = self;
     _isUserTriggeredScrolling = NO;
     _shouldUpdateContentInsetAdjustmentBehavior = YES;
@@ -735,10 +751,27 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
   static_cast<const ScrollViewEventEmitter &>(*_eventEmitter).onScrollEndDrag(metrics);
 }
 
-- (BOOL)touchesShouldCancelInContentView:(__unused UIView *)view
+- (BOOL)touchesShouldCancelInContentView:(UIView *)view
 {
   // Historically, `UIScrollView`s in React Native do not cancel touches
   // started on `UIControl`-based views (as normal iOS `UIScrollView`s do).
+  //
+  // That uniform answer is wrong for a control that owns its drag. UIKit
+  // decides this per content view, which is why dragging a `UISlider` inside a
+  // table view moves the slider rather than scrolling the table; answering YES
+  // for everything means such a control cannot work inside a scrollable at all.
+  // Elements that own a drag say so (`EXPElementDragOwnership`) and are asked
+  // here, which restores UIKit's rule rather than adding a second policy
+  // alongside it.
+  if (facebook::react::ReactNativeFeatureFlags::enableNativeGestureRecognizers()) {
+    for (UIView *candidate = view; candidate != nil && candidate != self; candidate = candidate.superview) {
+      if ([candidate conformsToProtocol:@protocol(EXPElementDragOwnership)] &&
+          [(id<EXPElementDragOwnership>)candidate elementOwnsDragGesture]) {
+        return NO;
+      }
+    }
+  }
+
   return ![self _shouldDisableScrollInteraction];
 }
 

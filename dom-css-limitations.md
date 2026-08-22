@@ -112,6 +112,25 @@ standing rather than dropping one the author never replaced. Closing it needs
 the resolved direction at merge time, which is the same missing channel as the
 RTL items — DEFERRED with them.
 
+## Platform
+
+**`android-spellcheck-implies-autocorrect`** — `.../views/view/ElementTextInputView.kt`
+HTML defines `spellcheck` and `autocorrect` as separate attributes: one marks
+mistakes, the other rewrites them (§6.8.5 and §6.8.8). iOS has a trait for each
+— `spellCheckingType` and `autocorrectionType` — so "underline my mistakes but
+do not rewrite them" is expressible there. Android has one flag for both:
+`TextView.isSuggestionsEnabled()` returns false the moment
+`TYPE_TEXT_FLAG_NO_SUGGESTIONS` is set, and that single predicate gates the
+spell checker *and* the IME's suggestion strip. So on Android
+`spellcheck="false"` takes autocorrection with it. Honouring the attribute the
+author actually named, and turning off more than they asked, is the lesser of
+the two wrongs available. `autocorrect` on its own is exact on both platforms;
+it is only the combination `spellcheck="false" autocorrect="on"` that Android
+cannot express.
+
+A platform wall, like the entry above it: the predicate is `TextView`'s and
+takes no argument. Nothing to schedule.
+
 ## Performance
 
 **`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`
@@ -190,6 +209,7 @@ rather than going quiet.
 - `list-style-type-additive-scripts` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
+- `no-font-on-a-control` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPElementTextAreaComponentView.mm`
 - `no-generic-font-families` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-grid` — limitation, `ReactCommon/react/renderer/components/view/conversions.h`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
@@ -197,9 +217,11 @@ rather than going quiet.
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
 - `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `press-dim-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
 - `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`
 - `rtl-inline-run-not-reordered` — limitation, `ReactCommon/react/renderer/components/text/InlineContentShadowNode.cpp`
+- `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
 - `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
