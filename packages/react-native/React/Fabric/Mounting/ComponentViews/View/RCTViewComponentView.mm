@@ -69,8 +69,9 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   BOOL _needsInvalidateLayer;
   BOOL _isJSResponder;
   BOOL _removeClippedSubviews;
-  // Set by -prepareForRecycle, consumed by the next -updateProps: — the
-  // cleared visuals diff against defaults exactly once. See both sites.
+  // Set by the recycle pixel clear, consumed by the next -updateProps:'s
+  // unconditional pixel restore, asserted spent in -finalizeUpdates. See the
+  // RECYCLE PIXEL CONTRACT comment on the clear/restore pair.
   BOOL _propsAreStaleFromRecycle;
   NSMutableArray<UIView *> *_reactSubviews;
   NSSet<NSString *> *_Nullable _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN;
@@ -601,33 +602,39 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 #endif
 
   /*
-   * The first update after a recycle diffs the BASE view props against
-   * DEFAULTS, not against `_props`.
+   * The old props are ALWAYS the real previous props, never a substitute.
    *
-   * `-prepareForRecycle` clears pixels — background, border, outline, filter
-   * layers — while `_props` keeps describing the old element, and this method
-   * diffs against `_props`: a view recycled between two elements with EQUAL
-   * styling diffed equal, skipped re-applying, and kept the cleared state
-   * (two of five identical dark code boxes rendered bare; which two depended
-   * on pooling). Diffing against defaults here makes every cleared property
-   * re-apply; each branch below assigns absolutely, so an occasional
-   * extra apply is idempotent.
+   * Every value diff below reasons about UIKit state prepareForRecycle does
+   * not touch — transform, opacity, accessibility, hit slop — and for that
+   * state the previous props are the only correct baseline. An earlier
+   * version substituted DEFAULT props here after a recycle (to make the
+   * cleared pixels re-apply), and that broke the untouched state instead:
+   * any stale value whose incoming prop happened to equal the default diffed
+   * equal and was never reset, so a recycled view kept the previous
+   * element's transform/opacity — navigation chrome lost its Back button and
+   * scroll content sat behind a phantom inset. The cleared pixels are
+   * restored EXPLICITLY instead, by `-_restorePixelStateClearedByRecycleWith:`
+   * below, which is the paired inverse of the clearing in
+   * `-prepareForRecycle` — see the shared contract comment on the pair.
    *
-   * `_props` itself is deliberately NOT reset. Subclasses static_cast it to
-   * their own props type — resetting it to plain ViewProps defaults sent
-   * `RCTParagraphComponentView` a garbage `isSelectable`, whose stale-diff
-   * called `removeInteraction:` with nothing installed and aborted in an
-   * NSAssert on the first recycled paragraph. Their UIKit state survives
-   * recycling untouched, so old props stay the consistent baseline for THEIR
-   * diffs; only the base's cleared visuals need the default baseline.
+   * `_props` itself is also never replaced on recycle. Subclasses
+   * static_cast it to their own props type — resetting it to plain ViewProps
+   * defaults sent `RCTParagraphComponentView` a garbage `isSelectable`,
+   * whose stale-diff called `removeInteraction:` with nothing installed and
+   * aborted in an NSAssert on the first recycled paragraph.
    */
-  const auto &oldViewProps = _propsAreStaleFromRecycle
-      ? static_cast<const ViewProps &>(*ViewShadowNode::defaultSharedProps())
-      : static_cast<const ViewProps &>(*_props);
-  _propsAreStaleFromRecycle = NO;
+  const auto &oldViewProps = static_cast<const ViewProps &>(*_props);
   const auto &newViewProps = static_cast<const ViewProps &>(*props);
 
   BOOL needsInvalidateLayer = NO;
+  if (_propsAreStaleFromRecycle) {
+    _propsAreStaleFromRecycle = NO;
+    [self _restorePixelStateClearedByRecycleWith:newViewProps];
+    // Every layer family the clear removed is rebuilt from the new props by
+    // -invalidateLayer, which runs in -finalizeUpdates after `_props` below
+    // has been swapped to `props`.
+    needsInvalidateLayer = YES;
+  }
 
   // `opacity`
   if (oldViewProps.opacity != newViewProps.opacity &&
@@ -1044,6 +1051,15 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask
 {
   [super finalizeUpdates:updateMask];
+  // RECYCLE PIXEL CONTRACT invariant (see the clear/restore pair below): by
+  // the time an update batch finalizes, a recycled view must have had
+  // -updateProps: run its unconditional pixel restore. A stale flag here
+  // means some mount path skipped it, and the view would reach the screen
+  // with its background/border/outline layers cleared.
+  RCTAssert(
+      !_propsAreStaleFromRecycle || (updateMask & RNComponentViewUpdateMaskProps) == 0,
+      @"%@ finalized a props update without restoring recycle-cleared pixels.",
+      self.class);
   _useCustomContainerView = [self styleWouldClipOverflowInk];
   if (!_needsInvalidateLayer) {
     return;
@@ -1091,7 +1107,43 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // No runs left, so this tears the selection interaction down with them.
   [self _updateTextSelectionInteraction];
 
-  // Clean up box shadow layers to prevent cross-component contamination
+  [self _clearPixelStateForRecycle];
+
+  _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN = nil;
+  _eventEmitter.reset();
+  _isJSResponder = NO;
+  _reactSubviews = [NSMutableArray new];
+  _layoutMetrics = EmptyLayoutMetrics;
+}
+
+/*
+ * RECYCLE PIXEL CONTRACT — these two methods are a PAIR.
+ *
+ * `_clearPixelStateForRecycle` destroys props-derived pixels while `_props`
+ * keeps describing the old element, so the value diffs in -updateProps:
+ * cannot see the loss: a view recycled between two elements with EQUAL
+ * styling diffs equal, skips re-applying, and would keep the cleared state
+ * (two of five identical dark code boxes rendered bare; which two depended on
+ * pooling). `_restorePixelStateClearedByRecycleWith:` is the inverse the
+ * first -updateProps: after a recycle applies UNCONDITIONALLY — restoration
+ * must not depend on a diff, for the same reason the diff cannot see the
+ * clear.
+ *
+ * The invariant that keeps this correct as it grows: everything the first
+ * method clears, the second restores (directly, or via the forced
+ * -invalidateLayer rebuild its caller schedules — the layer families:
+ * background color, border, outline, filter, box shadow, background image).
+ * Nothing else belongs in either: state prepareForRecycle does NOT clear is
+ * restored by the ordinary old-vs-new diffs and must NOT be force-applied
+ * here from a defaults baseline — that variant broke transform/opacity for
+ * every recycled view whose incoming prop equalled the default.
+ * -finalizeUpdates asserts the flag was consumed, so a recycled view can
+ * never reach the screen with its pixels cleared and no restore run.
+ */
+- (void)_clearPixelStateForRecycle
+{
+  // Box shadow layers, then every other visual layer family, to prevent
+  // cross-component contamination.
   if (_boxShadowLayers != nullptr) {
     for (CALayer *boxShadowLayer = nullptr in _boxShadowLayers) {
       [boxShadowLayer removeFromSuperlayer];
@@ -1099,8 +1151,6 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     [_boxShadowLayers removeAllObjects];
     _boxShadowLayers = nil;
   }
-
-  // Clean up other visual layers
   [_backgroundColorLayer removeFromSuperlayer];
   _backgroundColorLayer = nil;
   // The plain background too, not only its layer object: a view recycled out
@@ -1117,19 +1167,20 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   [_filterLayer removeFromSuperlayer];
   _filterLayer = nil;
   [self clearExistingBackgroundImageLayers];
-
-  _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN = nil;
-  _eventEmitter.reset();
-  _isJSResponder = NO;
   _removeClippedSubviews = NO;
-  _reactSubviews = [NSMutableArray new];
-  _layoutMetrics = EmptyLayoutMetrics;
 
-  // The cleared visuals above no longer match `_props`; the first
-  // -updateProps: after this reconciles by diffing the base view props
-  // against DEFAULTS (see there for why `_props` itself must keep the old
-  // element's type).
   _propsAreStaleFromRecycle = YES;
+}
+
+- (void)_restorePixelStateClearedByRecycleWith:(const ViewProps &)newViewProps
+{
+  self.backgroundColor = RCTUIColorFromSharedColor(newViewProps.backgroundColor);
+  if (!ReactNativeFeatureFlags::enableViewCulling()) {
+    _removeClippedSubviews = newViewProps.removeClippedSubviews;
+    [self _updateRemoveClippedSubviewsState];
+  }
+  // The removed layers are rebuilt from the new props by -invalidateLayer;
+  // the caller forces that by setting `needsInvalidateLayer`.
 }
 
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(NSSet<NSString *> *_Nullable)props

@@ -51,10 +51,38 @@ static Props::Shared propsWithBackground(int32_t argb)
 
   // Second element: a DIFFERENT props object with the SAME value — the exact
   // shape recycling produces when a pooled view moves between two identically
-  // styled code boxes. The diff must run against defaults, not the old element.
+  // styled code boxes. The restore must run unconditionally, not by diff.
   [view updateProps:propsWithBackground(0xFF34343D) oldProps:nullptr];
   [view finalizeUpdates:RNComponentViewUpdateMaskProps];
   XCTAssertNotNil(view.backgroundColor, @"an equal-valued background must re-apply after recycle");
+}
+
+- (void)testRecycleResetsUntouchedStateByRealDiffNotDefaults
+{
+  // The other half of the contract, and the bug that shipped in a preview
+  // build: state prepareForRecycle does NOT clear (opacity, transform) is
+  // reset by the ordinary old-vs-new diff, so the old side must be the REAL
+  // previous props. Diffing against defaults instead made "previous 0.5,
+  // incoming 1.0 (the default)" compare 1.0 == 1.0 and skip — a recycled view
+  // kept the previous element's opacity and transform, which is how a header
+  // lost its Back button and scroll content sat behind a phantom inset.
+  RCTViewComponentView *view = [[RCTViewComponentView alloc] initWithFrame:CGRectMake(0, 0, 100, 100)];
+
+  auto faded = std::make_shared<ViewProps>();
+  faded->opacity = 0.5;
+  faded->transform = Transform::Translate(0, 40, 0);
+  [view updateProps:faded oldProps:nullptr];
+  [view finalizeUpdates:RNComponentViewUpdateMaskProps];
+  XCTAssertEqualWithAccuracy(view.layer.opacity, 0.5, 0.001);
+
+  [view prepareForRecycle];
+
+  // The next element states nothing — every prop at its default.
+  [view updateProps:std::make_shared<ViewProps>() oldProps:nullptr];
+  [view finalizeUpdates:RNComponentViewUpdateMaskProps];
+  XCTAssertEqualWithAccuracy(view.layer.opacity, 1.0, 0.001, @"a recycled view must not keep the previous element's opacity");
+  XCTAssertTrue(
+      CATransform3DIsIdentity(view.layer.transform), @"a recycled view must not keep the previous element's transform");
 }
 
 - (void)testRecycleKeepsThePropsObjectForSubclassDiffs
@@ -63,7 +91,7 @@ static Props::Shared propsWithBackground(int32_t argb)
   // `_props` to their own type — replacing it with plain ViewProps defaults
   // sent RCTParagraphComponentView a garbage `isSelectable`, whose stale diff
   // called removeInteraction: with nothing installed and aborted. The base
-  // reconciles by diffing against defaults exactly once instead (the test
+  // reconciles by an explicit unconditional pixel restore instead (the test
   // above), so the old element's typed props may — must — survive recycling.
   RCTViewComponentView *view = [[RCTViewComponentView alloc] initWithFrame:CGRectMake(0, 0, 100, 100)];
   [view updateProps:propsWithBackground(0xFF123456) oldProps:nullptr];
