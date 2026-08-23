@@ -15,47 +15,78 @@ import android.text.style.CharacterStyle
 import android.text.style.ReplacementSpan
 
 /**
- * Adds an inline element's inline-axis margin/border/padding to the advance of a single character
- * (box-model-scope.md G3).
+ * THE INLINE RESERVE MODEL — the one model every consumer of an inline
+ * element's inline-axis space must share. `InlineBoxDecorationSpan` (box
+ * painting) and the published-rect query in `TextLayoutManager` are written
+ * against it; change it here and they are wrong.
  *
- * Applied to the character *preceding* an inline box for its leading space, and to the box's own
- * last character for its trailing space — never to a character added for the purpose. The string
- * backing a text run is also what accessibility and clipboard copy read, so a zero-width spacer
- * inserted for layout would leak into text the user reads and copies.
+ * An inline element's inline-axis margin + border + padding (its *reserve*,
+ * box-model-scope.md G3) becomes text ADVANCE, never characters — the string
+ * backing a run is also what accessibility and clipboard copy read, so a
+ * zero-width spacer inserted for layout would leak into text the user reads
+ * and copies.
  *
- * ## Why this is not `letterSpacing`
+ * Placement, and the order of the parts inside the reserved advance:
  *
- * It was, and the advances were right while the *drawing* was wrong. Android does not add letter
- * spacing after a glyph — Minikin splits it, half before the glyph and half after — so covering one
- * character with `spacingPx / textSize` put half an inline box's padding *inside* the word. It
- * rendered as `decorated inlin e`, `befor e SPA N after`, `the las t`: a gap before the final
- * character of every run carrying inline-box padding. The comment here used to assert the opposite,
- * that Android "applies it after every character", and that assumption was the whole bug.
+ *  - LEADING reserve: rides the character *preceding* the element, drawn after
+ *    that character's glyph in outermost-first order — margin, border,
+ *    padding — so the padding ends up adjacent to the element's first glyph.
+ *  - TRAILING reserve: rides the element's own last character, drawn after its
+ *    glyph innermost-first — padding, border, margin.
+ *  - An element that STARTS THE TEXT has no preceding character; its leading
+ *    reserve is a `LeadingMarginSpan` instead (it necessarily starts the first
+ *    line, and a leading edge applies once no matter how often the box wraps).
+ *  - An element PRECEDED BY AN ATTACHMENT cannot ride the attachment's
+ *    character (the placeholder is a `ReplacementSpan` that owns that advance
+ *    outright; two on one character fight and the attachment loses its
+ *    width). The reserve rides the element's own FIRST character, drawn
+ *    before its glyph — margin, border, padding, glyph.
  *
- * A `ReplacementSpan` is the only way on Android to say "reserve this advance and draw the glyph at
- * the left of it". The total advance is deliberately identical to the `letterSpacing` version —
- * natural width plus `spacingPx` — because the geometry was already right: the conformance corpus
- * agrees with real Safari on `inline-with-padding-around-box`, and that has to stay true. What
- * changes is only where the glyph sits inside its own advance.
+ * Consequence for pen positions (`getPrimaryHorizontal`), which include every
+ * consumed advance: at an element's start offset the pen sits at the CONTENT
+ * left edge (its leading reserve was consumed by the preceding character);
+ * at its end offset the pen sits at the MARGIN's outer right edge (the
+ * trailing reserve was consumed by the last character). The attachment-
+ * preceded exception shifts the start pen to the margin's outer LEFT edge.
  *
- * The cost is that this one character is shaped in isolation, so a kern or ligature it would have
- * formed with its neighbour is lost. That is one character at the edge of an inline box, weighed
- * against a gap in the middle of a word — and iOS has the same seam, since `NSKernAttributeName` is
- * applied to exactly this character there.
- */
-/**
- * @param spacingTakesFollowingBackground The one placement whose spacing belongs to a DIFFERENT
- *   element than its glyph: leading space hung off the character *preceding* an inline box. That
- *   character is outside the element, but the space after it is the element's own padding, and CSS
- *   paints an inline box's background across its padding (css-backgrounds-3 §2.2) — so the spacing
- *   region takes the background of the character at the span's END index (the element's first),
- *   not of the glyph it shares an advance with.
+ * Painting: backgrounds cover content and PADDING only (css-backgrounds-3
+ * §2.2) — never the border region (the border is painted beneath the glyph
+ * pass by `InlineBoxDecorationSpan`, and background drawn later in the
+ * TextLine pass would cover it) and never the margin.
+ *
+ * ## Why this is a ReplacementSpan and not `letterSpacing`
+ *
+ * It was `letterSpacing`, and the advances were right while the *drawing* was
+ * wrong: Minikin splits letter spacing half before and half after the glyph,
+ * so covering one character with `spacingPx / textSize` put half an inline
+ * box's padding *inside* the word (`decorated inlin e`, `the las t`). A
+ * `ReplacementSpan` is the only way on Android to say "reserve this advance
+ * and draw the glyph at its left edge". The total advance is identical to the
+ * letter-spacing version; only where the glyph sits inside it changed. The
+ * cost is that this one character is shaped in isolation, losing a kern or
+ * ligature with its neighbour — one character at the edge of an inline box,
+ * against a gap in the middle of a word. iOS has the same seam
+ * (`NSKernAttributeName` on exactly this character).
+ *
+ * A ReplacementSpan takes its whole range away from TextLine:
+ * `handleReplacement` applies the metric-affecting spans and calls [draw] — it
+ * never runs the character styles, never paints `bgColor`, never draws
+ * decorations. So the styling the rest of the line gets for free is
+ * reproduced here, or the LAST character of every inline element carrying
+ * trailing padding renders bare — which is how this was found:
+ * `<code style={{backgroundColor}}>…background</code>` drew its final "d" on
+ * the page background.
  */
 internal class InlineBoxSpacingSpan(
-    private val spacingPx: Float,
+    private val marginPx: Float,
+    private val borderPx: Float,
+    private val paddingPx: Float,
     private val spaceBefore: Boolean = false,
     private val spacingTakesFollowingBackground: Boolean = false,
 ) : ReplacementSpan(), ReactSpan {
+
+  private val spacingPx: Float
+    get() = marginPx + borderPx + paddingPx
 
   override fun getSize(
       paint: Paint,
@@ -87,49 +118,41 @@ internal class InlineBoxSpacingSpan(
       bottom: Int,
       paint: Paint,
   ) {
-    // Normally at the LEFT of the reserved advance, so the extra space falls AFTER the character —
-    // what the caller means by "leading space hung off the preceding character" and by "trailing
-    // space hung off the box's own last character".
-    //
-    // `spaceBefore` is for the one case that cannot use the preceding character: when it belongs to
-    // an attachment, which already owns a ReplacementSpan of its own. Two on one character fight,
-    // and the attachment loses its width. There the span goes on the box's FIRST character instead
-    // and the space is drawn ahead of the glyph, which puts it in the same place on screen.
     val spacing = if (spacingPx.isNaN()) 0f else spacingPx
-    val offset = if (spaceBefore) spacing else 0f
+    val padding = if (paddingPx.isNaN()) 0f else paddingPx
+    // The glyph sits at the LEFT of the reserved advance, except in the
+    // attachment-preceded placement where the reserve precedes it (see the
+    // model above).
+    val glyphLeft = x + if (spaceBefore) spacing else 0f
 
-    /*
-     * A ReplacementSpan takes its whole range away from TextLine: `handleReplacement` applies the
-     * metric-affecting spans and calls this method — it never runs the character styles, never
-     * paints `bgColor`, never draws decorations. So the styling the rest of the line gets for free
-     * has to be reproduced here, or the LAST character of every inline element carrying trailing
-     * padding renders bare — which is exactly how this was found: `<code
-     * style={{backgroundColor}}>…background</code>` drew its final "d" on the page background.
-     */
     val tp = TextPaint(paint)
-    (text as? Spanned)?.let { spanned ->
-      for (style in spanned.getSpans(start, end, CharacterStyle::class.java)) {
-        if (style !== this) {
-          style.updateDrawState(tp)
-        }
-      }
-    }
-
+    applyCoveringStyles(text, start, end, tp)
     val natural = tp.measureText(text, start, end)
-    val glyphLeft = x + offset
+
     // The glyph region carries the range's own background.
     if (tp.bgColor != 0) {
       drawBackground(canvas, tp.bgColor, glyphLeft, top, glyphLeft + natural, bottom)
     }
-    // The spacing region is an inline box's padding, and background covers padding
-    // (css-backgrounds-3 §2.2). Whose background depends on the placement — see the
-    // constructor doc.
-    if (spacing > 0f) {
-      val spacingLeft = if (spaceBefore) x else x + natural
-      val spacingBg =
+
+    // Background covers padding but not border or margin (see the model
+    // above), so only the PADDING portion of the reserve is painted — the part
+    // adjacent to the element's glyphs. Whose background depends on the
+    // placement: the leading reserve's padding belongs to the FOLLOWING
+    // element (the glyph this span shares an advance with is outside it).
+    if (padding > 0f) {
+      val paddingLeft =
+          when {
+            // [margin][border][padding][glyph]: padding ends where the glyph starts.
+            spaceBefore -> glyphLeft - padding
+            // [glyph][margin][border][padding]: padding is the reserve's far end.
+            spacingTakesFollowingBackground -> x + natural + spacing - padding
+            // [glyph][padding][border][margin]: padding starts at the glyph's end.
+            else -> x + natural
+          }
+      val paddingBg =
           if (spacingTakesFollowingBackground) backgroundAt(text, end) else tp.bgColor
-      if (spacingBg != 0) {
-        drawBackground(canvas, spacingBg, spacingLeft, top, spacingLeft + spacing, bottom)
+      if (paddingBg != 0) {
+        drawBackground(canvas, paddingBg, paddingLeft, top, paddingLeft + padding, bottom)
       }
     }
 
@@ -151,16 +174,32 @@ internal class InlineBoxSpacingSpan(
 
   /** The background colour the character at [index] would be painted with, or 0 for none. */
   private fun backgroundAt(text: CharSequence, index: Int): Int {
-    val spanned = text as? Spanned ?: return 0
-    if (index >= spanned.length) {
-      return 0
-    }
     val probe = TextPaint()
-    for (style in spanned.getSpans(index, index + 1, CharacterStyle::class.java)) {
-      if (style !== this) {
-        style.updateDrawState(probe)
+    applyCoveringStyles(text, index, index + 1, probe)
+    return probe.bgColor
+  }
+
+  /**
+   * Applies to [tp] exactly the character styles that COVER `[start, end)` — the styling TextLine
+   * itself would have used for those characters.
+   *
+   * Not `getSpans(start, end, …)` alone: `Spanned` implementations differ on whether spans that
+   * merely *touch* the query range (`spanEnd == start` or `spanStart == end`) are returned. This
+   * span sits on the character *preceding* an inline element, and the element's own spans start
+   * exactly where that character ends — a touch-inclusive implementation hands the element's
+   * styling to the preceding glyph. The covering check makes the answer implementation-independent.
+   */
+  private fun applyCoveringStyles(text: CharSequence, start: Int, end: Int, tp: TextPaint) {
+    val spanned = text as? Spanned ?: return
+    if (start >= spanned.length) {
+      return
+    }
+    for (style in spanned.getSpans(start, end, CharacterStyle::class.java)) {
+      if (style !== this &&
+          spanned.getSpanStart(style) <= start &&
+          spanned.getSpanEnd(style) >= end) {
+        style.updateDrawState(tp)
       }
     }
-    return probe.bgColor
   }
 }

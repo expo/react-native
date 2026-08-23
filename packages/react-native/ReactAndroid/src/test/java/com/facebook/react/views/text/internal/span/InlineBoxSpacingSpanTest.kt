@@ -43,7 +43,7 @@ class InlineBoxSpacingSpanTest {
     val text = "x"
     val natural = paint.measureText(text, 0, 1)
 
-    val size = InlineBoxSpacingSpan(12f).getSize(paint, text, 0, 1, null)
+    val size = InlineBoxSpacingSpan(0f, 0f, 12f).getSize(paint, text, 0, 1, null)
 
     assertThat(size).isEqualTo(Math.round(natural + 12f))
   }
@@ -54,7 +54,7 @@ class InlineBoxSpacingSpanTest {
     // opening a gap between it and the character before it — inside the word.
     val canvas = mock<Canvas>()
 
-    InlineBoxSpacingSpan(12f).draw(canvas, "x", 0, 1, 100f, 0, 10, 20, paint)
+    InlineBoxSpacingSpan(0f, 0f, 12f).draw(canvas, "x", 0, 1, 100f, 0, 10, 20, paint)
 
     val x = argumentCaptor<Float>()
     verify(canvas).drawText(eq("x" as CharSequence), eq(0), eq(1), x.capture(), any(), any())
@@ -68,7 +68,7 @@ class InlineBoxSpacingSpanTest {
     // hung off that preceding character — which means the far side of the reserved advance.
     val canvas = mock<Canvas>()
 
-    InlineBoxSpacingSpan(12f, spaceBefore = true).draw(canvas, "x", 0, 1, 100f, 0, 10, 20, paint)
+    InlineBoxSpacingSpan(0f, 0f, 12f, spaceBefore = true).draw(canvas, "x", 0, 1, 100f, 0, 10, 20, paint)
 
     val x = argumentCaptor<Float>()
     verify(canvas).drawText(eq("x" as CharSequence), eq(0), eq(1), x.capture(), any(), any())
@@ -81,7 +81,7 @@ class InlineBoxSpacingSpanTest {
     // collapses the height of every line that carries an inline box.
     val fm = android.graphics.Paint.FontMetricsInt()
 
-    InlineBoxSpacingSpan(12f).getSize(paint, "x", 0, 1, fm)
+    InlineBoxSpacingSpan(0f, 0f, 12f).getSize(paint, "x", 0, 1, fm)
 
     val expected = android.graphics.Paint.FontMetricsInt()
     paint.getFontMetricsInt(expected)
@@ -94,7 +94,7 @@ class InlineBoxSpacingSpanTest {
     val text = "x"
     val natural = paint.measureText(text, 0, 1)
     val canvas = mock<Canvas>()
-    val span = InlineBoxSpacingSpan(Float.NaN, spaceBefore = true)
+    val span = InlineBoxSpacingSpan(0f, 0f, Float.NaN, spaceBefore = true)
 
     assertThat(span.getSize(paint, text, 0, 1, null)).isEqualTo(Math.round(natural))
 

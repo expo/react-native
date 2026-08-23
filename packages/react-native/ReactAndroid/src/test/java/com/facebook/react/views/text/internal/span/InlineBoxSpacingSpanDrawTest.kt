@@ -62,7 +62,7 @@ class InlineBoxSpacingSpanDrawTest {
 
   @Test
   fun `trailing placement paints the element's background over glyph AND spacing`() {
-    val span = InlineBoxSpacingSpan(8f)
+    val span = InlineBoxSpacingSpan(0f, 0f, 8f)
     val text = spannedWord(span, 3, 4) // the element's own last character
     val canvas = draw(span, text, 3, 4)
 
@@ -83,7 +83,7 @@ class InlineBoxSpacingSpanDrawTest {
 
   @Test
   fun `the glyph is drawn with the character styles the replacement bypassed`() {
-    val span = InlineBoxSpacingSpan(8f)
+    val span = InlineBoxSpacingSpan(0f, 0f, 8f)
     val text = spannedWord(span, 3, 4)
     val canvas = draw(span, text, 3, 4)
 
@@ -100,7 +100,7 @@ class InlineBoxSpacingSpanDrawTest {
     // the element — so its glyph has no background, while the spacing after it
     // is the element's padding and takes the element's.
     val text = SpannableString("d word")
-    val span = InlineBoxSpacingSpan(8f, spacingTakesFollowingBackground = true)
+    val span = InlineBoxSpacingSpan(0f, 0f, 8f, spacingTakesFollowingBackground = true)
     text.setSpan(ReactBackgroundColorSpan(bg), 2, 6, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
     text.setSpan(span, 1, 2, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
 
@@ -118,9 +118,87 @@ class InlineBoxSpacingSpanDrawTest {
   }
 
   @Test
+  fun `the preceding character never takes the FOLLOWING element's styles`() {
+    // The leading-placement span rides the character BEFORE the element, and
+    // the element's own spans begin exactly where that character ends. On a
+    // SpannableStringBuilder — which is what the runtime text actually is —
+    // getSpans() also returns spans that merely TOUCH the query range, unlike
+    // SpannableString: relying on it painted the character before every
+    // highlighted element with the element's highlight ("the span is
+    // highlighted to the left"). Only the SPACING region (the element's own
+    // padding) may take the element's background; the glyph region and the
+    // glyph itself keep the preceding text's styling.
+    val text = android.text.SpannableStringBuilder("d word")
+    val span = InlineBoxSpacingSpan(0f, 0f, 8f, spacingTakesFollowingBackground = true)
+    text.setSpan(ReactBackgroundColorSpan(bg), 2, 6, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+    text.setSpan(ForegroundColorSpan(fg), 2, 6, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+    text.setSpan(span, 1, 2, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+
+    val canvas = draw(span, text, 1, 2)
+
+    // One rect only — the spacing's. A second rect would be the preceding
+    // glyph wrongly wearing the element's background.
+    val lefts = argumentCaptor<Float>()
+    val paints = argumentCaptor<Paint>()
+    verify(canvas).drawRect(lefts.capture(), any(), any<Float>(), any(), paints.capture())
+    assertThat(paints.firstValue.color).isEqualTo(bg)
+    val natural = TextPaint().measureText(text, 1, 2)
+    assertThat(lefts.firstValue).isEqualTo(100f + natural)
+
+    // And the glyph is drawn with the SURROUNDING text's paint, not the
+    // element's foreground colour.
+    val glyphPaint = argumentCaptor<Paint>()
+    verify(canvas).drawText(eq(text), eq(1), eq(2), any(), any(), glyphPaint.capture())
+    assertThat(glyphPaint.firstValue.color).isNotEqualTo(fg)
+  }
+
+  @Test
+  fun `background covers padding but never border or margin — trailing`() {
+    // css-backgrounds-3 §2.2: the background paints over content and padding.
+    // The border region is painted by InlineBoxDecorationSpan BENEATH the
+    // glyph pass — background drawn here, later, would cover it — and the
+    // margin is never painted by anything. Reserve [glyph][padding 8][border
+    // 2][margin 4]: the background rects must stop exactly at the padding's
+    // end, 6px short of the reserved advance.
+    val span = InlineBoxSpacingSpan(4f, 2f, 8f)
+    val text = spannedWord(span, 3, 4)
+    val canvas = draw(span, text, 3, 4)
+
+    val lefts = argumentCaptor<Float>()
+    val rights = argumentCaptor<Float>()
+    verify(canvas, org.mockito.kotlin.times(2))
+        .drawRect(lefts.capture(), any(), rights.capture(), any(), any())
+    val natural = TextPaint().measureText(text, 3, 4)
+    assertThat(rights.allValues.max()).isEqualTo(100f + natural + 8f)
+    assertThat(span.getSize(TextPaint(), text, 3, 4, null))
+        .isEqualTo(Math.round(natural + 14f))
+  }
+
+  @Test
+  fun `background covers padding but never border or margin — leading`() {
+    // Leading reserve rides the preceding character, outermost part first:
+    // [glyph][margin 4][border 2][padding 8]. Only the final 8px — the
+    // element's padding, adjacent to its first glyph — takes the element's
+    // background.
+    val text = SpannableString("d word")
+    val span = InlineBoxSpacingSpan(4f, 2f, 8f, spacingTakesFollowingBackground = true)
+    text.setSpan(ReactBackgroundColorSpan(bg), 2, 6, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+    text.setSpan(span, 1, 2, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+
+    val canvas = draw(span, text, 1, 2)
+
+    val lefts = argumentCaptor<Float>()
+    val rights = argumentCaptor<Float>()
+    verify(canvas).drawRect(lefts.capture(), any(), rights.capture(), any(), any())
+    val natural = TextPaint().measureText(text, 1, 2)
+    assertThat(lefts.firstValue).isEqualTo(100f + natural + 6f)
+    assertThat(rights.firstValue).isEqualTo(100f + natural + 14f)
+  }
+
+  @Test
   fun `no styles means no background rects, just the glyph`() {
     val text = SpannableString("xy")
-    val span = InlineBoxSpacingSpan(8f)
+    val span = InlineBoxSpacingSpan(0f, 0f, 8f)
     text.setSpan(span, 0, 1, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
     val canvas = draw(span, text, 0, 1)
     verify(canvas, org.mockito.kotlin.never())

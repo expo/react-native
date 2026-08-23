@@ -64,6 +64,11 @@ internal class InlineBoxDecorationSpan(
     private val outlineOffset: Float,
     private val marginLeft: Float,
     private val marginRight: Float,
+    // True for the attachment-preceded placement, where the element's leading
+    // reserve rides its own first character (see THE INLINE RESERVE MODEL on
+    // InlineBoxSpacingSpan) and the start pen sits at the margin's outer left
+    // edge rather than at the content edge.
+    private val leadingSpaceInsideAdvance: Boolean = false,
 ) : CanvasEffectSpan() {
 
   private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -97,25 +102,31 @@ internal class InlineBoxDecorationSpan(
         continue
       }
 
-      // Both edges' space sits outside the element's own glyph extent and has
-      // to be added back. `getPrimaryHorizontal` reports a cursor position, so
-      // the leading space (kerning on the *preceding* character) is left of
-      // `left`, and the trailing space is not included in `right` either — the
-      // cursor at the element's end offset sits at the last glyph's edge.
+      // Pen positions include every consumed reserved advance (THE INLINE
+      // RESERVE MODEL, documented on InlineBoxSpacingSpan): the pen at the
+      // element's start offset sits at its CONTENT left edge — its leading
+      // reserve was consumed by the preceding character, outermost part
+      // first — and the pen at its end offset sits at the MARGIN's outer
+      // right edge. The border box is therefore `pen(start) - (border +
+      // padding)` to `pen(end) - margin`; margins are outside it and are
+      // never painted. The attachment-preceded placement instead puts the
+      // whole leading reserve inside the element's own first advance, so
+      // there the start pen is the margin's outer left edge.
       if (isFirst) {
-        left -= paddingLeft + borderLeftWidth
+        left =
+            if (leadingSpaceInsideAdvance) left + marginLeft
+            else left - (paddingLeft + borderLeftWidth)
       }
-      if (isLast) {
-        right += paddingRight + borderRightWidth
+      if (isLast && to == end) {
+        right -= marginRight
       }
 
       // Vertically the box is the line box grown outwards by padding and
       // border — never inwards, and never changing the line's height.
       val top = layout.getLineTop(line) - paddingTop - borderTopWidth
       val bottom = layout.getLineBottom(line) + paddingBottom + borderBottomWidth
-      // Margins are outside the border box and are never painted.
-      val boxLeft = left + if (isFirst) marginLeft else 0f
-      val boxRight = right - if (isLast) marginRight else 0f
+      val boxLeft = left
+      val boxRight = right
 
       drawEdges(canvas, boxLeft, top, boxRight, bottom, isFirst, isLast)
       drawOutline(canvas, boxLeft, top, boxRight, bottom)
