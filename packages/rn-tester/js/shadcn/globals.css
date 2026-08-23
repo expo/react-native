@@ -97,6 +97,33 @@ h1, h2, h3, h4, h5, h6, p, blockquote, figure, pre {
   margin: 0;
 }
 
+/*
+ * shadcn's own base layer: `* { @apply border-border }` in its globals. Every
+ * border in the design system is the --border token unless a class says
+ * otherwise; without it `border-b` draws in the renderer's default (black)
+ * and every separator line shouts.
+ */
+* {
+  border-color: hsl(var(--border));
+}
+
+/*
+ * Preflight's button reset — the other half of what shadcn assumes.
+ *
+ * Every control Radix renders as a <button> (a switch's track, a checkbox, a
+ * radio item, an accordion or tabs trigger, a toggle) is authored against
+ * preflight's naked button: transparent background, no padding, no border.
+ * The fork's <button> instead wears the platform's chrome — right for HTML
+ * forms, wrong under a design system that paints every control itself.
+ * Stating the background here is also what dismisses the native chrome
+ * layer: an author surface claims the button (authorStatesSurface), and the
+ * platform metrics withdraw with the platter they were measured for.
+ */
+button {
+  background-color: transparent;
+  padding: 0;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-size: inherit;
   font-weight: inherit;

@@ -55,10 +55,9 @@ import {Switch} from '../../shadcn/ui/switch';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '../../shadcn/ui/tabs';
 // $FlowFixMe[cannot-resolve-module]
 import {Toggle} from '../../shadcn/ui/toggle';
-import {DemoHeader, DemoSection} from './DemoSection';
+import {DemoSection} from './DemoSection';
 import * as React from 'react';
 import {useState} from 'react';
-import {ScrollView} from 'react-native';
 
 installStylesheet(shadcnGlobals);
 installStylesheet(tailwindCss);
@@ -85,24 +84,13 @@ const TOUCH_SLOP = {top: 14, bottom: 14, left: 8, right: 8};
 // A row that gives its controls somewhere to put their slop.
 const TOUCH_ROW = 'flex flex-row flex-wrap items-center gap-4 min-h-11';
 
-function ShadcnExample(): React.Node {
-  const [checked, setChecked] = useState(false);
+function ButtonsSection(): React.Node {
   const [lastAction, setLastAction] = useState('none');
-  const [plan, setPlan] = useState('pro');
   return (
-    <ScrollView
-      style={{flex: 1}}
-      contentContainerStyle={{padding: 16, paddingBottom: 48}}>
-      <DemoHeader title="shadcn/ui">
-        Every component below is the unmodified source from the shadcn registry.
-        Its Tailwind classes are resolved by the fork's stylesheet engine, its
-        Radix primitives by the shims, its markup by the intrinsics runtime.
-      </DemoHeader>
-
-      <DemoSection
-        title="Button"
-        description="Six variants from one cva() call. The demo adds a 44pt minimum through className — the consumer-override path the components are built for."
-        code={`import {Button} from '@/components/ui/button';
+    <DemoSection
+      title="Button"
+      description="Six variants from one cva() call. The demo adds a 44pt minimum through className — the consumer-override path the components are built for."
+      code={`import {Button} from '@/components/ui/button';
 
 <Button className="min-h-11 min-w-11">Default</Button>
 <Button variant="secondary">Secondary</Button>
@@ -110,64 +98,76 @@ function ShadcnExample(): React.Node {
 <Button variant="outline">Outline</Button>
 <Button variant="ghost">Ghost</Button>
 <Button variant="link">Link</Button>`}>
-        <div className="flex flex-row flex-wrap gap-2">
-          <Button className={TOUCH} onClick={() => setLastAction('default')}>
-            Default
-          </Button>
-          <Button
-            className={TOUCH}
-            variant="secondary"
-            onClick={() => setLastAction('secondary')}>
-            Secondary
-          </Button>
-          <Button
-            className={TOUCH}
-            variant="destructive"
-            onClick={() => setLastAction('destructive')}>
-            Destructive
-          </Button>
-          <Button
-            className={TOUCH}
-            variant="outline"
-            onClick={() => setLastAction('outline')}>
-            Outline
-          </Button>
-          <Button
-            className={TOUCH}
-            variant="ghost"
-            onClick={() => setLastAction('ghost')}>
-            Ghost
-          </Button>
-          <Button
-            className={TOUCH}
-            variant="link"
-            onClick={() => setLastAction('link')}>
-            Link
-          </Button>
-        </div>
-      </DemoSection>
+      <div className="flex flex-row flex-wrap gap-2">
+        <Button className={TOUCH} onClick={() => setLastAction('default')}>
+          Default
+        </Button>
+        <Button
+          className={TOUCH}
+          variant="secondary"
+          onClick={() => setLastAction('secondary')}>
+          Secondary
+        </Button>
+        <Button
+          className={TOUCH}
+          variant="destructive"
+          onClick={() => setLastAction('destructive')}>
+          Destructive
+        </Button>
+        <Button
+          className={TOUCH}
+          variant="outline"
+          onClick={() => setLastAction('outline')}>
+          Outline
+        </Button>
+        <Button
+          className={TOUCH}
+          variant="ghost"
+          onClick={() => setLastAction('ghost')}>
+          Ghost
+        </Button>
+        <Button
+          className={TOUCH}
+          variant="link"
+          onClick={() => setLastAction('link')}>
+          Link
+        </Button>
+      </div>
+      <span className="mt-2 block text-sm text-muted-foreground">
+        Last pressed: {lastAction}
+      </span>
+    </DemoSection>
+  );
+}
 
-      <DemoSection
-        title="Badge"
-        description="Inline pills — the layout that proved cn() must group by CSS axis, not by class-name prefix (`flex` is display, `flex-row` is direction)."
-        code={`<div className="flex flex-row flex-wrap gap-2">
+function BadgeSection(): React.Node {
+  return (
+    <DemoSection
+      title="Badge"
+      description="Inline pills — the layout that proved cn() must group by CSS axis, not by class-name prefix (`flex` is display, `flex-row` is direction)."
+      code={`<div className="flex flex-row flex-wrap gap-2">
   <Badge>badge</Badge>
   <Badge variant="secondary">secondary</Badge>
   <Badge variant="destructive">destructive</Badge>
   <Badge variant="outline">outline</Badge>
 </div>`}>
-        <div className="flex flex-row flex-wrap gap-2">
-          <Badge>badge</Badge>
-          <Badge variant="secondary">secondary</Badge>
-          <Badge variant="destructive">destructive</Badge>
-          <Badge variant="outline">outline</Badge>
-        </div>
-      </DemoSection>
+      <div className="flex flex-row flex-wrap gap-2">
+        <Badge>badge</Badge>
+        <Badge variant="secondary">secondary</Badge>
+        <Badge variant="destructive">destructive</Badge>
+        <Badge variant="outline">outline</Badge>
+      </div>
+    </DemoSection>
+  );
+}
 
-      <DemoSection
-        title="Card"
-        description="Header, content and footer composition; every colour is an hsl(var(--token)) that flips with the OS appearance."
-        code={`<Card>
+function CardSection(): React.Node {
+  const [lastAction, setLastAction] = useState('none');
+  return (
+    <DemoSection
+      title="Card"
+      description="Header, content and footer composition; every colour is an hsl(var(--token)) that flips with the OS appearance."
+      code={`<Card>
   <CardHeader>
     <CardTitle>Deploy</CardTitle>
     <CardDescription>Ship the current branch.</CardDescription>
@@ -175,104 +175,128 @@ function ShadcnExample(): React.Node {
   <CardContent>Last button pressed: {lastAction}</CardContent>
   <CardFooter><Button>Deploy</Button></CardFooter>
 </Card>`}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Deploy</CardTitle>
-            <CardDescription>Ship the current branch.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <span className="text-sm text-muted-foreground">
-              Last button pressed: {lastAction}
-            </span>
-          </CardContent>
-          <CardFooter>
-            <Button className={TOUCH} onClick={() => setLastAction('deploy')}>
-              Deploy
-            </Button>
-          </CardFooter>
-        </Card>
-      </DemoSection>
+      <Card>
+        <CardHeader>
+          <CardTitle>Deploy</CardTitle>
+          <CardDescription>Ship the current branch.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <span className="text-sm text-muted-foreground">
+            Last button pressed: {lastAction}
+          </span>
+        </CardContent>
+        <CardFooter>
+          <Button className={TOUCH} onClick={() => setLastAction('deploy')}>
+            Deploy
+          </Button>
+        </CardFooter>
+      </Card>
+    </DemoSection>
+  );
+}
 
-      <DemoSection
-        title="Alert"
-        description="Its spacing comes entirely from utilities — which is why the globals sheet carries the part of Tailwind's preflight that zeroes heading margins."
-        code={`<Alert>
+function AlertSection(): React.Node {
+  return (
+    <DemoSection
+      title="Alert"
+      description="Its spacing comes entirely from utilities — which is why the globals sheet carries the part of Tailwind's preflight that zeroes heading margins."
+      code={`<Alert>
   <AlertTitle>Heads up</AlertTitle>
   <AlertDescription>Styled by alert.tsx's own classes.</AlertDescription>
 </Alert>
 
 <Alert variant="destructive">…</Alert>`}>
-        <Alert className="mb-3">
-          <AlertTitle>Heads up</AlertTitle>
-          <AlertDescription>
-            This is the vendored alert.tsx, styled by its own classes.
-          </AlertDescription>
-        </Alert>
-        <Alert variant="destructive">
-          <AlertTitle>Destructive</AlertTitle>
-          <AlertDescription>The variant's colours applied.</AlertDescription>
-        </Alert>
-      </DemoSection>
+      <Alert className="mb-3">
+        <AlertTitle>Heads up</AlertTitle>
+        <AlertDescription>
+          This is the vendored alert.tsx, styled by its own classes.
+        </AlertDescription>
+      </Alert>
+      <Alert variant="destructive">
+        <AlertTitle>Destructive</AlertTitle>
+        <AlertDescription>The variant's colours applied.</AlertDescription>
+      </Alert>
+    </DemoSection>
+  );
+}
 
-      <DemoSection
-        title="Form controls"
-        description="Switch, Checkbox and RadioGroup. Their boxes keep the sizes shadcn designed (44x24 and 16x16, matching Safari); the 44pt touch minimum comes from hitSlop plus a row tall enough to hold it, not from stretching the controls."
-        code={`{/* Designed size kept; the TOUCH TARGET grows via hitSlop.
-    hitSlop is clipped by ancestors, so the ROW carries min-h-11 —
-    without it the slop hangs outside the row and is never hit. */}
-<div className="flex flex-row items-center gap-4 min-h-11">
-  <Switch hitSlop={{top: 14, bottom: 14, left: 8, right: 8}}
-    checked={checked} onCheckedChange={setChecked} />
-  <Checkbox hitSlop={{top: 14, bottom: 14, left: 8, right: 8}}
-    checked={checked} onCheckedChange={setChecked} />
-</div>
+function FormControlsSection(): React.Node {
+  const [checked, setChecked] = useState(false);
+  const [plan, setPlan] = useState('pro');
+  return (
+    <DemoSection
+      title="Form controls"
+      description="Switch, Checkbox and RadioGroup. Their boxes keep the sizes shadcn designed (44x24 and 16x16, matching Safari); the 44pt touch minimum comes from hitSlop plus a row tall enough to hold it, not from stretching the controls."
+      code={`<Switch checked={checked} onCheckedChange={setChecked} />
+<Checkbox checked={checked} onCheckedChange={setChecked} />
 
 <RadioGroup value={plan} onValueChange={setPlan}>
   <RadioGroupItem value="free" /> <Label>Free</Label>
   <RadioGroupItem value="pro" />  <Label>Pro</Label>
 </RadioGroup>`}>
+      <div className={TOUCH_ROW}>
+        <Switch
+          hitSlop={TOUCH_SLOP}
+          checked={checked}
+          onCheckedChange={setChecked}
+        />
+        <Checkbox
+          hitSlop={TOUCH_SLOP}
+          checked={checked}
+          onCheckedChange={setChecked}
+        />
+        <Label>{checked ? 'Subscribed' : 'Not subscribed'}</Label>
+      </div>
+      {/* The other state, statically, so both of a control's looks are on
+          screen at once — this screen is a fidelity instrument as much as a
+          demo, and a capture can only compare what it can see. */}
+      <div className={TOUCH_ROW}>
+        <Switch checked={true} />
+        <Checkbox checked={true} />
+        <Label>Checked twins</Label>
+      </div>
+      <Separator className="my-4" />
+      <RadioGroup value={plan} onValueChange={setPlan}>
         <div className={TOUCH_ROW}>
-          <Switch
-            hitSlop={TOUCH_SLOP}
-            checked={checked}
-            onCheckedChange={setChecked}
-          />
-          <Checkbox
-            hitSlop={TOUCH_SLOP}
-            checked={checked}
-            onCheckedChange={setChecked}
-          />
-          <Label>{checked ? 'Subscribed' : 'Not subscribed'}</Label>
+          <RadioGroupItem hitSlop={TOUCH_SLOP} value="free" />
+          <Label>Free</Label>
+          <RadioGroupItem hitSlop={TOUCH_SLOP} value="pro" />
+          <Label>Pro — “{plan}” selected</Label>
         </div>
-        <Separator className="my-4" />
-        <RadioGroup value={plan} onValueChange={setPlan}>
-          <div className={TOUCH_ROW}>
-            <RadioGroupItem hitSlop={TOUCH_SLOP} value="free" />
-            <Label>Free</Label>
-            <RadioGroupItem hitSlop={TOUCH_SLOP} value="pro" />
-            <Label>Pro — “{plan}” selected</Label>
-          </div>
-        </RadioGroup>
-      </DemoSection>
+      </RadioGroup>
+    </DemoSection>
+  );
+}
 
-      <DemoSection
-        title="Progress, Skeleton, Toggle"
-        description="Progress translates its indicator by percentage; Skeleton pulses on the renderer's animation engine."
-        code={`<Progress value={checked ? 80 : 30} />
+function ProgressSection(): React.Node {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <DemoSection
+      title="Progress, Skeleton, Toggle"
+      description="Progress translates its indicator by percentage; Skeleton pulses on the renderer's animation engine. Pressing the Toggle drives the Progress value."
+      code={`<Progress value={pressed ? 80 : 30} />
 <Skeleton className="h-4 w-24" />
-<Toggle className="min-h-11">Bold</Toggle>`}>
-        <Progress className="mb-4" value={checked ? 80 : 30} />
-        <div className="flex flex-row flex-wrap items-center gap-3">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-16" />
-          <Toggle className={TOUCH}>Bold</Toggle>
-        </div>
-      </DemoSection>
+<Toggle className="min-h-11" pressed={pressed} onPressedChange={setPressed}>
+  Bold
+</Toggle>`}>
+      <Progress className="mb-4" value={pressed ? 80 : 30} />
+      <div className="flex flex-row flex-wrap items-center gap-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-16" />
+        <Toggle className={TOUCH} pressed={pressed} onPressedChange={setPressed}>
+          Bold
+        </Toggle>
+      </div>
+    </DemoSection>
+  );
+}
 
-      <DemoSection
-        title="Tabs"
-        description="Only the active panel mounts; the trigger's active styling is a data-[state=active] rule."
-        code={`<Tabs defaultValue="account">
+function TabsSection(): React.Node {
+  return (
+    <DemoSection
+      title="Tabs"
+      description="Only the active panel mounts; the trigger's active styling is a data-[state=active] rule."
+      code={`<Tabs defaultValue="account">
   <TabsList>
     <TabsTrigger value="account">Account</TabsTrigger>
     <TabsTrigger value="password">Password</TabsTrigger>
@@ -280,32 +304,37 @@ function ShadcnExample(): React.Node {
   <TabsContent value="account">Account settings panel.</TabsContent>
   <TabsContent value="password">Password settings panel.</TabsContent>
 </Tabs>`}>
-        <Tabs defaultValue="account">
-          <TabsList>
-            <TabsTrigger className={TOUCH} value="account">
-              Account
-            </TabsTrigger>
-            <TabsTrigger className={TOUCH} value="password">
-              Password
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="account">
-            <span className="text-sm text-muted-foreground">
-              Account settings panel.
-            </span>
-          </TabsContent>
-          <TabsContent value="password">
-            <span className="text-sm text-muted-foreground">
-              Password settings panel.
-            </span>
-          </TabsContent>
-        </Tabs>
-      </DemoSection>
+      <Tabs defaultValue="account">
+        <TabsList>
+          <TabsTrigger className={TOUCH} value="account">
+            Account
+          </TabsTrigger>
+          <TabsTrigger className={TOUCH} value="password">
+            Password
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="account">
+          <span className="text-sm text-muted-foreground">
+            Account settings panel.
+          </span>
+        </TabsContent>
+        <TabsContent value="password">
+          <span className="text-sm text-muted-foreground">
+            Password settings panel.
+          </span>
+        </TabsContent>
+      </Tabs>
+    </DemoSection>
+  );
+}
 
-      <DemoSection
-        title="Dialog and DropdownMenu"
-        description="dialog.tsx and dropdown-menu.tsx over the Radix shims over the top layer. The dialog's corners are square below 640px in the original — its source rounds them only at `sm:` — so the demo opts a phone in with a className."
-        code={`<Dialog>
+function OverlaysSection(): React.Node {
+  const [lastAction, setLastAction] = useState('none');
+  return (
+    <DemoSection
+      title="Dialog and DropdownMenu"
+      description="dialog.tsx and dropdown-menu.tsx over the Radix shims over the top layer. The dialog's corners are square below 640px in the original — its source rounds them only at `sm:` — so the demo opts a phone in with a className."
+      code={`<Dialog>
   <DialogTrigger asChild>
     <Button variant="outline">Open dialog</Button>
   </DialogTrigger>
@@ -322,88 +351,92 @@ function ShadcnExample(): React.Node {
 
 /* dialog.tsx ends "… duration-200 sm:rounded-lg": rounded only at ≥640px.
    The className above is how a phone opts in. */`}>
-        <div className="flex flex-row flex-wrap gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className={TOUCH} variant="outline">
-                Open dialog
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-lg">
-              <DialogHeader>
-                <DialogTitle>shadcn dialog</DialogTitle>
-                <DialogDescription>
-                  dialog.tsx over the Radix shim over the top layer.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                {/* A footer button closes the dialog by BEING a
-                    DialogClose — Radix's asChild composition, not an
-                    onClick that reaches for the open state. */}
-                <DialogClose asChild>
-                  <Button
-                    className={TOUCH}
-                    onClick={() => setLastAction('save')}>
-                    Save
-                  </Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+      <div className="flex flex-row flex-wrap gap-2">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className={TOUCH} variant="outline">
+              Open dialog
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="rounded-lg">
+            <DialogHeader>
+              <DialogTitle>shadcn dialog</DialogTitle>
+              <DialogDescription>
+                dialog.tsx over the Radix shim over the top layer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              {/* A footer button closes the dialog by BEING a
+                  DialogClose — Radix's asChild composition, not an
+                  onClick that reaches for the open state. */}
+              <DialogClose asChild>
+                <Button className={TOUCH} onClick={() => setLastAction('save')}>
+                  Save
+                </Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className={TOUCH} variant="secondary">
-                Menu
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="min-h-11"
-                onSelect={() => setLastAction('copy')}>
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="min-h-11"
-                onSelect={() => setLastAction('share')}>
-                Share
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </DemoSection>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className={TOUCH} variant="secondary">
+              Menu
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="min-h-11"
+              onSelect={() => setLastAction('copy')}>
+              Copy
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="min-h-11"
+              onSelect={() => setLastAction('share')}>
+              Share
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <span className="mt-2 block text-sm text-muted-foreground">
+        Last action: {lastAction}
+      </span>
+    </DemoSection>
+  );
+}
 
-      <DemoSection
-        title="Accordion"
-        description="Single type, collapsible; the chevron rotates through a data-[state=open] transform rule."
-        code={`<Accordion type="single" collapsible>
+function AccordionSection(): React.Node {
+  return (
+    <DemoSection
+      title="Accordion"
+      description="Single type, collapsible; the chevron rotates through a data-[state=open] transform rule."
+      code={`<Accordion type="single" collapsible>
   <AccordionItem value="a">
     <AccordionTrigger>Is it accessible?</AccordionTrigger>
     <AccordionContent>Yes — the shims carry the aria surface.</AccordionContent>
   </AccordionItem>
 </Accordion>`}>
-        <Accordion type="single" collapsible={true}>
-          <AccordionItem value="a">
-            <AccordionTrigger className="min-h-11">
-              Is it accessible?
-            </AccordionTrigger>
-            <AccordionContent>
-              Yes — the shims carry the aria surface.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="b">
-            <AccordionTrigger className="min-h-11">
-              Is it styled?
-            </AccordionTrigger>
-            <AccordionContent>
-              By its own Tailwind classes, resolved by the fork.
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </DemoSection>
-    </ScrollView>
+      <Accordion type="single" collapsible={true}>
+        <AccordionItem value="a">
+          <AccordionTrigger className="min-h-11">
+            Is it accessible?
+          </AccordionTrigger>
+          <AccordionContent>
+            Yes — the shims carry the aria surface.
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="b">
+          <AccordionTrigger className="min-h-11">
+            Is it styled?
+          </AccordionTrigger>
+          <AccordionContent>
+            By its own Tailwind classes, resolved by the fork.
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </DemoSection>
   );
 }
 
@@ -412,13 +445,53 @@ export default {
   category: 'UI',
   description:
     'Vendored, unmodified shadcn/ui components: Tailwind classes through ' +
-    'the stylesheet engine, Radix primitives through the shims.',
+    'the stylesheet engine, Radix primitives through the shims, markup ' +
+    'through the intrinsics runtime.',
   examples: [
     {
-      title: 'shadcn/ui',
-      render(): React.Node {
-        return <ShadcnExample />;
-      },
+      name: 'buttons',
+      title: 'Button',
+      render: (): React.Node => <ButtonsSection />,
+    },
+    {
+      name: 'badge',
+      title: 'Badge',
+      render: (): React.Node => <BadgeSection />,
+    },
+    {
+      name: 'card',
+      title: 'Card',
+      render: (): React.Node => <CardSection />,
+    },
+    {
+      name: 'alert',
+      title: 'Alert',
+      render: (): React.Node => <AlertSection />,
+    },
+    {
+      name: 'controls',
+      title: 'Form controls',
+      render: (): React.Node => <FormControlsSection />,
+    },
+    {
+      name: 'progress',
+      title: 'Progress, Skeleton, Toggle',
+      render: (): React.Node => <ProgressSection />,
+    },
+    {
+      name: 'tabs',
+      title: 'Tabs',
+      render: (): React.Node => <TabsSection />,
+    },
+    {
+      name: 'overlays',
+      title: 'Dialog and DropdownMenu',
+      render: (): React.Node => <OverlaysSection />,
+    },
+    {
+      name: 'accordion',
+      title: 'Accordion',
+      render: (): React.Node => <AccordionSection />,
     },
   ],
 } as RNTesterModule;
