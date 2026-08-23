@@ -55,6 +55,12 @@ YogaLayoutableShadowNode::defaultCascadeTextAttributes() {
 // content. Defined with the other classification predicates below.
 static bool isInlineLevelBox(const ShadowNode& child);
 
+// Whether the author's own `display` makes `child` block-level regardless of
+// its UA default (css-display-3 §2's blockification, from the other
+// direction): `display: 'block'` on an element whose trait says inline takes
+// it out of inline flow.
+static bool authorDisplayBlockifies(const ShadowNode& child);
+
 // Whether the inheritable text props that feed the element-tree cascade
 // (text-children-plan.md §3.D) differ between two revisions of a View's props.
 // A change here must re-run the cascade into descendant IFCs even though none
@@ -680,9 +686,15 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
     // trait, so only Android's framework-backed <img> took the run path: three
     // images in a `gap: 12` row rendered TOUCHING and baseline-bottom on one
     // platform and correctly spaced on the other, from identical C++.
+    // The trait states the element's UA default, not an unconditional fate:
+    // an author `display: 'block'` blockifies an inline replaced element out
+    // of inline flow (css-display-3 §2), and it lays out as an ordinary
+    // block-level Yoga child below — which is also what lets <img>'s
+    // box-chrome composite fill its wrapper's content box by flex.
     if (stringChildrenEnabled && containerIsBlock &&
         getChildren()[i]->getTraits().check(
-            ShadowNodeTraits::Trait::InlineReplaced)) {
+            ShadowNodeTraits::Trait::InlineReplaced) &&
+        !authorDisplayBlockifies(*getChildren()[i])) {
       inlineRun.push_back(getChildren()[i]);
       continue;
     }
@@ -850,6 +862,12 @@ static bool isInlineLevelBox(const ShadowNode& child) {
       dynamic_cast<const YogaStylableProps*>(child.getProps().get());
   return props != nullptr && props->displayInline &&
       props->yogaStyle.positionType() != yoga::PositionType::Absolute;
+}
+
+static bool authorDisplayBlockifies(const ShadowNode& child) {
+  const auto* props =
+      dynamic_cast<const YogaStylableProps*>(child.getProps().get());
+  return props != nullptr && props->displayBlock;
 }
 
 bool YogaLayoutableShadowNode::isAtomicInline(const ShadowNode& child) {

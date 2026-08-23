@@ -192,8 +192,50 @@ export function accessibilityForAlt(alt: ?string): AltAccessibility | null {
   return null;
 }
 
+/*
+ * The style keys that make an `<img>` need its own element box (see the
+ * composite in `Img`): everything that paints or insets the box rather than the
+ * picture. `margin`/layout keys are NOT here — they work identically on the
+ * single view, and alone they keep the fast path.
+ */
+const BOX_CHROME_PREFIXES = ['padding', 'border', 'background', 'outline'];
+
+function hasBoxChrome(style: {readonly [string]: unknown, ...}): boolean {
+  for (const key of Object.keys(style)) {
+    for (const prefix of BOX_CHROME_PREFIXES) {
+      if (key.startsWith(prefix) && style[key] != null) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Grow-and-stretch rather than percentage sizes: flex fills the parent's
+// CONTENT box, which is the padding inset doing its job. `display: 'block'`
+// is load-bearing: an <img> is inline, and an inline child would be laid out
+// as a text attachment in an inline formatting context, where flex sizing
+// means nothing. Blockifying it (css-display-3 §2) keeps it an ordinary Yoga
+// child of the wrapper. A wrapper with box chrome but NO height still
+// collapses to its padding — an image only a browser's intrinsic sizing
+// would size; state the dimensions, as the demos do.
+const IMAGE_FILLS_CONTENT_BOX = {
+  display: 'block',
+  width: '100%',
+  height: '100%',
+};
+
+// The element box half of the composite: an inline replaced box (the img UA
+// display) that clips its content at the padding edge, so a border radius
+// rounds the picture too, the way a browser clips replaced content.
+const ELEMENT_BOX_BASE = {display: 'inline-block', overflow: 'hidden'};
+
 function Img(props: ImgProps): React.Node {
-  const {src, srcSet, sizes, alt, width, height, source, style, ...rest} =
+  // `ref` is pulled out because it must always land on the ELEMENT's box —
+  // the single image view on the fast path, the wrapper of the composite —
+  // never on the composite's inner image, which is an implementation detail.
+  // $FlowFixMe[prop-missing] React 19 delivers `ref` as an ordinary prop.
+  const {src, srcSet, sizes, alt, width, height, source, style, ref, ...rest} =
     props;
 
   /*
@@ -310,23 +352,59 @@ function Img(props: ImgProps): React.Node {
   const expoBacked = (globalThis.expo as any)?.getViewConfig?.('ExpoImage') != null;
   const relayed = withSynthesizedLoadEnd(rest, expoBacked);
 
+  /*
+   * A replaced element paints its own box: `<img style={{backgroundColor,
+   * padding, borderRadius}}>` shows the background as a ring THROUGH the
+   * padding, around the image (css-backgrounds-3 §2.2), and the radius clips
+   * the picture. A native image view cannot do that — its pixels fill its
+   * bounds — so an element carrying box chrome splits into CSS's own model:
+   * the element box (a view wearing the background, padding, border and
+   * radius) with the image view filling its CONTENT box, inset by the
+   * padding. The common chrome-less image keeps the single-view fast path.
+   */
+  const imageProps = {
+    ...relayed,
+    shouldNotifyLoadEvents: wantsLoadEvents,
+    source: resolvedSource.length > 0 ? resolvedSource : undefined,
+    contentFit: fit.contentFit,
+    resizeMode: fit.resizeMode,
+  };
+
+  if (!hasBoxChrome(boxStyle)) {
+    return (
+      // $FlowFixMe[prop-missing] intrinsic
+      <element-img
+        {...imageProps}
+        {...accessibility}
+        ref={ref}
+        nodeName="img"
+        style={
+          Object.keys(dimensionHints).length > 0
+            ? [dimensionHints, boxStyle]
+            : boxStyle
+        }
+      />
+    );
+  }
+
   return (
     // $FlowFixMe[prop-missing] intrinsic
-    <element-img
-      {...relayed}
+    <div
       {...accessibility}
-      shouldNotifyLoadEvents={wantsLoadEvents}
+      ref={ref}
       nodeName="img"
-      source={resolvedSource.length > 0 ? resolvedSource : undefined}
-      style={
-        Object.keys(dimensionHints).length > 0
-          ? [dimensionHints, boxStyle]
-          : boxStyle
-      }
-      contentFit={fit.contentFit}
-      resizeMode={fit.resizeMode}
-    />
+      style={[ELEMENT_BOX_BASE, dimensionHints, boxStyle]}>
+      {/* $FlowFixMe[prop-missing] intrinsic */}
+      <element-img
+        {...imageProps}
+        accessible={false}
+        accessibilityElementsHidden={true}
+        importantForAccessibility="no-hide-descendants"
+        style={IMAGE_FILLS_CONTENT_BOX}
+      />
+    </div>
   );
 }
+
 
 export default Img;
