@@ -5,7 +5,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "Three sized atomic inlines with no text: x is the running sum of widths and nothing else.",
     "tree": {
       "tag": "div",
@@ -58,7 +61,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "The fourth box does not fit in 300px, so it starts the next line at x=0.",
     "tree": {
       "tag": "div",
@@ -122,7 +128,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "Line growth: line-height is 20 and the box is 50, so the line box — and the container — must be 50 tall. Only one box, so nothing here depends on vertical-align.",
     "tree": {
       "tag": "div",
@@ -153,7 +162,10 @@
     "heightOnly": true,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "A line of text with line-height 20 is 20 tall. Separates \"line-height never reaches the run\" from \"line-height reaches text but not an attachment-only line\".",
     "tree": {
       "tag": "div",
@@ -174,7 +186,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "One 10pt box on a 20pt line: the strut floors the line box at 20 (CSS2 §10.8), so the container is 20 tall, not 10.",
     "tree": {
       "tag": "div",
@@ -205,7 +220,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "The inverse: a 10pt box on a 20pt line-height line still occupies a 20pt line box, because the strut sets a minimum (CSS2 §10.8). Two lines, so the second line's y shows the first line's height.",
     "tree": {
       "tag": "div",
@@ -247,7 +265,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "A 50pt box on line one, then a box that cannot fit beside it: the second line starts below the first line box, not one line-height down.",
     "tree": {
       "tag": "div",
@@ -289,7 +310,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "An inline box establishes no formatting context, so a box inside a <span> is on the same line at the same x as if it were a direct child.",
     "tree": {
       "tag": "div",
@@ -337,7 +361,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "Depth is irrelevant to the IFC.",
     "tree": {
       "tag": "div",
@@ -397,7 +424,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "A box after a nested one continues the same line, so the nesting must not consume horizontal space of its own.",
     "tree": {
       "tag": "div",
@@ -445,7 +475,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "display:inline-flex is inline-level and atomic: it sits on the line like an inline-block and does not let its contents escape into the run.",
     "tree": {
       "tag": "div",
@@ -510,7 +543,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "Its children are flex items in a row, so the second starts after the first — inside the flex box, not on the outer line.",
     "tree": {
       "tag": "div",
@@ -564,7 +600,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "An inline element with no content contributes no width, so the boxes either side are adjacent.",
     "tree": {
       "tag": "div",
@@ -611,7 +650,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "Horizontal padding on an inline box DOES apply (css-inline-3), so the inner box is pushed right by it.",
     "tree": {
       "tag": "div",
@@ -673,7 +715,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "Two boxes of different heights, both aligned top: their tops are equal regardless of any font strut.",
     "tree": {
       "tag": "div",
@@ -715,7 +760,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "A short box aligned to the bottom of a line made tall by a taller sibling.",
     "tree": {
       "tag": "div",
@@ -757,7 +805,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": "CSS defines `middle` against the parent's X-HEIGHT (CSS2 §10.8.1), not the middle of the line box — so its offset is a fact about a font file and cannot be pinned across three engines. What IS pinned: it lands strictly between `top` and `bottom`, and inside the line box.",
+    "bounded": "between-top-and-bottom",
     "why": "Centred on the line box rather than on the text's x-height, which is what CSS middle means for an atomic inline in the absence of text.",
     "tree": {
       "tag": "div",
@@ -799,7 +850,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
-    "fontDependent": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": "The line box is the box plus the strut's descent below the baseline, which is a font metric: Safari 44, iOS 44.33, Android 43.81 for the same 40pt box. Pinning it exactly compares fonts, not layout.",
+    "bounded": "line-taller-than-box",
     "why": "A lone box with NO vertical-align, so baseline-aligned: its bottom sits on the baseline and the strut's descent still hangs below it, making the line taller than the box. Adjudicates whether the line should be exactly the box height.",
     "tree": {
       "tag": "div",
@@ -829,7 +883,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "A single box in an otherwise empty block: the container height is the line box height, which the box drives when it exceeds line-height.",
     "tree": {
       "tag": "div",
@@ -860,7 +917,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "Boxes summing to exactly the container width stay on one line; the next one wraps. Pins the off-by-one at the wrap boundary.",
     "tree": {
       "tag": "div",
@@ -913,7 +973,10 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
+    "bounded": null,
     "why": "Wrapping inside a nested inline element: the inner box wraps to the next line and starts at x=0, not at the inline box origin.",
     "tree": {
       "tag": "div",
@@ -961,8 +1024,11 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
-    "why": "The shape the product is actually written in. Compared structurally: the box shares a line with the text either side.",
+    "bounded": null,
+    "why": "The shape the product is actually written in: two boxes with text around and between them share one line, in order.",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -984,7 +1050,19 @@
             "backgroundColor": "#30b0c7"
           }
         },
-        " after"
+        " between ",
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        " end"
       ]
     }
   },
@@ -994,8 +1072,11 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
     "fontDependent": null,
-    "why": "The <a><img></a> shape.",
+    "bounded": null,
+    "why": "The <a><img></a> shape: a box inside the inline element shares a line with one after it, in order.",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1019,13 +1100,199 @@
                 "width": "40px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#0a84ff"
+                "backgroundColor": "#34c759"
               }
             },
             " end"
           ]
         },
+        " then ",
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        },
         " done"
+      ]
+    }
+  },
+  {
+    "name": "encoding-does-not-move-a-box",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": [
+      [
+        "plain",
+        "combining"
+      ]
+    ],
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Precomposed vs combining-mark text of identical appearance must put the following box in the same place; the two differ in character count but not in glyph count.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "row-plain",
+          "style": {},
+          "children": [
+            "éééé",
+            {
+              "tag": "span",
+              "m": "plain",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "row-combining",
+          "style": {},
+          "children": [
+            "éééé",
+            {
+              "tag": "span",
+              "m": "combining",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-run-of-spaces-is-one-space",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": [
+      [
+        "one",
+        "three"
+      ]
+    ],
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A run of collapsible whitespace collapses to a single space, so both rows place their box identically.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "row-one",
+          "style": {},
+          "children": [
+            "ab ",
+            {
+              "tag": "span",
+              "m": "one",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "row-three",
+          "style": {},
+          "children": [
+            "ab   ",
+            {
+              "tag": "span",
+              "m": "three",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#0a84ff"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-shifted-run-does-not-grow-the-line",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": "line-height-unchanged-by-shift",
+    "why": "A <sup> shifts the baseline within the line box; the line stays one line-height tall, unlike Safari which grows it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "x",
+        {
+          "tag": "sup",
+          "m": "sup",
+          "style": {},
+          "children": [
+            "2"
+          ]
+        },
+        "y",
+        {
+          "tag": "sub",
+          "m": "sub",
+          "style": {},
+          "children": [
+            "3"
+          ]
+        },
+        "z"
       ]
     }
   }

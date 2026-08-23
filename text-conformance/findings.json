@@ -1,0 +1,93 @@
+{
+  "_README": [
+    "Findings for the cross-engine comparison report, keyed by the same",
+    "Screen~example string the screenshots use. Written by hand — a screenshot",
+    "cannot tell you whether a difference is a bug, a deliberate deviation, or a",
+    "platform being itself — but attached to the evidence mechanically, so a",
+    "finding whose case disappears becomes visible rather than becoming a",
+    "paragraph about something that is no longer there.",
+    "",
+    "kind: match | deviation | disparity | bug | limitation",
+    "  match      all engines agree",
+    "  deviation  we differ from the web on purpose; rationale required",
+    "  disparity  iOS and Android differ from each other",
+    "  bug        wrong on some engine, no rationale",
+    "  limitation something the model cannot express yet (DOM-CSS-LIMITATION)"
+  ],
+  "HTMLTextLevelExample~emphasis": {
+    "kind": "match",
+    "text": "`<em>`, `<strong>`, nested `<strong>`, `<i>`, `<b>`, `<mark>` and `<small>` all render as the browser does. With the text column matched to the device, **all five lines of the first case break at exactly the same points** as WebKit — the same text, the same font, the same width, the same breaks. `<mark>`'s highlight ends with the word rather than running to the end of the line."
+  },
+  "HTMLTextLevelExample~technical": {
+    "kind": "deviation",
+    "text": "`<code>`, `<var>`, `<samp>` and `<kbd>` match, including nesting: monospace at 0.8125em, `<var>` italic. **`<sup>`/`<sub>` deviate deliberately.** In Safari a raised or lowered run grows the line box, so the line after `x²` is visibly pushed down and the paragraph loses its rhythm. On iOS and Android the baseline shifts *inside* the existing line box and the spacing stays even. That is CoreText's `kCTSuperscriptAttributeName` and Android's `SuperscriptSpan`/`SubscriptSpan` — the native text stack, which is the stated preference — and it is the better typographic result. Documented, not fixed."
+  },
+  "HTMLTextLevelExample~annotations": {
+    "kind": "match",
+    "text": "`<dfn>` and `<cite>` italic, `<time>`/`<data>`/`<output>` render their text, and **`<q>` matches including the nesting alternation** — curly doubles outside, curly singles within — generated the way a browser generates it from the UA sheet. **`<abbr title>` now carries Safari's `text-decoration: underline dotted`** (2026-08-22), drawn by CoreText on iOS and Android's own dotted decoration, and verified by cropping the full-resolution frame rather than by eye. The `title` attribute itself still does not reach the native side — see the text-level attributes entry under *Not built yet* — so the underline currently advertises a tooltip that is not there. That is the remaining half, and it is a missing feature rather than a rendering bug."
+  },
+  "HTMLTextLevelExample~edits": {
+    "kind": "match",
+    "text": "`<del>` and `<s>` struck through, `<ins>` and `<u>` underlined, with the same line breaks as the browser. The `datetime` and `cite` attributes are dropped before they reach the native side, so the machine-readable half of `<del>`/`<ins>` is missing — that is recorded under *Not built yet*, and it is not visible here because nothing renders it in a browser either."
+  },
+  "HTMLTextLevelExample~spans": {
+    "kind": "match",
+    "text": "`<span>`'s author colour and background both apply, the highlight wraps across a line break the way the browser's does, and `<br>` produces the same three lines from one paragraph."
+  },
+  "HTMLTextLevelExample~styling": {
+    "kind": "match",
+    "text": "The case that was broken when you last looked at it. A paragraph setting a size and colour is now inherited by the `<strong>` inside it — which adds weight and keeps the colour — while a `<span>` overrides only the size. Previously the bold run and the small run both reverted to black, because the UA sheet stated `color` on every element and an element's own declaration outranks an inherited author value."
+  },
+  "HTMLGroupingExample~headings": {
+    "kind": "match",
+    "text": "Fixed during this comparison. `h1`–`h6` sizes and margins now match Safari's computed values to within rounding (21.44 / 19.91 / 18.72 / 21.27 / 22.17 / 24.97 at a 16px root). The margins had been computed as *spec figure × fixed root em*, but CSS resolves an `em` margin against the element's OWN font-size — so h1 and h2 came out at roughly half their margin and h6 at 50% too much, in the same table. h4 was right by luck, being the one heading at 1em. See `HeadingMargins-itest.js`."
+  },
+  "HTMLGroupingExample~paragraphs": [
+    {
+      "kind": "match",
+      "text": "Adjacent paragraphs now show ONE collapsed margin on all three engines — measured 21pt iOS / 26dp Android / 22px web between text blocks, previously the sum of both margins on devices. The fix was structural: the demo's Case frame was a flex container (flex items never collapse margins), and the shared-document conversion made it a block <div>, which is also what lets this very page render from the same module the devices run."
+    }
+  ],
+  "HTMLGroupingExample~quotes": {
+    "kind": "match",
+    "text": "**Fixed 2026-08-22**, same cause as the paragraphs case. `<blockquote>`'s 40pt indent is right, the `<cite>` inside the footer is italic, and the attribution now sits a full margin below the last line of the quotation as it does in Safari."
+  },
+  "HTMLGroupingExample~descriptions": {
+    "kind": "match",
+    "text": "`<dl>`, `<dt>` and `<dd>` match exactly, including `<dd>`'s 40pt indent and the wrapping of a long description under it."
+  },
+  "HTMLGroupingExample~sections": {
+    "kind": "match",
+    "text": "The sectioning elements all generate their own boxes and stack as the browser does. **The whitespace claim previously recorded here was wrong**: it said a run of three literal spaces in the `<nav>` was preserved where HTML collapses it to one. Collapsing is implemented (`collapseWhitespace`, css-text-3 §3, across fragments) and is correct. Pinned rather than re-argued: `a-run-of-spaces-is-one-space` in the conformance corpus renders one row separated by one space and another by three and asserts the following box lands at the same x. Safari puts both at 22.22; iOS and Android agree exactly."
+  },
+  "HTMLFormsExample~grouping": [
+    {
+      "kind": "deviation",
+      "text": "`<label>` wrapping its control sits the label ON the control's line, centred, on BOTH platforms now. Two fixes landed here: the sheet states UISwitch's real iOS-26 footprint (63x28 — the control ignores assigned sizes, and the stale 51x31 box let it overflow into the label's space), and checkables carry `vertical-align: middle` (DOM-CSS-DEVIATION(checkable-line-centering)) — a browser baseline-aligns its ~13px glyph, but these are the platform's own controls in the platform's own touch-target boxes, and Material rows and iOS Settings rows centre them against the label line. An author's `vertical-align` still wins over the sheet (`CheckableLineCentering-itest`)."
+    }
+  ],
+  "HTMLFormsExample~textAttributes": [
+    {
+      "kind": "match",
+      "text": "The readOnly field shows the HEAD of its overflowing value on both platforms now, as a browser does. Android used to show the tail — the caret was parked at the end on every write, and on an unfocused EditText the selection decides the scroll. The caret now rests at the end only while focused (`ElementTextInputSelectionTest`, mutation-checked)."
+    }
+  ],
+  "HTMLEmbeddedExample~lineheight": [
+    {
+      "kind": "deviation",
+      "text": "The gap between a text line and the tall box below it: web 4px / Android 5px above the red (lineHeight 26) box vs 1px above the green (default) one — CSS's half-leading, distributed around the taller line's glyphs, and those two engines agree. iOS measures 1px/2px: it does not show the explicit line-height's below-glyph leading ahead of an attachment line, though the corpus pins its BOX geometry Safari-exact and its centring pass (RCTApplyBaselineOffsetForRange) runs on run strings. The residual is how TextKit distributes the extra leading around lines adjacent to attachments — recorded in Status.md §3 with the repro numbers; visual nuance, not a layout-coordinate error."
+    }
+  ],
+  "HTMLEmbeddedExample~sizing": [
+    {
+      "kind": "disparity",
+      "text": "The middle image's yellow ring is web-only — and the web is RIGHT. It is not a border: the demo gives the <img> `backgroundColor: '#ffd60a'; padding: 6`, and CSS insets a replaced element's content to the content box, painting the background through the padding ring. Both device image backings paint the bitmap across the whole box, so the ring never shows. A genuine renderer gap (padding on replaced elements must inset the replaced content), recorded in Status.md §2."
+    }
+  ],
+  "HTMLGroupingExample~lists": [
+    {
+      "kind": "match",
+      "text": "Both device-side list gaps closed this pass: nested lists now zero their block margins exactly as html.css does (`ul ul { margin-block: 0 }` — the 1em float above 'inner one' is gone on both platforms), and nested unordered markers walk the browser ladder (disc → circle → square) via the list components' depth context. Android renders the level-two hollow circle; iOS draws the same C++ marker glyphs and its nested glyph deserves one precision look at full resolution. Marker metrics (gap, size) still differ slightly per text stack, as native type does."
+    }
+  ]
+}

@@ -906,7 +906,19 @@ const CORPUS = [
             backgroundColor: '#30b0c7',
           },
         },
-        ' after',
+        ' between ',
+        {
+          tag: 'span',
+          m: 'after',
+          style: {
+            display: 'inline-block',
+            width: '40px',
+            height: '20px',
+            verticalAlign: 'top',
+            backgroundColor: '#0a84ff',
+          },
+        },
+        ' end',
       ],
     },
   },
@@ -936,13 +948,161 @@ const CORPUS = [
                 width: '40px',
                 height: '20px',
                 verticalAlign: 'top',
-                backgroundColor: '#0a84ff',
+                backgroundColor: '#34c759',
               },
             },
             ' end',
           ],
         },
+        ' then ',
+        {
+          tag: 'span',
+          m: 'after',
+          style: {
+            display: 'inline-block',
+            width: '40px',
+            height: '20px',
+            verticalAlign: 'top',
+            backgroundColor: '#ff9500',
+          },
+        },
         ' done',
+      ],
+    },
+  },
+  {
+    name: 'encoding-does-not-move-a-box',
+    withText: true,
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          m: 'row-plain',
+          style: {},
+          children: [
+            'éééé',
+            {
+              tag: 'span',
+              m: 'plain',
+              style: {
+                display: 'inline-block',
+                width: '40px',
+                height: '20px',
+                verticalAlign: 'top',
+                backgroundColor: '#af52de',
+              },
+            },
+          ],
+        },
+        {
+          tag: 'div',
+          m: 'row-combining',
+          style: {},
+          children: [
+            'éééé',
+            {
+              tag: 'span',
+              m: 'combining',
+              style: {
+                display: 'inline-block',
+                width: '40px',
+                height: '20px',
+                verticalAlign: 'top',
+                backgroundColor: '#ff3b30',
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: 'a-run-of-spaces-is-one-space',
+    withText: true,
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          m: 'row-one',
+          style: {},
+          children: [
+            'ab ',
+            {
+              tag: 'span',
+              m: 'one',
+              style: {
+                display: 'inline-block',
+                width: '40px',
+                height: '20px',
+                verticalAlign: 'top',
+                backgroundColor: '#30b0c7',
+              },
+            },
+          ],
+        },
+        {
+          tag: 'div',
+          m: 'row-three',
+          style: {},
+          children: [
+            'ab   ',
+            {
+              tag: 'span',
+              m: 'three',
+              style: {
+                display: 'inline-block',
+                width: '40px',
+                height: '20px',
+                verticalAlign: 'top',
+                backgroundColor: '#0a84ff',
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: 'a-shifted-run-does-not-grow-the-line',
+    withText: true,
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        'x',
+        {
+          tag: 'sup',
+          m: 'sup',
+          style: {},
+          children: ['2'],
+        },
+        'y',
+        {
+          tag: 'sub',
+          m: 'sub',
+          style: {},
+          children: ['3'],
+        },
+        'z',
       ],
     },
   },

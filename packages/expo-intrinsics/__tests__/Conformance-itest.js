@@ -160,6 +160,24 @@ for (const testCase of CORPUS) {
     test.skip(`${label} — device-only: needs real line breaking`, () => {});
     continue;
   }
+  if (testCase.bounded === 'line-taller-than-box') {
+    /*
+     * The line box is the box plus the strut's descent below the baseline, and
+     * that descent is a font metric — this runner's grid has its own, which is
+     * neither device's. What is asserted is what CSS fixes: the box keeps its
+     * declared size at the top of the line, and the line is strictly taller
+     * than the box, which is the claim the case exists to make.
+     */
+    test(`${testCase.name} (bounded — the strut's descent is font-dependent)`, () => {
+      const got = measure(testCase.tree);
+      expect(got.only.width).toBe(want.only.width);
+      expect(got.only.height).toBe(want.only.height);
+      expect(got.only.y).toBe(got.root.y);
+      expect(got.root.height).toBeGreaterThan(got.only.height);
+    });
+    continue;
+  }
+
   if (testCase.fontDependent != null) {
     // Not skipped — asserted differently. The exact offset depends on a font's
     // x-height, but the *properties* of `middle` do not: the box stays inside
@@ -189,6 +207,26 @@ for (const testCase of CORPUS) {
 
   test(label, () => {
     const got = measure(testCase.tree);
+
+    /*
+     * `sameX` is deliberately NOT checked here — it is a device assertion.
+     *
+     * It asks whether two encodings of the same text put a following box in
+     * the same place, which is a question about glyph shaping. This runner's
+     * measurer is a monospace grid of `kDeterministicCharacterWidth` cells
+     * that advances once per UTF-16 code unit, by design and for
+     * reproducibility. It has no clusters and no combining marks, so
+     * "e"+U+0301 is two cells where precomposed "é" is one, and the two rows
+     * land 40pt apart — a fact about the stub, not about the product.
+     *
+     * Asserting it anyway would have been worse than useless: it fails here
+     * for a reason unrelated to the defect, so it would train the eye to
+     * ignore the case that is supposed to catch that defect. The real check
+     * runs in `verify.js` against real TextKit and real Safari.
+     *
+     * The case still runs here for its structure — two rows, two lines, a box
+     * on each — which the grid does model correctly.
+     */
 
     if (testCase.withText) {
       expect(signature(got)).toBe(signature(want));

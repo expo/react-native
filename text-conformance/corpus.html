@@ -1,0 +1,113 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; border: 0; box-sizing: content-box; }
+  body { font-family: -apple-system, sans-serif; }
+  section { margin-bottom: 40px; }
+</style>
+</head><body>
+
+    <section data-case="atomic-inlines-in-a-row">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="a"></span><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#34c759" data-m="b"></span><span style="display:inline-block;width:30px;height:20px;vertical-align:top;background-color:#ff9500" data-m="c"></span></div>
+    </section>
+
+    <section data-case="atomic-inlines-wrap">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#af52de" data-m="a"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="b"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="c"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="d"></span></div>
+    </section>
+
+    <section data-case="atomic-inline-taller-than-line-height">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:50px;vertical-align:top;background-color:#34c759" data-m="tall"></span></div>
+    </section>
+
+    <section data-case="text-only-honours-line-height">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">Ag</div>
+    </section>
+
+    <section data-case="short-box-alone-honours-line-height">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:10px;vertical-align:top;background-color:#ff9500" data-m="only"></span></div>
+    </section>
+
+    <section data-case="line-height-is-a-floor-not-a-ceiling">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:200px;height:10px;vertical-align:top;background-color:#af52de" data-m="shortA"></span><span style="display:inline-block;width:200px;height:10px;vertical-align:top;background-color:#ff3b30" data-m="shortB"></span></div>
+    </section>
+
+    <section data-case="a-tall-line-pushes-the-next-line-down">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:200px;height:50px;vertical-align:top;background-color:#30b0c7" data-m="tall"></span><span style="display:inline-block;width:200px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="second"></span></div>
+    </section>
+
+    <section data-case="nested-in-one-inline">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="before"></span><span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="inner"></span></span></div>
+    </section>
+
+    <section data-case="nested-three-deep">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="before"></span><span><span><span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="inner"></span></span></span></span></div>
+    </section>
+
+    <section data-case="nested-then-sibling">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="inner"></span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="after"></span></div>
+    </section>
+
+    <section data-case="inline-flex-atomic">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="before"></span><span style="display:inline-flex;width:80px;height:20px;vertical-align:top" data-m="flex"><span style="display:inline-block;width:20px;height:20px;vertical-align:top;background-color:#ff9500" data-m="flexchild"></span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="after"></span></div>
+    </section>
+
+    <section data-case="inline-flex-lays-out-its-children">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-flex;width:120px;height:30px;vertical-align:top" data-m="flex"><span style="display:inline-block;width:30px;height:30px;vertical-align:top;background-color:#ff3b30" data-m="i1"></span><span style="display:inline-block;width:30px;height:30px;vertical-align:top;background-color:#30b0c7" data-m="i2"></span></span></div>
+    </section>
+
+    <section data-case="empty-inline-between-boxes">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="a"></span><span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="b"></span></div>
+    </section>
+
+    <section data-case="inline-with-padding-around-box">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="before"></span><span style="padding-left:10px;padding-right:10px"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="inner"></span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="after"></span></div>
+    </section>
+
+    <section data-case="vertical-align-top-vs-default">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="short"></span><span style="display:inline-block;width:40px;height:40px;vertical-align:top;background-color:#0a84ff" data-m="tall"></span></div>
+    </section>
+
+    <section data-case="vertical-align-bottom">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:40px;vertical-align:top;background-color:#34c759" data-m="tall"></span><span style="display:inline-block;width:40px;height:20px;vertical-align:bottom;background-color:#ff9500" data-m="short"></span></div>
+    </section>
+
+    <section data-case="vertical-align-middle">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:40px;vertical-align:top;background-color:#af52de" data-m="tall"></span><span style="display:inline-block;width:40px;height:20px;vertical-align:middle;background-color:#ff3b30" data-m="short"></span></div>
+    </section>
+
+    <section data-case="baseline-aligned-box-alone">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:30px;height:40px;background-color:#0a84ff" data-m="only"></span></div>
+    </section>
+
+    <section data-case="atomic-inline-alone-on-line">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:60px;vertical-align:top;background-color:#30b0c7" data-m="only"></span></div>
+    </section>
+
+    <section data-case="wrap-boundary-exact">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:150px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="a"></span><span style="display:inline-block;width:150px;height:20px;vertical-align:top;background-color:#34c759" data-m="b"></span><span style="display:inline-block;width:10px;height:20px;vertical-align:top;background-color:#ff9500" data-m="c"></span></div>
+    </section>
+
+    <section data-case="nested-inline-wrap">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:200px;height:20px;vertical-align:top;background-color:#af52de" data-m="a"></span><span><span style="display:inline-block;width:150px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="inner"></span></span></div>
+    </section>
+
+    <section data-case="box-between-text">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">before <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="mid"></span> between <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="after"></span> end</div>
+    </section>
+
+    <section data-case="box-in-inline-with-text">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">see <span>link <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="mid"></span> end</span> then <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="after"></span> done</div>
+    </section>
+
+    <section data-case="encoding-does-not-move-a-box">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div data-m="row-plain">éééé<span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="plain"></span></div><div data-m="row-combining">éééé<span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="combining"></span></div></div>
+    </section>
+
+    <section data-case="a-run-of-spaces-is-one-space">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div data-m="row-one">ab <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="one"></span></div><div data-m="row-three">ab   <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="three"></span></div></div>
+    </section>
+
+    <section data-case="a-shifted-run-does-not-grow-the-line">
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">x<sup data-m="sup">2</sup>y<sub data-m="sub">3</sub>z</div>
+    </section>
+</body></html>
