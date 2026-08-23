@@ -1,4 +1,1822 @@
 {
+  "PROBE-text-align-center-centres-the-line": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "a": {
+      "x": 100,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "b": {
+      "x": 140,
+      "y": 0,
+      "width": 60,
+      "height": 20
+    }
+  },
+  "PROBE-text-align-right-packs-to-the-end": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "a": {
+      "x": 200,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "b": {
+      "x": 240,
+      "y": 0,
+      "width": 60,
+      "height": 20
+    }
+  },
+  "text-align-does-not-move-a-block-child": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "blockChild": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "inlineBox": {
+      "x": 260,
+      "y": 20,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "text-align-inherits-into-a-nested-block": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "nested": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "inlineBox": {
+      "x": 260,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "PROBE-border-box-keeps-padding-inside-the-width": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    },
+    "inner": {
+      "x": 30,
+      "y": 0,
+      "width": 140,
+      "height": 20
+    }
+  },
+  "PROBE-display-contents-child-joins-the-parent-flow": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 80,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "contents-with-block-children-stacks-them-in-the-outer-flow": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "first": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    },
+    "second": {
+      "x": 0,
+      "y": 40,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "margins-collapse-through-a-contents-wrapper": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 70
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "inner": {
+      "x": 0,
+      "y": 50,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "overflow-hidden-inline-block-aligns-by-its-bottom-margin-edge": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 64
+    },
+    "plain": {
+      "x": 0,
+      "y": 24,
+      "width": 40,
+      "height": 40
+    },
+    "clipped": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 40
+    }
+  },
+  "PROBE-percentage-width-resolves-against-the-container": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "half": {
+      "x": 0,
+      "y": 0,
+      "width": 150,
+      "height": 20
+    }
+  },
+  "PROBE-max-width-caps-a-block": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "capped": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20
+    }
+  },
+  "auto-inline-margins-centre-a-block": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "centred": {
+      "x": 50,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    }
+  },
+  "one-auto-inline-margin-takes-all-the-leftover": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "pushed": {
+      "x": 100,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    }
+  },
+  "a-percentage-min-height-against-an-auto-parent-does-not-apply": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "relative-percentage-offset-resolves-against-the-container": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "shifted": {
+      "x": 30,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "a-relative-box-given-both-left-and-right-uses-left": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "shifted": {
+      "x": 30,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "a-relative-box-given-both-top-and-bottom-uses-top": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "shifted": {
+      "x": 0,
+      "y": 15,
+      "width": 100,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "a-percentage-top-offset-resolves-against-the-container-height": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "shifted": {
+      "x": 0,
+      "y": 25,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "margins-collapse-through-several-empty-siblings": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 65
+    },
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    },
+    "last": {
+      "x": 0,
+      "y": 45,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "vertical-align-does-not-move-a-block-child": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    },
+    "b": {
+      "x": 0,
+      "y": 20,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "a-float-and-a-following-block-share-the-band": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    },
+    "after": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    }
+  },
+  "rtl-float-inline-start-packs-against-the-right": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "floated": {
+      "x": 200,
+      "y": 0,
+      "width": 100,
+      "height": 30
+    }
+  },
+  "rtl-float-inline-end-packs-against-the-left": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 30
+    }
+  },
+  "an-rtl-float-is-inset-by-the-containers-padding": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "floated": {
+      "x": 175,
+      "y": 0,
+      "width": 100,
+      "height": 30
+    }
+  },
+  "rtl-places-a-block-child-from-the-right": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "child": {
+      "x": 200,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "an-absolute-child-positions-from-the-padding-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "abs": {
+      "x": 5,
+      "y": 5,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "an-absolute-child-with-no-offsets-sits-at-its-static-position": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "abs": {
+      "x": 0,
+      "y": 30,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "an-absolute-child-offsets-from-the-bottom-and-right": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "abs": {
+      "x": 255,
+      "y": 75,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "opposite-offsets-size-an-auto-width-absolute-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "abs": {
+      "x": 20,
+      "y": 0,
+      "width": 230,
+      "height": 20
+    }
+  },
+  "an-absolute-child-does-not-take-space-in-the-flow": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "abs": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 90
+    },
+    "after": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "an-absolute-box-does-not-collapse-margins-with-its-siblings": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 70
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 70
+    },
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "abs": {
+      "x": 0,
+      "y": 150,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 50,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "nested-percentage-widths-compound": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 150,
+      "height": 20
+    },
+    "inner": {
+      "x": 0,
+      "y": 0,
+      "width": 75,
+      "height": 20
+    }
+  },
+  "a-percentage-min-width-resolves-against-the-container": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20
+    }
+  },
+  "a-border-reduces-the-content-box-under-border-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    },
+    "inner": {
+      "x": 15,
+      "y": 0,
+      "width": 170,
+      "height": 20
+    }
+  },
+  "a-block-container-ignores-gap": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    },
+    "second": {
+      "x": 0,
+      "y": 20,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "content-box-percentage-padding-resolves-against-the-width": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "padded": {
+      "x": 0,
+      "y": 0,
+      "width": 130,
+      "height": 20
+    }
+  },
+  "percentage-margin-resolves-against-the-width": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "shifted": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "a-percentage-height-against-an-auto-height-parent-is-auto": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 0
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 0
+    },
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 0
+    }
+  },
+  "a-percentage-height-against-a-definite-parent-applies": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 80
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 80
+    },
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    }
+  },
+  "a-percentage-height-resolves-against-the-content-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "child": {
+      "x": 0,
+      "y": 10,
+      "width": 300,
+      "height": 40
+    }
+  },
+  "a-negative-inline-margin-pulls-a-block-out": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "pulled": {
+      "x": -20,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "clear-both-drops-below-floats-on-both-sides": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 70
+    },
+    "left": {
+      "x": 0,
+      "y": 0,
+      "width": 80,
+      "height": 30
+    },
+    "right": {
+      "x": 220,
+      "y": 0,
+      "width": 80,
+      "height": 50
+    },
+    "cleared": {
+      "x": 0,
+      "y": 50,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-max-width-clamps-against-a-percentage-margin": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "looseParent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "container": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    },
+    "clamped": {
+      "x": 20,
+      "y": 0,
+      "width": 150,
+      "height": 20
+    }
+  },
+  "a-max-height-clamps-against-a-percentage-margin": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 200
+    },
+    "looseParent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 200
+    },
+    "container": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 200
+    },
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 100
+    }
+  },
+  "min-width-beats-max-width-when-they-conflict": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "conflicted": {
+      "x": 0,
+      "y": 0,
+      "width": 180,
+      "height": 20
+    }
+  },
+  "min-width-under-border-box-includes-the-padding": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 30
+    },
+    "inner": {
+      "x": 20,
+      "y": 0,
+      "width": 80,
+      "height": 10
+    }
+  },
+  "min-width-under-content-box-excludes-the-padding": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 160,
+      "height": 30
+    },
+    "inner": {
+      "x": 20,
+      "y": 0,
+      "width": 120,
+      "height": 10
+    }
+  },
+  "a-max-height-does-not-move-the-children": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "capped": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "second": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "an-auto-width-beats-auto-margins": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "filled": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "a-percentage-width-resolves-against-the-content-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "padded": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    },
+    "half": {
+      "x": 20,
+      "y": 0,
+      "width": 80,
+      "height": 20
+    }
+  },
+  "float-margins-never-collapse": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 90
+    },
+    "f1": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "f2": {
+      "x": 0,
+      "y": 70,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "a-float-with-padding-and-border-takes-its-whole-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 90,
+      "height": 20
+    },
+    "second": {
+      "x": 90,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "a-percentage-width-float-resolves-against-the-container": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 75,
+      "height": 20
+    }
+  },
+  "opposite-floats-share-one-line": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "left": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    },
+    "right": {
+      "x": 200,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "a-definite-height-stops-the-bottom-margin-collapsing-out": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 80
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 60,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "a-min-height-stops-a-block-collapsing-through": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 90
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "empty": {
+      "x": 0,
+      "y": 40,
+      "width": 300,
+      "height": 10
+    },
+    "after": {
+      "x": 0,
+      "y": 70,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "two-negative-margins-collapse-to-the-most-negative": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 50
+    },
+    "first": {
+      "x": 0,
+      "y": 40,
+      "width": 300,
+      "height": 20
+    },
+    "second": {
+      "x": 0,
+      "y": 30,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "auto-margins-do-not-centre-a-float": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "a-max-width-caps-a-float": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 80,
+      "height": 20
+    },
+    "second": {
+      "x": 80,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-float-is-offset-by-its-own-inline-margin": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "floated": {
+      "x": 20,
+      "y": 0,
+      "width": 100,
+      "height": 30
+    }
+  },
+  "a-right-float-is-offset-by-its-own-inline-margin": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "floated": {
+      "x": 180,
+      "y": 0,
+      "width": 100,
+      "height": 30
+    }
+  },
+  "a-negative-margin-on-a-float-pulls-it-out": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "floated": {
+      "x": -20,
+      "y": 0,
+      "width": 100,
+      "height": 30
+    }
+  },
+  "clear-left-ignores-a-right-float": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 50
+    },
+    "right": {
+      "x": 220,
+      "y": 0,
+      "width": 80,
+      "height": 50
+    },
+    "cleared": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "min-width-clamps-a-narrower-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20
+    }
+  },
+  "min-height-clamps-a-shorter-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 50
+    },
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 50
+    }
+  },
+  "max-height-caps-a-taller-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "capped": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    }
+  },
+  "aspect-ratio-sizes-the-axis-that-is-auto": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "ratio": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 40
+    }
+  },
+  "aspect-ratio-sizes-the-width-from-a-definite-height": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "wrapper": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "ratio": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "relative-offset-does-not-move-the-next-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "shifted": {
+      "x": 30,
+      "y": 10,
+      "width": 100,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 20,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "percentage-padding-resolves-against-the-width": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "padded": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    }
+  },
+  "border-box-includes-the-border-in-the-width": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    },
+    "inner": {
+      "x": 20,
+      "y": 0,
+      "width": 160,
+      "height": 20
+    }
+  },
+  "overflow-hidden-stops-a-margin-collapsing-through": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 70
+    },
+    "context": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 50
+    },
+    "child": {
+      "x": 0,
+      "y": 30,
+      "width": 100,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 50,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "padding-stops-the-parent-child-collapse": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 70
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 70
+    },
+    "child": {
+      "x": 0,
+      "y": 50,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "a-negative-top-margin-pulls-the-box-up": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 45
+    },
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    },
+    "second": {
+      "x": 0,
+      "y": 25,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "adjacent-siblings-collapse-to-the-larger": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 90
+    },
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "b": {
+      "x": 0,
+      "y": 50,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 70,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-border-stops-the-parent-child-collapse": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 86
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "parent": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 46
+    },
+    "child": {
+      "x": 0,
+      "y": 46,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 66,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "an-empty-block-collapses-through": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 70
+    },
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "empty": {
+      "x": 0,
+      "y": 40,
+      "width": 300,
+      "height": 0
+    },
+    "b": {
+      "x": 0,
+      "y": 50,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "negative-and-positive-margins-combine": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 80
+    },
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "b": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 60,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-float-shrinks-to-fit": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "inner": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-float-with-auto-width-shrinks-to-the-available-space": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "c1": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20
+    },
+    "c2": {
+      "x": 120,
+      "y": 0,
+      "width": 120,
+      "height": 20
+    },
+    "c3": {
+      "x": 0,
+      "y": 20,
+      "width": 120,
+      "height": 20
+    }
+  },
+  "two-floats-pack-then-wrap": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "f1": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20
+    },
+    "f2": {
+      "x": 120,
+      "y": 0,
+      "width": 120,
+      "height": 20
+    },
+    "f3": {
+      "x": 0,
+      "y": 20,
+      "width": 120,
+      "height": 20
+    }
+  },
+  "clear-drops-below-the-float": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    },
+    "cleared": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-line-shortens-beside-a-float": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 40
+    },
+    "a": {
+      "x": 120,
+      "y": 0,
+      "width": 60,
+      "height": 20
+    },
+    "b": {
+      "x": 180,
+      "y": 0,
+      "width": 60,
+      "height": 20
+    },
+    "c": {
+      "x": 240,
+      "y": 0,
+      "width": 60,
+      "height": 20
+    },
+    "d": {
+      "x": 120,
+      "y": 20,
+      "width": 60,
+      "height": 20
+    }
+  },
+  "a-plain-block-does-not-contain-its-floats": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "plain": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 0
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    },
+    "after": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "a-float-does-not-escape-an-inner-formatting-context": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "inner": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    },
+    "after": {
+      "x": 0,
+      "y": 40,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "floating-an-inline-blockifies-it": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 30
+    },
+    "second": {
+      "x": 100,
+      "y": 0,
+      "width": 40,
+      "height": 30
+    }
+  },
+  "absolute-positioning-cancels-float": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "abs": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    },
+    "inflow": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "a-float-can-clear-another-float": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    },
+    "second": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "clearance-absorbs-a-smaller-top-margin": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "floated": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 40
+    },
+    "cleared": {
+      "x": 0,
+      "y": 40,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "rtl-inline-run-starts-at-the-right-edge": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "first": {
+      "x": 260,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "second": {
+      "x": 200,
+      "y": 0,
+      "width": 60,
+      "height": 20
+    }
+  },
   "atomic-inlines-in-a-row": {
     "root": {
       "x": 0,
@@ -54,6 +1872,64 @@
       "x": 0,
       "y": 20,
       "width": 100,
+      "height": 20
+    }
+  },
+  "nowrap-keeps-atomic-inlines-on-one-line": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    },
+    "b": {
+      "x": 100,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    },
+    "c": {
+      "x": 200,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    },
+    "d": {
+      "x": 300,
+      "y": 0,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "nowrap-does-not-stop-a-block-child-breaking-the-run": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "blockChild": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    },
+    "b": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
       "height": 20
     }
   },
@@ -225,6 +2101,38 @@
       "height": 20
     }
   },
+  "inline-grid-atomic": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "grid": {
+      "x": 40,
+      "y": 0,
+      "width": 80,
+      "height": 20
+    },
+    "gridchild": {
+      "x": 40,
+      "y": 0,
+      "width": 20,
+      "height": 20
+    },
+    "after": {
+      "x": 120,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
   "inline-flex-lays-out-its-children": {
     "root": {
       "x": 0,
@@ -294,6 +2202,58 @@
       "x": 100,
       "y": 0,
       "width": 40,
+      "height": 20
+    }
+  },
+  "vertical-padding-on-an-inline-does-not-grow-the-line": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "nextLine": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    }
+  },
+  "vertical-margins-on-an-inline-have-no-effect": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "nextLine": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
       "height": 20
     }
   },
@@ -443,6 +2403,144 @@
       "y": 0,
       "width": 40,
       "height": 20
+    },
+    "after": {
+      "x": 161.83,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "inline-then-block-then-inline": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "first": {
+      "x": 51.17,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "blocked": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    },
+    "second": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "container-padding-offsets-the-run": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "a": {
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 20
+    },
+    "b": {
+      "x": 50,
+      "y": 10,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "absolute-child-among-inline-content": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "b": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "nested-block-containers-each-all-inline": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "inner": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    },
+    "nested": {
+      "x": 0,
+      "y": 20,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "display-none-child-keeps-the-run-contiguous": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "b": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-block-child-breaks-the-run": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 60
+    },
+    "inline": {
+      "x": 51.17,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "blocked": {
+      "x": 0,
+      "y": 20,
+      "width": 40,
+      "height": 20
     }
   },
   "box-in-inline-with-text": {
@@ -455,6 +2553,122 @@
     "mid": {
       "x": 58.86,
       "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 171.25,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "encoding-does-not-move-a-box": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "row-plain": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "plain": {
+      "x": 35.31,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "row-combining": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    },
+    "combining": {
+      "x": 35.31,
+      "y": 20,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-run-of-spaces-is-one-space": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "row-one": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "one": {
+      "x": 22.22,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "row-three": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
+      "height": 20
+    },
+    "three": {
+      "x": 22.22,
+      "y": 20,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "a-shifted-run-does-not-grow-the-line": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 30.53
+    },
+    "sup": {
+      "x": 8.08,
+      "y": 2,
+      "width": 7.95,
+      "height": 16
+    },
+    "sub": {
+      "x": 24.4,
+      "y": 12.53,
+      "width": 8.26,
+      "height": 16
+    }
+  },
+  "margin-collapses-out-of-a-block-containers-bottom-edge": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "measured": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 80,
       "width": 40,
       "height": 20
     }
