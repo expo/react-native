@@ -925,6 +925,267 @@ const CORPUS = [
     }
   },
   {
+    "name": "inline-then-block-then-inline",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "before ",
+        {
+          "tag": "span",
+          "m": "first",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "blocked",
+          "style": {
+            "height": "20px"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "second",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        " after"
+      ]
+    }
+  },
+  {
+    "name": "container-padding-offsets-the-run",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "padding": "10px",
+        "boxSizing": "border-box"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "absolute-child-among-inline-content",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "position": "absolute",
+            "left": "0px",
+            "top": "60px",
+            "width": "10px",
+            "height": "10px"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "nested-block-containers-each-all-inline",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "outer",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "inner",
+          "children": [
+            {
+              "tag": "span",
+              "m": "nested",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff9500"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "display-none-child-keeps-the-run-contiguous",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "display": "none"
+          },
+          "children": [
+            "hidden"
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-block-child-breaks-the-run",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "before ",
+        {
+          "tag": "span",
+          "m": "inline",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        " more ",
+        {
+          "tag": "span",
+          "m": "blocked",
+          "style": {
+            "display": "block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        " after"
+      ]
+    }
+  },
+  {
     "name": "box-in-inline-with-text",
     "withText": true,
     "tree": {
@@ -1111,6 +1372,50 @@ const CORPUS = [
         "z"
       ]
     }
+  },
+  {
+    "name": "margin-collapses-out-of-a-block-containers-bottom-edge",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "marginBlock": "20px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
   }
 ];
 
@@ -1122,7 +1427,7 @@ const CORPUS = [
 function toStyle(css) {
   const out = {};
   for (const [key, value] of Object.entries(css ?? {})) {
-    if (typeof value === 'string' && /^-?\d+(\.\d+)?px$/.test(value)) {
+    if (typeof value === 'string' && /^-?d+(.d+)?px$/.test(value)) {
       out[key] = parseFloat(value);
     } else {
       out[key] = value;
@@ -1131,6 +1436,23 @@ function toStyle(css) {
   return out;
 }
 
+/*
+ * Each case is laid out inside a BLOCK container, matching the browser, where
+ * every case is a child of <body>.
+ *
+ * This is structural, not cosmetic. A block box that is a FLEX ITEM
+ * establishes an independent formatting context, so margins do not collapse
+ * through its edges (CSS 2.1 8.3.1) — and React Native's surface root is a
+ * flex container, so without this wrapper every case root is a flex item while
+ * the browser's is a block child. Safari says the same thing when asked
+ * directly: the identical markup measures 60 under a block parent and 80 under
+ * a flex one.
+ *
+ * Left unwrapped, the corpus compared two different trees and reported the
+ * difference as a renderer bug. It is not one — this renderer produces exactly
+ * Safari's flex-parent answer — and the corpus has to render the same
+ * structure on both sides before any disagreement it reports means anything.
+ */
 function render(node, refs, key) {
   if (typeof node === 'string') {
     return node;
@@ -1185,7 +1507,11 @@ function Case({caseData, onMeasured}) {
   return (
     <View style={{marginBottom: 24}}>
       <Text style={{fontSize: 10, color: TERTIARY_COLOR}}>{caseData.name}</Text>
-      {render(caseData.tree, refs, caseData.name)}
+      {/* A block container, so the case root is not a flex item — see the
+          note beside the render function above. */}
+      <div style={{display: 'block'}}>
+        {render(caseData.tree, refs, caseData.name)}
+      </div>
     </View>
   );
 }
