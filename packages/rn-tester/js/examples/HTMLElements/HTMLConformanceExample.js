@@ -34,1078 +34,1084 @@ const REPORT_URL = 'http://localhost:8900/report';
 
 const CORPUS = [
   {
-    name: 'atomic-inlines-in-a-row',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "atomic-inlines-in-a-row",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'a',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#0a84ff',
-          },
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
         },
         {
-          tag: 'span',
-          m: 'b',
-          style: {
-            display: 'inline-block',
-            width: '60px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#34c759',
-          },
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
         },
         {
-          tag: 'span',
-          m: 'c',
-          style: {
-            display: 'inline-block',
-            width: '30px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#ff9500',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "c",
+          "style": {
+            "display": "inline-block",
+            "width": "30px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'atomic-inlines-wrap',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "atomic-inlines-wrap",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'a',
-          style: {
-            display: 'inline-block',
-            width: '100px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#af52de',
-          },
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
         },
         {
-          tag: 'span',
-          m: 'b',
-          style: {
-            display: 'inline-block',
-            width: '100px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#ff3b30',
-          },
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
         },
         {
-          tag: 'span',
-          m: 'c',
-          style: {
-            display: 'inline-block',
-            width: '100px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#30b0c7',
-          },
+          "tag": "span",
+          "m": "c",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
         },
         {
-          tag: 'span',
-          m: 'd',
-          style: {
-            display: 'inline-block',
-            width: '100px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#0a84ff',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "d",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'atomic-inline-taller-than-line-height',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "atomic-inline-taller-than-line-height",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'tall',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '50px',
-            verticalAlign: 'top',
-            backgroundColor: '#34c759',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "50px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'text-only-honours-line-height',
-    withText: true,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "text-only-honours-line-height",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: ['Ag'],
-    },
+      "children": [
+        "Ag"
+      ]
+    }
   },
   {
-    name: 'short-box-alone-honours-line-height',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "short-box-alone-honours-line-height",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'only',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '10px',
-            verticalAlign: 'top',
-            backgroundColor: '#ff9500',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "only",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "10px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'line-height-is-a-floor-not-a-ceiling',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "line-height-is-a-floor-not-a-ceiling",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'shortA',
-          style: {
-            display: 'inline-block',
-            width: '200px',
-            height: '10px',
-            verticalAlign: 'top',
-            backgroundColor: '#af52de',
-          },
+          "tag": "span",
+          "m": "shortA",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "10px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
         },
         {
-          tag: 'span',
-          m: 'shortB',
-          style: {
-            display: 'inline-block',
-            width: '200px',
-            height: '10px',
-            verticalAlign: 'top',
-            backgroundColor: '#ff3b30',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "shortB",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "10px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'a-tall-line-pushes-the-next-line-down',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "a-tall-line-pushes-the-next-line-down",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'tall',
-          style: {
-            display: 'inline-block',
-            width: '200px',
-            height: '50px',
-            verticalAlign: 'top',
-            backgroundColor: '#30b0c7',
-          },
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "50px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
         },
         {
-          tag: 'span',
-          m: 'second',
-          style: {
-            display: 'inline-block',
-            width: '200px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#0a84ff',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "second",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'nested-in-one-inline',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "nested-in-one-inline",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'before',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#34c759',
-          },
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
         },
         {
-          tag: 'span',
-          style: {},
-          children: [
+          "tag": "span",
+          "style": {},
+          "children": [
             {
-              tag: 'span',
-              m: 'inner',
-              style: {
-                display: 'inline-block',
-                width: '40px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#ff9500',
-              },
-            },
-          ],
-        },
-      ],
-    },
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff9500"
+              }
+            }
+          ]
+        }
+      ]
+    }
   },
   {
-    name: 'nested-three-deep',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "nested-three-deep",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'before',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#af52de',
-          },
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
         },
         {
-          tag: 'span',
-          style: {},
-          children: [
+          "tag": "span",
+          "style": {},
+          "children": [
             {
-              tag: 'span',
-              style: {},
-              children: [
+              "tag": "span",
+              "style": {},
+              "children": [
                 {
-                  tag: 'span',
-                  style: {},
-                  children: [
+                  "tag": "span",
+                  "style": {},
+                  "children": [
                     {
-                      tag: 'span',
-                      m: 'inner',
-                      style: {
-                        display: 'inline-block',
-                        width: '40px',
-                        height: '20px',
-                        verticalAlign: 'top',
-                        backgroundColor: '#ff3b30',
-                      },
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
+                      "tag": "span",
+                      "m": "inner",
+                      "style": {
+                        "display": "inline-block",
+                        "width": "40px",
+                        "height": "20px",
+                        "verticalAlign": "top",
+                        "backgroundColor": "#ff3b30"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
   },
   {
-    name: 'nested-then-sibling',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "nested-then-sibling",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          style: {},
-          children: [
+          "tag": "span",
+          "style": {},
+          "children": [
             {
-              tag: 'span',
-              m: 'inner',
-              style: {
-                display: 'inline-block',
-                width: '40px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#30b0c7',
-              },
-            },
-          ],
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
         },
         {
-          tag: 'span',
-          m: 'after',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#0a84ff',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'inline-flex-atomic',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "inline-flex-atomic",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'before',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#34c759',
-          },
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
         },
         {
-          tag: 'span',
-          m: 'flex',
-          style: {
-            display: 'inline-flex',
-            width: '80px',
-            height: '20px',
-            verticalAlign: 'top',
+          "tag": "span",
+          "m": "flex",
+          "style": {
+            "display": "inline-flex",
+            "width": "80px",
+            "height": "20px",
+            "verticalAlign": "top"
           },
-          children: [
+          "children": [
             {
-              tag: 'span',
-              m: 'flexchild',
-              style: {
-                display: 'inline-block',
-                width: '20px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#ff9500',
-              },
-            },
-          ],
+              "tag": "span",
+              "m": "flexchild",
+              "style": {
+                "display": "inline-block",
+                "width": "20px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff9500"
+              }
+            }
+          ]
         },
         {
-          tag: 'span',
-          m: 'after',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#af52de',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'inline-flex-lays-out-its-children',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "inline-flex-lays-out-its-children",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'flex',
-          style: {
-            display: 'inline-flex',
-            width: '120px',
-            height: '30px',
-            verticalAlign: 'top',
+          "tag": "span",
+          "m": "flex",
+          "style": {
+            "display": "inline-flex",
+            "width": "120px",
+            "height": "30px",
+            "verticalAlign": "top"
           },
-          children: [
+          "children": [
             {
-              tag: 'span',
-              m: 'i1',
-              style: {
-                display: 'inline-block',
-                width: '30px',
-                height: '30px',
-                verticalAlign: 'top',
-                backgroundColor: '#ff3b30',
-              },
+              "tag": "span",
+              "m": "i1",
+              "style": {
+                "display": "inline-block",
+                "width": "30px",
+                "height": "30px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff3b30"
+              }
             },
             {
-              tag: 'span',
-              m: 'i2',
-              style: {
-                display: 'inline-block',
-                width: '30px',
-                height: '30px',
-                verticalAlign: 'top',
-                backgroundColor: '#30b0c7',
-              },
-            },
-          ],
-        },
-      ],
-    },
+              "tag": "span",
+              "m": "i2",
+              "style": {
+                "display": "inline-block",
+                "width": "30px",
+                "height": "30px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
+        }
+      ]
+    }
   },
   {
-    name: 'empty-inline-between-boxes',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "empty-inline-between-boxes",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'a',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#0a84ff',
-          },
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
         },
         {
-          tag: 'span',
-          style: {},
-          children: [],
+          "tag": "span",
+          "style": {},
+          "children": []
         },
         {
-          tag: 'span',
-          m: 'b',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#34c759',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'inline-with-padding-around-box',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "inline-with-padding-around-box",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'before',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#ff9500',
-          },
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
         },
         {
-          tag: 'span',
-          style: {
-            paddingLeft: '10px',
-            paddingRight: '10px',
+          "tag": "span",
+          "style": {
+            "paddingLeft": "10px",
+            "paddingRight": "10px"
           },
-          children: [
+          "children": [
             {
-              tag: 'span',
-              m: 'inner',
-              style: {
-                display: 'inline-block',
-                width: '40px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#af52de',
-              },
-            },
-          ],
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
         },
         {
-          tag: 'span',
-          m: 'after',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#ff3b30',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'vertical-align-top-vs-default',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "vertical-align-top-vs-default",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'short',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#30b0c7',
-          },
+          "tag": "span",
+          "m": "short",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
         },
         {
-          tag: 'span',
-          m: 'tall',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '40px',
-            verticalAlign: 'top',
-            backgroundColor: '#0a84ff',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "40px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'vertical-align-bottom',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "vertical-align-bottom",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'tall',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '40px',
-            verticalAlign: 'top',
-            backgroundColor: '#34c759',
-          },
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "40px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
         },
         {
-          tag: 'span',
-          m: 'short',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'bottom',
-            backgroundColor: '#ff9500',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "short",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "bottom",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'vertical-align-middle',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "vertical-align-middle",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'tall',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '40px',
-            verticalAlign: 'top',
-            backgroundColor: '#af52de',
-          },
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "40px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
         },
         {
-          tag: 'span',
-          m: 'short',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'middle',
-            backgroundColor: '#ff3b30',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "short",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "middle",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'baseline-aligned-box-alone',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "baseline-aligned-box-alone",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'only',
-          style: {
-            display: 'inline-block',
-            width: '30px',
-            height: '40px',
-            backgroundColor: '#0a84ff',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "only",
+          "style": {
+            "display": "inline-block",
+            "width": "30px",
+            "height": "40px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'atomic-inline-alone-on-line',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "atomic-inline-alone-on-line",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'only',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '60px',
-            verticalAlign: 'top',
-            backgroundColor: '#30b0c7',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "only",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "60px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'wrap-boundary-exact',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "wrap-boundary-exact",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'a',
-          style: {
-            display: 'inline-block',
-            width: '150px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#0a84ff',
-          },
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "150px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
         },
         {
-          tag: 'span',
-          m: 'b',
-          style: {
-            display: 'inline-block',
-            width: '150px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#34c759',
-          },
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "150px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
         },
         {
-          tag: 'span',
-          m: 'c',
-          style: {
-            display: 'inline-block',
-            width: '10px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#ff9500',
-          },
-        },
-      ],
-    },
+          "tag": "span",
+          "m": "c",
+          "style": {
+            "display": "inline-block",
+            "width": "10px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
   },
   {
-    name: 'nested-inline-wrap',
-    withText: false,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "nested-inline-wrap",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'span',
-          m: 'a',
-          style: {
-            display: 'inline-block',
-            width: '200px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#af52de',
-          },
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
         },
         {
-          tag: 'span',
-          style: {},
-          children: [
+          "tag": "span",
+          "style": {},
+          "children": [
             {
-              tag: 'span',
-              m: 'inner',
-              style: {
-                display: 'inline-block',
-                width: '150px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#ff3b30',
-              },
-            },
-          ],
-        },
-      ],
-    },
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "150px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
   },
   {
-    name: 'box-between-text',
-    withText: true,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "box-between-text",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
-        'before ',
+      "children": [
+        "before ",
         {
-          tag: 'span',
-          m: 'mid',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#30b0c7',
-          },
+          "tag": "span",
+          "m": "mid",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
         },
-        ' between ',
+        " between ",
         {
-          tag: 'span',
-          m: 'after',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#0a84ff',
-          },
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
         },
-        ' end',
-      ],
-    },
+        " end"
+      ]
+    }
   },
   {
-    name: 'box-in-inline-with-text',
-    withText: true,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "box-in-inline-with-text",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
-        'see ',
+      "children": [
+        "see ",
         {
-          tag: 'span',
-          style: {},
-          children: [
-            'link ',
+          "tag": "span",
+          "style": {},
+          "children": [
+            "link ",
             {
-              tag: 'span',
-              m: 'mid',
-              style: {
-                display: 'inline-block',
-                width: '40px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#34c759',
-              },
+              "tag": "span",
+              "m": "mid",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#34c759"
+              }
             },
-            ' end',
-          ],
+            " end"
+          ]
         },
-        ' then ',
+        " then ",
         {
-          tag: 'span',
-          m: 'after',
-          style: {
-            display: 'inline-block',
-            width: '40px',
-            height: '20px',
-            verticalAlign: 'top',
-            backgroundColor: '#ff9500',
-          },
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
         },
-        ' done',
-      ],
-    },
+        " done"
+      ]
+    }
   },
   {
-    name: 'encoding-does-not-move-a-box',
-    withText: true,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "encoding-does-not-move-a-box",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'div',
-          m: 'row-plain',
-          style: {},
-          children: [
-            'éééé',
+          "tag": "div",
+          "m": "row-plain",
+          "style": {},
+          "children": [
+            "éééé",
             {
-              tag: 'span',
-              m: 'plain',
-              style: {
-                display: 'inline-block',
-                width: '40px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#af52de',
-              },
-            },
-          ],
+              "tag": "span",
+              "m": "plain",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
         },
         {
-          tag: 'div',
-          m: 'row-combining',
-          style: {},
-          children: [
-            'éééé',
+          "tag": "div",
+          "m": "row-combining",
+          "style": {},
+          "children": [
+            "éééé",
             {
-              tag: 'span',
-              m: 'combining',
-              style: {
-                display: 'inline-block',
-                width: '40px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#ff3b30',
-              },
-            },
-          ],
-        },
-      ],
-    },
+              "tag": "span",
+              "m": "combining",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
   },
   {
-    name: 'a-run-of-spaces-is-one-space',
-    withText: true,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "a-run-of-spaces-is-one-space",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
+      "children": [
         {
-          tag: 'div',
-          m: 'row-one',
-          style: {},
-          children: [
-            'ab ',
+          "tag": "div",
+          "m": "row-one",
+          "style": {},
+          "children": [
+            "ab ",
             {
-              tag: 'span',
-              m: 'one',
-              style: {
-                display: 'inline-block',
-                width: '40px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#30b0c7',
-              },
-            },
-          ],
+              "tag": "span",
+              "m": "one",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
         },
         {
-          tag: 'div',
-          m: 'row-three',
-          style: {},
-          children: [
-            'ab   ',
+          "tag": "div",
+          "m": "row-three",
+          "style": {},
+          "children": [
+            "ab   ",
             {
-              tag: 'span',
-              m: 'three',
-              style: {
-                display: 'inline-block',
-                width: '40px',
-                height: '20px',
-                verticalAlign: 'top',
-                backgroundColor: '#0a84ff',
-              },
-            },
-          ],
-        },
-      ],
-    },
+              "tag": "span",
+              "m": "three",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#0a84ff"
+              }
+            }
+          ]
+        }
+      ]
+    }
   },
   {
-    name: 'a-shifted-run-does-not-grow-the-line',
-    withText: true,
-    tree: {
-      tag: 'div',
-      m: 'root',
-      style: {
-        width: '300px',
-        lineHeight: '20px',
-        fontSize: '16px',
+    "name": "a-shifted-run-does-not-grow-the-line",
+    "withText": true,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
       },
-      children: [
-        'x',
+      "children": [
+        "x",
         {
-          tag: 'sup',
-          m: 'sup',
-          style: {},
-          children: ['2'],
+          "tag": "sup",
+          "m": "sup",
+          "style": {},
+          "children": [
+            "2"
+          ]
         },
-        'y',
+        "y",
         {
-          tag: 'sub',
-          m: 'sub',
-          style: {},
-          children: ['3'],
+          "tag": "sub",
+          "m": "sub",
+          "style": {},
+          "children": [
+            "3"
+          ]
         },
-        'z',
-      ],
-    },
-  },
+        "z"
+      ]
+    }
+  }
 ];
 
 /*
@@ -1141,11 +1147,7 @@ function render(node, refs, key) {
       }
     };
   }
-  return React.createElement(
-    Tag,
-    props,
-    children.length ? children : undefined,
-  );
+  return React.createElement(Tag, props, children.length ? children : undefined);
 }
 
 function Case({caseData, onMeasured}) {
@@ -1241,6 +1243,7 @@ export default {
   examples: [
     {
       name: 'conformance',
+      fullBleed: true,
       title: 'Corpus',
       render: () => <ConformanceScreen />,
     },
