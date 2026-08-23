@@ -83,13 +83,22 @@ export default function RNTesterModuleContainer(props: Props): React.Node {
       {singleModule.scrollable === true ? (
         <ScrollView
           style={styles.examplesContainer}
-          contentContainerStyle={styles.singleExampleContent}
+          contentContainerStyle={
+            singleModule.fullBleed === true ? null : styles.singleExampleContent
+          }
           testID="example-container">
           <singleModule.render />
         </ScrollView>
       ) : (
         <View
-          style={[styles.examplesContainer, styles.singleExampleContent]}
+          style={[
+            styles.examplesContainer,
+            // A screen that owns its scrolling must reach the edges: padding
+            // here would inset the screen's OWN ScrollView, floating its
+            // scroll indicator 20pt off the display's right edge and adding
+            // a second frame of chrome around content already padded inside.
+            singleModule.fullBleed === true ? null : styles.singleExampleContent,
+          ]}
           testID="example-container">
           <singleModule.render />
         </View>

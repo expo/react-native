@@ -47,6 +47,7 @@ export default {
   examples: DOC_SECTIONS.map(([name, title, Component]) => ({
     name,
     title,
+    fullBleed: true,
     render: () => (
       <Section>
         <Component />

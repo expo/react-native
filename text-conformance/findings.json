@@ -89,5 +89,11 @@
       "kind": "match",
       "text": "Both device-side list gaps closed this pass: nested lists zero their block margins exactly as html.css does (`ul ul { margin-block: 0 }`), and nested unordered markers walk the browser ladder (disc → circle → square) natively. Two further defects closed on review: `<ol start={98}>` collided with Yoga's `start` inset — the attribute shifted the whole list 98px right on both platforms; it now travels as a private native prop and the started list sits at the standard gutter with markers right-aligned into it, matching Safari. And the geometric marker glyphs (▪ in particular) carry the U+FE0E text-presentation selector, because Apple's fallback chose the EMOJI face for the bare code point and drew third-level squares as large emoji. Residual, by design: the exact size of a symbolic marker glyph is UA discretion — css-counter-styles-3 defines disc/circle/square as glyphs the UA renders as it sees fit, and browsers paint geometry (~0.4em) where the native stacks shape real font glyphs. Neither the HIG nor Material defines text-list markers, so the platform's type is the native answer here."
     }
+  ],
+  "HTMLEmbeddedExample~figure": [
+    {
+      "severity": "match",
+      "text": "The figure's indent is exactly Safari's: measured inside the case card, the image starts 154px (51.3dp) from the card's left on all three engines — html.css's 40px inline margin plus the card frame. What read as 'offset too far right' was the screens' OUTER chrome: RNTester wrapped every single-example screen in a 20pt-padded view on top of the screen's own 16pt, against the web page's 12. The wrapper now has a full-bleed opt-out used by all these screens, which also puts the scroll indicator back at the display's right edge."
+    }
   ]
 }

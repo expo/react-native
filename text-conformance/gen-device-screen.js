@@ -198,6 +198,7 @@ export default {
   examples: [
     {
       name: 'conformance',
+      fullBleed: true,
       title: 'Corpus',
       render: () => <ConformanceScreen />,
     },
