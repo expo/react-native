@@ -114,8 +114,15 @@ using namespace facebook::react;
 
   _dotLayer.path = [UIBezierPath bezierPathWithOvalInRect:dot].CGPath;
   // The layer's bounds are the whole view so the path sits where it was
-  // computed; the scale transform is what animates.
-  _dotLayer.frame = self.bounds;
+  // computed; the scale transform is what animates. BOUNDS and POSITION, not
+  // `frame`: the unchecked dot carries a scale(0) transform, and CALayer's
+  // frame setter computes geometry THROUGH the current transform — through a
+  // degenerate scale the position came out garbage, and the dot sprang in
+  // from the bottom-right of wherever that left it instead of growing from
+  // its own centre.
+  _dotLayer.bounds = self.bounds;
+  _dotLayer.position =
+      CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
   _dotLayer.fillColor =
       (self.isEnabled ? self.tintColor : [UIColor quaternaryLabelColor]).CGColor;
   [self applyDotStateAnimated:NO];

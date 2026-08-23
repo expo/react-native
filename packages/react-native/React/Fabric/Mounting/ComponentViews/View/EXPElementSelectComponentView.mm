@@ -14,6 +14,34 @@
 
 using namespace facebook::react;
 
+/*
+ * The pop-up's dismissal must follow the button, not the button's OLD spot.
+ *
+ * UIButton presents its menu through a context-menu interaction, and the
+ * dismissal animation collapses the menu into a targeted preview. Left to
+ * the default, that target is resolved from geometry captured when the
+ * interaction began — so picking an option and then scrolling while the menu
+ * closed shrank the menu into the position the button held BEFORE the scroll.
+ * UIButton documents these delegate methods as subclass override points; a
+ * VIEW-based UITargetedPreview makes UIKit resolve the target against the
+ * live view at dismissal time, so the closing menu tracks the scroll.
+ */
+@interface EXPElementSelectButton : UIButton
+@end
+
+@implementation EXPElementSelectButton
+
+- (UITargetedPreview *)contextMenuInteraction:(UIContextMenuInteraction *)interaction
+    previewForDismissingMenuWithConfiguration:(UIContextMenuConfiguration *)configuration
+{
+  if (self.window == nil) {
+    return [super contextMenuInteraction:interaction previewForDismissingMenuWithConfiguration:configuration];
+  }
+  return [[UITargetedPreview alloc] initWithView:self];
+}
+
+@end
+
 @implementation EXPElementSelectComponentView {
   UIButton *_button;
   BOOL _isInitialValueSet;
@@ -30,7 +58,7 @@ using namespace facebook::react;
     // pop-up button and a context menu.
     UIButtonConfiguration *configuration = [UIButtonConfiguration borderedButtonConfiguration];
     configuration.cornerStyle = UIButtonConfigurationCornerStyleMedium;
-    _button = [UIButton buttonWithConfiguration:configuration primaryAction:nil];
+    _button = [EXPElementSelectButton buttonWithConfiguration:configuration primaryAction:nil];
     _button.showsMenuAsPrimaryAction = YES;
     // The menu marks the current choice with a checkmark, which is only correct
     // if UIKit is told the selection is single-valued.
