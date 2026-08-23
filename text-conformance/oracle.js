@@ -37,6 +37,7 @@ function page() {
   const sections = CASES.map(
     c => `
     <section data-case="${c.name}">
+      <div class="case-label">${c.name}</div>
       ${toHTML(c.tree)}
     </section>`,
   ).join('\n');
@@ -46,16 +47,24 @@ function page() {
    * and the container's own borders would shift every coordinate by a constant,
    * and a constant offset is exactly the kind of difference that looks like a
    * layout bug. Rects are reported relative to each case's own root, so the
-   * page's own geometry cancels out entirely.
+   * page's own geometry cancels out entirely — which is also what makes the
+   * PRESENTATION chrome below safe: the labels, intro and spacing mirror the
+   * device screen (gen-device-screen.js: 16px page padding, a 10px tertiary
+   * label over each case, 24px between cases), so the report's web column
+   * shows the same page a person sees on the device, while the measured
+   * numbers never include any of it.
    */
   return `<!doctype html>
 <html><head><meta charset="utf-8">
 <style>
   * { margin: 0; padding: 0; border: 0; box-sizing: content-box; }
-  body { font-family: -apple-system, sans-serif; }
-  section { margin-bottom: 40px; }
+  body { font-family: -apple-system, sans-serif; padding: 16px; }
+  .intro { font-size: 11px; color: #8E8E93; margin-bottom: 8px; }
+  .case-label { font-size: 10px; color: #8E8E93; margin-bottom: 2px; }
+  section { margin-bottom: 24px; }
 </style>
 </head><body>
+<div class="intro">${CASES.length} cases — one corpus (cases.js), rendered by this browser and by the device screens from the same trees.</div>
 ${sections}
 </body></html>`;
 }

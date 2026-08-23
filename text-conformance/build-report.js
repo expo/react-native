@@ -93,14 +93,14 @@ const SECTIONS = [
   {
     title: 'Native surface',
     blurb:
-      'Where the answer is deliberately *not* the web: platform buttons, ' +
-      'SwiftUI/Compose via Expo UI, and icons.',
+      'Where the answer is deliberately *not* the web: platform buttons ' +
+      'and icons.',
     screens: ['NativeButtonExample', 'IconsExample'],
   },
   {
     title: 'Benchmarks',
     blurb: 'Text measurement cost. Included for completeness.',
-    screens: ['DeviceTextBenchmarkExample', 'SharedTextBenchmarkExample'],
+    screens: ['DeviceTextBenchmarkExample'],
   },
 ];
 

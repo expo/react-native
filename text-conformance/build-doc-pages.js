@@ -43,6 +43,25 @@ const DOCS_DIR = path.join(
 const CONVERTED = {
   HTMLGroupingExample: path.join(DOCS_DIR, 'groupingDocs.js'),
   HTMLTextLevelExample: path.join(DOCS_DIR, 'textLevelDocs.js'),
+  HTMLEmbeddedExample: path.join(DOCS_DIR, 'embeddedDocs.js'),
+};
+
+/**
+ * Routes whose web column is a real page, written by hand, rather than a
+ * rendered document — keyed by the same `Screen~example` string everything
+ * else here is keyed by.
+ *
+ * A shared document holds only what both engines render the same way from the
+ * same markup, which rules out anything whose subject is *behaviour*. The
+ * embedded screen's load lifecycle is the case in point: rendering its
+ * document statically would put a list of events into the browser column that
+ * no browser had dispatched, which is worse than no column at all because it
+ * still looks like evidence. So that route gets a page with real listeners on
+ * a real `<img>`, and the page says in its own text where the two engines
+ * legitimately differ.
+ */
+const HAND_WRITTEN = {
+  'HTMLEmbeddedExample~loading': path.join(__dirname, 'img-events.html'),
 };
 
 const OUT_SHOTS = '/tmp/shots/web';
@@ -71,6 +90,16 @@ function main() {
     }
   }
 
+  for (const [key, pagePath] of Object.entries(HAND_WRITTEN)) {
+    if (!fs.existsSync(pagePath)) {
+      throw new Error(`hand-written page missing: ${pagePath}`);
+    }
+    jobs.push({
+      url: 'file://' + pagePath,
+      out: path.join(OUT_SHOTS, `${key}.png`),
+    });
+  }
+
   const wkshot = path.join(__dirname, 'tools', 'wkshot');
   if (!fs.existsSync(wkshot)) {
     execFileSync('swiftc', ['-O', '-o', wkshot, path.join(__dirname, 'tools', 'wkshot.swift')]);
@@ -83,7 +112,11 @@ function main() {
     child.stdin.end();
     child.on('exit', code =>
       code === 0
-        ? resolve(console.log(`doc pages: ${jobs.length} captured from shared documents`))
+        ? resolve(console.log(
+            `doc pages: ${jobs.length} captured ` +
+              `(${jobs.length - Object.keys(HAND_WRITTEN).length} from shared ` +
+              `documents, ${Object.keys(HAND_WRITTEN).length} hand-written)`,
+          ))
         : reject(new Error(`wkshot exited ${code}`)),
     );
   });

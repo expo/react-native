@@ -211,15 +211,16 @@ on iOS and the framework fallback on Android — so the two columns for any imag
 case in the comparison report are running different code, not the same code
 twice.
 
-### 2.1a Replaced elements ignore padding when painting their content
+### 2.1a (CLOSED 2026-08-23) Replaced elements ignore padding when painting
 
-`<img style={{backgroundColor, padding: 6}}>` should draw the bitmap inset to
-the CONTENT box with the background visible through the padding ring — the
-web column shows exactly that yellow ring on the sizing demo, and both device
-backings paint the bitmap across the whole box instead. CSS is unambiguous
-(the replaced content fits the content box; background covers padding).
-Closing it means teaching both image backings a content inset derived from
-the computed padding — expo-image and the framework image view alike.
+Closed by the composite in `Img.js`: an `<img>` whose style carries box
+chrome (background/padding/border/radius) splits into CSS's own model — an
+element box wearing the chrome, the image blockified (`display:'block'`, a
+new css-display-3 §2 opt-out in the C++ run collection) and flex-filling the
+CONTENT box, so the yellow padding ring paints and the radius clips. Zero
+native image-view changes, both backings covered; chrome-less images keep the
+single-view fast path. `ImgBoxChrome-itest` (3) pins border-box invariance,
+the composite structure, and the fast path.
 
 ### 2.2 (CLOSED 2026-08-23) Checkables centre on their label line
 
@@ -245,18 +246,20 @@ background IS the platform's plain `EditText` (Material's filled box is
 
 ## 3. Items to check
 
-### 3.0 iOS: half-leading around attachment lines
+### 3.0 (CLOSED 2026-08-23) iOS: half-leading around attachment lines
 
-Measured on the embedded line-height demo (text line above a 56pt inline box):
-web 4px and Android 5px of gap above the `lineHeight: 26` box versus 1px above
-the default-leading twin — CSS's half-leading below the taller line's glyphs.
-iOS measures 1px/2px: the explicit line-height's below-glyph leading does not
-appear ahead of the attachment's line. The centring pass
-(`RCTApplyBaselineOffsetForRange`) runs for run strings and the corpus pins
-iOS box geometry Safari-exact, so the residual is TextKit's distribution of
-the extra leading on lines adjacent to attachments. Next probe: dump the
-drawn storage's paragraph style for the demo run (lldb attach was repeatedly
-fatal to the app tonight; instrument the draw path in a debug build instead).
+Closed as measurement artifact + instrument-proven pipeline. The earlier
+"1-2px on iOS" figure came from a gap scan that stopped at a single
+antialiased descender pixel; measured properly (ink BANDS, ≥4 dark samples
+per row), the air between the text line and the 56pt box is iOS 12px,
+Safari 13px, Android 12px at 3x — the three engines agree. The pipeline is
+additionally pinned by `RCTAttachmentLineLeadingTests` (3): a pure-text
+`line-height: 26` line measures exactly 26 with the box's line starting at
+its end; a mixed text+image line keeps `descent + half-leading` below its
+baseline; and the attachment-PLACEMENT path (`measureAttributedString`, the
+API that positions the real view) puts the box's frame a full first line
+down. The strut's half-leading share below the baseline was already built
+into attachment bounds (`strutDescent` in RCTAttributedTextUtils).
 
 
 Claims that are currently unverified, or verified in a way that would not catch
