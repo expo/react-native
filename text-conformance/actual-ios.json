@@ -25,20 +25,6 @@
       "height": 20
     }
   },
-  "atomic-inline-taller-than-line-height": {
-    "tall": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 50
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300,
-      "height": 50
-    }
-  },
   "atomic-inlines-wrap": {
     "a": {
       "x": 0,
@@ -69,6 +55,20 @@
       "y": 0,
       "width": 300,
       "height": 40
+    }
+  },
+  "atomic-inline-taller-than-line-height": {
+    "tall": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 50
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 50
     }
   },
   "text-only-honours-line-height": {
@@ -153,6 +153,26 @@
       "height": 20
     }
   },
+  "nested-then-sibling": {
+    "inner": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    }
+  },
   "nested-three-deep": {
     "before": {
       "x": 0,
@@ -194,26 +214,6 @@
     },
     "after": {
       "x": 120,
-      "y": 0,
-      "width": 40,
-      "height": 20
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300,
-      "height": 20
-    }
-  },
-  "nested-then-sibling": {
-    "inner": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20
-    },
-    "after": {
-      "x": 40,
       "y": 0,
       "width": 40,
       "height": 20
@@ -411,6 +411,26 @@
       "height": 40
     }
   },
+  "box-between-text": {
+    "mid": {
+      "x": 51.17,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 161.84,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    }
+  },
   "nested-inline-wrap": {
     "a": {
       "x": 0,
@@ -431,24 +451,36 @@
       "height": 40
     }
   },
-  "box-between-text": {
-    "mid": {
-      "x": 51.17,
+  "encoding-does-not-move-a-box": {
+    "plain": {
+      "x": 35.31,
       "y": 0,
       "width": 40,
       "height": 20
     },
-    "after": {
-      "x": 161.84,
+    "row-plain": {
+      "x": 0,
       "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "combining": {
+      "x": 35.31,
+      "y": 20,
       "width": 40,
+      "height": 20
+    },
+    "row-combining": {
+      "x": 0,
+      "y": 20,
+      "width": 300,
       "height": 20
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 300,
-      "height": 20
+      "height": 40
     }
   },
   "box-in-inline-with-text": {
@@ -491,38 +523,6 @@
       "height": 20
     },
     "row-three": {
-      "x": 0,
-      "y": 20,
-      "width": 300,
-      "height": 20
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300,
-      "height": 40
-    }
-  },
-  "encoding-does-not-move-a-box": {
-    "plain": {
-      "x": 35.31,
-      "y": 0,
-      "width": 40,
-      "height": 20
-    },
-    "row-plain": {
-      "x": 0,
-      "y": 0,
-      "width": 300,
-      "height": 20
-    },
-    "combining": {
-      "x": 35.31,
-      "y": 20,
-      "width": 40,
-      "height": 20
-    },
-    "row-combining": {
       "x": 0,
       "y": 20,
       "width": 300,
