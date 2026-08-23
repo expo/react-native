@@ -509,19 +509,33 @@ const uaStyles: {[string]: UAStyle} = {
   // standards mode (the 1em block-end margin is a quirks-mode rule, and there
   // is no quirks mode here — DOM-CSS-LIMITATION(no-quirks-mode)).
   form: {},
-  // <fieldset>'s border is `groove 2px ThreeDFace`, a 3D system border with no
-  // analogue on either platform and no system colour to resolve ThreeDFace
-  // against. A 1px hairline in the platform's separator colour is the honest
-  // approximation; DOM-CSS-LIMITATION(no-groove-border) records the gap.
+  /*
+   * <fieldset> is drawn as the platform's GROUP SURFACE, not as html.css's
+   * box. The web's `border: groove 2px ThreeDFace` has no analogue here
+   * (DOM-CSS-LIMITATION(no-groove-border)), and its `0.35em/0.625em` block
+   * padding — tuned around 13px web controls — reads cramped wrapped around
+   * a 44pt switch or a 56dp field. What a native form puts around a group of
+   * related controls is a rounded outlined surface with real breathing room:
+   * an inset-grouped section on iOS (10pt radius; hairline in `separator`),
+   * an outlined card on Material (12dp radius; `colorOutlineVariant`, 16dp
+   * padding). DOM-CSS-DEVIATION(fieldset-native-surface): the platform's
+   * group idiom takes precedence over html.css's metrics; the legend sits
+   * above the surface (see `legend`).
+   */
   fieldset: {
     marginInline: 2,
     borderWidth: 1,
-    borderColor: '#0000001f',
-    // CSS's `padding-block: 0.35em 0.625em` is two values; RN's paddingBlock
-    // takes one, so the asymmetry needs the longhands.
-    paddingBlockStart: 0.35 * EM,
-    paddingBlockEnd: 0.625 * EM,
-    paddingInline: 0.75 * EM,
+    borderColor: Platform.select<ColorValue>({
+      ios: PlatformColor('separator'),
+      android: PlatformColor(
+        '?attr/colorOutlineVariant',
+        '?attr/colorSurfaceVariant',
+      ),
+      default: '#0000001f',
+    }),
+    borderRadius: Platform.select<number>({ios: 10, android: 12, default: 8}),
+    paddingBlock: Platform.select<number>({ios: 12, android: 16, default: 12}),
+    paddingInline: 16,
   },
   // The legend renders ABOVE the fieldset's box (Fieldset.js hoists it —
   // DOM-CSS-DEVIATION(fieldset-legend-position)); the block-end margin is the

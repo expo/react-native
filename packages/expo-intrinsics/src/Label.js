@@ -33,7 +33,7 @@ import * as React from 'react';
  *
  * ## What this does and does not do
  *
- * It sets the control's **name**. Tapping a label does not yet focus or toggle
+ * It sets the control's **name**. Tapping a label does not focus or toggle
  * its control — HTML's other half of the association — because that needs the
  * control's imperative handle, and the element controls do not expose one yet.
  * The naming is the part that matters for accessibility; the tap target is

@@ -198,6 +198,25 @@ Painting changed to make this safe; layout did not.
 
 ---
 
+### `<fieldset>` is the platform's group surface
+
+`DOM-CSS-DEVIATION(fieldset-native-surface)`
+
+**What we do:** a rounded, outlined surface in the platform's own tokens —
+iOS: 10pt radius, hairline in `separator`, 12pt block padding; Android: 12dp
+radius, `colorOutlineVariant`, 16dp padding; 16 inline padding on both.
+
+**The spec:** html.css draws `border: groove 2px ThreeDFace` with
+`padding: 0.35em 0.75em 0.625em` — metrics tuned around 13px web controls.
+
+**Why:** wrapped around a 44pt switch or a 56dp text field, the web's 5.6px
+of top padding reads as a rendering mistake. What a native form actually
+puts around a group of related controls is an inset-grouped section (iOS) or
+an outlined card (Material), and this is that, in each platform's tokens —
+adaptive in dark mode for free.
+
+---
+
 ### `<legend>` sits above the fieldset's box, not notched into its border
 
 `DOM-CSS-DEVIATION(fieldset-legend-position)`
@@ -212,6 +231,28 @@ express, since neither can interrupt a border behind a text run. And neither
 platform's forms speak that idiom: iOS grouped settings and Material both set
 a group's label above the group's surface, so the hoist is the platforms' own
 convention rather than an approximation of the web's.
+
+---
+
+### Tapping a `<label>` does not activate its control
+
+`DOM-CSS-DEVIATION(label-activation)`
+
+**What we do:** `<label htmlFor>` (and a label wrapping its control)
+associates for ACCESSIBILITY — the control announces with the label's text —
+but tapping the label's text does not toggle or focus the control.
+
+**The spec:** HTML §4.10.4 — activating a label dispatches the activation to
+its labeled control; on the web, clicking the word toggles the checkbox.
+
+**Why:** label-click activation is a pointer-era affordance: a 13px web
+checkbox is a hard mouse target, so the label doubles as one. The platforms'
+own forms do the opposite — a UISwitch or a Material checkbox IS the touch
+target, at 44pt/48dp, and neither iOS Settings nor Material rows toggle from
+their caption text; making text toggle a control it does not visually
+resemble also fights the platform gesture system (text selection,
+scrolling). Intentional, not a gap; the association half — the part
+assistive technology needs — is fully carried.
 
 ---
 

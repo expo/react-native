@@ -192,7 +192,7 @@ test('each tag reports itself, not the component backing it', () => {
   }
 });
 
-test('<fieldset> carries the UA border and asymmetric block padding', () => {
+test('<fieldset> carries the native group surface metrics', () => {
   const child = createRef<HostInstance>();
   const outer = createRef<HostInstance>();
   const root = Fantom.createRoot();
@@ -210,14 +210,14 @@ test('<fieldset> carries the UA border and asymmetric block padding', () => {
     );
   });
 
-  // padding-block is 0.35em over 0.625em against a 16px root, plus the 1px
-  // border — so the content does NOT start at the padding box's top the way a
-  // symmetric shorthand would put it. Asserting the start edge specifically is
-  // what catches `paddingBlock` having been written as a single value.
+  // DOM-CSS-DEVIATION(fieldset-native-surface): the platform's group
+  // surface, not html.css's 0.35em/0.625em web-control metrics — Material's
+  // outlined card gives 16dp of block padding (Fantom resolves the android
+  // table), inside the 1px outline.
   const inset = rectOf(child).y - rectOf(outer).y;
-  expect(inset).toBeCloseTo(0.35 * 16 + 1, 1);
+  expect(inset).toBeCloseTo(16 + 1, 1);
 
-  // marginInline: 2 on each side, and 0.75em inline padding inside the border.
+  // marginInline: 2 on each side.
   expect(rectOf(outer).width).toBe(200 - 4);
 });
 

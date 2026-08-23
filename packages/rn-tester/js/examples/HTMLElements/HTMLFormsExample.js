@@ -75,10 +75,9 @@ const READOUT = {
  * air around a control than a browser does, and the demos are what someone
  * judges the elements by.
  *
- * This is demo layout, not the user-agent sheet: the UA `fieldset` padding
- * already matches Chrome exactly (2px margin, 5.6/10px block, 12px inline,
- * measured) and is left alone, because the conformance harness pins it against
- * a real browser.
+ * This is demo layout, not the user-agent sheet: the UA `fieldset` surface is
+ * the platform's own group idiom (DOM-CSS-DEVIATION(fieldset-native-surface))
+ * and is left alone here.
  */
 const ROW = {
   flexDirection: 'row',
@@ -910,6 +909,28 @@ function WholeForm() {
             <Text style={NOTE}>notes</Text>
             <textarea name="notes" rows={2} placeholder="Anything else?" />
 
+            <Text style={NOTE}>
+              method — GET serialises the fields into the URL; POST encodes a
+              body. Change it and submit again.
+            </Text>
+            {/* Nameless on purpose: a control without a name is never
+                submitted (HTML §4.10.18.6), so the chooser can live inside
+                the form — where the submit row needs to be — without
+                touching the payload. Selection is fully controlled. */}
+            <View style={ROW}>
+              {['get', 'post'].map(m => (
+                <View key={m} style={ROW}>
+                  <input
+                    type="radio"
+                    value={m}
+                    checked={method === m}
+                    onChange={() => setMethod(m)}
+                  />
+                  <Text>{m.toUpperCase()}</Text>
+                </View>
+              ))}
+            </View>
+
             <View style={{...ROW, marginTop: 4}}>
               <button type="submit">Submit</button>
               <button type="reset">Reset</button>
@@ -920,25 +941,6 @@ function WholeForm() {
           </View>
         </form>
       </View>
-
-      <Case
-        title="method"
-        note="GET serialises the fields into the URL; POST encodes a body. Change it and submit again.">
-        <View style={ROW}>
-          {['get', 'post'].map(m => (
-            <View key={m} style={ROW}>
-              <input
-                type="radio"
-                name="demo-method"
-                value={m}
-                checked={method === m}
-                onChange={() => setMethod(m)}
-              />
-              <Text>{m.toUpperCase()}</Text>
-            </View>
-          ))}
-        </View>
-      </Case>
 
       {submitted != null ? (
         <View
@@ -1080,8 +1082,8 @@ function GroupingAndLabels() {
       </Case>
 
       <Case
-        title="Not built yet: tapping a label"
-        note="The association sets the control's name, which is the part that matters for accessibility. HTML also makes a label a second tap target for its control; that needs an imperative focus handle the element controls do not expose yet.">
+        title="Deviation: tapping a label does not activate its control"
+        note="Intentional, not a gap — see DOM-CSS-DEVIATION(label-activation). The association names the control for assistive technology, which is the half that matters. Label-click activation is a pointer-era affordance for 13px targets; the platforms' own 44pt/48dp controls ARE the touch target, and neither iOS Settings nor Material rows toggle from their caption text.">
         <View style={ROW}>
           <input id="tapme" type="checkbox" />
           <label htmlFor="tapme">
@@ -1108,51 +1110,60 @@ export default {
     'Form controls — §4.10. Every one is a real platform control reached ' +
     'through the HTML element that means it.',
   examples: [
-    {name: 'text', title: 'Text input types', render: () => <TextInputs />},
+    {name: 'text', title: 'Text input types', fullBleed: true, render: () => <TextInputs />},
     {
       name: 'textAttributes',
+      fullBleed: true,
       title: 'Text field attributes',
       render: () => <TextAttributes />,
     },
     {
       name: 'controlled',
+      fullBleed: true,
       title: 'Controlled input & onBeforeInput',
       render: () => <ControlledInputs />,
     },
     {
       name: 'checkable',
+      fullBleed: true,
       title: 'Checkbox and radio',
       render: () => <Checkables />,
     },
     {
       name: 'numeric',
+      fullBleed: true,
       title: 'Range, progress and meter',
       render: () => <NumericControls />,
     },
     {
       name: 'select',
+      fullBleed: true,
       title: 'Select and options',
       render: () => <SelectControls />,
     },
     {
       name: 'pickers',
+      fullBleed: true,
       title: 'Date, time, colour and file',
       render: () => <PickerControls />,
     },
-    {name: 'textarea', title: 'Textarea', render: () => <TextAreas />},
-    {name: 'buttons', title: 'Buttons', render: () => <Buttons />},
+    {name: 'textarea', title: 'Textarea', fullBleed: true, render: () => <TextAreas />},
+    {name: 'buttons', title: 'Buttons', fullBleed: true, render: () => <Buttons />},
     {
       name: 'form',
+      fullBleed: true,
       title: 'A whole form & submission',
       render: () => <WholeForm />,
     },
     {
       name: 'functionAction',
+      fullBleed: true,
       title: 'A function action',
       render: () => <FunctionAction />,
     },
     {
       name: 'grouping',
+      fullBleed: true,
       title: 'Fieldset, legend, label, output',
       render: () => <GroupingAndLabels />,
     },
