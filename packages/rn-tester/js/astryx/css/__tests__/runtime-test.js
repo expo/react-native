@@ -153,6 +153,36 @@ describe('stylesheets on intrinsic elements', () => {
     expect(stops[0]).toMatchObject({offset: 0, transform: 'rotate(0deg)'});
   });
 
+  it('keeps a cubic-bezier() whole through the animation shorthand', () => {
+    // Tailwind's own animate-pulse. The bezier's commas are INSIDE the
+    // function — a naive comma split cut the shorthand there and filed
+    // "cubic-bezier(.4" under animationName.
+    installStylesheet(`
+      @keyframes pulse { 50% { opacity: .5 } }
+      .animate-pulse { animation: pulse 2s cubic-bezier(.4,0,.6,1) infinite }
+    `);
+    const r = render(div({className: 'animate-pulse'}));
+    const style = hostStyle(r, 'div');
+    expect(style.animationDuration).toBe('2s');
+    expect(style.animationTimingFunction).toBe('cubic-bezier(.4,0,.6,1)');
+    expect(style.animationIterationCount).toBe('infinite');
+    expect(JSON.parse(style.animationKeyframes)).toEqual([
+      {offset: 0.5, opacity: 0.5},
+    ]);
+  });
+
+  it('keeps a cubic-bezier() whole through the transition shorthand', () => {
+    installStylesheet(
+      '.t2 { transition: transform .15s cubic-bezier(.4,0,.2,1), opacity 300ms }',
+    );
+    const style = hostStyle(render(div({className: 't2'})), 'div');
+    expect(style.transitionProperty).toBe('transform, opacity');
+    expect(style.transitionDuration).toBe('.15s, 300ms');
+    expect(style.transitionTimingFunction).toBe(
+      'cubic-bezier(.4,0,.2,1), ease',
+    );
+  });
+
   it('expands the transition shorthand into longhand lists', () => {
     installStylesheet('.t { transition: color 150ms ease-in, opacity 300ms }');
     const style = hostStyle(render(div({className: 't'})), 'div');

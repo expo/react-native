@@ -185,6 +185,38 @@ function camelize(property: string): string {
 
 const ANIMATION_TIMING =
   /^(linear|ease|ease-in|ease-out|ease-in-out|step-start|step-end|cubic-bezier\(.*\)|steps\(.*\))$/;
+
+/**
+ * Splits at top-level occurrences of any character in `separators`: commas or
+ * spaces inside a function's parentheses (`cubic-bezier(.4,0,.6,1)`) belong
+ * to that value, not to the list. The naive split()s this replaced cut
+ * `animation: pulse 2s cubic-bezier(.4,0,.6,1) infinite` at the bezier's
+ * commas and filed the fragment under animationName.
+ */
+function splitTopLevel(value: string, separators: string): Array<string> {
+  const parts: Array<string> = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of value) {
+    if (ch === '(') {
+      depth++;
+    } else if (ch === ')') {
+      depth = Math.max(0, depth - 1);
+    }
+    if (depth === 0 && separators.includes(ch)) {
+      if (current.trim() !== '') {
+        parts.push(current.trim());
+      }
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim() !== '') {
+    parts.push(current.trim());
+  }
+  return parts;
+}
 const ANIMATION_DIRECTION = /^(normal|reverse|alternate|alternate-reverse)$/;
 const ANIMATION_FILL = /^(none|forwards|backwards|both)$/;
 const TIME = /^-?[\d.]+m?s$/;
@@ -195,17 +227,13 @@ const TIME = /^-?[\d.]+m?s$/;
  * engine's current support).
  */
 function expandAnimationShorthand(value: string): {[string]: string} {
-  const first = value.split(',')[0].trim();
+  const first = splitTopLevel(value, ',')[0] ?? '';
   if (first === '' || first === 'none') {
     return {};
   }
   const out: {[string]: string} = {};
   let sawDuration = false;
-  for (const token of first.split(/\s+/)) {
-    const t = token.trim();
-    if (t === '') {
-      continue;
-    }
+  for (const t of splitTopLevel(first, ' \t\n')) {
     if (TIME.test(t)) {
       // First time is duration, second is delay (css-animations-1 §5).
       if (!sawDuration) {
@@ -249,16 +277,13 @@ function expandTransitionShorthand(value: string): {[string]: string} {
   const durations = [];
   const timings = [];
   const delays = [];
-  for (const segment of value.split(',')) {
+  for (const segment of splitTopLevel(value, ',')) {
     let property = 'all';
     let duration = '0s';
     let timing = 'ease';
     let delay = '0s';
     let sawDuration = false;
-    for (const token of segment.trim().split(/\s+/)) {
-      if (token === '') {
-        continue;
-      }
+    for (const token of splitTopLevel(segment, ' \t\n')) {
       if (TIME.test(token)) {
         if (!sawDuration) {
           duration = token;
