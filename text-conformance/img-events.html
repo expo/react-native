@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!--
+  The web column for HTMLEmbeddedExample~loading — hand-written, and the only
+  page here that is.
+
+  Every other web capture is rendered from the SHARED DOCUMENT the device
+  screen imports, so the two columns are the same markup by construction. This
+  route cannot work that way: its subject is the load lifecycle, which is
+  listeners and the record they build up, and a static document rendered to
+  HTML would show a list of events that nothing had dispatched. So this page
+  does the real thing — real <img> elements, real listeners, the report written
+  by the events as they fire — and is written by hand to match the device
+  case's frame and type.
+
+  The chrome below is copied from render-docs.js's page frame and
+  groupingDocs.js's Case, deliberately: 402px viewport, the grouped background,
+  the label/note/card rhythm. If those change, this changes with them.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=402, initial-scale=1" />
+    <style>
+      html { font-family: -apple-system, system-ui, sans-serif; }
+      body {
+        margin: 0;
+        background: #f2f2f7;
+        width: 402px;
+        box-sizing: border-box;
+        padding: 12px;
+      }
+      .intro { font-size: 13px; line-height: 18px; color: #6d6d72; margin: 0; }
+      .label {
+        font-size: 12px;
+        color: #6d6d72;
+        margin: 18px 0 2px 0;
+      }
+      .note { font-size: 11px; color: #8e8e93; margin: 0 0 6px 0; }
+      .frame {
+        border: 1px solid #d1d1d6;
+        border-radius: 6px;
+        padding: 10px;
+        background: #ffffff;
+      }
+      .report {
+        font-family: Menlo, monospace;
+        font-size: 11px;
+        margin-top: 6px;
+      }
+      .caption {
+        font-size: 13px;
+        line-height: 19px;
+        color: #6d6d72;
+        margin: 0 0 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="intro">
+      &lt;img&gt; is an inline replaced element: an atomic box inside a run of
+      text, shifting the line's height the way a letter would. That is what
+      separates it from a block-level &lt;Image&gt;.
+    </p>
+
+    <section>
+      <p class="label">Load events</p>
+      <p class="note">
+        loadstart, load and loadend fire as the image is fetched — the same
+        lifecycle the DOM exposes.
+      </p>
+      <div class="frame">
+        <p class="caption">
+          The web and the native side do not report the same set here, and the
+          difference is in the standard rather than in this engine: an
+          <code>&lt;img&gt;</code> fires only <code>load</code> and
+          <code>error</code>. <code>loadstart</code> and <code>loadend</code>
+          are progress events — they belong to <code>XMLHttpRequest</code> and
+          to the media elements, not to images — so a browser has nothing to
+          dispatch for them. The native side reports the whole lifecycle
+          because its image loader knows when the request began.
+        </p>
+        <img
+          src="https://reactnative.dev/img/logo-og.png"
+          width="200"
+          height="60"
+          onload="record('load')"
+          onerror="record('error')"
+        />
+        <div class="report" id="ok-report" style="color: #0a84ff">waiting…</div>
+      </div>
+    </section>
+
+    <section>
+      <p class="label">A broken image fires error</p>
+      <p class="note">
+        What a browser draws as a broken-image icon — the box below is the
+        browser's own, not a placeholder this page drew.
+      </p>
+      <div class="frame">
+        <img
+          src="https://reactnative.dev/img/this-does-not-exist.png"
+          width="120"
+          height="80"
+          style="background: #ffffff; border: 1px solid #d1d1d6"
+          onload="recordBroken('load')"
+          onerror="recordBroken('error')"
+        />
+        <div class="report" id="broken-report" style="color: #8e8e93">
+          no error yet
+        </div>
+      </div>
+    </section>
+
+    <script>
+      /*
+       * The handlers are inline attributes on purpose: a listener attached
+       * from a script at the end of the document can miss a `load` that has
+       * already fired from cache, and a page about which events fire is the
+       * last place to let a race decide the answer.
+       */
+      var okEvents = [];
+      var brokenEvents = [];
+
+      function record(name) {
+        okEvents.push(name);
+        document.getElementById('ok-report').textContent =
+          okEvents.join(' → ');
+      }
+
+      function recordBroken(name) {
+        brokenEvents.push(name);
+        var el = document.getElementById('broken-report');
+        el.textContent =
+          brokenEvents.indexOf('error') === -1
+            ? brokenEvents.join(' → ')
+            : 'error fired';
+        el.style.color =
+          brokenEvents.indexOf('error') === -1 ? '#8e8e93' : '#ff3b30';
+      }
+    </script>
+  </body>
+</html>
