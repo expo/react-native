@@ -1,0 +1,691 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; border: 0; box-sizing: content-box; }
+  body { font-family: -apple-system, sans-serif; padding: 16px; }
+  .intro { font-size: 11px; color: #8E8E93; margin-bottom: 8px; }
+  /*
+   * A case title is read, not glanced at: it is how you find the case you came
+   * for among 134, and how you say which one disagrees. Full-contrast body
+   * colour rather than the quiet grey the captions use — the same call the
+   * device screen makes in choosing its primary label colour over the tertiary
+   * one, so the two presentations of one corpus keep reading the same.
+   *
+   * No backticks in this comment: it lives inside a template literal.
+   */
+  .case-label { font-size: 10px; color: #1C1C1E; margin-bottom: 2px; }
+  section { margin-bottom: 24px; }
+</style>
+</head><body>
+<div class="intro">134 cases — one corpus (cases.js), rendered by this browser and by the device screens from the same trees.</div>
+
+    <section data-case="PROBE-text-align-center-centres-the-line">
+      <div class="case-label">PROBE-text-align-center-centres-the-line</div>
+      <div style="width:300px;line-height:20px;font-size:16px;text-align:center" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="a"></span><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#34c759" data-m="b"></span></div>
+    </section>
+
+    <section data-case="PROBE-text-align-right-packs-to-the-end">
+      <div class="case-label">PROBE-text-align-right-packs-to-the-end</div>
+      <div style="width:300px;line-height:20px;font-size:16px;text-align:right" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="a"></span><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#af52de" data-m="b"></span></div>
+    </section>
+
+    <section data-case="text-align-does-not-move-a-block-child">
+      <div class="case-label">text-align-does-not-move-a-block-child</div>
+      <div style="width:300px;line-height:20px;font-size:16px;text-align:right" data-m="root"><div style="display:block;height:20px;background-color:#0a84ff" data-m="blockChild"></div><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="inlineBox"></span></div>
+    </section>
+
+    <section data-case="text-align-inherits-into-a-nested-block">
+      <div class="case-label">text-align-inherits-into-a-nested-block</div>
+      <div style="width:300px;line-height:20px;font-size:16px;text-align:right" data-m="root"><div style="display:block;background-color:#e5e5ea" data-m="nested"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="inlineBox"></span></div></div>
+    </section>
+
+    <section data-case="PROBE-border-box-keeps-padding-inside-the-width">
+      <div class="case-label">PROBE-border-box-keeps-padding-inside-the-width</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="box-sizing:border-box;width:200px;padding-left:30px;padding-right:30px;display:block" data-m="outer"><div style="width:auto;height:20px;background-color:#0a84ff;display:block" data-m="inner"></div></div></div>
+    </section>
+
+    <section data-case="PROBE-display-contents-child-joins-the-parent-flow">
+      <div class="case-label">PROBE-display-contents-child-joins-the-parent-flow</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="before"></span><div style="display:contents"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="inner"></span></div><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="after"></span></div>
+    </section>
+
+    <section data-case="contents-with-block-children-stacks-them-in-the-outer-flow">
+      <div class="case-label">contents-with-block-children-stacks-them-in-the-outer-flow</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="before"></span><div style="display:contents"><div style="display:block;height:20px;background-color:#0a84ff" data-m="first"></div><div style="display:block;height:20px;background-color:#34c759" data-m="second"></div></div></div>
+    </section>
+
+    <section data-case="margins-collapse-through-a-contents-wrapper">
+      <div class="case-label">margins-collapse-through-a-contents-wrapper</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;height:20px;margin-bottom:30px;background-color:#0a84ff" data-m="before"></div><div style="display:contents"><div style="display:block;height:20px;margin-top:20px;background-color:#34c759" data-m="inner"></div></div></div>
+    </section>
+
+    <section data-case="overflow-hidden-inline-block-aligns-by-its-bottom-margin-edge">
+      <div class="case-label">overflow-hidden-inline-block-aligns-by-its-bottom-margin-edge</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:40px;background-color:#0a84ff" data-m="plain">Ag</span><span style="display:inline-block;overflow:hidden;width:40px;height:40px;background-color:#34c759" data-m="clipped">Ag</span></div>
+    </section>
+
+    <section data-case="PROBE-percentage-width-resolves-against-the-container">
+      <div class="case-label">PROBE-percentage-width-resolves-against-the-container</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:50%;height:20px;background-color:#30b0c7;display:block" data-m="half"></div></div>
+    </section>
+
+    <section data-case="PROBE-max-width-caps-a-block">
+      <div class="case-label">PROBE-max-width-caps-a-block</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:auto;height:20px;background-color:#0a84ff;display:block;max-width:120px" data-m="capped"></div></div>
+    </section>
+
+    <section data-case="auto-inline-margins-centre-a-block">
+      <div class="case-label">auto-inline-margins-centre-a-block</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:200px;height:20px;background-color:#34c759;display:block;margin-left:auto;margin-right:auto" data-m="centred"></div></div>
+    </section>
+
+    <section data-case="one-auto-inline-margin-takes-all-the-leftover">
+      <div class="case-label">one-auto-inline-margin-takes-all-the-leftover</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:200px;height:20px;background-color:#ff9500;display:block;margin-left:auto" data-m="pushed"></div></div>
+    </section>
+
+    <section data-case="a-percentage-min-height-against-an-auto-parent-does-not-apply">
+      <div class="case-label">a-percentage-min-height-against-an-auto-parent-does-not-apply</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;background-color:#ff9500" data-m="parent"><div style="width:100px;height:20px;background-color:#af52de;display:block;min-height:50%" data-m="child"></div></div></div>
+    </section>
+
+    <section data-case="relative-percentage-offset-resolves-against-the-container">
+      <div class="case-label">relative-percentage-offset-resolves-against-the-container</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:20px;background-color:#ff3b30;display:block;position:relative;left:10%" data-m="shifted"></div></div>
+    </section>
+
+    <section data-case="a-relative-box-given-both-left-and-right-uses-left">
+      <div class="case-label">a-relative-box-given-both-left-and-right-uses-left</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:20px;background-color:#30b0c7;display:block;position:relative;left:30px;right:10px" data-m="shifted"></div></div>
+    </section>
+
+    <section data-case="a-relative-box-given-both-top-and-bottom-uses-top">
+      <div class="case-label">a-relative-box-given-both-top-and-bottom-uses-top</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:20px;background-color:#0a84ff;display:block;position:relative;top:15px;bottom:5px" data-m="shifted"></div><div style="display:block;height:20px;background-color:#34c759" data-m="after"></div></div>
+    </section>
+
+    <section data-case="a-percentage-top-offset-resolves-against-the-container-height">
+      <div class="case-label">a-percentage-top-offset-resolves-against-the-container-height</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;height:100px;background-color:#e5e5ea" data-m="holder"><div style="width:100px;height:20px;background-color:#34c759;display:block;position:relative;top:25%" data-m="shifted"></div></div></div>
+    </section>
+
+    <section data-case="margins-collapse-through-several-empty-siblings">
+      <div class="case-label">margins-collapse-through-several-empty-siblings</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:20px;background-color:#ff9500;display:block;margin-block-end:10px" data-m="first"></div><div style="display:block;margin-block:25px"></div><div style="display:block;margin-block:15px"></div><div style="width:100px;height:20px;background-color:#af52de;display:block;margin-block-start:10px" data-m="last"></div></div>
+    </section>
+
+    <section data-case="vertical-align-does-not-move-a-block-child">
+      <div class="case-label">vertical-align-does-not-move-a-block-child</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:20px;background-color:#ff3b30;display:block;vertical-align:bottom" data-m="a"></div><div style="width:100px;height:20px;background-color:#30b0c7;display:block" data-m="b"></div></div>
+    </section>
+
+    <section data-case="a-float-and-a-following-block-share-the-band">
+      <div class="case-label">a-float-and-a-following-block-share-the-band</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:100px;height:40px;background-color:#0a84ff" data-m="floated"></div><div style="width:200px;height:20px;background-color:#0a84ff;display:block" data-m="after"></div></div>
+    </section>
+
+    <section data-case="rtl-float-inline-start-packs-against-the-right">
+      <div class="case-label">rtl-float-inline-start-packs-against-the-right</div>
+      <div style="width:300px;line-height:20px;font-size:16px;direction:rtl;overflow:hidden" data-m="root"><div style="float:inline-start;width:100px;height:30px;background-color:#0a84ff" data-m="floated"></div></div>
+    </section>
+
+    <section data-case="rtl-float-inline-end-packs-against-the-left">
+      <div class="case-label">rtl-float-inline-end-packs-against-the-left</div>
+      <div style="width:300px;line-height:20px;font-size:16px;direction:rtl;overflow:hidden" data-m="root"><div style="float:inline-end;width:100px;height:30px;background-color:#34c759" data-m="floated"></div></div>
+    </section>
+
+    <section data-case="an-rtl-float-is-inset-by-the-containers-padding">
+      <div class="case-label">an-rtl-float-is-inset-by-the-containers-padding</div>
+      <div style="width:300px;line-height:20px;font-size:16px;direction:rtl;overflow:hidden;box-sizing:border-box;padding-left:15px;padding-right:25px" data-m="root"><div style="float:inline-start;width:100px;height:30px;background-color:#af52de" data-m="floated"></div></div>
+    </section>
+
+    <section data-case="rtl-places-a-block-child-from-the-right">
+      <div class="case-label">rtl-places-a-block-child-from-the-right</div>
+      <div style="width:300px;line-height:20px;font-size:16px;direction:rtl" data-m="root"><div style="width:100px;height:20px;background-color:#34c759;display:block" data-m="child"></div></div>
+    </section>
+
+    <section data-case="an-absolute-child-positions-from-the-padding-box">
+      <div class="case-label">an-absolute-child-positions-from-the-padding-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;position:relative;box-sizing:border-box;padding:10px;height:60px;background-color:#30b0c7" data-m="holder"><div style="position:absolute;top:5px;left:5px;width:40px;height:20px;background-color:#ff3b30" data-m="abs"></div></div></div>
+    </section>
+
+    <section data-case="an-absolute-child-with-no-offsets-sits-at-its-static-position">
+      <div class="case-label">an-absolute-child-with-no-offsets-sits-at-its-static-position</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;position:relative;height:100px;background-color:#e5e5ea" data-m="holder"><div style="height:30px;background-color:#0a84ff" data-m="first"></div><div style="position:absolute;width:40px;height:20px;background-color:#ff3b30" data-m="abs"></div></div></div>
+    </section>
+
+    <section data-case="an-absolute-child-offsets-from-the-bottom-and-right">
+      <div class="case-label">an-absolute-child-offsets-from-the-bottom-and-right</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;position:relative;box-sizing:border-box;padding:10px;height:100px;background-color:#e5e5ea" data-m="holder"><div style="position:absolute;bottom:5px;right:5px;width:40px;height:20px;background-color:#ff3b30" data-m="abs"></div></div></div>
+    </section>
+
+    <section data-case="opposite-offsets-size-an-auto-width-absolute-box">
+      <div class="case-label">opposite-offsets-size-an-auto-width-absolute-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;position:relative;height:60px;background-color:#e5e5ea" data-m="holder"><div style="position:absolute;left:20px;right:50px;height:20px;background-color:#ff3b30" data-m="abs"></div></div></div>
+    </section>
+
+    <section data-case="an-absolute-child-does-not-take-space-in-the-flow">
+      <div class="case-label">an-absolute-child-does-not-take-space-in-the-flow</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;position:relative;background-color:#e5e5ea" data-m="holder"><div style="height:20px;background-color:#0a84ff" data-m="first"></div><div style="position:absolute;top:0px;left:0px;width:40px;height:90px;background-color:#ff3b30" data-m="abs"></div><div style="height:20px;background-color:#34c759" data-m="after"></div></div></div>
+    </section>
+
+    <section data-case="an-absolute-box-does-not-collapse-margins-with-its-siblings">
+      <div class="case-label">an-absolute-box-does-not-collapse-margins-with-its-siblings</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;position:relative;background-color:#e5e5ea" data-m="holder"><div style="height:20px;margin-bottom:30px;background-color:#0a84ff" data-m="first"></div><div style="position:absolute;width:40px;height:20px;margin-top:100px;background-color:#ff3b30" data-m="abs"></div><div style="height:20px;margin-top:20px;background-color:#34c759" data-m="after"></div></div></div>
+    </section>
+
+    <section data-case="nested-percentage-widths-compound">
+      <div class="case-label">nested-percentage-widths-compound</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;width:50%;background-color:#0a84ff" data-m="outer"><div style="width:50%;height:20px;background-color:#ff9500;display:block" data-m="inner"></div></div></div>
+    </section>
+
+    <section data-case="a-percentage-min-width-resolves-against-the-container">
+      <div class="case-label">a-percentage-min-width-resolves-against-the-container</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#af52de;display:block;min-width:40%" data-m="clamped"></div></div>
+    </section>
+
+    <section data-case="a-border-reduces-the-content-box-under-border-box">
+      <div class="case-label">a-border-reduces-the-content-box-under-border-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;box-sizing:border-box;width:200px;border-left-width:15px;border-right-width:15px;border-left-style:solid;border-right-style:solid;border-left-color:#af52de;border-right-color:#af52de" data-m="outer"><div style="width:auto;height:20px;background-color:#ff3b30;display:block" data-m="inner"></div></div></div>
+    </section>
+
+    <section data-case="a-block-container-ignores-gap">
+      <div class="case-label">a-block-container-ignores-gap</div>
+      <div style="width:300px;line-height:20px;font-size:16px;gap:30px" data-m="root"><div style="width:100px;height:20px;background-color:#30b0c7;display:block" data-m="first"></div><div style="width:100px;height:20px;background-color:#0a84ff;display:block" data-m="second"></div></div>
+    </section>
+
+    <section data-case="content-box-percentage-padding-resolves-against-the-width">
+      <div class="case-label">content-box-percentage-padding-resolves-against-the-width</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;box-sizing:content-box;width:100px;height:20px;padding-left:10%;background-color:#af52de" data-m="padded"></div></div>
+    </section>
+
+    <section data-case="percentage-margin-resolves-against-the-width">
+      <div class="case-label">percentage-margin-resolves-against-the-width</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:20px;background-color:#34c759;display:block;margin-top:10%" data-m="shifted"></div></div>
+    </section>
+
+    <section data-case="a-percentage-height-against-an-auto-height-parent-is-auto">
+      <div class="case-label">a-percentage-height-against-an-auto-height-parent-is-auto</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;background-color:#30b0c7" data-m="parent"><div style="width:100px;height:50%;background-color:#ff9500;display:block" data-m="child"></div></div></div>
+    </section>
+
+    <section data-case="a-percentage-height-against-a-definite-parent-applies">
+      <div class="case-label">a-percentage-height-against-a-definite-parent-applies</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;height:80px;background-color:#30b0c7" data-m="parent"><div style="display:block;height:50%;background-color:#ff3b30" data-m="child"></div></div></div>
+    </section>
+
+    <section data-case="a-percentage-height-resolves-against-the-content-box">
+      <div class="case-label">a-percentage-height-resolves-against-the-content-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;box-sizing:content-box;height:80px;padding-top:10px;padding-bottom:10px;background-color:#30b0c7" data-m="parent"><div style="display:block;height:50%;background-color:#ff3b30" data-m="child"></div></div></div>
+    </section>
+
+    <section data-case="a-negative-inline-margin-pulls-a-block-out">
+      <div class="case-label">a-negative-inline-margin-pulls-a-block-out</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:20px;background-color:#af52de;display:block;margin-left:-20px" data-m="pulled"></div></div>
+    </section>
+
+    <section data-case="clear-both-drops-below-floats-on-both-sides">
+      <div class="case-label">clear-both-drops-below-floats-on-both-sides</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:80px;height:30px;background-color:#0a84ff" data-m="left"></div><div style="float:right;width:80px;height:50px;background-color:#34c759" data-m="right"></div><div style="clear:both;display:block;width:40px;height:20px;background-color:#ff3b30" data-m="cleared"></div></div>
+    </section>
+
+    <section data-case="a-max-width-clamps-against-a-percentage-margin">
+      <div class="case-label">a-max-width-clamps-against-a-percentage-margin</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block" data-m="looseParent"><div style="display:block;width:200px;background-color:#e5e5ea" data-m="container"><div style="display:block;max-width:150px;margin-left:10%;height:20px;background-color:#ff3b30" data-m="clamped"></div></div></div></div>
+    </section>
+
+    <section data-case="a-max-height-clamps-against-a-percentage-margin">
+      <div class="case-label">a-max-height-clamps-against-a-percentage-margin</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block" data-m="looseParent"><div style="display:block;width:200px;height:200px;background-color:#e5e5ea" data-m="container"><div style="display:block;height:180px;max-height:100px;margin-top:10%;background-color:#ff3b30" data-m="clamped"></div></div></div></div>
+    </section>
+
+    <section data-case="min-width-beats-max-width-when-they-conflict">
+      <div class="case-label">min-width-beats-max-width-when-they-conflict</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#ff3b30;display:block;min-width:180px;max-width:90px" data-m="conflicted"></div></div>
+    </section>
+
+    <section data-case="min-width-under-border-box-includes-the-padding">
+      <div class="case-label">min-width-under-border-box-includes-the-padding</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;box-sizing:border-box;width:40px;min-width:120px;height:30px;padding-left:20px;padding-right:20px;background-color:#0a84ff" data-m="clamped"><div style="display:block;height:10px;background-color:#ff3b30" data-m="inner"></div></div></div>
+    </section>
+
+    <section data-case="min-width-under-content-box-excludes-the-padding">
+      <div class="case-label">min-width-under-content-box-excludes-the-padding</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;box-sizing:content-box;width:40px;min-width:120px;height:30px;padding-left:20px;padding-right:20px;background-color:#0a84ff" data-m="clamped"><div style="display:block;height:10px;background-color:#ff3b30" data-m="inner"></div></div></div>
+    </section>
+
+    <section data-case="a-max-height-does-not-move-the-children">
+      <div class="case-label">a-max-height-does-not-move-the-children</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;max-height:30px;background-color:#e5e5ea" data-m="capped"><div style="display:block;height:20px;background-color:#0a84ff" data-m="first"></div><div style="display:block;height:20px;background-color:#34c759" data-m="second"></div></div></div>
+    </section>
+
+    <section data-case="an-auto-width-beats-auto-margins">
+      <div class="case-label">an-auto-width-beats-auto-margins</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:auto;height:20px;background-color:#30b0c7;display:block;margin-left:auto;margin-right:auto" data-m="filled"></div></div>
+    </section>
+
+    <section data-case="a-percentage-width-resolves-against-the-content-box">
+      <div class="case-label">a-percentage-width-resolves-against-the-content-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;box-sizing:border-box;width:200px;padding-left:20px;padding-right:20px;background-color:#30b0c7" data-m="padded"><div style="width:50%;height:20px;background-color:#0a84ff;display:block" data-m="half"></div></div></div>
+    </section>
+
+    <section data-case="float-margins-never-collapse">
+      <div class="case-label">float-margins-never-collapse</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:300px;height:20px;margin-bottom:20px;background-color:#0a84ff" data-m="f1"></div><div style="float:left;width:300px;height:20px;margin-top:30px;background-color:#34c759" data-m="f2"></div></div>
+    </section>
+
+    <section data-case="a-float-with-padding-and-border-takes-its-whole-box">
+      <div class="case-label">a-float-with-padding-and-border-takes-its-whole-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;box-sizing:content-box;width:60px;height:20px;padding-left:10px;padding-right:10px;border-left-width:5px;border-right-width:5px;border-left-style:solid;border-right-style:solid;border-left-color:#af52de;border-right-color:#af52de;background-color:#ff9500" data-m="floated"></div><div style="float:left;width:100px;height:20px;background-color:#30b0c7" data-m="second"></div></div>
+    </section>
+
+    <section data-case="a-percentage-width-float-resolves-against-the-container">
+      <div class="case-label">a-percentage-width-float-resolves-against-the-container</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:25%;height:20px;background-color:#ff3b30" data-m="floated"></div></div>
+    </section>
+
+    <section data-case="opposite-floats-share-one-line">
+      <div class="case-label">opposite-floats-share-one-line</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:100px;height:20px;background-color:#0a84ff" data-m="left"></div><div style="float:right;width:100px;height:20px;background-color:#34c759" data-m="right"></div></div>
+    </section>
+
+    <section data-case="a-definite-height-stops-the-bottom-margin-collapsing-out">
+      <div class="case-label">a-definite-height-stops-the-bottom-margin-collapsing-out</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="height:60px;background-color:#e5e5ea" data-m="parent"><div style="height:20px;margin-bottom:30px;background-color:#0a84ff" data-m="child"></div></div><div style="height:20px;background-color:#34c759" data-m="after"></div></div>
+    </section>
+
+    <section data-case="a-min-height-stops-a-block-collapsing-through">
+      <div class="case-label">a-min-height-stops-a-block-collapsing-through</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="height:20px;background-color:#0a84ff" data-m="before"></div><div style="min-height:10px;margin-top:20px;margin-bottom:20px" data-m="empty"></div><div style="height:20px;background-color:#34c759" data-m="after"></div></div>
+    </section>
+
+    <section data-case="two-negative-margins-collapse-to-the-most-negative">
+      <div class="case-label">two-negative-margins-collapse-to-the-most-negative</div>
+      <div style="width:300px;line-height:20px;font-size:16px;padding-top:40px" data-m="root"><div style="height:20px;margin-bottom:-10px;background-color:#0a84ff" data-m="first"></div><div style="height:20px;margin-top:-30px;background-color:#34c759" data-m="second"></div></div>
+    </section>
+
+    <section data-case="auto-margins-do-not-centre-a-float">
+      <div class="case-label">auto-margins-do-not-centre-a-float</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:100px;height:20px;margin-left:auto;margin-right:auto;background-color:#af52de" data-m="floated"></div></div>
+    </section>
+
+    <section data-case="a-max-width-caps-a-float">
+      <div class="case-label">a-max-width-caps-a-float</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:200px;max-width:80px;height:20px;background-color:#ff9500" data-m="floated"></div><div style="float:left;width:40px;height:20px;background-color:#30b0c7" data-m="second"></div></div>
+    </section>
+
+    <section data-case="a-float-is-offset-by-its-own-inline-margin">
+      <div class="case-label">a-float-is-offset-by-its-own-inline-margin</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:100px;height:30px;margin-left:20px;background-color:#af52de" data-m="floated"></div></div>
+    </section>
+
+    <section data-case="a-right-float-is-offset-by-its-own-inline-margin">
+      <div class="case-label">a-right-float-is-offset-by-its-own-inline-margin</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:right;width:100px;height:30px;margin-right:20px;background-color:#30b0c7" data-m="floated"></div></div>
+    </section>
+
+    <section data-case="a-negative-margin-on-a-float-pulls-it-out">
+      <div class="case-label">a-negative-margin-on-a-float-pulls-it-out</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:100px;height:30px;margin-left:-20px;background-color:#0a84ff" data-m="floated"></div></div>
+    </section>
+
+    <section data-case="clear-left-ignores-a-right-float">
+      <div class="case-label">clear-left-ignores-a-right-float</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:right;width:80px;height:50px;background-color:#34c759" data-m="right"></div><div style="clear:left;display:block;width:40px;height:20px;background-color:#ff3b30" data-m="cleared"></div></div>
+    </section>
+
+    <section data-case="min-width-clamps-a-narrower-box">
+      <div class="case-label">min-width-clamps-a-narrower-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#34c759;display:block;min-width:120px" data-m="clamped"></div></div>
+    </section>
+
+    <section data-case="min-height-clamps-a-shorter-box">
+      <div class="case-label">min-height-clamps-a-shorter-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:10px;background-color:#ff9500;display:block;min-height:50px" data-m="clamped"></div></div>
+    </section>
+
+    <section data-case="max-height-caps-a-taller-box">
+      <div class="case-label">max-height-caps-a-taller-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:200px;background-color:#af52de;display:block;max-height:40px" data-m="capped"></div></div>
+    </section>
+
+    <section data-case="aspect-ratio-sizes-the-axis-that-is-auto">
+      <div class="case-label">aspect-ratio-sizes-the-axis-that-is-auto</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;width:120px;aspect-ratio:3 / 1;background-color:#0a84ff" data-m="ratio"></div></div>
+    </section>
+
+    <section data-case="aspect-ratio-sizes-the-width-from-a-definite-height">
+      <div class="case-label">aspect-ratio-sizes-the-width-from-a-definite-height</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;vertical-align:top" data-m="wrapper"><div style="display:block;height:20px;aspect-ratio:2 / 1;background-color:#0a84ff" data-m="ratio"></div></span></div>
+    </section>
+
+    <section data-case="relative-offset-does-not-move-the-next-box">
+      <div class="case-label">relative-offset-does-not-move-the-next-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:20px;background-color:#ff3b30;display:block;position:relative;left:30px;top:10px" data-m="shifted"></div><div style="width:100px;height:20px;background-color:#30b0c7;display:block" data-m="after"></div></div>
+    </section>
+
+    <section data-case="percentage-padding-resolves-against-the-width">
+      <div class="case-label">percentage-padding-resolves-against-the-width</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;padding-top:10%;background-color:#34c759" data-m="padded"></div></div>
+    </section>
+
+    <section data-case="border-box-includes-the-border-in-the-width">
+      <div class="case-label">border-box-includes-the-border-in-the-width</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="box-sizing:border-box;width:200px;border-left-width:20px;border-right-width:20px;border-left-style:solid;border-right-style:solid;border-left-color:#af52de;border-right-color:#af52de;display:block" data-m="outer"><div style="width:auto;height:20px;background-color:#0a84ff;display:block" data-m="inner"></div></div></div>
+    </section>
+
+    <section data-case="overflow-hidden-stops-a-margin-collapsing-through">
+      <div class="case-label">overflow-hidden-stops-a-margin-collapsing-through</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;overflow:hidden;background-color:#ff9500" data-m="context"><div style="width:100px;height:20px;background-color:#34c759;display:block;margin-top:30px" data-m="child"></div></div><div style="width:100px;height:20px;background-color:#ff9500;display:block" data-m="after"></div></div>
+    </section>
+
+    <section data-case="padding-stops-the-parent-child-collapse">
+      <div class="case-label">padding-stops-the-parent-child-collapse</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;padding-top:10px;background-color:#30b0c7" data-m="parent"><div style="width:100px;height:20px;background-color:#af52de;display:block;margin-top:40px" data-m="child"></div></div></div>
+    </section>
+
+    <section data-case="a-negative-top-margin-pulls-the-box-up">
+      <div class="case-label">a-negative-top-margin-pulls-the-box-up</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:100px;height:40px;background-color:#ff3b30;display:block" data-m="first"></div><div style="width:100px;height:20px;background-color:#30b0c7;display:block;margin-top:-15px" data-m="second"></div></div>
+    </section>
+
+    <section data-case="adjacent-siblings-collapse-to-the-larger">
+      <div class="case-label">adjacent-siblings-collapse-to-the-larger</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#0a84ff;display:block;margin-block-end:20px" data-m="a"></div><div style="width:40px;height:20px;background-color:#34c759;display:block;margin-block-start:30px" data-m="b"></div><div style="width:40px;height:20px;background-color:#ff9500" data-m="after"></div></div>
+    </section>
+
+    <section data-case="a-border-stops-the-parent-child-collapse">
+      <div class="case-label">a-border-stops-the-parent-child-collapse</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#af52de" data-m="before"></div><div style="width:300px;display:block;border-top-width:1px;border-top-style:solid;border-top-color:#000" data-m="parent"><div style="width:40px;height:20px;background-color:#ff3b30;display:block;margin-block-start:25px" data-m="child"></div></div><div style="width:40px;height:20px;background-color:#30b0c7" data-m="after"></div></div>
+    </section>
+
+    <section data-case="an-empty-block-collapses-through">
+      <div class="case-label">an-empty-block-collapses-through</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#0a84ff" data-m="a"></div><div style="display:block;margin-block-start:20px;margin-block-end:30px" data-m="empty"></div><div style="width:40px;height:20px;background-color:#34c759" data-m="b"></div></div>
+    </section>
+
+    <section data-case="negative-and-positive-margins-combine">
+      <div class="case-label">negative-and-positive-margins-combine</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#ff9500;display:block;margin-block-end:30px" data-m="a"></div><div style="width:40px;height:20px;background-color:#af52de;display:block;margin-block-start:-10px" data-m="b"></div><div style="width:40px;height:20px;background-color:#ff3b30" data-m="after"></div></div>
+    </section>
+
+    <section data-case="a-float-shrinks-to-fit">
+      <div class="case-label">a-float-shrinks-to-fit</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;display:block" data-m="floated"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="inner"></span></div><div style="width:40px;height:20px;background-color:#0a84ff" data-m="after"></div></div>
+    </section>
+
+    <section data-case="a-float-with-auto-width-shrinks-to-the-available-space">
+      <div class="case-label">a-float-with-auto-width-shrinks-to-the-available-space</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;display:block" data-m="floated"><span style="display:inline-block;width:120px;height:20px;vertical-align:top;background-color:#34c759" data-m="c1"></span><span style="display:inline-block;width:120px;height:20px;vertical-align:top;background-color:#ff9500" data-m="c2"></span><span style="display:inline-block;width:120px;height:20px;vertical-align:top;background-color:#af52de" data-m="c3"></span></div></div>
+    </section>
+
+    <section data-case="two-floats-pack-then-wrap">
+      <div class="case-label">two-floats-pack-then-wrap</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:120px;height:20px;background-color:#0a84ff" data-m="f1"></div><div style="float:left;width:120px;height:20px;background-color:#34c759" data-m="f2"></div><div style="float:left;width:120px;height:20px;background-color:#ff9500" data-m="f3"></div></div>
+    </section>
+
+    <section data-case="clear-drops-below-the-float">
+      <div class="case-label">clear-drops-below-the-float</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:100px;height:40px;background-color:#af52de" data-m="floated"></div><div style="clear:left;display:block;width:40px;height:20px;background-color:#ff3b30" data-m="cleared"></div></div>
+    </section>
+
+    <section data-case="a-line-shortens-beside-a-float">
+      <div class="case-label">a-line-shortens-beside-a-float</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:120px;height:40px;background-color:#af52de" data-m="floated"></div><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="a"></span><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="b"></span><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="c"></span><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#34c759" data-m="d"></span></div>
+    </section>
+
+    <section data-case="a-plain-block-does-not-contain-its-floats">
+      <div class="case-label">a-plain-block-does-not-contain-its-floats</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="display:block;background-color:#e5e5ea" data-m="plain"><div style="float:left;width:100px;height:40px;background-color:#af52de" data-m="floated"></div></div><div style="display:block;height:20px;background-color:#34c759" data-m="after"></div></div>
+    </section>
+
+    <section data-case="a-float-does-not-escape-an-inner-formatting-context">
+      <div class="case-label">a-float-does-not-escape-an-inner-formatting-context</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="display:block;overflow:hidden;background-color:#e5e5ea" data-m="inner"><div style="float:left;width:100px;height:40px;background-color:#af52de" data-m="floated"></div></div><div style="display:block;height:20px;background-color:#34c759" data-m="after"></div></div>
+    </section>
+
+    <section data-case="floating-an-inline-blockifies-it">
+      <div class="case-label">floating-an-inline-blockifies-it</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><span style="float:left;display:inline;width:100px;height:30px;background-color:#af52de" data-m="floated"></span><div style="float:left;width:40px;height:30px;background-color:#30b0c7" data-m="second"></div></div>
+    </section>
+
+    <section data-case="absolute-positioning-cancels-float">
+      <div class="case-label">absolute-positioning-cancels-float</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;position:relative;background-color:#e5e5ea" data-m="holder"><div style="position:absolute;float:left;top:0px;left:0px;width:100px;height:40px;background-color:#ff3b30" data-m="abs"></div><div style="display:block;height:20px;background-color:#34c759" data-m="inflow"></div></div></div>
+    </section>
+
+    <section data-case="a-float-can-clear-another-float">
+      <div class="case-label">a-float-can-clear-another-float</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:100px;height:40px;background-color:#af52de" data-m="first"></div><div style="float:left;clear:left;width:40px;height:20px;background-color:#ff3b30" data-m="second"></div></div>
+    </section>
+
+    <section data-case="clearance-absorbs-a-smaller-top-margin">
+      <div class="case-label">clearance-absorbs-a-smaller-top-margin</div>
+      <div style="width:300px;line-height:20px;font-size:16px;overflow:hidden" data-m="root"><div style="float:left;width:100px;height:40px;background-color:#af52de" data-m="floated"></div><div style="clear:left;display:block;height:20px;margin-top:25px;background-color:#ff3b30" data-m="cleared"></div></div>
+    </section>
+
+    <section data-case="rtl-inline-run-starts-at-the-right-edge">
+      <div class="case-label">rtl-inline-run-starts-at-the-right-edge</div>
+      <div style="width:300px;line-height:20px;font-size:16px;direction:rtl" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="first"></span><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#af52de" data-m="second"></span></div>
+    </section>
+
+    <section data-case="atomic-inlines-in-a-row">
+      <div class="case-label">atomic-inlines-in-a-row</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="a"></span><span style="display:inline-block;width:60px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="b"></span><span style="display:inline-block;width:30px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="c"></span></div>
+    </section>
+
+    <section data-case="atomic-inlines-wrap">
+      <div class="case-label">atomic-inlines-wrap</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#34c759" data-m="a"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#ff9500" data-m="b"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#af52de" data-m="c"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="d"></span></div>
+    </section>
+
+    <section data-case="nowrap-keeps-atomic-inlines-on-one-line">
+      <div class="case-label">nowrap-keeps-atomic-inlines-on-one-line</div>
+      <div style="width:300px;line-height:20px;font-size:16px;white-space:nowrap" data-m="root"><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="a"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="b"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#34c759" data-m="c"></span><span style="display:inline-block;width:100px;height:20px;vertical-align:top;background-color:#ff9500" data-m="d"></span></div>
+    </section>
+
+    <section data-case="nowrap-does-not-stop-a-block-child-breaking-the-run">
+      <div class="case-label">nowrap-does-not-stop-a-block-child-breaking-the-run</div>
+      <div style="width:300px;line-height:20px;font-size:16px;white-space:nowrap" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="a"></span><div style="display:block;height:20px;background-color:#0a84ff" data-m="blockChild"></div><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="b"></span></div>
+    </section>
+
+    <section data-case="atomic-inline-taller-than-line-height">
+      <div class="case-label">atomic-inline-taller-than-line-height</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:50px;vertical-align:top;background-color:#30b0c7" data-m="tall"></span></div>
+    </section>
+
+    <section data-case="text-only-honours-line-height">
+      <div class="case-label">text-only-honours-line-height</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">Ag</div>
+    </section>
+
+    <section data-case="short-box-alone-honours-line-height">
+      <div class="case-label">short-box-alone-honours-line-height</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:10px;vertical-align:top;background-color:#0a84ff" data-m="only"></span></div>
+    </section>
+
+    <section data-case="line-height-is-a-floor-not-a-ceiling">
+      <div class="case-label">line-height-is-a-floor-not-a-ceiling</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:200px;height:10px;vertical-align:top;background-color:#34c759" data-m="shortA"></span><span style="display:inline-block;width:200px;height:10px;vertical-align:top;background-color:#ff9500" data-m="shortB"></span></div>
+    </section>
+
+    <section data-case="a-tall-line-pushes-the-next-line-down">
+      <div class="case-label">a-tall-line-pushes-the-next-line-down</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:200px;height:50px;vertical-align:top;background-color:#af52de" data-m="tall"></span><span style="display:inline-block;width:200px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="second"></span></div>
+    </section>
+
+    <section data-case="nested-in-one-inline">
+      <div class="case-label">nested-in-one-inline</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="before"></span><span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="inner"></span></span></div>
+    </section>
+
+    <section data-case="nested-three-deep">
+      <div class="case-label">nested-three-deep</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="before"></span><span><span><span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="inner"></span></span></span></span></div>
+    </section>
+
+    <section data-case="nested-then-sibling">
+      <div class="case-label">nested-then-sibling</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="inner"></span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="after"></span></div>
+    </section>
+
+    <section data-case="inline-flex-atomic">
+      <div class="case-label">inline-flex-atomic</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="before"></span><span style="display:inline-flex;width:80px;height:20px;vertical-align:top" data-m="flex"><span style="display:inline-block;width:20px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="flexchild"></span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="after"></span></div>
+    </section>
+
+    <section data-case="inline-grid-atomic">
+      <div class="case-label">inline-grid-atomic</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="before"></span><span style="display:inline-grid;width:80px;height:20px;vertical-align:top" data-m="grid"><span style="display:inline-block;width:20px;height:20px;vertical-align:top;background-color:#af52de" data-m="gridchild"></span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="after"></span></div>
+    </section>
+
+    <section data-case="inline-flex-lays-out-its-children">
+      <div class="case-label">inline-flex-lays-out-its-children</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-flex;width:120px;height:30px;vertical-align:top" data-m="flex"><span style="display:inline-block;width:30px;height:30px;vertical-align:top;background-color:#30b0c7" data-m="i1"></span><span style="display:inline-block;width:30px;height:30px;vertical-align:top;background-color:#0a84ff" data-m="i2"></span></span></div>
+    </section>
+
+    <section data-case="empty-inline-between-boxes">
+      <div class="case-label">empty-inline-between-boxes</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="a"></span><span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="b"></span></div>
+    </section>
+
+    <section data-case="inline-with-padding-around-box">
+      <div class="case-label">inline-with-padding-around-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="before"></span><span style="padding-left:10px;padding-right:10px"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="inner"></span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="after"></span></div>
+    </section>
+
+    <section data-case="vertical-padding-on-an-inline-does-not-grow-the-line">
+      <div class="case-label">vertical-padding-on-an-inline-does-not-grow-the-line</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="before"></span><span style="padding-top:15px;padding-bottom:15px"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="inner"></span></span><div style="display:block;height:20px;background-color:#34c759" data-m="nextLine"></div></div>
+    </section>
+
+    <section data-case="vertical-margins-on-an-inline-have-no-effect">
+      <div class="case-label">vertical-margins-on-an-inline-have-no-effect</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="before"></span><span style="margin-top:20px;margin-bottom:20px"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="inner"></span></span><div style="display:block;height:20px;background-color:#34c759" data-m="nextLine"></div></div>
+    </section>
+
+    <section data-case="vertical-align-top-vs-default">
+      <div class="case-label">vertical-align-top-vs-default</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="short"></span><span style="display:inline-block;width:40px;height:40px;vertical-align:top;background-color:#30b0c7" data-m="tall"></span></div>
+    </section>
+
+    <section data-case="vertical-align-bottom">
+      <div class="case-label">vertical-align-bottom</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:40px;vertical-align:top;background-color:#0a84ff" data-m="tall"></span><span style="display:inline-block;width:40px;height:20px;vertical-align:bottom;background-color:#34c759" data-m="short"></span></div>
+    </section>
+
+    <section data-case="vertical-align-middle">
+      <div class="case-label">vertical-align-middle</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:40px;vertical-align:top;background-color:#ff9500" data-m="tall"></span><span style="display:inline-block;width:40px;height:20px;vertical-align:middle;background-color:#af52de" data-m="short"></span></div>
+    </section>
+
+    <section data-case="baseline-aligned-box-alone">
+      <div class="case-label">baseline-aligned-box-alone</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:30px;height:40px;background-color:#0a84ff" data-m="only"></span></div>
+    </section>
+
+    <section data-case="atomic-inline-alone-on-line">
+      <div class="case-label">atomic-inline-alone-on-line</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:60px;vertical-align:top;background-color:#ff3b30" data-m="only"></span></div>
+    </section>
+
+    <section data-case="wrap-boundary-exact">
+      <div class="case-label">wrap-boundary-exact</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:150px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="a"></span><span style="display:inline-block;width:150px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="b"></span><span style="display:inline-block;width:10px;height:20px;vertical-align:top;background-color:#34c759" data-m="c"></span></div>
+    </section>
+
+    <section data-case="nested-inline-wrap">
+      <div class="case-label">nested-inline-wrap</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:200px;height:20px;vertical-align:top;background-color:#ff9500" data-m="a"></span><span><span style="display:inline-block;width:150px;height:20px;vertical-align:top;background-color:#af52de" data-m="inner"></span></span></div>
+    </section>
+
+    <section data-case="box-between-text">
+      <div class="case-label">box-between-text</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">before <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="mid"></span> between <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="after"></span> end</div>
+    </section>
+
+    <section data-case="inline-then-block-then-inline">
+      <div class="case-label">inline-then-block-then-inline</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">before <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="first"></span><div style="height:20px" data-m="blocked"></div><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="second"></span> after</div>
+    </section>
+
+    <section data-case="container-padding-offsets-the-run">
+      <div class="case-label">container-padding-offsets-the-run</div>
+      <div style="width:300px;line-height:20px;font-size:16px;padding:10px;box-sizing:border-box" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="a"></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="b"></span></div>
+    </section>
+
+    <section data-case="absolute-child-among-inline-content">
+      <div class="case-label">absolute-child-among-inline-content</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="a"></span><div style="position:absolute;left:0px;top:60px;width:10px;height:10px"></div><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="b"></span></div>
+    </section>
+
+    <section data-case="nested-block-containers-each-all-inline">
+      <div class="case-label">nested-block-containers-each-all-inline</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="outer"></span><div data-m="inner"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="nested"></span></div></div>
+    </section>
+
+    <section data-case="display-none-child-keeps-the-run-contiguous">
+      <div class="case-label">display-none-child-keeps-the-run-contiguous</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="a"></span><div style="display:none">hidden</div><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="b"></span></div>
+    </section>
+
+    <section data-case="a-block-child-breaks-the-run">
+      <div class="case-label">a-block-child-breaks-the-run</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">before <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="inline"></span> more <span style="display:block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="blocked"></span> after</div>
+    </section>
+
+    <section data-case="box-in-inline-with-text">
+      <div class="case-label">box-in-inline-with-text</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">see <span>link <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="mid"></span> end</span> then <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="after"></span> done</div>
+    </section>
+
+    <section data-case="encoding-does-not-move-a-box">
+      <div class="case-label">encoding-does-not-move-a-box</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div data-m="row-plain">éééé<span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="plain"></span></div><div data-m="row-combining">éééé<span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="combining"></span></div></div>
+    </section>
+
+    <section data-case="a-run-of-spaces-is-one-space">
+      <div class="case-label">a-run-of-spaces-is-one-space</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div data-m="row-one">ab <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="one"></span></div><div data-m="row-three">ab   <span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="three"></span></div></div>
+    </section>
+
+    <section data-case="a-shifted-run-does-not-grow-the-line">
+      <div class="case-label">a-shifted-run-does-not-grow-the-line</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root">x<sup data-m="sup">2</sup>y<sub data-m="sub">3</sub>z</div>
+    </section>
+
+    <section data-case="em-margin-resolves-against-the-elements-own-size">
+      <div class="case-label">em-margin-resolves-against-the-elements-own-size</div>
+      <div style="width:300px;line-height:20px;font-size:50px" data-m="root"><div style="width:40px;height:20px;background-color:#0a84ff" data-m="before"></div><div style="width:40px;height:20px;background-color:#34c759;display:block;font-size:20px;margin-block:1em" data-m="measured"></div><div style="width:40px;height:20px;background-color:#ff9500" data-m="after"></div></div>
+    </section>
+
+    <section data-case="em-margin-ignores-the-inherited-size">
+      <div class="case-label">em-margin-ignores-the-inherited-size</div>
+      <div style="width:300px;line-height:20px;font-size:10px" data-m="root"><div style="width:40px;height:20px;background-color:#af52de" data-m="before"></div><div style="width:40px;height:20px;background-color:#ff3b30;display:block;font-size:20px;margin-block:1em" data-m="measured"></div><div style="width:40px;height:20px;background-color:#30b0c7" data-m="after"></div></div>
+    </section>
+
+    <section data-case="em-margin-follows-a-size-stated-in-em">
+      <div class="case-label">em-margin-follows-a-size-stated-in-em</div>
+      <div style="width:300px;line-height:20px;font-size:30px" data-m="root"><div style="width:40px;height:20px;background-color:#0a84ff" data-m="before"></div><div style="width:40px;height:20px;background-color:#34c759;display:block;font-size:2em;margin-block:0.5em" data-m="measured"></div><div style="width:40px;height:20px;background-color:#ff9500" data-m="after"></div></div>
+    </section>
+
+    <section data-case="em-margin-scales-with-the-inherited-size">
+      <div class="case-label">em-margin-scales-with-the-inherited-size</div>
+      <div style="width:300px;line-height:20px;font-size:40px" data-m="root"><div style="width:40px;height:20px;background-color:#af52de" data-m="before"></div><div style="width:40px;height:20px;background-color:#ff3b30;display:block;margin-block:1em" data-m="measured"></div><div style="width:40px;height:20px;background-color:#30b0c7" data-m="after"></div></div>
+    </section>
+
+    <section data-case="rem-margin-is-one-size-for-the-whole-tree">
+      <div class="case-label">rem-margin-is-one-size-for-the-whole-tree</div>
+      <div style="width:300px;line-height:20px;font-size:30px" data-m="root"><div style="width:40px;height:20px;background-color:#0a84ff" data-m="before"></div><div style="width:40px;height:20px;background-color:#34c759;display:block;font-size:8px;margin-block:1rem" data-m="small"></div><div style="width:40px;height:20px;background-color:#ff9500" data-m="gap"></div><div style="width:40px;height:20px;background-color:#af52de;display:block;font-size:64px;margin-block:1rem" data-m="large"></div><div style="width:40px;height:20px;background-color:#ff3b30" data-m="after"></div></div>
+    </section>
+
+    <section data-case="em-and-rem-differ-on-the-same-element">
+      <div class="case-label">em-and-rem-differ-on-the-same-element</div>
+      <div style="width:300px;line-height:20px;font-size:30px" data-m="root"><div style="width:40px;height:20px;background-color:#30b0c7" data-m="before"></div><div style="width:40px;height:20px;background-color:#0a84ff;display:block;font-size:64px;margin-block:1rem" data-m="viaRem"></div><div style="width:40px;height:20px;background-color:#34c759" data-m="gap"></div><div style="width:40px;height:20px;background-color:#ff9500;display:block;font-size:64px;margin-block:1em" data-m="viaEm"></div><div style="width:40px;height:20px;background-color:#af52de" data-m="after"></div></div>
+    </section>
+
+    <section data-case="margin-collapses-out-of-a-block-containers-bottom-edge">
+      <div class="case-label">margin-collapses-out-of-a-block-containers-bottom-edge</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#ff3b30" data-m="before"></div><div style="width:40px;height:20px;background-color:#30b0c7;display:block;margin-block:20px" data-m="measured"></div><div style="width:40px;height:20px;background-color:#0a84ff" data-m="after"></div></div>
+    </section>
+</body></html>
