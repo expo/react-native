@@ -101,6 +101,7 @@ export const examples: Array<RNTesterModuleExample> = [
   },
   {
     title: 'View background color',
+    name: 'viewBackgroundColor',
     render(): React.Node {
       return (
         <Comparison actual={['invalid']} expected={undefined}>
