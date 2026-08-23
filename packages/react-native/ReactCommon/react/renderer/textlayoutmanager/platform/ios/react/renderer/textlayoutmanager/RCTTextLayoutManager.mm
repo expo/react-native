@@ -7,6 +7,8 @@
 
 #import "RCTTextLayoutManager.h"
 
+#import <CoreText/CoreText.h>
+
 #import <array>
 
 #import "RCTAttributedTextUtils.h"
@@ -818,7 +820,20 @@ void drawInlineBoxDecorations(
                                                        if ([style isEqualToString:@"wavy"]) {
                                                          y = baseline + 1.0f;
                                                        } else {
-                                                         y = baseline + thickness + 1.0f;
+                                                         // The font's own underline position, not an
+                                                         // invented constant: CoreText publishes where
+                                                         // this face puts its rule (negative = below the
+                                                         // baseline), and the platform's underlines sit
+                                                         // there. A dotted rule is round-capped, so half
+                                                         // its thickness rides above the stroke's centre
+                                                         // — the dots hugged the descenders when the
+                                                         // centre sat at the type's position; centring
+                                                         // the stroke a half-thickness lower keeps the
+                                                         // dot TOPS at the face's rule position.
+                                                         CGFloat rulePosition = -CTFontGetUnderlinePosition(
+                                                             (__bridge CTFontRef)font);
+                                                         y = baseline + MAX(rulePosition, thickness) +
+                                                             thickness / 2.0f + 0.5f;
                                                        }
                                                      } else {
                                                        y = baseline - (font.ascender + font.descender) / 2.0f + 1.0f;
