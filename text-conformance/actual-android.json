@@ -59,100 +59,6 @@
       "height": 70.1
     }
   },
-  "nested-in-one-inline": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "inner": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 20.19
-    }
-  },
-  "text-only-honours-line-height": {
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 20.19
-    }
-  },
-  "atomic-inlines-wrap": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "b": {
-      "x": 100.19,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "c": {
-      "x": 200.38,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "d": {
-      "x": 0,
-      "y": 20.19,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 40.38
-    }
-  },
-  "short-box-alone-honours-line-height": {
-    "only": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 9.9
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 20.19
-    }
-  },
-  "line-height-is-a-floor-not-a-ceiling": {
-    "shortA": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 9.9
-    },
-    "shortB": {
-      "x": 0,
-      "y": 20.19,
-      "width": 200,
-      "height": 9.9
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 40.38
-    }
-  },
   "vertical-align-top-vs-default": {
     "short": {
       "x": 0,
@@ -193,6 +99,26 @@
       "height": 40
     }
   },
+  "nested-in-one-inline": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 20.19
+    }
+  },
   "vertical-align-middle": {
     "tall": {
       "x": 0,
@@ -211,6 +137,28 @@
       "y": 0,
       "width": 299.81,
       "height": 40
+    }
+  },
+  "baseline-aligned-box-alone": {
+    "only": {
+      "x": 0,
+      "y": 0,
+      "width": 30.1,
+      "height": 40
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 43.81
+    }
+  },
+  "text-only-honours-line-height": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 20.19
     }
   },
   "nested-three-deep": {
@@ -233,6 +181,20 @@
       "height": 20.19
     }
   },
+  "atomic-inline-alone-on-line": {
+    "only": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 60.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 60.19
+    }
+  },
   "nested-then-sibling": {
     "inner": {
       "x": 0,
@@ -253,6 +215,38 @@
       "height": 20.19
     }
   },
+  "atomic-inlines-wrap": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "b": {
+      "x": 100.19,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "c": {
+      "x": 200.38,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "d": {
+      "x": 0,
+      "y": 20.19,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 40.38
+    }
+  },
   "inline-with-padding-around-box": {
     "before": {
       "x": 0,
@@ -271,6 +265,66 @@
       "y": 0,
       "width": 40,
       "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 20.19
+    }
+  },
+  "empty-inline-between-boxes": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "b": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 20.19
+    }
+  },
+  "inline-flex-lays-out-its-children": {
+    "i1": {
+      "x": 0,
+      "y": 0,
+      "width": 30.1,
+      "height": 30.1
+    },
+    "i2": {
+      "x": 30.1,
+      "y": 0,
+      "width": 30.1,
+      "height": 30.1
+    },
+    "flex": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 30.1
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 30.1
+    }
+  },
+  "short-box-alone-honours-line-height": {
+    "only": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 9.9
     },
     "root": {
       "x": 0,
@@ -311,41 +365,87 @@
       "height": 20.19
     }
   },
-  "inline-flex-lays-out-its-children": {
-    "i1": {
+  "line-height-is-a-floor-not-a-ceiling": {
+    "shortA": {
       "x": 0,
       "y": 0,
-      "width": 30.1,
-      "height": 30.1
+      "width": 200,
+      "height": 9.9
     },
-    "i2": {
-      "x": 30.1,
-      "y": 0,
-      "width": 30.1,
-      "height": 30.1
-    },
-    "flex": {
+    "shortB": {
       "x": 0,
-      "y": 0,
-      "width": 120,
-      "height": 30.1
+      "y": 20.19,
+      "width": 200,
+      "height": 9.9
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 299.81,
-      "height": 30.1
+      "height": 40.38
     }
   },
-  "empty-inline-between-boxes": {
-    "a": {
-      "x": 0,
+  "box-between-text": {
+    "mid": {
+      "x": 49.76,
       "y": 0,
       "width": 40,
       "height": 20.19
     },
-    "b": {
-      "x": 40,
+    "after": {
+      "x": 157.95,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 20.19
+    }
+  },
+  "a-run-of-spaces-is-one-space": {
+    "one": {
+      "x": 21.71,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "row-one": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 20.19
+    },
+    "three": {
+      "x": 21.71,
+      "y": 20.19,
+      "width": 40,
+      "height": 20.19
+    },
+    "row-three": {
+      "x": 0,
+      "y": 20.19,
+      "width": 299.81,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 299.81,
+      "height": 40.38
+    }
+  },
+  "box-in-inline-with-text": {
+    "mid": {
+      "x": 57.14,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "after": {
+      "x": 166.1,
       "y": 0,
       "width": 40,
       "height": 20.19
@@ -409,32 +509,24 @@
       "height": 40.38
     }
   },
-  "atomic-inline-alone-on-line": {
-    "only": {
+  "nested-inline-wrap": {
+    "a": {
       "x": 0,
       "y": 0,
-      "width": 40,
-      "height": 60.19
+      "width": 200,
+      "height": 20.19
+    },
+    "inner": {
+      "x": 0,
+      "y": 20.19,
+      "width": 150.1,
+      "height": 20.19
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 299.81,
-      "height": 60.19
-    }
-  },
-  "baseline-aligned-box-alone": {
-    "only": {
-      "x": 0,
-      "y": 0,
-      "width": 30.1,
-      "height": 40
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 43.81
+      "height": 40.38
     }
   },
   "wrap-boundary-exact": {
@@ -461,98 +553,6 @@
       "y": 0,
       "width": 299.81,
       "height": 40.38
-    }
-  },
-  "nested-inline-wrap": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 20.19
-    },
-    "inner": {
-      "x": 0,
-      "y": 20.19,
-      "width": 150.1,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 40.38
-    }
-  },
-  "a-run-of-spaces-is-one-space": {
-    "one": {
-      "x": 21.71,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "row-one": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 20.19
-    },
-    "three": {
-      "x": 21.71,
-      "y": 20.19,
-      "width": 40,
-      "height": 20.19
-    },
-    "row-three": {
-      "x": 0,
-      "y": 20.19,
-      "width": 299.81,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 40.38
-    }
-  },
-  "box-in-inline-with-text": {
-    "mid": {
-      "x": 57.14,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "after": {
-      "x": 166.1,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 20.19
-    }
-  },
-  "box-between-text": {
-    "mid": {
-      "x": 49.76,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "after": {
-      "x": 157.95,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 299.81,
-      "height": 20.19
     }
   }
 }
