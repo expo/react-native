@@ -1,0 +1,2 @@
+# The compiled binary; `swiftc -O wkshot.swift -o wkshot` rebuilds it.
+wkshot
