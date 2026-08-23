@@ -304,15 +304,19 @@ void measureImageAttachments(
     const LayoutContext& layoutContext,
     const LayoutConstraints& layoutConstraints) {
   auto& fragments = attributedString.getFragments();
-  auto constraints = layoutConstraints;
-  constraints.minimumSize = Size{0, 0};
+  auto baseConstraints = layoutConstraints;
+  baseConstraints.minimumSize = Size{0, 0};
   for (const auto& attachment : attachments) {
     const auto* layoutable =
         dynamic_cast<const LayoutableShadowNode*>(attachment.shadowNode);
     if (layoutable == nullptr || attachment.fragmentIndex >= fragments.size()) {
       continue;
     }
-    auto size = layoutable->measure(layoutContext, constraints);
+    // A measurement root takes its min/max from the constraints, not from its
+    // own style — see `constraintsHonoringOwnBounds` for the bug that is.
+    auto size = layoutable->measure(
+        layoutContext,
+        constraintsHonoringOwnBounds(*attachment.shadowNode, baseConstraints));
     // Where this box's baseline sits, so the text engine can put that baseline
     // on the line's rather than dropping the box's bottom onto it.
     fragments[attachment.fragmentIndex].atomicInlineBaseline =
