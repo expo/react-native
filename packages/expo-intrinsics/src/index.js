@@ -377,6 +377,26 @@ registerFrameworkElement('element-button-box', () =>
  */
 function buttonUAStyle(props: {[string]: unknown}): {[string]: unknown} {
   let style: {[string]: unknown} = uaStyleFor('button');
+  /*
+   * The chrome is a unit. The platter, the content insets, the minimum touch
+   * height and the label typography are one design — each measured against
+   * the others on a real platform button — so when the author claims the
+   * surface (`hasAuthorChrome`, computed next to the style prop in
+   * Button.js/Input.js and also read by the platform views to hide the
+   * platter), the metrics that exist to fit that platter withdraw with it.
+   * What remains is the neutral inline-block box a preflight-reset web
+   * <button> is: contents centred, typography and colour inherited — which
+   * is the world design systems that restyle every control are written for.
+   *
+   * DOM-CSS-DEVIATION(button-chrome-withdraws-as-a-unit): on the web an
+   * author background keeps the UA padding (~2px) and ButtonText colour.
+   * Here the insets are platform chrome metrics, not web's hairlines, and
+   * keeping them under an author's surface would look like neither platform
+   * nor web. Informational.
+   */
+  if (props?.hasAuthorChrome === true) {
+    return without(style, CHROME_METRIC_KEYS);
+  }
   // The prominent variant's label — white on iOS's filled configuration,
   // `colorOnPrimary` on Material's filled button. The surface itself is the
   // platform view's to draw; only the label colour rides through the sheet,
@@ -451,6 +471,24 @@ const PADDING_KEYS = [
  * has expressed the same intent even more explicitly.
  */
 const HEIGHT_KEYS = ['height', 'minHeight', 'maxHeight'];
+
+/*
+ * Everything in the user-agent button entry that exists to fit the platform
+ * platter: its insets, its minimum touch height, and the label typography
+ * measured against it. Withdrawn together when the author claims the surface
+ * — see `buttonUAStyle`. The box-model basics stay: `display`, `textAlign`,
+ * `alignContent` and `flexShrink` describe what a button IS (an inline-block
+ * whose label centres and whose width floors at its content), not what the
+ * platform's chrome looks like.
+ */
+const CHROME_METRIC_KEYS = [
+  ...PADDING_KEYS,
+  ...HEIGHT_KEYS,
+  'fontSize',
+  'fontWeight',
+  'letterSpacing',
+  'color',
+];
 
 function authorStates(style: unknown, keys: ReadonlyArray<string>): boolean {
   if (style == null) {
