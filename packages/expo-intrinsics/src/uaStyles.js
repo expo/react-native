@@ -447,7 +447,28 @@ const uaStyles: {[string]: UAStyle} = {
     fontSize: 0.8125 * EM,
     whiteSpace: 'pre',
   },
-  hr: {marginBlock: 8, borderTopWidth: 1, borderColor: '#0000001f'},
+  /*
+   * `<hr>` — html.css says `border: 1px inset`, a 3D border that renders as a
+   * dark line on the web (there is no system colour behind it to soften it).
+   * A thematic break drawn by the platform is a SEPARATOR, and both platforms
+   * name a token for exactly that — iOS `separator`, Material's
+   * `colorOutlineVariant` — so the sheet delegates to them, which also keeps
+   * the rule adaptive in dark mode. DOM-CSS-DEVIATION(hr-separator-color):
+   * deliberately lighter than the web's inset line; the platform's own
+   * divider idiom takes precedence. The hex fallback approximates both.
+   */
+  hr: {
+    marginBlock: 8,
+    borderTopWidth: 1,
+    borderColor: Platform.select<ColorValue>({
+      ios: PlatformColor('separator'),
+      android: PlatformColor(
+        '?attr/colorOutlineVariant',
+        '?attr/colorSurfaceVariant',
+      ),
+      default: '#0000001f',
+    }),
+  },
 
   /*
    * Headings: bold, with sizes and margins that shrink together down the scale.
@@ -502,7 +523,11 @@ const uaStyles: {[string]: UAStyle} = {
     paddingBlockEnd: 0.625 * EM,
     paddingInline: 0.75 * EM,
   },
-  legend: {paddingInline: 2},
+  // The legend renders ABOVE the fieldset's box (Fieldset.js hoists it —
+  // DOM-CSS-DEVIATION(fieldset-legend-position)); the block-end margin is the
+  // platforms' label-to-surface gap, the role html.css's border-notch layout
+  // plays on the web.
+  legend: {paddingInline: 2, marginBlockEnd: 6},
 
   // <address> is block-level AND italic; both come from html.css.
   address: {fontStyle: 'italic'},

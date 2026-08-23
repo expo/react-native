@@ -1021,12 +1021,9 @@ function GroupingAndLabels() {
       intro={'The elements that structure a form rather than carry a value.'}>
       <Case
         title="<fieldset> and <legend>"
-        note="A group of related controls with a caption.">
+        note="A group of related controls with a caption. Deviation: a browser notches the legend into the fieldset's top border; here it renders above the box, the way iOS grouped settings and Material set a group's label — see DOM-CSS-DEVIATION(fieldset-legend-position).">
         <fieldset>
-          {/* A legend sits ON the border in a browser and the content starts
-              below it; with native-sized controls the browser's 5.6pt gap is
-              not enough to read as a group heading. */}
-          <legend style={{marginBottom: 10}}>Delivery</legend>
+          <legend>Delivery</legend>
           <View style={ROW}>
             <input
               type="radio"

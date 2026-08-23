@@ -193,6 +193,13 @@ internal open class ElementTextInputView(context: Context) : AppCompatEditText(c
     // A single-line field, unless a subclass says otherwise. Without this an `<input>` would accept
     // newlines and grow, which is what `<textarea>` is for.
     isSingleLine = !isMultiline
+    if (!isMultiline) {
+      // Material centres a filled field's text in its 56dp container; the
+      // vertical position comes from gravity, not from padding, so the
+      // Yoga-forwarded padding (inline 16dp, block none) lands on a field
+      // whose text is already where the spec puts it.
+      gravity = android.view.Gravity.CENTER_VERTICAL or android.view.Gravity.START
+    }
 
     addTextChangedListener(
         object : TextWatcher {

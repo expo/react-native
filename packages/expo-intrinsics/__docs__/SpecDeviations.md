@@ -161,6 +161,60 @@ and only that one gets the link colour and underline.
 
 ---
 
+### `<hr>` is the platform's separator, not the web's inset line
+
+`DOM-CSS-DEVIATION(hr-separator-color)`
+
+**What we do:** a 1px rule in the platform's own divider token — iOS
+`separator`, Material `colorOutlineVariant` — which is lighter than the
+web's, and adapts to dark mode for free.
+
+**The spec:** html.css draws `border: 1px inset`, a 3D border with no system
+colour behind it; at 1px it renders as a hard dark line.
+
+**Why:** a thematic break drawn natively IS a separator, and both platforms
+name a token for it. Neither HIG nor Material defines an `<hr>`; they define
+dividers, and this is one.
+
+---
+
+### `<sup>`/`<sub>` shift inside the line box; the line does not grow
+
+**What we do:** the user-agent sheet sizes both at `0.8333em` (exactly
+Chrome's computed 13.3333px on a 16px root), and each platform's text stack
+shifts the run by half the ascent. The line box does NOT grow: the paragraph
+keeps its rhythm, and the shifted ink paints into overflow the run's canvas
+reserves for it — half the font size above a superscript, below a subscript —
+so nothing clips (an `x²` on a first line keeps the top of its 2).
+
+**The spec:** Safari grows the line box under a shifted run — measured
+30.53px against the surrounding 24px rhythm — visibly pushing the next line
+down.
+
+**Why:** the platforms' own typography keeps ruled rhythm under super- and
+subscripts, and it reads better; the size (the half of the rule the sheet can
+own) is kept spec-identical so only the line-growth behaviour differs.
+Painting changed to make this safe; layout did not.
+
+---
+
+### `<legend>` sits above the fieldset's box, not notched into its border
+
+`DOM-CSS-DEVIATION(fieldset-legend-position)`
+
+**What we do:** a `<fieldset>` with a `<legend>` renders the legend ABOVE the
+bordered box, separated by the legend's user-agent `margin-block-end` (6px);
+the border encloses only the controls (Fieldset.js).
+
+**Why:** a browser's fieldset layout notches the legend into the top border and
+erases the border behind the text — a special layout neither platform can
+express, since neither can interrupt a border behind a text run. And neither
+platform's forms speak that idiom: iOS grouped settings and Material both set
+a group's label above the group's surface, so the hoist is the platforms' own
+convention rather than an approximation of the web's.
+
+---
+
 ## The platform cannot
 
 ### `<input type="color">` offers a swatch grid on Android

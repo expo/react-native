@@ -54,6 +54,17 @@ internal class ElementTextInputViewManager : SimpleViewManager<ElementTextInputV
   }
 
   /**
+   * Fabric delivers the Yoga-computed padding of a LEAF view here, and the base ViewManager DROPS
+   * it — which is how the user-agent sheet's Material 16dp field inset (`FIELD_SURFACE.paddingInline`
+   * in uaStyles.js) never reached the EditText: the field rendered with the platform drawable's
+   * ~4dp and the placeholder sat nearly on the edge. Forwarding is the same contract the
+   * framework's own `ReactTextInputManager.setPadding` implements.
+   */
+  override fun setPadding(view: ElementTextInputView, left: Int, top: Int, right: Int, bottom: Int) {
+    view.setPadding(left, top, right, bottom)
+  }
+
+  /**
    * The props are staged as they arrive and applied here, after React has set all of them for this
    * update. Several are only meaningful together — see [ElementTextInputView.commitProps] — and
    * applying each as it lands would let the order React happens to use decide the result.

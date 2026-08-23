@@ -42,6 +42,7 @@ import {
   registerFrameworkComponent,
   registerFrameworkElement,
 } from './ElementRegistry';
+import Fieldset from './Fieldset';
 import Form from './Form';
 import {LEVELS as HEADING_LEVELS, makeHeading} from './Heading';
 import Img from './Img';
@@ -705,8 +706,11 @@ function inputSizeUAStyle(props: {[string]: unknown}): {[string]: unknown} {
         // The field SURFACE rides with the size: both are "what a text-entry
         // control looks like here", and neither belongs on checkables,
         // buttons, or pickers, which own their chrome. See FIELD_SURFACE.
+        // Android: Material's filled text field container is 56dp tall with
+        // 16dp inline padding (the padding rides in FIELD_SURFACE); 48 was a
+        // generic touch-target floor, not the field spec.
         return Platform.OS === 'android'
-          ? {width: 200, height: 48, ...FIELD_SURFACE}
+          ? {width: 200, height: 56, ...FIELD_SURFACE}
           : {width: 200, height: 36, ...FIELD_SURFACE};
       }
       // No intrinsic size for this type; the element keeps whatever the
@@ -993,7 +997,6 @@ for (const name of [
   'hgroup',
   'search',
   'noscript',
-  'fieldset',
   'legend',
   'li',
   'dl',
@@ -1002,6 +1005,13 @@ for (const name of [
 ]) {
   registerBlockElement(name);
 }
+
+// <fieldset> is a component so its <legend> can hoist above the bordered box
+// — the platforms' group-label convention; see Fieldset.js for the deviation
+// note. The box itself is the ordinary block registered under
+// `element-fieldset`.
+registerBlockElementUnderName('element-fieldset', 'fieldset');
+registerFrameworkComponent('fieldset', Fieldset);
 
 // The list containers are components so a nested list can zero its block
 // margins the way every browser's sheet does with `ul ul { margin-block: 0 }`

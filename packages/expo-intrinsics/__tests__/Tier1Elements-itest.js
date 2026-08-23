@@ -221,21 +221,37 @@ test('<fieldset> carries the UA border and asymmetric block padding', () => {
   expect(rectOf(outer).width).toBe(200 - 4);
 });
 
-test('<legend> is inline-level inside its fieldset', () => {
+test('<legend> hoists above the bordered box as the group label', () => {
+  // DOM-CSS-DEVIATION(fieldset-legend-position): a browser notches the legend
+  // into the top border; the platforms' form convention — iOS grouped
+  // settings, Material subheads — sets the label ABOVE the surface, so
+  // Fieldset.js hoists it. The legend must sit entirely above the box the
+  // controls live in, separated by its UA block-end margin.
   const legend = createRef<HostInstance>();
+  const control = createRef<HostInstance>();
+  const outer = createRef<HostInstance>();
   const root = Fantom.createRoot();
 
   Fantom.runTask(() => {
     root.render(
       // $FlowFixMe[prop-missing] element from the catalog
-      <fieldset style={{width: 200}}>
+      <fieldset ref={outer} style={{width: 200}}>
         {/* $FlowFixMe[prop-missing] */}
         <legend ref={legend}>Details</legend>
+        {/* $FlowFixMe[prop-missing] */}
+        <div ref={control} style={{height: 10}} />
       </fieldset>,
     );
   });
 
-  // The legend renders; its border-notch positioning is a documented gap
-  // (DOM-CSS-LIMITATION), so this asserts only that it lays out inside the box.
-  expect(rectOf(legend).width).toBeGreaterThan(0);
+  const legendRect = rectOf(legend);
+  const controlRect = rectOf(control);
+  expect(legendRect.width).toBeGreaterThan(0);
+  // The control sits in the bordered box BELOW the whole legend: legend
+  // bottom + its 6px margin + the box's 1px border + 0.35em padding.
+  expect(controlRect.y).toBeGreaterThanOrEqual(
+    legendRect.y + legendRect.height + 6,
+  );
+  // And the element's overall box still honours the author's width.
+  expect(rectOf(outer).width).toBe(200);
 });
