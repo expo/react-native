@@ -403,16 +403,23 @@ std::string listMarkerText(ListStyleType type, int ordinal) {
       return {};
 
     // The glyphs a UA uses for the symbolic styles. No counter, no suffix.
+    // Geometric symbols carry VARIATION SELECTOR-15 (U+FE0E, text
+    // presentation): several of them — U+25AA in particular — are
+    // emoji-capable, and Apple's fallback picks the EMOJI face for a bare
+    // code point, which rendered every third-level `square` bullet as a big
+    // black rounded emoji square instead of a small text glyph.
     case ListStyleType::Disc:
-      return reinterpret_cast<const char*>(u8"•"); // BULLET
+      return reinterpret_cast<const char*>(u8"•︎"); // BULLET
     case ListStyleType::Circle:
-      return reinterpret_cast<const char*>(u8"◦"); // WHITE BULLET
+      return reinterpret_cast<const char*>(u8"◦︎"); // WHITE BULLET
     case ListStyleType::Square:
-      return reinterpret_cast<const char*>(u8"▪"); // BLACK SMALL SQUARE
+      return reinterpret_cast<const char*>(u8"▪︎"); // BLACK SMALL SQUARE
     case ListStyleType::DisclosureOpen:
-      return reinterpret_cast<const char*>(u8"▾"); // BLACK DOWN-POINTING SMALL TRIANGLE
+      // BLACK DOWN-POINTING SMALL TRIANGLE
+      return reinterpret_cast<const char*>(u8"▾︎");
     case ListStyleType::DisclosureClosed:
-      return reinterpret_cast<const char*>(u8"▸"); // BLACK RIGHT-POINTING SMALL TRIANGLE
+      // BLACK RIGHT-POINTING SMALL TRIANGLE
+      return reinterpret_cast<const char*>(u8"▸︎");
 
     // Counter styles carry the separator their definition specifies.
     case ListStyleType::Decimal:

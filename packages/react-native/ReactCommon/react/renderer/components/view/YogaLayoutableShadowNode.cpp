@@ -1174,7 +1174,11 @@ void YogaLayoutableShadowNode::prepareListContext(int depth) {
   }
   const auto name = boxProps->domNodeName();
   const auto ordered = name == "ol";
-  if (!ordered && name != "ul") {
+  // `<menu>` is a list of commands and the HTML Standard renders it exactly
+  // as `<ul>` (html.css groups them for both margins and the disc marker) —
+  // it was missing from this recognition, so its items generated no markers
+  // at all while every stylesheet said `disc`.
+  if (!ordered && name != "ul" && name != "menu") {
     return;
   }
 

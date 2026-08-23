@@ -29,18 +29,22 @@ import {createContext, useContext} from 'react';
 const ListDepthContext: React.Context<number> = createContext(0);
 
 /*
- * The exact html.css nesting rules: a nested list zeroes only its block
- * margins (the indent is its own padding and stays), and an unordered
- * marker walks the browser ladder — disc, then circle, then square — so a
- * second-level bullet reads as second-level. `<ol>` keeps its numbering at
- * every depth, exactly as browsers do.
+ * The exact html.css margin rule: a nested list zeroes only its block
+ * margins — the indent is its own padding and stays. The MARKER half of
+ * nesting (disc → circle → square) deliberately does not live here: the
+ * layout engine computes it natively from real nesting depth
+ * (`nestedBulletForDepth` in YogaLayoutableShadowNode::prepareListContext),
+ * and a second copy in JavaScript would be a divergence waiting to happen —
+ * it briefly was one, masking that `<menu>` was not recognised as a list
+ * container at all.
  */
 const NESTED_LIST_MARGIN_RESET = {marginBlockStart: 0, marginBlockEnd: 0};
-const UNORDERED_MARKER_BY_DEPTH = ['disc', 'circle', 'square'];
 
 type ListProps = {
   children?: React.Node,
   style?: unknown,
+  /** `<ol start>` — where the counter begins (HTML §4.4.5). */
+  start?: ?number,
   ...
 };
 
@@ -52,28 +56,18 @@ type ListProps = {
 export function makeList(tag: string): React.ComponentType<ListProps> {
   const Host: $FlowFixMe = `element-${tag}`;
 
-  function List({style, ...rest}: ListProps): React.Node {
+  function List({style, start, ...rest}: ListProps): React.Node {
     const depth = useContext(ListDepthContext);
-    const nestedDefaults =
-      depth > 0
-        ? [
-            NESTED_LIST_MARGIN_RESET,
-            tag === 'ol'
-              ? null
-              : {
-                  listStyleType:
-                    UNORDERED_MARKER_BY_DEPTH[
-                      Math.min(depth, UNORDERED_MARKER_BY_DEPTH.length - 1)
-                    ],
-                },
-          ]
-        : null;
     return (
       <ListDepthContext.Provider value={depth + 1}>
         <Host
           {...rest}
           nodeName={tag}
-          style={nestedDefaults != null ? [...nestedDefaults, style] : style}
+          // The HTML attribute under a private native name: `start` is ALSO
+          // Yoga's inline-start inset, and forwarding it verbatim shifted the
+          // whole list `start` pixels while it seeded the counter.
+          listStart={start}
+          style={depth > 0 ? [NESTED_LIST_MARGIN_RESET, style] : style}
         />
       </ListDepthContext.Provider>
     );

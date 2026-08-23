@@ -927,7 +927,9 @@ function registerBlockElementUnderName(hostName: string, domName: string) {
   }
   registerFrameworkElement(hostName, () =>
     createViewConfig({
-      validAttributes: {nodeName: true},
+      // `listStart` is `<ol start>` under a private native name — the HTML
+      // attribute collides with Yoga's inline-start inset; see List.js.
+      validAttributes: {nodeName: true, listStart: true},
       uiViewClassName: 'element-box',
       uaStyle,
     }),

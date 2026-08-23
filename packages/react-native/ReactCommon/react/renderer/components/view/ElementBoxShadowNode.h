@@ -60,7 +60,13 @@ class ElementBoxProps final : public ViewProps, public NodeNameProvider {
             convertRawProp(context, rawProps, "listStyleType", sourceProps.listStyleTypeValue, std::string{})),
         listStylePositionValue(
             convertRawProp(context, rawProps, "listStylePosition", sourceProps.listStylePositionValue, std::string{})),
-        start(convertRawProp(context, rawProps, "start", sourceProps.start, 1)) {}
+        // NOT the raw HTML attribute name: `start` is ALSO Yoga's
+        // inline-start inset, so `<ol start={98}>` forwarded verbatim both
+        // seeded the counter and SHIFTED the whole list 98px — the component
+        // translates the attribute to this private name (List.js), exactly
+        // as <img> translates `src`.
+        start(convertRawProp(
+            context, rawProps, "listStart", sourceProps.start, 1)) {}
 
   // Empty when rendered without an authored tag, in which case core falls back
   // to the component name.
