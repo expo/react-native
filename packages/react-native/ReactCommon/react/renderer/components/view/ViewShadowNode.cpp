@@ -436,11 +436,6 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
 
     for (const auto& candidate : attachmentCandidates) {
       const auto& runChild = candidate.node;
-      if (!runChild->getTraits().check(
-              ShadowNodeTraits::Trait::InlineReplaced) &&
-          !YogaLayoutableShadowNode::isAtomicInline(*runChild)) {
-        continue;
-      }
       const auto* layoutable =
           dynamic_cast<const LayoutableShadowNode*>(runChild.get());
       if (layoutable == nullptr) {
@@ -455,6 +450,21 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
       if (auto it = placementsByFamily.find(&runChild->getFamily());
           it != placementsByFamily.end()) {
         attachmentFrame = it->second;
+      }
+
+      // A REPORTED placement is itself the proof this candidate is an
+      // attachment: the text layout measured it into the run. Gating on the
+      // traits as well skipped exactly the node the run had reserved space
+      // for whenever the backing does not declare them — the expo-image
+      // <img> carries neither InlineReplaced nor an inline display, so a
+      // nested <a><img> had its frame computed, thrown away here, and the
+      // picture mounted at the line's start, under the words before it. The
+      // trait check remains only for candidates the layout did NOT place.
+      if (attachmentFrame == nullptr &&
+          !runChild->getTraits().check(
+              ShadowNodeTraits::Trait::InlineReplaced) &&
+          !YogaLayoutableShadowNode::isAtomicInline(*runChild)) {
+        continue;
       }
 
       auto attachmentSize = attachmentFrame != nullptr &&

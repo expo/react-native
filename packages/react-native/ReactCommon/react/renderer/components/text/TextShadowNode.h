@@ -77,21 +77,32 @@ class TextShadowNode
    * inline formatting context paints, and it would hit-test the whole union
    * including the parts of those lines belonging to other elements.
    *
-   * Returning empty metrics here leaves painting to `InlineBoxDecorationSpan`
+   * Returning a zero SIZE here leaves painting to `InlineBoxDecorationSpan`
    * and hit-testing to the text view's span lookup, both of which work per
    * fragment. The hit-testing half is verified: Android resolves a touch
    * inside text through `ReactCompoundView.reactTagForTouch(x, y)`
    * (`TouchTargetHelper`, and `PreparedLayoutTextView` implements it), which
    * maps the point to a span and returns that element's tag. It never consults
    * the child views' bounds, so an inline element's tag is found whether its
-   * view is unsized, or flattened away entirely by view collapsing. It also restores upstream's shape, where this class is not
-   * layoutable at all and the mounted view is consequently 0x0; the stamped
-   * metrics this class holds exist for `getBoundingClientRect()`, which reads
-   * the shadow tree and is unaffected.
+   * view is unsized, or flattened away entirely by view collapsing.
+   *
+   * The ORIGIN, unlike the size, is real and LOAD-BEARING. The mounting
+   * layer composes a flattened element's origin onto its descendants
+   * (`sliceChildShadowNodeViewPairs` reads exactly these metrics), and the
+   * attachment pass places a nested atomic inline PARENT-RELATIVE on the
+   * assumption that composition happens — `<a><img/> text</a>` has the
+   * image's frame made relative to the anchor's stamped origin. Returning
+   * `EmptyLayoutMetrics` zeroed the origin too, so nothing ever added the
+   * anchor's share back and the picture mounted at the line's START, drawn
+   * under the words before it — on BOTH platforms, while every shadow-tree
+   * instrument (getBoundingClientRect, the Safari-pinned corpus) read
+   * perfect numbers, because those compose the stamped SHADOW metrics.
    */
   LayoutMetrics getMountedLayoutMetrics() const override
   {
-    return EmptyLayoutMetrics;
+    auto metrics = getLayoutMetrics();
+    metrics.frame.size = Size{};
+    return metrics;
   }
 
 #ifdef ANDROID
