@@ -715,6 +715,13 @@ const INITIAL_VALUES: {[string]: unknown} = {
   // container, and the same holds here: a block container lays out through
   // Yoga's block display, which ignores it.
   flexDirection: 'row',
+  // `flex-shrink`'s initial value is 1 (css-flexbox-1 §7.3); React Native
+  // defaults to 0. On the web a flex item yields when the row runs out of
+  // room; an RN item overflows instead — which is how a `<label>` beside a
+  // checkbox in a flex row CLIPPED its text at the row's edge where a
+  // browser wraps it. Like flexDirection above, it only means anything when
+  // the element is actually a flex item.
+  flexShrink: 1,
 };
 
 /**

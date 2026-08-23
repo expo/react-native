@@ -945,6 +945,18 @@ void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
     auto boxStyle = box->yogaNode_.style();
     boxStyle.setAlignSelf(yoga::Align::Stretch);
     box->yogaNode_.setStyle(boxStyle);
+  } else {
+    // In a FLEX container this box is an anonymous flex item (a text-run
+    // sequence, or a single blockified inline text element — css-flexbox-1
+    // §4), and a flex item's `flex-shrink` initial value is 1 (§7.3). React
+    // Native's own default is 0, and an inline TEXT element carries no yoga
+    // style to say otherwise (TextProps is not YogaStylable), so without
+    // this the item could never yield: a long <label> beside a checkbox in
+    // a flex row overflowed and CLIPPED at the row's edge where every
+    // browser wraps its text.
+    auto boxStyle = box->yogaNode_.style();
+    boxStyle.setFlexShrink(yoga::FloatOptional{1.0f});
+    box->yogaNode_.setStyle(boxStyle);
   }
 
   yogaLayoutableChildren_.push_back(box);
