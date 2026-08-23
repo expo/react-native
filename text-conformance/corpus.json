@@ -1,0 +1,1660 @@
+[
+  {
+    "name": "atomic-inlines-in-a-row",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Three sized atomic inlines with no text: x is the running sum of widths and nothing else.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "c",
+          "style": {
+            "display": "inline-block",
+            "width": "30px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "atomic-inlines-wrap",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The fourth box does not fit in 300px, so it starts the next line at x=0.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "c",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "d",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "atomic-inline-taller-than-line-height",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Line growth: line-height is 20 and the box is 50, so the line box — and the container — must be 50 tall. Only one box, so nothing here depends on vertical-align.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "50px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "text-only-honours-line-height",
+    "withText": true,
+    "heightOnly": true,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A line of text with line-height 20 is 20 tall. Separates \"line-height never reaches the run\" from \"line-height reaches text but not an attachment-only line\".",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "Ag"
+      ]
+    }
+  },
+  {
+    "name": "short-box-alone-honours-line-height",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "One 10pt box on a 20pt line: the strut floors the line box at 20 (CSS2 §10.8), so the container is 20 tall, not 10.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "only",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "10px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "line-height-is-a-floor-not-a-ceiling",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The inverse: a 10pt box on a 20pt line-height line still occupies a 20pt line box, because the strut sets a minimum (CSS2 §10.8). Two lines, so the second line's y shows the first line's height.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "shortA",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "10px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "shortB",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "10px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-tall-line-pushes-the-next-line-down",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A 50pt box on line one, then a box that cannot fit beside it: the second line starts below the first line box, not one line-height down.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "50px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "second",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "nested-in-one-inline",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An inline box establishes no formatting context, so a box inside a <span> is on the same line at the same x as if it were a direct child.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "span",
+          "style": {},
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff9500"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "nested-three-deep",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Depth is irrelevant to the IFC.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "style": {},
+          "children": [
+            {
+              "tag": "span",
+              "style": {},
+              "children": [
+                {
+                  "tag": "span",
+                  "style": {},
+                  "children": [
+                    {
+                      "tag": "span",
+                      "m": "inner",
+                      "style": {
+                        "display": "inline-block",
+                        "width": "40px",
+                        "height": "20px",
+                        "verticalAlign": "top",
+                        "backgroundColor": "#ff3b30"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "nested-then-sibling",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A box after a nested one continues the same line, so the nesting must not consume horizontal space of its own.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "style": {},
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "inline-flex-atomic",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "display:inline-flex is inline-level and atomic: it sits on the line like an inline-block and does not let its contents escape into the run.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "flex",
+          "style": {
+            "display": "inline-flex",
+            "width": "80px",
+            "height": "20px",
+            "verticalAlign": "top"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "flexchild",
+              "style": {
+                "display": "inline-block",
+                "width": "20px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff9500"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "inline-flex-lays-out-its-children",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Its children are flex items in a row, so the second starts after the first — inside the flex box, not on the outer line.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "flex",
+          "style": {
+            "display": "inline-flex",
+            "width": "120px",
+            "height": "30px",
+            "verticalAlign": "top"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "i1",
+              "style": {
+                "display": "inline-block",
+                "width": "30px",
+                "height": "30px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff3b30"
+              }
+            },
+            {
+              "tag": "span",
+              "m": "i2",
+              "style": {
+                "display": "inline-block",
+                "width": "30px",
+                "height": "30px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty-inline-between-boxes",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An inline element with no content contributes no width, so the boxes either side are adjacent.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "span",
+          "style": {},
+          "children": []
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "inline-with-padding-around-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Horizontal padding on an inline box DOES apply (css-inline-3), so the inner box is pushed right by it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        {
+          "tag": "span",
+          "style": {
+            "paddingLeft": "10px",
+            "paddingRight": "10px"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "vertical-align-top-vs-default",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Two boxes of different heights, both aligned top: their tops are equal regardless of any font strut.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "short",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "40px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "vertical-align-bottom",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A short box aligned to the bottom of a line made tall by a taller sibling.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "40px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "short",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "bottom",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "vertical-align-middle",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": "CSS defines `middle` against the parent's X-HEIGHT (CSS2 §10.8.1), not the middle of the line box — so its offset is a fact about a font file and cannot be pinned across three engines. What IS pinned: it lands strictly between `top` and `bottom`, and inside the line box.",
+    "bounded": "between-top-and-bottom",
+    "why": "Centred on the line box rather than on the text's x-height, which is what CSS middle means for an atomic inline in the absence of text.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "tall",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "40px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "short",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "middle",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "baseline-aligned-box-alone",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": "The line box is the box plus the strut's descent below the baseline, which is a font metric: Safari 44, iOS 44.33, Android 43.81 for the same 40pt box. Pinning it exactly compares fonts, not layout.",
+    "bounded": "line-taller-than-box",
+    "why": "A lone box with NO vertical-align, so baseline-aligned: its bottom sits on the baseline and the strut's descent still hangs below it, making the line taller than the box. Adjudicates whether the line should be exactly the box height.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "only",
+          "style": {
+            "display": "inline-block",
+            "width": "30px",
+            "height": "40px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "atomic-inline-alone-on-line",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A single box in an otherwise empty block: the container height is the line box height, which the box drives when it exceeds line-height.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "only",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "60px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "wrap-boundary-exact",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Boxes summing to exactly the container width stay on one line; the next one wraps. Pins the off-by-one at the wrap boundary.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "150px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "150px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "c",
+          "style": {
+            "display": "inline-block",
+            "width": "10px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "nested-inline-wrap",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Wrapping inside a nested inline element: the inner box wraps to the next line and starts at x=0, not at the inline box origin.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "200px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "style": {},
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "150px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "box-between-text",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The shape the product is actually written in: two boxes with text around and between them share one line, in order.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "before ",
+        {
+          "tag": "span",
+          "m": "mid",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        " between ",
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        " end"
+      ]
+    }
+  },
+  {
+    "name": "inline-then-block-then-inline",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A block-level child between inline content splits it into separate runs; the boxes either side must land on different lines.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "before ",
+        {
+          "tag": "span",
+          "m": "first",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "blocked",
+          "style": {
+            "height": "20px"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "second",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        " after"
+      ]
+    }
+  },
+  {
+    "name": "container-padding-offsets-the-run",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The run is laid out in the container CONTENT box, so padding moves the first box by exactly the padding.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "padding": "10px",
+        "boxSizing": "border-box"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "absolute-child-among-inline-content",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An out-of-flow child generates no in-flow box, so the inline run around it stays one run.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "position": "absolute",
+            "left": "0px",
+            "top": "60px",
+            "width": "10px",
+            "height": "10px"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "nested-block-containers-each-all-inline",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Each block container establishes its own inline formatting context, so the inner one starts its own line.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "outer",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "inner",
+          "children": [
+            {
+              "tag": "span",
+              "m": "nested",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff9500"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "display-none-child-keeps-the-run-contiguous",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A child that generates no box does not interrupt inline content, so the boxes either side share a line.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "display": "none"
+          },
+          "children": [
+            "hidden"
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-block-child-breaks-the-run",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "CSS 2.1 9.2.1.1: a block-level child splits the surrounding inline content, so it starts its own line while an inline-level sibling shares one.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "before ",
+        {
+          "tag": "span",
+          "m": "inline",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        " more ",
+        {
+          "tag": "span",
+          "m": "blocked",
+          "style": {
+            "display": "block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        " after"
+      ]
+    }
+  },
+  {
+    "name": "box-in-inline-with-text",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The <a><img></a> shape: a box inside the inline element shares a line with one after it, in order.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "see ",
+        {
+          "tag": "span",
+          "style": {},
+          "children": [
+            "link ",
+            {
+              "tag": "span",
+              "m": "mid",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#34c759"
+              }
+            },
+            " end"
+          ]
+        },
+        " then ",
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        " done"
+      ]
+    }
+  },
+  {
+    "name": "encoding-does-not-move-a-box",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": [
+      [
+        "plain",
+        "combining"
+      ]
+    ],
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Precomposed vs combining-mark text of identical appearance must put the following box in the same place; the two differ in character count but not in glyph count.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "row-plain",
+          "style": {},
+          "children": [
+            "éééé",
+            {
+              "tag": "span",
+              "m": "plain",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "row-combining",
+          "style": {},
+          "children": [
+            "éééé",
+            {
+              "tag": "span",
+              "m": "combining",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-run-of-spaces-is-one-space",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": [
+      [
+        "one",
+        "three"
+      ]
+    ],
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A run of collapsible whitespace collapses to a single space, so both rows place their box identically.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "row-one",
+          "style": {},
+          "children": [
+            "ab ",
+            {
+              "tag": "span",
+              "m": "one",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "row-three",
+          "style": {},
+          "children": [
+            "ab   ",
+            {
+              "tag": "span",
+              "m": "three",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#0a84ff"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-shifted-run-does-not-grow-the-line",
+    "withText": true,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": "line-height-unchanged-by-shift",
+    "why": "A <sup> shifts within the line (rhythm kept, unlike Safari growing to 30.53) and the run box reserves the shifted ink at its edges.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        "x",
+        {
+          "tag": "sup",
+          "m": "sup",
+          "style": {},
+          "children": [
+            "2"
+          ]
+        },
+        "y",
+        {
+          "tag": "sub",
+          "m": "sub",
+          "style": {},
+          "children": [
+            "3"
+          ]
+        },
+        "z"
+      ]
+    }
+  },
+  {
+    "name": "margin-collapses-out-of-a-block-containers-bottom-edge",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A block container's last child's bottom margin collapses THROUGH its bottom edge (CSS 2.1 8.3.1), so the container measures as if the margin were outside it — 60, not 80.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "marginBlock": "20px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  }
+]
