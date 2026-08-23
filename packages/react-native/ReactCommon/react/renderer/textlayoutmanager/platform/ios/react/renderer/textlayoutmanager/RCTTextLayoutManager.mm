@@ -162,6 +162,59 @@ NSTextStorage *cachedRunTextStorage(const AttributedString &attributedString, CG
 
 } // namespace
 
+@implementation RCTGlyphHuggingLayoutManager {
+  CGPoint _backgroundDrawOrigin;
+}
+
+- (void)drawBackgroundForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin
+{
+  // Remembered so -fillBackgroundRectArray: can translate its rects (which
+  // arrive offset by this origin) back into container coordinates, where the
+  // line fragment rects live.
+  _backgroundDrawOrigin = origin;
+  [super drawBackgroundForGlyphRange:glyphsToShow atPoint:origin];
+}
+
+- (void)fillBackgroundRectArray:(const CGRect *)rectArray
+                          count:(NSUInteger)rectCount
+              forCharacterRange:(NSRange)charRange
+                          color:(UIColor *)color
+{
+  /*
+   * TextKit extends a wrapped range's background to the line fragment's far
+   * edge — the SELECTION convention, where the highlight is a caret range
+   * and running to the wrap point is meaningful. A CSS background is not a
+   * selection: it hugs the glyphs, and the space collapsed at a soft wrap
+   * paints nothing (css-text-3 §4.1.3 removes it for rendering; verified
+   * against real Safari, which ends the first-line highlight at the last
+   * glyph while TextKit painted on to the container edge).
+   *
+   * Each rect is clamped to its own line fragment's USED rect, which is the
+   * glyph extent without the trailing whitespace. Legitimate in-advance
+   * background — inline-box padding riding a character's kern — is inside
+   * the used rect and unaffected. Clamping both edges keeps the rule
+   * direction-agnostic: whichever side the wrap leaves hanging is the side
+   * the used rect excludes.
+   */
+  NSTextContainer *textContainer = self.textContainers.firstObject;
+  std::vector<CGRect> clamped(rectCount);
+  for (NSUInteger i = 0; i < rectCount; i++) {
+    CGRect rect = CGRectOffset(rectArray[i], -_backgroundDrawOrigin.x, -_backgroundDrawOrigin.y);
+    NSUInteger glyphIndex =
+        [self glyphIndexForPoint:CGPointMake(CGRectGetMinX(rect) + 0.5, CGRectGetMidY(rect))
+                 inTextContainer:textContainer];
+    CGRect usedRect = [self lineFragmentUsedRectForGlyphAtIndex:glyphIndex effectiveRange:nil];
+    CGFloat left = MAX(CGRectGetMinX(rect), CGRectGetMinX(usedRect));
+    CGFloat right = MIN(CGRectGetMaxX(rect), CGRectGetMaxX(usedRect));
+    rect.origin.x = left;
+    rect.size.width = MAX(right - left, 0);
+    clamped[i] = CGRectOffset(rect, _backgroundDrawOrigin.x, _backgroundDrawOrigin.y);
+  }
+  [super fillBackgroundRectArray:clamped.data() count:rectCount forCharacterRange:charRange color:color];
+}
+
+@end
+
 @implementation RCTTextLayoutManager {
   SimpleThreadSafeCache<AttributedString, std::shared_ptr<void>, 256> _cache;
 }
@@ -949,7 +1002,9 @@ void drawInlineBoxDecorations(
       : NSLineBreakByClipping;
   textContainer.maximumNumberOfLines = paragraphAttributes.maximumNumberOfLines;
 
-  NSLayoutManager *layoutManager = [NSLayoutManager new];
+  // The subclass gives CSS background semantics to wrapped ranges — see its
+  // -fillBackgroundRectArray: for the whole story.
+  NSLayoutManager *layoutManager = [RCTGlyphHuggingLayoutManager new];
   layoutManager.usesFontLeading = NO;
   [layoutManager addTextContainer:textContainer];
 

@@ -23,6 +23,16 @@ using RCTTextLayoutFragmentEnumerationBlock =
     void (^)(CGRect fragmentRect, NSString *_Nonnull fragmentText, NSString *value);
 
 /**
+ * The layout manager every RCTTextLayoutManager text storage uses. It gives
+ * wrapped ranges CSS background semantics: TextKit extends a wrapped range's
+ * background to the line's wrap edge (the selection convention), while a CSS
+ * background hugs the glyphs — the space collapsed at a soft wrap paints
+ * nothing. See -fillBackgroundRectArray: in the implementation.
+ */
+@interface RCTGlyphHuggingLayoutManager : NSLayoutManager
+@end
+
+/**
  * iOS-specific TextLayoutManager
  */
 @interface RCTTextLayoutManager : NSObject
