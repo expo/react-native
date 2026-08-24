@@ -726,14 +726,33 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
     // continuations included — starts at the content edge.
     const auto marker = contentAccessor->getOutsideMarker();
     if (marker.present) {
+      // The marker's glyphs sit on the content's FIRST-LINE baseline. A
+      // symbolic marker renders at kSymbolicMarkerFontScale, so its own line
+      // is far shorter than the content's — top-aligning the boxes floated
+      // the bullet at cap height. The content baseline (LayoutableShadowNode
+      // ::baseline) already includes the box's baseline-shift reserve, so
+      // nothing else is added; when either baseline is unavailable, fall
+      // back to the old top alignment plus that reserve.
+      const auto markerShiftInk = contentString.baselineShiftInkOverflow().top;
+      Float markerY = contentFrame.origin.y + markerShiftInk;
+      if (marker.baseline > 0) {
+        if (const auto* layoutable =
+                dynamic_cast<const LayoutableShadowNode*>(box.get())) {
+          const auto contentBaseline =
+              layoutable->baseline(LayoutContext{}, contentFrame.size);
+          if (contentBaseline > 0) {
+            markerY =
+                contentFrame.origin.y + contentBaseline - marker.baseline;
+          }
+        }
+      }
       textRuns.push_back(
           ViewState::TextRun{
               .attributedString = marker.attributedString,
               .frame =
                   Rect{
                       .origin =
-                          {contentFrame.origin.x - marker.size.width,
-                           contentFrame.origin.y},
+                          {contentFrame.origin.x - marker.size.width, markerY},
                       .size = marker.size},
               .documentOrder = documentOrder});
     }

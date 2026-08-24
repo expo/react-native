@@ -123,11 +123,43 @@ struct ListMarker {
    */
   bool outside{true};
 
+  /*
+   * A symbolic marker (disc/circle/square, the disclosure triangles) is a
+   * GEOMETRIC glyph the UA sizes at its own discretion (css-counter-styles-3
+   * §6.2). Browsers paint theirs at roughly a third of an em; the text
+   * faces' full-size geometric characters are far larger, so a symbolic
+   * marker fragment renders at a reduced font size — the flag is what tells
+   * the marker builders to apply it. Counter markers ("1.", "iv.") are TEXT
+   * and keep the item's size.
+   */
+  bool symbolic{false};
+
   bool operator==(const ListMarker &other) const
   {
-    return text == other.text && outside == other.outside;
+    return text == other.text && outside == other.outside &&
+        symbolic == other.symbolic;
   }
 };
+
+/*
+ * The scale a symbolic marker's glyph renders at, per platform font.
+ *
+ * Browsers PAINT their markers: ~0.33em of the item's font (real Safari: a
+ * 16px item paints a 5.3px disc). We render the geometric glyphs (●/○/■)
+ * instead, and their ink is a property of the platform font, not of Unicode:
+ * measured on-screen, SF draws ● at ~0.77em of its point size, Roboto at
+ * ~0.48em — a single scale cannot land both. Each platform's scale is
+ * derived from the same target: scale = 0.33 / (that font's ink ratio).
+ *
+ * DOM-CSS-DEVIATION(glyph-markers-not-painted): a font glyph will track the
+ * browsers' painted size within ~15% across the trio (the three forms' ink
+ * ratios differ slightly within a font), not exactly.
+ */
+#if defined(__APPLE__)
+constexpr float kSymbolicMarkerFontScale = 0.43f;
+#else
+constexpr float kSymbolicMarkerFontScale = 0.69f;
+#endif
 
 class ListMarkerSink {
  public:
@@ -144,5 +176,8 @@ class ListMarkerSink {
  * Returns an empty string for `None`.
  */
 std::string listMarkerText(ListStyleType type, int ordinal);
+
+/* Whether `type` is a symbolic (geometric-glyph) style — see ListMarker::symbolic. */
+bool isSymbolicListStyleType(ListStyleType type);
 
 } // namespace facebook::react

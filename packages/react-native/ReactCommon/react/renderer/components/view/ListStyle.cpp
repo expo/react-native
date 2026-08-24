@@ -397,6 +397,19 @@ ListStyleType nestedBulletForDepth(int depth) {
   }
 }
 
+bool isSymbolicListStyleType(ListStyleType type) {
+  switch (type) {
+    case ListStyleType::Disc:
+    case ListStyleType::Circle:
+    case ListStyleType::Square:
+    case ListStyleType::DisclosureOpen:
+    case ListStyleType::DisclosureClosed:
+      return true;
+    default:
+      return false;
+  }
+}
+
 std::string listMarkerText(ListStyleType type, int ordinal) {
   switch (type) {
     case ListStyleType::None:
@@ -409,11 +422,11 @@ std::string listMarkerText(ListStyleType type, int ordinal) {
     // code point, which rendered every third-level `square` bullet as a big
     // black rounded emoji square instead of a small text glyph.
     case ListStyleType::Disc:
-      return reinterpret_cast<const char*>(u8"•︎"); // BULLET
+      return reinterpret_cast<const char*>(u8"●︎"); // BLACK CIRCLE
     case ListStyleType::Circle:
-      return reinterpret_cast<const char*>(u8"◦︎"); // WHITE BULLET
+      return reinterpret_cast<const char*>(u8"○︎"); // WHITE CIRCLE
     case ListStyleType::Square:
-      return reinterpret_cast<const char*>(u8"▪︎"); // BLACK SMALL SQUARE
+      return reinterpret_cast<const char*>(u8"■︎"); // BLACK SQUARE
     case ListStyleType::DisclosureOpen:
       // BLACK DOWN-POINTING SMALL TRIANGLE
       return reinterpret_cast<const char*>(u8"▾︎");

@@ -1156,7 +1156,8 @@ void YogaLayoutableShadowNode::assignListMarkerIfNeeded(
   const auto ordinal = listContext_.nextOrdinal++;
   const auto marker = ListMarker{
       .text = listMarkerText(listContext_.type, ordinal),
-      .outside = listContext_.position == ListStylePosition::Outside};
+      .outside = listContext_.position == ListStylePosition::Outside,
+      .symbolic = isSymbolicListStyleType(listContext_.type)};
 
   if (sink->getListMarker() == marker) {
     return;

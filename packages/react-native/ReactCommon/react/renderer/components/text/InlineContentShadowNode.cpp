@@ -375,6 +375,15 @@ void InlineContentShadowNode::appendListMarkerIfNeeded(
   // white-space collapsing a plain space would not.
   marker.string = listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
   marker.textAttributes = textAttributes;
+  if (listMarker_.symbolic) {
+    // A geometric glyph at the item's full size dwarfs the browsers' painted
+    // markers; the scale puts its ink where theirs measures. See
+    // kSymbolicMarkerFontScale.
+    Float base = !std::isnan(marker.textAttributes.fontSize)
+        ? marker.textAttributes.fontSize
+        : TextAttributes::defaultTextAttributes().fontSize;
+    marker.textAttributes.fontSize = base * kSymbolicMarkerFontScale;
+  }
   // No `parentShadowView`: the marker is not any element's content, so it is
   // treated as bare text and never stamped with an element box.
   attributedString.appendFragment(std::move(marker));
@@ -410,6 +419,13 @@ InlineContentShadowNode::getOutsideMarker() const {
   fragment.string =
       listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
   fragment.textAttributes = cascadeWithResolvedDirection();
+  if (listMarker_.symbolic) {
+    // Same symbolic scale the inside path applies; see kSymbolicMarkerFontScale.
+    Float base = !std::isnan(fragment.textAttributes.fontSize)
+        ? fragment.textAttributes.fontSize
+        : TextAttributes::defaultTextAttributes().fontSize;
+    fragment.textAttributes.fontSize = base * kSymbolicMarkerFontScale;
+  }
   // A fragment reaching the paint path needs a real `parentShadowView`: the
   // text-effect machinery walks it, and a default-constructed one segfaults.
   fragment.parentShadowView = ShadowView{*this};
@@ -423,9 +439,27 @@ InlineContentShadowNode::getOutsideMarker() const {
           .surfaceId = getSurfaceId()},
       LayoutConstraints{});
 
+  // The marker's own baseline, so the caller can align it with the content's
+  // first line rather than the box top — the same bottom-minus-descender
+  // formulation baseline() uses, for the same reason.
+  Float markerBaseline = 0;
+  if constexpr (TextLayoutManagerExtended::supportsLineMeasurement()) {
+    auto lines = TextLayoutManagerExtended(*textLayoutManager_)
+                     .measureLines(
+                         AttributedStringBox{markerString},
+                         ParagraphAttributes{},
+                         measurement.size);
+    if (!lines.empty()) {
+      const auto& line = lines[0];
+      markerBaseline = line.frame.origin.y + line.frame.size.height -
+          std::abs(line.descender);
+    }
+  }
+
   return OutsideMarker{
       .attributedString = markerString,
       .size = measurement.size,
+      .baseline = markerBaseline,
       .present = true};
 }
 

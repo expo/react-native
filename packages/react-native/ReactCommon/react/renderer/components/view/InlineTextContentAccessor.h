@@ -89,6 +89,15 @@ class InlineTextContentAccessor {
   struct OutsideMarker {
     AttributedString attributedString;
     Size size;
+    /*
+     * Distance from the marker box's top to its glyphs' baseline. The caller
+     * aligns this with the content's first-line baseline — a symbolic marker
+     * renders at a reduced font size (kSymbolicMarkerFontScale), so its own
+     * line is much shorter than the content's, and top-aligning the two boxes
+     * floated the bullet up at cap height. 0 when line measurement is
+     * unavailable; the caller then falls back to top alignment.
+     */
+    Float baseline{0};
     bool present{false};
   };
   virtual OutsideMarker getOutsideMarker() const = 0;
