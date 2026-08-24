@@ -58,3 +58,30 @@ test('a label in a tight flex row yields instead of overflowing', () => {
   // the row's right edge.
   expect(rect.right).toBeLessThanOrEqual(200);
 });
+
+test('a button in a tight flex row keeps its label on one line', () => {
+  // The other half of the shrink rule: CSS floors a flex item at its
+  // min-content (`min-width: auto`), which Yoga does not implement — so a
+  // control whose width IS its label must not shrink at all, or "Submit"
+  // wraps in any row tighter than its buttons.
+  const root = Fantom.createRoot();
+  const submit = createRef<HostInstance>();
+  Fantom.runTask(() => {
+    root.render(
+      <View style={{width: 220, flexDirection: 'row', gap: 14}}>
+        {/* $FlowFixMe[prop-missing] intrinsic */}
+        <button ref={submit} type="button">
+          Submit
+        </button>
+        {/* $FlowFixMe[prop-missing] intrinsic */}
+        <button type="button">Reset</button>
+        {/* $FlowFixMe[prop-missing] intrinsic */}
+        <button type="button">Clear output</button>
+      </View>,
+    );
+  });
+  const rect = nullthrows(submit.current).getBoundingClientRect();
+  // Material's 48dp button (Fantom = android table): a one-line label. A
+  // wrapped label would double the height.
+  expect(rect.height).toBe(48);
+});

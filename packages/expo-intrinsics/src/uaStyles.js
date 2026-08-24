@@ -380,6 +380,13 @@ function buttonSheetEntry(): UAStyle {
     paddingBlock: BUTTON_CHROME.paddingBlock,
     paddingInline: BUTTON_CHROME.paddingInline,
     minHeight: BUTTON_CHROME.minHeight,
+    // On the web a flex item's implied `min-width: auto` (its min-content)
+    // stops a shrunk button collapsing below its label. Yoga has no
+    // automatic minimum, so the flex-shrink:1 initial the elements state
+    // let a tight row wrap "Submit" onto two lines. Not shrinking is the
+    // Yoga-expressible half of CSS's floor for a control whose whole width
+    // IS its label; an author flexShrink still wins.
+    flexShrink: 0,
   };
   if (BUTTON_CHROME.fontSize != null) {
     entry.fontSize = BUTTON_CHROME.fontSize;

@@ -1026,6 +1026,10 @@ function GroupingAndLabels() {
         note="A group of related controls with a caption. Deviation: a browser notches the legend into the fieldset's top border; here it renders above the box, the way iOS grouped settings and Material set a group's label — see DOM-CSS-DEVIATION(fieldset-legend-position).">
         <fieldset>
           <legend>Delivery</legend>
+          {/* The LAST row sheds its bottom margin: the box's symmetric UA
+              padding is the vertical rhythm, and a trailing row margin
+              stacked on it read as "too much bottom padding" (12 above the
+              first row, 12 + 14 under the last). */}
           <View style={ROW}>
             <input
               type="radio"
@@ -1035,7 +1039,7 @@ function GroupingAndLabels() {
             />
             <Text>Standard</Text>
           </View>
-          <View style={ROW}>
+          <View style={{...ROW, marginBottom: 0}}>
             <input type="radio" name="delivery" value="express" />
             <Text>Express</Text>
           </View>
