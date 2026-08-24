@@ -201,6 +201,31 @@ describe('cn', () => {
     expect(cn('text-sm text-lg')).toBe('text-lg');
   });
 
+  it('keeps a ring width next to a ring colour', () => {
+    // The collision that deleted every focus ring's WIDTH across the design
+    // system: ring-2 is a width, ring-ring is a colour — one prefix, two
+    // axes, the flex/flex-row shape again. The switch loses its offset the
+    // same way (offset width and offset colour).
+    expect(
+      cn('focus-visible:ring-2 focus-visible:ring-ring').split(' ').sort(),
+    ).toEqual(['focus-visible:ring-2', 'focus-visible:ring-ring']);
+    expect(
+      cn(
+        'focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      )
+        .split(' ')
+        .sort(),
+    ).toEqual([
+      'focus-visible:ring-offset-2',
+      'focus-visible:ring-offset-background',
+    ]);
+    // Same axis still collapses: widths against widths, colours against
+    // colours, and the bare `ring` (the 3px default) IS a width.
+    expect(cn('ring-2 ring-4')).toBe('ring-4');
+    expect(cn('ring ring-0')).toBe('ring-0');
+    expect(cn('ring-ring ring-blue-500')).toBe('ring-blue-500');
+  });
+
   it('merges conflicting utilities, later wins', () => {
     expect(cn('px-4 py-2', 'px-8').split(' ').sort()).toEqual(['px-8', 'py-2']);
     expect(cn('bg-primary', false, 'bg-secondary')).toBe('bg-secondary');

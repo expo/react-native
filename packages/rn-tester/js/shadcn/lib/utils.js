@@ -151,8 +151,6 @@ const PREFIX_GROUPS = [
   ['bottom', 'bottom'],
   ['left', 'left'],
   ['z', 'z'],
-  ['ring-offset', 'ring-offset'],
-  ['ring', 'ring'],
   ['underline-offset', 'underline-offset'],
   ['fill', 'fill'],
   ['stroke', 'stroke'],
@@ -220,6 +218,29 @@ function conflictKey(cls: string): string {
     }
     return variants + 'flex';
   }
+  // `ring-2` sets a width and `ring-ring` a colour — one prefix, two axes,
+  // exactly the flex/flex-row shape again. Collapsed to one group, the later
+  // colour deleted the width, and NO focus ring in the design system ever
+  // had a non-zero width (eight components hit; ring-offset collides the
+  // same way in switch.tsx). A numeric or arbitrary-length suffix is a
+  // width, bare `ring` is the 3px default width, `inset` is its own axis,
+  // anything else is a colour.
+  if (utility === 'ring' || utility.startsWith('ring-')) {
+    const offset = utility.startsWith('ring-offset-');
+    const suffix = offset
+      ? utility.slice('ring-offset-'.length)
+      : utility === 'ring'
+        ? ''
+        : utility.slice('ring-'.length);
+    if (suffix === 'inset') {
+      return variants + 'ring-inset';
+    }
+    const isWidth =
+      suffix === '' || /^\d/.test(suffix) || /^\[\d/.test(suffix);
+    const axis = offset ? 'ring-offset' : 'ring';
+    return variants + axis + (isWidth ? '-width' : '-color');
+  }
+
   if (utility === 'border' || /^border-\d/.test(utility)) {
     return variants + 'border-width';
   }
