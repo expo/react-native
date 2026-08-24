@@ -166,8 +166,16 @@ test('a button insets its content, and an author padding replaces that inset', (
    * element withdraws its padding when the author states any — see
    * `authorStates`. Without it this test reads 14, not 4.
    */
-  expect(measureButton({borderWidth: 0}).offset.left).toBe(UA_INSET_INLINE);
-  expect(measureButton({borderWidth: 0, padding: 4}).offset.left).toBe(4);
+  expect(measureButton({}).offset.left).toBe(UA_INSET_INLINE);
+  expect(measureButton({padding: 4}).offset.left).toBe(4);
+  /*
+   * An explicit border — even zero — claims the SURFACE, and the chrome
+   * withdraws as a unit (insets included), exactly as web preflight's
+   * `border: 0` strips a button naked. The withdrawal itself is pinned in
+   * ButtonChromeWithdrawal-itest; here it only explains why these
+   * measurements must not pass a borderWidth to mean "plain".
+   */
+  expect(measureButton({borderWidth: 0}).offset.left).toBe(0);
 });
 
 test('a button is at least a touch target tall, and centres its content in it', () => {
@@ -182,7 +190,7 @@ test('a button is at least a touch target tall, and centres its content in it', 
    * floor applies and the content ends up centred inside it rather than sitting
    * at the padding edge.
    */
-  const {offset, height} = measureButton({borderWidth: 0});
+  const {offset, height} = measureButton({});
   expect(height).toBe(UA_MIN_HEIGHT);
   expect(offset.top).toBe((height - 10) / 2);
 });
