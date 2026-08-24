@@ -531,6 +531,13 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
   // `measureContent` does, using the box's own pixel scale.
   auto layoutContext = LayoutContext{};
   layoutContext.pointScaleFactor = getLayoutMetrics().pointScaleFactor;
+  // The inline axis is bounded by the RUN'S OWN final width — this is the
+  // paint/publish path, so layout is done and the box is known. An infinite
+  // maximum here let a shrink-to-fit atomic inline (a measured `<select>`)
+  // publish WIDER than the run that had measured it clamped, so the mounted
+  // control overflowed the container the layout had respected. The block
+  // axis stays unbounded: an inline box's ink may overflow the line.
+  const auto runWidth = getLayoutMetrics().frame.size.width;
   measureImageAttachments(
       attributedString,
       attachments,
@@ -538,7 +545,7 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
       LayoutConstraints{
           .minimumSize = {0, 0},
           .maximumSize = {
-              std::numeric_limits<Float>::infinity(),
+              runWidth > 0 ? runWidth : std::numeric_limits<Float>::infinity(),
               std::numeric_limits<Float>::infinity()}});
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
@@ -583,7 +590,12 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
   // Reserve each image's box so the run lays out with the attachments included,
   // exactly as `measureContent` does. The images are not laid out yet at this
   // point (the owning View positions them right after), so we measure them here
-  // rather than reading their (still-zero) layout metrics.
+  // rather than reading their (still-zero) layout metrics. The inline axis is
+  // bounded by the run's own FINAL width — layout is done on this path — so a
+  // shrink-to-fit atomic inline (a measured `<select>`) is placed at the same
+  // clamped size the run measured with, instead of overflowing the container
+  // the layout respected.
+  const auto placementRunWidth = getLayoutMetrics().frame.size.width;
   measureImageAttachments(
       attributedString,
       attachments,
@@ -591,7 +603,8 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
       LayoutConstraints{
           .minimumSize = {0, 0},
           .maximumSize = {
-              std::numeric_limits<Float>::infinity(),
+              placementRunWidth > 0 ? placementRunWidth
+                                    : std::numeric_limits<Float>::infinity(),
               std::numeric_limits<Float>::infinity()}});
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
