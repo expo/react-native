@@ -371,19 +371,34 @@ void InlineContentShadowNode::appendListMarkerIfNeeded(
     return;
   }
   auto marker = AttributedString::Fragment{};
-  // The gap after the marker is a no-break space, so it survives the
-  // white-space collapsing a plain space would not.
-  marker.string = listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
   marker.textAttributes = textAttributes;
   if (listMarker_.symbolic) {
     // A geometric glyph at the item's full size dwarfs the browsers' painted
-    // markers; the scale puts its ink where theirs measures. See
-    // kSymbolicMarkerFontScale.
+    // markers; the scale puts its ink where theirs measures, and the
+    // baseline shift centres that ink on the x-height midpoint the way
+    // browsers place theirs — a scaled glyph seated ON the baseline read
+    // visibly low. See kSymbolicMarkerFontScale/-BaselineShiftEm.
     Float base = !std::isnan(marker.textAttributes.fontSize)
         ? marker.textAttributes.fontSize
         : TextAttributes::defaultTextAttributes().fontSize;
+    marker.string = listMarker_.text;
     marker.textAttributes.fontSize = base * kSymbolicMarkerFontScale;
+    marker.textAttributes.baselineShift = base * kSymbolicMarkerBaselineShiftEm;
+    attributedString.appendFragment(std::move(marker));
+    // The gap in the ITEM's font, not the marker's reduced one — scaled
+    // down with the glyph it measured ~0.1em and the marker read as glued
+    // to the text. No-break spaces survive white-space collapsing.
+    auto gap = AttributedString::Fragment{};
+    gap.textAttributes = textAttributes;
+    for (int i = 0; i < kSymbolicMarkerGapSpaces; i++) {
+      gap.string += reinterpret_cast<const char*>(u8"\u00A0");
+    }
+    attributedString.appendFragment(std::move(gap));
+    return;
   }
+  // The gap after the marker is a no-break space, so it survives the
+  // white-space collapsing a plain space would not.
+  marker.string = listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
   // No `parentShadowView`: the marker is not any element's content, so it is
   // treated as bare text and never stamped with an element box.
   attributedString.appendFragment(std::move(marker));
@@ -413,23 +428,39 @@ InlineContentShadowNode::getOutsideMarker() const {
 
   auto markerString = AttributedString{};
   auto fragment = AttributedString::Fragment{};
-  // The trailing no-break space is the gap between the marker and the content.
-  // Measuring it as part of the marker is what sets the marker's start
-  // position once the caller right-aligns the whole thing to the content edge.
-  fragment.string =
-      listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
   fragment.textAttributes = cascadeWithResolvedDirection();
   if (listMarker_.symbolic) {
-    // Same symbolic scale the inside path applies; see kSymbolicMarkerFontScale.
+    // Same scale, shift and item-sized gap as the inside path — see
+    // kSymbolicMarkerFontScale/-BaselineShiftEm/-GapSpaces. The gap is
+    // measured as part of the marker, which is what sets the marker's start
+    // once the caller right-aligns the whole thing to the content edge.
     Float base = !std::isnan(fragment.textAttributes.fontSize)
         ? fragment.textAttributes.fontSize
         : TextAttributes::defaultTextAttributes().fontSize;
+    fragment.string = listMarker_.text;
+    auto gap = AttributedString::Fragment{};
+    gap.textAttributes = fragment.textAttributes;
     fragment.textAttributes.fontSize = base * kSymbolicMarkerFontScale;
+    fragment.textAttributes.baselineShift = base * kSymbolicMarkerBaselineShiftEm;
+    // A fragment reaching the paint path needs a real `parentShadowView`:
+    // the text-effect machinery walks it, and a default-constructed one
+    // segfaults.
+    fragment.parentShadowView = ShadowView{*this};
+    markerString.appendFragment(std::move(fragment));
+    for (int i = 0; i < kSymbolicMarkerGapSpaces; i++) {
+      gap.string += reinterpret_cast<const char*>(u8"\u00A0");
+    }
+    gap.parentShadowView = ShadowView{*this};
+    markerString.appendFragment(std::move(gap));
+  } else {
+    // The trailing no-break space is the gap between the marker and the
+    // content, measured as part of the marker so the right-alignment to the
+    // content edge places the text where it should start.
+    fragment.string =
+        listMarker_.text + reinterpret_cast<const char*>(u8"\u00A0");
+    fragment.parentShadowView = ShadowView{*this};
+    markerString.appendFragment(std::move(fragment));
   }
-  // A fragment reaching the paint path needs a real `parentShadowView`: the
-  // text-effect machinery walks it, and a default-constructed one segfaults.
-  fragment.parentShadowView = ShadowView{*this};
-  markerString.appendFragment(std::move(fragment));
 
   const auto measurement = textLayoutManager_->measure(
       AttributedStringBox{markerString},

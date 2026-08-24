@@ -161,6 +161,23 @@ constexpr float kSymbolicMarkerFontScale = 0.43f;
 constexpr float kSymbolicMarkerFontScale = 0.69f;
 #endif
 
+/*
+ * Where the glyph SITS. Browsers centre their painted marker on the item
+ * text's x-height midpoint; a font glyph sits on the baseline, which reads
+ * visibly low once the glyph is scaled down. The raise, as a fraction of
+ * the ITEM's font size: (x-height - marker ink) / 2 with x-height ~0.52em
+ * and ink ~0.33em on both platform fonts.
+ */
+constexpr float kSymbolicMarkerBaselineShiftEm = 0.095f;
+
+/*
+ * The marker-to-text gap, in ITEM-font no-break spaces. One NBSP in the
+ * MARKER's reduced font measured ~0.1em and read as glued-on; Safari's
+ * painted markers sit ~0.65em of gap from the text (measured), and two
+ * item-sized NBSPs (~0.55em) land next to that.
+ */
+constexpr int kSymbolicMarkerGapSpaces = 2;
+
 class ListMarkerSink {
  public:
   virtual ~ListMarkerSink() = default;
