@@ -15,6 +15,7 @@
 #import <React/RCTConstants.h>
 #import <React/RCTDefines.h>
 #import <React/RCTLinkingManager.h>
+#import <React/RCTUtils.h>
 #import <ReactCommon/RCTSampleTurboModule.h>
 #import <ReactCommon/RCTTurboModuleManager.h>
 
@@ -178,7 +179,65 @@ class RNTesterFeatureFlagsOverrides : public facebook::react::ReactNativeFeature
             openURL:(NSURL *)url
             options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options
 {
+  // `rntester://nativeprobe` — the pure-UIKit control experiment for the
+  // select-dismissal glitch. Presented modally OVER the React app with not a
+  // single React Native view inside it, so a finger on a real device can
+  // answer "does UIKit's own pop-up ghost when scrolled during dismissal?"
+  // with the app itself as the control group. Type the URL in Safari on the
+  // device to open it.
+  if ([url.host isEqualToString:@"nativeprobe"]) {
+    [self presentNativeMenuProbe];
+    return YES;
+  }
   return [RCTLinkingManager application:app openURL:url options:options];
+}
+
+- (void)presentNativeMenuProbe
+{
+  UIViewController *probe = [UIViewController new];
+  probe.view.backgroundColor = UIColor.systemBackgroundColor;
+
+  UIScrollView *scroll = [[UIScrollView alloc] initWithFrame:probe.view.bounds];
+  scroll.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+  scroll.contentSize = CGSizeMake(probe.view.bounds.size.width, 3000);
+  [probe.view addSubview:scroll];
+
+  for (int i = 0; i < 30; i++) {
+    UILabel *row = [[UILabel alloc] initWithFrame:CGRectMake(16, 100 + i * 100, 320, 30)];
+    row.text = [NSString stringWithFormat:@"plain UIKit row %d", i];
+    row.textColor = UIColor.labelColor;
+    [scroll addSubview:row];
+  }
+
+  UIButtonConfiguration *configuration = [UIButtonConfiguration borderedButtonConfiguration];
+  configuration.cornerStyle = UIButtonConfigurationCornerStyleMedium;
+  UIButton *popUp = [UIButton buttonWithConfiguration:configuration primaryAction:nil];
+  popUp.frame = CGRectMake(60, 450, 240, 44);
+  popUp.showsMenuAsPrimaryAction = YES;
+  popUp.changesSelectionAsPrimaryAction = YES;
+  popUp.menu = [UIMenu menuWithTitle:@""
+                            children:@[
+                              [UIAction actionWithTitle:@"Apple" image:nil identifier:nil handler:^(UIAction *a){}],
+                              [UIAction actionWithTitle:@"Banana" image:nil identifier:nil handler:^(UIAction *a){}],
+                              [UIAction actionWithTitle:@"Cherry" image:nil identifier:nil handler:^(UIAction *a){}],
+                            ]];
+  [scroll addSubview:popUp];
+
+  UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
+  close.frame = CGRectMake(16, 40, 80, 44);
+  [close setTitle:@"Close" forState:UIControlStateNormal];
+  [close addAction:[UIAction actionWithHandler:^(UIAction *a) {
+           [probe dismissViewControllerAnimated:YES completion:nil];
+         }]
+      forControlEvents:UIControlEventTouchUpInside];
+  [probe.view addSubview:close];
+
+  probe.modalPresentationStyle = UIModalPresentationFullScreen;
+  UIViewController *top = RCTKeyWindow().rootViewController;
+  while (top.presentedViewController != nil) {
+    top = top.presentedViewController;
+  }
+  [top presentViewController:probe animated:YES completion:nil];
 }
 
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const std::string &)name
