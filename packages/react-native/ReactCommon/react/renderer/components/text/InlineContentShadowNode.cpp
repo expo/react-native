@@ -461,7 +461,10 @@ Float InlineContentShadowNode::baseline(
     // around it on iOS. The bottom minus the descender is where the glyphs
     // actually sit.
     const auto& line = lines[0];
-    return line.frame.origin.y + line.frame.size.height -
+    // Plus the box's baseline-shift reserve: the first line sits that far
+    // below the box top (measureContent).
+    return attributedString.baselineShiftInkOverflow().top +
+        line.frame.origin.y + line.frame.size.height -
         std::abs(line.descender);
   }
   return 0;
@@ -576,13 +579,17 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
       LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
 
   // `measurement.attachments` is parallel to the attachment fragments in the
-  // measured string, which preserves the order of `attachments`.
+  // measured string, which preserves the order of `attachments`. The box
+  // reserves baseline-shift ink at its top (measureContent), so everything
+  // the text layout placed shifts down by that reserve.
+  const auto placementShiftInk = attributedString.baselineShiftInkOverflow();
   auto count = std::min(attachments.size(), measurement.attachments.size());
   placements.reserve(count);
   for (size_t i = 0; i < count; ++i) {
+    auto frame = measurement.attachments[i].frame;
+    frame.origin.y += placementShiftInk.top;
     placements.push_back(
-        {&attachments[i].shadowNode->getFamily(),
-         measurement.attachments[i].frame});
+        {&attachments[i].shadowNode->getFamily(), frame});
   }
   return placements;
 }
@@ -653,10 +660,17 @@ InlineContentShadowNode::stampInlineElementMetrics(
       textLayoutContext,
       LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
 
+  // Fragment rects come from the text layout; the box's baseline-shift
+  // reserve (measureContent) sits above them.
+  auto shiftedRects = measurement.fragmentRects;
+  const auto stampShiftInk = attributedString.baselineShiftInkOverflow();
+  for (auto& rect : shiftedRects) {
+    rect.origin.y += stampShiftInk.top;
+  }
   return facebook::react::stampInlineElementMetrics(
       *this,
       attributedString,
-      measurement.fragmentRects,
+      shiftedRects,
       contentOrigin,
       ownerLayoutMetrics);
 }
@@ -724,13 +738,22 @@ Size InlineContentShadowNode::measureContent(
       .runTag = getTag(),
   };
 
-  return textLayoutManager_
-      ->measure(
-          AttributedStringBox{attributedString},
-          ParagraphAttributes{},
-          textLayoutContext,
-          constraintsForWhiteSpace(textAttributes, layoutConstraints))
-      .size;
+  auto size = textLayoutManager_
+                  ->measure(
+                      AttributedStringBox{attributedString},
+                      ParagraphAttributes{},
+                      textLayoutContext,
+                      constraintsForWhiteSpace(textAttributes, layoutConstraints))
+                  .size;
+  // Baseline-shifted ink (<sup>/<sub>) paints past the LINE box by design —
+  // the keep-the-rhythm deviation — but it must not escape the RUN'S box:
+  // ink past the box's top painted over whatever sat above the run. The box
+  // reserves it at its edges; the paint and placement passes shift content
+  // down by the same top share (they recompute it from the same string, so
+  // the two sides cannot disagree).
+  const auto shiftInk = attributedString.baselineShiftInkOverflow();
+  size.height += shiftInk.top + shiftInk.bottom;
+  return size;
 }
 
 } // namespace facebook::react

@@ -182,10 +182,13 @@ dividers, and this is one.
 
 **What we do:** the user-agent sheet sizes both at `0.8333em` (exactly
 Chrome's computed 13.3333px on a 16px root), and each platform's text stack
-shifts the run by half the ascent. The line box does NOT grow: the paragraph
-keeps its rhythm, and the shifted ink paints into overflow the run's canvas
-reserves for it — half the font size above a superscript, below a subscript —
-so nothing clips (an `x²` on a first line keeps the top of its 2).
+shifts the run by half the ascent. The LINE box does not grow — the
+paragraph keeps its interior rhythm — but the RUN'S BOX reserves the shifted
+ink at its edges (half the shifted fragment's font size above a superscript,
+below a subscript), so nothing clips and the ink can never escape the
+element to paint over a sibling: an `x²` on a paragraph's first line keeps
+the top of its 2 *inside its own box* instead of riding into the element
+above (`SupInkReserved-itest`).
 
 **The spec:** Safari grows the line box under a shifted run — measured
 30.53px against the surrounding 24px rhythm — visibly pushing the next line

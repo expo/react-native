@@ -1624,13 +1624,21 @@ internal object TextLayoutManager {
             paragraphAttributes.getInt(PA_KEY_MAX_NUMBER_OF_LINES)
         else ReactConstants.UNSET
 
-    val verticalOffset = getVerticalOffset(
+    var verticalOffset = getVerticalOffset(
         result.layout,
         paragraphAttributes,
         height,
         heightYogaMeasureMode,
         maximumNumberOfLines,
     )
+    // The run box RESERVES baseline-shift ink at its top
+    // (InlineContentShadowNode::measureContent adds
+    // AttributedString::baselineShiftInkOverflow to the measured height), so
+    // the first baseline sits a reserve lower and a superscript's ink lands
+    // inside the box instead of painting over the sibling above. This is the
+    // Android half of that agreement — the same rule as the C++ side: half
+    // the shifted fragment's font size.
+    verticalOffset += baselineShiftInkTop(fragments)
 
     return PreparedLayout(
         result.layout,
@@ -1745,6 +1753,26 @@ internal object TextLayoutManager {
 
       previousFontSize = currentFontSize
     }
+  }
+
+  /**
+   * The top share of the baseline-shift ink reserve — the Kotlin mirror of
+   * `AttributedString::baselineShiftInkOverflow().top`, computed from the
+   * same per-fragment facts (a `super` fragment reserves half its already
+   * pixel-converted font size) so the measured box (C++) and the drawn
+   * layout (here) cannot disagree.
+   */
+  private fun baselineShiftInkTop(fragments: MapBuffer): Float {
+    var top = 0f
+    for (i in 0 until fragments.count) {
+      val fragment = fragments.getMapBuffer(i)
+      val props =
+          TextAttributeProps.fromMapBuffer(fragment.getMapBuffer(FR_KEY_TEXT_ATTRIBUTES))
+      if (props.verticalAlign == "super" && props.fontSize > 0) {
+        top = maxOf(top, props.fontSize / 2f)
+      }
+    }
+    return top
   }
 
   @JvmStatic
