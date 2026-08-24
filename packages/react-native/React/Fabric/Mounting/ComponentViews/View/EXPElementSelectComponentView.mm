@@ -45,7 +45,126 @@ using namespace facebook::react;
 @property(nonatomic, copy, nullable) void (^onMenuFullyDismissed)(void);
 @end
 
-@implementation EXPElementSelectButton
+/*
+ * The dismissal-follows-the-scroll compensation.
+ *
+ * UIKit's own platter retargeting starves while a finger drags (the main
+ * run loop sits in UITrackingRunLoopMode), which is the ghost the probes
+ * isolated: programmatic scrolls track, real drags do not. This display
+ * link is scheduled in COMMON run-loop modes, so it keeps firing during the
+ * drag — each frame it reads how far the ancestor scroll views have moved
+ * since the dismissal began and translates the menu's container by the
+ * opposite amount. A TRANSFORM, not a frame write, so it composes with the
+ * morph animation UIKit is running on the platter instead of fighting it.
+ *
+ * Everything here is public API over discovered views: the container is
+ * found by class name, and when it is not found the behaviour is exactly
+ * today's (the compensation is a no-op).
+ */
+static UIView *EXPFindMenuContainer(UIView *root)
+{
+  NSString *name = NSStringFromClass([root class]);
+  if ([name containsString:@"ContextMenuContainer"] || [name containsString:@"MorphingPlatter"]) {
+    return root;
+  }
+  for (UIView *subview in root.subviews) {
+    UIView *found = EXPFindMenuContainer(subview);
+    if (found != nil) {
+      return found;
+    }
+  }
+  return nil;
+}
+
+static UIView *EXPMenuContainerInAnyWindow(void)
+{
+  for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+    if (![scene isKindOfClass:[UIWindowScene class]]) {
+      continue;
+    }
+    for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+      UIView *found = EXPFindMenuContainer(window);
+      if (found != nil) {
+        return found;
+      }
+    }
+  }
+  return nil;
+}
+
+// The prototype's switch — see the call site in willEndForConfiguration.
+static const BOOL kEXPSelectFollowDismissalScroll = NO;
+
+@interface EXPSelectDismissalFollower : NSObject
+- (instancetype)initWithButton:(UIButton *)button;
+- (void)stop;
+@end
+
+@implementation EXPSelectDismissalFollower {
+  __weak UIButton *_button;
+  __weak UIView *_container;
+  CADisplayLink *_link;
+  NSMapTable<UIScrollView *, NSValue *> *_startOffsets;
+}
+
+- (instancetype)initWithButton:(UIButton *)button
+{
+  if (self = [super init]) {
+    _button = button;
+    _startOffsets = [NSMapTable weakToStrongObjectsMapTable];
+    UIView *ancestor = button.superview;
+    while (ancestor != nil) {
+      if ([ancestor isKindOfClass:[UIScrollView class]]) {
+        UIScrollView *scrollView = (UIScrollView *)ancestor;
+        [_startOffsets setObject:[NSValue valueWithCGPoint:scrollView.contentOffset]
+                          forKey:scrollView];
+      }
+      ancestor = ancestor.superview;
+    }
+    _container = EXPMenuContainerInAnyWindow();
+    if (_container != nil && _startOffsets.count > 0) {
+      _link = [CADisplayLink displayLinkWithTarget:self selector:@selector(tick)];
+      [_link addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
+    }
+  }
+  return self;
+}
+
+- (void)tick
+{
+  UIView *container = _container;
+  if (container == nil) {
+    [self stop];
+    return;
+  }
+  CGFloat deltaX = 0;
+  CGFloat deltaY = 0;
+  for (UIScrollView *scrollView in _startOffsets.keyEnumerator) {
+    CGPoint start = [[_startOffsets objectForKey:scrollView] CGPointValue];
+    deltaX += scrollView.contentOffset.x - start.x;
+    deltaY += scrollView.contentOffset.y - start.y;
+  }
+  // Content moving down (offset grows) carries the button UP the screen; the
+  // closing menu follows it by the same amount.
+  container.transform = CGAffineTransformMakeTranslation(-deltaX, -deltaY);
+}
+
+- (void)stop
+{
+  [_link invalidate];
+  _link = nil;
+  UIView *container = _container;
+  if (container != nil) {
+    container.transform = CGAffineTransformIdentity;
+  }
+  _container = nil;
+}
+
+@end
+
+@implementation EXPElementSelectButton {
+  EXPSelectDismissalFollower *_dismissalFollower;
+}
 
 - (void)contextMenuInteraction:(UIContextMenuInteraction *)interaction
     willDisplayMenuForConfiguration:(UIContextMenuConfiguration *)configuration
@@ -59,6 +178,16 @@ using namespace facebook::react;
        willEndForConfiguration:(UIContextMenuConfiguration *)configuration
                       animator:(id<UIContextMenuInteractionAnimating>)animator
 {
+  // Follow the scroll for the dismissal's duration — see the follower. OFF
+  // by default: the direction of record is a MINIMAL fix derived from the
+  // standalone repro app, not display-link work; this prototype stays as
+  // the known-working fallback (its display link runs in common modes, so
+  // it keeps firing where UIKit's own retargeting starves during a drag).
+  if (kEXPSelectFollowDismissalScroll) {
+    [_dismissalFollower stop];
+    _dismissalFollower = [[EXPSelectDismissalFollower alloc] initWithButton:self];
+  }
+
   __weak EXPElementSelectButton *weakSelf = self;
   void (^finished)(void) = ^{
     EXPElementSelectButton *strongSelf = weakSelf;
@@ -66,6 +195,8 @@ using namespace facebook::react;
       return;
     }
     strongSelf.menuOnScreen = NO;
+    [strongSelf->_dismissalFollower stop];
+    strongSelf->_dismissalFollower = nil;
     void (^pending)(void) = strongSelf.onMenuFullyDismissed;
     strongSelf.onMenuFullyDismissed = nil;
     if (pending != nil) {
@@ -86,6 +217,8 @@ using namespace facebook::react;
   if (newWindow == nil) {
     self.menuOnScreen = NO;
     self.onMenuFullyDismissed = nil;
+    [_dismissalFollower stop];
+    _dismissalFollower = nil;
   }
   [super willMoveToWindow:newWindow];
 }
