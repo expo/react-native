@@ -44,6 +44,7 @@ const CONVERTED = {
   HTMLGroupingExample: path.join(DOCS_DIR, 'groupingDocs.js'),
   HTMLTextLevelExample: path.join(DOCS_DIR, 'textLevelDocs.js'),
   HTMLEmbeddedExample: path.join(DOCS_DIR, 'embeddedDocs.js'),
+  HTMLIntrinsicsDocExample: path.join(DOCS_DIR, 'intrinsicsDocs.js'),
 };
 
 /**

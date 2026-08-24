@@ -92,6 +92,13 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'UI',
   },
   {
+    key: 'HTMLIntrinsicsDocExample',
+    pinned: true,
+    module: require('../examples/HTMLElements/HTMLIntrinsicsDocExample')
+      .default,
+    category: 'UI',
+  },
+  {
     key: 'DisplayBlockExample',
     pinned: true,
     module: require('../examples/DisplayBlock/DisplayBlockExample').default,

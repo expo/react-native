@@ -78,6 +78,7 @@ const SECTIONS = [
       'on.',
     screens: [
       'StringChildrenExample',
+      'HTMLIntrinsicsDocExample',
       'IntrinsicElementsExample',
       'ListsExample',
     ],
@@ -96,11 +97,6 @@ const SECTIONS = [
       'Where the answer is deliberately *not* the web: platform buttons ' +
       'and icons.',
     screens: ['NativeButtonExample', 'IconsExample'],
-  },
-  {
-    title: 'Benchmarks',
-    blurb: 'Text measurement cost. Included for completeness.',
-    screens: ['DeviceTextBenchmarkExample'],
   },
 ];
 
