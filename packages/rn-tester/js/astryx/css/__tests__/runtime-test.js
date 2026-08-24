@@ -153,6 +153,20 @@ describe('stylesheets on intrinsic elements', () => {
     expect(stops[0]).toMatchObject({offset: 0, transform: 'rotate(0deg)'});
   });
 
+  it('resolves an explicit inherit on an inherited property to a null reset', () => {
+    // Preflight's `h1..h6 { font-size: inherit }` must DEFEAT the
+    // user-agent heading size underneath it. The engine cannot reach the UA
+    // layer, but RN can: a null style value cancels the merged prop and the
+    // renderer's own text cascade supplies the inherited value — which is
+    // what `inherit` computes to. Dropped instead, the UA size stood, and
+    // an accordion trigger (an <h3> underneath) rendered at heading size.
+    installStylesheet('.reset { font-size: inherit; padding: inherit }');
+    const style = hostStyle(render(div({className: 'reset'})), 'div');
+    expect(style.fontSize).toBe(null);
+    // A non-inherited property has nothing to compute to here; it drops.
+    expect('padding' in style).toBe(false);
+  });
+
   it('keeps a cubic-bezier() whole through the animation shorthand', () => {
     // Tailwind's own animate-pulse. The bezier's commas are INSIDE the
     // function — a naive comma split cut the shorthand there and filed

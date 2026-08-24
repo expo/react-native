@@ -1141,6 +1141,13 @@ export function resolveDeclarations(
     if (value != null && typeof value === 'object' && !Array.isArray(value)) {
       value = pickConditionalValue(value, state);
     }
+    if (value === null) {
+      // An explicit-`inherit` reset (resolveCssForElement): the null must
+      // REACH the style, where the merge cancels lower layers and the
+      // renderer's text cascade supplies the inherited value.
+      out[prop] = null;
+      continue;
+    }
     if (value == null) {
       continue;
     }

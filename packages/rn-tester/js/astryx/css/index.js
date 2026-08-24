@@ -380,6 +380,23 @@ const QUIET_WEB_ONLY: Set<string> = new Set([
   'transformOrigin',
 ]);
 
+// The properties the renderer's text cascade inherits — the ones for which
+// an explicit author `inherit` has a value to resolve to (see the `inherit`
+// handling below).
+const INHERITED_PROPERTIES: Set<string> = new Set([
+  'color',
+  'fontFamily',
+  'fontSize',
+  'fontStyle',
+  'fontVariant',
+  'fontWeight',
+  'letterSpacing',
+  'lineHeight',
+  'textAlign',
+  'textTransform',
+  'writingDirection',
+]);
+
 const EMPTY: CssResolution = {style: null, vars: null, dependsOnStates: false};
 
 /**
@@ -457,14 +474,25 @@ export function resolveCssForElement(
     }
   }
 
-  // `inherit` is not a value RN can be handed: inheritance happens in the
-  // renderer's own text cascade, so a literal `inherit` means "leave it
-  // alone" — which is exactly what dropping it does. (Preflight sets
-  // `font-size: inherit` on headings; keeping it made a font size look
-  // present-but-unusable to everything downstream.)
+  // `inherit`, by cascade origin. For an INHERITED property, an author's
+  // explicit `inherit` must still DEFEAT a user-agent declaration — that is
+  // the whole point of preflight's `h1..h6 { font-size: inherit }`, and
+  // dropping it left the UA heading size standing (an accordion trigger,
+  // an <h3> underneath, rendered at heading size against web's 16px). RN's
+  // way to say "no value from this layer, and cancel the layers below" is
+  // an explicit null: the style merge keeps it, the attribute payload
+  // resets the prop, and the renderer's own text cascade supplies the
+  // inherited value — which is exactly what `inherit` computes to. For a
+  // non-inherited property there is no inherited value to fall back to and
+  // no way to read the parent's here, so those still drop (a real `inherit`
+  // on `padding` is rare enough to be a documented gap).
   for (const property of Object.keys(merged)) {
     if (merged[property] === 'inherit') {
-      delete merged[property];
+      if (INHERITED_PROPERTIES.has(property)) {
+        merged[property] = null;
+      } else {
+        delete merged[property];
+      }
     }
   }
 
