@@ -8,6 +8,7 @@
 #import "EXPElementSelectComponentView.h"
 
 #import <React/RCTConversions.h>
+#import <react/renderer/components/text/DomElementsRegistry.h>
 #import <react/renderer/components/view/ElementSelectShadowNode.h>
 
 #import "RCTComponentViewFactory.h"
@@ -237,7 +238,9 @@ using namespace facebook::react;
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
 {
-  return concreteComponentDescriptorProvider<ElementSelectComponentDescriptor>();
+  // The MEASURED descriptor (DomElementsRegistry): shrink-to-fit needs the
+  // text-side label measurer injected on adopt.
+  return concreteComponentDescriptorProvider<dom::ElementSelectMeasuredComponentDescriptor>();
 }
 
 + (void)load

@@ -849,7 +849,18 @@ registerFrameworkElement('element-select', () =>
       // Inline-block, for the reason spelled out on `<input>`: a control sits in
       // a line of text, which is how a `<label>` wrapping one is written.
       display: 'inline-block',
-      width: 200,
+      // No width: the shadow node MEASURES it — a `<select>` shrink-to-fits
+      // its widest option, which is the web's rule (real Safari: 41/72/239px
+      // for one-char/short/long option sets) and each platform's own idiom.
+      // The measure floors at the platform touch-target width; an author
+      // width overrides it entirely. See ElementSelectShadowNode.
+      //
+      // And no STRETCHING: an inline-level control never fills its
+      // container on the web — that takes width:100%. RN's flex default
+      // (alignItems: stretch) would fill the cross axis the moment the
+      // fixed width left, which is how every select in a plain column
+      // rendered full-width. An author alignSelf or width still wins.
+      alignSelf: 'flex-start',
       height: Platform.OS === 'android' ? 48 : 36,
       /*
        * On Android the bare Spinner is a word and a small caret floating on

@@ -22,6 +22,7 @@
 		A975CA6C2C05EADF0043F72A /* RCTNetworkTaskTests.m in Sources */ = {isa = PBXBuildFile; fileRef = A975CA6B2C05EADE0043F72A /* RCTNetworkTaskTests.m */; };
 		AB0DE1F000000000000000A1 /* EXPElementButtonPressAppearanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000A2 /* EXPElementButtonPressAppearanceTests.m */; };
 		AB0DE1F000000000000000B1 /* EXPElementCheckboxGeometryTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.mm */; };
+		AB0DE1F000000000000000B3 /* EXPElementSelectGeometryTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000B4 /* EXPElementSelectGeometryTests.mm */; };
 		AB0DE1F000000000000000C1 /* RCTViewComponentViewRecycleTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */; };
 		AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */; };
 		AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */; };
@@ -108,6 +109,7 @@
 		A975CA6B2C05EADE0043F72A /* RCTNetworkTaskTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RCTNetworkTaskTests.m; sourceTree = "<group>"; };
 		AB0DE1F000000000000000A2 /* EXPElementButtonPressAppearanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EXPElementButtonPressAppearanceTests.m; sourceTree = "<group>"; };
 		AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPElementCheckboxGeometryTests.mm; sourceTree = "<group>"; };
+		AB0DE1F000000000000000B4 /* EXPElementSelectGeometryTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPElementSelectGeometryTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTViewComponentViewRecycleTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTGlyphHuggingLayoutManagerTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTAttachmentLineLeadingTests.mm; sourceTree = "<group>"; };
@@ -378,6 +380,7 @@
 				E7DB20AF22B2BAA4005AC45F /* RCTFontTests.m */,
 				AB0DE1F000000000000000A2 /* EXPElementButtonPressAppearanceTests.m */,
 				AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.mm */,
+				AB0DE1F000000000000000B4 /* EXPElementSelectGeometryTests.mm */,
 				AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */,
 				AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */,
 				AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */,
@@ -867,6 +870,7 @@
 				E7DB20D622B2BAA6005AC45F /* RCTFontTests.m in Sources */,
 				AB0DE1F000000000000000A1 /* EXPElementButtonPressAppearanceTests.m in Sources */,
 				AB0DE1F000000000000000B1 /* EXPElementCheckboxGeometryTests.mm in Sources */,
+				AB0DE1F000000000000000B3 /* EXPElementSelectGeometryTests.mm in Sources */,
 				AB0DE1F000000000000000C1 /* RCTViewComponentViewRecycleTests.mm in Sources */,
 				AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */,
 				AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */,

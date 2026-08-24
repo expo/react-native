@@ -27,7 +27,62 @@
 #include <react/renderer/components/view/ElementTextAreaShadowNode.h>
 #include <react/renderer/components/view/ElementTextInputShadowNode.h>
 
+#include <react/renderer/attributedstring/AttributedString.h>
+#include <react/renderer/attributedstring/AttributedStringBox.h>
+#include <react/renderer/attributedstring/ParagraphAttributes.h>
+#include <react/renderer/textlayoutmanager/TextLayoutContext.h>
+#include <react/renderer/textlayoutmanager/TextLayoutManager.h>
+
 namespace facebook::react::dom {
+
+/*
+ * `<select>`'s descriptor with the label measurer injected.
+ *
+ * The shadow node (view layer) shrink-to-fits its widest option but cannot
+ * include the text layout manager — the same layering that keeps
+ * InlineTextContentAccessor abstract — so the TEXT side owns the descriptor
+ * and hands the node a measuring function on adopt. The label renders in the
+ * platform control's own font (kElementSelectLabelFontSize, pinned against
+ * the real control by EXPElementSelectGeometryTests), so that is what the
+ * measure uses; the option strings never flow through the text cascade.
+ */
+class ElementSelectMeasuredComponentDescriptor final
+    : public ConcreteComponentDescriptor<ElementSelectShadowNode> {
+ public:
+  explicit ElementSelectMeasuredComponentDescriptor(const ComponentDescriptorParameters& parameters)
+      : ConcreteComponentDescriptor(parameters),
+        textLayoutManager_(std::make_shared<const TextLayoutManager>(contextContainer_))
+  {
+  }
+
+ protected:
+  void adopt(ShadowNode& shadowNode) const override
+  {
+    ConcreteComponentDescriptor::adopt(shadowNode);
+    auto& node = static_cast<ElementSelectShadowNode&>(shadowNode);
+    auto textLayoutManager = textLayoutManager_;
+    node.setLabelWidthMeasurer(
+        [textLayoutManager](const std::string& label, Float pointScaleFactor, Float fontSizeMultiplier) -> Float {
+          auto attributedString = AttributedString{};
+          auto fragment = AttributedString::Fragment{};
+          fragment.string = label;
+          auto textAttributes = TextAttributes::defaultTextAttributes();
+          textAttributes.fontSize = kElementSelectLabelFontSize;
+          textAttributes.fontSizeMultiplier = fontSizeMultiplier;
+          fragment.textAttributes = textAttributes;
+          attributedString.appendFragment(std::move(fragment));
+          const auto measurement = textLayoutManager->measure(
+              AttributedStringBox{attributedString},
+              ParagraphAttributes{},
+              TextLayoutContext{.pointScaleFactor = pointScaleFactor},
+              LayoutConstraints{});
+          return measurement.size.width;
+        });
+  }
+
+ private:
+  std::shared_ptr<const TextLayoutManager> textLayoutManager_;
+};
 
 /*
  * Registration entry point for the intrinsic DOM elements — the native half of
@@ -96,9 +151,10 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders() {
   // claim a gesture.
   providers.push_back(
       concreteComponentDescriptorProvider<ElementProgressComponentDescriptor>());
-  // `<select>`, whose `<option>` children are flattened onto it as a prop.
+  // `<select>`, whose `<option>` children are flattened onto it as a prop —
+  // the MEASURED descriptor, so the control shrink-to-fits its widest option.
   providers.push_back(
-      concreteComponentDescriptorProvider<ElementSelectComponentDescriptor>());
+      concreteComponentDescriptorProvider<ElementSelectMeasuredComponentDescriptor>());
   // `<input type="radio">`.
   providers.push_back(
       concreteComponentDescriptorProvider<ElementRadioComponentDescriptor>());
