@@ -255,16 +255,15 @@ function main() {
         const cols = PLATFORMS.filter(p => available[p.key].has(key));
         for (const c of cols) counted[c.key]++;
 
-        const note = findings[key];
         body.push(`<div class="case">`);
         body.push(
           `<div class="case-head"><span class="ex">${esc(example)}</span>` +
             `<span class="cols">${cols.map(c => c.label).join(' · ')}</span></div>`,
         );
-        if (note) {
+        for (const note of notesFor(findings[key])) {
           body.push(
-            `<div class="finding ${esc(note.kind || 'note')}">` +
-              `<span class="tag">${esc(kindLabel(note.kind || 'note'))}</span>` +
+            `<div class="finding ${esc(note.kind)}">` +
+              `<span class="tag">${esc(kindLabel(note.kind))}</span>` +
               `<div class="finding-body">${md(note.text)}</div></div>`,
           );
         }
@@ -386,11 +385,26 @@ function kindLabel(kind) {
     : String(kind).replace(/-/g, ' ');
 }
 
+/*
+ * A case's findings, as a uniform list. The JSON allows one object or an
+ * ARRAY of them per case (several cases carry more than one observation),
+ * and one early entry spelled `kind` as `severity` — treating either shape
+ * as a single object rendered pills reading "note: undefined".
+ */
+function notesFor(value) {
+  if (value == null) return [];
+  const list = Array.isArray(value) ? value : [value];
+  return list
+    .filter(n => n != null && typeof n === 'object' && n.text)
+    .map(n => ({kind: n.kind || n.severity || 'note', text: n.text}));
+}
+
 function shell(body, counted, findings, corpus) {
   const kinds = {};
   for (const k of Object.keys(findings)) {
-    const kind = findings[k].kind || 'note';
-    kinds[kind] = (kinds[kind] || 0) + 1;
+    for (const note of notesFor(findings[k])) {
+      kinds[note.kind] = (kinds[note.kind] || 0) + 1;
+    }
   }
   const legend = Object.keys(kinds)
     .sort()
