@@ -93,6 +93,14 @@ static UIView *EXPMenuContainerInAnyWindow(void)
 }
 
 // The prototype's switch — see the call site in willEndForConfiguration.
+//
+// STAYS OFF, and now for a harder reason than preference: dumped with a menu
+// visibly open on iOS 26, EVERY window-enumeration route (connectedScenes,
+// UIApplication.windows, the key window's scene) sees only the app's own
+// window — the platter renders OUT OF PROCESS. There is no in-process view
+// for either follower to move, so the mechanism below is inert on iOS 26 by
+// construction; it is kept as documentation of the attempt and for older
+// OS versions where the platter was in-process.
 static const BOOL kEXPSelectFollowDismissalScroll = NO;
 
 @interface EXPSelectDismissalFollower : NSObject
