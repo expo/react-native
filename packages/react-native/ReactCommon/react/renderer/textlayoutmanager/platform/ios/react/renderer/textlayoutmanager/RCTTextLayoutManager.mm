@@ -168,6 +168,59 @@ NSTextStorage *cachedRunTextStorage(const AttributedString &attributedString, CG
   CGPoint _backgroundDrawOrigin;
 }
 
+/*
+ * `NSBaselineOffsetAttributeName`, actually applied.
+ *
+ * TextKit 1's `NSLayoutManager` does not honour the attribute — it is a
+ * string-drawing convenience (`UILabel`, `NSStringDrawing`); a raw layout
+ * manager lays out and draws as if it were absent (probed: a 0.3em offset
+ * moved nothing). The symbolic list markers state their x-height centring
+ * through it, so the drawing pass applies it here: ranges carrying a
+ * non-zero offset draw through a translated context. Layout metrics are
+ * deliberately untouched — the shift moves INK, like an inline box's
+ * decoration overflow, and the marker's advance and line stay put.
+ */
+- (void)drawGlyphsForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin
+{
+  NSRange charRange = [self characterRangeForGlyphRange:glyphsToShow actualGlyphRange:nullptr];
+  __block BOOL anyShift = NO;
+  [self.textStorage enumerateAttribute:NSBaselineOffsetAttributeName
+                               inRange:charRange
+                               options:0
+                            usingBlock:^(NSNumber *value, NSRange range, BOOL *stop) {
+                              if (value != nil && value.doubleValue != 0) {
+                                anyShift = YES;
+                                *stop = YES;
+                              }
+                            }];
+  if (!anyShift) {
+    [super drawGlyphsForGlyphRange:glyphsToShow atPoint:origin];
+    return;
+  }
+  [self.textStorage
+      enumerateAttribute:NSBaselineOffsetAttributeName
+                 inRange:charRange
+                 options:0
+              usingBlock:^(NSNumber *value, NSRange range, BOOL *stop) {
+                NSRange subGlyphs = [self glyphRangeForCharacterRange:range actualCharacterRange:nullptr];
+                subGlyphs = NSIntersectionRange(subGlyphs, glyphsToShow);
+                if (subGlyphs.length == 0) {
+                  return;
+                }
+                CGFloat shift = value != nil ? value.doubleValue : 0;
+                if (shift == 0) {
+                  [super drawGlyphsForGlyphRange:subGlyphs atPoint:origin];
+                  return;
+                }
+                CGContextRef context = UIGraphicsGetCurrentContext();
+                CGContextSaveGState(context);
+                // Positive raises; the context's y grows downward.
+                CGContextTranslateCTM(context, 0, -shift);
+                [super drawGlyphsForGlyphRange:subGlyphs atPoint:origin];
+                CGContextRestoreGState(context);
+              }];
+}
+
 - (void)drawBackgroundForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin
 {
   // Remembered so -fillBackgroundRectArray: can translate its rects (which

@@ -168,7 +168,19 @@ constexpr float kSymbolicMarkerFontScale = 0.69f;
  * the ITEM's font size: (x-height - marker ink) / 2 with x-height ~0.52em
  * and ink ~0.33em on both platform fonts.
  */
+/*
+ * Per platform: the geometric target is the same ((x-height - ink)/2 above
+ * the seated position), but iOS shifts DRAWN INK only (TextKit 1 ignores
+ * NSBaselineOffset in layout; RCTGlyphHuggingLayoutManager translates the
+ * glyph drawing) while Android's span shifts through TextPaint — measured
+ * on-screen against descender-free labels, each lands centred at its own
+ * number.
+ */
+#if defined(__APPLE__)
+constexpr float kSymbolicMarkerBaselineShiftEm = 0.16f;
+#else
 constexpr float kSymbolicMarkerBaselineShiftEm = 0.095f;
+#endif
 
 /*
  * The marker-to-text gap, in ITEM-font no-break spaces. One NBSP in the
