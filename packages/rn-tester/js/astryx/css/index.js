@@ -197,7 +197,8 @@ function splitTopLevel(value: string, separators: string): Array<string> {
   const parts: Array<string> = [];
   let depth = 0;
   let current = '';
-  for (const ch of value) {
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
     if (ch === '(') {
       depth++;
     } else if (ch === ')') {

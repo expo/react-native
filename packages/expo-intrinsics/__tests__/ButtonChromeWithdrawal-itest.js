@@ -37,7 +37,7 @@ import {createRef} from 'react';
 
 import '@react-native/expo-intrinsics-poc';
 
-function renderButton(style: {[string]: mixed}): HostInstance {
+function renderButton(style: {[string]: unknown}): HostInstance {
   const root = Fantom.createRoot();
   const ref = createRef<HostInstance>();
   Fantom.runTask(() => {
@@ -45,7 +45,7 @@ function renderButton(style: {[string]: mixed}): HostInstance {
       // $FlowFixMe[prop-missing] intrinsic
       <div style={{width: 360}}>
         {/* $FlowFixMe[prop-missing] intrinsic */}
-        <button ref={ref} type="button" style={{alignSelf: 'flex-start', ...style}} />
+        <button ref={ref} type="button" style={{...style, alignSelf: 'flex-start'}} />
       </div>,
     );
   });
