@@ -261,6 +261,37 @@ assistive technology needs — is fully carried.
 
 ## The platform cannot
 
+### A closing `<select>` menu ghosts under a scroll — UIKit's own behavior
+
+`DOM-CSS-DEVIATION(select-dismissal-ghost)` — informational; nothing to fix.
+
+**What happens:** pick an option in a `<select>`'s pop-up menu and
+immediately drag-scroll while the ~0.4s close animation runs, and the
+collapsing menu platter hangs at its pre-scroll screen position for the
+rest of the animation instead of following the button.
+
+**Why this is the platform, not the fork:** established by elimination on a
+real device with a real finger. The fork's select is a near-stock pop-up
+`UIButton` (`showsMenuAsPrimaryAction` + `changesSelectionAsPrimaryAction`);
+the same gesture reproduces the identical ghost in (1) a pure-UIKit screen
+inside RNTester with no React Native views (`rntester://nativeprobe`), and
+(2) a standalone 25KB UIKit-only app with no dependencies at all. Meanwhile
+every PROGRAMMATIC scroll dispatched during the dismissal — plain, animated,
+60fps continuous, with the menu and configuration reassigned mid-flight —
+tracks perfectly in the same probes. The distinguishing variable is the
+finger: during a drag the main run loop sits in `UITrackingRunLoopMode`,
+which starves the default-mode machinery UIKit appears to use to retarget
+the closing platter.
+
+**Why we don't work around it:** the earlier mitigation froze ancestor
+scrolling for the menu's lifetime, which fought the user's scroll and could
+be silently undone by any props update re-applying `scrollEnabled`; there
+is no public API to move UIKit's platter mid-animation. Stock behavior is
+what every native app exhibits under this gesture, so stock is what the
+element does.
+
+---
+
 ### `<input type="color">` offers a swatch grid on Android
 
 **The spec:** a colour well opening a colour picker.

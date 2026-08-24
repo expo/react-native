@@ -17,15 +17,18 @@ using namespace facebook::react;
 /*
  * As close to a STOCK pop-up UIButton as it can be.
  *
- * Probed in a standalone UIKit app (a plain scroll view + pop-up button,
- * with the scroll dispatched DURING the dismissal animation): the system's
- * own dismissal tracks the scrolled button — the platter morphs into the
- * button's LIVE position — with no overrides, no scroll freezing, even when
- * the menu and configuration are reassigned mid-dismissal. Two earlier
- * "fixes" here are therefore gone: a dismissal UITargetedPreview (stock
- * already resolves against the live view) and freezing ancestor scroll
- * views (it fought the user's scroll, and a props update re-applying
- * scrollEnabled could silently undo it mid-close anyway).
+ * The scroll-during-close ghost (the platter hanging at its pre-scroll
+ * position while a finger drags) is UIKit'S OWN: reproduced on a real
+ * device in a pure-UIKit screen with no React Native views and in a
+ * standalone dependency-free app, while every PROGRAMMATIC scroll during
+ * the dismissal tracks perfectly in the same probes — the distinguishing
+ * variable is the drag's UITrackingRunLoopMode. Documented as
+ * DOM-CSS-DEVIATION(select-dismissal-ghost); stock behavior is what every
+ * native app exhibits, so stock is what this element does. Two earlier
+ * "fixes" are therefore gone: a dismissal UITargetedPreview (stock already
+ * resolves against the live view) and freezing ancestor scroll views (it
+ * fought the user's scroll, and a props update re-applying scrollEnabled
+ * could silently undo it mid-close anyway).
  *
  * What the subclass still does is KNOW when the menu is on screen. A Fabric
  * commit lands the moment a selection event does — exactly during the
