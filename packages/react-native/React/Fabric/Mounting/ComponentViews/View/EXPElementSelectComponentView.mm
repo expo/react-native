@@ -27,6 +27,7 @@ using namespace facebook::react;
  * live view at dismissal time, so the closing menu tracks the scroll.
  */
 @interface EXPElementSelectButton : UIButton
+@property(nonatomic, strong) NSHashTable<UIScrollView *> *pausedScrollViews;
 @end
 
 @implementation EXPElementSelectButton
@@ -38,6 +39,75 @@ using namespace facebook::react;
     return [super contextMenuInteraction:interaction previewForDismissingMenuWithConfiguration:configuration];
   }
   return [[UITargetedPreview alloc] initWithView:self];
+}
+
+/*
+ * A pop-up's anchor does not move. The dismissal target is resolved ONCE
+ * when the close begins (probed: previewForDismissing fires exactly once),
+ * so a scroll that continues THROUGH the ~0.3s animation still leaves the
+ * platter collapsing toward where the button used to be — which is the
+ * "menu is not aware of the scroll view" glitch. Native pop-ups do not have
+ * the problem because their overlay owns every touch while the menu is up.
+ * So: freeze the ancestor scroll views for the menu's whole lifecycle, and
+ * give them back only after the dismissal ANIMATION completes.
+ */
+- (void)pauseAncestorScrolling
+{
+  if (self.pausedScrollViews == nil) {
+    self.pausedScrollViews = [NSHashTable weakObjectsHashTable];
+  }
+  UIView *ancestor = self.superview;
+  while (ancestor != nil) {
+    if ([ancestor isKindOfClass:[UIScrollView class]]) {
+      UIScrollView *scrollView = (UIScrollView *)ancestor;
+      if (scrollView.scrollEnabled) {
+        scrollView.scrollEnabled = NO;
+        [self.pausedScrollViews addObject:scrollView];
+      }
+    }
+    ancestor = ancestor.superview;
+  }
+}
+
+- (void)resumeAncestorScrolling
+{
+  for (UIScrollView *scrollView in self.pausedScrollViews.allObjects) {
+    scrollView.scrollEnabled = YES;
+  }
+  [self.pausedScrollViews removeAllObjects];
+}
+
+- (void)contextMenuInteraction:(UIContextMenuInteraction *)interaction
+    willDisplayMenuForConfiguration:(UIContextMenuConfiguration *)configuration
+                           animator:(id<UIContextMenuInteractionAnimating>)animator
+{
+  [self pauseAncestorScrolling];
+  [super contextMenuInteraction:interaction willDisplayMenuForConfiguration:configuration animator:animator];
+}
+
+- (void)contextMenuInteraction:(UIContextMenuInteraction *)interaction
+       willEndForConfiguration:(UIContextMenuConfiguration *)configuration
+                      animator:(id<UIContextMenuInteractionAnimating>)animator
+{
+  __weak EXPElementSelectButton *weakSelf = self;
+  if (animator != nil) {
+    [animator addCompletion:^{
+      [weakSelf resumeAncestorScrolling];
+    }];
+  } else {
+    [self resumeAncestorScrolling];
+  }
+  [super contextMenuInteraction:interaction willEndForConfiguration:configuration animator:animator];
+}
+
+// Whatever else happens (interaction torn down, view unmounted mid-menu),
+// scrolling must come back.
+- (void)willMoveToWindow:(UIWindow *)newWindow
+{
+  if (newWindow == nil) {
+    [self resumeAncestorScrolling];
+  }
+  [super willMoveToWindow:newWindow];
 }
 
 @end
