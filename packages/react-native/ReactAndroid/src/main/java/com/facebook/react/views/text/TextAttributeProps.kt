@@ -87,6 +87,9 @@ public class TextAttributeProps private constructor() {
    */
   public var verticalAlign: String? = null
 
+  /** Numeric baseline shift in dp; positive raises the glyphs. NaN = unset. */
+  public var baselineShift: Float = Float.NaN
+
   // `ReactConstants.UNSET` is -1, same as `LayoutDirection.UNDEFINED` (which is a hidden symbol)
   public var layoutDirection: Int = ReactConstants.UNSET
     private set
@@ -387,6 +390,8 @@ public class TextAttributeProps private constructor() {
     public const val TA_KEY_LETTER_SPACING: Int = 10
     /** `<sup>`/`<sub>`; must match TA_KEY_VERTICAL_ALIGN in conversions.h. */
     public const val TA_KEY_VERTICAL_ALIGN: Int = 32
+    /** Numeric baseline shift in dp (positive raises); must match conversions.h. */
+    public const val TA_KEY_BASELINE_SHIFT: Int = 33
     public const val TA_KEY_LINE_HEIGHT: Int = 11
     public const val TA_KEY_ALIGNMENT: Int = 12
     public const val TA_KEY_BEST_WRITING_DIRECTION: Int = 13
@@ -446,6 +451,7 @@ public class TextAttributeProps private constructor() {
           TA_KEY_ALLOW_FONT_SCALING -> result.allowFontScaling = entry.booleanValue
           TA_KEY_LETTER_SPACING -> result.letterSpacing = entry.doubleValue.toFloat()
           TA_KEY_VERTICAL_ALIGN -> result.verticalAlign = entry.stringValue
+          TA_KEY_BASELINE_SHIFT -> result.baselineShift = entry.doubleValue.toFloat()
           TA_KEY_LINE_HEIGHT -> result.lineHeight = entry.doubleValue.toFloat()
           TA_KEY_ALIGNMENT -> {}
           TA_KEY_BEST_WRITING_DIRECTION -> {}

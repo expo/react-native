@@ -690,6 +690,28 @@ internal object TextLayoutManager {
           "sub" -> ops.add(SetSpanOperation(start, end, SubscriptSpan()))
           else -> Unit
         }
+        if (!textAttributes.baselineShift.isNaN() && textAttributes.baselineShift != 0f) {
+          // Numeric baseline shift, dp -> px; positive raises. TextPaint's
+          // baselineShift moves the BASELINE down for positive values, so the
+          // raise is the negation (the same sign dance SuperscriptSpan does
+          // with the negative ascent).
+          val shiftPx = PixelUtil.toPixelFromDIP(textAttributes.baselineShift).toInt()
+          ops.add(
+              SetSpanOperation(
+                  start,
+                  end,
+                  object : android.text.style.MetricAffectingSpan() {
+                    override fun updateDrawState(tp: android.text.TextPaint) {
+                      tp.baselineShift -= shiftPx
+                    }
+
+                    override fun updateMeasureState(tp: android.text.TextPaint) {
+                      tp.baselineShift -= shiftPx
+                    }
+                  },
+              )
+          )
+        }
         ops.add(SetSpanOperation(start, end, ReactAbsoluteSizeSpan(textAttributes.fontSize)))
         if (
             textAttributes.fontStyle != ReactConstants.UNSET ||

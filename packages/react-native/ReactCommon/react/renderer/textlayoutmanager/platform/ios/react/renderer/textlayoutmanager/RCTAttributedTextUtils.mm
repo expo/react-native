@@ -224,6 +224,13 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
     attributes[NSKernAttributeName] = @(textAttributes.letterSpacing);
   }
 
+  // A numeric baseline shift (positive raises), stated in points — the
+  // symbolic list markers use it to centre their ink at the x-height
+  // midpoint the way browsers paint theirs.
+  if (!isnan(textAttributes.baselineShift)) {
+    attributes[NSBaselineOffsetAttributeName] = @(textAttributes.baselineShift);
+  }
+
   /*
    * `<sup>` / `<sub>`: the SHIFT only. The size is the sheet's.
    *

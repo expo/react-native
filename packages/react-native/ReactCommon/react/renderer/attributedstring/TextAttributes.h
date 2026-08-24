@@ -87,6 +87,15 @@ class TextAttributes : public DebugStringConvertible {
   Float letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
   // `<sup>`/`<sub>`: a baseline shift the platform's text engine computes.
   std::optional<TextVerticalAlign> verticalAlign{};
+  /*
+   * A NUMERIC baseline shift in points; positive raises the glyphs. Unlike
+   * `verticalAlign`, whose amount each platform derives from its font, this
+   * states the distance — what a symbolic list marker needs to centre its
+   * ink on the x-height midpoint the way browsers paint theirs, and what
+   * `vertical-align: <length>` will need. iOS: NSBaselineOffset; Android: a
+   * MetricAffecting span adjusting TextPaint.baselineShift.
+   */
+  Float baselineShift{std::numeric_limits<Float>::quiet_NaN()};
   Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
   Float textShadowRadius{std::numeric_limits<Float>::quiet_NaN()};
   // TODO: Use `Point` type instead of `Size` for `textShadowOffset` attribute.
@@ -166,6 +175,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.fontVariant,
         textAttributes.allowFontScaling,
         textAttributes.letterSpacing,
+        textAttributes.baselineShift,
         textAttributes.textTransform,
         textAttributes.whiteSpace,
         textAttributes.lineHeight,

@@ -135,7 +135,8 @@ static_assert(
     sizeof(ViewShadowNode) <= 1144,
     "ViewShadowNode grew past its memory budget");
 static_assert(
-    sizeof(TextAttributes) <= 176,
+    // 176 -> 184 with `baselineShift`, same addition as the iOS bound below.
+    sizeof(TextAttributes) <= 184,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
     sizeof(ViewProps) <= 1900,
@@ -146,7 +147,11 @@ static_assert(
     sizeof(ViewShadowNode) <= 1200,
     "ViewShadowNode grew past its memory budget");
 static_assert(
-    sizeof(TextAttributes) <= 288,
+    // 288 -> 296 for the numeric `baselineShift` (2026-08: symbolic list
+    // markers centre their ink with it; it will also carry
+    // `vertical-align: <length>`). One Float plus alignment padding — moved
+    // consciously, per the note above.
+    sizeof(TextAttributes) <= 296,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
     sizeof(ViewProps) <= 2400,
