@@ -74,6 +74,42 @@ static UIWindow *MenuWindow(UIWindow *appWindow)
   return nil;
 }
 
+// The platter view itself, wherever UIKit put it: recursive scan of EVERY
+// window for a private class whose name says menu/platter. The window-level
+// search above found nothing on current iOS — the container can live in the
+// app's own window.
+static UIView *FindMenuPlatter(UIView *root)
+{
+  NSString *name = NSStringFromClass([root class]);
+  if ([name containsString:@"Platter"] || [name containsString:@"ContextMenuView"] ||
+      [name containsString:@"MorphingPlatter"]) {
+    return root;
+  }
+  for (UIView *subview in root.subviews) {
+    UIView *found = FindMenuPlatter(subview);
+    if (found != nil) {
+      return found;
+    }
+  }
+  return nil;
+}
+
+static UIView *MenuPlatterAnywhere(void)
+{
+  for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+    if (![scene isKindOfClass:[UIWindowScene class]]) {
+      continue;
+    }
+    for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+      UIView *found = FindMenuPlatter(window);
+      if (found != nil) {
+        return found;
+      }
+    }
+  }
+  return nil;
+}
+
 - (void)testDismissalTracksTheScrolledButton
 {
   UIWindow *window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 390, 844)];
@@ -106,15 +142,35 @@ static UIWindow *MenuWindow(UIWindow *appWindow)
   Spin(0.6);
 
   UIWindow *menuWindow = MenuWindow(window);
-  NSLog(@"@@SELECT open calls=%@ menuWindow=%@", [button.calls componentsJoinedByString:@","],
-        menuWindow != nil ? @"YES" : @"NO");
+  UIView *platterOpen = MenuPlatterAnywhere();
+  CGRect platterOpenFrame = CGRectZero;
+  if (platterOpen != nil) {
+    platterOpenFrame = [platterOpen convertRect:platterOpen.bounds
+                              toCoordinateSpace:window.screen.coordinateSpace];
+  }
+  NSLog(@"@@SELECT open calls=%@ menuWindow=%@ platter=%@ platterY=%.0f",
+        [button.calls componentsJoinedByString:@","],
+        menuWindow != nil ? @"YES" : @"NO",
+        platterOpen != nil ? NSStringFromClass([platterOpen class]) : @"NONE",
+        platterOpenFrame.origin.y);
 
   // Scroll while the menu is up: the button moves 150pt up on screen.
   scrollView.contentOffset = CGPointMake(0, 150);
   Spin(0.1);
 
   CGRect buttonInScreen = [button convertRect:button.bounds toCoordinateSpace:window.screen.coordinateSpace];
-  NSLog(@"@@SELECT after-scroll buttonY=%.0f", buttonInScreen.origin.y);
+  UIView *platterScrolled = MenuPlatterAnywhere();
+  CGRect scrolledFrame = CGRectZero;
+  if (platterScrolled != nil) {
+    scrolledFrame = [platterScrolled convertRect:platterScrolled.bounds
+                               toCoordinateSpace:window.screen.coordinateSpace];
+  }
+  NSLog(@"@@SELECT after-scroll buttonY=%.0f platterY=%.0f (open-platter tracked scroll: %@)",
+        buttonInScreen.origin.y, scrolledFrame.origin.y,
+        platterScrolled != nil && platterOpen != nil &&
+                fabs(scrolledFrame.origin.y - platterOpenFrame.origin.y) > 50
+            ? @"YES"
+            : @"NO");
 
   // Dismiss and sample the platter mid-animation and at the end.
   UIContextMenuInteraction *interaction = nil;
@@ -126,21 +182,25 @@ static UIWindow *MenuWindow(UIWindow *appWindow)
   NSLog(@"@@SELECT interaction=%@", interaction != nil ? @"YES" : @"NO");
   [interaction dismissMenu];
 
-  for (int sample = 0; sample < 4; sample++) {
-    Spin(0.12);
-    UIWindow *platterWindow = MenuWindow(window);
-    if (platterWindow == nil) {
-      NSLog(@"@@SELECT sample=%d platter-gone", sample);
-      break;
+  // ALSO scroll DURING the dismissal — the user's exact gesture.
+  for (int sample = 0; sample < 6; sample++) {
+    Spin(0.08);
+    if (sample == 1) {
+      scrollView.contentOffset = CGPointMake(0, 250);
     }
-    // The platter is somewhere in that window; log the frame of its largest
-    // visible subview tree root for position evidence.
-    UIView *root = platterWindow.subviews.firstObject;
-    CGRect rootInScreen = [root convertRect:root.bounds toCoordinateSpace:window.screen.coordinateSpace];
-    NSLog(@"@@SELECT sample=%d platterY=%.0f height=%.0f", sample, rootInScreen.origin.y, rootInScreen.size.height);
+    UIView *platter = MenuPlatterAnywhere();
+    if (platter == nil) {
+      NSLog(@"@@SELECT sample=%d platter-gone", sample);
+      continue;
+    }
+    CGRect frame = [platter convertRect:platter.bounds toCoordinateSpace:window.screen.coordinateSpace];
+    NSLog(@"@@SELECT sample=%d platter=%@ y=%.0f h=%.0f", sample,
+          NSStringFromClass([platter class]), frame.origin.y, frame.size.height);
   }
 
-  NSLog(@"@@SELECT final calls=%@", [button.calls componentsJoinedByString:@","]);
+  CGRect buttonFinal = [button convertRect:button.bounds toCoordinateSpace:window.screen.coordinateSpace];
+  NSLog(@"@@SELECT final buttonY=%.0f calls=%@", buttonFinal.origin.y,
+        [button.calls componentsJoinedByString:@","]);
   XCTAssertTrue(YES);
 }
 

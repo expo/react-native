@@ -15,73 +15,39 @@
 using namespace facebook::react;
 
 /*
- * The pop-up's dismissal must follow the button, not the button's OLD spot.
+ * As close to a STOCK pop-up UIButton as it can be.
  *
- * UIButton presents its menu through a context-menu interaction, and the
- * dismissal animation collapses the menu into a targeted preview. Left to
- * the default, that target is resolved from geometry captured when the
- * interaction began — so picking an option and then scrolling while the menu
- * closed shrank the menu into the position the button held BEFORE the scroll.
- * UIButton documents these delegate methods as subclass override points; a
- * VIEW-based UITargetedPreview makes UIKit resolve the target against the
- * live view at dismissal time, so the closing menu tracks the scroll.
+ * Probed in a standalone UIKit app (a plain scroll view + pop-up button,
+ * with the scroll dispatched DURING the dismissal animation): the system's
+ * own dismissal tracks the scrolled button — the platter morphs into the
+ * button's LIVE position — with no overrides, no scroll freezing, even when
+ * the menu and configuration are reassigned mid-dismissal. Two earlier
+ * "fixes" here are therefore gone: a dismissal UITargetedPreview (stock
+ * already resolves against the live view) and freezing ancestor scroll
+ * views (it fought the user's scroll, and a props update re-applying
+ * scrollEnabled could silently undo it mid-close anyway).
+ *
+ * What the subclass still does is KNOW when the menu is on screen. A Fabric
+ * commit lands the moment a selection event does — exactly during the
+ * dismissal animation — and rebuilds the menu (UIMenu is immutable; the
+ * checkmark can only move by replacement). A whole commit's worth of
+ * mounting around that reassignment is the one thing the standalone probe
+ * cannot reproduce, so the rebuild waits until the menu has fully left the
+ * screen; UIKit already shows the chosen title itself
+ * (changesSelectionAsPrimaryAction), so nothing visible waits with it.
  */
 @interface EXPElementSelectButton : UIButton
-@property(nonatomic, strong) NSHashTable<UIScrollView *> *pausedScrollViews;
+@property(nonatomic, assign, getter=isMenuOnScreen) BOOL menuOnScreen;
+@property(nonatomic, copy, nullable) void (^onMenuFullyDismissed)(void);
 @end
 
 @implementation EXPElementSelectButton
-
-- (UITargetedPreview *)contextMenuInteraction:(UIContextMenuInteraction *)interaction
-    previewForDismissingMenuWithConfiguration:(UIContextMenuConfiguration *)configuration
-{
-  if (self.window == nil) {
-    return [super contextMenuInteraction:interaction previewForDismissingMenuWithConfiguration:configuration];
-  }
-  return [[UITargetedPreview alloc] initWithView:self];
-}
-
-/*
- * A pop-up's anchor does not move. The dismissal target is resolved ONCE
- * when the close begins (probed: previewForDismissing fires exactly once),
- * so a scroll that continues THROUGH the ~0.3s animation still leaves the
- * platter collapsing toward where the button used to be — which is the
- * "menu is not aware of the scroll view" glitch. Native pop-ups do not have
- * the problem because their overlay owns every touch while the menu is up.
- * So: freeze the ancestor scroll views for the menu's whole lifecycle, and
- * give them back only after the dismissal ANIMATION completes.
- */
-- (void)pauseAncestorScrolling
-{
-  if (self.pausedScrollViews == nil) {
-    self.pausedScrollViews = [NSHashTable weakObjectsHashTable];
-  }
-  UIView *ancestor = self.superview;
-  while (ancestor != nil) {
-    if ([ancestor isKindOfClass:[UIScrollView class]]) {
-      UIScrollView *scrollView = (UIScrollView *)ancestor;
-      if (scrollView.scrollEnabled) {
-        scrollView.scrollEnabled = NO;
-        [self.pausedScrollViews addObject:scrollView];
-      }
-    }
-    ancestor = ancestor.superview;
-  }
-}
-
-- (void)resumeAncestorScrolling
-{
-  for (UIScrollView *scrollView in self.pausedScrollViews.allObjects) {
-    scrollView.scrollEnabled = YES;
-  }
-  [self.pausedScrollViews removeAllObjects];
-}
 
 - (void)contextMenuInteraction:(UIContextMenuInteraction *)interaction
     willDisplayMenuForConfiguration:(UIContextMenuConfiguration *)configuration
                            animator:(id<UIContextMenuInteractionAnimating>)animator
 {
-  [self pauseAncestorScrolling];
+  self.menuOnScreen = YES;
   [super contextMenuInteraction:interaction willDisplayMenuForConfiguration:configuration animator:animator];
 }
 
@@ -90,22 +56,32 @@ using namespace facebook::react;
                       animator:(id<UIContextMenuInteractionAnimating>)animator
 {
   __weak EXPElementSelectButton *weakSelf = self;
+  void (^finished)(void) = ^{
+    EXPElementSelectButton *strongSelf = weakSelf;
+    if (strongSelf == nil) {
+      return;
+    }
+    strongSelf.menuOnScreen = NO;
+    void (^pending)(void) = strongSelf.onMenuFullyDismissed;
+    strongSelf.onMenuFullyDismissed = nil;
+    if (pending != nil) {
+      pending();
+    }
+  };
   if (animator != nil) {
-    [animator addCompletion:^{
-      [weakSelf resumeAncestorScrolling];
-    }];
+    [animator addCompletion:finished];
   } else {
-    [self resumeAncestorScrolling];
+    finished();
   }
   [super contextMenuInteraction:interaction willEndForConfiguration:configuration animator:animator];
 }
 
-// Whatever else happens (interaction torn down, view unmounted mid-menu),
-// scrolling must come back.
+// Unmounted mid-menu: nothing left to defer for.
 - (void)willMoveToWindow:(UIWindow *)newWindow
 {
   if (newWindow == nil) {
-    [self resumeAncestorScrolling];
+    self.menuOnScreen = NO;
+    self.onMenuFullyDismissed = nil;
   }
   [super willMoveToWindow:newWindow];
 }
@@ -113,7 +89,7 @@ using namespace facebook::react;
 @end
 
 @implementation EXPElementSelectComponentView {
-  UIButton *_button;
+  EXPElementSelectButton *_button;
   BOOL _isInitialValueSet;
 }
 
@@ -225,9 +201,22 @@ using namespace facebook::react;
   [super updateProps:props oldProps:oldProps];
 
   // After `super`, because the menu is rebuilt from `_props` and `super` is
-  // what assigns the new props object.
+  // what assigns the new props object. While the menu is on screen —
+  // including its dismissal animation, which is exactly when the
+  // selection's own commit lands — the rebuild waits: replacing an
+  // in-flight presentation's menu is the one interference a Fabric commit
+  // adds over the probed stock behaviour, and the content only matters for
+  // the NEXT open. rebuildMenu reads _props at call time, so the deferred
+  // run always builds from the latest.
   if (!_isInitialValueSet || optionsChanged || valueChanged) {
-    [self rebuildMenu];
+    if (_button.isMenuOnScreen) {
+      __weak EXPElementSelectComponentView *weakSelf = self;
+      _button.onMenuFullyDismissed = ^{
+        [weakSelf rebuildMenu];
+      };
+    } else {
+      [self rebuildMenu];
+    }
   }
   _isInitialValueSet = YES;
 }
@@ -239,6 +228,8 @@ using namespace facebook::react;
   _isInitialValueSet = NO;
   _button.enabled = YES;
   _button.menu = nil;
+  _button.menuOnScreen = NO;
+  _button.onMenuFullyDismissed = nil;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
