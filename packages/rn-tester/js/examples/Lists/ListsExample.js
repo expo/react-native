@@ -70,6 +70,7 @@ export default {
     'both list-style-position values, <ol start>, and nesting.',
   examples: [
     {
+      name: 'baseline',
       title: 'Baseline alignment of an atomic inline',
       description:
         'An atomic inline box — inline-block, inline-flex, an <img> — is ' +
@@ -226,6 +227,7 @@ export default {
       ),
     },
     {
+      name: 'bullets',
       title: 'Unordered: the UA bullet, and what nesting does to it',
       description:
         'An unauthored <ul> takes the bullet for its depth — disc, then ' +
@@ -267,6 +269,7 @@ export default {
       ),
     },
     {
+      name: 'types',
       title: 'list-style-type on an unordered list',
       description:
         'disc, circle, square and none. An unknown keyword falls back the ' +
@@ -283,6 +286,7 @@ export default {
       ),
     },
     {
+      name: 'ordered',
       title: 'Ordered: counters, and where they start',
       description:
         'decimal is the default. <ol start> seeds the counter, exactly as ' +
@@ -298,6 +302,7 @@ export default {
       ),
     },
     {
+      name: 'counters',
       title: 'Alphabetic and Roman counter styles',
       description:
         'lower-alpha carries bijectively — z is followed by aa, not a0 — and ' +
@@ -323,6 +328,7 @@ export default {
       ),
     },
     {
+      name: 'position',
       title: 'list-style-position: two mechanisms, not an offset',
       description:
         'outside is the CSS initial value: the marker is NOT measured with ' +
@@ -344,6 +350,7 @@ export default {
       ),
     },
     {
+      name: 'markerStyle',
       title: 'The marker takes the item’s own text styling',
       description:
         'A marker is generated content of the item, so it inherits the ' +
@@ -363,6 +370,7 @@ export default {
       ),
     },
     {
+      name: 'notImplemented',
       title: 'What is not implemented',
       render: (): React.Node => (
         <DemoContent>
