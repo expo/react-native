@@ -32,7 +32,7 @@ import '@react-native/expo-intrinsics-poc';
 function renderSelect(
   options: Array<string>,
   containerWidth: number = 360,
-  style?: {[string]: mixed},
+  style?: {[string]: unknown},
 ): number {
   const root = Fantom.createRoot();
   const ref = createRef<HostInstance>();
