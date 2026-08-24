@@ -39,7 +39,14 @@
 
 import {INERT_PROPS, NOT_INERT_PROPS, modalContainerProps} from './focusTrap';
 import * as React from 'react';
-import {useCallback, useContext, useEffect, useMemo, useState} from 'react';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
 
 export type OverlayMode = 'modal' | 'auto' | 'manual';
@@ -72,6 +79,25 @@ export function allocateOverlayId(): number {
  */
 export function TopLayerHost({children}: {children: React.Node}): React.Node {
   const [entries, setEntries] = useState<ReadonlyArray<OverlayEntry>>([]);
+  // Where this host's (0,0) actually sits in the WINDOW. Overlays position in
+  // window coordinates (measureInWindow / getBoundingClientRect), but the
+  // app-root view is not the window origin everywhere: on Android the
+  // activity's content starts below the status bar, so every overlay rendered
+  // in host coordinates landed exactly that far low. The host itself never
+  // scrolls, so one measurement per layout is stable — unlike the earlier
+  // per-open measurement of a NESTED host, which drifted with scroll.
+  const rootRef = useRef<$FlowFixMe>(null);
+  const [windowOffset, setWindowOffset] = useState({x: 0, y: 0});
+  const measureRoot = useCallback(() => {
+    const node = rootRef.current;
+    if (node != null && typeof node.measureInWindow === 'function') {
+      node.measureInWindow((x: number, y: number) => {
+        setWindowOffset(previous =>
+          previous.x === x && previous.y === y ? previous : {x, y},
+        );
+      });
+    }
+  }, []);
   const present = useCallback(
     (id: number, mode: OverlayMode, content: React.Node) => {
       setEntries(current => {
@@ -95,7 +121,7 @@ export function TopLayerHost({children}: {children: React.Node}): React.Node {
 
   return (
     <TopLayerContext.Provider value={api}>
-      <View style={styles.root}>
+      <View ref={rootRef} onLayout={measureRoot} style={styles.root}>
         {/* While a modal is open the page behind it is inert to assistive
             technology — the containment half of a focus trap, and the escape
             route that actually matters on a touch platform. Non-modal
@@ -113,7 +139,20 @@ export function TopLayerHost({children}: {children: React.Node}): React.Node {
             overlay's position drift with whatever scroll offset the
             measurement happened to catch. */}
         {entries.length > 0 ? (
-          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          // Its (0,0) IS the window origin — overlays then position in
+          // window coordinates directly. The negative edges (not a
+          // transform, which would shift the far edges too and leave the
+          // backdrop short of the window bottom) grow the box so it covers
+          // the whole window; views don't clip, so hanging past the host is
+          // fine.
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              windowOffset.x !== 0 || windowOffset.y !== 0
+                ? {left: -windowOffset.x, top: -windowOffset.y}
+                : null,
+            ]}
+            pointerEvents="box-none">
             {/* The backdrop: painted for modals (the ::backdrop analogue) and
                 used as the light-dismiss surface for auto popovers. */}
             {hasModal || topMostAuto != null ? (

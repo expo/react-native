@@ -40,25 +40,43 @@ describe('anchor positioning', () => {
     expect(result.y).toBe(428);
   });
 
-  it('aligns edges for span-inline-start (the menu-under-a-button shape)', () => {
-    const result = resolveAnchorPosition({
-      anchor,
-      overlay,
-      viewport,
-      area: 'block-end span-inline-start',
-    });
-    expect(result.x).toBe(anchor.x);
-  });
-
-  it('aligns the trailing edge for span-inline-end', () => {
+  it('span-inline-end grows toward the end, start edges flush (the menu-under-a-button shape)', () => {
+    // css-anchor-position-1 §3.1: the span names the SPREAD direction, not
+    // the flush edge — `span-inline-end` extends from the anchor's
+    // inline-START edge toward inline-end, so the start edges align. This is
+    // what Radix's align="start" maps to; encoded backwards, a menu hung
+    // LEFT off its trigger.
     const result = resolveAnchorPosition({
       anchor,
       overlay,
       viewport,
       area: 'block-end span-inline-end',
     });
+    expect(result.x).toBe(anchor.x);
+  });
+
+  it('span-inline-start grows toward the start, end edges flush', () => {
+    const result = resolveAnchorPosition({
+      anchor,
+      overlay,
+      viewport,
+      area: 'block-end span-inline-start',
+    });
     // Right edges flush: 150 + 100 - 120 = 130.
     expect(result.x).toBe(130);
+  });
+
+  it('the inline sides span the block axis the same way', () => {
+    // side="right", align="start" (Radix) = inline-end span-block-end:
+    // top edges flush, overlay to the anchor's right.
+    const result = resolveAnchorPosition({
+      anchor,
+      overlay,
+      viewport,
+      area: 'inline-end span-block-end',
+    });
+    expect(result.x).toBe(anchor.x + anchor.width);
+    expect(result.y).toBe(anchor.y);
   });
 
   it('places inline-end to the right, vertically centered', () => {

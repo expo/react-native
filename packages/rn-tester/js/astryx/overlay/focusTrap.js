@@ -42,7 +42,7 @@
 import type {HostInstance} from 'react-native';
 
 import {useEffect, useRef} from 'react';
-import {AccessibilityInfo, Platform, findNodeHandle} from 'react-native';
+import {AccessibilityInfo, Platform} from 'react-native';
 
 /**
  * Props that make a subtree invisible to assistive technology.
@@ -98,11 +98,12 @@ export function focusAccessibility(target: ?HostInstance): boolean {
   if (target == null) {
     return false;
   }
-  const handle = findNodeHandle(target);
-  if (handle == null) {
-    return false;
-  }
-  AccessibilityInfo.setAccessibilityFocus(handle);
+  // The INSTANCE, not a numeric handle: `setAccessibilityFocus(tag)` is the
+  // deprecated Paper path, and under bridgeless its
+  // `UIManager.getConstants()` is null — opening a dialog threw an uncaught
+  // error from inside the focus trap. `sendAccessibilityEvent` dispatches by
+  // what the node actually is.
+  AccessibilityInfo.sendAccessibilityEvent(target, 'focus');
   return true;
 }
 

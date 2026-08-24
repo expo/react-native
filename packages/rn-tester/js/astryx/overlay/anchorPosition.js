@@ -49,7 +49,11 @@ export type PositionArea =
   | 'block-start span-inline-start'
   | 'block-start span-inline-end'
   | 'block-end span-inline-start'
-  | 'block-end span-inline-end';
+  | 'block-end span-inline-end'
+  | 'inline-start span-block-start'
+  | 'inline-start span-block-end'
+  | 'inline-end span-block-start'
+  | 'inline-end span-block-end';
 
 /**
  * `position-try-fallbacks`: alternatives tried in order when the preferred
@@ -88,12 +92,20 @@ const BLOCK_FLIP: {[PositionArea]: PositionArea} = {
   'block-end span-inline-end': 'block-start span-inline-end',
   'inline-start': 'inline-start',
   'inline-end': 'inline-end',
+  'inline-start span-block-start': 'inline-start span-block-end',
+  'inline-start span-block-end': 'inline-start span-block-start',
+  'inline-end span-block-start': 'inline-end span-block-end',
+  'inline-end span-block-end': 'inline-end span-block-start',
   center: 'center',
 };
 
 const INLINE_FLIP: {[PositionArea]: PositionArea} = {
   'inline-start': 'inline-end',
   'inline-end': 'inline-start',
+  'inline-start span-block-start': 'inline-end span-block-start',
+  'inline-start span-block-end': 'inline-end span-block-end',
+  'inline-end span-block-start': 'inline-start span-block-start',
+  'inline-end span-block-end': 'inline-start span-block-end',
   'block-start span-inline-start': 'block-start span-inline-end',
   'block-start span-inline-end': 'block-start span-inline-start',
   'block-end span-inline-start': 'block-end span-inline-end',
@@ -128,19 +140,43 @@ function place(
       return {x: centeredX, y: centeredY};
     // `span-*` aligns the overlay's edge with the anchor's edge rather than
     // centering it — the menu-under-a-button shape.
-    case 'block-start span-inline-start':
-      return {x: anchor.x, y: anchor.y - overlay.height - offset};
+    //
+    // The direction names read like the SPREAD, not the anchor edge
+    // (css-anchor-position-1 §3.1): `span-inline-end` grows from the
+    // anchor's inline-START edge toward inline-end, so the START edges are
+    // the flush pair; `span-inline-start` grows the other way and aligns
+    // the END edges. This function had them inverted — a menu opened with
+    // Radix's align="start" hung LEFT off its trigger.
     case 'block-start span-inline-end':
+      return {x: anchor.x, y: anchor.y - overlay.height - offset};
+    case 'block-start span-inline-start':
       return {
         x: anchor.x + anchor.width - overlay.width,
         y: anchor.y - overlay.height - offset,
       };
-    case 'block-end span-inline-start':
-      return {x: anchor.x, y: anchor.y + anchor.height + offset};
     case 'block-end span-inline-end':
+      return {x: anchor.x, y: anchor.y + anchor.height + offset};
+    case 'block-end span-inline-start':
       return {
         x: anchor.x + anchor.width - overlay.width,
         y: anchor.y + anchor.height + offset,
+      };
+    // The inline sides span the BLOCK axis the same way. These fell through
+    // to the centered default before, so a side="left"/"right" overlay
+    // ignored its align entirely.
+    case 'inline-start span-block-end':
+      return {x: anchor.x - overlay.width - offset, y: anchor.y};
+    case 'inline-start span-block-start':
+      return {
+        x: anchor.x - overlay.width - offset,
+        y: anchor.y + anchor.height - overlay.height,
+      };
+    case 'inline-end span-block-end':
+      return {x: anchor.x + anchor.width + offset, y: anchor.y};
+    case 'inline-end span-block-start':
+      return {
+        x: anchor.x + anchor.width + offset,
+        y: anchor.y + anchor.height - overlay.height,
       };
     default:
       return {x: centeredX, y: centeredY};
