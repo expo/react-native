@@ -409,30 +409,33 @@ const CASES = [
   },
   {
     /*
-     * A raised or lowered run must not make the line taller.
+     * A raised or lowered run must not change the line's interior rhythm —
+     * and its box must RESERVE the shifted ink at its edges.
      *
-     * This is a DELIBERATE deviation and the case exists to hold it. Safari
-     * grows the line box to contain a shifted run — measured on
-     * `x<sup>2</sup>y` at `line-height: 20px`, its paragraph is 30.53 tall —
-     * so a paragraph loses its rhythm wherever a footnote marker appears. Both
-     * platforms shift the baseline INSIDE the existing line box instead, which
-     * is the native text stacks' behaviour and the better typographic result.
-     *
-     * So this is asserted against the declared `line-height` rather than
-     * against the browser: one line of 20pt, whatever is raised inside it.
+     * This is a DELIBERATE deviation and the case exists to hold both
+     * halves of it. Safari grows the line box to contain a shifted run —
+     * measured on `x<sup>2</sup>y` at `line-height: 20px`, its paragraph is
+     * 30.53 tall — so a paragraph loses its rhythm wherever a footnote
+     * marker appears. Both platforms shift the baseline within the line
+     * instead, which is the native text stacks' behaviour and the better
+     * typographic result. The ink that shift pushes past the line's edge is
+     * then reserved at the RUN BOX's edges (half the shifted fragment's font
+     * size per side — SpecDeviations.md), because without the reserve a
+     * superscript on the box's first line painted over whatever sat above
+     * the element.
      *
      * It also guards the SIZE, which is the browser's and is not deviated
      * from. `<sup>` was rendering near half the body size on iOS because
      * `kCTSuperscriptAttributeName` reduces the font on top of the user-agent
      * sheet's `font-size: 0.8333em` — two reductions for the one the web
      * applies. iOS now takes only the shift from the platform. A regression
-     * there shows up here as a line that is no longer exactly one line tall,
-     * because a smaller font shifts by a smaller amount.
+     * there shows up here through the reserve, which is sized from the
+     * fragment's font.
      */
     name: 'a-shifted-run-does-not-grow-the-line',
     withText: true,
     bounded: 'line-height-unchanged-by-shift',
-    why: 'A <sup> shifts the baseline within the line box; the line stays one line-height tall, unlike Safari which grows it.',
+    why: 'A <sup> shifts within the line (rhythm kept, unlike Safari growing to 30.53) and the run box reserves the shifted ink at its edges.',
     tree: root([
       'x',
       {tag: 'sup', m: 'sup', style: {}, children: ['2']},

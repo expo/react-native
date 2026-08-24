@@ -111,17 +111,27 @@ function compare(expected, actual) {
      * — and that the box keeps its declared size at the top of the line.
      */
     /*
-     * A shifted run must not grow the line — see the case's own note. Held to
-     * the declared `line-height` rather than to Safari, which deliberately
-     * differs here (its paragraph for the same markup is 30.53 tall).
+     * A shifted run keeps the line's interior rhythm, and the RUN'S BOX
+     * reserves the shifted ink at its edges — the revised deviation
+     * (SpecDeviations.md "sup/sub shift inside the line box"). Safari
+     * deliberately differs both ways: it grows the LINE (30.53 for this
+     * markup) and reserves nothing at the box.
+     *
+     * The reserve is half the shifted fragment's font size per shifted edge:
+     * sup and sub are 0.8333em of the root's 16px, so the box is the
+     * declared line-height plus 2 x (0.8333*16)/2. Tolerance is 1pt rather
+     * than the global 0.5: iOS's text measurement ceils this box to whole
+     * points (33.33 measures 34), which is rounding, not layout.
      */
     if (testCase.bounded === 'line-height-unchanged-by-shift') {
       const declared = parseFloat(testCase.tree.style.lineHeight);
+      const shiftedFontSize = 0.8333 * parseFloat(testCase.tree.style.fontSize);
+      const expected = declared + shiftedFontSize;
       exactChecks++;
-      if (Math.abs(got.root.height - declared) > TOLERANCE) {
+      if (Math.abs(got.root.height - expected) > 1) {
         failures.push({
           name,
-          detail: `line box is ${got.root.height}, not the declared line-height of ${declared} — a shifted run grew the line`,
+          detail: `run box is ${got.root.height}, not line-height ${declared} + the reserved shift ink ${shiftedFontSize} = ${expected}`,
           why: testCase.why,
         });
       }
