@@ -21,7 +21,7 @@
 		832F45BB2A8A6E1F0097B4E6 /* SwiftTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 832F45BA2A8A6E1F0097B4E6 /* SwiftTest.swift */; };
 		A975CA6C2C05EADF0043F72A /* RCTNetworkTaskTests.m in Sources */ = {isa = PBXBuildFile; fileRef = A975CA6B2C05EADE0043F72A /* RCTNetworkTaskTests.m */; };
 		AB0DE1F000000000000000A1 /* EXPElementButtonPressAppearanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000A2 /* EXPElementButtonPressAppearanceTests.m */; };
-		AB0DE1F000000000000000B1 /* EXPElementCheckboxGeometryTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.m */; };
+		AB0DE1F000000000000000B1 /* EXPElementCheckboxGeometryTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.mm */; };
 		AB0DE1F000000000000000C1 /* RCTViewComponentViewRecycleTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */; };
 		AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */; };
 		AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */; };
@@ -107,7 +107,7 @@
 		93A243F0D4D5C54911E811C4 /* libPods-RNTesterIntegrationTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-RNTesterIntegrationTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A975CA6B2C05EADE0043F72A /* RCTNetworkTaskTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RCTNetworkTaskTests.m; sourceTree = "<group>"; };
 		AB0DE1F000000000000000A2 /* EXPElementButtonPressAppearanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EXPElementButtonPressAppearanceTests.m; sourceTree = "<group>"; };
-		AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EXPElementCheckboxGeometryTests.m; sourceTree = "<group>"; };
+		AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPElementCheckboxGeometryTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTViewComponentViewRecycleTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTGlyphHuggingLayoutManagerTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTAttachmentLineLeadingTests.mm; sourceTree = "<group>"; };
@@ -377,7 +377,7 @@
 				E7DB20C822B2BAA5005AC45F /* RCTDevMenuTests.m */,
 				E7DB20AF22B2BAA4005AC45F /* RCTFontTests.m */,
 				AB0DE1F000000000000000A2 /* EXPElementButtonPressAppearanceTests.m */,
-				AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.m */,
+				AB0DE1F000000000000000B2 /* EXPElementCheckboxGeometryTests.mm */,
 				AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */,
 				AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */,
 				AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */,
@@ -866,7 +866,7 @@
 				E7DB20E622B2BAA6005AC45F /* RCTImageLoaderHelpers.m in Sources */,
 				E7DB20D622B2BAA6005AC45F /* RCTFontTests.m in Sources */,
 				AB0DE1F000000000000000A1 /* EXPElementButtonPressAppearanceTests.m in Sources */,
-				AB0DE1F000000000000000B1 /* EXPElementCheckboxGeometryTests.m in Sources */,
+				AB0DE1F000000000000000B1 /* EXPElementCheckboxGeometryTests.mm in Sources */,
 				AB0DE1F000000000000000C1 /* RCTViewComponentViewRecycleTests.mm in Sources */,
 				AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */,
 				AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */,

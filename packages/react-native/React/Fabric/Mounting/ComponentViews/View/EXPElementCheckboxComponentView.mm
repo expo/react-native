@@ -39,14 +39,28 @@ using namespace facebook::react;
   [super layoutSubviews];
   /*
    * A UISwitch ignores assigned sizes — set its frame to the element's box and
-   * it snaps back to its own intrinsic size, hanging out of the right edge if
-   * the box is smaller. The sheet states the control's real footprint, so in
-   * the normal case this is the identity; when the two ever disagree (a new
-   * OS resizes the control again), centring makes the drift symmetrical
-   * instead of an overlap with whatever text follows the control on its line.
+   * it snaps back to its own intrinsic size. The sheet states the control's
+   * footprint, so in the normal case this is the identity; but the two CAN
+   * disagree at runtime — on iOS 26 the switch grows with the accessibility
+   * content-size categories, which the sheet's constant cannot know.
+   *
+   * When they disagree, the overflow must go TRAILING, never leading: this
+   * box starts at whatever alignment the layout gave the element, and a
+   * centred control spilled half the excess PAST the text margin — a row of
+   * controls at large Dynamic Type read as randomly indented (user-reported,
+   * from a device screenshot: one switch 6pt left of the paragraph edge).
+   * The trailing side is where the platform's own label gap and the sheet's
+   * inline-end margin already budget space.
    */
   [_switch sizeToFit];
-  _switch.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+  const CGRect bounds = self.bounds;
+  CGRect controlFrame = _switch.frame;
+  const BOOL rightToLeft = self.effectiveUserInterfaceLayoutDirection ==
+      UIUserInterfaceLayoutDirectionRightToLeft;
+  controlFrame.origin.x =
+      rightToLeft ? CGRectGetMaxX(bounds) - controlFrame.size.width : CGRectGetMinX(bounds);
+  controlFrame.origin.y = CGRectGetMidY(bounds) - controlFrame.size.height / 2;
+  _switch.frame = controlFrame;
 }
 
 - (void)switchToggled:(UISwitch *)sender
