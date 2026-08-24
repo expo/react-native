@@ -632,9 +632,19 @@ static NSMutableAttributedString *RCTNSAttributedStringFragmentFromFragment(
       string = RCTNSStringFromStringApplyingTextTransform(string, textTransform);
     }
 
-    return [[NSMutableAttributedString alloc]
-        initWithString:string
-            attributes:RCTNSTextAttributesFromTextAttributes(fragment.textAttributes)];
+    NSMutableDictionary<NSAttributedStringKey, id> *attributes =
+        RCTNSTextAttributesFromTextAttributes(fragment.textAttributes);
+    if (!fragment.inlineBox.isEmpty()) {
+      // A fragment with box decorations gets its background from
+      // drawInlineBoxDecorations, which paints the element's whole border box
+      // — the attribute covers glyph advances only, which starts AFTER the
+      // left padding (G3 kerns it onto the preceding character) and spills
+      // over the right margin. Both painting the box and keeping the
+      // attribute would double-paint a translucent colour.
+      [attributes removeObjectForKey:NSBackgroundColorAttributeName];
+    }
+
+    return [[NSMutableAttributedString alloc] initWithString:string attributes:attributes];
   }
 }
 

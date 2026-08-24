@@ -481,12 +481,29 @@ UIColor *_Nullable inlineBoxColor(const facebook::react::SharedColor &sharedColo
 //
 // Vertical padding/border deliberately overflow the line box rather than
 // growing it, which is what the web does for inline boxes.
+//
+// Two phases, because the element's own background must sit UNDER any
+// background a nested child paints through TextKit's attribute pass, while
+// the borders must sit OVER it: Background runs before
+// `drawBackgroundForGlyphRange:`, Borders after.
+//
+// The background is painted here, not by `NSBackgroundColorAttributeName`,
+// for any fragment carrying box decorations: the attribute covers glyph
+// advances only, and G3 hangs the LEADING space off the preceding character
+// — so a padded span's background started after its own left padding (and,
+// on the trailing side, the attribute spilled over the margin). CSS paints
+// the background over the border box; the box computed for the borders is
+// exactly that. The attribute is stripped from such fragments where the
+// string is built (RCTNSAttributedStringFragmentWithAttributesFromFragment).
+enum class InlineBoxPaintPhase { Background, Borders };
+
 void drawInlineBoxDecorations(
     const AttributedString &attributedString,
     NSTextStorage *textStorage,
     NSLayoutManager *layoutManager,
     NSTextContainer *textContainer,
-    CGPoint origin)
+    CGPoint origin,
+    InlineBoxPaintPhase phase)
 {
   const auto &fragments = attributedString.getFragments();
   CGContextRef context = UIGraphicsGetCurrentContext();
@@ -515,6 +532,10 @@ void drawInlineBoxDecorations(
     // Consume the whole element: consecutive fragments sharing these
     // decorations, ending at the fragment flagged as the box's end.
     const auto decorations = fragment.inlineBox;
+    // The element's own background. Nested children carry it too (the text
+    // cascade inherits backgroundColor down), so the first fragment's value
+    // is the element's unless a child overrode it at the very start.
+    const auto elementBackground = fragment.textAttributes.backgroundColor;
     NSUInteger elementStart = location;
     NSUInteger elementLength = 0;
     bool sawEnd = false;
@@ -626,6 +647,24 @@ void drawInlineBoxDecorations(
           std::max((CGFloat)0, right - left),
           run.size.height + padTop + padBottom + borderTop + borderBottom);
 
+      if (phase == InlineBoxPaintPhase::Background) {
+        // The border box, exactly — CSS's default background-clip. The
+        // borders paint over it in the later phase.
+        UIColor *backgroundColor = inlineBoxColor(elementBackground);
+        if (backgroundColor != nil) {
+          CGContextSetFillColorWithColor(context, backgroundColor.CGColor);
+          if (decorations.borderRadius > 0) {
+            UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:borderBox
+                                                            cornerRadius:decorations.borderRadius];
+            CGContextAddPath(context, path.CGPath);
+            CGContextFillPath(context);
+          } else {
+            CGContextFillRect(context, borderBox);
+          }
+        }
+        continue;
+      }
+
       // Edges are filled as solid rects rather than stroked: a stroke centres
       // on the path, so a degenerate (zero-height) rect straddles the edge and
       // lands half a point off, and CoreGraphics' handling of zero-size rects
@@ -725,10 +764,25 @@ void drawInlineBoxDecorations(
 
   [self processTruncatedAttributedText:textStorage textContainer:textContainer layoutManager:layoutManager];
 
-  [layoutManager drawBackgroundForGlyphRange:glyphRange atPoint:frame.origin];
-  // Inline box decorations paint beneath the glyphs, like a background.
+  // An inline element's own background paints first, so a nested child's
+  // attribute-painted background can still sit on top of it; the borders and
+  // outline paint after the attribute pass, so they sit on top of everything
+  // but the glyphs.
   drawInlineBoxDecorations(
-      attributedString, textStorage, layoutManager, textContainer, frame.origin);
+      attributedString,
+      textStorage,
+      layoutManager,
+      textContainer,
+      frame.origin,
+      InlineBoxPaintPhase::Background);
+  [layoutManager drawBackgroundForGlyphRange:glyphRange atPoint:frame.origin];
+  drawInlineBoxDecorations(
+      attributedString,
+      textStorage,
+      layoutManager,
+      textContainer,
+      frame.origin,
+      InlineBoxPaintPhase::Borders);
   [layoutManager drawGlyphsForGlyphRange:glyphRange atPoint:frame.origin];
 
 #if TARGET_OS_MACCATALYST
