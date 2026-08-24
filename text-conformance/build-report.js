@@ -264,7 +264,7 @@ function main() {
         if (note) {
           body.push(
             `<div class="finding ${esc(note.kind || 'note')}">` +
-              `<span class="tag">${esc((note.kind || 'note').replace(/-/g, ' '))}</span>` +
+              `<span class="tag">${esc(kindLabel(note.kind || 'note'))}</span>` +
               `<div class="finding-body">${md(note.text)}</div></div>`,
           );
         }
@@ -375,6 +375,17 @@ function METHOD(counted, corpus) {
 </dl>`;
 }
 
+/*
+ * What a kind's pill READS. `deviation` is spelled out as intentional —
+ * every one of them is a documented decision (SpecDeviations.md), and an
+ * unlabeled "deviation" reads like a defect.
+ */
+function kindLabel(kind) {
+  return kind === 'deviation'
+    ? 'intentional deviation'
+    : String(kind).replace(/-/g, ' ');
+}
+
 function shell(body, counted, findings, corpus) {
   const kinds = {};
   for (const k of Object.keys(findings)) {
@@ -385,7 +396,7 @@ function shell(body, counted, findings, corpus) {
     .sort()
     .map(
       k =>
-        `<span class="finding ${esc(k)}"><span class="tag">${esc(k.replace(/-/g, ' '))}</span> ${kinds[k]}</span>`,
+        `<span class="finding ${esc(k)}"><span class="tag">${esc(kindLabel(k))}</span> ${kinds[k]}</span>`,
     )
     .join(' ');
 
@@ -444,8 +455,12 @@ function shell(body, counted, findings, corpus) {
     background: color-mix(in srgb, currentColor 16%, transparent);
   }
   .finding.bug        { border-left-color: #ff3b30; background: color-mix(in srgb, #ff3b30 11%, transparent); }
-  .finding.deviation  { border-left-color: #ff9500; background: color-mix(in srgb, #ff9500 11%, transparent); }
-  .finding.disparity  { border-left-color: #af52de; background: color-mix(in srgb, #af52de 11%, transparent); }
+  /* PURPLE for an INTENTIONAL deviation — a decision, documented in
+     SpecDeviations.md, not a warning; the label says so too. Yellow/orange
+     is reserved for disparities, which ARE warnings (the platforms
+     disagreeing with each other unintentionally). */
+  .finding.deviation  { border-left-color: #af52de; background: color-mix(in srgb, #af52de 11%, transparent); }
+  .finding.disparity  { border-left-color: #ff9500; background: color-mix(in srgb, #ff9500 11%, transparent); }
   .finding.match      { border-left-color: #34c759; background: color-mix(in srgb, #34c759 10%, transparent); }
   .finding.limitation { border-left-color: #30b0c7; background: color-mix(in srgb, #30b0c7 11%, transparent); }
   code {
