@@ -533,6 +533,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::UserSelect userSelect;
   public facebook::react::ViewEvents events;
   public static facebook::react::Transform resolveTransform(const facebook::react::Size& frameSize, const facebook::react::Transform& transform, const facebook::react::TransformOrigin& transformOrigin);
+  public std::optional<facebook::react::DynamicTypeRamp> inheritedDynamicTypeRamp;
   public std::optional<facebook::react::FontStyle> inheritedFontStyle;
   public std::optional<facebook::react::FontVariant> inheritedFontVariant;
   public std::optional<facebook::react::FontWeight> inheritedFontWeight;
