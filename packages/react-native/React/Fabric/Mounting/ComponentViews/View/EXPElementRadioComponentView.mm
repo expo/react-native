@@ -10,87 +10,26 @@
 #import <React/RCTConversions.h>
 #import <react/renderer/components/view/ElementRadioShadowNode.h>
 
+#import "EXPRadioRunList.h"
 #import "RCTComponentViewFactory.h"
 
 using namespace facebook::react;
 
 #pragma mark - The control
 
-// Drawn, since UIKit has no radio: `tintColor` for the chosen state and the
-// separator colour for the ring, reported as a button with a selected state
+/*
+ * The radio itself draws nothing on iOS. UIKit has no radio control; a run of
+ * radios is presented as a grouped list whose chosen row carries the list's
+ * own `UICellAccessoryCheckmark` (see `EXPRadioRunList`). The element keeps
+ * `name`, `value` and `checked`, which the run reads and a form submits, and
+ * reports itself to assistive technology as a button with a meaningful selected
+ * state, as UIKit describes a chosen row.
+ */
 @interface EXPElementRadioControl : UIControl
 @property (nonatomic, assign) BOOL isChosen;
 @end
 
-// The box is the 44pt touch target; the ring is drawn at its design diameter
-// and centred, as Material centres a 24dp drawable in a 48dp target
-static const CGFloat kEXPRadioIndicatorDiameter = 22;
-
-/*
- * The touch target, which is deliberately LARGER than the box.
- *
- * Making the box itself 44pt met the guideline and produced a second
- * complaint: 11pt of empty target all round a 22pt circle reads as a lot of
- * air in a stack of radios, while the control still felt small to aim at.
- * Both are the same fact — a target is only as findable as the ink that
- * advertises it, so a 44pt box around a 22pt dot spends space without looking
- * like it bought anything.
- *
- * So the box shrinks to fit the ink and the target grows past it, which is
- * what `pointInside:` is for. The two numbers stop being the same number: the
- * layout box is what the row spends space on, and this is what a finger has to
- * find. Nothing in the layout moves when this changes.
- *
- * The ancestor still has to be big enough to let the touch through — UIKit
- * stops walking down at the first view whose bounds exclude the point, so an
- * expanded target inside a row shorter than 44pt is clipped away exactly where
- * it was wanted. That is why the demo rows state a minimum height rather than
- * taking the control's.
- */
-static const CGFloat kEXPRadioTouchTarget = 44;
-
-/*
- * The ring's rect and stroke width for a given box.
- *
- * `drawRect:` and `layoutSubviews` both need this — the ring is stroked in one
- * and the dot's path is derived from it in the other — and they computed it
- * with two copies of the same arithmetic. Two copies of a geometry rule is one
- * edit away from a dot that no longer sits in its ring.
- */
-static CGRect EXPRadioRingRect(CGRect bounds, CGFloat *outLineWidth)
-{
-  const CGFloat side = MIN(MIN(CGRectGetWidth(bounds), CGRectGetHeight(bounds)), kEXPRadioIndicatorDiameter);
-  const CGFloat lineWidth = MAX(1.0, side / 12.0);
-  if (outLineWidth != NULL) {
-    *outLineWidth = lineWidth;
-  }
-  return CGRectInset(
-      CGRectMake((CGRectGetWidth(bounds) - side) / 2, (CGRectGetHeight(bounds) - side) / 2, side, side),
-      lineWidth / 2,
-      lineWidth / 2);
-}
-
-@implementation EXPElementRadioControl {
-  // The dot, as a layer so it can spring; see `applyDotStateAnimated:`.
-  CAShapeLayer *_dotLayer;
-}
-
-/*
- * Accepts a touch anywhere within the target, even outside the view's bounds.
- *
- * `hitSlop` is not the mechanism for the same reason it was rejected for the
- * box: it is clipped to the ancestor's bounds, and it is not expressible from
- * the user-agent sheet at all. This is the platform's own hook for the same
- * idea, and it belongs on the control rather than the container because the
- * control is the thing being aimed at.
- */
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
-{
-  const CGRect bounds = self.bounds;
-  const CGFloat dx = MAX(0, (kEXPRadioTouchTarget - CGRectGetWidth(bounds)) / 2);
-  const CGFloat dy = MAX(0, (kEXPRadioTouchTarget - CGRectGetHeight(bounds)) / 2);
-  return CGRectContainsPoint(CGRectInset(bounds, -dx, -dy), point);
-}
+@implementation EXPElementRadioControl
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
@@ -98,15 +37,6 @@ static CGRect EXPRadioRingRect(CGRect bounds, CGFloat *outLineWidth)
     self.backgroundColor = [UIColor clearColor];
     self.isAccessibilityElement = YES;
     self.accessibilityTraits = UIAccessibilityTraitButton;
-
-    // In its own layer so it can animate; `drawRect` only redraws
-    _dotLayer = [CAShapeLayer layer];
-    _dotLayer.fillColor = self.tintColor.CGColor;
-    // Scaled about the middle, so the spring grows from the centre outward.
-    _dotLayer.anchorPoint = CGPointMake(0.5, 0.5);
-    _dotLayer.transform = CATransform3DMakeScale(0, 0, 1);
-    _dotLayer.opacity = 0;
-    [self.layer addSublayer:_dotLayer];
   }
   return self;
 }
@@ -117,103 +47,24 @@ static CGRect EXPRadioRingRect(CGRect bounds, CGFloat *outLineWidth)
     return;
   }
   _isChosen = isChosen;
-  [self setNeedsDisplay];
-  [self applyDotStateAnimated:YES];
+  // No ink to change; the mark is the list's
   self.accessibilityTraits =
       isChosen ? (UIAccessibilityTraitButton | UIAccessibilityTraitSelected) : UIAccessibilityTraitButton;
-}
-
-- (void)drawRect:(CGRect)rect
-{
-  CGFloat lineWidth = 0;
-  const CGRect ring = EXPRadioRingRect(self.bounds, &lineWidth);
-
-  UIBezierPath *ringPath = [UIBezierPath bezierPathWithOvalInRect:ring];
-  ringPath.lineWidth = lineWidth;
-  UIColor *ringColor = self.isEnabled ? [UIColor separatorColor] : [UIColor quaternaryLabelColor];
-  [(self.isChosen && self.isEnabled ? self.tintColor : ringColor) setStroke];
-  [ringPath stroke];
-
-  // The dot is NOT drawn here — it is a layer, so that it can spring. See
-  // `applyDotStateAnimated:`.
-}
-
-/*
- * The dot's geometry, kept in step with the ring `drawRect` computes.
- */
-- (void)layoutSubviews
-{
-  [super layoutSubviews];
-  const CGRect ring = EXPRadioRingRect(self.bounds, NULL);
-  const CGRect dot = CGRectInset(ring, CGRectGetWidth(ring) * 0.28, CGRectGetHeight(ring) * 0.28);
-
-  _dotLayer.path = [UIBezierPath bezierPathWithOvalInRect:dot].CGPath;
-  // The layer's bounds are the whole view so the path sits where it was
-  // computed; the scale transform is what animates. BOUNDS and POSITION, not
-  // `frame`: the unchecked dot carries a scale(0) transform, and CALayer's
-  // frame setter computes geometry THROUGH the current transform — through a
-  // degenerate scale the position came out garbage, and the dot sprang in
-  // from the bottom-right of wherever that left it instead of growing from
-  // its own centre.
-  _dotLayer.bounds = self.bounds;
-  _dotLayer.position = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
-  _dotLayer.fillColor = (self.isEnabled ? self.tintColor : [UIColor quaternaryLabelColor]).CGColor;
-  [self applyDotStateAnimated:NO];
-}
-
-// A spring in, plain out: unchoosing is a consequence of choosing another
-- (void)applyDotStateAnimated:(BOOL)animated
-{
-  const CGFloat target = self.isChosen ? 1.0 : 0.0;
-
-  // The final state is set unconditionally; reduce motion skips only the
-  // animation
-  [CATransaction begin];
-  [CATransaction setDisableActions:YES];
-  _dotLayer.transform = CATransform3DMakeScale(target, target, 1);
-  _dotLayer.opacity = self.isChosen ? 1 : 0;
-  [CATransaction commit];
-
-  if (!animated || UIAccessibilityIsReduceMotionEnabled()) {
-    return;
-  }
-
-  if (self.isChosen) {
-    CASpringAnimation *spring = [CASpringAnimation animationWithKeyPath:@"transform.scale"];
-    spring.fromValue = @0.0;
-    spring.toValue = @1.0;
-    spring.damping = 14;
-    spring.stiffness = 300;
-    spring.mass = 1;
-    // The spring decides its own duration; anything else truncates the settle
-    // and reads as a stutter.
-    spring.duration = spring.settlingDuration;
-    [_dotLayer addAnimation:spring forKey:@"dot-in"];
-  } else {
-    CABasicAnimation *out = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
-    out.fromValue = @1.0;
-    out.toValue = @0.0;
-    out.duration = 0.12;
-    out.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
-    [_dotLayer addAnimation:out forKey:@"dot-out"];
-  }
-}
-
-- (void)tintColorDidChange
-{
-  [super tintColorDidChange];
-  [self setNeedsDisplay];
 }
 
 - (void)setEnabled:(BOOL)enabled
 {
   [super setEnabled:enabled];
-  [self setNeedsDisplay];
+  self.accessibilityTraits =
+      enabled ? self.accessibilityTraits : (self.accessibilityTraits | UIAccessibilityTraitNotEnabled);
 }
 
 @end
 
 #pragma mark - Component view
+
+@interface EXPElementRadioComponentView () <EXPRadioRunMember>
+@end
 
 @implementation EXPElementRadioComponentView {
   EXPElementRadioControl *_radio;
@@ -226,27 +77,80 @@ static CGRect EXPRadioRingRect(CGRect bounds, CGFloat *outLineWidth)
     _props = ElementRadioShadowNode::defaultSharedProps();
 
     _radio = [[EXPElementRadioControl alloc] initWithFrame:self.bounds];
+    /*
+     * The control answers for its own box only, which on iOS is zero wide
+     * (`RADIO_FOOTPRINT_BY_PLATFORM.ios`); in a run the row is the target and
+     * the row's cell selects. The action stays for a radio with no run behind
+     * it and for VoiceOver, whose activation goes through `UIControl`, not hit
+     * testing.
+     */
     [_radio addTarget:self action:@selector(radioTapped) forControlEvents:UIControlEventTouchUpInside];
     self.elementControl = _radio;
   }
   return self;
 }
 
+#pragma mark - Belonging to a run
+
 /*
- * The container has to admit the touch too.
- *
- * UIKit walks down from the window and stops at the first view whose
- * `pointInside:` says no, so an expanded target on the control alone is
- * unreachable: the point never gets past this view. Both have to agree, which
- * is easy to forget because the control's override is the one that looks like
- * it does the work.
+ * A radio's row is the element that contains it, and its container is what
+ * contains that. HTML does not mark rows; both `<label><input> Text</label>`
+ * and `<div><input> Free</div>` make the containing element the row. A radio
+ * with no element around it has no row and is left alone.
  */
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
+- (void)didMoveToWindow
 {
-  const CGRect bounds = self.bounds;
-  const CGFloat dx = MAX(0, (kEXPRadioTouchTarget - CGRectGetWidth(bounds)) / 2);
-  const CGFloat dy = MAX(0, (kEXPRadioTouchTarget - CGRectGetHeight(bounds)) / 2);
-  return CGRectContainsPoint(CGRectInset(bounds, -dx, -dy), point);
+  [super didMoveToWindow];
+  UIView *row = self.superview;
+  UIView *container = row.superview;
+  if (self.window == nil || row == nil || container == nil) {
+    return;
+  }
+  [EXPRadioRunList announceRadio:self row:row inContainer:container];
+}
+
+- (void)removeFromSuperview
+{
+  UIView *row = self.superview;
+  UIView *container = row.superview;
+  if (row != nil && container != nil) {
+    [EXPRadioRunList withdrawRow:row fromContainer:container];
+  }
+  [super removeFromSuperview];
+}
+
+/*
+ * Re-grouping is driven from the radio, not from every container's layout, so
+ * a tree without radios pays nothing; it runs on the next turn of the run
+ * loop, once the container's other children have their frames.
+ */
+- (void)updateLayoutMetrics:(const LayoutMetrics &)layoutMetrics
+           oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics
+{
+  [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
+  UIView *container = self.superview.superview;
+  if (container == nil || ![EXPRadioRunList containerHasRuns:container]) {
+    return;
+  }
+  [EXPRadioRunList scheduleRegroupFor:container];
+}
+
+#pragma mark - EXPRadioRunMember
+
+- (BOOL)exp_isChosen
+{
+  return static_cast<const ElementRadioProps &>(*_props).checked;
+}
+
+- (BOOL)exp_isEnabled
+{
+  // The control's own state, not a second copy of the `disabled` prop
+  return _radio.enabled;
+}
+
+- (void)exp_choose
+{
+  [self radioTapped];
 }
 
 - (void)radioTapped
@@ -269,6 +173,8 @@ static CGRect EXPRadioRingRect(CGRect bounds, CGFloat *outLineWidth)
 
   if (!_isInitialValueSet || oldRadioProps.checked != newRadioProps.checked) {
     _radio.isChosen = newRadioProps.checked;
+    // The mark is the list's accessory, so the list is told to look again
+    [EXPRadioRunList radioDidChange:self];
   }
 
   if (!_isInitialValueSet || oldRadioProps.disabled != newRadioProps.disabled) {
