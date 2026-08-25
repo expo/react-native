@@ -318,31 +318,68 @@ export const CHECKABLE_FOOTPRINT_BY_PLATFORM: {
 };
 
 /**
- * `<input type="radio">`'s box — the TOUCH TARGET, not the ink.
+ * `<input type="radio">`'s box.
  *
- * A radio's circle is small by design; its tappable area must not be. iOS drew
- * a 22pt circle in a 22pt box, so the control was exactly as tappable as it was
- * visible — half the Human Interface Guidelines' 44pt minimum.
+ * A checkmark's box on iOS, not a ring's. UIKit has no radio control —
+ * `PickerStyle.radioGroup` is macOS-only — and what the platform offers for
+ * "one of several" is a list whose chosen row carries a checkmark. A run of
+ * radios is presented as exactly that, so the checkmark IS the indicator and a
+ * ring beside it would state the same thing twice in two different symbols.
  *
- * Making the BOX 44pt fixed that and bought a second complaint: 11pt of empty
- * target all round the ink reads as a lot of air in a stack of radios, and the
- * control still felt small to aim at. Both are the same fact — a target is only
- * as findable as the ink advertising it, so a 44pt box around a 22pt dot spends
- * space without looking like it bought anything.
+ * ZERO WIDTH, because the element has nothing to draw. The checkmark is the
+ * LIST'S — a real `UICellAccessoryCheckmark`, so its glyph, its tint, its
+ * placement and its side are the platform's, trailing in a left-to-right layout
+ * and leading in a right-to-left one. Drawing one here as well produced exactly
+ * what it sounds like: two checkmarks on the chosen row.
  *
- * So the two numbers are no longer one number. The box is 32pt, which is the
- * ink plus a modest ring, and the TARGET reaches past it to 44pt through
- * `pointInside:` (`kEXPRadioTouchTarget` in `EXPElementRadioComponentView`).
- * Layout spends 32; a finger finds 44.
+ * The space the accessory needs is reserved instead as the ROW's user-agent
+ * padding, which is where it belongs — the row is the box the platform insets,
+ * and a row's contents are positioned by Yoga across its width and cannot be
+ * re-flowed afterwards. See `radioRowPadding()`.
  *
- * hitSlop is not the mechanism: iOS clips it to the ancestor's bounds and it
- * cannot be stated from this sheet at all. `pointInside:` has the same
- * ancestor constraint, which is why a row holding radios states a minimum
- * height — see RADIO_ROW in the forms demo.
+ * The HEIGHT is not zero, and it is the one number here that does work. Yoga
+ * measures the row and UIKit draws the cell behind it, and if they disagree the
+ * disagreement is visible: a row measured at its label's 20pt got a section
+ * 20pt tall, UIKit drew its cell taller, and each group showed its first row
+ * with the rest clipped off square.
  *
- * The inline-end margin states the LABEL's distance from the visible circle
- * rather than from the box: iOS insets the ink (32 - 22) / 2 = 5pt, so 7 leaves
- * 12pt between the circle and its label.
+ * 52 is the platform's STANDARD ROW HEIGHT, not the HIG's 44pt minimum tappable
+ * target. Those are different numbers and using the minimum for the standard is
+ * how a list ends up looking cramped: measured against Settings on the same
+ * device, its rows are 52pt and a 44pt row is visibly tighter. UIKit says so
+ * itself — a list cell with nothing to measure falls back on 52, which is not a
+ * guess but the height its appearance uses.
+ *
+ * It is a FLOOR, not a fixed height. A row whose own content is taller keeps
+ * its height, so a two-line row is a two-line row; and the 44pt target is still
+ * met with room to spare.
+ *
+ * The element is still there and still carries `name`, `value` and `checked`: a
+ * form reads it and the run asks it which row is chosen. It simply has no ink,
+ * and a zero-WIDTH box is how an element says that without disturbing the row
+ * its author laid out around it.
+ *
+ * Its HEIGHT is not zero, and that is the one number here that does work.
+ * Yoga lays the row out and UIKit draws the cell, and the two have to agree or
+ * the disagreement is visible: a row measured at its label's 20pt gets a list
+ * frame 20pt tall, UIKit draws its cell at the standard 44, and the run shows
+ * its first row with the rest clipped off — which is exactly what it did.
+ *
+ * 44 is the platform's, not ours: it is `UITableViewCell`'s standard height and
+ * the HIG's minimum tappable target, the size UIKit will use whatever we ask
+ * for. Stating it on the control means any row containing a radio reserves the
+ * height its cell is going to take, and a row whose own content is TALLER than
+ * that still wins — the cell is given the height Yoga measured, so an author
+ * who builds a two-line row gets a two-line row.
+ *
+ * It sits beside Android's 48dp target below, which is the same kind of number
+ * for the same kind of reason: the platform's metric, written where the
+ * platform's other metrics are.
+ *
+ * Android keeps its own `RadioButton`, drawn in the platform's 48dp target,
+ * because Android HAS the control. The element is the semantic and the control
+ * is each platform's answer to it — which is the same reasoning that makes a
+ * checkbox a switch on one and a checkbox on the other.
  */
 export const RADIO_FOOTPRINT_BY_PLATFORM: {
   ios: {
@@ -358,7 +395,7 @@ export const RADIO_FOOTPRINT_BY_PLATFORM: {
     verticalAlign: 'middle',
   },
 } = {
-  ios: {width: 32, height: 32, marginInlineEnd: 7, verticalAlign: 'middle'},
+  ios: {width: 0, height: 52, marginInlineEnd: 0, verticalAlign: 'middle'},
   android: {
     width: 48,
     height: 48,
