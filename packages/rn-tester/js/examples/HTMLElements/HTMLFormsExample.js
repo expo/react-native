@@ -140,6 +140,32 @@ const RADIO_ROW = {
   minHeight: 44,
 };
 
+/*
+ * A row inside a platform list.
+ *
+ * No margin of its own: the list supplies the spacing between rows, and a
+ * bottom margin here is empty space the OS then centres the content WITHIN —
+ * measured as content sitting 6.6pt above the row's middle, which is half of
+ * CONTROL_ROW's 14pt. The platform was centring correctly; it was centring a
+ * box that was mostly margin.
+ */
+/*
+ * Lets a platform list reach the screen edges.
+ *
+ * `UICollectionLayoutListAppearanceInsetGrouped` insets its card from its
+ * container and expects that container to BE the screen — that is the Settings
+ * look. Inside this screen's 16pt padding the two insets add up and the card
+ * starts 32pt in, measured. Cancelling the screen's padding leaves the
+ * platform's own inset as the only one, which is what Settings actually shows.
+ */
+const FULL_BLEED = {marginHorizontal: -16};
+
+const LIST_ROW = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  columnGap: 0,
+};
+
 const CONTROL_ROW = {
   flexDirection: 'row',
   alignItems: 'center',
@@ -503,6 +529,7 @@ function ControlledInputs() {
 
 function Checkables() {
   const [checked, setChecked] = useState(false);
+  const [plan, setPlan] = useState('free');
   const [size, setSize] = useState('m');
 
   return (
@@ -543,15 +570,75 @@ function Checkables() {
       </Case>
 
       <Case
+        title="A radio group, rendered as the platform's list"
+        note="Plain radios in a plain container. iOS has no radio control, so a run of them is drawn as the list the platform does have, with the checkmark on the chosen row. Nothing here asks for a list. On a page its own colour the card carries a faint edge — iOS 18+; below that, put the group on a background it contrasts with."
+        readout={`plan: ${plan}`}>
+        <View>
+          {['free', 'pro'].map(id => (
+            <View key={id} style={LIST_ROW} collapsable={false}>
+              <input
+                type="radio"
+                name="plan"
+                value={id}
+                checked={plan === id}
+                onChange={() => setPlan(id)}
+              />
+              <Text style={CONTROL_LABEL}>
+                {id === 'free' ? 'Free' : 'Pro — $9/mo'}
+              </Text>
+            </View>
+          ))}
+
+          {/* Ordinary content between the options. It is not a row: it ends one
+              run and begins another, which is how a group interrupted by prose
+              becomes two sections without anyone writing that rule. */}
+          <Text style={{...NOTE, marginTop: 8}}>
+            Team plans are billed annually and include priority support.
+          </Text>
+
+          <View style={LIST_ROW} collapsable={false}>
+            <input
+              type="radio"
+              name="plan"
+              value="team"
+              checked={plan === 'team'}
+              onChange={() => setPlan('team')}
+            />
+            <Text style={CONTROL_LABEL}>Team</Text>
+          </View>
+
+          {/* An arbitrary row. Two stacked lines and a trailing price, laid out
+              by the author in their own flexbox — the cell takes it at the
+              height Yoga measured rather than a height a list cell assumes. */}
+          <View style={LIST_ROW} collapsable={false}>
+            <input
+              type="radio"
+              name="plan"
+              value="enterprise"
+              checked={plan === 'enterprise'}
+              onChange={() => setPlan('enterprise')}
+            />
+            <View style={{flex: 1, paddingVertical: 8}}>
+              <Text style={CONTROL_LABEL}>Enterprise</Text>
+              <Text style={{...NOTE, marginTop: 2}}>
+                SSO, audit log, and a named contact.
+              </Text>
+            </View>
+            <Text style={CONTROL_LABEL}>$99</Text>
+          </View>
+        </View>
+      </Case>
+
+      <Case
         title="Radio group — tied together by a shared name"
-        note="Deviation: a real RadioButton on Android; on iOS a drawn ring, because UIKit has no radio control."
+        note="Same group, one choice. Deviation: a real RadioButton on Android; on iOS a checkmark in a list, because UIKit has no radio control."
         readout={`size: ${size}`}>
         {[
           ['s', 'Small'],
           ['m', 'Medium'],
           ['l', 'Large'],
         ].map(([value, text]) => (
-          <View key={value} style={RADIO_ROW}>
+          <View key={value} style={RADIO_ROW} collapsable={false}>
             <input
               type="radio"
               name="size"
