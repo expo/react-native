@@ -102,7 +102,7 @@ function TextArea(props: TextAreaProps): React.Node {
   // Resolved against the tree rather than forwarded — see TextCorrection.js.
   // A textarea has no `type`, so nothing forbids it autocorrection outright.
   const {defaultValue, spellCheck, autoCorrect, ...forwarded} = rest;
-  const resolvedSpellCheck = useSpellcheck(spellCheck);
+  const resolvedSpellCheck = useSpellcheck(spellCheck, 'textarea');
   const resolvedAutoCorrect = useAutocorrect(autoCorrect, 'textarea');
 
   return (

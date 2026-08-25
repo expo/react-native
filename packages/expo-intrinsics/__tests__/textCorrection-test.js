@@ -36,12 +36,14 @@ import TestRenderer from 'react-test-renderer';
  */
 function SpellcheckProbe({
   own,
+  type,
   report,
 }: {
   own: boolean | void,
+  type: string,
   report: (boolean) => void,
 }) {
-  report(useSpellcheck(own));
+  report(useSpellcheck(own, type));
   return null;
 }
 
@@ -86,8 +88,12 @@ function render(
 const spellcheck = (
   own: boolean | void,
   wrap: (React.Node) => React.Node = node => node,
+  type: string = 'text',
 ): boolean =>
-  render(report => <SpellcheckProbe own={own} report={report} />, wrap);
+  render(
+    report => <SpellcheckProbe own={own} type={type} report={report} />,
+    wrap,
+  );
 
 const autocorrect = (
   own: AutocorrectValue | void,
@@ -109,6 +115,18 @@ describe('the used spellcheck state', () => {
   test('its own attribute decides', () => {
     expect(spellcheck(false)).toBe(false);
     expect(spellcheck(true)).toBe(true);
+  });
+
+  test('url, email and password are not checked by default', () => {
+    // DOM-CSS-DEVIATION(no-spellcheck-on-url-email-password). The spec lists
+    // Email and URL as checkable; no system field on either platform checks
+    // them, and every address reads as a misspelling — on iOS the predictive
+    // bar then appears with nothing to offer.
+    for (const type of ['url', 'email', 'password']) {
+      expect(spellcheck(undefined, node => node, type)).toBe(false);
+      // A default, not a refusal: an author who asks still gets it.
+      expect(spellcheck(true, node => node, type)).toBe(true);
+    }
   });
 
   test('it inherits from an ancestor that states one', () => {

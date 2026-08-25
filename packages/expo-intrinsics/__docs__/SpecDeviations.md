@@ -237,6 +237,22 @@ convention rather than an approximation of the web's.
 
 ---
 
+### `url`, `email` and `password` fields are not spell-checked
+
+`DOM-CSS-DEVIATION(no-spellcheck-on-url-email-password)`
+
+HTML lists Email and URL among the types a user agent *should* consider
+checkable (§6.8.5). No system field on either platform checks them, and for
+good reason: an address is not prose, so every one of them reads as a
+misspelling and the field fills with red underlines that mean nothing. On iOS
+the effect is worse than noise — the predictive bar appears above the keyboard
+with nothing to put in it, which is how this was reported from a device.
+
+So the three default to unchecked. It is a DEFAULT, not a refusal: an author who
+writes `spellCheck` gets what they asked for. That is the difference between
+this and the `autocorrect` rule beside it, where the spec itself makes the
+refusal absolute for the same three types.
+
 ### Tapping a `<label>` does not activate its control
 
 `DOM-CSS-DEVIATION(label-activation)`

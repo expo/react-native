@@ -85,10 +85,21 @@ function isAutocorrectOn(value: AutocorrectValue): boolean {
  * §6.8.5's algorithm, minus the two steps about user overrides, which belong to
  * the platform and are not ours to answer: the element's own attribute wins,
  * then the nearest ancestor that states one, then the element's own default
- * behaviour — `true-by-default` for a text field, which is what a browser and
- * both platforms do with an unmarked one.
+ * behaviour.
+ *
+ * That last step is where this departs from the letter of the spec, which lists
+ * Email and URL among the types a user agent should consider checkable. An
+ * address is not prose: every one of them is a "misspelling", so the field
+ * fills with red underlines that mean nothing, and on iOS the predictive bar
+ * appears above the keyboard with nothing to put in it — reported from a device
+ * as exactly that, a bar that shows up empty. No system email field on either
+ * platform checks spelling. So these three default to OFF and an author who
+ * states `spellCheck` still gets it: a default, not a refusal, which is the
+ * difference between this and the autocorrect rule above.
+ *
+ * DOM-CSS-DEVIATION(no-spellcheck-on-url-email-password)
  */
-export function useSpellcheck(own: boolean | null | void): boolean {
+export function useSpellcheck(own: boolean | null | void, type: string): boolean {
   const inherited = React.useContext(SpellcheckContext);
   if (own != null) {
     return own;
@@ -96,7 +107,7 @@ export function useSpellcheck(own: boolean | null | void): boolean {
   if (inherited != null) {
     return inherited;
   }
-  return true;
+  return !NEVER_AUTOCORRECTED.has(type);
 }
 
 /**

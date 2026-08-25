@@ -389,7 +389,7 @@ function Input(props: InputProps): React.Node {
    * passed to the autocorrect resolution because HTML forbids autocorrection
    * outright on url, email and password fields.
    */
-  const resolvedSpellCheck = useSpellcheck(spellCheck);
+  const resolvedSpellCheck = useSpellcheck(spellCheck, type);
   const resolvedAutoCorrect = useAutocorrect(autoCorrect, type);
 
   // `<input type="submit">` has no children in HTML; its label is the `value`
