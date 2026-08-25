@@ -889,6 +889,14 @@ bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   // subclasses), and the inline replaced <img>. Using the trait instead of a hardcoded
   // component-name list means a new intrinsic flows inline with no change here, and keeps
   // components/view free of a components/text include dependency.
+  /*
+   * Note: an absolutely-positioned inline element never reaches here. Its
+   * position blockifies it (css-display-3 §2.7) and the element resolves to
+   * the BOX backing before layout sees it, which is where that rule is
+   * applied — see `resolveInlineElementComponent`. It cannot be applied here:
+   * an inline element is backed by a text shadow node whose props carry no
+   * position, so this function has nothing to test.
+   */
   return child.getTraits().check(ShadowNodeTraits::Trait::InlineText);
 }
 
