@@ -182,5 +182,47 @@ export default {
         </DemoContent>
       ),
     },
+    {
+      title: 'A user-agent inline element is taken out of flow too',
+      description:
+        'The same rule from the other side. `position: absolute` blockifies ' +
+        '(css-display-3 §2.7) and removes the box from flow (CSS2 §9.7), so ' +
+        'it contributes nothing to the line — and that has to hold for an ' +
+        'element that is inline by USER-AGENT default, not only for one that ' +
+        'opted in with display:\'inline\'. A <span> took the other code path ' +
+        'and stayed in the run however it was positioned, which is how the ' +
+        'canonical visually-hidden block — position:absolute on a 1x1 clipped ' +
+        'box, the way a component says "assistive technology only" — ended up ' +
+        'laying its screen-reader text out as visible words and squeezing the ' +
+        'real label until it wrapped. Both lines below must be the same width.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<View style={{display: 'block'}}>Cart</View>\n" +
+            "<View style={{display: 'block'}}>\n" +
+            '  Cart\n' +
+            "  <span style={{position: 'absolute', width: 1, height: 1,\n" +
+            "                overflow: 'hidden'}}>completed</span>\n" +
+            '</View>'
+          }>
+          <View style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'Cart'}
+          </View>
+          <View style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'Cart'}
+            {/* $FlowFixMe[prop-missing] intrinsic */}
+            <span
+              style={{
+                position: 'absolute',
+                width: 1,
+                height: 1,
+                overflow: 'hidden',
+              }}>
+              {'completed'}
+            </span>
+          </View>
+        </DemoContent>
+      ),
+    },
   ],
 } as RNTesterModule;
