@@ -6,6 +6,9 @@
  */
 
 #import "RCTViewComponentView.h"
+
+#if TARGET_OS_IOS
+#endif
 #import <React/RCTSurfaceHostingProxyRootView.h>
 
 #import <CoreGraphics/CoreGraphics.h>
@@ -155,6 +158,9 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   // One paint view per anonymous text run, interleaved with mounted children in
   // document order. Internal, never differ-driven.
   NSMutableArray<RCTAnonymousTextRunView *> *_textRunViews;
+  // Chrome installed from OUTSIDE by a host, kept out of the mount indices.
+  // See `-addHostChromeSubview:`.
+  NSMutableArray<UIView *> *_hostChromeSubviews;
 #if !TARGET_OS_TV
   // Installed only while this View both paints text and asks for it to be
   // selectable. See the `user-select` section below.
@@ -268,12 +274,51 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 // counting only non-run subviews.
 - (BOOL)hasHostChromeSubviews
 {
-  return NO;
+  return _hostChromeSubviews.count > 0;
 }
 
 - (BOOL)isHostChromeSubview:(UIView *)view
 {
-  return NO;
+  return [_hostChromeSubviews containsObject:view];
+}
+
+- (void)rememberHostChromeSubview:(UIView *)view
+{
+  if (_hostChromeSubviews == nil) {
+    _hostChromeSubviews = [NSMutableArray new];
+  }
+  if (![_hostChromeSubviews containsObject:view]) {
+    [_hostChromeSubviews addObject:view];
+  }
+}
+
+- (void)addHostChromeSubview:(UIView *)view
+{
+  [self rememberHostChromeSubview:view];
+  // At the back, so no mounted child is ever covered by a backdrop.
+  [self.currentContainerView insertSubview:view atIndex:0];
+}
+
+- (void)addHostChromeSubview:(UIView *)view behindSubview:(UIView *)sibling
+{
+  [self rememberHostChromeSubview:view];
+  UIView *container = self.currentContainerView;
+  if (sibling.superview != container) {
+    [container insertSubview:view atIndex:0];
+    return;
+  }
+  // `belowSubview:` rather than an index: UIKit removes a view that is already a
+  // subview before re-inserting it, so a precomputed index is off by one when
+  // the chrome is moved rather than added
+  [container insertSubview:view belowSubview:sibling];
+}
+
+- (void)removeHostChromeSubview:(UIView *)view
+{
+  [_hostChromeSubviews removeObject:view];
+  if (view.superview == self.currentContainerView) {
+    [view removeFromSuperview];
+  }
 }
 
 - (NSInteger)_containerIndexForMountIndex:(NSInteger)index
@@ -1116,6 +1161,16 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 {
   [super prepareForRecycle];
 
+  /*
+   * Host chrome installed from outside belongs to what this view was; left
+   * attached through recycling it would back unrelated content and keep
+   * counting itself out of the mount indices.
+   */
+  for (UIView *chrome in _hostChromeSubviews) {
+    [chrome removeFromSuperview];
+  }
+  [_hostChromeSubviews removeAllObjects];
+
   // If view was managed by animated, its props need to align with UIView's properties.
   const auto &props = static_cast<const ViewProps &>(*_props);
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"transform"]) {
@@ -1148,6 +1203,9 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN = nil;
   _eventEmitter.reset();
   _isJSResponder = NO;
+  // Chrome that asked for this is gone by now, and the view is about to become
+  // something with no list behind it.
+  _passesTouchesToHostChrome = NO;
   _reactSubviews = [NSMutableArray new];
   _layoutMetrics = EmptyLayoutMetrics;
 }
@@ -1262,11 +1320,43 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   return isPointInside ? self : nil;
 }
 
+- (BOOL)hasTouchHandlers
+{
+  return _props->events.bits.any();
+}
+
+/*
+ * Whether a hit view is worth interrupting the host chrome for. Anything that is
+ * not a React view is assumed to want its own touches (a `UIControl`, a text
+ * run that answered because a link is under the point); only a React view with
+ * no handler is safe to pass over.
+ */
+static BOOL RCTViewWouldActOnTheTouch(UIView *view)
+{
+  if (![view isKindOfClass:[RCTViewComponentView class]]) {
+    return YES;
+  }
+  return ((RCTViewComponentView *)view).hasTouchHandlers;
+}
+
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
 {
   switch (_props->pointerEvents) {
-    case PointerEventsMode::Auto:
-      return [self betterHitTest:point withEvent:event];
+    case PointerEventsMode::Auto: {
+      /*
+       * `passesTouchesToHostChrome` reaches further than `BoxNone`, which gives
+       * up only this view's area: a child that merely draws (the label in a
+       * radio row) must not swallow a tap meant for the row, so the whole
+       * subtree is passed over except what would act on the touch, as `UILabel`
+       * defaults `userInteractionEnabled` off. Only `Auto` becomes this; `None`
+       * and `BoxOnly` are the author's and chrome does not overrule them.
+       */
+      UIView *view = [self betterHitTest:point withEvent:event];
+      if (_passesTouchesToHostChrome && (view == self || !RCTViewWouldActOnTheTouch(view))) {
+        return nil;
+      }
+      return view;
+    }
     case PointerEventsMode::None:
       return nil;
     case PointerEventsMode::BoxOnly:
