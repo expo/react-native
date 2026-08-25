@@ -8,6 +8,7 @@
 #import "EXPElementTextInputComponentView.h"
 
 #import <React/EXPElementDragOwnership.h>
+#import <React/EXPTextInputCaret.h>
 #import <React/RCTConversions.h>
 #import <React/RCTUtils.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
@@ -25,8 +26,10 @@ using namespace facebook::react;
 @interface EXPElementTextInputComponentView () <UITextFieldDelegate, EXPElementDragOwnership>
 @end
 
-// One factory for the mounted field and the startup probe, so the probe
-// measures the field that mounts
+/*
+ * The field the element mounts and the one the startup probe measures, from one
+ * factory so the probe's height is the mounted field's.
+ */
 static UITextField *EXPMakeElementTextField(CGRect frame)
 {
   UITextField *field = [[UITextField alloc] initWithFrame:frame];
@@ -64,6 +67,9 @@ static UITextField *EXPMakeElementTextField(CGRect frame)
    * would block the UI thread on the runtime it is already holding.
    */
   BOOL _isReportingEditSynchronously;
+
+  /* Set while a controlled value is being written into the field. */
+  BOOL _isApplyingProps;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -93,16 +99,28 @@ static UITextField *EXPMakeElementTextField(CGRect frame)
 
 #pragma mark - Events
 
-// The synchronous path blocks the UI thread until it can take over the
-// runtime (`executeSynchronouslyOnSameThread_CAN_DEADLOCK`); NO sends
-// controlled fields back to the asynchronous path, correct one frame late
+/*
+ * Whether a controlled field reports its edit synchronously. The synchronous
+ * path blocks the UI thread until it holds the JavaScript runtime
+ * (`executeSynchronouslyOnSameThread_CAN_DEADLOCK` underneath), so JavaScript
+ * waiting on the main thread while this is on the stack deadlocks; NO sends
+ * controlled fields down the asynchronous path, correct but one frame late.
+ */
 static const BOOL kEXPReportControlledEditSynchronously = YES;
 
 - (void)textDidChange
 {
-  // Copied out before any dispatch: the synchronous dispatch below mounts
-  // re-entrantly and `updateProps:` replaces `_props`, so a reference into the
-  // old props would dangle
+  /*
+   * Everything needed from the props is copied out before any dispatch: the
+   * synchronous dispatch below can run JavaScript, commit and mount
+   * re-entrantly on this thread, replacing `_props` while a reference into the
+   * old object would still be in use.
+   */
+  if (_isApplyingProps) {
+    // A write-back in progress, not something the user typed.
+    return;
+  }
+
   const auto &props = static_cast<const ElementTextInputProps &>(*_props);
   const NSInteger maxLength = props.maxLength;
   const BOOL isControlled = props.hasValue;
@@ -127,13 +145,16 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
   const auto count = (int)_nativeEventCount;
 
   /*
-   * A controlled field reports its edit synchronously so the handler, React's
-   * render and the write-back happen before the run loop commits the frame;
-   * dispatched asynchronously, the frame carrying the unclamped text is drawn
-   * first. The UI thread blocks until it can take over the runtime, and the
-   * mount that follows runs re-entrantly inside the delegate call, hence the
-   * guard. An uncontrolled field has nothing to write back and keeps the
-   * asynchronous path.
+   * A controlled field reports its edit synchronously. This runs inside UIKit's
+   * editing-changed handling, before the frame is committed; dispatched
+   * asynchronously, the frame with the unclamped text is drawn before React's
+   * clamped `value` comes back, a flash no JavaScript speed removes.
+   * Synchronously, the handler, render, commit and write-back all happen on
+   * this stack, as a browser restores the DOM before paint. The cost is a UI
+   * thread blocked for the JavaScript task, a deadlock if JavaScript waits on
+   * the main thread, and a mount that runs re-entrantly inside a UITextField
+   * delegate call. An uncontrolled field has no value to write back and keeps
+   * the asynchronous path.
    */
   if (isControlled && kEXPReportControlledEditSynchronously && !_isReportingEditSynchronously && RCTIsMainQueue()) {
     // RAII rather than a pair of assignments: the dispatch runs arbitrary
@@ -197,9 +218,13 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
     return NO;
   }
 
-  // `beforeinput` is answered inside UIKit's "should this change be applied?",
-  // so a refused or substituted keystroke never appears; the handler runs
-  // while this call is on the stack
+  /*
+   * `beforeinput`, answered before the character lands: this is UIKit's own
+   * "should this change be applied?", so a refusal shows nothing and a
+   * substitution shows only itself. The handler runs while this call is on
+   * the stack, blocking the JavaScript thread for its duration, as a browser
+   * does before it commits.
+   */
   if (!_eventEmitter || !props.hasBeforeInput) {
     return YES;
   }
@@ -309,8 +334,9 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
   const BOOL isCaseSensitiveField = (key == "email" || key == "url" || key == "password");
   _textField.autocapitalizationType =
       isCaseSensitiveField ? UITextAutocapitalizationTypeNone : UITextAutocapitalizationTypeSentences;
-  // `autocorrectionType` belongs to the `autocorrect` attribute, whose
-  // resolution (§6.8.8) runs in JavaScript for both platforms
+  // `autocorrectionType` is the `autocorrect` attribute's, resolved in
+  // JavaScript for both platforms (HTML §6.8.8); setting it from `type` here as
+  // well would win or lose depending on which block ran last
 }
 
 - (UIReturnKeyType)returnKeyTypeForHint:(const std::string &)hint type:(const std::string &)type
@@ -381,8 +407,13 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
     if (newInputProps.disabled && _textField.isFirstResponder) {
       [_textField resignFirstResponder];
     }
-    // Unlike `UISlider`, a `UITextField` does not grey itself from `enabled`;
-    // `tertiaryLabelColor` is the platform's inert label colour
+    /*
+     * Unlike `UISlider` and the pop-up button, a `UITextField` does not grey
+     * itself from `isEnabled`, so the disabled look is applied here rather than
+     * as an `opacity` in the user-agent sheet, which would double-dim the
+     * controls that do. `tertiaryLabelColor` is the platform's inert label
+     * colour; enabled restores the default `labelColor`.
+     */
     _textField.textColor = newInputProps.disabled ? [UIColor tertiaryLabelColor] : [UIColor labelColor];
   }
 
@@ -399,22 +430,30 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
         newInputProps.autoCorrect ? UITextAutocorrectionTypeYes : UITextAutocorrectionTypeNo;
   }
 
-  // While `mostRecentEventCount` trails `_nativeEventCount` there are
-  // keystrokes in flight and this `value` was computed without them; a stale
-  // value is skipped, since an update with the current count is on its way
+  /*
+   * `mostRecentEventCount` is how many of this element's edits JavaScript has
+   * processed. While it trails `_nativeEventCount` there are keystrokes in
+   * flight that this `value` was computed without, and writing it would rewind
+   * the field under the user's fingers; a stale value is skipped, since another
+   * props update with the current count is on its way.
+   */
   const BOOL isValueCurrent = newInputProps.mostRecentEventCount >= _nativeEventCount;
   if (newInputProps.hasValue && isValueCurrent) {
-    NSString *value = RCTNSStringFromString(newInputProps.value);
-    if (![_textField.text isEqualToString:value]) {
-      // Preserved across the write so that a controlled field which echoes the
-      // value back unchanged does not throw the caret to the end on every
-      // keystroke — the classic tell of a re-rendered input.
-      UITextRange *selection = _textField.selectedTextRange;
-      _textField.text = value;
-      if (selection != nil && _textField.isEditing) {
-        _textField.selectedTextRange = selection;
+    // Applying a value is not a user edit: echoing it back would count a
+    // phantom keystroke and, on the synchronous path, re-enter the held
+    // runtime. Android's `isApplyingProps` guards the same thing.
+    struct ApplyingGuard {
+      BOOL *flag;
+      explicit ApplyingGuard(BOOL *f) : flag(f)
+      {
+        *flag = YES;
       }
-    }
+      ~ApplyingGuard()
+      {
+        *flag = NO;
+      }
+    } guard{&_isApplyingProps};
+    EXPWriteTextPreservingCaret(_textField, RCTNSStringFromString(newInputProps.value));
   } else if (!_isInitialValueSet && !newInputProps.hasValue) {
     // Uncontrolled: `defaultValue` seeds the field once and is never written
     // again, exactly as in HTML.
@@ -471,7 +510,11 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
 
 @end
 
-// The first frame's size; the mounted field reports its own once it exists
+/*
+ * What an empty `<input type=text>` measures before it exists; the mounted field
+ * reports its own size afterwards. Built by the element's factory so both
+ * measure the same field.
+ */
 void EXPProbeTextFieldMetrics(facebook::react::ElementControlMetrics &metrics)
 {
   RCTAssertMainQueue();
