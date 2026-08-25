@@ -8,6 +8,9 @@
 plugins {
   id("com.facebook.react")
   id("com.android.library")
+  // Expo Go builds with android.builtInKotlin=false (like template apps), so the
+  // Kotlin Gradle plugin must be applied explicitly.
+  id("org.jetbrains.kotlin.android")
 }
 
 android {
