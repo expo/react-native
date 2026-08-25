@@ -1237,6 +1237,23 @@
     sf-symbols-typescript "^2.1.0"
     vaul "^1.1.2"
 
+"@formatjs/fast-memoize@3.1.7":
+  version "3.1.7"
+  resolved "https://registry.yarnpkg.com/@formatjs/fast-memoize/-/fast-memoize-3.1.7.tgz#5f79b3756e4bcb5faee47b3a2f01216e1212c9e4"
+  integrity sha512-zXfhLpvA6T7+efdt9JLbBwZ00tT7NsBMDVnDu8rpHeNNv8KfRZAMo2gkG0k9lK/Nzc//3kJ9pImsfuJxk3KhUA==
+
+"@formatjs/icu-messageformat-parser@3.5.17":
+  version "3.5.17"
+  resolved "https://registry.yarnpkg.com/@formatjs/icu-messageformat-parser/-/icu-messageformat-parser-3.5.17.tgz#7ac90ff6dde99468cd0b4a3f55344ccf8ae2ed87"
+  integrity sha512-cN9jhVqT7u0K9tix43fhjoUwL0nazyW6zsNIXs2QdPADr+nurPfYyssUiMqcSCGlPcCiqnYVxgSn7zBSuI+5Bg==
+  dependencies:
+    "@formatjs/icu-skeleton-parser" "2.1.11"
+
+"@formatjs/icu-skeleton-parser@2.1.11":
+  version "2.1.11"
+  resolved "https://registry.yarnpkg.com/@formatjs/icu-skeleton-parser/-/icu-skeleton-parser-2.1.11.tgz#09226edf55a18e3fea80304d2cc95aaeb0095436"
+  integrity sha512-j8cUmOJzVgkHuS0QiQ6ga76UIoLOFSAMWhs7aZJztH3aAdCOAE6vpC8KVvFB4cU10ON0y2/5oOVmPJ43s2lTwA==
+
 "@hapi/hoek@^9.0.0", "@hapi/hoek@^9.3.0":
   version "9.3.0"
   resolved "https://registry.yarnpkg.com/@hapi/hoek/-/hoek-9.3.0.tgz#8368869dcb735be2e7f5cb7647de78e167a251fb"
@@ -5308,10 +5325,10 @@ hasown@^2.0.3:
   dependencies:
     function-bind "^1.1.2"
 
-hermes-compiler@0.0.0:
-  version "0.0.0"
-  resolved "https://registry.yarnpkg.com/hermes-compiler/-/hermes-compiler-0.0.0.tgz#8d9f6a0b2740ce34d71258fec684e7b6bfd97efa"
-  integrity sha512-boVFutx6ME/Km2mB6vvsQcdnazEYYI/jV1pomx1wcFUG/EVqTkr5CU0CW9bKipOA/8Hyu3NYwW3THg2Q1kNCfA==
+hermes-compiler@260318099.0.1:
+  version "260318099.0.1"
+  resolved "https://registry.yarnpkg.com/hermes-compiler/-/hermes-compiler-260318099.0.1.tgz#bc073e380bfcb9286d1bcbf69e83933a515b7e2d"
+  integrity sha512-jDXx48/z7ULUr2+sf+A3+3RQRiwcvH4Y+mhlxMdUhNQGOsnQY8eeDgy+8yhKrDHbLvRfW2JwEnDFfmyf96F5SQ==
 
 hermes-eslint@0.37.0:
   version "0.37.0"
@@ -5536,6 +5553,14 @@ interpret@^1.0.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/interpret/-/interpret-1.4.0.tgz#665ab8bc4da27a774a40584e812e3e0fa45b1a1e"
   integrity sha512-agE4QfB2Lkp9uICn7BAqoscw4SZP9kTE2hxiFI3jBPmXJfdqiahTbUuKGsMoN2GtqL9AxhYioAcVvgsb1HvRbA==
+
+intl-messageformat@^11.2.9:
+  version "11.2.14"
+  resolved "https://registry.yarnpkg.com/intl-messageformat/-/intl-messageformat-11.2.14.tgz#610e4a21511d85dc06634424409d60bb1e9e441f"
+  integrity sha512-9f2VD1HFuxUvMw0RxsaP8WmMns6JRTnsNB/zghTFrp11ZktiXWwVDeZBPQchBKEmo+Gx/ZhxI7Qht7YglFD4PA==
+  dependencies:
+    "@formatjs/fast-memoize" "3.1.7"
+    "@formatjs/icu-messageformat-parser" "3.5.17"
 
 invariant@^2.2.4:
   version "2.2.4"
