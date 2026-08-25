@@ -51,6 +51,21 @@ class AbstractViewShadowNode
     initialize();
   }
 
+  /*
+   * Told when a child arrives, because the constructor is too early to ask.
+   *
+   * `initialize()` runs before the initial tree's children are appended, so a
+   * row containing an `<input type="radio">` looked childless there and was
+   * flattened away exactly as if it held nothing — the list never appeared at
+   * all on first mount, and only a clone would have noticed. A clone carries
+   * its children in the fragment, so `initialize()` DOES see them there; this
+   * covers the other half.
+   *
+   * Both halves are needed and neither is redundant: one path builds a node
+   * with children, the other appends them afterwards.
+   */
+  void appendChild(const std::shared_ptr<const ShadowNode> &child) override;
+
   void layout(LayoutContext layoutContext) override;
 
   /*
@@ -62,6 +77,9 @@ class AbstractViewShadowNode
 
  private:
   void initialize() noexcept;
+
+  /** The user-agent row padding, where the platform draws a list. */
+  void applyRadioRowPaddingIfNeeded();
 
   /*
    * Publishes the laid-out anonymous text runs into `ViewState` so the

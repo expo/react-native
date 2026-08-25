@@ -43,6 +43,21 @@
 
 namespace facebook::react {
 
+namespace {
+/** Whether the author stated horizontal padding of their own, on any edge. */
+bool authoredHorizontalPadding(const yoga::Style& style)
+{
+  for (auto edge :
+       {yoga::Edge::Start, yoga::Edge::End, yoga::Edge::Left, yoga::Edge::Right, yoga::Edge::Horizontal,
+        yoga::Edge::All}) {
+    if (style.padding(edge).isDefined()) {
+      return true;
+    }
+  }
+  return false;
+}
+} // namespace
+
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char ViewComponentName[] = "View";
 
@@ -209,6 +224,56 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
     formsStackingContext = true;
   }
 
+  bool holdsRadio = false;
+  {
+    /*
+     * A row holding an `<input type="radio">` is a row, and has to survive as
+     * one.
+     *
+     * On iOS a run of radios is presented as the platform's grouped list, and
+     * what the list hosts in each cell is the ROW — the element the author
+     * wrote around the control, with its label and whatever else it holds.
+     * Fabric flattens a view that draws nothing, and a row usually draws
+     * nothing, so the row an author wrote was simply not in the view tree by
+     * the time anything looked for it: the walk landed on the container above
+     * and made one section the size of the screen.
+     *
+     * The alternative was to have authors write `collapsable={false}` on every
+     * row, which is a renderer's implementation detail appearing in markup for
+     * a reason nothing about the markup explains. `<input type="radio">` is all
+     * anyone should have to write.
+     *
+     * BOTH traits, as the text-content check above sets both. Forming a view
+     * without forming a stacking context is not the same thing: the row
+     * survived, but the mounting layer put it somewhere else — each row alone
+     * inside a wrapper of its own, so no two rows were ever siblings and no run
+     * was ever more than one row long. A row is a row among its siblings or it
+     * is not a row.
+     *
+     * Stated as a child scan for the same reason the text-content check is:
+     * this runs where the children are already known, and the answer cannot
+     * come from the props of the node itself. The scan is unconditional rather
+     * than a fallback for views that would otherwise flatten, because the same
+     * answer decides the row's user-agent PADDING below — and a row that draws
+     * a background already forms a view, so a scan skipped on that ground would
+     * leave exactly those rows unpadded.
+     */
+    for (const auto &child : this->getChildren()) {
+      if (child->getComponentHandle() == ElementRadioShadowNode::Handle()) {
+        formsView = true;
+        formsStackingContext = true;
+        holdsRadio = true;
+        break;
+      }
+    }
+  }
+
+  // ONLY where a radio was actually found. Hanging this off `formsView` instead
+  // reached every view that draws anything at all, and indented the whole page.
+  if (holdsRadio) {
+    this->applyRadioRowPaddingIfNeeded();
+  }
+
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       viewProps.displayInline) {
     // Atomic `display:'inline'` boxes are positioned by their container's
@@ -235,6 +300,49 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
     this->traits_.set(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   } else {
     this->traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+  }
+}
+
+/*
+ * The user-agent padding for a row that holds a radio.
+ *
+ * Applied here rather than in `updateYogaProps`, because that runs from the
+ * Yoga base's constructor — before the initial tree's children are appended, so
+ * a row looked childless there. Both of this function's callers run after the
+ * base constructor has already written the style, so writing over it is the
+ * last word; and every props change builds a NEW node, whose `initialize()`
+ * re-applies it.
+ *
+ * A DEFAULT, not an override: a row that states its own horizontal padding
+ * keeps it, exactly as a user-agent stylesheet gives way to an author's.
+ */
+template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::
+    applyRadioRowPaddingIfNeeded() {
+  const auto padding = HostPlatformViewTraitsInitializer::radioRowPadding();
+  if (padding.start == 0 && padding.end == 0) {
+    return;
+  }
+  const auto& authored = static_cast<const ViewPropsT&>(*this->props_).yogaStyle;
+  auto style = this->yogaNode_.style();
+  if (authoredHorizontalPadding(authored)) {
+    return;
+  }
+  style.setPadding(yoga::Edge::Start, yoga::StyleLength::points(padding.start));
+  style.setPadding(yoga::Edge::End, yoga::StyleLength::points(padding.end));
+  this->yogaNode_.setStyle(style);
+}
+
+template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::appendChild(
+    const std::shared_ptr<const ShadowNode>& child) {
+  BaseShadowNode::appendChild(child);
+  // See the header: a row holding a radio has to survive flattening, and this
+  // is the moment the initial tree learns it holds one.
+  if (child->getComponentHandle() == ElementRadioShadowNode::Handle()) {
+    this->traits_.set(ShadowNodeTraits::Trait::FormsView);
+    this->traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
+    this->applyRadioRowPaddingIfNeeded();
   }
 }
 

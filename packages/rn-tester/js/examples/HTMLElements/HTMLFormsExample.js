@@ -149,17 +149,6 @@ const RADIO_ROW = {
  * CONTROL_ROW's 14pt. The platform was centring correctly; it was centring a
  * box that was mostly margin.
  */
-/*
- * Lets a platform list reach the screen edges.
- *
- * `UICollectionLayoutListAppearanceInsetGrouped` insets its card from its
- * container and expects that container to BE the screen — that is the Settings
- * look. Inside this screen's 16pt padding the two insets add up and the card
- * starts 32pt in, measured. Cancelling the screen's padding leaves the
- * platform's own inset as the only one, which is what Settings actually shows.
- */
-const FULL_BLEED = {marginHorizontal: -16};
-
 const LIST_ROW = {
   flexDirection: 'row',
   alignItems: 'center',
@@ -339,7 +328,7 @@ function TextAttributes() {
       <Case
         title="spellCheck inherits, autoCorrect does not"
         note="spellcheck comes from the nearest ancestor, autocorrect from the form. Both fields inherit from the form; the second overrides spellCheck.">
-          {/* $FlowFixMe[prop-missing] intrinsic */}
+        {/* $FlowFixMe[prop-missing] intrinsic */}
         <form spellCheck={false} autoCorrect="off">
           <View style={ROW}>
             <input placeholder="inherits both" />
@@ -570,12 +559,13 @@ function Checkables() {
       </Case>
 
       <Case
+        grouped
         title="A radio group, rendered as the platform's list"
-        note="Plain radios in a plain container. iOS has no radio control, so a run of them is drawn as the list the platform does have, with the checkmark on the chosen row. Nothing here asks for a list. On a page its own colour the card carries a faint edge — iOS 18+; below that, put the group on a background it contrasts with."
+        note="Plain radios in a plain container. iOS has no radio control, so a run of them is drawn as the list the platform does have, with the checkmark on the chosen row. Nothing here asks for a list. The card is the platform's grouped surface, so this case supplies the grouped page it needs — as Settings does."
         readout={`plan: ${plan}`}>
         <View>
           {['free', 'pro'].map(id => (
-            <View key={id} style={LIST_ROW} collapsable={false}>
+            <View key={id} style={LIST_ROW}>
               <input
                 type="radio"
                 name="plan"
@@ -596,7 +586,7 @@ function Checkables() {
             Team plans are billed annually and include priority support.
           </Text>
 
-          <View style={LIST_ROW} collapsable={false}>
+          <View style={LIST_ROW}>
             <input
               type="radio"
               name="plan"
@@ -610,7 +600,7 @@ function Checkables() {
           {/* An arbitrary row. Two stacked lines and a trailing price, laid out
               by the author in their own flexbox — the cell takes it at the
               height Yoga measured rather than a height a list cell assumes. */}
-          <View style={LIST_ROW} collapsable={false}>
+          <View style={LIST_ROW}>
             <input
               type="radio"
               name="plan"
@@ -630,6 +620,7 @@ function Checkables() {
       </Case>
 
       <Case
+        grouped
         title="Radio group — tied together by a shared name"
         note="Same group, one choice. Deviation: a real RadioButton on Android; on iOS a checkmark in a list, because UIKit has no radio control."
         readout={`size: ${size}`}>
@@ -638,7 +629,7 @@ function Checkables() {
           ['m', 'Medium'],
           ['l', 'Large'],
         ].map(([value, text]) => (
-          <View key={value} style={RADIO_ROW} collapsable={false}>
+          <View key={value} style={RADIO_ROW}>
             <input
               type="radio"
               name="size"
@@ -1336,7 +1327,12 @@ export default {
     'Form controls — §4.10. Every one is a real platform control reached ' +
     'through the HTML element that means it.',
   examples: [
-    {name: 'text', title: 'Text input types', fullBleed: true, render: () => <TextInputs />},
+    {
+      name: 'text',
+      title: 'Text input types',
+      fullBleed: true,
+      render: () => <TextInputs />,
+    },
     {
       name: 'textAttributes',
       fullBleed: true,
@@ -1373,8 +1369,18 @@ export default {
       title: 'Date, time, colour and file',
       render: () => <PickerControls />,
     },
-    {name: 'textarea', title: 'Textarea', fullBleed: true, render: () => <TextAreas />},
-    {name: 'buttons', title: 'Buttons', fullBleed: true, render: () => <Buttons />},
+    {
+      name: 'textarea',
+      title: 'Textarea',
+      fullBleed: true,
+      render: () => <TextAreas />,
+    },
+    {
+      name: 'buttons',
+      title: 'Buttons',
+      fullBleed: true,
+      render: () => <Buttons />,
+    },
     {
       name: 'form',
       fullBleed: true,
