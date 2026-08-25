@@ -16,7 +16,15 @@ module.exports = {
   presets: [
     ['module:@react-native/babel-preset', {disableDeepImportWarnings: true}],
   ],
-  plugins: ['babel-plugin-transform-flow-enums'],
+  plugins: [
+    'babel-plugin-transform-flow-enums',
+    // Astryx's one runtime dependency, `intl-messageformat`, ships static
+    // class blocks. React Native's preset does not transform them, so the
+    // bundler stops at `Static class blocks are not enabled` in a file nobody
+    // here wrote. Enabling the transform is the whole fix; it is inert for
+    // source that does not use the syntax.
+    '@babel/plugin-transform-class-static-block',
+  ],
   overrides: [
     {
       // The Astryx layer compiles JSX against its own runtime so intrinsic
