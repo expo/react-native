@@ -1486,6 +1486,101 @@ export function createTheme(_vars: unknown, _overrides: unknown): RawStyle {
   return {};
 }
 
+/**
+ * `stylex.defineMarker()` — a tag an element wears so a condition can name it.
+ *
+ * Astryx 0.5.0 applies a marker through `stylex.props(stepMarker, …)` and then
+ * refers to it from `when.ancestor(':first-child', stepMarker)`, which is how a
+ * step's connector keys off the step row rather than the outer list. The
+ * marker itself contributes no declarations — it exists to be pointed at.
+ *
+ * So it is an object with NO enumerable properties: every resolver here walks
+ * own enumerable keys, and a marker must pass through all of them contributing
+ * nothing rather than being mistaken for a property called `__stylexMarker`
+ * and warned about. The identity hangs off a non-enumerable field, which is
+ * also what lets `when.*` build a key that distinguishes two markers.
+ */
+let markerSequence = 0;
+
+function makeMarker(name: string): {...} {
+  const marker: {...} = {};
+  Object.defineProperty(marker, '__stylexMarker', {
+    value: name,
+    enumerable: false,
+  });
+  return marker;
+}
+
+const DEFAULT_MARKER = makeMarker('default');
+
+export function defineMarker(): {...} {
+  markerSequence += 1;
+  return makeMarker(`marker-${markerSequence}`);
+}
+
+export function defaultMarker(): {...} {
+  return DEFAULT_MARKER;
+}
+
+function markerName(scope: unknown): string {
+  if (scope != null && typeof scope === 'object') {
+    // $FlowFixMe[prop-missing] non-enumerable identity written above
+    const name = scope.__stylexMarker;
+    if (typeof name === 'string') {
+      return name;
+    }
+  }
+  return 'any';
+}
+
+/**
+ * `stylex.when.*` — conditions keyed off something OTHER than this element.
+ *
+ * Astryx 0.5.0 introduced these, and they are not a Stepper detail: `Tab`,
+ * `TabMenu`, `LayoutContent` and the `Indicator` family all use
+ * `when.ancestor` too, so the upgrade needs this to exist at all. Without it
+ * `stylex.when` is undefined and the first component to read `.ancestor` off
+ * it takes the app down with "Cannot read property 'ancestor' of undefined".
+ *
+ * On the web these compile to a CSS custom property that an ancestor sets and
+ * the descendant reads through a selector — a container query in all but name.
+ * Here they return a condition KEY, and the resolver only applies keys it
+ * recognises (see `resolveDeclarations`), so a block under one of these is
+ * simply not applied.
+ *
+ * DOM-CSS-LIMITATION(stylex-when-ancestor): ancestor-conditional styling is
+ * not modelled. What it costs is small and specific — Astryx uses it to hide
+ * the connector on a stepper's first and last step and to round the ends of a
+ * tab strip — so the affected elements render in their unconditional form
+ * rather than wrongly. Implementing it properly means matching a selector
+ * against an ancestor at style time, which the element-tree cascade (M3) could
+ * carry, since it already publishes a scope downward.
+ *
+ * The key embeds the selector so two different conditions never collide if
+ * this is ever taught to match them.
+ */
+function whenCondition(kind: string, selector: unknown, scope: unknown): string {
+  warnOnce(
+    'when-' + kind,
+    `stylex.when.${kind}() is not modelled on React Native; styles under it ` +
+      'are not applied (DOM-CSS-LIMITATION(stylex-when-ancestor)).',
+  );
+  return `@when-${kind}:${markerName(scope)}:${String(selector)}`;
+}
+
+export const when: {
+  ancestor: (selector: unknown, scope?: unknown) => string,
+  descendant: (selector: unknown, scope?: unknown) => string,
+  sibling: (selector: unknown, scope?: unknown) => string,
+} = {
+  ancestor: (selector: unknown, scope?: unknown) =>
+    whenCondition('ancestor', selector, scope),
+  descendant: (selector: unknown, scope?: unknown) =>
+    whenCondition('descendant', selector, scope),
+  sibling: (selector: unknown, scope?: unknown) =>
+    whenCondition('sibling', selector, scope),
+};
+
 export type StyleXStyles = unknown;
 export type {VarScope};
 
@@ -1499,4 +1594,7 @@ export default {
   keyframes,
   firstThatWorks,
   createTheme,
+  when,
+  defineMarker,
+  defaultMarker,
 };
