@@ -303,10 +303,38 @@ internal open class ElementTextInputView(context: Context) : AppCompatEditText(c
 
   private fun writeText(value: String) {
     isApplyingProps = true
-    // The caret is placed rather than left where it was: after a write the old offset may not exist
-    // in the new text. Holding it at the end matches what a field does when its value is replaced,
-    // and a controlled field that echoes the value back unchanged never reaches here at all,
-    // because of the equality check in [commitProps].
+    /*
+     * Replace only the span that DIFFERS, so the caret keeps its place.
+     *
+     * This used to `setText` the whole buffer and park the caret at the end, on the reasoning that
+     * an old offset may not exist in the new text. That is true of a wholesale replacement and not
+     * of the write a controlled field actually makes: a handler that clamps or transforms changes
+     * a few characters, and dropping the caret to the end on every one of those is what makes a
+     * controlled field feel foreign — type into the middle of `slice(0, 10)`-capped text and the
+     * caret leaves with each keystroke.
+     *
+     * `Editable.replace` is Android's own editing primitive and adjusts the selection the way any
+     * edit does, which is the same reason iOS uses `replaceRange:withText:` rather than assigning
+     * `.text` — see `EXPWriteTextPreservingCaret`. Both platforms now answer "keep the cursor
+     * stable" the same way: nothing under the caret changed, so the caret does not move.
+     *
+     * Boundaries snap to whole code points; splitting a surrogate pair would hand the buffer half
+     * an emoji.
+     */
+    val current = text?.toString() ?: ""
+    val editable = editableText
+    if (editable != null && current != value && current.isNotEmpty() && value.isNotEmpty()) {
+      val span = DifferingSpan.between(current, value)
+      try {
+        editable.replace(span.start, span.endInCurrent, value.substring(span.start, span.endInNext))
+      } finally {
+        // The guard has to come off even if the buffer refuses the edit: leaving it on makes the
+        // view ignore every edit the user makes from here, which is a worse failure than the one
+        // that got us here.
+        isApplyingProps = false
+      }
+      return
+    }
     setText(value)
     // Clamped to what actually landed, not to what was asked for. A filter may shorten the write —
     // `maxLength` truncates it, and read-only refused it outright before the guard in [applyFilters]
@@ -574,5 +602,60 @@ internal open class ElementTextInputView(context: Context) : AppCompatEditText(c
     // A recycled view is handed to a different element: the remembered type belongs to the old one,
     // and keeping it would skip the application the new element needs.
     appliedInputType = null
+  }
+}
+
+/** The stretch of two strings that actually differs, in UTF-16 offsets. */
+internal data class DifferingSpan(val start: Int, val endInCurrent: Int, val endInNext: Int) {
+
+  companion object {
+    /**
+     * The span to replace so that `current` becomes `next` while everything either side — and any
+     * caret or selection sitting in it — is left untouched.
+     *
+     * Extracted and made testable on its own because the interesting part is invisible from
+     * outside: `current[..start) + next[start..endInNext) + current[endInCurrent..)` spells `next`
+     * for MANY choices of boundary, so a test that only reads the field back afterwards passes with
+     * boundaries that are wrong. What a wrong boundary costs is a split surrogate pair and a caret
+     * dragged out of position, and the only way to see it is to look at the boundary.
+     *
+     * Two rules:
+     *  - the boundaries move off a partial character, so a pair is never cut in half;
+     *  - a boundary may only ever SHRINK the common run, never extend it. The scans below proved a
+     *    run common by comparing it; extending one asserts an equality nobody checked, and then the
+     *    reconstruction above stops spelling `next` at all.
+     */
+    fun between(current: String, next: String): DifferingSpan {
+      val shorter = minOf(current.length, next.length)
+
+      var prefix = 0
+      while (prefix < shorter && current[prefix] == next[prefix]) {
+        prefix++
+      }
+      // A low surrogate here means the common run ends INSIDE a pair: give the high half back.
+      if (prefix > 0 && prefix < current.length &&
+          Character.isLowSurrogate(current[prefix]) &&
+          Character.isHighSurrogate(current[prefix - 1])) {
+        prefix--
+      }
+
+      var suffix = 0
+      while (suffix < shorter - prefix &&
+          current[current.length - 1 - suffix] == next[next.length - 1 - suffix]) {
+        suffix++
+      }
+      // Same test at the other end, and note which surrogate is asked about. The suffix runs from
+      // this index to the end, so a HIGH surrogate here is a whole pair already inside it and needs
+      // nothing; it is a LOW one — its partner left outside — that straddles the boundary. Nudging
+      // on the high surrogate instead splits the very pair the snap exists to protect.
+      val boundary = current.length - suffix
+      if (suffix > 0 && boundary > 0 &&
+          Character.isLowSurrogate(current[boundary]) &&
+          Character.isHighSurrogate(current[boundary - 1])) {
+        suffix--
+      }
+
+      return DifferingSpan(prefix, current.length - suffix, next.length - suffix)
+    }
   }
 }
