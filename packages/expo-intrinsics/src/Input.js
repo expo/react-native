@@ -279,12 +279,39 @@ function Input(props: InputProps): React.Node {
   // (the overwhelming case) would produce anyway.
   useFormControl({name: isButton ? '' : name, getValue, reset});
 
+  /*
+   * The echo half of the controlled-input handshake.
+   *
+   * The view refuses to write an incoming `value` while its own edit count is
+   * ahead of this one, because such a value was computed without the
+   * keystrokes still in flight and writing it would rewind the field under the
+   * user's fingers. That guard is right, but it needs this number to actually
+   * come back — left at 0 it is permanently behind, so EVERY controlled write
+   * is skipped and the `value` prop stops meaning anything after the first
+   * keystroke.
+   *
+   * It lives in state rather than a ref on purpose, and that is the second
+   * half of the fix. A controlled input whose handler clamps the text —
+   * `slice(0, 10)` — sets the same string it already had once the cap is hit,
+   * so `useState` bails out, React never re-renders, and no props reach the
+   * view at all: the eleventh character stays on screen. The count strictly
+   * increases with every edit, so storing it guarantees the re-render that
+   * carries the author's unchanged `value` back down.
+   */
+  const [mostRecentEventCount, setMostRecentEventCount] = React.useState(0);
+
   const handleInput = React.useCallback(
     (event: $FlowFixMe) => {
       if (event?.nativeEvent?.value !== undefined) {
         latest.current = event.nativeEvent.value;
       }
       onInput?.(event);
+      // After the author's handler, as React Native's own TextInput does: the
+      // handler may set the state whose value this then carries down.
+      const count = event?.nativeEvent?.eventCount;
+      if (typeof count === 'number') {
+        setMostRecentEventCount(count);
+      }
     },
     [onInput],
   );
@@ -405,6 +432,7 @@ function Input(props: InputProps): React.Node {
         }
         spellCheck={resolvedSpellCheck}
         autoCorrect={resolvedAutoCorrect}
+        mostRecentEventCount={mostRecentEventCount}
         hasBeforeInput={onBeforeInput != null}
         onBeforeInput={onBeforeInput}
         onInput={handleInput}
