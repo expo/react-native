@@ -94,6 +94,23 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   Float inheritedLineHeight{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextAlignment> inheritedTextAlign{};
   std::optional<TextTransform> inheritedTextTransform{};
+  /*
+   * The platform's own name for this text's ROLE — `title1`, `headline` — from
+   * which the platform supplies the font.
+   *
+   * Not a size and not a weight, which is the point: `[UIFont
+   * preferredFontForTextStyle:]` answers with the size, the weight, the family
+   * and the leading together, and with whatever else Apple attaches to that
+   * role in a later release. A table of numbers copied out of the Human
+   * Interface Guidelines gets none of that and goes stale silently — React
+   * Native ships one, `RCTBaseSizeForDynamicTypeRamp`, with the spec's URL in
+   * a comment above it.
+   *
+   * Inherited, because the role belongs to the ELEMENT and the text is a run
+   * inside it: `<h1>Title</h1>` is a View with an anonymous run, so a role set
+   * on the heading has to reach the run the same way its colour does.
+   */
+  std::optional<DynamicTypeRamp> inheritedDynamicTypeRamp{};
   // `white-space`, inherited like the rest of these: a `<pre>` sets it and
   // every run inside keeps it.
   std::optional<WhiteSpace> inheritedWhiteSpace{};
