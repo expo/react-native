@@ -41,35 +41,29 @@ describe('checkable footprint states the control, not a wish', () => {
   });
 });
 
-/*
- * A radio's box is its INK, and its target reaches past it.
- *
- * These were once the same number: the box was made 44pt so that the Human
- * Interface Guidelines' minimum was met by layout alone. That worked and cost
- * something — 11pt of empty target all round a 22pt circle reads as a lot of
- * air in a stack of radios, and reported from a device the control STILL felt
- * small to aim at, because a target is only as findable as the ink advertising
- * it.
- *
- * So the box is now the ink plus a modest ring, and the 44pt guarantee moved to
- * `pointInside:` — `kEXPRadioTouchTarget` in `EXPElementRadioComponentView`,
- * pinned by `EXPElementRadioHitAreaTests`, which is where to look for it now.
- * It is deliberately NOT assertable from this table any more: asserting it here
- * would be asserting the wrong thing, since the sheet no longer decides it.
+/**
+ * A radio's box on iOS is zero wide and its row is the platform's standard
+ * height. UIKit has no radio control, so a run of radios is presented as the
+ * platform's list with a checkmark on the chosen row, drawn by the list's
+ * trailing accessory; the element itself has no ink, so it takes no width.
+ * Yoga measures the row and UIKit draws the cell behind it at that height, so
+ * a row holding a radio is never shorter than the platform's 52pt standard
+ * row (Settings' rows measure 52; the HIG's 44 is the minimum target and reads
+ * as cramped beside them).
  */
-describe('radio footprint is the ink, with the target beyond it', () => {
-  test('iOS is the ink plus a ring, not the target', () => {
+describe('a radio reserves the box for what its platform draws', () => {
+  test('iOS draws nothing, but still reserves the platform row height', () => {
     expect(RADIO_FOOTPRINT_BY_PLATFORM.ios).toEqual({
-      width: 32,
-      height: 32,
-      // The 22pt circle sits 5pt inside a 32pt box, so this leaves 12pt of
-      // visible spacing before the label.
-      marginInlineEnd: 7,
+      // No ink: the checkmark is the list's own accessory
+      width: 0,
+      height: 52,
+      marginInlineEnd: 0,
       verticalAlign: 'middle',
     });
   });
 
-  test('Android is the 48dp Material touch target', () => {
+  test('Android keeps the 48dp Material touch target', () => {
+    // Android has a radio control and uses it
     expect(RADIO_FOOTPRINT_BY_PLATFORM.android).toEqual({
       width: 48,
       height: 48,
@@ -78,16 +72,22 @@ describe('radio footprint is the ink, with the target beyond it', () => {
     });
   });
 
-  test('the box is never smaller than the ink it centres', () => {
-    // What this table CAN still answer. The circle is drawn at
-    // `kEXPRadioIndicatorDiameter` and centred in whatever box it is given, so
-    // a box below that would clip the control rather than pad it.
-    for (const box of [
-      RADIO_FOOTPRINT_BY_PLATFORM.ios,
-      RADIO_FOOTPRINT_BY_PLATFORM.android,
-    ]) {
-      expect(box.width).toBeGreaterThanOrEqual(22);
-      expect(box.height).toBeGreaterThanOrEqual(22);
-    }
+  test('only the platform that draws a control reserves width for one', () => {
+    // A box is reserved only where there is ink to put in it
+    expect(RADIO_FOOTPRINT_BY_PLATFORM.ios.width).toBe(0);
+    expect(RADIO_FOOTPRINT_BY_PLATFORM.android.width).toBeGreaterThanOrEqual(
+      48,
+    );
+  });
+
+  test("the iOS box is the platform's standard row height", () => {
+    // The height the list cell is given, so a section is never sized for less
+    // than UIKit draws in it
+    expect(RADIO_FOOTPRINT_BY_PLATFORM.ios.height).toBe(52);
+  });
+
+  test('the standard row height clears the HIG minimum target', () => {
+    // 52 is how tall a list row is; 44 is the smallest a control may be
+    expect(RADIO_FOOTPRINT_BY_PLATFORM.ios.height).toBeGreaterThan(44);
   });
 });
