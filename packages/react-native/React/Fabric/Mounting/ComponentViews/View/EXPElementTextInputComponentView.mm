@@ -8,6 +8,7 @@
 #import "EXPElementTextInputComponentView.h"
 
 #import <React/RCTConversions.h>
+#import <React/RCTUtils.h>
 #import <React/EXPElementDragOwnership.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/components/view/ElementTextInputShadowNode.h>
@@ -36,6 +37,13 @@ using namespace facebook::react;
   NSString *_textAtEditingStart;
 
   BOOL _isInitialValueSet;
+
+  /*
+   * Guards against starting a synchronous edit report from inside one. The
+   * dispatch mounts re-entrantly, and a mount that reached this method again
+   * would block the UI thread on the runtime it is already holding.
+   */
+  BOOL _isReportingEditSynchronously;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -71,16 +79,41 @@ using namespace facebook::react;
 
 #pragma mark - Events
 
+/*
+ * Whether a CONTROLLED field reports its edit synchronously.
+ *
+ * Kept as a named switch because it is a concurrency trade, not a detail: the
+ * synchronous path blocks the UI thread until it can take over the JavaScript
+ * runtime, and upstream calls the primitive underneath it
+ * `executeSynchronouslyOnSameThread_CAN_DEADLOCK` for a reason. If JavaScript
+ * is ever blocked waiting on the main thread while this is on the stack, the
+ * two wait on each other. Flip this to NO and controlled fields go back to the
+ * asynchronous path — correct, one frame late — without touching anything else.
+ */
+static const BOOL kEXPReportControlledEditSynchronously = YES;
+
 - (void)textDidChange
 {
+  /*
+   * Everything needed from the props is copied out HERE, before any dispatch.
+   *
+   * `_props` is a shared_ptr that the mounting layer REPLACES in `updateProps:`,
+   * and the synchronous dispatch below can reach that code re-entrantly: it
+   * runs JavaScript on this thread, React commits, and `scheduleTransaction`
+   * mounts inline because it is already on the main queue. A reference into the
+   * old props object is dangling from that moment on. Nothing below reads one —
+   * and it stays that way by there being nothing to read.
+   */
   const auto &props = static_cast<const ElementTextInputProps &>(*_props);
+  const NSInteger maxLength = props.maxLength;
+  const BOOL isControlled = props.hasValue;
 
   // Enforced here rather than left to `shouldChangeCharactersInRange:`, because
   // that method never sees a paste that the system autofills, nor a dictation
   // insertion. Trimming after the fact covers every way text can arrive.
-  if (props.maxLength >= 0 && (NSInteger)_textField.text.length > props.maxLength) {
+  if (maxLength >= 0 && (NSInteger)_textField.text.length > maxLength) {
     UITextRange *selection = _textField.selectedTextRange;
-    _textField.text = [_textField.text substringToIndex:props.maxLength];
+    _textField.text = [_textField.text substringToIndex:maxLength];
     _textField.selectedTextRange = selection;
   }
 
@@ -88,6 +121,8 @@ using namespace facebook::react;
     return;
   }
   _nativeEventCount++;
+  // A copy, not the ivar: the emitter has to outlive a dispatch that can run
+  // arbitrary JavaScript and unmount this view.
   auto emitter = std::static_pointer_cast<const ElementTextInputEventEmitter>(_eventEmitter);
   const auto text = RCTStringFromNSString(_textField.text);
   const auto count = (int)_nativeEventCount;
@@ -97,33 +132,54 @@ using namespace facebook::react;
    * not. The difference is a frame.
    *
    * This runs inside UIKit's own editing-changed handling, so the run loop has
-   * not committed the frame yet. Dispatched the ordinary way, the event is
-   * queued and JavaScript answers on a later tick: React re-renders, the clamped
-   * `value` comes back down, and the view corrects itself — but the frame
-   * carrying the UNCLAMPED text has already been drawn. That is the flash of a
-   * character that should never have appeared, and no amount of speed on the
-   * JavaScript side removes it, because the race is against a frame that is
+   * not committed the frame yet. Dispatched the ordinary way the event is
+   * queued and JavaScript answers on a later tick: React re-renders, the
+   * clamped `value` comes back down and the view corrects itself — but the
+   * frame carrying the UNCLAMPED text has already been drawn. That is the flash
+   * of a character that should never have appeared, and no amount of speed on
+   * the JavaScript side removes it, because the race is against a frame that is
    * already scheduled.
    *
    * Dispatching synchronously closes it: the handler, React's render, the
-   * commit and the write-back all happen while this call is still on the stack,
-   * so the only text ever presented is the text the author's state agreed to.
-   * It is the same shape as the web — a browser lets the character reach the
-   * DOM and restores it before paint, in one turn — and the same trade the
-   * `beforeinput` path above makes, for the same reason.
+   * commit and the write-back all happen while this call is still on the stack.
+   * It is the shape the web has — a browser lets the character reach the DOM
+   * and restores it before paint, in one turn.
+   *
+   * THE COSTS, since they are real. The UI thread blocks until it can take over
+   * the runtime, so a long JavaScript task is felt as a stalled keystroke, and
+   * if JavaScript is itself waiting on the main thread the two deadlock. The
+   * mount that follows runs re-entrantly, inside a UITextField delegate call —
+   * which is why nothing here holds a props reference across it, and why the
+   * guard below refuses to start a second one from inside the first.
    *
    * Only when controlled. An uncontrolled field has no value to write back, so
    * there is nothing to be late for, and it keeps the asynchronous path rather
    * than paying a blocked thread per keystroke for nothing.
    */
-  if (props.hasValue) {
+  if (isControlled && kEXPReportControlledEditSynchronously && !_isReportingEditSynchronously &&
+      RCTIsMainQueue()) {
+    // RAII rather than a pair of assignments: the dispatch runs arbitrary
+    // JavaScript, and a C++ exception unwinding through it must not leave the
+    // guard latched — every later edit on this field would silently take the
+    // asynchronous path and the flicker would come back with no way to see why.
+    struct ReentryGuard {
+      BOOL *flag;
+      explicit ReentryGuard(BOOL *f) : flag(f)
+      {
+        *flag = YES;
+      }
+      ~ReentryGuard()
+      {
+        *flag = NO;
+      }
+    } guard{&_isReportingEditSynchronously};
+
     if (emitter->experimental_dispatchSyncNow([&emitter, &text, count]() {
           emitter->onElementInput(text, count);
         })) {
       return;
     }
-    // No dispatcher: fall through and report it the ordinary way rather than
-    // dropping the edit.
+    // No dispatcher: report it the ordinary way rather than dropping the edit.
   }
   emitter->onElementInput(text, count);
 }
