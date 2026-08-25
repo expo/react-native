@@ -944,6 +944,13 @@ export type StyleXProps = {
   // FIRST commit only. The element drops them after mount and the renderer's
   // native transitions animate to the real values.
   __startingStyle?: {[string]: unknown},
+  // The id of the marker this element carries, if it carries one. What a
+  // `when.*` condition on a descendant is asking about.
+  __stylexMarker?: string,
+  // `when.*` blocks, condition key to the style it applies, left UNRESOLVED
+  // here: whether one applies depends on the element's position in the tree,
+  // which `props()` cannot see. The JSX runtime settles them.
+  __stylexWhen?: {[string]: unknown},
 };
 
 export type InteractionState = {
@@ -1367,6 +1374,34 @@ export function propsWithState(
     result.__stylexVars = declaredVars;
   }
 
+  /*
+   * A marker applied to this element, and the `when.*` blocks that depend on
+   * one. Neither can be settled here: `props()` is a plain function with no
+   * view of the tree, so the marker is surfaced for the element to publish and
+   * the blocks are deferred for it to evaluate — the same split M3 uses for a
+   * `var()` an ancestor might still define.
+   */
+  const ownMarker = merged.marker;
+  if (typeof ownMarker === 'symbol') {
+    const id = MARKER_ID_BY_SYMBOL.get(ownMarker);
+    if (id != null) {
+      result.__stylexMarker = id;
+    }
+    // Never a style declaration; it exists to be pointed at.
+    delete (result.style as $FlowFixMe)?.marker;
+  }
+  const deferredWhen: {[string]: unknown} = {};
+  let hasDeferredWhen = false;
+  for (const key of Object.keys(merged)) {
+    if (key.startsWith(':where-')) {
+      deferredWhen[key] = merged[key];
+      hasDeferredWhen = true;
+    }
+  }
+  if (hasDeferredWhen) {
+    result.__stylexWhen = deferredWhen;
+  }
+
   // `@starting-style` (css-transitions-2 §3): the values the element renders
   // with on its FIRST commit. The element drops them after mount, and the
   // renderer's native CSS transitions — the same `transition-*` declarations
@@ -1487,99 +1522,261 @@ export function createTheme(_vars: unknown, _overrides: unknown): RawStyle {
 }
 
 /**
- * `stylex.defineMarker()` — a tag an element wears so a condition can name it.
+ * Markers and `stylex.when.*` — conditions that depend on ANOTHER element.
  *
- * Astryx 0.5.0 applies a marker through `stylex.props(stepMarker, …)` and then
- * refers to it from `when.ancestor(':first-child', stepMarker)`, which is how a
- * step's connector keys off the step row rather than the outer list. The
- * marker itself contributes no declarations — it exists to be pointed at.
+ * The spec, read off `@stylexjs/stylex@0.19`'s own type declarations rather
+ * than inferred from call sites:
  *
- * So it is an object with NO enumerable properties: every resolver here walks
- * own enumerable keys, and a marker must pass through all of them contributing
- * nothing rather than being mistaken for a property called `__stylexMarker`
- * and warned about. The identity hangs off a non-enumerable field, which is
- * also what lets `when.*` build a key that distinguishes two markers.
+ *   defineMarker(): MapNamespace<{readonly marker: symbol}>
+ *   when.ancestor(pseudo?, marker?): `:where-ancestor(${Pseudo}, ${Symbol})`
+ *   when.descendant / siblingBefore / siblingAfter / anySibling: likewise
+ *
+ * `Pseudo` is `:${string}` or `[${string}]` — a pseudo-class such as
+ * `:first-child`, or an attribute selector. Both arguments are optional; with
+ * no marker the condition refers to the DEFAULT marker. A marker is a style
+ * namespace, so it is applied by passing it to `props()` like any other style,
+ * and its identity is a symbol.
+ *
+ * Upstream these are compile-time only: the runtime entry points in the real
+ * package THROW, because the Babel plugin is expected to have rewritten them
+ * into class names and a `:has()`-style selector. There is no compiler here,
+ * so they are evaluated at runtime instead — which is possible because the
+ * element tree already carries a channel for exactly this kind of question
+ * (the custom-property scope M3 added), and the JSX runtime is the element's
+ * own React component, so it can read context that a plain `props()` call
+ * cannot.
+ *
+ * The division of labour is the same two-pass shape M3 uses: `props()` cannot
+ * know anything about ancestors, so it DEFERS these blocks onto the props it
+ * returns, and `resolveWhen` finishes them at the element once the marker
+ * state in scope is known.
  */
+
+// Symbols are not embeddable in a string, so each marker also gets a stable id
+// that can appear in the condition key. The registry is keyed by symbol so two
+// markers never collide, and lookups from a key go through `MARKER_BY_ID`.
+const MARKER_ID_BY_SYMBOL: Map<symbol, string> = new Map();
+const MARKER_BY_ID: Map<string, symbol> = new Map();
 let markerSequence = 0;
 
-function makeMarker(name: string): {...} {
-  const marker: {...} = {};
-  Object.defineProperty(marker, '__stylexMarker', {
-    value: name,
-    enumerable: false,
-  });
-  return marker;
+/**
+ * Whether any marker exists at all.
+ *
+ * The structural bookkeeping markers need (an element knowing whether it is a
+ * first or last child) costs a walk of every intrinsic's children, and an app
+ * that never calls `defineMarker` must not pay it. Nothing in React Native
+ * uses markers; only a vendored design system does. See `hasMarkers()`.
+ */
+export function hasMarkers(): boolean {
+  return markerSequence > 0;
 }
 
-const DEFAULT_MARKER = makeMarker('default');
-
-export function defineMarker(): {...} {
+export function defineMarker(): {readonly marker: symbol} {
   markerSequence += 1;
-  return makeMarker(`marker-${markerSequence}`);
+  const symbol = Symbol(`stylex.marker.${markerSequence}`);
+  const id = `m${markerSequence}`;
+  MARKER_ID_BY_SYMBOL.set(symbol, id);
+  MARKER_BY_ID.set(id, symbol);
+  return {marker: symbol};
 }
 
-export function defaultMarker(): {...} {
+const DEFAULT_MARKER: {readonly marker: symbol} = defineMarker();
+
+export function defaultMarker(): {readonly marker: symbol} {
   return DEFAULT_MARKER;
 }
 
-function markerName(scope: unknown): string {
-  if (scope != null && typeof scope === 'object') {
-    // $FlowFixMe[prop-missing] non-enumerable identity written above
-    const name = scope.__stylexMarker;
-    if (typeof name === 'string') {
-      return name;
-    }
+/** The id for a marker namespace, or the default marker's when absent. */
+function markerIdOf(namespace: unknown): string {
+  const symbol =
+    namespace != null && typeof namespace === 'object'
+      ? // $FlowFixMe[prop-missing] a marker namespace
+        namespace.marker
+      : null;
+  const id =
+    typeof symbol === 'symbol' ? MARKER_ID_BY_SYMBOL.get(symbol) : undefined;
+  if (id != null) {
+    return id;
   }
-  return 'any';
+  return MARKER_ID_BY_SYMBOL.get(DEFAULT_MARKER.marker) ?? 'm1';
 }
 
-/**
- * `stylex.when.*` — conditions keyed off something OTHER than this element.
+/** The marker id a `props()` result is applying to its element, if any. */
+export function markerOfProps(styleProps: StyleXProps): string | null {
+  // $FlowFixMe[prop-missing] set by props() below
+  const id = styleProps.__stylexMarker;
+  return typeof id === 'string' ? id : null;
+}
+
+const WHEN_KIND_SELECTOR: {[string]: string} = {
+  ancestor: 'where-ancestor',
+  descendant: 'where-descendant',
+  siblingBefore: 'where-sibling-before',
+  siblingAfter: 'where-sibling-after',
+  anySibling: 'where-any-sibling',
+};
+
+/*
+ * Whether any `when.descendant` condition exists in the program.
  *
- * Astryx 0.5.0 introduced these, and they are not a Stepper detail: `Tab`,
- * `TabMenu`, `LayoutContent` and the `Indicator` family all use
- * `when.ancestor` too, so the upgrade needs this to exist at all. Without it
- * `stylex.when` is undefined and the first component to read `.ancestor` off
- * it takes the app down with "Cannot read property 'ancestor' of undefined".
- *
- * On the web these compile to a CSS custom property that an ancestor sets and
- * the descendant reads through a selector — a container query in all but name.
- * Here they return a condition KEY, and the resolver only applies keys it
- * recognises (see `resolveDeclarations`), so a block under one of these is
- * simply not applied.
- *
- * DOM-CSS-LIMITATION(stylex-when-ancestor): ancestor-conditional styling is
- * not modelled. What it costs is small and specific — Astryx uses it to hide
- * the connector on a stepper's first and last step and to round the ends of a
- * tab strip — so the affected elements render in their unconditional form
- * rather than wrongly. Implementing it properly means matching a selector
- * against an ancestor at style time, which the element-tree cascade (M3) could
- * carry, since it already publishes a scope downward.
- *
- * The key embeds the selector so two different conditions never collide if
- * this is ever taught to match them.
+ * Answering one costs an upward registration from every marked element and a
+ * second render of the asking element (see `useDescendantMarkers` in the JSX
+ * runtime). A tree that never asks must pay neither, and the question is
+ * settled at module scope — these keys are built when a component's styles are
+ * defined, long before anything renders.
  */
-function whenCondition(kind: string, selector: unknown, scope: unknown): string {
-  warnOnce(
-    'when-' + kind,
-    `stylex.when.${kind}() is not modelled on React Native; styles under it ` +
-      'are not applied (DOM-CSS-LIMITATION(stylex-when-ancestor)).',
-  );
-  return `@when-${kind}:${markerName(scope)}:${String(selector)}`;
+let descendantConditionCount = 0;
+
+export function hasDescendantConditions(): boolean {
+  return descendantConditionCount > 0;
+}
+
+function whenKey(kind: string, pseudo: unknown, marker: unknown): string {
+  const selector = typeof pseudo === 'string' ? pseudo : ':scope';
+  if (kind === 'descendant') {
+    descendantConditionCount += 1;
+  }
+  return `:${WHEN_KIND_SELECTOR[kind]}(${selector}, ${markerIdOf(marker)})`;
+}
+
+/** Parses a key produced by `when.*` back into its parts. */
+export function parseWhenKey(
+  key: string,
+): ?{kind: string, pseudo: string, marker: string} {
+  const match = /^:where-([a-z-]+)\(([^,]+), ([^)]+)\)$/.exec(key);
+  if (match == null) {
+    return null;
+  }
+  const kind = match[1];
+  return {kind, pseudo: match[2], marker: match[3]};
 }
 
 export const when: {
-  ancestor: (selector: unknown, scope?: unknown) => string,
-  descendant: (selector: unknown, scope?: unknown) => string,
-  sibling: (selector: unknown, scope?: unknown) => string,
+  ancestor: (pseudo?: unknown, marker?: unknown) => string,
+  descendant: (pseudo?: unknown, marker?: unknown) => string,
+  siblingBefore: (pseudo?: unknown, marker?: unknown) => string,
+  siblingAfter: (pseudo?: unknown, marker?: unknown) => string,
+  anySibling: (pseudo?: unknown, marker?: unknown) => string,
 } = {
-  ancestor: (selector: unknown, scope?: unknown) =>
-    whenCondition('ancestor', selector, scope),
-  descendant: (selector: unknown, scope?: unknown) =>
-    whenCondition('descendant', selector, scope),
-  sibling: (selector: unknown, scope?: unknown) =>
-    whenCondition('sibling', selector, scope),
+  ancestor: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('ancestor', pseudo, marker),
+  descendant: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('descendant', pseudo, marker),
+  siblingBefore: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('siblingBefore', pseudo, marker),
+  siblingAfter: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('siblingAfter', pseudo, marker),
+  anySibling: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('anySibling', pseudo, marker),
 };
+
+/**
+ * The state of every marker an element can see, and of its own position.
+ *
+ * `ancestors` maps a marker id to the pseudo-classes the nearest ancestor
+ * carrying that marker matches; `siblings` does the same for the markers on
+ * this element's previous and following siblings. Both come from the JSX
+ * runtime, which is the only place that knows the shape of the tree.
+ */
+export type MarkerState = {
+  readonly ancestors: ReadonlyMap<string, ReadonlySet<string>>,
+  readonly before: ReadonlyMap<string, ReadonlySet<string>>,
+  readonly after: ReadonlyMap<string, ReadonlySet<string>>,
+  /*
+   * The union of what every marked DESCENDANT matches — `:has()` semantics,
+   * where one matching descendant satisfies the condition. Collected by
+   * registration rather than published downward, because it travels the other
+   * way: see `useDescendantMarkers`.
+   */
+  readonly descendants: ReadonlyMap<string, ReadonlySet<string>>,
+};
+
+export const EMPTY_MARKER_STATE: MarkerState = {
+  ancestors: new Map(),
+  before: new Map(),
+  after: new Map(),
+  descendants: new Map(),
+};
+
+/** Whether a single `when.*` condition holds for `state`. */
+export function whenConditionApplies(
+  key: string,
+  state: MarkerState,
+): boolean {
+  const parsed = parseWhenKey(key);
+  if (parsed == null) {
+    return false;
+  }
+  const {kind, pseudo, marker} = parsed;
+  switch (kind) {
+    // `parseWhenKey` returns the relation WITHOUT the `where-` prefix, which
+    // the key carries only to look like the selector it stands in for.
+    case 'ancestor':
+      return state.ancestors.get(marker)?.has(pseudo) === true;
+    case 'sibling-before':
+      return state.before.get(marker)?.has(pseudo) === true;
+    case 'sibling-after':
+      return state.after.get(marker)?.has(pseudo) === true;
+    case 'any-sibling':
+      return (
+        state.before.get(marker)?.has(pseudo) === true ||
+        state.after.get(marker)?.has(pseudo) === true
+      );
+    case 'descendant':
+      /*
+       * `:has()` semantics: one matching descendant is enough.
+       *
+       * This is the only relation whose answer travels UP, and it is therefore
+       * the only one that cannot be settled during the asking element's first
+       * render — a parent renders before its descendants exist, so on that pass
+       * the map is legitimately empty. Marked descendants register in a layout
+       * effect and the asker re-renders before paint, so the settled answer is
+       * the first one presented. That is an extra render for trees that ask,
+       * which is why nothing pays for it unless it does.
+       */
+      return state.descendants.get(marker)?.has(pseudo) === true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Applies the deferred `when.*` blocks a `props()` result carries, given the
+ * marker state at the element. Returns the style to render with.
+ */
+export function resolveWhen(
+  style: {[string]: unknown} | null,
+  deferred: ?{[string]: unknown},
+  state: MarkerState,
+  inheritedScope: ?VarScope,
+): {[string]: unknown} | null {
+  if (deferred == null) {
+    return style;
+  }
+  let result = style;
+  for (const key of Object.keys(deferred)) {
+    if (!whenConditionApplies(key, state)) {
+      continue;
+    }
+    const block = deferred[key];
+    if (block == null || typeof block !== 'object') {
+      continue;
+    }
+    // A matching block layers over the base declarations, which is what the
+    // generated CSS would do: the conditional rule is authored after the
+    // unconditional one and wins at equal specificity.
+    // Resolved against the element's OWN custom-property scope and finished,
+    // exactly as its base declarations were: a `var()` inside a conditional
+    // block reads the same cascade as one outside it, and by this point the
+    // scope is known. Called with two of its four arguments, this silently
+    // resolved against no scope at all and left the values unfinished.
+    result = {
+      ...(result ?? {}),
+      ...resolveDeclarations({...block}, RESTING, inheritedScope, true),
+    };
+  }
+  return result;
+}
 
 export type StyleXStyles = unknown;
 export type {VarScope};
