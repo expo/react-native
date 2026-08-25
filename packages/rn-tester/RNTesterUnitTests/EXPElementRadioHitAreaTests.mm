@@ -13,13 +13,14 @@
 /*
  * How much of a radio's box actually takes a touch.
  *
- * The user-agent sheet gives `<input type="radio">` a 44x44 box for the Human
- * Interface Guidelines' minimum target, with the 22pt circle centred in it. The
- * box being 44pt is measurable from a screenshot and was; what a screenshot
- * cannot show is whether a touch 20pt from the centre — inside the box, well
- * outside the ink — actually reaches the control. Reported from a device as
- * still hard to hit while looking too widely spaced, which is exactly the shape
- * of a box that reserves 44pt of layout and accepts touches on rather less.
+ * The user-agent sheet gives `<input type="radio">` a 22x44 box on iOS: as tall
+ * as the platform's row, and only as wide as the mark it draws, so that a run
+ * of radios costs a list's worth of width rather than a column of empty target.
+ * The box is measurable from a screenshot and was; what a screenshot cannot
+ * show is whether a touch 20pt from the centre — inside the target, outside the
+ * box — actually reaches the control. Reported from a device as hard to hit
+ * while looking too widely spaced, which is exactly the shape of a box that
+ * reserves layout it does not accept touches on.
  *
  * So this asks the view the question directly, through `hitTest:`, which is the
  * same call UIKit makes when a finger lands.
@@ -34,7 +35,7 @@
 {
   // The user-agent box, which is the INK's size now and not the target's.
   EXPElementRadioComponentView *view =
-      [[EXPElementRadioComponentView alloc] initWithFrame:CGRectMake(0, 0, 32, 32)];
+      [[EXPElementRadioComponentView alloc] initWithFrame:CGRectMake(0, 0, 22, 44)];
   // The mounting layer sizes the view and then lays it out; without this the
   // content view keeps whatever frame it was born with, which is the bug this
   // test exists to catch rather than to reproduce.
@@ -46,17 +47,17 @@
 {
   EXPElementRadioComponentView *view = [self radio];
 
-  // Nine points across the 32pt box: centre, edge midpoints, corners.
+  // Nine points across the 22x44 box: centre, edge midpoints, corners.
   const CGPoint points[] = {
-      {16, 16},
-      {1, 16},
-      {31, 16},
-      {16, 1},
-      {16, 31},
+      {11, 22},
+      {1, 22},
+      {21, 22},
+      {11, 1},
+      {11, 43},
       {1, 1},
-      {31, 1},
-      {1, 31},
-      {31, 31},
+      {21, 1},
+      {1, 43},
+      {21, 43},
   };
   for (size_t i = 0; i < sizeof(points) / sizeof(points[0]); i++) {
     UIView *hit = [view hitTest:points[i] withEvent:nil];
@@ -75,11 +76,12 @@
 
 - (void)testTheTargetReachesPastTheBox
 {
-  // The point of separating them. A 32pt box would be 32pt tappable if
-  // `pointInside:` were left alone, which is under the guideline's 44pt; these
-  // points are OUTSIDE the box and must still land on the control.
+  // The point of separating them. A 22pt-wide box would be 22pt tappable if
+  // `pointInside:` were left alone, which is half the guideline's 44pt; these
+  // points are OUTSIDE the box and must still land on the control. Only the
+  // horizontal axis has anything to make up — the box is already 44pt tall.
   EXPElementRadioComponentView *view = [self radio];
-  const CGPoint outside[] = {{-5, 16}, {36, 16}, {16, -5}, {16, 36}, {-5, -5}};
+  const CGPoint outside[] = {{-5, 22}, {26, 22}, {-10, 1}, {31, 43}, {-10, 43}};
   for (size_t i = 0; i < sizeof(outside) / sizeof(outside[0]); i++) {
     XCTAssertTrue(
         [view pointInside:outside[i] withEvent:nil],
@@ -95,10 +97,10 @@
   // meant for a neighbouring radio, and the rows tile at this pitch.
   EXPElementRadioComponentView *view = [self radio];
   XCTAssertFalse(
-      [view pointInside:CGPointMake(16, 45) withEvent:nil],
-      @"the target reaches past 44pt and into the next row");
+      [view pointInside:CGPointMake(11, 45) withEvent:nil],
+      @"the target reaches past the box's own 44pt height and into the next row");
   XCTAssertFalse(
-      [view pointInside:CGPointMake(-13, 16) withEvent:nil],
+      [view pointInside:CGPointMake(-12, 22) withEvent:nil],
       @"the target reaches more than 44pt wide");
 }
 

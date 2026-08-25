@@ -20,6 +20,29 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /**
+ * Told when a finger is on this view, for chrome that draws a pressed state.
+ *
+ * The touches, not a gesture recognizer, and that is the whole point. A scroll
+ * view's `delaysContentTouches` holds a touch back for a moment to see whether
+ * a scroll was meant, and it does so by delaying delivery *to the view*.
+ * Recognizers are outside that — UIKit hands them the touch immediately,
+ * whatever the scroll view decides later — so recognizer-driven feedback lights
+ * up under a finger that was only passing through. `UIControl` tracks touches
+ * at the view level for exactly this reason, and so does
+ * `EXPElementButtonComponentView`.
+ *
+ * Chrome that needs this cannot get it any other way: the view a run of
+ * `<input type="radio">` rows hangs from is whatever ancestor survived
+ * flattening and is nobody's subclass, so there is no `touchesBegan:` of its
+ * own to override.
+ *
+ * Reports press state only. It does not activate anything.
+ */
+@protocol RCTViewPressObserver <NSObject>
+- (void)pressedView:(UIView *_Nonnull)view didBecomePressed:(BOOL)pressed;
+@end
+
+/**
  * UIView class for <View> component.
  */
 @interface RCTViewComponentView : UIView <RCTComponentViewProtocol, RCTTouchableComponentViewProtocol> {
@@ -74,6 +97,55 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, readonly) BOOL hasHostChromeSubviews;
 - (BOOL)isHostChromeSubview:(UIView *_Nonnull)view;
+
+/**
+ * Installs host chrome BEHIND this view's mounted children, and remembers it as
+ * chrome so the mount-index bookkeeping skips it.
+ *
+ * The subclass hooks above answer for chrome a component view installs in
+ * ITSELF, which is the common case. This is for chrome installed from outside,
+ * into a view whose class knows nothing about it — a run of `<input
+ * type="radio">` rows drawing the platform's grouped list behind them, where
+ * the view holding the rows is whatever ancestor survived flattening and is
+ * nobody's subclass.
+ *
+ * Behind, always: chrome is a backdrop, and a mounted child that ends up under
+ * it disappears. Use this rather than `addSubview:` — an unregistered extra
+ * subview shifts every mount index after it, which lands children at the wrong
+ * z-position and aborts on valid removals.
+ *
+ * NEVER re-parent a mounted child to put it inside chrome. Mounting addresses
+ * children by index into this view's subviews, so a child that has moved
+ * elsewhere is not merely misplaced, it is unaddressable: the index maps to the
+ * wrong view or past the end, and unmounting aborts.
+ */
+- (void)addHostChromeSubview:(UIView *_Nonnull)view;
+
+/**
+ * The same, but behind ONE child rather than behind all of them.
+ *
+ * "At the back" is right for chrome that backs the whole view, and wrong for
+ * chrome that backs a RUN of children, because a flattened ancestor is not
+ * absent from the tree: Fabric hoists its children into this view and leaves the
+ * ancestor itself here as a CHILDLESS SIBLING carrying its background, ordered
+ * before the children it used to hold. Chrome at index 0 therefore sits behind
+ * that backdrop, and any ancestor with a background hides it — which is what a
+ * radio group inside a plain coloured `<View>` did: rows, no card.
+ *
+ * Behind its own first child, chrome lands between that backdrop and the run,
+ * which is where a backdrop for those children belongs whatever else the
+ * container holds. `sibling` must be a subview of this view; chrome goes to the
+ * back if it is not.
+ */
+- (void)addHostChromeSubview:(UIView *_Nonnull)view behindSubview:(UIView *_Nonnull)sibling;
+- (void)removeHostChromeSubview:(UIView *_Nonnull)view;
+
+
+/**
+ * Nil for every view unless chrome asks for it, and weak so that chrome going
+ * away cannot leave a view reporting to nothing.
+ */
+@property (nonatomic, weak, nullable) id<RCTViewPressObserver> pressObserver;
 
 /**
  * Enforcing `call super` semantic for overridden methods from `RCTComponentViewProtocol`.

@@ -117,12 +117,14 @@ static const CGFloat EXPElementPressSlop = 16.0;
  */
 - (BOOL)hasHostChromeSubviews
 {
-  return _chromeButton != nil;
+  // `super` too: the base class now keeps a registry for chrome installed from
+  // OUTSIDE, and a subclass with chrome of its own must not hide it.
+  return _chromeButton != nil || [super hasHostChromeSubviews];
 }
 
 - (BOOL)isHostChromeSubview:(UIView *)view
 {
-  return view == _chromeButton;
+  return view == _chromeButton || [super isHostChromeSubview:view];
 }
 
 #pragma mark - Press tracking
