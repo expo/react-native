@@ -76,6 +76,85 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)isHostChromeSubview:(UIView *_Nonnull)view;
 
 /**
+ * Installs host chrome BEHIND this view's mounted children, and remembers it as
+ * chrome so the mount-index bookkeeping skips it.
+ *
+ * The subclass hooks above answer for chrome a component view installs in
+ * ITSELF, which is the common case. This is for chrome installed from outside,
+ * into a view whose class knows nothing about it — a run of `<input
+ * type="radio">` rows drawing the platform's grouped list behind them, where
+ * the view holding the rows is whatever ancestor survived flattening and is
+ * nobody's subclass.
+ *
+ * Behind, always: chrome is a backdrop, and a mounted child that ends up under
+ * it disappears. Use this rather than `addSubview:` — an unregistered extra
+ * subview shifts every mount index after it, which lands children at the wrong
+ * z-position and aborts on valid removals.
+ *
+ * NEVER re-parent a mounted child to put it inside chrome. Mounting addresses
+ * children by index into this view's subviews, so a child that has moved
+ * elsewhere is not merely misplaced, it is unaddressable: the index maps to the
+ * wrong view or past the end, and unmounting aborts.
+ */
+- (void)addHostChromeSubview:(UIView *_Nonnull)view;
+
+/**
+ * The same, but behind ONE child rather than behind all of them.
+ *
+ * "At the back" is right for chrome that backs the whole view, and wrong for
+ * chrome that backs a RUN of children, because a flattened ancestor is not
+ * absent from the tree: Fabric hoists its children into this view and leaves the
+ * ancestor itself here as a CHILDLESS SIBLING carrying its background, ordered
+ * before the children it used to hold. Chrome at index 0 therefore sits behind
+ * that backdrop, and any ancestor with a background hides it — which is what a
+ * radio group inside a plain coloured `<View>` did: rows, no card.
+ *
+ * Behind its own first child, chrome lands between that backdrop and the run,
+ * which is where a backdrop for those children belongs whatever else the
+ * container holds. `sibling` must be a subview of this view; chrome goes to the
+ * back if it is not.
+ */
+- (void)addHostChromeSubview:(UIView *_Nonnull)view behindSubview:(UIView *_Nonnull)sibling;
+- (void)removeHostChromeSubview:(UIView *_Nonnull)view;
+
+
+/**
+ * Makes this view transparent to touches in its OWN area, while leaving its
+ * children reachable — `pointerEvents: box-none`, asked for by host chrome
+ * rather than by a prop.
+ *
+ * Host chrome is added BEHIND the children it stands for
+ * (`addHostChromeSubview:behindSubview:`), so a touch meant for the chrome has
+ * to pass through the child drawn in front of it. UIKit's hook for that is
+ * `hitTest:` returning nil for self, which is exactly what `BoxNone` already
+ * does here; this says so for a view whose author never wrote a prop.
+ *
+ * It is deliberately NOT `userInteractionEnabled = NO`, which would take the
+ * whole subtree with it — a link inside the row would stop working. Only this
+ * view's own area is given up.
+ *
+ * It covers the view's DESCENDANTS too, but only the ones that would do
+ * nothing with the touch. A child that draws and no more — a `<Text>` label in
+ * a radio row — must not swallow a tap meant for the row, and a child the
+ * author gave a handler still gets it. See `-hasTouchHandlers`.
+ *
+ * Set and cleared in pairs by whoever installed the chrome, so a recycled view
+ * never carries it into its next life. See `EXPRadioRunList`.
+ */
+@property (nonatomic, assign) BOOL passesTouchesToHostChrome;
+
+/**
+ * Whether this view would DO anything with a touch — i.e. whether its author
+ * gave it any handler at all (`events`).
+ *
+ * Only consulted under `passesTouchesToHostChrome`, and only to decide whether
+ * a view is worth interrupting the chrome behind it for. It is the same policy
+ * UIKit applies by defaulting `UILabel.userInteractionEnabled` to NO: a thing
+ * that only draws is not a thing you can press.
+ */
+@property (nonatomic, readonly) BOOL hasTouchHandlers;
+
+/**
  * Enforcing `call super` semantic for overridden methods from `RCTComponentViewProtocol`.
  * The methods update the instance variables.
  */
