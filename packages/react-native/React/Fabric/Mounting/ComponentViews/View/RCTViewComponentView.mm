@@ -83,6 +83,9 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   // One paint view per anonymous text run, interleaved with mounted children in
   // document order (text-children-plan.md §3.B). Internal, never differ-driven.
   NSMutableArray<RCTAnonymousTextRunView *> *_textRunViews;
+  // Chrome installed from OUTSIDE by a host, kept out of the mount indices.
+  // See `-addHostChromeSubview:`.
+  NSMutableArray<UIView *> *_hostChromeSubviews;
 #if !TARGET_OS_TV
   // Installed only while this View both paints text and asks for it to be
   // selectable. See the `user-select` section below.
@@ -196,12 +199,89 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 // counting only non-run subviews.
 - (BOOL)hasHostChromeSubviews
 {
-  return NO;
+  return _hostChromeSubviews.count > 0;
 }
 
 - (BOOL)isHostChromeSubview:(UIView *)view
 {
-  return NO;
+  return [_hostChromeSubviews containsObject:view];
+}
+
+- (void)rememberHostChromeSubview:(UIView *)view
+{
+  if (_hostChromeSubviews == nil) {
+    _hostChromeSubviews = [NSMutableArray new];
+  }
+  if (![_hostChromeSubviews containsObject:view]) {
+    [_hostChromeSubviews addObject:view];
+  }
+}
+
+- (void)addHostChromeSubview:(UIView *)view
+{
+  [self rememberHostChromeSubview:view];
+  // At the back, so no mounted child is ever covered by a backdrop.
+  [self.currentContainerView insertSubview:view atIndex:0];
+}
+
+- (void)addHostChromeSubview:(UIView *)view behindSubview:(UIView *)sibling
+{
+  [self rememberHostChromeSubview:view];
+  UIView *container = self.currentContainerView;
+  if (sibling.superview != container) {
+    [container insertSubview:view atIndex:0];
+    return;
+  }
+  // `belowSubview:` rather than an index, because UIKit removes a view that is
+  // already a subview before re-inserting it — so an index computed beforehand
+  // is off by one exactly when the chrome is being moved rather than added.
+  [container insertSubview:view belowSubview:sibling];
+}
+
+- (void)removeHostChromeSubview:(UIView *)view
+{
+  [_hostChromeSubviews removeObject:view];
+  if (view.superview == self.currentContainerView) {
+    [view removeFromSuperview];
+  }
+}
+
+#pragma mark - Press tracking for chrome
+
+/*
+ * `super` is always called, and the observer is nil unless chrome asked for
+ * one, so a view nobody is watching behaves exactly as it did. React Native's
+ * own touches do not come through here — `RCTSurfaceTouchHandler` is a
+ * recognizer on the surface — so this neither sees them nor takes them.
+ *
+ * Nothing here decides *when*: the platform delivers the touch, having already
+ * waited out a scroll view's `delaysContentTouches` and cancelled it if the
+ * finger was leaving. That is the entire reason this is here and not in a
+ * gesture recognizer. See `RCTViewPressObserver`.
+ */
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+  [super touchesBegan:touches withEvent:event];
+  // A second finger on an already-pressed view is not a second press. Written
+  // as "not more than one" rather than "exactly one" so that an event nobody
+  // supplied still counts as a press instead of silently being none.
+  if (event.allTouches.count <= 1) {
+    [_pressObserver pressedView:self didBecomePressed:YES];
+  }
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+  [super touchesEnded:touches withEvent:event];
+  [_pressObserver pressedView:self didBecomePressed:NO];
+}
+
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+  [super touchesCancelled:touches withEvent:event];
+  // The usual reason to be here is an enclosing scroll view claiming the
+  // gesture once the finger has moved far enough to be a scroll.
+  [_pressObserver pressedView:self didBecomePressed:NO];
 }
 
 - (NSInteger)_containerIndexForMountIndex:(NSInteger)index
@@ -1072,6 +1152,18 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 - (void)prepareForRecycle
 {
   [super prepareForRecycle];
+
+  /*
+   * Host chrome does not survive recycling: this view is going back to the pool
+   * to become some other component, and chrome installed from outside belongs
+   * to what it used to be. Left attached it would be a backdrop under unrelated
+   * content, and it would keep counting itself out of mount indices for a view
+   * that no longer has any.
+   */
+  for (UIView *chrome in _hostChromeSubviews) {
+    [chrome removeFromSuperview];
+  }
+  [_hostChromeSubviews removeAllObjects];
 
   // If view was managed by animated, its props need to align with UIView's properties.
   const auto &props = static_cast<const ViewProps &>(*_props);
