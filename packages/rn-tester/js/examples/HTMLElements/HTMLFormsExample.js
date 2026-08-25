@@ -432,19 +432,13 @@ function ControlledInputs() {
   return (
     <Screen
       intro={
-        'A controlled input needs the value to be decided before anything is ' +
-        'drawn. onBeforeInput is asked on each platform’s own pre-commit hook — ' +
-        'shouldChangeCharactersInRange on iOS, an InputFilter on Android — so a ' +
-        'refused or substituted character never reaches the control at all, on ' +
-        'both platforms. A plain value prop instead lets the character land and ' +
-        'writes the state back: on iOS that round trip is synchronous and ' +
-        'finishes before the frame is drawn, so nothing intermediate is ' +
-        'presented; on Android it is still reported asynchronously and the ' +
-        'rejected character is visible for one frame.'
+        'onBeforeInput runs on each platform’s own pre-commit hook, so a refused ' +
+        'character never reaches the control. A value prop instead lets it land ' +
+        'and writes the state back.'
       }>
       <Case
         title="onBeforeInput + setValue — uppercase as you type"
-        note="The lowercase character is never applied, so it is never drawn — the edit is refused before the control commits it, on both platforms. The value-prop case below reaches the same result from the other side on iOS: the character lands, but the write-back happens in the same frame."
+        note="The lowercase character is refused before the control commits it, so it is never drawn — on both platforms."
         readout={`value: ${JSON.stringify(upper)}`}>
         <input
           placeholder="Type lowercase"
@@ -466,7 +460,7 @@ function ControlledInputs() {
 
       <Case
         title="Controlled the ordinary way — a value prop"
-        note="This is how React controls an input on the web too: let the character land, run the handler, write the prop back. Rejecting a character is simply not changing the state, and nothing here needs preventDefault. On iOS a controlled field reports its edit synchronously, so that whole round trip finishes before the frame is drawn — the same reason a browser can restore the DOM value before paint. Android still reports asynchronously, so the character it rejects shows for one frame."
+        note="Let the character land, run the handler, write the prop back. iOS finishes that round trip before the frame is drawn; Android reports asynchronously, so a rejected character shows for one frame."
         readout={`value: ${JSON.stringify(capped)}`}>
         <input
           value={capped}
