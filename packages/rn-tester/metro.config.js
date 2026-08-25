@@ -51,6 +51,18 @@ const config = {
     // The vendored Astryx sources (js/astryx/vendor) import '@stylexjs/stylex'
     // verbatim; resolve it to the RN StyleX runtime so they run unmodified.
     resolveRequest: (context, moduleName, platform) => {
+      // Astryx 0.5.0's `Layer/useLayer` imports `createPortal`. react-dom is
+      // banned here — these components are meant to run on the renderer, not
+      // on the web — and the branch that calls it is unreachable anyway, since
+      // its portal target is an `HTMLElement` resolved from `parentElement`.
+      // The import still has to resolve for the module to load. Aliasing keeps
+      // the vendored source unmodified, exactly as the StyleX alias below does.
+      if (moduleName === 'react-dom') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/astryx/react-dom-shim.js'),
+        };
+      }
       if (moduleName === '@stylexjs/stylex') {
         return {
           type: 'sourceFile',

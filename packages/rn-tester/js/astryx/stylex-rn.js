@@ -214,8 +214,8 @@ function lookupVar(
 /**
  * Substitutes every `var(--x[, fallback])` occurrence, recursively.
  *
- * `final` distinguishes the two resolution passes of custom-property
- * inheritance: during the eager pass inside `props()` an unknown name is
+ * `final` distinguishes the two resolution passes (custom-property
+ * inheritance, M3): during the eager pass inside `props()` an unknown name is
  * left *unresolved* — an ancestor element may still define it, and taking its
  * fallback here would be wrong — so the whole `var()` expression is preserved
  * for the element to finish. In the final pass (at the element, with the
@@ -307,6 +307,7 @@ function substituteColorMix(value: string): string {
   return result;
 }
 
+// --- calc() ---
 // Small recursive-descent evaluator over px/unitless arithmetic. Returns the
 // resolved px number as a string, or null when it hits anything it cannot
 // evaluate (%, em, unresolved keywords) — the calc() is then dropped upstream.
@@ -469,7 +470,7 @@ function warnOnce(key: string, message: string) {
   }
 }
 
-// The `transition-*` longhands React Native's renderer runs natively
+// The `transition-*` longhands React Native's renderer now runs natively
 // (css-transitions-1: property/duration/delay/timing-function, off the JS
 // thread). Passed through as-is: the native parser reads the same CSS strings
 // Astryx writes, kebab-case property names and comma lists included.
@@ -556,6 +557,10 @@ const ROOT_FONT_SIZE = 16;
 // A bare number with no unit — for `line-height`, a multiplier of the font
 // size rather than a length.
 const UNITLESS_NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)$/;
+
+// A length in `em`: a multiple of a font size, so it cannot be converted until
+// one is known.
+const EM_LENGTH = /^([+-]?(?:\d+\.?\d*|\.\d+))em$/;
 
 /**
  * The properties the renderer's text cascade inherits — the ones for which an
@@ -659,8 +664,10 @@ export function parseTransformString(
  * CSS shorthands → the longhands React Native understands.
  *
  * RN's style API is longhand-only: `padding: '10px 16px'` is not a value it
- * can parse, so an unexpanded shorthand silently contributes nothing. A
- * Tailwind build emits longhands; hand-written CSS does not.
+ * can parse, so an unexpanded shorthand silently contributes NOTHING — the
+ * failure mode is a box with no padding at all, which is exactly what
+ * hand-written CSS produced before this existed. (A Tailwind build emits
+ * longhands, so that path never noticed.)
  *
  * Returns null when the property is not a shorthand, or when a single value
  * makes the shorthand equivalent to its own name (`padding: 8px` is a valid
@@ -748,9 +755,8 @@ function expandShorthand(
   if (BOX_SIDES[prop] != null) {
     // Even a one-value box shorthand expands: `margin: 0` has to beat a UA
     // default like `margin-block: 1.67em`, and a shorthand cannot outrank a
-    // longhand applied natively rather than through this cascade. Borders
-    // have no UA default to outrank, so only the box-spacing shorthands
-    // expand from a single value.
+    // longhand applied natively. Only the box-spacing shorthands do; borders
+    // have no UA default to outrank
     const expandsSingle =
       prop === 'margin' || prop === 'padding' || prop === 'inset';
     const sides =
@@ -785,9 +791,8 @@ function expandShorthand(
     };
   }
 
-  // `place-content` / `place-items` are the grid alignment shorthands. With
-  // grid degraded to flex they have to produce centring on both axes: a
-  // `grid place-content-center` box has nothing else positioning its child.
+  // `place-content` / `place-items` / `place-self` set both axes' alignment; a
+  // shadcn checkbox says `grid place-content-center` and nothing else
   if (prop === 'placeContent' || prop === 'placeItems') {
     const block = parts[0];
     const inline = parts.length > 1 ? parts[1] : parts[0];
@@ -920,9 +925,12 @@ function convertValue(prop: string, value: string): unknown {
   if (px != null) {
     return parseFloat(value);
   }
-  // `rem` against the CSS initial root font size, which Astryx's type scale is
-  // authored in (`--font-size-base: 0.875rem` = 14px). RN has no document root
-  // to read a user-adjusted value from, so this is a constant.
+  // `rem` against the CSS initial root size of 16, which Astryx's tokens are
+  // written against (`--font-size-base: 0.875rem` = 14px). A rem font size
+  // could resolve against the real root through `fontSizeRem`, which on a
+  // device tracks the user's text size; no other property has such a channel,
+  // so a rem padding or width stays a constant. See
+  // `no-author-facing-em-lengths`.
   // DOM-CSS-LIMITATION(rem-fixed-root)
   const rem = /^[+-]?(\d+\.?\d*|\.\d+)rem$/.exec(value);
   if (rem != null) {
@@ -942,8 +950,8 @@ function convertValue(prop: string, value: string): unknown {
  */
 /**
  * What `props()` hands to an element: the resolved RN style, plus any custom
- * properties the element declares so it can publish them to its descendants.
- * The astryx JSX runtime consumes `__stylexVars` and
+ * properties the element declares so it can publish them to its descendants
+ * (CSS inheritance, M3). The astryx JSX runtime consumes `__stylexVars` and
  * strips it before the props reach the host component.
  */
 export type StyleXProps = {
@@ -959,6 +967,16 @@ export type StyleXProps = {
   // FIRST commit only. The element drops them after mount and the renderer's
   // native transitions animate to the real values.
   __startingStyle?: {[string]: unknown},
+  // Whether any of these styles is keyed on a pressed pseudo-class, decided in
+  // `props()` because `resolveDeclarations` drops every `:`-prefixed key; the
+  // element suppresses the platform's own press feedback when so
+  __stylexAnswersPress?: boolean,
+  // The id of the marker this element carries, which a `when.*` condition on a
+  // descendant asks about
+  __stylexMarker?: string,
+  // `when.*` blocks, condition key to the style it applies, left for the JSX
+  // runtime to settle from the element's position in the tree
+  __stylexWhen?: {[string]: unknown},
 };
 
 export type InteractionState = {
@@ -982,6 +1000,14 @@ const PSEUDO_ORDER: ReadonlyArray<[string, (InteractionState) => boolean]> = [
   [':active', s => s.pressed === true],
   [':disabled', s => s.disabled === true],
 ];
+
+/**
+ * The pseudo-classes that answer a finger, as opposed to focus or being
+ * disabled. A component that styles either draws its own press, and the
+ * platform's feedback must stay out of its way. A touch reports as a hover on
+ * the way to a press in this runtime, so a hover style answers the finger too.
+ */
+const PRESS_ANSWERING_PSEUDOS = [':hover', ':active'];
 
 // The OS accessibility setting behind `prefers-reduced-motion`, cached so the
 // synchronous style-resolution path can read it. Seeded and kept fresh by
@@ -1018,8 +1044,8 @@ function mediaQueryApplies(query: string): boolean {
     return Platform.OS !== 'ios' && Platform.OS !== 'android';
   }
   if (q.includes('prefers-reduced-motion')) {
-    // Tracks the OS "Reduce Motion" setting, cached because style resolution
-    // is synchronous
+    // Tracks the OS "Reduce Motion" setting; cached below because style
+    // resolution is synchronous
     return q.includes('reduce') === reduceMotionEnabled;
   }
   // Width/feature queries we cannot evaluate: keep the default branch.
@@ -1118,9 +1144,10 @@ export function resolveDeclarations(
   }
 
   const out: {[string]: unknown} = {};
-  // Held back until the whole block is resolved: a unitless line-height needs
-  // the font size, which may be declared after it.
+  // Held back until the whole block is resolved: a unitless line-height and an
+  // `em` length both need the font size, which may be declared after them.
   let unitlessLineHeight: ?number = null;
+  const emLengths: Map<string, number> = new Map();
   for (const prop of Object.keys(merged)) {
     if (prop.startsWith('--')) {
       continue; // consumed via `scope`
@@ -1206,7 +1233,7 @@ export function resolveDeclarations(
     }
 
     if (resolved.includes('var(')) {
-      // An ancestor may still define this custom property; hand the
+      // An ancestor may still define this custom property (M3); hand the
       // expression to the element to finish. Nothing to warn about.
       out[prop] = resolved;
       continue;
@@ -1226,18 +1253,62 @@ export function resolveDeclarations(
     if (resolved === '') {
       continue;
     }
+    if (resolved === 'inherit') {
+      // For a property the renderer's cascade inherits, an explicit null says
+      // "nothing from this layer": the merge cancels the layers below and the
+      // cascade supplies the value, which is what `inherit` computes to. Any
+      // other property has no inherited value to fall back on
+      if (INHERITED_PROPERTIES.has(prop)) {
+        out[prop] = null;
+      }
+      continue;
+    }
     if (prop === 'lineHeight' && UNITLESS_NUMBER.test(resolved)) {
       // Remember it as a RATIO rather than converting now — resolving it needs
       // the font size, which may appear later in this same loop.
       unitlessLineHeight = parseFloat(resolved);
       continue;
     }
+    if (prop === 'borderStyle' && resolved === 'none') {
+      // `border-style: none` forces the used border width to zero (CSS2
+      // §8.5.3); React Native's `borderStyle` has no way to say "no border"
+      out.borderWidth = 0;
+      continue;
+    }
+    const em = EM_LENGTH.exec(resolved);
+    if (em != null && prop !== 'fontSize') {
+      // On a length, `em` is the element's own computed font size (css-values-4
+      // §5.1.1), deferred like the ratio above; on `font-size` it is the
+      // inherited size, which falls through to the unresolvable values below
+      emLengths.set(prop, parseFloat(em[1]));
+      continue;
+    }
     out[prop] = convertValue(prop, resolved);
   }
 
-  // A unitless `line-height` is a multiplier of the font size in CSS
-  // (`line-height: 1.6667` on 12px text means 20px); React Native's
-  // `lineHeight` is absolute points
+  // A unitless `line-height` multiplies the font size in CSS; React Native's
+  // `lineHeight` is absolute points, so the ratio passed through would collapse
+  // the line box
+  for (const [prop, ratio] of emLengths) {
+    const fontSize = out.fontSize;
+    if (typeof fontSize === 'number') {
+      out[prop] = ratio * fontSize;
+    } else if (!final) {
+      // The font size is still a var() for the element to finish, and the
+      // length is finished with it there, by this same pass run final
+      out[prop] = `${ratio}em`;
+    } else {
+      // The font size is inherited rather than declared here, so there is
+      // nothing to multiply by
+      // DOM-CSS-LIMITATION(unitless-line-height-needs-local-font-size)
+      warnOnce(
+        `em-length:${prop}`,
+        `Dropping ${prop}: ${ratio}em with no fontSize in the same style to ` +
+          'resolve it against.',
+      );
+    }
+  }
+
   if (unitlessLineHeight != null) {
     const fontSize = out.fontSize;
     if (typeof fontSize === 'number') {
@@ -1247,9 +1318,10 @@ export function resolveDeclarations(
       // ratio is finished with it there, by this same pass run final
       out.lineHeight = String(unitlessLineHeight);
     } else {
-      // The font size is inherited rather than declared here, and RN gives no
-      // way to resolve it at this point; leaving `lineHeight` unset is better
-      // than a line box collapsed to the bare ratio.
+      // The font size is inherited and there is no `lineHeightEm` to carry the
+      // ratio to the renderer, so `lineHeight` is left unset: wrong spacing
+      // beats a collapsed line box. The same missing channel as
+      // `no-author-facing-em-lengths`.
       // DOM-CSS-LIMITATION(unitless-line-height-needs-local-font-size)
       warnOnce(
         'unitless-line-height',
@@ -1364,7 +1436,7 @@ export function propsWithState(
   }
 
   // Custom properties this element declares — carried on the props so the
-  // element can publish them to its descendants. They
+  // element can publish them to its descendants (CSS inheritance, M3). They
   // are resolved against the element's own scope so a declaration like
   // `--container-padding-inline-start: var(--astryx-card-padding, 16px)`
   // reaches descendants already substituted where possible.
@@ -1377,6 +1449,14 @@ export function propsWithState(
       declaredVars[key] = merged[key];
     }
   }
+
+  /*
+   * Whether these styles answer a press is decided here, since
+   * `resolveDeclarations` drops every `:`-prefixed key as it converts.
+   */
+  const answersPress = PRESS_ANSWERING_PSEUDOS.some(
+    pseudo => merged[pseudo] != null,
+  );
 
   // A query container is a fact about the element for its descendants'
   // container queries, not a style of its own; the JSX runtime publishes it
@@ -1402,6 +1482,9 @@ export function propsWithState(
     // inline style beats a class.
     result.__stylexStyle = style;
   }
+  if (answersPress) {
+    result.__stylexAnswersPress = true;
+  }
   if (declaredVars != null) {
     result.__stylexVars = declaredVars;
   }
@@ -1409,11 +1492,37 @@ export function propsWithState(
     result.__stylexContainer = container;
   }
 
+  /*
+   * A marker applied to this element and the `when.*` blocks that depend on one
+   * cannot be settled here, since `props()` has no view of the tree: the marker
+   * is surfaced for the element to publish and the blocks deferred for it to
+   * evaluate, the same split as a `var()` an ancestor might still define.
+   */
+  const ownMarker = merged.marker;
+  if (typeof ownMarker === 'symbol') {
+    const id = MARKER_ID_BY_SYMBOL.get(ownMarker);
+    if (id != null) {
+      result.__stylexMarker = id;
+    }
+    // Never a style declaration; it exists to be pointed at.
+    delete (result.style as $FlowFixMe)?.marker;
+  }
+  const deferredWhen: {[string]: unknown} = {};
+  let hasDeferredWhen = false;
+  for (const key of Object.keys(merged)) {
+    if (key.startsWith(':where-')) {
+      deferredWhen[key] = merged[key];
+      hasDeferredWhen = true;
+    }
+  }
+  if (hasDeferredWhen) {
+    result.__stylexWhen = deferredWhen;
+  }
+
   // `@starting-style` (css-transitions-2 §3): the values the element renders
-  // with on its first commit. The element drops them after mount, and the
-  // renderer's native CSS transitions, the same `transition-*` declarations
-  // this style already carries, animate from them to the real values. Nothing
-  // here is an animation; it is only the first frame's worth of style.
+  // with on its first commit and drops after mount; the renderer's own CSS
+  // transitions animate from them to the real values, so any transitionable
+  // property works
   const startingBlock = merged['@starting-style'];
   if (startingBlock != null && typeof startingBlock === 'object') {
     // Resolved as FINAL. Everywhere else an unknown `var()` is deferred so an
@@ -1436,7 +1545,7 @@ export function propsWithState(
 
 /**
  * Finishes a style produced by `props()` at the element, with the custom
- * properties inherited from ancestors in scope. Values still holding
+ * properties inherited from ancestors in scope (M3). Values still holding
  * `var()` references — the ones nothing local or global defined — resolve
  * here, taking their fallbacks only now that the full scope is known.
  *
@@ -1472,7 +1581,7 @@ export function resolveInherited(
   }
 
   // What the eager pass left for here: a var() it could not resolve, and a
-  // unitless line-height waiting on a font size that was one.
+  // unitless line-height or em length waiting on a font size that was one.
   // Fast path: nothing deferred.
   let needsWork = false;
   for (const prop of Object.keys(style)) {
@@ -1512,7 +1621,8 @@ export function resolveInherited(
 function isDeferredValue(prop: string, value: string): boolean {
   return (
     value.includes('var(') ||
-    (prop === 'lineHeight' && UNITLESS_NUMBER.test(value))
+    (prop === 'lineHeight' && UNITLESS_NUMBER.test(value)) ||
+    (prop !== 'fontSize' && EM_LENGTH.test(value))
   );
 }
 
@@ -1525,6 +1635,222 @@ export function attrs(...items: Array<unknown>): StyleXProps {
 export function createTheme(_vars: unknown, _overrides: unknown): RawStyle {
   warnOnce('createTheme', 'stylex.createTheme() is not supported on RN yet');
   return {};
+}
+
+/**
+ * Markers and `stylex.when.*`: conditions that depend on another element. The
+ * shapes are `@stylexjs/stylex@0.19`'s own declarations:
+ *   defineMarker(): MapNamespace<{readonly marker: symbol}>
+ *   when.ancestor(pseudo?, marker?): `:where-ancestor(${Pseudo}, ${Symbol})`
+ *   when.descendant / siblingBefore / siblingAfter / anySibling: likewise
+ * `Pseudo` is `:${string}` or `[${string}]`; both arguments are optional, and
+ * without a marker the condition refers to the default marker. A marker is a
+ * style namespace applied through `props()`, with a symbol for its identity.
+ * Upstream's runtime throws from these and expects the Babel plugin to have
+ * rewritten them into class names and a `:has()`-style selector; without a
+ * compiler they are evaluated at runtime, in the two-pass shape custom
+ * properties use: `props()` defers the blocks onto its result, and
+ * `resolveWhen` finishes them at the element once the marker state is known.
+ */
+
+// Symbols are not embeddable in a string, so each marker also gets a stable id
+// that can appear in the condition key. The registry is keyed by symbol so two
+// markers never collide, and lookups from a key go through `MARKER_BY_ID`.
+const MARKER_ID_BY_SYMBOL: Map<symbol, string> = new Map();
+const MARKER_BY_ID: Map<string, symbol> = new Map();
+let markerSequence = 0;
+
+/**
+ * Whether any marker exists at all. The bookkeeping markers need (an element
+ * knowing whether it is a first or last child) costs a walk of every
+ * intrinsic's children, which an app that never calls `defineMarker` must not
+ * pay. See `hasMarkers()`.
+ */
+export function hasMarkers(): boolean {
+  return markerSequence > 0;
+}
+
+export function defineMarker(): {readonly marker: symbol} {
+  markerSequence += 1;
+  const symbol = Symbol(`stylex.marker.${markerSequence}`);
+  const id = `m${markerSequence}`;
+  MARKER_ID_BY_SYMBOL.set(symbol, id);
+  MARKER_BY_ID.set(id, symbol);
+  return {marker: symbol};
+}
+
+const DEFAULT_MARKER: {readonly marker: symbol} = defineMarker();
+
+export function defaultMarker(): {readonly marker: symbol} {
+  return DEFAULT_MARKER;
+}
+
+/** The id for a marker namespace, or the default marker's when absent. */
+function markerIdOf(namespace: unknown): string {
+  const symbol =
+    namespace != null && typeof namespace === 'object'
+      ? // $FlowFixMe[prop-missing] a marker namespace
+        namespace.marker
+      : null;
+  const id =
+    typeof symbol === 'symbol' ? MARKER_ID_BY_SYMBOL.get(symbol) : undefined;
+  if (id != null) {
+    return id;
+  }
+  return MARKER_ID_BY_SYMBOL.get(DEFAULT_MARKER.marker) ?? 'm1';
+}
+const WHEN_KIND_SELECTOR: {[string]: string} = {
+  ancestor: 'where-ancestor',
+  descendant: 'where-descendant',
+  siblingBefore: 'where-sibling-before',
+  siblingAfter: 'where-sibling-after',
+  anySibling: 'where-any-sibling',
+};
+
+/**
+ * Whether any `when.descendant` condition exists in the program. Answering one
+ * costs an upward registration from every marked element and a second render of
+ * the asking element (see `useDescendantMarkers`), which a tree that never asks
+ * must not pay; settled at module scope, since the keys are built when a
+ * component's styles are defined.
+ */
+let descendantConditionCount = 0;
+
+export function hasDescendantConditions(): boolean {
+  return descendantConditionCount > 0;
+}
+
+function whenKey(kind: string, pseudo: unknown, marker: unknown): string {
+  const selector = typeof pseudo === 'string' ? pseudo : ':scope';
+  if (kind === 'descendant') {
+    descendantConditionCount += 1;
+  }
+  return `:${WHEN_KIND_SELECTOR[kind]}(${selector}, ${markerIdOf(marker)})`;
+}
+
+/** Parses a key produced by `when.*` back into its parts. */
+export function parseWhenKey(
+  key: string,
+): ?{kind: string, pseudo: string, marker: string} {
+  const match = /^:where-([a-z-]+)\(([^,]+), ([^)]+)\)$/.exec(key);
+  if (match == null) {
+    return null;
+  }
+  const kind = match[1];
+  return {kind, pseudo: match[2], marker: match[3]};
+}
+
+export const when: {
+  ancestor: (pseudo?: unknown, marker?: unknown) => string,
+  descendant: (pseudo?: unknown, marker?: unknown) => string,
+  siblingBefore: (pseudo?: unknown, marker?: unknown) => string,
+  siblingAfter: (pseudo?: unknown, marker?: unknown) => string,
+  anySibling: (pseudo?: unknown, marker?: unknown) => string,
+} = {
+  ancestor: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('ancestor', pseudo, marker),
+  descendant: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('descendant', pseudo, marker),
+  siblingBefore: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('siblingBefore', pseudo, marker),
+  siblingAfter: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('siblingAfter', pseudo, marker),
+  anySibling: (pseudo?: unknown, marker?: unknown) =>
+    whenKey('anySibling', pseudo, marker),
+};
+
+/**
+ * The state of every marker an element can see, and of its own position.
+ *
+ * `ancestors` maps a marker id to the pseudo-classes the nearest ancestor
+ * carrying that marker matches; `siblings` does the same for the markers on
+ * this element's previous and following siblings. Both come from the JSX
+ * runtime, which is the only place that knows the shape of the tree.
+ */
+export type MarkerState = {
+  readonly ancestors: ReadonlyMap<string, ReadonlySet<string>>,
+  readonly before: ReadonlyMap<string, ReadonlySet<string>>,
+  readonly after: ReadonlyMap<string, ReadonlySet<string>>,
+  /*
+   * The union of what every marked descendant matches (`:has()` semantics),
+   * collected by registration because it travels upward; see
+   * `useDescendantMarkers`.
+   */
+  readonly descendants: ReadonlyMap<string, ReadonlySet<string>>,
+};
+
+export const EMPTY_MARKER_STATE: MarkerState = {
+  ancestors: new Map(),
+  before: new Map(),
+  after: new Map(),
+  descendants: new Map(),
+};
+
+/** Whether a single `when.*` condition holds for `state`. */
+export function whenConditionApplies(key: string, state: MarkerState): boolean {
+  const parsed = parseWhenKey(key);
+  if (parsed == null) {
+    return false;
+  }
+  const {kind, pseudo, marker} = parsed;
+  switch (kind) {
+    // `parseWhenKey` returns the relation WITHOUT the `where-` prefix, which
+    // the key carries only to look like the selector it stands in for.
+    case 'ancestor':
+      return state.ancestors.get(marker)?.has(pseudo) === true;
+    case 'sibling-before':
+      return state.before.get(marker)?.has(pseudo) === true;
+    case 'sibling-after':
+      return state.after.get(marker)?.has(pseudo) === true;
+    case 'any-sibling':
+      return (
+        state.before.get(marker)?.has(pseudo) === true ||
+        state.after.get(marker)?.has(pseudo) === true
+      );
+    case 'descendant':
+      /*
+       * `:has()` semantics: one matching descendant is enough. The only relation
+       * whose answer travels up, so it cannot be settled during the asking element's
+       * first render; marked descendants register in a layout effect and the asker
+       * re-renders before paint. That extra render is paid only by trees that ask.
+       */
+      return state.descendants.get(marker)?.has(pseudo) === true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Applies the deferred `when.*` blocks a `props()` result carries, given the
+ * marker state at the element. Returns the style to render with.
+ */
+export function resolveWhen(
+  style: {[string]: unknown} | null,
+  deferred: ?{[string]: unknown},
+  state: MarkerState,
+  inheritedScope: ?VarScope,
+): {[string]: unknown} | null {
+  if (deferred == null) {
+    return style;
+  }
+  let result = style;
+  for (const key of Object.keys(deferred)) {
+    if (!whenConditionApplies(key, state)) {
+      continue;
+    }
+    const block = deferred[key];
+    if (block == null || typeof block !== 'object') {
+      continue;
+    }
+    // A matching block layers over the base declarations, as the conditional
+    // rule authored after the unconditional one wins at equal specificity, and
+    // is resolved against the element's own custom-property scope like them
+    result = {
+      ...(result ?? {}),
+      ...resolveDeclarations({...block}, RESTING, inheritedScope, true),
+    };
+  }
+  return result;
 }
 
 export type StyleXStyles = unknown;
@@ -1540,4 +1866,7 @@ export default {
   keyframes,
   firstThatWorks,
   createTheme,
+  when,
+  defineMarker,
+  defaultMarker,
 };
