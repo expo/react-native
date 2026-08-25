@@ -35,6 +35,8 @@ import {Kbd} from '../../astryx/vendor/Kbd/Kbd';
 import {ProgressBar} from '../../astryx/vendor/ProgressBar/ProgressBar';
 // $FlowFixMe[cannot-resolve-module]
 import {Skeleton} from '../../astryx/vendor/Skeleton/Skeleton';
+// $FlowFixMe[cannot-resolve-module] vendored TypeScript source
+import {Step, Stepper} from '../../astryx/vendor/Stepper';
 // $FlowFixMe[cannot-resolve-module]
 import {StatusDot} from '../../astryx/vendor/StatusDot/StatusDot';
 // $FlowFixMe[cannot-resolve-module]
@@ -1662,6 +1664,42 @@ export default {
               hanging indent outside positioning exists to produce
             </li>
           </ul>
+        </DemoContent>
+      ),
+    },
+    {
+      // Named so it can be deep-linked directly:
+      //   rntester://example/AstryxExample/stepper
+      name: 'stepper',
+      title: 'Stepper — new in Astryx 0.5.0',
+      description:
+        'Promoted from the canary Lab package to Core in 0.5.0, vendored ' +
+        'UNMODIFIED. Its whole dependency closure was already supported — ' +
+        'Icon, VisuallyHidden, the i18n translator and the theme tokens — ' +
+        'and the only CSS it needs is transitions and animations, which the ' +
+        'renderer runs off the JS thread. The connector fill animating as a ' +
+        'step completes is the one thing 0.5.0 animates; going backwards and ' +
+        'jumping more than one step apply at once, by design.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            '<Stepper activeStep={1} label="Checkout">\n' +
+            '  <Step step={0} label="Cart" />\n' +
+            '  <Step step={1} label="Delivery" />\n' +
+            '  <Step step={2} label="Payment" />\n' +
+            '</Stepper>'
+          }>
+          <Stepper activeStep={1} label="Checkout">
+            <Step step={0} label="Cart" />
+            <Step step={1} label="Delivery" />
+            <Step step={2} label="Payment" />
+          </Stepper>
+          <View style={{height: 24}} />
+          <Stepper activeStep={2} orientation="vertical" label="Onboarding">
+            <Step step={0} label="Account" status="success" />
+            <Step step={1} label="Profile" status="success" />
+            <Step step={2} label="Verify" status="warning" />
+          </Stepper>
         </DemoContent>
       ),
     },
