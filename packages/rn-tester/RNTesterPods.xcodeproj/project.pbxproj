@@ -30,6 +30,7 @@
 		AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */; };
 		AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */; };
 		AB0DE1F000000000000000F1 /* EXPSelectMenuDismissTrackingTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000F2 /* EXPSelectMenuDismissTrackingTests.mm */; };
+		AB0DE1F0000000000000CA00 /* EXPTextInputCaretTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000CB00 /* EXPTextInputCaretTests.mm */; };
 		AB0DE1F0000000000000EA00 /* EXPLineHeightInkTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */; };
 		C175B6D9ED9336FB66637943 /* libPods-RNTester.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C706D402EE4AF9BE838CBA9 /* libPods-RNTester.a */; };
 		CD10C7A5290BD4EB0033E1ED /* RCTEventEmitterTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CD10C7A4290BD4EB0033E1ED /* RCTEventEmitterTests.m */; };
@@ -121,6 +122,7 @@
 		AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTGlyphHuggingLayoutManagerTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTAttachmentLineLeadingTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000F2 /* EXPSelectMenuDismissTrackingTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPSelectMenuDismissTrackingTests.mm; sourceTree = "<group>"; };
+		AB0DE1F0000000000000CB00 /* EXPTextInputCaretTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPTextInputCaretTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPLineHeightInkTests.mm; sourceTree = "<group>"; };
 		AC474BFB29BBD4A1002BDAED /* RNTester.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = RNTester.xctestplan; path = RNTester/RNTester.xctestplan; sourceTree = "<group>"; };
 		B0E70A8A05E03E868F8703FE /* Pods-RNTesterIntegrationTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RNTesterIntegrationTests.release.xcconfig"; path = "Target Support Files/Pods-RNTesterIntegrationTests/Pods-RNTesterIntegrationTests.release.xcconfig"; sourceTree = "<group>"; };
@@ -394,6 +396,7 @@
 				AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */,
 				AB0DE1F0000000000000FC02 /* RCTViewAccessibilityLabelRecycleTests.mm */,
 				AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */,
+				AB0DE1F0000000000000CB00 /* EXPTextInputCaretTests.mm */,
 				AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */,
 				AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */,
 				AB0DE1F000000000000000F2 /* EXPSelectMenuDismissTrackingTests.mm */,
@@ -888,6 +891,7 @@
 				AB0DE1F000000000000000C1 /* RCTViewComponentViewRecycleTests.mm in Sources */,
 				AB0DE1F0000000000000FC01 /* RCTViewAccessibilityLabelRecycleTests.mm in Sources */,
 				AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */,
+				AB0DE1F0000000000000CA00 /* EXPTextInputCaretTests.mm in Sources */,
 				AB0DE1F0000000000000EA00 /* EXPLineHeightInkTests.mm in Sources */,
 				AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */,
 				AB0DE1F000000000000000F1 /* EXPSelectMenuDismissTrackingTests.mm in Sources */,
