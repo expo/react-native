@@ -11,11 +11,21 @@
 'use strict';
 
 /**
- * HTML forms (§4.10): every control is the platform's own, reached through the
- * HTML element that means it. Each example shows the live value beneath the
- * control, since what a control reports and submits is half of it. Deliberate
- * differences from the web are marked as deviations. `@noflow`: the intrinsics
- * have no JSX types.
+ * HTML forms — §4.10.
+ *
+ * Every control here is a real platform control: a `UISwitch` and a `UIMenu` on
+ * iOS, a `CheckBox` and a modal list on Android. That is the point of the
+ * screen — not that the elements exist, but that each one is the thing the
+ * platform would have drawn anyway, reached through the HTML element that means
+ * it.
+ *
+ * Each example shows the live value beneath the control, because a form control
+ * that renders is only half of one: what matters is what it reports, when, and
+ * what a `<form>` would submit for it. Cases where the platform deliberately
+ * differs from the web are marked **deviation** and are written up in
+ * `expo-intrinsics/__docs__/SpecDeviations.md`.
+ *
+ * `@noflow`: the intrinsics have no JSX types.
  */
 
 import {
@@ -57,10 +67,31 @@ const READOUT = {
   marginTop: 4,
   fontFamily: 'Menlo',
 };
-// A control and its label on one line, spaced for native controls rather than
-// the web's density; demo layout, not the user-agent sheet
-// `flexWrap` so the rows survive Dynamic Type: a button cannot shrink below
-// its label, so the row gives
+/*
+ * A control and its label on one line.
+ *
+ * Spaced for NATIVE controls rather than for the web's density. A checkbox here
+ * is a real `UISwitch` (51x31) and a radio is a drawn indicator at the platform
+ * tap size, so the 10/8 that reads as comfortable next to a 13px web checkbox
+ * leaves a 44pt control almost touching its label. iOS puts appreciably more
+ * air around a control than a browser does, and the demos are what someone
+ * judges the elements by.
+ *
+ * This is demo layout, not the user-agent sheet: the UA `fieldset` surface is
+ * the platform's own group idiom (DOM-CSS-DEVIATION(fieldset-native-surface))
+ * and is left alone here.
+ */
+/*
+ * `flexWrap` because these rows have to survive Dynamic Type.
+ *
+ * Every label and control here grows with the user's text size, and a row of
+ * three buttons that fits at the default size runs past the screen at an
+ * accessibility size — where it was reported as the last button being clipped.
+ * A button cannot shrink below its own label (that floor is deliberate), so
+ * the row is what has to give: wrapping reflows it instead of pushing content
+ * out of the card. `rowGap` then keeps wrapped lines apart, which a single
+ * `gap` would otherwise have to do for both axes at once.
+ */
 const ROW = {
   flexDirection: 'row',
   alignItems: 'center',
@@ -70,10 +101,35 @@ const ROW = {
   marginBottom: 14,
 };
 
-// No `gap`: the user-agent sheet gives a checkable its inline-end margin, and
-// a gap would add to it
-// Radios tile with no row margin: each box is a 44pt touch target around a
-// 22pt circle, so the targets already space the ink
+/*
+ * The row for a control that already carries its own label spacing.
+ *
+ * The user-agent sheet gives a checkable an inline-end margin — 8pt on iOS,
+ * because a system form sits a label about that far off a switch and the
+ * single space character of `<label><input/> text</label>` does not. In a flex
+ * row an explicit `gap` ADDS to that margin rather than replacing it, so these
+ * rows were spacing their labels twice: 8 + 14 = 22pt measured on the
+ * simulator, against the ~8pt an iOS Settings row uses. The platform's number
+ * is the right one, so this row contributes nothing of its own.
+ */
+/*
+ * A row of radios, stacked.
+ *
+ * A radio's box is its 44pt touch target with a 22pt circle centred in it, so
+ * every row already carries ~11pt of clear space above and below its ink. A
+ * row margin on top of that is spacing counted twice — 36pt between circles,
+ * where a grouped list wants about 22. The targets tile instead, which is also
+ * what makes the whole group tappable with no dead bands between rows.
+ */
+/*
+ * The row states the touch height rather than taking it from the control.
+ *
+ * The radio's box is only as big as its ink now, and its target reaches past
+ * it — but UIKit stops walking down at the first view whose bounds exclude the
+ * point, so a row that is only as tall as a 32pt control clips the target back
+ * to 32pt. `minHeight` is what keeps the reach the control asks for, and it
+ * costs nothing visually: the rows already tiled at this pitch.
+ */
 const RADIO_ROW = {
   flexDirection: 'row',
   alignItems: 'center',
@@ -81,6 +137,7 @@ const RADIO_ROW = {
   columnGap: 0,
   rowGap: 8,
   marginBottom: 0,
+  minHeight: 44,
 };
 
 const CONTROL_ROW = {
@@ -92,14 +149,35 @@ const CONTROL_ROW = {
   marginBottom: 14,
 };
 
-// Stated rather than inherited: `color` on the ScrollView's content container
-// does not reach these
+/*
+ * The text beside a control.
+ *
+ * Stated rather than inherited: `color` on the ScrollView's content container
+ * does NOT reach these — checked on the simulator with a literal colour, where
+ * the labels stayed exactly as invisible as before. Left unstyled they fall to
+ * React Native's default black, which is why they vanished against a dark
+ * screen while every other string on it, each carrying its own themed colour,
+ * was fine.
+ */
 const CONTROL_LABEL = {color: LABEL_COLOR};
 
-// `grouped` gives a case the grouped page a platform list's card
-// (`secondarySystemGroupedBackground`, white in light mode) contrasts
-// against, as in Settings. On the case's own view: once it paints, Fabric
-// leaves it as a backdrop ordered before its hoisted children
+/*
+ * `grouped` gives a case the page a platform list needs behind it.
+ *
+ * A run of `<input type="radio">` draws as the OS's inset-grouped list, and that
+ * card is `secondarySystemGroupedBackground` — white in light mode, exactly like
+ * the block these cases sit on. On that block the card showed its rows and its
+ * separators with nothing around them. iOS answers this with the PAGE rather
+ * than with an edge around the card (Settings), and the page is the demo's to
+ * choose, so it is chosen here.
+ *
+ * It goes on the case's OWN view. That is a real view once it paints — Fabric
+ * hoists a flattened view's children into the container and leaves the view
+ * itself among them as a childless backdrop ordered BEFORE them — and the card
+ * is inserted directly behind the first row, so it lands in front of that
+ * backdrop. Putting the colour any closer to the rows is not needed for the same
+ * reason.
+ */
 const GROUPED_PAGE = {
   marginBottom: 8,
   backgroundColor: GROUPED_PAGE_COLOR,

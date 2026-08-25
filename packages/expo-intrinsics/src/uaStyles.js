@@ -9,24 +9,56 @@
  */
 
 /**
- * The user-agent stylesheet, a table like WebKit's `html.css` and grouped in
- * its order. Defaults are data, and the author always wins because the table
- * merges beneath the author's style (CSS Cascade §6.1).
+ * The user-agent stylesheet.
  *
- * Divergences from the web:
- *  - DOM-CSS-LIMITATION(no-em-units): values are points computed against the
- *    root size below, so they do not track the user's font size. `em`
- *    resolves against the element's own font-size, so a rule on an element
- *    that resizes itself (every heading) multiplies by that size, not the root's.
+ * Browsers all ship one of these — WebKit's `html.css`, Blink's copy, Gecko's
+ * `html.css` + `forms.css` — a plain stylesheet applied at the lowest cascade
+ * origin. Two properties of that design are worth copying and are why this is
+ * a table rather than code:
+ *
+ *  1. **Defaults are data.** Adding `<article>` is a row here, not a props
+ *     class in C++.
+ *  2. **The author always wins**, because a UA declaration is simply a lower
+ *     origin (CSS Cascade §6.1). Here that is realised by merging these
+ *     *beneath* the author's style, so no per-property special-casing exists.
+ *
+ * Grouped by role in WebKit's order, because that grouping is the
+ * documentation.
+ *
+ * Divergences from the web, stated rather than discovered:
+ *  - DOM-CSS-LIMITATION(no-em-units): browsers express these in `em`; we have
+ *    no font-relative units, so values are points, computed once against the
+ *    root size below. They do not track the user's font size the way the web
+ *    does.
+ *
+ *    Computing them here does not mean computing them all against the root.
+ *    `em` resolves against the element's OWN font-size, so a rule on an element
+ *    that resizes itself — every heading — has to be multiplied by that size and
+ *    not by the root's. See the headings below, where getting this wrong put h1
+ *    at half its margin and h6 at half again too much, in the same table.
  *  - DOM-CSS-DEVIATION(root-font-size-is-native-not-16px): the root is the
  *    platform's body text size rather than the web's 16px. See `ROOT_FONT_SIZE`.
- *  - DOM-CSS-LIMITATION(no-quirks-mode): no `quirks.css` equivalent.
- *  - DOM-CSS-DEVIATION(native-form-widgets): the platform views draw the
- *    controls' surfaces; this sheet carries only what the renderer draws:
- *    label typography and colour, content insets, touch-target minimums.
- *  - DOM-CSS-DEVIATION(no-visited-links): `:visited` is not evaluated. It
- *    would need history state, and the web's purple is what no native app
- *    does; a link keeps the system tint (`LinkText` in `systemColors.js`).
+ *  - DOM-CSS-LIMITATION(no-quirks-mode): no `quirks.css` equivalent, since
+ *    there is no quirks mode to be compatible with.
+ *  - DOM-CSS-DEVIATION(native-form-widgets): form controls are platform-drawn
+ *    on purpose — `<button>`'s surface is a real `UIButton` configuration on
+ *    iOS and the Material construction on Android, drawn by the platform views
+ *    rather than described here. This sheet carries only what the renderer
+ *    itself draws: label typography and colour, content insets, touch-target
+ *    minimums.
+ *  - DOM-CSS-DEVIATION(no-visited-links): `<a href>` gets the link colour and
+ *    underline (`a:link`) and `:visited` is NOT evaluated, so a followed link
+ *    never changes colour. Partly because it would need history state we do not
+ *    have — and deliberately, because the thing it would change to is the web's
+ *    purple, which no native app on either platform does. A link here keeps the
+ *    system tint whether or not it has been followed.
+ *
+ *    The colour is `LinkText` from `systemColors.js`, which is
+ *    `UIColor.linkColor` on iOS and `?android:attr/textColorLink` on Android —
+ *    adaptive tokens, so dark mode and Material You arrive on their own. Not
+ *    `-webkit-link`'s fixed `#0000EE`, which cannot move.
+ *
+ *    An anchor with no `href` is correctly left unstyled, as in a browser.
  */
 
 import type {ColorValue} from 'react-native';
@@ -35,12 +67,29 @@ import {systemColor} from './systemColors';
 import {Platform, PlatformColor} from 'react-native';
 
 /**
- * The surface a text-entry control sits on: `<input>`'s textual types,
- * `<textarea>`, and `<select>` on Android. iOS fields sit on the system
- * background (CSS's `Field`, see systemColors.js) with `UITextField`'s corner
- * radius. Android fields are Material 3 filled text fields: a tonal container
- * with 4dp top corners and 16dp inline padding, over the active indicator the
- * theme draws at the bottom edge.
+ * The surface a text-entry control sits on — `<input>`'s textual types,
+ * `<textarea>`, and `<select>` on Android.
+ *
+ * Without it the controls were TRANSPARENT: a bare rounded-rect border on the
+ * grouped gray page on iOS, an underline floating in space on Android — both
+ * read as body text, not as things to type into. Each platform's own forms
+ * answer differently and the table says so:
+ *
+ *  - iOS fields sit on the system background (white in light, elevated in
+ *    dark) — the look of a field in any grouped Settings-style page. The
+ *    radius matches `UITextField`'s rounded-rect border so the host's fill
+ *    stays inside the control's own outline. The colour is CSS's own `Field`
+ *    keyword resolved to the platform (see systemColors.js).
+ *  - Android fields are Material 3 FILLED text fields: a tonal container
+ *    with the top corners rounded (extra-small, 4dp) and the active
+ *    indicator underline the theme already draws at the bottom edge; 16dp
+ *    inline padding is the spec's content inset. The container tone is the
+ *    component role M3 names for filled fields, theme-derived so Material
+ *    You recolours it. The bare underline-only `EditText` is the Material 2
+ *    idiom, and reading it next to real M3 apps is what prompted this.
+ *
+ * An author's `backgroundColor`/`borderRadius`/`padding` still wins — this
+ * merges below author styles like every other UA declaration.
  */
 export const FIELD_SURFACE: {
   backgroundColor?: unknown,
@@ -68,11 +117,17 @@ export const FIELD_SURFACE: {
 });
 
 /*
- * React Native resolves `fontFamily` against real faces, and only Android
- * accepts `'monospace'` as an alias.
+ * The monospace face, by a name each platform actually has.
+ *
+ * CSS's generic families (`monospace`, `serif`, `sans-serif`) are not font
+ * names, and React Native resolves `fontFamily` against real faces. Android
+ * happens to accept `'monospace'` as an alias, so `<code>` looked right there
+ * and silently fell back to the system font on iOS — the same declaration
+ * working on one platform and doing nothing on the other, which is the hardest
+ * kind of gap to notice.
  *
  * DOM-CSS-LIMITATION(no-generic-font-families): the other generics are not
- * mapped, so `font-family: serif` resolves to nothing.
+ * mapped, so `font-family: serif` still resolves to nothing.
  */
 const MONOSPACE: string = Platform.select({
   ios: 'Menlo',
@@ -83,28 +138,89 @@ const MONOSPACE: string = Platform.select({
 export type UAStyle = {[string]: unknown};
 
 /**
- * What `1em` means in this sheet: the platform's body text size (iOS 17pt,
- * Material `bodyLarge` 16sp) rather than the web's 16px, so a document reads
- * at the size everything else on the phone does.
+ * The root font size, in points — what `1em` means in this stylesheet.
  *
- * DOM-CSS-DEVIATION(root-font-size-is-native-not-16px): proportions are
- * preserved, absolute sizes are not, and differ per platform. Must stay in
- * step with `kRootFontSize` in `YogaLayoutableShadowNode.cpp`.
+ * A browser's root is 16px. This one is the platform's own body text size, and
+ * that choice is the deliberate one: iOS sets body copy at 17pt
+ * (`UIFont.systemFontSize`) and Material's `bodyLarge` is 16sp, so a document
+ * built from these elements reads at the size everything else on the phone
+ * does. React Native's own default of 14 is neither the web's figure nor either
+ * platform's, and prose left at it came out noticeably small next to any native
+ * app.
+ *
+ * DOM-CSS-DEVIATION(root-font-size-is-native-not-16px): documents here are not
+ * 16px-rooted, so a length quoted in `em` resolves to a different number of
+ * points than the same stylesheet would produce in a browser — and to a
+ * different number on each platform. Proportions are preserved, absolute sizes
+ * are not. This must stay in step with `kRootFontSize` in
+ * `YogaLayoutableShadowNode.cpp`, which is where an element with no `font-size`
+ * of its own gets this value from; the two are the same constant expressed on
+ * each side of the bridge.
  */
 const ROOT_FONT_SIZE: number = Platform.select({
   ios: 17,
   android: 16,
   default: 16,
 });
-// CSS's `CanvasText`, as each platform's own label colour so it follows the
-// appearance without a light/dark pair
+/*
+ * The colour text is drawn in when nothing else decides it.
+ *
+ * CSS calls this `CanvasText`, and a browser resolves it against the page's
+ * colour scheme. Naming each platform's own label colour does the same job and
+ * does it better: a native app themes without being asked, so an element that
+ * stays black on a dark surface looks imported. This is one of the few places
+ * worth departing from the web, whose initial value is a fixed colour.
+ *
+ * A platform colour rather than a light/dark pair, so the value is the
+ * platform's own and follows any appearance it grows later. The Android
+ * spelling only began resolving once `ColorPropConverter.resolveThemeAttribute`
+ * was fixed — it returned a ColorStateList's resource ID as though it were
+ * ARGB, which drew as fully transparent text. See `ColorPropConverterTest`.
+ */
 
 const EM = ROOT_FONT_SIZE;
 
-// Typed by name because an unannotated `Platform.select` infers number
-// literal types per branch and reports them incompatible, while `UAStyle`'s
-// indexer makes the result unspreadable. No padding: ElementButtonShadowNode
-// folds the control's own content insets onto the style
+/*
+ * `<button>`'s platform chrome, hoisted and typed.
+ *
+ * Two Flow problems live in this one call, and they pull in opposite
+ * directions. Unannotated, `Platform.select` infers NUMBER LITERAL types from
+ * the branches — `8`, `4`, `6` — and reports them as mutually incompatible,
+ * though differing is the entire point. Annotated as `UAStyle`, the indexer
+ * makes the result unspreadable, because Flow cannot tell whether an indexed
+ * key will overwrite an explicit one.
+ *
+ * Naming the three properties satisfies both: concrete enough to spread,
+ * general enough that the branches may differ. `default` has no platform
+ * colours to offer, so the colour fields are optional rather than invented.
+ */
+/*
+ * The padding here was Safari's, and it is now each platform's own.
+ *
+ * It used to be `2` and `8`, derived from Safari's user-agent style for
+ * `<button>` (`padding: 0 6px 1px`, `border: 2px outset` — content inset 8 and
+ * 2). That was a real measurement of the wrong thing: this element carries the
+ * *platform's* chrome rather than the browser's, which is a choice made and
+ * documented long before, and a browser's padding under a platform's fill is
+ * neither. The visible result was a button noticeably tighter and smaller than
+ * anything else on the device.
+ *
+ * Native takes precedence over the web where the two disagree about a control's
+ * appearance, so the numbers below come from UIKit and from the Android
+ * framework directly. The web's own values are recorded above for the record.
+ *
+ * A note that still applies: a switch track and a radio indicator are
+ * `element-checkbox` and `element-radio`, separate components taking
+ * `uaStyleFor('input')`, so this entry does not reach them. The two fixtures in
+ * `ButtonContentCentring-itest` that still model a control out of `<button>`
+ * state their own geometry, which is what a control that owns its layout does.
+ */
+/*
+ * No padding: the shadow node folds the control's own content insets onto the
+ * style (ElementButtonShadowNode). This table carried 7 and 12 for iOS, which
+ * a real `UIButtonConfiguration` does indeed report — but reporting it is the
+ * control's job, not this file's memory of it.
+ */
 type ButtonChrome = {
   fontSize?: number,
   fontWeight?: string,
@@ -113,33 +229,74 @@ type ButtonChrome = {
 };
 
 /*
- * The platform views draw `<button>`'s surface (a `UIButtonConfiguration` on
- * iOS, Material's inset pill and ripple on Android); the sheet carries what
- * the renderer draws: label typography and the minimum touch target.
- * Measured: a gray `UIButtonConfiguration` draws its label in the label
- * colour on iOS 26 although `titleColorForState:` answers `systemBlue`;
- * `Widget.Material3.Button` resolves label-large (14sp, weight 500, 0.1
- * letter spacing). `minHeight` is the touch target (HIG 44, Material 48),
- * since the box is the touch target. `textAllCaps` is not adopted: it changes
- * the text, and Chrome on Android does not uppercase `<button>` either.
+ * `<button>`'s SURFACE is no longer described here at all.
+ *
+ * The platform views draw it with the platform's own machinery — a real
+ * `UIButton` with a real `UIButtonConfiguration` hosted behind the children on
+ * iOS, the Material button construction (inset pill + ripple) on Android — so
+ * the fills, shapes, dark-mode adaptations and disabled states are UIKit's and
+ * Material's own rather than this sheet's description of them. The first
+ * CSS-described chrome drifted precisely the way a description does: its
+ * gray-button label was UIKit's pre-26 blue, its Android shape was the
+ * Material-2-era 4dp rectangle. What remains here is what the *renderer*
+ * needs: the label's typography and colours, the content inset, and the
+ * minimum touch target.
+ *
+ * MEASURED, still. iOS: a gray `UIButtonConfiguration` reports content insets
+ * 7/12 and — rendered, not just queried — draws its label in the LABEL colour
+ * on iOS 26 (`titleColorForState:` still answers `systemBlue`, and the actual
+ * pixels disagree; trust the pixels). A filled one draws white on `systemBlue`.
+ * Android: Material 3's `Widget.Material3.Button` styles resolve
+ * label-large typography (14sp, weight 500, 0.1 letter spacing), 24dp inline
+ * padding, and the two prominences' colour roles — filled is
+ * `colorPrimary`/`colorOnPrimary`, tonal is
+ * `colorSecondaryContainer`/`colorOnSecondaryContainer` — read from the
+ * material library's own resources, not the docs.
+ *
+ * `minHeight` is the accessible touch target (HIG 44, Material 48): a
+ * `<button>`'s box IS its touch target here, so the visual-height question and
+ * the touch-target question collapse into one number and it is the larger.
+ *
+ * `textAllCaps` is deliberately not adopted. It would change the element's
+ * text rather than its presentation, and Chrome on Android does not uppercase
+ * `<button>` either.
  */
 /**
- * `<input type="checkbox">`'s box is the backing control's intrinsic size: a
- * UISwitch (63x28 on iOS 26, which ignores assigned sizes) and a CheckBox's
- * 48dp touch target. `EXPElementCheckboxGeometryTests` and
- * `checkableMetrics-test.js` pin these literals to the controls.
+ * `<input type="checkbox">`'s box, stated as the size of the control that
+ * backs it — a UISwitch on iOS, a CheckBox on Android.
  *
- * The inline-end margin is the platform's label spacing. The space in
- * `<label><input/> Subscribe</label>` leaves an iOS label almost flush
- * against the switch, where system apps sit it about 8pt off; on Android the
- * touch box already carries 12dp of inset past the drawable, so the negative
- * margin gives the space back. DOM-CSS-DEVIATION(checkable-label-gap): a
- * browser adds no spacing here.
+ * The iOS numbers are the CURRENT OS's, not the famous ones: UISwitch has
+ * been 63x28 since iOS 26 (measured: `intrinsicContentSize`), after a decade
+ * at 51x31 — and a UISwitch IGNORES assigned sizes, so a sheet stating the
+ * old footprint got a control that overflowed its own layout box by 12pt and
+ * swallowed exactly this margin plus the label's space.
+ * `EXPElementCheckboxGeometryTests` (ObjC) and `checkableMetrics-test.js`
+ * pin the control's real intrinsic size to these literals so the next silent
+ * resize fails a test instead of a screenshot.
+ *
+ * The inline-end margin is the platform's own label spacing, and the two run
+ * in OPPOSITE directions from the same markup.
+ * `<label><input/> Subscribe</label>` contributes one space character: on iOS
+ * that puts the label almost flush against the switch — no HIG form does
+ * that; system apps sit labels ~8pt off a control, so the margin adds it. On
+ * Android the 48dp touch box already carries 12dp of visual inset past the
+ * 24dp drawable, and Material's spec places the label 12dp from the ICON —
+ * i.e. at the touch target's edge — so the space character pushes the label
+ * PAST the platform's position; the negative margin gives that overshoot
+ * back. DOM-CSS-DEVIATION(checkable-label-gap): a browser adds no spacing
+ * here at all; the platforms' own form conventions take precedence.
+ * Informational, not a warning.
  *
  * DOM-CSS-DEVIATION(checkable-line-centering): `vertical-align: middle`
- * rather than `baseline`. Baseline-aligning a 48dp touch target or a 28pt
- * switch drops or lifts the visible control against the words it labels;
- * Material rows and iOS Settings rows centre the control on the label line.
+ * rather than CSS's initial `baseline`. A browser's checkable is a ~13px
+ * glyph whose bottom sits ON the baseline and looks right there; these are
+ * the platform's own controls in the platform's own boxes — a 48dp Material
+ * touch target with the 24dp drawable centred in it, a 28pt switch — and
+ * baseline-aligning the BOX drops the visible control well below (iOS) or
+ * rides it high above (Android) the words it labels. Material rows and iOS
+ * Settings rows both centre the control against the label line, so the sheet
+ * says so. `middle` here is CSS's own middle (baseline + half x-height), the
+ * same maths all three engines implement for atomic inlines.
  */
 export const CHECKABLE_FOOTPRINT_BY_PLATFORM: {
   ios: {
@@ -155,7 +312,7 @@ export const CHECKABLE_FOOTPRINT_BY_PLATFORM: {
     verticalAlign: 'middle',
   },
 } = {
-  ios: {width: 63, height: 28, marginInlineEnd: 8, verticalAlign: 'middle'},
+  ios: {width: 63, height: 28, marginInlineEnd: 12, verticalAlign: 'middle'},
   android: {
     width: 48,
     height: 48,
@@ -165,13 +322,31 @@ export const CHECKABLE_FOOTPRINT_BY_PLATFORM: {
 };
 
 /**
- * `<input type="radio">`'s box is the touch target (HIG 44pt, Material 48dp),
- * with the circle centred in it at its design diameter
- * (`kEXPRadioIndicatorDiameter` in `EXPElementRadioComponentView`). Not
- * hitSlop: iOS clips it to the ancestor's bounds, and a form row is only as
- * tall as its text. The inline-end margins state the label's distance from
- * the circle rather than from the box: iOS insets the ink by 11pt, so -3
- * leaves the 8pt a system form puts between a control and its label.
+ * `<input type="radio">`'s box — the TOUCH TARGET, not the ink.
+ *
+ * A radio's circle is small by design; its tappable area must not be. iOS drew
+ * a 22pt circle in a 22pt box, so the control was exactly as tappable as it was
+ * visible — half the Human Interface Guidelines' 44pt minimum.
+ *
+ * Making the BOX 44pt fixed that and bought a second complaint: 11pt of empty
+ * target all round the ink reads as a lot of air in a stack of radios, and the
+ * control still felt small to aim at. Both are the same fact — a target is only
+ * as findable as the ink advertising it, so a 44pt box around a 22pt dot spends
+ * space without looking like it bought anything.
+ *
+ * So the two numbers are no longer one number. The box is 32pt, which is the
+ * ink plus a modest ring, and the TARGET reaches past it to 44pt through
+ * `pointInside:` (`kEXPRadioTouchTarget` in `EXPElementRadioComponentView`).
+ * Layout spends 32; a finger finds 44.
+ *
+ * hitSlop is not the mechanism: iOS clips it to the ancestor's bounds and it
+ * cannot be stated from this sheet at all. `pointInside:` has the same
+ * ancestor constraint, which is why a row holding radios states a minimum
+ * height — see RADIO_ROW in the forms demo.
+ *
+ * The inline-end margin states the LABEL's distance from the visible circle
+ * rather than from the box: iOS insets the ink (32 - 22) / 2 = 5pt, so 7 leaves
+ * 12pt between the circle and its label.
  */
 export const RADIO_FOOTPRINT_BY_PLATFORM: {
   ios: {
@@ -187,7 +362,7 @@ export const RADIO_FOOTPRINT_BY_PLATFORM: {
     verticalAlign: 'middle',
   },
 } = {
-  ios: {width: 44, height: 44, marginInlineEnd: -3, verticalAlign: 'middle'},
+  ios: {width: 32, height: 32, marginInlineEnd: 7, verticalAlign: 'middle'},
   android: {
     width: 48,
     height: 48,
@@ -215,19 +390,33 @@ export const BUTTON_CHROME_BY_PLATFORM: {
   },
 };
 
-// Exported above so `buttonMetrics-test.js` can assert both branches; each
-// runner sees only one of them
+/*
+ * Exported above rather than passed straight to `Platform.select`, so both
+ * branches can be asserted from one test. Each runner only ever sees one of
+ * them — jest is `ios`, Fantom is `android` — so a table that collapses before
+ * anything can read it leaves whichever platform the runner is not to drift
+ * unchecked. `buttonMetrics-test.js` checks both against the measurements.
+ */
 const BUTTON_CHROME: ButtonChrome = Platform.select<ButtonChrome>({
   // Spelled out rather than spread: `PlatformSelectSpec`'s properties are
-  // optional and invariantly typed, and the table's are required
+  // optional and invariantly typed, so the table — whose properties are
+  // deliberately required, that being what the test asserts — is not directly
+  // one.
   ios: BUTTON_CHROME_BY_PLATFORM.ios,
   android: BUTTON_CHROME_BY_PLATFORM.android,
   default: BUTTON_CHROME_BY_PLATFORM.default,
 });
 
-// CSS Color 4's names for the two roles; `systemColors.js` resolves them to
-// the OS tokens. The renderer draws the label, so its colour comes through
-// the sheet; the platform views draw the surfaces
+/**
+ * The label colour for a prominence, spoken in CSS system colors.
+ *
+ * `ButtonText` and `AccentColorText` are CSS Color 4's own names for exactly
+ * these two roles, and `systemColors.js` resolves each to the OS's adaptive
+ * token (`UIColor.label` / `?attr/colorOnSecondaryContainer`, white /
+ * `?attr/colorOnPrimary`). The surface colours never pass through here at
+ * all — the platform views draw the surfaces natively. The label is drawn by
+ * the renderer, so its colour has to come through the sheet.
+ */
 export function buttonLabelColor(prominent: boolean): ColorValue | void {
   return systemColor(prominent ? 'AccentColorText' : 'ButtonText');
 }
@@ -244,13 +433,23 @@ function buttonSheetEntry(): UAStyle {
     textAlign: 'center',
     alignContent: 'center',
     color: buttonLabelColor(false),
-    // No padding: ElementButtonShadowNode writes the control's content insets
-    // onto the node, since a button laid out around its children cannot carry
-    // a measure function. `minHeight` is the published touch-target minimum,
-    // which no control reports
+    /*
+     * No padding here: the shadow node folds the CONTROL's own content insets
+     * onto the style (ElementButtonShadowNode). A button laid out around its
+     * children cannot carry a Yoga measure function, so the platform's answer
+     * is written onto the node instead of measured through it — but it is
+     * still the platform's, not the 7 and 12 this table used to state.
+     *
+     * `minHeight` stays: 44 and 48 are the published touch-target minimums,
+     * not anything a control reports, so there is nothing to ask.
+     */
     minHeight: BUTTON_CHROME.minHeight,
-    // Yoga has no `min-width: auto`, so not shrinking is what keeps a tight
-    // row from wrapping the label; an author flexShrink still wins
+    // On the web a flex item's implied `min-width: auto` (its min-content)
+    // stops a shrunk button collapsing below its label. Yoga has no
+    // automatic minimum, so the flex-shrink:1 initial the elements state
+    // let a tight row wrap "Submit" onto two lines. Not shrinking is the
+    // Yoga-expressible half of CSS's floor for a control whose whole width
+    // IS its label; an author flexShrink still wins.
     flexShrink: 0,
   };
   if (BUTTON_CHROME.fontSize != null) {
@@ -266,15 +465,47 @@ function buttonSheetEntry(): UAStyle {
 }
 
 const uaStyles: {[string]: UAStyle} = {
-  // Block-level containers; `display` comes from the registration, so only
-  // the box metrics belong here.
-  //
-  // DOM-CSS-LIMITATION(paragraph-margin-shorthand-dropped): on device a
-  // `<p>` with `marginBlock: EM` gets no vertical margin, specific to this
-  // tag and below JavaScript; Fantom measures the correct gap. Writing the
-  // longhands instead restores the gap and inverts the cascade, because
-  // `applyAliasedProps` fills `Edge::Top`/`Bottom` only when undefined, so a
-  // UA longhand beats an author `marginBlock: 0`. The shorthand stays
+  // Block-level containers. `display` comes from the element's registration
+  // (they alias <div>), so only the box metrics belong here.
+  /*
+   * `<p>` uses the SHORTHAND, like every other block element here, and a
+   * previous attempt to write it as longhands was reverted. Both halves of that
+   * are load-bearing.
+   *
+   * The bug it was working around is real: with `marginBlock: EM` a paragraph
+   * gets no vertical margin on either DEVICE, so two adjacent `<p>`s sit one
+   * line apart and the space *between* paragraphs equals the line spacing
+   * *inside* one — on the most common block element in HTML.
+   * `DOM-CSS-LIMITATION(paragraph-margin-shorthand-dropped)` tracks it. Ruled
+   * out already, so nobody repeats it: not the value, the container, the
+   * position in the tree, margin support, or margin collapsing; not the style's
+   * shape (`<dl>` has the byte-identical `{marginBlock: EM}` and works, as do
+   * `<figure>`, `<blockquote>` and `<h1>`–`<h6>`); not the sheet failing to
+   * reach the element (a throwaway tag with a view config verified identical to
+   * `<p>`'s gets its margin). It is specific to this tag and below JavaScript.
+   *
+   * Writing longhands here DID restore the gap on both devices — and broke
+   * something worse, which is why it is gone.
+   *
+   * `applyAliasedProps` treats `marginBlock` as an alias WITH precedence: it
+   * sets `Edge::Vertical` unconditionally. The longhands are aliases WITHOUT
+   * precedence: they fill `Edge::Top`/`Bottom` only when those are still
+   * undefined. So a UA longhand BEATS an author shorthand — `<p style={{
+   * marginBlock: 0 }}>` sets Vertical to 0, leaves Top/Bottom undefined, and
+   * the user-agent's 16pt then fills them in. The cascade runs backwards, on
+   * the one element authors most often restyle.
+   *
+   * Two tests in `DomElementsCatalog-itest` say exactly that, and both failed:
+   * "<p> is block-level" (40 expected, 104 measured — four 16pt margins that
+   * should not have been there) and, on the nose, "an author style beats the UA
+   * default". A user-agent default that cannot be overridden is a worse defect
+   * than a missing default, so the gap goes back to being a known bug rather
+   * than being bought at that price.
+   *
+   * Fantom does not reproduce the device bug — it measures the correct gap
+   * either way — so no Fantom test can guard a fix for it. It DID catch the
+   * regression above, which is the part that matters here.
+   */
   p: {marginBlock: EM},
   blockquote: {marginBlock: EM, marginInline: 40},
   figure: {marginBlock: EM, marginInline: 40},
@@ -287,9 +518,16 @@ const uaStyles: {[string]: UAStyle} = {
     fontSizeEm: 0.8125,
     whiteSpace: 'pre',
   },
-  // DOM-CSS-DEVIATION(hr-separator-color): the platforms' separator tokens
-  // (iOS `separator`, Material `colorOutlineVariant`) rather than html.css's
-  // `border: 1px inset`; lighter than the web's line and adaptive
+  /*
+   * `<hr>` — html.css says `border: 1px inset`, a 3D border that renders as a
+   * dark line on the web (there is no system colour behind it to soften it).
+   * A thematic break drawn by the platform is a SEPARATOR, and both platforms
+   * name a token for exactly that — iOS `separator`, Material's
+   * `colorOutlineVariant` — so the sheet delegates to them, which also keeps
+   * the rule adaptive in dark mode. DOM-CSS-DEVIATION(hr-separator-color):
+   * deliberately lighter than the web's inset line; the platform's own
+   * divider idiom takes precedence. The hex fallback approximates both.
+   */
   hr: {
     marginBlock: 8,
     borderTopWidth: 1,
@@ -303,9 +541,23 @@ const uaStyles: {[string]: UAStyle} = {
     }),
   },
 
-  // Headings, as html.css gives them. The margins are `spec figure × own
-  // font-size` because `em` in a margin resolves against the element's own
-  // font-size, not the root's
+  /*
+   * Headings: bold, with sizes and margins that shrink together down the scale.
+   * h1 is 2em down to h6 at 0.67em, and the margins move the other way.
+   *
+   * The margins are written as two factors on purpose. `html.css` gives them in
+   * `em`, and `em` in a margin resolves against **the element's own font-size**
+   * — which for a heading is not the root size. Multiplying the spec's figure
+   * by a fixed root EM gets h4 right by luck (h4 is 1em) and everything else
+   * wrong in both directions at once: h1 and h2 come out at roughly half the
+   * margin they should have, while h6 comes out about 50% too large. On screen
+   * that reads as an h1 sitting too close to what precedes it and the small
+   * headings drifting apart, which looks like a margin-collapsing fault and is
+   * not one.
+   *
+   * Left as `spec figure × own font-size` rather than folded into a single
+   * constant so the derivation stays checkable against the spec.
+   */
   h1: {fontSize: 2 * EM, fontWeight: 'bold', marginBlock: 0.67 * (2 * EM)},
   h2: {fontSize: 1.5 * EM, fontWeight: 'bold', marginBlock: 0.83 * (1.5 * EM)},
   h3: {fontSize: 1.17 * EM, fontWeight: 'bold', marginBlock: 1.0 * (1.17 * EM)},
@@ -321,21 +573,39 @@ const uaStyles: {[string]: UAStyle} = {
     marginBlock: 2.33 * (0.67 * EM),
   },
 
-  // The 40pt inline-start padding is the gutter an `outside` marker hangs in
-  // (css-lists-3 §3). <form>'s 1em block-end margin is a quirks-mode rule,
-  // DOM-CSS-LIMITATION(no-quirks-mode)
+  // Lists. The 40pt inline-start padding is the gutter an `outside` marker
+  // hangs in, which is where the list container generates them (css-lists-3
+  // §3); `<li>` needs no rule of its own here.
+  // Form containers. <form> is block-level with no box metrics of its own in
+  // standards mode (the 1em block-end margin is a quirks-mode rule, and there
+  // is no quirks mode here — DOM-CSS-LIMITATION(no-quirks-mode)).
   form: {},
   /*
-   * <fieldset> is the platform's group surface: an inset-grouped section on
-   * iOS, an outlined card on Material. DOM-CSS-LIMITATION(no-groove-border):
-   * the web's `border: groove 2px ThreeDFace` has no analogue.
-   * DOM-CSS-DEVIATION(fieldset-native-surface): the platform's metrics rather
-   * than html.css's, which are tuned around 13px controls.
+   * <fieldset> is drawn as the platform's GROUP SURFACE, not as html.css's
+   * box. The web's `border: groove 2px ThreeDFace` has no analogue here
+   * (DOM-CSS-LIMITATION(no-groove-border)), and its `0.35em/0.625em` block
+   * padding — tuned around 13px web controls — reads cramped wrapped around
+   * a 44pt switch or a 56dp field. What a native form puts around a group of
+   * related controls is a rounded outlined surface with real breathing room:
+   * an inset-grouped section on iOS (10pt radius; hairline in `separator`),
+   * an outlined card on Material (12dp radius; `colorOutlineVariant`, 16dp
+   * padding). DOM-CSS-DEVIATION(fieldset-native-surface): the platform's
+   * group idiom takes precedence over html.css's metrics; the legend sits
+   * above the surface (see `legend`).
    */
   fieldset: {
     marginInline: 2,
-    // The grouped page colour, so a radio list's card
-    // (`secondarySystemGroupedBackground`) contrasts against it as in Settings
+    /*
+     * The GROUPED page colour, which is what makes the surface readable.
+     *
+     * A run of radios inside a fieldset draws as the platform's inset-grouped
+     * list, and that list's card is `secondarySystemGroupedBackground` —
+     * white in light mode. With no fill here the card sat on the page's own
+     * white and the rows had nothing to sit on: an outline around some text.
+     * The platforms answer this with the PAGE, not with more edges, so the
+     * fieldset takes the page colour and the list card contrasts against it,
+     * exactly as a grouped section does in Settings.
+     */
     backgroundColor: Platform.select<ColorValue>({
       ios: PlatformColor('systemGroupedBackground'),
       android: PlatformColor(
@@ -357,9 +627,10 @@ const uaStyles: {[string]: UAStyle} = {
     paddingBlock: Platform.select<number>({ios: 12, android: 16, default: 12}),
     paddingInline: 16,
   },
-  // Fieldset.js hoists the legend above the box,
-  // DOM-CSS-DEVIATION(fieldset-legend-position); the block-end margin is the
-  // platforms' label-to-surface gap
+  // The legend renders ABOVE the fieldset's box (Fieldset.js hoists it —
+  // DOM-CSS-DEVIATION(fieldset-legend-position)); the block-end margin is the
+  // platforms' label-to-surface gap, the role html.css's border-notch layout
+  // plays on the web.
   legend: {paddingInline: 2, marginBlockEnd: 6},
 
   // <address> is block-level AND italic; both come from html.css.
@@ -367,30 +638,87 @@ const uaStyles: {[string]: UAStyle} = {
   // <menu> is a list: the HTML Standard groups it with dir/ol/ul for margins
   // and with dir/ul for the disc marker.
   menu: {marginBlock: EM, paddingInlineStart: 40, listStyleType: 'disc'},
-  // Scripting is always enabled, so `@media (scripting) { noscript { display:
-  // none } }` is unconditional
+  // Scripting is always enabled here, so <noscript> content never renders —
+  // `@media (scripting) { noscript { display: none !important } }`. There is no
+  // no-scripting mode to fall back to, so this is unconditional.
   noscript: {display: 'none'},
   ul: {marginBlock: EM, paddingInlineStart: 40},
   ol: {marginBlock: EM, paddingInlineStart: 40},
   dl: {marginBlock: EM},
   dd: {marginInlineStart: 40},
 
-  // Form controls are `display: inline-block`, a box that takes padding while
-  // sitting in a line of text. Browsers centre a button's content on both
-  // axes: `text-align` for the inline axis, `align-content` for the block
-  // (css-align-3 §5.3). Not `justify-content`, so a button an author made a
-  // flex container keeps its own alignment.
+  // Form controls. Browsers give <button> `display: inline-block`, which is
+  // what makes it a box that takes padding while still sitting in a line of
+  // text. Without it a <button> is a span-like inline element and its padding
+  // has nowhere to apply.
   //
-  // `<button>` states `color`: in Chrome `<div style="color:red"><button>`
-  // computes black, since a form control states its own text colour
+  // Browsers centre a button's content on BOTH axes — which is why a radio's
+  // dot and a checkbox's tick sit in the middle of their box on the web
+  // without the markup saying anything about alignment. `text-align` does the
+  // inline axis; `align-content` does the block one (css-align-3 §5.3 applies
+  // it to block containers, where a block container's contents are a single
+  // alignment subject).
+  //
+  // Neither reaches for `justify-content`, and that matters: a button whose
+  // author made it a flex container keeps its own alignment. Centring with
+  // `justify-content` here is what once centred the sliding thumb inside a
+  // switch track — an `inline-flex` button whose thumb's whole job is to sit
+  // at one end.
+  /*
+   * `<button>` — a real platform button's chrome, not a browser's.
+   *
+   * It carried layout only, so it drew as bare text: indistinguishable from a
+   * label, with nothing for the press state to change. The press tracking was
+   * already live — the component reports `:active` continuously and RNTester
+   * enables `enableNativeGestureRecognizers` natively on both platforms — so
+   * the missing feedback was only ever a missing surface to paint.
+   *
+   * Native takes precedence over the web here. A browser draws
+   * `background: ButtonFace; border: 2px outset; padding: 1px 6px`, which looks
+   * like nothing on either platform. These are the platforms' own: the
+   * bordered/tinted button on iOS, the same construction `<select>` uses, and a
+   * filled button on Android.
+   *
+   * `color` belongs here and is NOT the inheritance bug: verified in Chrome,
+   * `<div style="color:red"><button>` computes BLACK — a form control states its
+   * own text colour while a presentational inline inherits. `backgroundColor`
+   * is not an inherited property at all. See [[ua-colour-broke-inheritance]].
+   *
+   * Padding IS declared, via `BUTTON_INSET` — see the measurement there.
+   *
+   * Only the SURFACE is platform chrome — fill, radius, tint. Geometry is left
+   * exactly as it was, because `<button>` is also the box a switch track and a
+   * radio indicator are built from, and padding moved their contents. Measured
+   * in Chrome, a browser's own `padding: 1px 6px` puts a switch thumb at
+   * left 8 (ours: 8 with padding, 2 without) and a 16pt indicator's dot at
+   * left 7 (ours: 3 either way) — so the two cases do not agree about what
+   * following the browser would even mean here.
+   *
+   * The geometry note below is kept because it is the evidence, and because it
+   * still bounds what "follow the browser" can mean here: measured in Chrome, a
+   * browser's `padding: 1px 6px` puts a switch thumb at left 8 and a 16pt
+   * indicator's dot at left 7, so the two constructions never agreed about what
+   * following the browser would produce. The resolution was to stop treating
+   * them as the same question — the controls are their own components now.
+   */
   button: buttonSheetEntry(),
 
-  // <img> is an inline replaced element. Stated here rather than through the
-  // shadow node's `InlineReplaced` trait because only some backings declare
-  // the trait; expo-image's does not
+  // <img> is an inline REPLACED element: inline-level on the outside, with
+  // contents the layout never lays out. `inline-block` is how that outer box
+  // type is spelled here, the same as <button> above.
+  //
+  // Stating it in the UA sheet matters rather than leaning on the shadow node's
+  // `InlineReplaced` trait, because only *some* backings declare that trait.
+  // The framework's own image shadow node does; an autolinked one — expo-image,
+  // which `<img>` resolves to whenever the Expo runtime is present — does not,
+  // and a plain view shadow node has no way to say "I am replaced". So an
+  // <img> silently became a block-level flex child and took a line of its own,
+  // breaking the sentence it was meant to sit inside. A UA declaration is the
+  // one place that reaches every backing, which is where the box type belongs.
   img: {display: 'inline-block'},
 
-  // Inline presentational
+  // Inline presentational. <b>/<i>/<u> are here rather than baked into their
+  // C++ props classes, so a default lives in exactly one place.
   b: {fontWeight: 'bold'},
   i: {fontStyle: 'italic'},
   u: {textDecorationLine: 'underline'},
@@ -398,14 +726,38 @@ const uaStyles: {[string]: UAStyle} = {
   em: {fontStyle: 'italic'},
   cite: {fontStyle: 'italic'},
   dfn: {fontStyle: 'italic'},
+  // `<var>` is italic in every browser's user-agent sheet and was the one
+  // member of the italic set we had missed — found by measuring Chrome rather
+  // than by reading, because upright text next to <code> and <samp> looks
+  // deliberate.
   var: {fontStyle: 'italic'},
-  // Safari's computed `text-decoration: underline dotted`, drawn by the text
-  // stack so it follows the text through wrapping. Browsers scope it to
-  // `abbr[title]`; there is no attribute selector here, so it is unconditional
+  /*
+   * `<abbr>` gets the dotted underline browsers give it — the affordance that
+   * says "this is an abbreviation with an expansion", read off Safari's
+   * computed style (`text-decoration: underline dotted`) rather than assumed.
+   *
+   * It is drawn by each platform's own text stack, not by a border: CoreText's
+   * `NSUnderlineStyleSingle | NSUnderlinePatternDot` on iOS and Android's
+   * dotted decoration path, both of which already exist here for
+   * `text-decoration-style` and both of which follow the text through wrapping.
+   * A border cannot do that — it would box the element rather than underline
+   * its lines.
+   *
+   * Browsers scope this to `abbr[title]`, on the reasoning that the affordance
+   * promises an expansion. There is no attribute selector here, and `title`
+   * does not reach the native side yet (see *Not built yet*), so it is
+   * unconditional: an `<abbr>` is an abbreviation whether or not the expansion
+   * is currently carried, and the alternative is drawing nothing at all.
+   */
   abbr: {textDecorationLine: 'underline', textDecorationStyle: 'dotted'},
   small: {fontSizeEm: 0.8333},
-  // Every browser renders monospace at 13px on a 16px root, since a monospace
-  // face reads larger than proportional text at the same nominal size
+  /*
+   * Monospace text is also SMALLER — `13px` against a 16px root, which every
+   * browser applies and which measuring Chrome is the only way to discover.
+   * The reason is optical rather than arbitrary: a monospace face at the same
+   * nominal size reads noticeably larger than the surrounding proportional
+   * text, so `<code>` in a sentence looked oversized next to it.
+   */
   code: {fontFamily: MONOSPACE, fontSizeEm: 0.8125},
   kbd: {fontFamily: MONOSPACE, fontSizeEm: 0.8125},
   samp: {fontFamily: MONOSPACE, fontSizeEm: 0.8125},
@@ -413,28 +765,66 @@ const uaStyles: {[string]: UAStyle} = {
   del: {textDecorationLine: 'line-through'},
   ins: {textDecorationLine: 'underline'},
   mark: {backgroundColor: '#ffff00', color: '#000000'},
-  // Chrome computes `font-size: 13.3333px` on a 16px root, the same `smaller`
-  // ratio `<small>` uses
+  /*
+   * `<sup>` and `<sub>` — verified against Chrome, which computes
+   * `vertical-align: super`/`sub` at `font-size: 13.3333px` on a 16px root.
+   * That is `smaller`, the same 0.83 ratio `<small>` uses.
+   *
+   * They had NO user-agent style at all, so both rendered as ordinary text and
+   * the elements did nothing visible — registered, inherited from, and inert.
+   */
   sup: {fontSizeEm: 0.8333, verticalAlign: 'super'},
   sub: {fontSizeEm: 0.8333, verticalAlign: 'sub'},
 };
 
-// CSS initial values that differ from React Native's defaults, applied to
-// registered elements only; a `<View>` keeps RN's own
+/**
+ * CSS initial values that differ from React Native's defaults.
+ *
+ * The web applies these to every element before any stylesheet runs, so they
+ * belong to the elements rather than to the components backing them — which is
+ * exactly why they live here and not in `View`. A react-native `<View>` or
+ * `<ScrollView>` keeps RN's own defaults; only registered HTML intrinsics get
+ * these.
+ */
 const INITIAL_VALUES: {[string]: unknown} = {
-  // No `color`: a declaration on every element would outrank the inherited
-  // value, so `<div style={{color: 'red'}}>` would draw its `<b>` in the canvas
-  // colour. The renderer's initial colour is CanvasText instead.
-  // `flex-direction`'s initial value is `row` (css-flexbox-1 §5.1); a block
-  // container ignores it
+  /*
+   * `color` is NOT here, and must not be.
+   *
+   * `INITIAL_VALUES` is applied to every element, so a `color` here would give
+   * each element its OWN colour declaration, which outranks the value it
+   * should inherit: a `<div style={{color:'red'}}>` would draw its `<b>` and
+   * `<small>` children in the canvas colour instead of red.
+   *
+   * Browsers state `color` once, on the root, and let the cascade carry it. An
+   * element here can be mounted anywhere, so there is no such root to write it
+   * on: the platform-themed default is the renderer's initial colour instead —
+   * CanvasText, which each platform resolves where it draws.
+   */
+  // `flex-direction`'s initial value is `row` (css-flexbox-1 §5.1); React
+  // Native defaults to `column`. On the web this only takes effect on a flex
+  // container, and the same holds here: a block container lays out through
+  // Yoga's block display, which ignores it.
   flexDirection: 'row',
-  // `flex-shrink`'s initial value is 1 (css-flexbox-1 §7.3), so a flex item
-  // yields and wraps where React Native's 0 would clip it at the row's edge
+  // `flex-shrink`'s initial value is 1 (css-flexbox-1 §7.3); React Native
+  // defaults to 0. On the web a flex item yields when the row runs out of
+  // room; an RN item overflows instead — which is how a `<label>` beside a
+  // checkbox in a flex row CLIPPED its text at the row's edge where a
+  // browser wraps it. Like flexDirection above, it only means anything when
+  // the element is actually a flex item.
   flexShrink: 1,
 };
 
-// Returns the same object each time and seeds it in place: view configs
-// capture it by reference and `overrideUAStyle` mutates it
+/**
+ * The UA style for `tag`, including the initial values above.
+ *
+ * Returns the SAME object each time and seeds it in place rather than building
+ * a merged copy, because view configs capture this object by reference when
+ * the element is registered — `overrideUAStyle` depends on that, and a fresh
+ * object here would silently stop later overrides from being seen.
+ *
+ * A per-tag declaration wins: the table below is a more specific origin than
+ * an initial value, so `in` rather than a blind assignment.
+ */
 export function uaStyleFor(tag: string): UAStyle {
   let style: UAStyle = uaStyles[tag];
   if (style == null) {
