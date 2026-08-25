@@ -94,7 +94,7 @@ constructor(
     }
 
     UiThreadUtil.runOnUiThread {
-      val activity = currentActivity
+      val activity = reactApplicationContext.currentActivity
       if (activity is AppCompatActivity) {
         activity.delegate.localNightMode = nightMode
       } else {
