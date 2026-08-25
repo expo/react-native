@@ -208,6 +208,8 @@ rather than going quiet.
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `heading-margins-follow-the-web-ladder` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
+- `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
