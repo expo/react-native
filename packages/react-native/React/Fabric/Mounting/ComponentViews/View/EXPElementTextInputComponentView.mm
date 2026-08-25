@@ -88,8 +88,44 @@ using namespace facebook::react;
     return;
   }
   _nativeEventCount++;
-  std::static_pointer_cast<const ElementTextInputEventEmitter>(_eventEmitter)
-      ->onElementInput(RCTStringFromNSString(_textField.text), (int)_nativeEventCount);
+  auto emitter = std::static_pointer_cast<const ElementTextInputEventEmitter>(_eventEmitter);
+  const auto text = RCTStringFromNSString(_textField.text);
+  const auto count = (int)_nativeEventCount;
+
+  /*
+   * A CONTROLLED field reports its edit synchronously; an uncontrolled one does
+   * not. The difference is a frame.
+   *
+   * This runs inside UIKit's own editing-changed handling, so the run loop has
+   * not committed the frame yet. Dispatched the ordinary way, the event is
+   * queued and JavaScript answers on a later tick: React re-renders, the clamped
+   * `value` comes back down, and the view corrects itself — but the frame
+   * carrying the UNCLAMPED text has already been drawn. That is the flash of a
+   * character that should never have appeared, and no amount of speed on the
+   * JavaScript side removes it, because the race is against a frame that is
+   * already scheduled.
+   *
+   * Dispatching synchronously closes it: the handler, React's render, the
+   * commit and the write-back all happen while this call is still on the stack,
+   * so the only text ever presented is the text the author's state agreed to.
+   * It is the same shape as the web — a browser lets the character reach the
+   * DOM and restores it before paint, in one turn — and the same trade the
+   * `beforeinput` path above makes, for the same reason.
+   *
+   * Only when controlled. An uncontrolled field has no value to write back, so
+   * there is nothing to be late for, and it keeps the asynchronous path rather
+   * than paying a blocked thread per keystroke for nothing.
+   */
+  if (props.hasValue) {
+    if (emitter->experimental_dispatchSyncNow([&emitter, &text, count]() {
+          emitter->onElementInput(text, count);
+        })) {
+      return;
+    }
+    // No dispatcher: fall through and report it the ordinary way rather than
+    // dropping the edit.
+  }
+  emitter->onElementInput(text, count);
 }
 
 #pragma mark - UITextFieldDelegate

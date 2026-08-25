@@ -409,13 +409,18 @@ function ControlledInputs() {
     <Screen
       intro={
         'A controlled input needs the value to be decided before anything is ' +
-        'drawn. onBeforeInput is dispatched synchronously — on ' +
-        'shouldChangeCharactersInRange on iOS and an InputFilter on Android — so ' +
-        'the transform is invisible rather than corrected a frame later.'
+        'drawn, and both paths here are synchronous so that it is. ' +
+        'onBeforeInput is asked on each platform’s own pre-commit hook — ' +
+        'shouldChangeCharactersInRange on iOS, an InputFilter on Android — so a ' +
+        'refused or substituted character never reaches the control. A plain ' +
+        'value prop lets the character land, but a controlled field reports the ' +
+        'edit synchronously, so the handler, the re-render and the write-back ' +
+        'all finish before the frame is drawn. Neither shows a character that ' +
+        'is corrected a frame later.'
       }>
       <Case
         title="onBeforeInput + setValue — uppercase as you type"
-        note="No flicker: the lowercase character is never applied, so it is never drawn. Compare with a value-prop round trip, which shows the rejected character for one frame."
+        note="The lowercase character is never applied, so it is never drawn — the edit is refused before the control commits it. The value-prop case below reaches the same result from the other side: the character lands, but the write-back happens in the same frame, so nothing intermediate is presented either."
         readout={`value: ${JSON.stringify(upper)}`}>
         <input
           placeholder="Type lowercase"
@@ -437,7 +442,7 @@ function ControlledInputs() {
 
       <Case
         title="Controlled the ordinary way — a value prop"
-        note="This is how React controls an input on the web too: let the character land, run the handler, write the prop back. Rejecting a character is simply not changing the state. Nothing here needs preventDefault."
+        note="This is how React controls an input on the web too: let the character land, run the handler, write the prop back. Rejecting a character is simply not changing the state, and nothing here needs preventDefault. A controlled field reports its edit synchronously so that whole round trip finishes before the frame is drawn — the same reason a browser can restore the DOM value before paint."
         readout={`value: ${JSON.stringify(capped)}`}>
         <input
           value={capped}
