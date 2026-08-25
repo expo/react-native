@@ -223,6 +223,10 @@ const validAttributesForNonEventProps = {
   // `white-space`: inherited like the rest of this group, and the reason a
   // <pre> keeps its newlines and space runs.
   whiteSpace: true,
+  // The platform's own name for the text's ROLE, from which the platform
+  // supplies the font. Inherited with the rest of this group: the role is set
+  // on the element and the text inside it is a run that has to receive it.
+  dynamicTypeRamp: true,
   // `transition` (css-transitions-1). Delivered as the four longhands and
   // zipped in the renderer, which is also where the animation runs — these
   // never reach JavaScript again once set.

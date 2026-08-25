@@ -138,6 +138,37 @@ const MONOSPACE: string = Platform.select({
 export type UAStyle = {[string]: unknown};
 
 /**
+ * One heading level's type, from the platform where the platform has an answer.
+ *
+ * `role` is the platform's own name for the text — what `[UIFont
+ * preferredFontForTextStyle:]` is asked, and what supplies the size, the
+ * weight and the leading together. `webScale` is the browser's `em` multiple
+ * for the same level, used where no role can be resolved.
+ *
+ * `statedWeight` is for the two levels the platform's scale runs out on. iOS
+ * has four roles above body text and HTML has six, so h5 and h6 land on
+ * Subheadline and Footnote — secondary-text roles, delivered regular — and a
+ * heading that renders at a secondary weight stops reading as a heading. A
+ * stated weight is a design decision. A stated SIZE would be a copied metric,
+ * which is the thing this exists to avoid.
+ */
+function headingType(
+  role: string,
+  webScale: number,
+  statedWeight?: string,
+): {[string]: unknown} {
+  if (Platform.OS === 'ios') {
+    return statedWeight != null
+      ? {dynamicTypeRamp: role, fontWeight: statedWeight}
+      : {dynamicTypeRamp: role};
+  }
+  // Android resolves a Material text appearance from the theme; until that
+  // half exists, the web's ladder stands rather than a table of Material's
+  // numbers copied into this file.
+  return {fontSize: webScale * EM, fontWeight: 'bold'};
+}
+
+/**
  * The root font size, in points — what `1em` means in this stylesheet.
  *
  * A browser's root is 16px. This one is the platform's own body text size, and
@@ -583,8 +614,46 @@ const uaStyles: {[string]: UAStyle} = {
   },
 
   /*
-   * Headings: bold, with sizes and margins that shrink together down the scale.
-   * h1 is 2em down to h6 at 0.67em, and the margins move the other way.
+   * Headings.
+   *
+   * On iOS the SIZE AND WEIGHT ARE THE PLATFORM'S. Each level names a text
+   * ROLE — `title1`, `headline` — and `[UIFont preferredFontForTextStyle:]`
+   * answers with a whole font: the size, the weight, the leading, and whatever
+   * else Apple attaches to that role later. Stating 28pt semibold here instead
+   * would be copying today's answer, and copied answers go stale silently.
+   *
+   * It also fixes something a size cannot. The platform's Dynamic Type curve is
+   * COMPRESSIVE — measured on iOS 26.5, Body goes 17 -> 53 at the largest
+   * accessibility size (x3.1) while Large Title goes 34 -> 60 (x1.76), so the
+   * scale converges as text grows. A fixed size scaled by one multiplier
+   * diverges from that: a 34pt heading would reach about 106pt where the
+   * platform stops at 60. Naming the role hands the curve to `UIFontMetrics`,
+   * which IS the curve.
+   *
+   * The mapping is not the web's ladder, because iOS does not have one. Its
+   * scale is a set of ROLES, and only four of them sit above body text —
+   * Title 1, 2, 3 and Headline — against HTML's six levels. So h1-h4 take those
+   * four, and h5/h6 fall to Subheadline and Footnote, which are secondary-text
+   * roles rather than headings.
+   *
+   * Weight at the BOTTOM of the scale, which is the platform's own shape and
+   * the inverse of the web's. iOS keeps every Title regular and reserves
+   * semibold for Headline; Material likewise is regular through Display,
+   * Headline and Title Large, and medium only at Title Medium/Small. So h4
+   * takes the platform's semibold as given, and h5/h6 STATE a weight — the one
+   * deliberate departure here, because at Subheadline and Footnote sizes a
+   * regular weight stops reading as a heading at all. A stated weight is a
+   * design decision; a stated size would be a copied metric.
+   *
+   * DOM-CSS-DEVIATION(headings-use-the-platform-type-scale)
+   *
+   * DOM-CSS-LIMITATION(heading-margins-follow-the-web-ladder): the margins
+   * below are still `spec figure x the WEB ladder's size`, because `em` in a
+   * margin resolves against the element's own font-size and this file no longer
+   * knows what that is on iOS — the platform decides it after layout has been
+   * described. The proportions therefore hold against 2em/1.5em/... rather than
+   * against Title 1/Title 2/..., which leaves an h1's margin a few points
+   * generous. Fixing it properly means resolving the margin natively too.
    *
    * The margins are written as two factors on purpose. `html.css` gives them in
    * `em`, and `em` in a margin resolves against **the element's own font-size**
@@ -599,18 +668,16 @@ const uaStyles: {[string]: UAStyle} = {
    * Left as `spec figure × own font-size` rather than folded into a single
    * constant so the derivation stays checkable against the spec.
    */
-  h1: {fontSize: 2 * EM, fontWeight: 'bold', marginBlock: 0.67 * (2 * EM)},
-  h2: {fontSize: 1.5 * EM, fontWeight: 'bold', marginBlock: 0.83 * (1.5 * EM)},
-  h3: {fontSize: 1.17 * EM, fontWeight: 'bold', marginBlock: 1.0 * (1.17 * EM)},
-  h4: {fontSize: EM, fontWeight: 'bold', marginBlock: 1.33 * EM},
+  h1: {...headingType('title1', 2), marginBlock: 0.67 * (2 * EM)},
+  h2: {...headingType('title2', 1.5), marginBlock: 0.83 * (1.5 * EM)},
+  h3: {...headingType('title3', 1.17), marginBlock: 1.0 * (1.17 * EM)},
+  h4: {...headingType('headline', 1), marginBlock: 1.33 * EM},
   h5: {
-    fontSize: 0.83 * EM,
-    fontWeight: 'bold',
+    ...headingType('subheadline', 0.83, '600'),
     marginBlock: 1.67 * (0.83 * EM),
   },
   h6: {
-    fontSize: 0.67 * EM,
-    fontWeight: 'bold',
+    ...headingType('footnote', 0.67, '600'),
     marginBlock: 2.33 * (0.67 * EM),
   },
 
