@@ -222,12 +222,27 @@ function Input(props: InputProps): React.Node {
   // (the overwhelming case) would produce anyway.
   useFormControl({name: isButton ? '' : name, getValue, reset});
 
+  /*
+   * The echo half of the controlled-input handshake: the view refuses to write an
+   * incoming `value` while its own edit count is ahead of this one, so the count
+   * has to come back or every controlled write is skipped. State rather than a
+   * ref, because a handler that clamps (`slice(0, 10)`) sets the same string once
+   * the cap is hit and `useState` bails out; the count rises on every edit and so
+   * carries the author's unchanged `value` back down.
+   */
+  const [mostRecentEventCount, setMostRecentEventCount] = React.useState(0);
+
   const handleInput = React.useCallback(
     (event: $FlowFixMe) => {
       if (event?.nativeEvent?.value !== undefined) {
         latest.current = event.nativeEvent.value;
       }
       onInput?.(event);
+      // After the author's handler, which may set the state this carries down
+      const count = event?.nativeEvent?.eventCount;
+      if (typeof count === 'number') {
+        setMostRecentEventCount(count);
+      }
     },
     [onInput],
   );
@@ -336,6 +351,7 @@ function Input(props: InputProps): React.Node {
         }
         spellCheck={resolvedSpellCheck}
         autoCorrect={resolvedAutoCorrect}
+        mostRecentEventCount={mostRecentEventCount}
         hasBeforeInput={onBeforeInput != null}
         onBeforeInput={onBeforeInput}
         onInput={handleInput}
