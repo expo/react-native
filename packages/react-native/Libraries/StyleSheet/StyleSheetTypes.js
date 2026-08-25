@@ -1049,6 +1049,43 @@ export type ____ViewStyle_InternalBase = Readonly<{
    */
   whiteSpace?:
     'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',
+
+  /**
+   * The platform's own name for this text's ROLE, from which the platform
+   * supplies the font.
+   *
+   * Not a size and not a weight, which is the point. `title1` or `headline` is
+   * a question the OS answers with a whole font — size, weight, family and
+   * leading together, and whatever else it attaches to that role in a later
+   * release. A stylesheet that states 28pt semibold instead is copying today's
+   * answer and will keep giving it after the platform has moved on.
+   *
+   * It supplies only what nothing else has decided: an explicit `fontSize` or
+   * `fontWeight` still wins, so this is the initial value rather than an
+   * override. Inherited like the other text properties here — the role belongs
+   * to the element, and the text inside it is a run that has to receive it.
+   *
+   * ONE key for both platforms, resolved differently on each: iOS asks
+   * `preferredFontForTextStyle:` for the same name, and Android maps it onto
+   * Material's scale and asks the app's theme. The vocabulary is iOS's because
+   * it is React Native's existing `dynamicTypeRamp`; the mapping to Material
+   * lives on the Android side, where the two scales differ.
+   *
+   * A host that cannot resolve a role — a test host with neither UIKit nor an
+   * Android theme — leaves the text at whatever else decided its size.
+   */
+  dynamicTypeRamp?:
+    | 'caption2'
+    | 'caption1'
+    | 'footnote'
+    | 'subheadline'
+    | 'callout'
+    | 'body'
+    | 'headline'
+    | 'title3'
+    | 'title2'
+    | 'title1'
+    | 'largeTitle',
 }>;
 
 export type ____ViewStyle_InternalCore = Readonly<{

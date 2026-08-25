@@ -195,6 +195,15 @@ BaseViewProps::BaseViewProps(
                     sourceProps.inheritedTextTransform,
                     {})
               : sourceProps.inheritedTextTransform),
+      inheritedDynamicTypeRamp(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "dynamicTypeRamp",
+                    sourceProps.inheritedDynamicTypeRamp,
+                    {})
+              : sourceProps.inheritedDynamicTypeRamp),
       inheritedWhiteSpace(
           parseInheritedTextProps && stringChildrenEnabled
               ? convertRawProp(
@@ -579,7 +588,7 @@ bool BaseViewProps::computeHasInheritedTextProps() const {
       inheritedFontStyle.has_value() || inheritedFontVariant.has_value() ||
       !std::isnan(inheritedLetterSpacing) || !std::isnan(inheritedLineHeight) ||
       inheritedTextAlign.has_value() || inheritedTextTransform.has_value() ||
-      inheritedWhiteSpace.has_value();
+      inheritedWhiteSpace.has_value() || inheritedDynamicTypeRamp.has_value();
 }
 
 // Sets an inheritable text prop, as the constructor does only when
@@ -631,6 +640,7 @@ void BaseViewProps::setProp(
     INHERITED_TEXT_PROP_SET_CASE(inheritedTextAlign, "textAlign");
     INHERITED_TEXT_PROP_SET_CASE(inheritedTextTransform, "textTransform");
     INHERITED_TEXT_PROP_SET_CASE(inheritedWhiteSpace, "whiteSpace");
+    INHERITED_TEXT_PROP_SET_CASE(inheritedDynamicTypeRamp, "dynamicTypeRamp");
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundImage);
     RAW_SET_PROP_SWITCH_CASE(backgroundImage, "experimental_backgroundImage");
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundSize);
@@ -891,6 +901,34 @@ void BaseViewProps::applyInheritedTextAttributes(
   }
   if (inheritedTextAlign) {
     textAttributes.alignment = inheritedTextAlign;
+  }
+  if (inheritedDynamicTypeRamp) {
+    textAttributes.dynamicTypeRamp = inheritedDynamicTypeRamp;
+    /*
+     * A role supplies the size and the weight, so it has to CLEAR what it
+     * supersedes — but only where this element stated neither.
+     *
+     * There is no such thing as an unsized run to fall through to. The
+     * cascade is seeded with the platform's default text attributes, so
+     * `fontSize` arrives already carrying the body size and `weight` may
+     * carry an ancestor's. A platform role that only filled in blanks would
+     * therefore never fill anything, which is exactly how this first behaved:
+     * every heading rendered at body size while faithfully carrying a role
+     * nothing consulted.
+     *
+     * Clearing them is also the correct cascade. A role stated on THIS element
+     * is a user-agent declaration on the element, and a declaration beats an
+     * inherited value — `font-size: 2em` on `h1` wins over a size cascaded in
+     * from a `<div>` above it. What it must not beat is an explicit size or
+     * weight on the element itself, which is why each is guarded by whether
+     * this element stated one.
+     */
+    if (std::isnan(inheritedFontSize)) {
+      textAttributes.fontSize = std::numeric_limits<Float>::quiet_NaN();
+    }
+    if (!inheritedFontWeight.has_value()) {
+      textAttributes.fontWeight.reset();
+    }
   }
   if (inheritedTextTransform) {
     textAttributes.textTransform = inheritedTextTransform;
