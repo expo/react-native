@@ -81,10 +81,43 @@ const READOUT = {
  * the platform's own group idiom (DOM-CSS-DEVIATION(fieldset-native-surface))
  * and is left alone here.
  */
+/*
+ * `flexWrap` because these rows have to survive Dynamic Type.
+ *
+ * Every label and control here grows with the user's text size, and a row of
+ * three buttons that fits at the default size runs past the screen at an
+ * accessibility size — where it was reported as the last button being clipped.
+ * A button cannot shrink below its own label (that floor is deliberate), so
+ * the row is what has to give: wrapping reflows it instead of pushing content
+ * out of the card. `rowGap` then keeps wrapped lines apart, which a single
+ * `gap` would otherwise have to do for both axes at once.
+ */
 const ROW = {
   flexDirection: 'row',
   alignItems: 'center',
-  gap: 14,
+  flexWrap: 'wrap',
+  columnGap: 14,
+  rowGap: 8,
+  marginBottom: 14,
+};
+
+/*
+ * The row for a control that already carries its own label spacing.
+ *
+ * The user-agent sheet gives a checkable an inline-end margin — 8pt on iOS,
+ * because a system form sits a label about that far off a switch and the
+ * single space character of `<label><input/> text</label>` does not. In a flex
+ * row an explicit `gap` ADDS to that margin rather than replacing it, so these
+ * rows were spacing their labels twice: 8 + 14 = 22pt measured on the
+ * simulator, against the ~8pt an iOS Settings row uses. The platform's number
+ * is the right one, so this row contributes nothing of its own.
+ */
+const CONTROL_ROW = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  columnGap: 0,
+  rowGap: 8,
   marginBottom: 14,
 };
 
@@ -435,7 +468,7 @@ function Checkables() {
         'there is a UISwitch. Both still announce as what they are.'
       }>
       <Case title="Controlled checkbox" readout={`checked: ${String(checked)}`}>
-        <View style={ROW}>
+        <View style={CONTROL_ROW}>
           <input
             type="checkbox"
             checked={checked}
@@ -448,18 +481,18 @@ function Checkables() {
       <Case
         title="Uncontrolled checkbox — defaultChecked"
         note="Tracked in state internally so what is drawn and what would be submitted cannot drift apart.">
-        <View style={ROW}>
+        <View style={CONTROL_ROW}>
           <input type="checkbox" defaultChecked />
           <Text style={CONTROL_LABEL}>Checked to begin with</Text>
         </View>
       </Case>
 
       <Case title="disabled">
-        <View style={ROW}>
+        <View style={CONTROL_ROW}>
           <input type="checkbox" disabled />
           <Text style={{color: TERTIARY_COLOR}}>Disabled, off</Text>
         </View>
-        <View style={ROW}>
+        <View style={CONTROL_ROW}>
           <input type="checkbox" disabled defaultChecked />
           <Text style={{color: TERTIARY_COLOR}}>Disabled, on</Text>
         </View>
@@ -474,7 +507,7 @@ function Checkables() {
           ['m', 'Medium'],
           ['l', 'Large'],
         ].map(([value, text]) => (
-          <View key={value} style={ROW}>
+          <View key={value} style={CONTROL_ROW}>
             <input
               type="radio"
               name="size"
@@ -952,7 +985,7 @@ function WholeForm() {
               newsletter (an unchecked box contributes nothing at all — not an
               empty string)
             </Text>
-            <View style={ROW}>
+            <View style={CONTROL_ROW}>
               <input type="checkbox" name="newsletter" defaultChecked />
               <Text style={CONTROL_LABEL}>Subscribe</Text>
             </View>
@@ -960,7 +993,7 @@ function WholeForm() {
             <Text style={NOTE}>
               tier (radio — only the checked one is submitted)
             </Text>
-            <View style={ROW}>
+            <View style={CONTROL_ROW}>
               <input type="radio" name="tier" value="monthly" defaultChecked />
               <Text style={CONTROL_LABEL}>Monthly</Text>
               <input type="radio" name="tier" value="yearly" />
@@ -978,9 +1011,9 @@ function WholeForm() {
                 submitted (HTML §4.10.18.6), so the chooser can live inside
                 the form — where the submit row needs to be — without
                 touching the payload. Selection is fully controlled. */}
-            <View style={ROW}>
+            <View style={CONTROL_ROW}>
               {['get', 'post'].map(m => (
-                <View key={m} style={ROW}>
+                <View key={m} style={CONTROL_ROW}>
                   <input
                     type="radio"
                     value={m}
@@ -1089,7 +1122,7 @@ function GroupingAndLabels() {
               padding is the vertical rhythm, and a trailing row margin
               stacked on it read as "too much bottom padding" (12 above the
               first row, 12 + 14 under the last). */}
-          <View style={ROW}>
+          <View style={CONTROL_ROW}>
             <input
               type="radio"
               name="delivery"
@@ -1098,7 +1131,7 @@ function GroupingAndLabels() {
             />
             <Text style={CONTROL_LABEL}>Standard</Text>
           </View>
-          <View style={{...ROW, marginBottom: 0}}>
+          <View style={{...CONTROL_ROW, marginBottom: 0}}>
             <input type="radio" name="delivery" value="express" />
             <Text style={CONTROL_LABEL}>Express</Text>
           </View>
@@ -1108,11 +1141,11 @@ function GroupingAndLabels() {
       <Case
         title="<label htmlFor> — names the control"
         note='Invisible on screen and the most common real accessibility failure in a form: without it a screen reader announces "switch, off" and never says what it switches. Turn on VoiceOver or TalkBack and compare the two below.'>
-        <View style={ROW}>
+        <View style={CONTROL_ROW}>
           <input id="remember" type="checkbox" />
           <label htmlFor="remember">Remember me</label>
         </View>
-        <View style={ROW}>
+        <View style={CONTROL_ROW}>
           <input type="checkbox" />
           <Text style={CONTROL_LABEL}>Unlabelled, for comparison</Text>
         </View>
@@ -1147,7 +1180,7 @@ function GroupingAndLabels() {
       <Case
         title="Deviation: tapping a label does not activate its control"
         note="Intentional — DOM-CSS-DEVIATION(label-activation). The association still names the control for assistive technology; the platforms' own 44pt/48dp controls are already the touch target.">
-        <View style={ROW}>
+        <View style={CONTROL_ROW}>
           <input id="tapme" type="checkbox" />
           <label htmlFor="tapme">
             Tapping this text does not toggle the box

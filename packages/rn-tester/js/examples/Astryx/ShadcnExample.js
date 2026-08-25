@@ -305,7 +305,13 @@ function TabsSection(): React.Node {
   <TabsContent value="password">Password settings panel.</TabsContent>
 </Tabs>`}>
       <Tabs defaultValue="account">
-        <TabsList>
+        {/* `h-auto` because the triggers carry a 44pt minimum: shadcn's list is
+            a fixed `h-10` (40pt), and a 44pt child inside it is centred and
+            overflows the muted background by 2pt top and bottom — correctly,
+            and identically in a browser, but it reads as a control falling out
+            of its container. The container is what should grow when the target
+            does; padding then puts the pill back inside it. */}
+        <TabsList className="h-auto">
           <TabsTrigger className={TOUCH} value="account">
             Account
           </TabsTrigger>
