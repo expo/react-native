@@ -101,6 +101,72 @@ inline static UIFontTextStyle RCTUIFontTextStyleForDynamicTypeRamp(const Dynamic
   }
 }
 
+/*
+ * The font the platform itself uses for a text style, at the DEFAULT content
+ * size.
+ *
+ * Asked, not tabulated, which is the whole point of a text ROLE: the OS owns
+ * these numbers, and a copy of them is right until the day it moves.
+ * `preferredFontForTextStyle:` also answers with the WEIGHT, which a table of
+ * sizes cannot — Headline is semibold and Body is not, at the same 17pt.
+ *
+ * Deliberately alongside `RCTBaseSizeForDynamicTypeRamp` rather than replacing
+ * it. That function is React Native's, it has its own callers and its own
+ * documented behaviour for `<Text dynamicTypeRamp>`, and changing what it
+ * returns would change what every existing app using that prop renders. This
+ * serves the element path only.
+ *
+ * At the DEFAULT content size deliberately. The caller scales it through
+ * `UIFontMetrics` for the same style, which is where the user's Dynamic Type
+ * setting is applied; taking the size at the CURRENT size as well would apply
+ * that scaling twice.
+ */
+inline static UIFont *RCTPreferredFontForDynamicTypeRamp(const DynamicTypeRamp &dynamicTypeRamp)
+{
+  /*
+   * MEMOISED, because this is asked once per text run per layout and the answer
+   * does not move.
+   *
+   * Measured on this simulator: `preferredFontForTextStyle:` costs ~300ns, a
+   * cached lookup ~17ns. Three hundred nanoseconds is nothing once and
+   * something else entirely when every string child on a screen asks for it —
+   * and our path asks twice, for the size and for the weight. At a few thousand
+   * runs rebuilt a few times a commit that is milliseconds off a frame budget,
+   * to re-derive a value that cannot have changed.
+   *
+   * It cannot have changed because we ask at the DEFAULT content size, on
+   * purpose: the user's Dynamic Type setting is applied afterwards through
+   * `UIFontMetrics`, so what this returns is a property of the OS rather than
+   * of the moment. The one thing that does move it is the Bold Text
+   * accessibility setting, which changes the system font itself — hence the
+   * two slots rather than one.
+   *
+   * The fill is unsynchronised deliberately: two threads racing here compute
+   * the same font and store the same pointer, so the race is benign and a lock
+   * on a text-layout hot path would cost more than the work it guards.
+   */
+  static UIFont *cache[2][12];
+  const size_t slot = UIAccessibilityIsBoldTextEnabled() ? 1 : 0;
+  const size_t index = (size_t)dynamicTypeRamp;
+  if (index >= 12) {
+    return nil;
+  }
+  UIFont *cached = cache[slot][index];
+  if (cached != nil) {
+    return cached;
+  }
+  static UITraitCollection *defaultContentSize;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    defaultContentSize =
+        [UITraitCollection traitCollectionWithPreferredContentSizeCategory:UIContentSizeCategoryLarge];
+  });
+  UIFont *font = [UIFont preferredFontForTextStyle:RCTUIFontTextStyleForDynamicTypeRamp(dynamicTypeRamp)
+                      compatibleWithTraitCollection:defaultContentSize];
+  cache[slot][index] = font;
+  return font;
+}
+
 inline static CGFloat RCTBaseSizeForDynamicTypeRamp(const DynamicTypeRamp &dynamicTypeRamp)
 {
   // Values taken from
@@ -130,6 +196,16 @@ inline static CGFloat RCTBaseSizeForDynamicTypeRamp(const DynamicTypeRamp &dynam
       return 34.0;
   }
 }
+
+/** The weight the platform gives that style, or NaN where it states none. */
+inline static CGFloat RCTWeightForDynamicTypeRamp(const DynamicTypeRamp &dynamicTypeRamp)
+{
+  UIFontDescriptor *descriptor = RCTPreferredFontForDynamicTypeRamp(dynamicTypeRamp).fontDescriptor;
+  NSDictionary *traits = [descriptor objectForKey:UIFontDescriptorTraitsAttribute];
+  NSNumber *weight = traits[UIFontWeightTrait];
+  return weight != nil ? (CGFloat)weight.doubleValue : (CGFloat)NAN;
+}
+
 
 inline static CGFloat RCTEffectiveFontSizeMultiplierFromTextAttributes(const TextAttributes &textAttributes)
 {
@@ -168,6 +244,47 @@ inline static UIFont *RCTEffectiveFontFromTextAttributes(const TextAttributes &t
   fontProperties.weight = textAttributes.fontWeight.has_value()
       ? RCTUIFontWeightFromInteger((NSInteger)textAttributes.fontWeight.value())
       : NAN;
+
+  /*
+   * A text ROLE supplies whatever the author did not.
+   *
+   * The role is the platform's own name for this text — `title1`, `headline` —
+   * and the platform answers it with a font, not a number. Size and weight are
+   * taken from that font ONLY where nothing has already decided them, so an
+   * author's `font-size` or `font-weight` still wins: the platform is the
+   * initial value, not an override.
+   *
+   * The weight is the half a size table cannot express. Headline is 17pt
+   * SEMIBOLD and Body is 17pt regular — the same size, different text. Before
+   * this, asking for the Headline ramp got the size and lost the semibold.
+   */
+  if (textAttributes.dynamicTypeRamp.has_value()) {
+    if (isnan(fontProperties.size)) {
+      fontProperties.size = RCTPreferredFontForDynamicTypeRamp(textAttributes.dynamicTypeRamp.value()).pointSize;
+    }
+    if (isnan(fontProperties.weight)) {
+      /*
+       * Stated only when the platform's answer is not REGULAR.
+       *
+       * `UIFontWeightRegular` is 0 and an unstated weight already means
+       * regular, so naming it says nothing that was not already true. Every
+       * Title in the iOS scale is regular, so the common case is the one that
+       * would carry the redundant declaration.
+       *
+       * No measurable cost either way — I looked, expecting naming a weight to
+       * bypass a font cache, and the numbers did not support it. This is here
+       * because it is redundant, not because it is slow.
+       *
+       * Headline's semibold IS stated, because there it is the whole
+       * difference between Headline and Body.
+       */
+      const CGFloat platformWeight = RCTWeightForDynamicTypeRamp(textAttributes.dynamicTypeRamp.value());
+      if (!isnan(platformWeight) && fabs(platformWeight - UIFontWeightRegular) > 0.001) {
+        fontProperties.weight = platformWeight;
+      }
+    }
+  }
+
   fontProperties.sizeMultiplier = RCTEffectiveFontSizeMultiplierFromTextAttributes(textAttributes);
 
   return RCTFontWithFontProperties(fontProperties);

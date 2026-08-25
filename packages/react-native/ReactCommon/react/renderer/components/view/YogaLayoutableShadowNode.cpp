@@ -79,7 +79,8 @@ static bool inheritableTextPropsDiffer(
       a.inheritedFontStyle != b.inheritedFontStyle ||
       a.inheritedFontVariant != b.inheritedFontVariant ||
       a.inheritedTextAlign != b.inheritedTextAlign ||
-      a.inheritedTextTransform != b.inheritedTextTransform) {
+      a.inheritedTextTransform != b.inheritedTextTransform ||
+      a.inheritedDynamicTypeRamp != b.inheritedDynamicTypeRamp) {
     return true;
   }
   // NaN-aware compares for the optional-by-NaN Float props.

@@ -288,6 +288,10 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   // inheritable text properties reach native as top-level props, and a key
   // missing from this table is dropped before it ever gets there.
   whiteSpace: true,
+  // The platform's own name for the text's ROLE — see `dynamicTypeRamp` in
+  // StyleSheetTypes. A style key rather than a component prop because it is
+  // inherited: a heading names the role and the run inside it receives it.
+  dynamicTypeRamp: true,
   // `all` (css-cascade-4 §3.2): `all: 'initial'` makes the element an
   // inheritance boundary — the cascade below it restarts from the initial
   // values, like the web's own reset.
