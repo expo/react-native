@@ -401,6 +401,12 @@ function ControlledInputs() {
   const [upper, setUpper] = useState('');
   const [noDigits, setNoDigits] = useState('');
   const [capped, setCapped] = useState('');
+  // Already upper-case, so a keystroke changes exactly the character typed.
+  // Starting from mixed case would make the FIRST keystroke rewrite every
+  // letter at once, and a caret has nothing to hold on to when the whole
+  // document differs — the rule would correctly send it to the end, and the
+  // demo would be showing the opposite of what it claims.
+  const [shouted, setShouted] = useState('EDIT ME IN THE MIDDLE');
   const [rejected, setRejected] = useState(0);
 
   /*
@@ -460,6 +466,17 @@ function ControlledInputs() {
           value={capped}
           placeholder="Max 10, enforced in state"
           onInput={e => setCapped(e.nativeEvent.value.slice(0, 10))}
+        />
+      </Case>
+
+      <Case
+        title="Editing in the middle of a controlled field"
+        note="Put the caret mid-text and type: it stays put, because only the character that differs is replaced. The value is already upper-case so each keystroke changes exactly one."
+        readout={`value: ${JSON.stringify(shouted)}`}>
+        <input
+          value={shouted}
+          placeholder="Typed lowercase, stored uppercase"
+          onInput={e => setShouted(e.nativeEvent.value.toUpperCase())}
         />
       </Case>
 

@@ -8,6 +8,7 @@
 #import "EXPElementTextInputComponentView.h"
 
 #import <React/EXPElementDragOwnership.h>
+#import <React/EXPTextInputCaret.h>
 #import <React/RCTConversions.h>
 #import <React/RCTUtils.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
@@ -71,6 +72,9 @@ static UITextField *EXPMakeElementTextField(CGRect frame)
    * would block the UI thread on the runtime it is already holding.
    */
   BOOL _isReportingEditSynchronously;
+
+  /* Set while a controlled value is being written into the field. */
+  BOOL _isApplyingProps;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -125,6 +129,11 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
    * old props object is dangling from that moment on. Nothing below reads one —
    * and it stays that way by there being nothing to read.
    */
+  if (_isApplyingProps) {
+    // A write-back in progress, not something the user typed.
+    return;
+  }
+
   const auto &props = static_cast<const ElementTextInputProps &>(*_props);
   const NSInteger maxLength = props.maxLength;
   const BOOL isControlled = props.hasValue;
@@ -485,17 +494,23 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
    */
   const BOOL isValueCurrent = newInputProps.mostRecentEventCount >= _nativeEventCount;
   if (newInputProps.hasValue && isValueCurrent) {
-    NSString *value = RCTNSStringFromString(newInputProps.value);
-    if (![_textField.text isEqualToString:value]) {
-      // Preserved across the write so that a controlled field which echoes the
-      // value back unchanged does not throw the caret to the end on every
-      // keystroke — the classic tell of a re-rendered input.
-      UITextRange *selection = _textField.selectedTextRange;
-      _textField.text = value;
-      if (selection != nil && _textField.isEditing) {
-        _textField.selectedTextRange = selection;
+    // Applying a value is not an edit by the user, so the edit report is
+    // suppressed for its duration: this text came FROM JavaScript and echoing
+    // it back would both count a phantom keystroke and, on the synchronous
+    // path, re-enter the runtime while it is already held. Android's
+    // `isApplyingProps` guards the same thing for the same reason.
+    struct ApplyingGuard {
+      BOOL *flag;
+      explicit ApplyingGuard(BOOL *f) : flag(f)
+      {
+        *flag = YES;
       }
-    }
+      ~ApplyingGuard()
+      {
+        *flag = NO;
+      }
+    } guard{&_isApplyingProps};
+    EXPWriteTextPreservingCaret(_textField, RCTNSStringFromString(newInputProps.value));
   } else if (!_isInitialValueSet && !newInputProps.hasValue) {
     // Uncontrolled: `defaultValue` seeds the field once and is never written
     // again, exactly as in HTML.
