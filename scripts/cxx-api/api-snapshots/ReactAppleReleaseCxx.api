@@ -380,6 +380,15 @@ interface EXPElementTextAreaComponentView : public EXPElementControlComponentVie
 interface EXPElementTextInputComponentView : public EXPElementControlComponentView {
 }
 
+interface EXPRadioRunList : public NSObject {
+  public virtual static BOOL containerHasRuns:(UIView* container);
+  public virtual static void announceRadio:row:inContainer:(UIView<EXPRadioRunMember>* radio, UIView* row, UIView* container);
+  public virtual static void containerDidLayout:(UIView* container);
+  public virtual static void radioDidChange:(UIView<EXPRadioRunMember>* radio);
+  public virtual static void scheduleRegroupFor:(UIView* container);
+  public virtual static void withdrawRow:fromContainer:(UIView* row, UIView* container);
+}
+
 interface EventEmitterCallbackWrapper : public NSObject {
   public facebook::react::EventEmitterCallback _eventEmitterCallback;
 }
@@ -2114,8 +2123,10 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   protected facebook::react::LayoutMetrics _layoutMetrics;
   protected facebook::react::SharedViewEventEmitter _eventEmitter;
   protected facebook::react::SharedViewProps _props;
+  public @property (assign) BOOL passesTouchesToHostChrome;
   public @property (assign) UIEdgeInsets hitTestEdgeInsets;
   public @property (assign, readonly) BOOL hasHostChromeSubviews;
+  public @property (assign, readonly) BOOL hasTouchHandlers;
   public @property (strong) NSString* nativeId;
   public @property (strong) UIView* contentView;
   public @property (strong, readonly) NSObject* accessibilityElement;
@@ -2123,8 +2134,11 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   public virtual BOOL wantsToCooptLabel();
   public virtual NSString* accessibilityLabelForCoopting();
   public virtual UIView* betterHitTest:withEvent:(CGPoint point, UIEvent* event);
+  public virtual void addHostChromeSubview:(UIView* _Nonnull view);
+  public virtual void addHostChromeSubview:behindSubview:(UIView* _Nonnull view, UIView* _Nonnull sibling);
   public virtual void finalizeUpdates:(RNComponentViewUpdateMask updateMask);
   public virtual void prepareForRecycle();
+  public virtual void removeHostChromeSubview:(UIView* _Nonnull view);
   public virtual void updateEventEmitter:(const facebook::react::EventEmitter::Shared& eventEmitter);
   public virtual void updateLayoutMetrics:oldLayoutMetrics:(const facebook::react::LayoutMetrics& layoutMetrics, const facebook::react::LayoutMetrics& oldLayoutMetrics);
   public virtual void updateProps:oldProps:(const facebook::react::Props::Shared& props, const facebook::react::Props::Shared& oldProps);
@@ -2179,6 +2193,12 @@ protocol EXPCaretPreservingTextInput : public UITextInput {
 
 protocol EXPElementDragOwnership : public NSObject {
   public virtual BOOL elementOwnsDragGesture();
+}
+
+protocol EXPRadioRunMember : public NSObject {
+  public virtual BOOL exp_isChosen();
+  public virtual BOOL exp_isEnabled();
+  public virtual void exp_choose();
 }
 
 protocol NativeAccessibilityInfoSpec : public RCTBridgeModule, public RCTTurboModule {
@@ -6974,6 +6994,7 @@ class facebook::react::AbstractViewShadowNode : public facebook::react::Concrete
   public AbstractViewShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
+  public virtual void appendChild(const std::shared_ptr<const facebook::react::ShadowNode>& child) override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
 }
 
@@ -8163,6 +8184,13 @@ struct facebook::react::Bridging<std::shared_ptr<T>, std::enable_if_t<std::is_ba
 bool facebook::react::HostPlatformViewTraitsInitializer::formsStackingContext(const facebook::react::ViewProps& props);
 bool facebook::react::HostPlatformViewTraitsInitializer::formsView(const facebook::react::ViewProps& props);
 bool facebook::react::HostPlatformViewTraitsInitializer::isKeyboardFocusable(const facebook::react::ViewProps&);
+bool facebook::react::HostPlatformViewTraitsInitializer::treatsRadioRowsAsListRows();
+facebook::react::HostPlatformViewTraitsInitializer::RadioRowPadding facebook::react::HostPlatformViewTraitsInitializer::radioRowPadding();
+
+struct facebook::react::HostPlatformViewTraitsInitializer::RadioRowPadding {
+  public float end;
+  public float start;
+}
 
 
 facebook::jsi::Value facebook::react::TurboModuleConvertUtils::convertObjCObjectToJSIValue(facebook::jsi::Runtime& runtime, id value);

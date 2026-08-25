@@ -4999,6 +4999,7 @@ class facebook::react::AbstractViewShadowNode : public facebook::react::Concrete
   public AbstractViewShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
+  public virtual void appendChild(const std::shared_ptr<const facebook::react::ShadowNode>& child) override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
 }
 
@@ -6400,6 +6401,13 @@ struct facebook::react::Bridging<std::shared_ptr<T>, std::enable_if_t<std::is_ba
 bool facebook::react::HostPlatformViewTraitsInitializer::formsStackingContext(const facebook::react::ViewProps& viewProps);
 bool facebook::react::HostPlatformViewTraitsInitializer::formsView(const facebook::react::ViewProps& viewProps);
 bool facebook::react::HostPlatformViewTraitsInitializer::isKeyboardFocusable(const facebook::react::ViewProps& viewProps);
+bool facebook::react::HostPlatformViewTraitsInitializer::treatsRadioRowsAsListRows();
+facebook::react::HostPlatformViewTraitsInitializer::RadioRowPadding facebook::react::HostPlatformViewTraitsInitializer::radioRowPadding();
+
+struct facebook::react::HostPlatformViewTraitsInitializer::RadioRowPadding {
+  public float end;
+  public float start;
+}
 
 
 class facebook::react::jsinspector_modern::JCxxInspectorPackagerConnection : public jni::HybridClass<facebook::react::jsinspector_modern::JCxxInspectorPackagerConnection> {

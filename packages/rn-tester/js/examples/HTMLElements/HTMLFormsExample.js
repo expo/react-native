@@ -140,6 +140,21 @@ const RADIO_ROW = {
   minHeight: 44,
 };
 
+/*
+ * A row inside a platform list.
+ *
+ * No margin of its own: the list supplies the spacing between rows, and a
+ * bottom margin here is empty space the OS then centres the content WITHIN —
+ * measured as content sitting 6.6pt above the row's middle, which is half of
+ * CONTROL_ROW's 14pt. The platform was centring correctly; it was centring a
+ * box that was mostly margin.
+ */
+const LIST_ROW = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  columnGap: 0,
+};
+
 const CONTROL_ROW = {
   flexDirection: 'row',
   alignItems: 'center',
@@ -159,7 +174,21 @@ const CONTROL_ROW = {
  * screen while every other string on it, each carrying its own themed colour,
  * was fine.
  */
-const CONTROL_LABEL = {color: LABEL_COLOR};
+const CONTROL_LABEL = {
+  color: LABEL_COLOR,
+  /*
+   * The label wraps its own text rather than moving below the control.
+   *
+   * These rows are `flex-wrap: wrap`, so a label too long for the space left
+   * beside the control is carried WHOLE onto the next line — the control
+   * alone on one line and its label under it, which reads as two unrelated
+   * things. "Unlabelled, for comparison" did exactly that at 393pt, the
+   * iPhone 15 Pro's width, while fitting at 402pt. Shrinking instead keeps it
+   * where a settings row keeps it: beside the control, wrapped to the width
+   * that is actually left.
+   */
+  flexShrink: 1,
+};
 
 /*
  * `grouped` gives a case the page a platform list needs behind it.
@@ -312,7 +341,7 @@ function TextAttributes() {
       <Case
         title="spellCheck inherits, autoCorrect does not"
         note="spellcheck comes from the nearest ancestor, autocorrect from the form. Both fields inherit from the form; the second overrides spellCheck.">
-          {/* $FlowFixMe[prop-missing] intrinsic */}
+        {/* $FlowFixMe[prop-missing] intrinsic */}
         <form spellCheck={false} autoCorrect="off">
           <View style={ROW}>
             <input placeholder="inherits both" />
@@ -501,6 +530,7 @@ function ControlledInputs() {
 
 function Checkables() {
   const [checked, setChecked] = useState(false);
+  const [plan, setPlan] = useState('free');
   const [size, setSize] = useState('m');
 
   return (
@@ -541,8 +571,70 @@ function Checkables() {
       </Case>
 
       <Case
+        grouped
+        title="A radio group, rendered as the platform's list"
+        note="Plain radios in a plain container. iOS has no radio control, so a run of them is drawn as the list the platform does have, with the checkmark on the chosen row. Nothing here asks for a list. The card is the platform's grouped surface, so this case supplies the grouped page it needs — as Settings does."
+        readout={`plan: ${plan}`}>
+        <View>
+          {['free', 'pro'].map(id => (
+            <View key={id} style={LIST_ROW}>
+              <input
+                type="radio"
+                name="plan"
+                value={id}
+                checked={plan === id}
+                onChange={() => setPlan(id)}
+              />
+              <span style={CONTROL_LABEL}>
+                {id === 'free' ? 'Free' : 'Pro — $9/mo'}
+              </span>
+            </View>
+          ))}
+
+          {/* Ordinary content between the options. It is not a row: it ends one
+              run and begins another, which is how a group interrupted by prose
+              becomes two sections without anyone writing that rule. */}
+          <Text style={{...NOTE, marginTop: 8}}>
+            Team plans are billed annually and include priority support.
+          </Text>
+
+          <View style={LIST_ROW}>
+            <input
+              type="radio"
+              name="plan"
+              value="team"
+              checked={plan === 'team'}
+              onChange={() => setPlan('team')}
+            />
+            <span style={CONTROL_LABEL}>Team</span>
+          </View>
+
+          {/* An arbitrary row. Two stacked lines and a trailing price, laid out
+              by the author in their own flexbox — the cell takes it at the
+              height Yoga measured rather than a height a list cell assumes. */}
+          <View style={LIST_ROW}>
+            <input
+              type="radio"
+              name="plan"
+              value="enterprise"
+              checked={plan === 'enterprise'}
+              onChange={() => setPlan('enterprise')}
+            />
+            <View style={{flex: 1, paddingVertical: 8}}>
+              <Text style={CONTROL_LABEL}>Enterprise</Text>
+              <Text style={{...NOTE, marginTop: 2}}>
+                SSO, audit log, and a named contact.
+              </Text>
+            </View>
+            <Text style={CONTROL_LABEL}>$99</Text>
+          </View>
+        </View>
+      </Case>
+
+      <Case
+        grouped
         title="Radio group — tied together by a shared name"
-        note="Deviation: a real RadioButton on Android; on iOS a drawn ring, because UIKit has no radio control."
+        note="Same group, one choice. Deviation: a real RadioButton on Android; on iOS a checkmark in a list, because UIKit has no radio control."
         readout={`size: ${size}`}>
         {[
           ['s', 'Small'],
@@ -557,7 +649,7 @@ function Checkables() {
               checked={size === value}
               onChange={() => setSize(value)}
             />
-            <Text style={CONTROL_LABEL}>{text}</Text>
+            <span style={CONTROL_LABEL}>{text}</span>
           </View>
         ))}
       </Case>
@@ -1029,9 +1121,16 @@ function WholeForm() {
             <Text style={NOTE}>
               tier (radio — only the checked one is submitted)
             </Text>
+            {/* One row per radio. A run of radios draws as the platform's
+                grouped list, and a list row is a row: putting two of them side
+                by side in one flex row gave the list a single row with both
+                labels in it and no control at all — "MonthlyYearly" in a white
+                pill. */}
             <View style={RADIO_ROW}>
               <input type="radio" name="tier" value="monthly" defaultChecked />
               <Text style={CONTROL_LABEL}>Monthly</Text>
+            </View>
+            <View style={RADIO_ROW}>
               <input type="radio" name="tier" value="yearly" />
               <Text style={CONTROL_LABEL}>Yearly</Text>
             </View>
@@ -1047,19 +1146,17 @@ function WholeForm() {
                 submitted (HTML §4.10.18.6), so the chooser can live inside
                 the form — where the submit row needs to be — without
                 touching the payload. Selection is fully controlled. */}
-            <View style={RADIO_ROW}>
-              {['get', 'post'].map(m => (
-                <View key={m} style={RADIO_ROW}>
-                  <input
-                    type="radio"
-                    value={m}
-                    checked={method === m}
-                    onChange={() => setMethod(m)}
-                  />
-                  <Text style={CONTROL_LABEL}>{m.toUpperCase()}</Text>
-                </View>
-              ))}
-            </View>
+            {['get', 'post'].map(m => (
+              <View key={m} style={RADIO_ROW}>
+                <input
+                  type="radio"
+                  value={m}
+                  checked={method === m}
+                  onChange={() => setMethod(m)}
+                />
+                <Text style={CONTROL_LABEL}>{m.toUpperCase()}</Text>
+              </View>
+            ))}
 
             <View style={{...ROW, marginTop: 4}}>
               <button type="submit">Submit</button>
@@ -1241,7 +1338,12 @@ export default {
     'Form controls — §4.10. Every one is a real platform control reached ' +
     'through the HTML element that means it.',
   examples: [
-    {name: 'text', title: 'Text input types', fullBleed: true, render: () => <TextInputs />},
+    {
+      name: 'text',
+      title: 'Text input types',
+      fullBleed: true,
+      render: () => <TextInputs />,
+    },
     {
       name: 'textAttributes',
       fullBleed: true,
@@ -1278,8 +1380,18 @@ export default {
       title: 'Date, time, colour and file',
       render: () => <PickerControls />,
     },
-    {name: 'textarea', title: 'Textarea', fullBleed: true, render: () => <TextAreas />},
-    {name: 'buttons', title: 'Buttons', fullBleed: true, render: () => <Buttons />},
+    {
+      name: 'textarea',
+      title: 'Textarea',
+      fullBleed: true,
+      render: () => <TextAreas />,
+    },
+    {
+      name: 'buttons',
+      title: 'Buttons',
+      fullBleed: true,
+      render: () => <Buttons />,
+    },
     {
       name: 'form',
       fullBleed: true,
