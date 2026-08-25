@@ -58,6 +58,7 @@ import TextArea from './TextArea';
 import uaStyles, {
   CHECKABLE_FOOTPRINT_BY_PLATFORM,
   FIELD_SURFACE,
+  RADIO_FOOTPRINT_BY_PLATFORM,
   buttonLabelColor,
   uaStyleFor,
 } from './uaStyles';
@@ -748,13 +749,16 @@ function inputSizeUAStyle(props: {[string]: unknown}): {[string]: unknown} {
         ? {width: 220, height: 48}
         : {width: 160, height: 36};
     case 'radio':
-      // Square, unlike the checkbox: a radio is a circle on both
-      // platforms, and iOS draws its own into whatever box it is given.
-      // Label spacing and line-centering as for the checkbox above, same
-      // reasoning per platform — see the footprint table's deviations.
-      return Platform.OS === 'android'
-        ? {width: 48, height: 48, marginInlineEnd: -4, verticalAlign: 'middle'}
-        : {width: 22, height: 22, marginInlineEnd: 8, verticalAlign: 'middle'};
+      // Square, unlike the checkbox: a radio is a circle on both platforms.
+      // The box is the touch target and the circle is drawn at its own design
+      // size inside it — see RADIO_FOOTPRINT_BY_PLATFORM for why, and for the
+      // margins that keep the LABEL the platform's distance from the ink
+      // rather than from the box.
+      return {
+        ...RADIO_FOOTPRINT_BY_PLATFORM[
+          Platform.OS === 'android' ? 'android' : 'ios'
+        ],
+      };
     default:
       // A text field's size comes from the platform's own: iOS lays out a
       // rounded-rect `UITextField` about 36pt tall, Android's `EditText`

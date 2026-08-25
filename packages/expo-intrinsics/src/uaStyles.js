@@ -309,6 +309,49 @@ export const CHECKABLE_FOOTPRINT_BY_PLATFORM: {
   },
 };
 
+/**
+ * `<input type="radio">`'s box — the TOUCH TARGET, not the ink.
+ *
+ * A radio's circle is small by design; its tappable area must not be. iOS drew
+ * a 22pt circle in a 22pt box, so the control was exactly as tappable as it
+ * was visible — half the Human Interface Guidelines' 44pt minimum, and
+ * reported from a device as hard to hit. The box is now the guideline's
+ * number, with the circle kept at its design diameter and centred in it
+ * (`kEXPRadioIndicatorDiameter` in `EXPElementRadioComponentView`), which is
+ * how Material centres a 24dp drawable in a 48dp target.
+ *
+ * hitSlop is deliberately not the mechanism: iOS clips it to the ancestor's
+ * bounds, and a form row is only as tall as its text, so the added area would
+ * be clipped away exactly where it is wanted.
+ *
+ * The inline-end margins then state the LABEL's distance from the visible
+ * circle rather than from the box: iOS insets the ink (44 - 22) / 2 = 11pt, so
+ * -3 leaves the ~8pt a system form puts between a control and its label — the
+ * same spacing the checkable footprint above is tuned to.
+ */
+export const RADIO_FOOTPRINT_BY_PLATFORM: {
+  ios: {
+    width: number,
+    height: number,
+    marginInlineEnd: number,
+    verticalAlign: 'middle',
+  },
+  android: {
+    width: number,
+    height: number,
+    marginInlineEnd: number,
+    verticalAlign: 'middle',
+  },
+} = {
+  ios: {width: 44, height: 44, marginInlineEnd: -3, verticalAlign: 'middle'},
+  android: {
+    width: 48,
+    height: 48,
+    marginInlineEnd: -4,
+    verticalAlign: 'middle',
+  },
+};
+
 export const BUTTON_CHROME_BY_PLATFORM: {
   ios: ButtonChrome,
   android: ButtonChrome,

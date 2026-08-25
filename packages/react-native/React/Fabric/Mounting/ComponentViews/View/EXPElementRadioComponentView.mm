@@ -31,6 +31,44 @@ using namespace facebook::react;
 @property (nonatomic, assign) BOOL isChosen;
 @end
 
+/*
+ * The indicator's design diameter, and the reason the ring is not simply the
+ * box.
+ *
+ * A radio's BOX is a touch target: 44pt on iOS (Human Interface Guidelines'
+ * minimum, and the number Apple states for any tappable control), 48dp on
+ * Android. Its INDICATOR is a small circle — Material draws 24dp inside its
+ * 48dp target, and a 44pt filled circle would read as a button, not a radio.
+ * So the ring is drawn at this size, centred in whatever box it is given,
+ * exactly as Android centres its drawable. Growing the target without growing
+ * the ink is the whole point: the control was 22pt square and therefore 22pt
+ * tappable, which is half the guideline and is why it was hard to hit.
+ */
+static const CGFloat kEXPRadioIndicatorDiameter = 22;
+
+/*
+ * The ring's rect and stroke width for a given box.
+ *
+ * `drawRect:` and `layoutSubviews` both need this — the ring is stroked in one
+ * and the dot's path is derived from it in the other — and they computed it
+ * with two copies of the same arithmetic. Two copies of a geometry rule is one
+ * edit away from a dot that no longer sits in its ring.
+ */
+static CGRect EXPRadioRingRect(CGRect bounds, CGFloat *outLineWidth)
+{
+  const CGFloat side = MIN(
+      MIN(CGRectGetWidth(bounds), CGRectGetHeight(bounds)), kEXPRadioIndicatorDiameter);
+  const CGFloat lineWidth = MAX(1.0, side / 12.0);
+  if (outLineWidth != NULL) {
+    *outLineWidth = lineWidth;
+  }
+  return CGRectInset(
+      CGRectMake(
+          (CGRectGetWidth(bounds) - side) / 2, (CGRectGetHeight(bounds) - side) / 2, side, side),
+      lineWidth / 2,
+      lineWidth / 2);
+}
+
 @implementation EXPElementRadioControl {
   // The dot, as a layer so it can spring; see `applyDotStateAnimated:`.
   CAShapeLayer *_dotLayer;
@@ -77,15 +115,8 @@ using namespace facebook::react;
 
 - (void)drawRect:(CGRect)rect
 {
-  // Sized from the box rather than fixed, so the ring still looks right when an
-  // author styles the element larger than the user-agent default.
-  const CGFloat side = MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds));
-  const CGFloat lineWidth = MAX(1.0, side / 12.0);
-  const CGRect ring = CGRectInset(
-      CGRectMake(
-          (CGRectGetWidth(self.bounds) - side) / 2, (CGRectGetHeight(self.bounds) - side) / 2, side, side),
-      lineWidth / 2,
-      lineWidth / 2);
+  CGFloat lineWidth = 0;
+  const CGRect ring = EXPRadioRingRect(self.bounds, &lineWidth);
 
   UIBezierPath *ringPath = [UIBezierPath bezierPathWithOvalInRect:ring];
   ringPath.lineWidth = lineWidth;
@@ -103,13 +134,7 @@ using namespace facebook::react;
 - (void)layoutSubviews
 {
   [super layoutSubviews];
-  const CGFloat side = MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds));
-  const CGFloat lineWidth = MAX(1.0, side / 12.0);
-  const CGRect ring = CGRectInset(
-      CGRectMake(
-          (CGRectGetWidth(self.bounds) - side) / 2, (CGRectGetHeight(self.bounds) - side) / 2, side, side),
-      lineWidth / 2,
-      lineWidth / 2);
+  const CGRect ring = EXPRadioRingRect(self.bounds, NULL);
   const CGRect dot = CGRectInset(ring, CGRectGetWidth(ring) * 0.28, CGRectGetHeight(ring) * 0.28);
 
   _dotLayer.path = [UIBezierPath bezierPathWithOvalInRect:dot].CGPath;
