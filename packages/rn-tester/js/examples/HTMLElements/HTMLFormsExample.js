@@ -121,6 +121,15 @@ const ROW = {
  * where a grouped list wants about 22. The targets tile instead, which is also
  * what makes the whole group tappable with no dead bands between rows.
  */
+/*
+ * The row states the touch height rather than taking it from the control.
+ *
+ * The radio's box is only as big as its ink now, and its target reaches past
+ * it — but UIKit stops walking down at the first view whose bounds exclude the
+ * point, so a row that is only as tall as a 32pt control clips the target back
+ * to 32pt. `minHeight` is what keeps the reach the control asks for, and it
+ * costs nothing visually: the rows already tiled at this pitch.
+ */
 const RADIO_ROW = {
   flexDirection: 'row',
   alignItems: 'center',
@@ -128,6 +137,7 @@ const RADIO_ROW = {
   columnGap: 0,
   rowGap: 8,
   marginBottom: 0,
+  minHeight: 44,
 };
 
 const CONTROL_ROW = {
