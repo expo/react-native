@@ -16,7 +16,12 @@ module.exports = {
   presets: [
     ['module:@react-native/babel-preset', {disableDeepImportWarnings: true}],
   ],
-  plugins: ['babel-plugin-transform-flow-enums'],
+  plugins: [
+    'babel-plugin-transform-flow-enums',
+    // Astryx's dependency `intl-messageformat` ships static class blocks, which
+    // React Native's preset does not transform
+    '@babel/plugin-transform-class-static-block',
+  ],
   overrides: [
     {
       // The Astryx layer compiles JSX against its own runtime so intrinsic
