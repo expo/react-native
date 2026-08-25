@@ -144,10 +144,20 @@ export type UAStyle = {[string]: unknown};
  * 16px-rooted, so a length quoted in `em` resolves to a different number of
  * points than the same stylesheet would produce in a browser — and to a
  * different number on each platform. Proportions are preserved, absolute sizes
- * are not. This must stay in step with `kRootFontSize` in
- * `YogaLayoutableShadowNode.cpp`, which is where an element with no `font-size`
- * of its own gets this value from; the two are the same constant expressed on
- * each side of the bridge.
+ * are not.
+ *
+ * This must stay in step with `kDefaultFontSize` in `TextAttributes.cpp`, which
+ * is where text with no `font-size` of its own gets the same platform size
+ * from. The two are one metric written on each side of the bridge: this one is
+ * the base for the `em`-derived values in this sheet — the heading sizes and
+ * the margins computed from them — and that one is the initial value every
+ * element, bare string and `<Text>` starts at.
+ *
+ * It is ONE default in ONE place over there on purpose, and the comment beside
+ * it says why: seeding only the element cascade gave a bare string the native
+ * size while a plain `<Text>` kept React Native's 14, which breaks the
+ * invariant that `<View>{'hi'}</View>` measures the same as
+ * `<View><Text>hi</Text></View>`.
  */
 const ROOT_FONT_SIZE: number = Platform.select({
   ios: 17,
