@@ -112,6 +112,24 @@ const ROW = {
  * simulator, against the ~8pt an iOS Settings row uses. The platform's number
  * is the right one, so this row contributes nothing of its own.
  */
+/*
+ * A row of radios, stacked.
+ *
+ * A radio's box is its 44pt touch target with a 22pt circle centred in it, so
+ * every row already carries ~11pt of clear space above and below its ink. A
+ * row margin on top of that is spacing counted twice — 36pt between circles,
+ * where a grouped list wants about 22. The targets tile instead, which is also
+ * what makes the whole group tappable with no dead bands between rows.
+ */
+const RADIO_ROW = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  columnGap: 0,
+  rowGap: 8,
+  marginBottom: 0,
+};
+
 const CONTROL_ROW = {
   flexDirection: 'row',
   alignItems: 'center',
@@ -506,7 +524,7 @@ function Checkables() {
           ['m', 'Medium'],
           ['l', 'Large'],
         ].map(([value, text]) => (
-          <View key={value} style={CONTROL_ROW}>
+          <View key={value} style={RADIO_ROW}>
             <input
               type="radio"
               name="size"
@@ -992,7 +1010,7 @@ function WholeForm() {
             <Text style={NOTE}>
               tier (radio — only the checked one is submitted)
             </Text>
-            <View style={CONTROL_ROW}>
+            <View style={RADIO_ROW}>
               <input type="radio" name="tier" value="monthly" defaultChecked />
               <Text style={CONTROL_LABEL}>Monthly</Text>
               <input type="radio" name="tier" value="yearly" />
@@ -1010,9 +1028,9 @@ function WholeForm() {
                 submitted (HTML §4.10.18.6), so the chooser can live inside
                 the form — where the submit row needs to be — without
                 touching the payload. Selection is fully controlled. */}
-            <View style={CONTROL_ROW}>
+            <View style={RADIO_ROW}>
               {['get', 'post'].map(m => (
-                <View key={m} style={CONTROL_ROW}>
+                <View key={m} style={RADIO_ROW}>
                   <input
                     type="radio"
                     value={m}
@@ -1117,11 +1135,10 @@ function GroupingAndLabels() {
         note="Deviation: the legend sits above the box rather than notched into its border, as iOS grouped settings and Material do — DOM-CSS-DEVIATION(fieldset-legend-position).">
         <fieldset>
           <legend>Delivery</legend>
-          {/* The LAST row sheds its bottom margin: the box's symmetric UA
-              padding is the vertical rhythm, and a trailing row margin
-              stacked on it read as "too much bottom padding" (12 above the
-              first row, 12 + 14 under the last). */}
-          <View style={CONTROL_ROW}>
+          {/* Neither row carries a bottom margin: the fieldset's symmetric UA
+              padding is the vertical rhythm above and below, and each radio's
+              44pt touch target supplies the space between. */}
+          <View style={RADIO_ROW}>
             <input
               type="radio"
               name="delivery"
@@ -1130,7 +1147,7 @@ function GroupingAndLabels() {
             />
             <Text style={CONTROL_LABEL}>Standard</Text>
           </View>
-          <View style={{...CONTROL_ROW, marginBottom: 0}}>
+          <View style={RADIO_ROW}>
             <input type="radio" name="delivery" value="express" />
             <Text style={CONTROL_LABEL}>Express</Text>
           </View>
