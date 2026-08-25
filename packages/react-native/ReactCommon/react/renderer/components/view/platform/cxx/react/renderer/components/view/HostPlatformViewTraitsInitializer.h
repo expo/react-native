@@ -27,4 +27,36 @@ inline bool isKeyboardFocusable(const ViewProps & /*props*/)
   return false;
 }
 
+/**
+ * The padding a row holding an `<input type="radio">` takes by default, so its
+ * content sits where a platform list row's content sits.
+ *
+ * A user-agent default in the only place it can be stated. A run of radios is
+ * drawn as the platform's grouped list, and a list row insets its content: the
+ * leading inset is what lines every row's text up with every other row's and
+ * with the separator, and the trailing one is the space the checkmark accessory
+ * occupies. Without them the author's content sits flush against the card's
+ * edges and runs underneath the mark.
+ *
+ * It cannot come from the element's own stylesheet, because the box that needs
+ * it is the ROW — whatever the author wrapped around the control — and no
+ * selector reaches a parent. It cannot come from the mounting layer either: the
+ * row's children are positioned by Yoga and cannot be re-flowed afterwards.
+ *
+ * MEASURED, not chosen. On iOS a list cell reserves 40 pt for an accessory at
+ * the standard dimension and lays its content out inside margins of 16 and 8;
+ * `EXPRadioRunList` reserves the accessory at that same width, so the two
+ * cannot drift. Android has a real `RadioButton` and no list, so it takes
+ * none.
+ */
+struct RadioRowPadding {
+  float start;
+  float end;
+};
+
+inline RadioRowPadding radioRowPadding()
+{
+  return {16, 48};
+}
+
 } // namespace facebook::react::HostPlatformViewTraitsInitializer
