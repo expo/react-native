@@ -230,7 +230,6 @@ rather than going quiet.
 - `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
 - `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
-- `stylex-when-ancestor` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
