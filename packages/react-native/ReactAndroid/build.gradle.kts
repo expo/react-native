@@ -18,6 +18,9 @@ plugins {
   id("maven-publish")
   id("com.facebook.react")
   alias(libs.plugins.android.library)
+  // Expo Go builds with android.builtInKotlin=false (like template apps), so the
+  // Kotlin Gradle plugin must be applied explicitly.
+  id("org.jetbrains.kotlin.android")
   alias(libs.plugins.download)
 }
 
@@ -574,15 +577,6 @@ android {
     targetCompatibility = JavaVersion.VERSION_17
   }
 
-  kotlin {
-    compilerOptions {
-      // Generate default java methods for interfaces
-      jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
-      // Using -PenableWarningsAsErrors=true prop to enable allWarningsAsErrors
-      allWarningsAsErrors = enableWarningsAsErrors()
-    }
-  }
-
   defaultConfig {
     minSdk = libs.versions.minSdk.get().toInt()
 
@@ -795,6 +789,12 @@ if (rootProject.name == "react-native-build-from-source") {
 kotlin {
   jvmToolchain(17)
   explicitApi()
+  compilerOptions {
+    // Generate default java methods for interfaces
+    jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
+    // Using -PenableWarningsAsErrors=true prop to enable allWarningsAsErrors
+    allWarningsAsErrors = enableWarningsAsErrors()
+  }
 }
 
 tasks.withType<Test> { jvmArgs = listOf("-Xshare:off") }
