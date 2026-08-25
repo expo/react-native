@@ -25,7 +25,8 @@ describe('checkable footprint states the control, not a wish', () => {
     expect(CHECKABLE_FOOTPRINT_BY_PLATFORM.ios).toEqual({
       width: 63,
       height: 28,
-      marginInlineEnd: 8,
+      // 12pt to the label; the system form's 8 reads as tight beside a 63pt switch
+      marginInlineEnd: 12,
       verticalAlign: 'middle',
     });
   });
@@ -41,18 +42,29 @@ describe('checkable footprint states the control, not a wish', () => {
 });
 
 /*
- * A radio's box is its touch target: the ink stays 22pt and is centred by
- * `kEXPRadioIndicatorDiameter`, so that constant and this table are both
- * stated as literals.
+ * A radio's box is its INK, and its target reaches past it.
+ *
+ * These were once the same number: the box was made 44pt so that the Human
+ * Interface Guidelines' minimum was met by layout alone. That worked and cost
+ * something — 11pt of empty target all round a 22pt circle reads as a lot of
+ * air in a stack of radios, and reported from a device the control STILL felt
+ * small to aim at, because a target is only as findable as the ink advertising
+ * it.
+ *
+ * So the box is now the ink plus a modest ring, and the 44pt guarantee moved to
+ * `pointInside:` — `kEXPRadioTouchTarget` in `EXPElementRadioComponentView`,
+ * pinned by `EXPElementRadioHitAreaTests`, which is where to look for it now.
+ * It is deliberately NOT assertable from this table any more: asserting it here
+ * would be asserting the wrong thing, since the sheet no longer decides it.
  */
-describe('radio footprint is the touch target, not the ink', () => {
-  test("iOS is the HIG's 44pt minimum", () => {
+describe('radio footprint is the ink, with the target beyond it', () => {
+  test('iOS is the ink plus a ring, not the target', () => {
     expect(RADIO_FOOTPRINT_BY_PLATFORM.ios).toEqual({
-      width: 44,
-      height: 44,
-      // The 22pt circle sits 11pt inside a 44pt box, so this leaves the ~8pt
-      // of visible spacing a system form puts before a label.
-      marginInlineEnd: -3,
+      width: 32,
+      height: 32,
+      // The 22pt circle sits 5pt inside a 32pt box, so this leaves 12pt of
+      // visible spacing before the label.
+      marginInlineEnd: 7,
       verticalAlign: 'middle',
     });
   });
@@ -66,13 +78,16 @@ describe('radio footprint is the touch target, not the ink', () => {
     });
   });
 
-  test('both platforms meet their own minimum tappable size', () => {
+  test('the box is never smaller than the ink it centres', () => {
+    // What this table CAN still answer. The circle is drawn at
+    // `kEXPRadioIndicatorDiameter` and centred in whatever box it is given, so
+    // a box below that would clip the control rather than pad it.
     for (const box of [
       RADIO_FOOTPRINT_BY_PLATFORM.ios,
       RADIO_FOOTPRINT_BY_PLATFORM.android,
     ]) {
-      expect(box.width).toBeGreaterThanOrEqual(44);
-      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(22);
+      expect(box.height).toBeGreaterThanOrEqual(22);
     }
   });
 });
