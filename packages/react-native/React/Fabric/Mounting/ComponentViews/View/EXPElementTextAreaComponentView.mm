@@ -8,6 +8,7 @@
 #import "EXPElementTextAreaComponentView.h"
 
 #import <React/RCTConversions.h>
+#import <React/EXPTextInputCaret.h>
 #import <React/EXPElementDragOwnership.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/components/view/ElementTextAreaShadowNode.h>
@@ -194,14 +195,12 @@ using namespace facebook::react;
   // rewind the field under the user's fingers.
   const BOOL isValueCurrent = newAreaProps.mostRecentEventCount >= _nativeEventCount;
   if (newAreaProps.hasValue && isValueCurrent) {
-    NSString *value = RCTNSStringFromString(newAreaProps.value);
-    if (![_textView.text isEqualToString:value]) {
-      NSRange selection = _textView.selectedRange;
-      _textView.text = value;
-      if (_textView.isFirstResponder && selection.location + selection.length <= value.length) {
-        _textView.selectedRange = selection;
-      }
-    }
+    // The same change-anchored write `<input>` uses: replace only the span
+    // that differs and let UIKit move the caret, rather than assigning the
+    // whole document and restoring a saved range. Saving and restoring was
+    // what this did, and it clamps silently when the new text is shorter —
+    // which for a textarea means a caret that jumps on every clamped edit.
+    EXPWriteTextPreservingCaret(_textView, RCTNSStringFromString(newAreaProps.value));
   } else if (!_isInitialValueSet && !newAreaProps.hasValue) {
     _textView.text = RCTNSStringFromString(newAreaProps.defaultValue);
   }
