@@ -47,6 +47,29 @@ using namespace facebook::react;
 static const CGFloat kEXPRadioIndicatorDiameter = 22;
 
 /*
+ * The touch target, which is deliberately LARGER than the box.
+ *
+ * Making the box itself 44pt met the guideline and produced a second
+ * complaint: 11pt of empty target all round a 22pt circle reads as a lot of
+ * air in a stack of radios, while the control still felt small to aim at.
+ * Both are the same fact — a target is only as findable as the ink that
+ * advertises it, so a 44pt box around a 22pt dot spends space without looking
+ * like it bought anything.
+ *
+ * So the box shrinks to fit the ink and the target grows past it, which is
+ * what `pointInside:` is for. The two numbers stop being the same number: the
+ * layout box is what the row spends space on, and this is what a finger has to
+ * find. Nothing in the layout moves when this changes.
+ *
+ * The ancestor still has to be big enough to let the touch through — UIKit
+ * stops walking down at the first view whose bounds exclude the point, so an
+ * expanded target inside a row shorter than 44pt is clipped away exactly where
+ * it was wanted. That is why the demo rows state a minimum height rather than
+ * taking the control's.
+ */
+static const CGFloat kEXPRadioTouchTarget = 44;
+
+/*
  * The ring's rect and stroke width for a given box.
  *
  * `drawRect:` and `layoutSubviews` both need this — the ring is stroked in one
@@ -72,6 +95,23 @@ static CGRect EXPRadioRingRect(CGRect bounds, CGFloat *outLineWidth)
 @implementation EXPElementRadioControl {
   // The dot, as a layer so it can spring; see `applyDotStateAnimated:`.
   CAShapeLayer *_dotLayer;
+}
+
+/*
+ * Accepts a touch anywhere within the target, even outside the view's bounds.
+ *
+ * `hitSlop` is not the mechanism for the same reason it was rejected for the
+ * box: it is clipped to the ancestor's bounds, and it is not expressible from
+ * the user-agent sheet at all. This is the platform's own hook for the same
+ * idea, and it belongs on the control rather than the container because the
+ * control is the thing being aimed at.
+ */
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
+{
+  const CGRect bounds = self.bounds;
+  const CGFloat dx = MAX(0, (kEXPRadioTouchTarget - CGRectGetWidth(bounds)) / 2);
+  const CGFloat dy = MAX(0, (kEXPRadioTouchTarget - CGRectGetHeight(bounds)) / 2);
+  return CGRectContainsPoint(CGRectInset(bounds, -dx, -dy), point);
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -236,6 +276,23 @@ static CGRect EXPRadioRingRect(CGRect bounds, CGFloat *outLineWidth)
     self.elementControl = _radio;
   }
   return self;
+}
+
+/*
+ * The container has to admit the touch too.
+ *
+ * UIKit walks down from the window and stops at the first view whose
+ * `pointInside:` says no, so an expanded target on the control alone is
+ * unreachable: the point never gets past this view. Both have to agree, which
+ * is easy to forget because the control's override is the one that looks like
+ * it does the work.
+ */
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
+{
+  const CGRect bounds = self.bounds;
+  const CGFloat dx = MAX(0, (kEXPRadioTouchTarget - CGRectGetWidth(bounds)) / 2);
+  const CGFloat dy = MAX(0, (kEXPRadioTouchTarget - CGRectGetHeight(bounds)) / 2);
+  return CGRectContainsPoint(CGRectInset(bounds, -dx, -dy), point);
 }
 
 - (void)radioTapped

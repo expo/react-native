@@ -308,7 +308,7 @@ export const CHECKABLE_FOOTPRINT_BY_PLATFORM: {
     verticalAlign: 'middle',
   },
 } = {
-  ios: {width: 63, height: 28, marginInlineEnd: 8, verticalAlign: 'middle'},
+  ios: {width: 63, height: 28, marginInlineEnd: 12, verticalAlign: 'middle'},
   android: {
     width: 48,
     height: 48,
@@ -321,21 +321,28 @@ export const CHECKABLE_FOOTPRINT_BY_PLATFORM: {
  * `<input type="radio">`'s box — the TOUCH TARGET, not the ink.
  *
  * A radio's circle is small by design; its tappable area must not be. iOS drew
- * a 22pt circle in a 22pt box, so the control was exactly as tappable as it
- * was visible — half the Human Interface Guidelines' 44pt minimum, and
- * reported from a device as hard to hit. The box is now the guideline's
- * number, with the circle kept at its design diameter and centred in it
- * (`kEXPRadioIndicatorDiameter` in `EXPElementRadioComponentView`), which is
- * how Material centres a 24dp drawable in a 48dp target.
+ * a 22pt circle in a 22pt box, so the control was exactly as tappable as it was
+ * visible — half the Human Interface Guidelines' 44pt minimum.
  *
- * hitSlop is deliberately not the mechanism: iOS clips it to the ancestor's
- * bounds, and a form row is only as tall as its text, so the added area would
- * be clipped away exactly where it is wanted.
+ * Making the BOX 44pt fixed that and bought a second complaint: 11pt of empty
+ * target all round the ink reads as a lot of air in a stack of radios, and the
+ * control still felt small to aim at. Both are the same fact — a target is only
+ * as findable as the ink advertising it, so a 44pt box around a 22pt dot spends
+ * space without looking like it bought anything.
  *
- * The inline-end margins then state the LABEL's distance from the visible
- * circle rather than from the box: iOS insets the ink (44 - 22) / 2 = 11pt, so
- * -3 leaves the ~8pt a system form puts between a control and its label — the
- * same spacing the checkable footprint above is tuned to.
+ * So the two numbers are no longer one number. The box is 32pt, which is the
+ * ink plus a modest ring, and the TARGET reaches past it to 44pt through
+ * `pointInside:` (`kEXPRadioTouchTarget` in `EXPElementRadioComponentView`).
+ * Layout spends 32; a finger finds 44.
+ *
+ * hitSlop is not the mechanism: iOS clips it to the ancestor's bounds and it
+ * cannot be stated from this sheet at all. `pointInside:` has the same
+ * ancestor constraint, which is why a row holding radios states a minimum
+ * height — see RADIO_ROW in the forms demo.
+ *
+ * The inline-end margin states the LABEL's distance from the visible circle
+ * rather than from the box: iOS insets the ink (32 - 22) / 2 = 5pt, so 7 leaves
+ * 12pt between the circle and its label.
  */
 export const RADIO_FOOTPRINT_BY_PLATFORM: {
   ios: {
@@ -351,7 +358,7 @@ export const RADIO_FOOTPRINT_BY_PLATFORM: {
     verticalAlign: 'middle',
   },
 } = {
-  ios: {width: 44, height: 44, marginInlineEnd: -3, verticalAlign: 'middle'},
+  ios: {width: 32, height: 32, marginInlineEnd: 7, verticalAlign: 'middle'},
   android: {
     width: 48,
     height: 48,
