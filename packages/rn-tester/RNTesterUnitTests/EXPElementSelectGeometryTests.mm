@@ -23,6 +23,16 @@
 
 @implementation EXPElementSelectGeometryTests
 
+/*
+ * A pop-up button measured at the DEFAULT Dynamic Type size.
+ *
+ * The constants below are the platform's metrics at `UIContentSizeCategoryLarge`
+ * — which is iOS's default, and is NOT the category named "medium". A button
+ * left to read the ambient setting measures whatever the simulator was last
+ * told to use, so a stale `simctl ui <udid> content_size` turns this into a
+ * failure that looks like a UIKit change and is not one. The trait is pinned
+ * here so the test measures the same control every run.
+ */
 static UIButton *PopUpButton(NSString *title)
 {
   UIButtonConfiguration *configuration = [UIButtonConfiguration borderedButtonConfiguration];
@@ -34,12 +44,33 @@ static UIButton *PopUpButton(NSString *title)
   button.menu = [UIMenu menuWithTitle:@""
                              children:@[ [UIAction actionWithTitle:title image:nil identifier:nil
                                                            handler:^(UIAction *a){}] ]];
+  // The override has to be resolved, and a detached view resolves nothing: a
+  // button outside a hierarchy keeps whatever traits it was born with, so
+  // setting `traitOverrides` on the button itself measures unchanged. Traits
+  // descend from the window, so the button is put in one that states the
+  // category, laid out, and only then measured.
+  UIWindow *window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 400, 200)];
+  if (@available(iOS 17.0, *)) {
+    window.traitOverrides.preferredContentSizeCategory = UIContentSizeCategoryLarge;
+  }
+  [window addSubview:button];
+  [window layoutIfNeeded];
   [button sizeToFit];
+  [button removeFromSuperview];
   return button;
 }
 
 - (void)testPopUpChromeMatchesTheMeasureConstants
 {
+  if (@available(iOS 17.0, *)) {
+    // Pinned above.
+  } else if (![UIApplication.sharedApplication.preferredContentSizeCategory
+                 isEqualToString:UIContentSizeCategoryLarge]) {
+    // Without `traitOverrides` there is no way to pin it, and measuring at some
+    // other size would assert against constants that were never stated for it.
+    XCTSkip(@"the device is not at the default Dynamic Type size");
+  }
+
   // The label font the C++ measure assumes (kElementSelectLabelFontSize).
   UIFont *labelFont = [UIFont systemFontOfSize:17];
   UIButton *apple = PopUpButton(@"Apple");
