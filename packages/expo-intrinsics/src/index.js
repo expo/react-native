@@ -1177,7 +1177,33 @@ function resolveInlineElementComponent(
     const styleSheetModule: any = require('react-native/Libraries/StyleSheet/StyleSheet');
     const flatten =
       styleSheetModule.default?.flatten ?? styleSheetModule.flatten;
-    const display = flatten(style)?.display ?? uaStyle?.display;
+    const flat = flatten(style);
+
+    /*
+     * BLOCKIFICATION (css-display-3 §2.7). `position: absolute` and `fixed`
+     * compute `display: inline` to `block`, and the box leaves flow entirely
+     * (CSS2 §9.7) — it contributes nothing to the line it was written in.
+     *
+     * Done here because this is where the element's display is computed, and
+     * because the alternative is worse: an inline element is backed by a text
+     * shadow node whose props carry no position at all, so the layout side
+     * cannot see the positioning even to ignore it. Resolving to the box
+     * backing hands it to the code that already implements the rule —
+     * `isInlineLevelBox` excludes absolutely-positioned boxes from inline flow
+     * and cites §9.7 for it.
+     *
+     * The case that found this is the canonical visually-hidden block:
+     * `position: absolute` on a 1x1 clipped `<span>`, which is how a component
+     * says "assistive technology only". Its screen-reader text was laying out
+     * in the line as visible words, and squeezing the real label until it
+     * wrapped mid-word.
+     */
+    const position = flat?.position;
+    if (position === 'absolute' || position === 'fixed') {
+      return boxComponentName;
+    }
+
+    const display = flat?.display ?? uaStyle?.display;
     return typeof display === 'string' && BOX_DISPLAYS.has(display)
       ? boxComponentName
       : uiViewClassName;
