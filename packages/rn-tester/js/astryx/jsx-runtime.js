@@ -42,7 +42,16 @@ import {
 import Dialog from './elements/Dialog';
 import Input from './elements/Input';
 import TextArea from './elements/TextArea';
-import {parseTransformString, resolveInherited} from './stylex-rn';
+import {
+  EMPTY_MARKER_STATE,
+  hasDescendantConditions,
+  hasMarkers,
+  markerOfProps,
+  parseTransformString,
+  resolveInherited,
+  resolveWhen,
+} from './stylex-rn';
+import type {MarkerState} from './stylex-rn';
 import {CurrentColorContext} from './svg/CurrentColor';
 import {Svg, SvgCircle, SvgLine, SvgPath, SvgRect} from './svg/Svg';
 import {useInteractionState} from './useInteractionState';
@@ -56,6 +65,149 @@ import {
 // The custom properties in scope for a subtree. `null` is the root scope
 // (only global design tokens apply).
 const VarScopeContext: React.Context<?VarScope> = React.createContext(null);
+
+/*
+ * What every `stylex.when.*` condition in the subtree is answered from.
+ *
+ * StyleX compiles these to a class on the marked element and a selector on the
+ * descendant, so the BROWSER answers "is my marked ancestor a `:first-child`?"
+ * out of the DOM. There is no DOM and no compiler here, so the marked element
+ * publishes the pseudo-classes it matches and the descendant reads them — the
+ * same direction the custom-property scope above already travels, for the same
+ * reason.
+ *
+ * `siblingBefore` / `siblingAfter` need a different fact — the markers on the
+ * elements either side of THIS one — so a parent hands each child its own
+ * state rather than the subtree sharing one.
+ */
+const MarkerStateContext: React.Context<MarkerState> =
+  React.createContext<MarkerState>(EMPTY_MARKER_STATE);
+
+/*
+ * How a `when.descendant` question is answered.
+ *
+ * Every other relation travels DOWN: an ancestor knows what it matches before
+ * its subtree renders, so it publishes and descendants read. This one travels
+ * UP, and that asymmetry is the whole difficulty — a parent renders before its
+ * descendants exist, so on its first pass the honest answer is "nothing has
+ * reported yet".
+ *
+ * So marked elements REGISTER with every asking ancestor, in a layout effect,
+ * and an asker whose set changed re-renders. Layout effects run after commit
+ * and before paint, and a state update from one is flushed in the same cycle,
+ * so the settled answer is the first one the screen shows rather than a
+ * corrected second frame.
+ *
+ * The chain is a list rather than a single callback because `:has()` is not
+ * limited to the nearest ancestor: a marked element satisfies the condition for
+ * EVERY asker above it, so it reports to all of them.
+ *
+ * Convergence is not an accident. What gets reported — an element's structural
+ * position and its own state pseudo-classes — never depends on the styles the
+ * answer produces, so an asker restyling cannot change what was reported and
+ * restart the cycle.
+ */
+type DescendantRegistrar = (
+  markerId: string,
+  pseudos: ReadonlySet<string>,
+) => () => void;
+
+const DescendantRegistryContext: React.Context<ReadonlyArray<DescendantRegistrar>> =
+  React.createContext<ReadonlyArray<DescendantRegistrar>>([]);
+
+/**
+ * For an element that asks about descendants: the collected answers, and the
+ * chain to hand down so deeper marked elements report here too.
+ */
+function useDescendantMarkers(asks: boolean): {
+  descendants: ReadonlyMap<string, ReadonlySet<string>>,
+  chain: ReadonlyArray<DescendantRegistrar>,
+} {
+  const parentChain = React.useContext(DescendantRegistryContext);
+  const [reported, setReported] = React.useState<
+    ReadonlyMap<string, ReadonlySet<string>>,
+  >(() => new Map());
+  // Reference counts, so two descendants reporting the same pseudo do not
+  // cancel each other when only one unmounts.
+  const countsRef = React.useRef<Map<string, Map<string, number>>>(new Map());
+
+  const register = React.useCallback<DescendantRegistrar>((markerId, pseudos) => {
+    const counts = countsRef.current;
+    const forMarker = counts.get(markerId) ?? new Map<string, number>();
+    counts.set(markerId, forMarker);
+    for (const pseudo of pseudos) {
+      forMarker.set(pseudo, (forMarker.get(pseudo) ?? 0) + 1);
+    }
+    setReported(snapshotCounts(counts));
+    return () => {
+      const current = countsRef.current.get(markerId);
+      if (current == null) {
+        return;
+      }
+      for (const pseudo of pseudos) {
+        const next = (current.get(pseudo) ?? 0) - 1;
+        if (next > 0) {
+          current.set(pseudo, next);
+        } else {
+          current.delete(pseudo);
+        }
+      }
+      if (current.size === 0) {
+        countsRef.current.delete(markerId);
+      }
+      setReported(snapshotCounts(countsRef.current));
+    };
+  }, []);
+
+  const chain = React.useMemo(
+    () => (asks ? [...parentChain, register] : parentChain),
+    [asks, parentChain, register],
+  );
+
+  return {descendants: asks ? reported : EMPTY_MARKER_STATE.descendants, chain};
+}
+
+/** A plain marker → pseudo-set view of the reference counts. */
+function snapshotCounts(
+  counts: Map<string, Map<string, number>>,
+): ReadonlyMap<string, ReadonlySet<string>> {
+  const out = new Map<string, ReadonlySet<string>>();
+  for (const [markerId, pseudos] of counts) {
+    out.set(markerId, new Set(pseudos.keys()));
+  }
+  return out;
+}
+
+/*
+ * The structural pseudo-classes an element matches from its position among
+ * siblings. These are the ones a marker can be asked about, and the only ones
+ * knowable without a layout pass or a DOM.
+ */
+function structuralPseudos(index: number, count: number): Set<string> {
+  const pseudos = new Set<string>();
+  if (index === 0) {
+    pseudos.add(':first-child');
+  }
+  if (index === count - 1) {
+    pseudos.add(':last-child');
+  }
+  if (count === 1) {
+    pseudos.add(':only-child');
+  }
+  pseudos.add(`:nth-child(${index + 1})`);
+  return pseudos;
+}
+
+/** A copy of `map` with `id`'s entry replaced — never a mutation of a parent's. */
+function withMarker(
+  map: ReadonlyMap<string, ReadonlySet<string>>,
+  id: string,
+  pseudos: ReadonlySet<string>,
+): Map<string, ReadonlySet<string>> {
+  const next = new Map(map);
+  next.set(id, pseudos);
+  return next;
+}
 
 // The ancestor chain for stylesheet selector matching (`.card .title`,
 // `.dark` theming). Ancestor descriptors carry structure — tag, classes,
@@ -89,9 +241,81 @@ type IntrinsicProps = {
   style?: {[string]: unknown},
   __stylexStyle?: {[string]: unknown},
   __stylexVars?: {[string]: unknown},
+  /*
+   * The `when.*` blocks this element deferred: condition key to the style it
+   * applies. Declared rather than left to the indexer below, because both the
+   * descendant scan and `resolveWhen` need it to be an object, and an
+   * `unknown` from the indexer is not one.
+   */
+  __stylexWhen?: {[string]: unknown},
   children?: React.Node,
   [string]: unknown,
 };
+
+/**
+ * A style array flattened enough for `when.*` blocks to layer over it.
+ *
+ * `mergedStyle` may be a single object or an array (a reset plus the resolved
+ * entry). A matching conditional block has to win over all of it, so the array
+ * is folded once here rather than the block being appended and hoping the
+ * renderer's own precedence agrees.
+ */
+function flattenStyleForWhen(style: unknown): {[string]: unknown} | null {
+  if (style == null) {
+    return null;
+  }
+  if (Array.isArray(style)) {
+    let flat: {[string]: unknown} = {};
+    for (const entry of style) {
+      const inner = flattenStyleForWhen(entry);
+      if (inner != null) {
+        // Spread rather than `Object.assign`, whose result Flow cannot track.
+        // These arrays are a reset plus a handful of resolved namespaces, so
+        // rebuilding costs nothing worth naming.
+        flat = {...flat, ...inner};
+      }
+    }
+    return flat;
+  }
+  if (typeof style === 'object') {
+    // $FlowFixMe[incompatible-return] a style object
+    return {...style};
+  }
+  return null;
+}
+
+/**
+ * Hands each child element its position among its siblings.
+ *
+ * A marked element has to know whether it is a `:first-child` before it can
+ * publish that, and only its PARENT knows. React gives a component no view of
+ * its own position, so the parent stamps each child as it renders it — which
+ * is a clone per child, and therefore gated on any marker existing at all.
+ * Nothing in React Native uses markers; an app that never calls
+ * `defineMarker()` walks no children and clones nothing.
+ */
+function markedChildren(children: unknown): unknown {
+  if (!hasMarkers() || children == null) {
+    return children;
+  }
+  const list = React.Children.toArray(children);
+  if (list.length === 0) {
+    return children;
+  }
+  let changed = false;
+  const stamped = list.map((child, index) => {
+    if (!React.isValidElement(child)) {
+      return child;
+    }
+    changed = true;
+    // $FlowFixMe[incompatible-type] stamping our own props onto our own element
+    return React.cloneElement(child, {
+      __astryxIndex: index,
+      __astryxCount: list.length,
+    });
+  });
+  return changed ? stamped : children;
+}
 
 /**
  * Renders one intrinsic element: finishes any style values that were waiting
@@ -104,15 +328,100 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   // Any change to the stylesheet environment — installation, appearance,
   // window size — re-renders every intrinsic so matches recompute.
   React.useSyncExternalStore(subscribeCss, cssVersion);
+  const markerState = React.useContext(MarkerStateContext);
   const {
     style: styleProp,
     __stylexStyle,
     __stylexVars,
     __startingStyle,
+    __stylexMarker,
+    __stylexWhen,
+    __astryxIndex,
+    __astryxCount,
     className,
     children,
     ...rest
   } = props;
+
+  /*
+   * A marked element publishes what it matches, so its subtree can be asked
+   * about it. Its own structural position came from its parent (`markedChildren`
+   * stamps it), because nothing else can know it.
+   *
+   * Sibling state is published too, and is per-child rather than per-subtree:
+   * `siblingBefore` asks about the element before THIS one, so the answer
+   * differs for every child of the same parent. This element contributes its
+   * own marker to what its FOLLOWING siblings see, which is the direction the
+   * tree can actually carry.
+   */
+  /*
+   * Descendant conditions, if this element asks any. The chain is handed down
+   * regardless, so a marked element deeper in the tree reports to every asker
+   * above it rather than only the nearest.
+   */
+  const asksAboutDescendants =
+    hasDescendantConditions() &&
+    __stylexWhen != null &&
+    Object.keys(__stylexWhen).some(key => key.startsWith(':where-descendant('));
+  const {descendants, chain: descendantChain} =
+    useDescendantMarkers(asksAboutDescendants);
+
+  /*
+   * A marked element reports itself upward, in a layout effect so the answer
+   * is settled before paint rather than one frame after it.
+   */
+  const ownPseudos = React.useMemo(
+    () =>
+      typeof __stylexMarker === 'string'
+        ? structuralPseudos(
+            typeof __astryxIndex === 'number' ? __astryxIndex : 0,
+            typeof __astryxCount === 'number' ? __astryxCount : 1,
+          )
+        : null,
+    [__stylexMarker, __astryxIndex, __astryxCount],
+  );
+  const parentChain = React.useContext(DescendantRegistryContext);
+  React.useLayoutEffect(() => {
+    if (typeof __stylexMarker !== 'string' || ownPseudos == null) {
+      return;
+    }
+    if (parentChain.length === 0) {
+      return;
+    }
+    const undo = parentChain.map(register =>
+      register(__stylexMarker, ownPseudos),
+    );
+    return () => {
+      for (const un of undo) {
+        un();
+      }
+    };
+  }, [__stylexMarker, ownPseudos, parentChain]);
+
+  const publishedMarkers = React.useMemo<MarkerState>(() => {
+    if (typeof __stylexMarker !== 'string') {
+      return markerState;
+    }
+    const index = typeof __astryxIndex === 'number' ? __astryxIndex : 0;
+    const count = typeof __astryxCount === 'number' ? __astryxCount : 1;
+    return {
+      ancestors: withMarker(
+        markerState.ancestors,
+        __stylexMarker,
+        structuralPseudos(index, count),
+      ),
+      before: markerState.before,
+      after: markerState.after,
+      descendants: markerState.descendants,
+    };
+  }, [markerState, __stylexMarker, __astryxIndex, __astryxCount]);
+
+  // What THIS element resolves against: what it can see from above, plus what
+  // its own descendants have reported.
+  const effectiveMarkerState = React.useMemo<MarkerState>(
+    () => (asksAboutDescendants ? {...markerState, descendants} : markerState),
+    [asksAboutDescendants, markerState, descendants],
+  );
 
   // Interaction tracking for stylesheet pseudo-classes. The hook always
   // runs (hook-order stability); its handlers attach only when some
@@ -273,10 +582,24 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   const stateProps = css.dependsOnStates
     ? composeInteractionHandlers(rest, interactionHandlers)
     : rest;
+  /*
+   * The `when.*` blocks this element deferred, settled now that the marker
+   * state is known, layered over everything else so a matching condition wins
+   * the same way the generated rule would.
+   */
+  const whenResolved = resolveWhen(
+    flattenStyleForWhen(mergedStyle),
+    __stylexWhen,
+    effectiveMarkerState,
+    scope,
+  );
+  const styleWithWhen =
+    __stylexWhen != null && whenResolved != null ? whenResolved : mergedStyle;
+
   const hostProps =
-    mergedStyle != null
-      ? {...stateProps, style: mergedStyle, children}
-      : {...stateProps, children};
+    styleWithWhen != null
+      ? {...stateProps, style: styleWithWhen, children: markedChildren(children)}
+      : {...stateProps, children: markedChildren(children)};
   if (mapped != null) {
     // Behavior-mapped element (e.g. <input> → TextInput). For most of these
     // children are noise — a TextInput renders any it is given as text — so
@@ -355,13 +678,31 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
     );
   }
 
+  let withMarkerState =
+    publishedMarkers === markerState ? (
+      element
+    ) : (
+      <MarkerStateContext.Provider value={publishedMarkers}>
+        {element}
+      </MarkerStateContext.Provider>
+    );
+  if (descendantChain !== parentChain) {
+    withMarkerState = (
+      <DescendantRegistryContext.Provider value={descendantChain}>
+        {withMarkerState}
+      </DescendantRegistryContext.Provider>
+    );
+  }
+
   // Only elements that declare custom properties open a new scope; everything
   // else reuses the ancestor's provider, so the common case adds no provider.
   if (scope === baseScope) {
-    return element;
+    return withMarkerState;
   }
   return (
-    <VarScopeContext.Provider value={scope}>{element}</VarScopeContext.Provider>
+    <VarScopeContext.Provider value={scope}>
+      {withMarkerState}
+    </VarScopeContext.Provider>
   );
 }
 
