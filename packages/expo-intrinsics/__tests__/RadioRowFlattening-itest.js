@@ -167,7 +167,17 @@ test('a row that gains a radio in an update is mounted too', () => {
  * whatever sat at its trailing edge instead of moving it.
  */
 describe("a row holding a radio takes the platform's row padding", () => {
-  function childOffsets(markup: React.Node): {start: number, end: number} {
+  // `markup` is a FUNCTION of the two refs, not a rendered node: each case has
+  // to put them on its own elements, and a node would have had to be built
+  // before there were refs to build it with. Typed as one, so that the arrows
+  // below get their parameter types from here rather than needing annotations
+  // at every call site.
+  type Markup = (
+    row: {current: HostInstance | null},
+    child: {current: HostInstance | null},
+  ) => React.MixedElement;
+
+  function childOffsets(markup: Markup): {start: number, end: number} {
     const row = createRef<HostInstance | null>();
     const child = createRef<HostInstance | null>();
     const root = Fantom.createRoot({viewportWidth: 300});
