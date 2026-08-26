@@ -490,6 +490,7 @@ static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_DE
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_DECORATION_LINE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_DECORATION_STYLE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_EFFECTS;
+static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_ROLE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_SHADOW_COLOR;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_SHADOW_OFFSET_DX;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_SHADOW_OFFSET_DY;
