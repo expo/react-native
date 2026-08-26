@@ -274,6 +274,27 @@ public class TextAttributeProps private constructor() {
     fontWeight = parseFontWeight(fontWeightString)
   }
 
+  /**
+   * Takes the size and weight the app's THEME gives a Material role.
+   *
+   * The role is a user-agent default, so it gives way to anything the author stated: the size is
+   * taken only where the element declared none of its own, and the weight likewise. That is the
+   * same rule the iOS side follows — the platform supplies the initial value, not an override.
+   *
+   * A theme that does not define the role resolves to nothing and this does nothing, which leaves
+   * whatever the stylesheet already said. That is deliberate: an app on a non-Material theme keeps
+   * working and simply does not get Material's typography.
+   */
+  private fun applyTextRole(role: String?) {
+    val appearance = role?.let { MaterialTypeScale.forRole(it) } ?: return
+    if (fontSize == ReactConstants.UNSET) {
+      setFontSize(appearance.textSizeSp)
+    }
+    if (fontWeight == ReactConstants.UNSET) {
+      fontWeight = appearance.fontWeight
+    }
+  }
+
   private fun setFontStyle(fontStyleString: String?) {
     fontStyle = parseFontStyle(fontStyleString)
   }
@@ -382,6 +403,12 @@ public class TextAttributeProps private constructor() {
     public const val TA_KEY_OPACITY: Int = 2
     public const val TA_KEY_FONT_FAMILY: Int = 3
     public const val TA_KEY_FONT_SIZE: Int = 4
+
+    /**
+     * The text ROLE an element names, mapped to a Material text appearance and resolved from the
+     * theme by [MaterialTypeScale]. Must match `TA_KEY_TEXT_ROLE` in `conversions.h`.
+     */
+    public const val TA_KEY_TEXT_ROLE: Int = 34
     public const val TA_KEY_FONT_SIZE_MULTIPLIER: Int = 5
     public const val TA_KEY_FONT_WEIGHT: Int = 6
     public const val TA_KEY_FONT_STYLE: Int = 7
@@ -444,6 +471,7 @@ public class TextAttributeProps private constructor() {
           TA_KEY_OPACITY -> result.opacity = entry.doubleValue.toFloat()
           TA_KEY_FONT_FAMILY -> result.fontFamily = entry.stringValue
           TA_KEY_FONT_SIZE -> result.setFontSize(entry.doubleValue.toFloat())
+          TA_KEY_TEXT_ROLE -> result.applyTextRole(entry.stringValue)
           TA_KEY_FONT_SIZE_MULTIPLIER -> {}
           TA_KEY_FONT_WEIGHT -> result.setFontWeight(entry.stringValue)
           TA_KEY_FONT_STYLE -> result.setFontStyle(entry.stringValue)

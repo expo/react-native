@@ -144,19 +144,47 @@ export type UAStyle = {[string]: unknown};
  * stated weight is a design decision. A stated SIZE would be a copied metric,
  * which is the thing this exists to avoid.
  */
+/**
+ * Whether this host can resolve a text ROLE into a font.
+ *
+ * A role is a question for the platform — `preferredFontForTextStyle:` on iOS,
+ * a Material text appearance from the theme on Android — and naming one is only
+ * useful where something can answer. Fantom has neither: it runs the renderer's
+ * C++ against a stub host on a desktop, with no UIKit and no Android theme, and
+ * reports itself as `android` because that is the layout dialect it emulates.
+ *
+ * Naming a role there produced headings with NO SIZE AT ALL, which is exactly
+ * what `HeadingMargins-itest` caught — every level collapsed to the default and
+ * the margin ratios it pins went with them.
+ *
+ * Asking about the TEST GLOBAL is unlovely and it is the honest question:
+ * "is anything here able to answer?", not "which OS is this?". A capability
+ * flag published from native would be the better shape if this needs to
+ * generalise.
+ */
+function hostResolvesTextRoles(): boolean {
+  const isFantom =
+    // $FlowFixMe[cannot-resolve-name] the test host's marker
+    typeof global !== 'undefined' && global.$$RunTests$$ != null;
+  return !isFantom && (Platform.OS === 'ios' || Platform.OS === 'android');
+}
+
 function headingType(
   role: string,
   webScale: number,
   statedWeight?: string,
 ): {[string]: unknown} {
-  if (Platform.OS === 'ios') {
+  if (hostResolvesTextRoles()) {
+    // The platform resolves the role: iOS asks
+    // `preferredFontForTextStyle:`, Android maps it onto Material's scale and
+    // asks the app's THEME. No size is stated on either — that is the point,
+    // and a theme with nothing to say falls back to the framework's own text
+    // appearances rather than to nothing.
     return statedWeight != null
       ? {dynamicTypeRamp: role, fontWeight: statedWeight}
       : {dynamicTypeRamp: role};
   }
-  // Android resolves a Material text appearance from the theme; until that
-  // half exists, the web's ladder stands rather than a table of Material's
-  // numbers copied into this file.
+  // Anywhere else — the web, and Fantom — the browser's ladder stands.
   return {fontSize: webScale * EM, fontWeight: 'bold'};
 }
 
