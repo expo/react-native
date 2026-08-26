@@ -100,7 +100,10 @@ describe('when.ancestor through the element tree', () => {
     let renderer: $FlowFixMe;
     TestRenderer.act(() => {
       renderer = TestRenderer.create(
-        <List count={3} condition={stylex.when.ancestor(':first-child', marker)} />,
+        <List
+          count={3}
+          condition={stylex.when.ancestor(':first-child', marker)}
+        />,
       );
     });
 
@@ -116,7 +119,10 @@ describe('when.ancestor through the element tree', () => {
     let renderer: $FlowFixMe;
     TestRenderer.act(() => {
       renderer = TestRenderer.create(
-        <List count={3} condition={stylex.when.ancestor(':last-child', marker)} />,
+        <List
+          count={3}
+          condition={stylex.when.ancestor(':last-child', marker)}
+        />,
       );
     });
     const values = opacities(renderer);
@@ -142,7 +148,10 @@ describe('when.ancestor through the element tree', () => {
     let renderer: $FlowFixMe;
     TestRenderer.act(() => {
       renderer = TestRenderer.create(
-        <List count={3} condition={stylex.when.ancestor(':first-child', other)} />,
+        <List
+          count={3}
+          condition={stylex.when.ancestor(':first-child', other)}
+        />,
       );
     });
     expect(opacities(renderer).filter(v => v === 0)).toHaveLength(0);
@@ -208,10 +217,7 @@ describe('when.descendant through the element tree', () => {
     TestRenderer.act(() => {
       renderer = TestRenderer.create(
         <Box pseudo=":last-child">
-          {[
-            jsx('div', {...stylex.props(marker)}, 'a'),
-            jsx('div', {}, 'b'),
-          ]}
+          {[jsx('div', {...stylex.props(marker)}, 'a'), jsx('div', {}, 'b')]}
         </Box>,
       );
     });
@@ -224,10 +230,7 @@ describe('when.descendant through the element tree', () => {
     TestRenderer.act(() => {
       renderer = TestRenderer.create(
         <Box pseudo=":last-child">
-          {[
-            jsx('div', {}, 'a'),
-            jsx('div', {...stylex.props(marker)}, 'b'),
-          ]}
+          {[jsx('div', {}, 'a'), jsx('div', {...stylex.props(marker)}, 'b')]}
         </Box>,
       );
     });
