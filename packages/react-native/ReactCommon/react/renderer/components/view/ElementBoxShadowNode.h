@@ -65,8 +65,25 @@ class ElementBoxProps final : public ViewProps, public NodeNameProvider {
         // seeded the counter and SHIFTED the whole list 98px — the component
         // translates the attribute to this private name (List.js), exactly
         // as <img> translates `src`.
-        start(convertRawProp(
-            context, rawProps, "listStart", sourceProps.start, 1)) {}
+        start(convertRawProp(context, rawProps, "listStart", sourceProps.start, 1)),
+        /*
+         * `href`, when this box is an `<a>`.
+         *
+         * An anchor is not always a run of glyphs. `display: 'block'` makes it
+         * a box, and so does anything else that generates one — at which point
+         * its destination cannot ride the text attributes, because the text
+         * inside it belongs to an anonymous run that (correctly) does not
+         * inherit the link.
+         *
+         * So the box carries it too, and the platform's link interaction is
+         * installed on the view rather than over glyph rects. Same behaviour
+         * for the author, two shapes underneath.
+         *
+         * On `ElementBoxProps` rather than `ViewProps`: this is an element
+         * attribute, like `listStyleType` beside it, and every plain `<View>`
+         * in every app has no business parsing one.
+         */
+        href(convertRawProp(context, rawProps, "href", sourceProps.href, std::string{})) {}
 
   // Empty when rendered without an authored tag, in which case core falls back
   // to the component name.
@@ -92,6 +109,16 @@ class ElementBoxProps final : public ViewProps, public NodeNameProvider {
   std::string listStyleTypeValue{};
   std::string listStylePositionValue{};
   int start{1};
+
+  /**
+   * The link destination when this box is an `<a href>`; empty otherwise.
+   *
+   * Declared LAST because it is initialised last: a member initialiser list out
+   * of declaration order is a `-Wreorder-ctor` error under the Android build's
+   * `-Werror`, though not under Xcode's default warnings — so this compiles on
+   * iOS and fails on Android, which is a confusing way to find out.
+   */
+  std::string href{};
 };
 
 using ElementBoxShadowNode = AbstractViewShadowNode<ElementBoxComponentName, ElementBoxProps>;
