@@ -58,6 +58,24 @@ const SHRINK = {alignSelf: 'flex-start'};
  * platform's root; asserting `2 × this` says what the test means, which is that
  * the newline produced a second line.
  */
+/*
+ * `height` is two lines of `<pre>` rather than one.
+ *
+ * Bounded rather than equated, because each line box is ceiled to a whole
+ * device pixel on its own — Yoga rounds a text node UP so a glyph is never
+ * clipped — so twice a one-line measurement can exceed a two-line one by up to
+ * a pixel. That is 1/3pt at this scale factor; the difference actually being
+ * asserted, one line against two, is fifty times larger.
+ *
+ * The upper bound matters as much as the lower: without it this would also
+ * pass for three lines, which is a different bug in the same neighbourhood.
+ */
+function expectTwoLines(height: number) {
+  const line = PRE_LINE();
+  expect(height).toBeGreaterThan(1.5 * line);
+  expect(height).toBeLessThanOrEqual(2 * line);
+}
+
 const PRE_LINE = (): number =>
   boxOf(ref => (
     // $FlowExpectedError[not-a-component] intrinsic <pre> tag
@@ -100,7 +118,7 @@ describe('white-space: pre preserves what normal collapses', () => {
     ));
     // Collapsed: one line of "aa bb". Preserved: two lines of "aa".
     expect(collapsed.height).toBe(20);
-    expect(preserved.height).toBeCloseTo(2 * PRE_LINE(), 1);
+    expectTwoLines(preserved.height);
   });
 
   it('keeps leading whitespace that a block would trim', () => {
@@ -185,7 +203,7 @@ describe('white-space: pre does not wrap', () => {
         {'aaaaaaaa\nbb'}
       </pre>
     ));
-    expect(box.height).toBeCloseTo(2 * PRE_LINE(), 1);
+    expectTwoLines(box.height);
     expect(box.width).toBe(80);
   });
 });

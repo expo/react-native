@@ -269,6 +269,7 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   fontFamily: true,
   fontSize: true,
   fontSizeEm: true,
+  fontSizeRem: true,
   fontStyle: true,
   fontVariant: fontVariantAttribute,
   fontWeight: true,
@@ -292,6 +293,11 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   // StyleSheetTypes. A style key rather than a component prop because it is
   // inherited: a heading names the role and the run inside it receives it.
   dynamicTypeRamp: true,
+  // The user-agent sheet's own-`em` margin factor; see BaseViewProps.h.
+  uaMarginBlockEm: true,
+  uaMarginBlockRem: true,
+  uaFontSizeEm: true,
+  uaFontWeight: true,
   // `all` (css-cascade-4 §3.2): `all: 'initial'` makes the element an
   // inheritance boundary — the cascade below it restarts from the initial
   // values, like the web's own reset.
