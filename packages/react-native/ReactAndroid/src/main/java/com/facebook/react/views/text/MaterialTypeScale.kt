@@ -9,6 +9,8 @@ package com.facebook.react.views.text
 
 import android.content.Context
 import android.util.TypedValue
+import androidx.annotation.VisibleForTesting
+import com.facebook.react.uimanager.PixelUtil
 
 /**
  * Material's type scale, read from the app's THEME rather than copied into this file.
@@ -41,7 +43,10 @@ import android.util.TypedValue
 public object MaterialTypeScale {
 
   /**
-   * What a theme says a role is. Sizes are in scaled pixels, as the theme states them.
+   * What a theme says a role is. Sizes are in `sp` AT THE DEFAULT FONT SCALE —
+   * the figures the theme literally states — so that the user's text size is
+   * applied once, downstream, rather than baked in here and applied again. See
+   * [unscaledSp].
    *
    * The LINE HEIGHT is part of the answer, not a detail. Material states one for every step —
    * Headline Large is 32sp of type on 40sp of line, Title Large 22 on 28, Body Large 16 on 24 —
@@ -151,6 +156,22 @@ public object MaterialTypeScale {
    * AT ALL, which surfaces as `FontSize should be a positive value` from a letter-spacing
    * calculation — a crash reachable from a plain, valid stylesheet.
    */
+  /**
+   * Forgets the resolved scale, so the next [primeFrom] resolves again.
+   *
+   * For tests. The latch is deliberate in production — see [primeFrom] — and it
+   * also means one test's priming decides what every later test in the same
+   * sandbox sees, including the font scale it was primed under.
+   */
+  @JvmStatic
+  @VisibleForTesting
+  public fun resetForTests() {
+    synchronized(this) {
+      resolved = null
+      settled = false
+    }
+  }
+
   @JvmStatic
   public fun forRole(role: String): Appearance? {
     val materialRole =
@@ -169,6 +190,99 @@ public object MaterialTypeScale {
           else -> return null
         }
     return resolved?.get(materialRole)
+  }
+
+  /**
+   * The roles the shared vocabulary names, in the spelling both platforms use.
+   *
+   * iOS's names, because the style property is React Native's existing
+   * `dynamicTypeRamp` and these are what it accepts; [forRole] maps each onto
+   * Material's own scale. Kept beside that mapping so the two cannot drift.
+   */
+  private val ROLE_NAMES: List<String> =
+      listOf(
+          "caption2",
+          "caption1",
+          "footnote",
+          "subheadline",
+          "callout",
+          "body",
+          "headline",
+          "title3",
+          "title2",
+          "title1",
+          "largeTitle",
+      )
+
+  /**
+   * What each role currently measures, in DP.
+   *
+   * For the layout layer, which resolves a heading's `em`-relative block margin
+   * against the size its text is drawn at and cannot ask the theme itself. See
+   * `TextRoleMetrics` on the C++ side.
+   *
+   * DP rather than SP because Yoga lays out in dp — and the conversion is where
+   * the user's font scale enters, so a margin computed from one of these grows
+   * with the text beside it rather than staying at the size it had when the app
+   * was written.
+   *
+   * Empty until the scale has been primed; a caller with nothing to publish
+   * publishes nothing, and the layout layer falls back to the font-size the
+   * cascade carried.
+   */
+  @JvmStatic
+  public fun roleSizesDp(context: Context): Map<String, Float> {
+    val metrics = context.resources.displayMetrics
+    if (metrics.density <= 0f) {
+      return emptyMap()
+    }
+    val out = mutableMapOf<String, Float>()
+    for (name in ROLE_NAMES) {
+      val appearance = forRole(name) ?: continue
+      /*
+       * Scaled through `PixelUtil` specifically, because that is the conversion
+       * the TEXT goes through — `TextAttributeProps` hands the size to it and
+       * the glyphs come out the other side. A margin resolved against anything
+       * else would be a margin computed for type that is not on the screen, and
+       * would drift from it by exactly whatever the two conversions disagreed
+       * about.
+       */
+      out[name] = PixelUtil.toPixelFromSP(appearance.textSizeSp) / metrics.density
+    }
+    return out
+  }
+
+/**
+   * A resolved pixel length, back as the `sp` figure the theme stated.
+   *
+   * Resolving a text appearance gives PIXELS with the user's font scale already
+   * applied, and React Native's text pipeline applies that scale again to
+   * whatever `fontSize` it is handed. So the scale has to come back out here,
+   * exactly, and be applied once downstream — the same decision the iOS side
+   * makes when it asks UIKit at `UIContentSizeCategoryLarge` and lets
+   * `UIFontMetrics` do the scaling afterwards.
+   *
+   * Dividing by `scaledDensity` is the obvious inverse and is WRONG since
+   * Android 14, where font scaling is non-linear: large text grows
+   * proportionally less than small, so a 32sp appearance does not resolve to
+   * `32 x scaledDensity` and dividing by it does not give 32 back. At a 1.5
+   * scale it gave 22.6, and that shortfall then cancelled almost exactly
+   * against React Native's own scaling — headings came out the SAME PHYSICAL
+   * SIZE at every text size the user could choose. Measured on an API 36
+   * emulator: h1's line box was 40dp at scale 1.0 and 28.95dp at 1.5, with the
+   * glyphs unchanged.
+   *
+   * `deriveDimension` is the framework's own inverse of `applyDimension` and
+   * knows the non-linear curve. It is API 34, and below that the curve is
+   * linear, so there the division IS exact.
+   */
+  private fun unscaledSp(context: Context, px: Float): Float {
+    val metrics = context.resources.displayMetrics
+    if (android.os.Build.VERSION.SDK_INT >= 34) {
+      return TypedValue.deriveDimension(TypedValue.COMPLEX_UNIT_SP, px, metrics)
+    }
+    @Suppress("DEPRECATION") val scaledDensity = metrics.scaledDensity
+    return if (scaledDensity > 0f) px / scaledDensity else px
   }
 
   private fun resolveAll(context: Context, material: MutableSet<String>): Map<String, Appearance> {
@@ -256,8 +370,10 @@ public object MaterialTypeScale {
       if (sizePx <= 0f) {
         return null
       }
-      val density = context.resources.displayMetrics.scaledDensity
-      val sizeSp = if (density > 0f) sizePx / density else sizePx
+      val sizeSp = unscaledSp(context, sizePx)
+      if (sizeSp <= 0f) {
+        return null
+      }
 
       /*
        * The weight is read the way the theme happens to state it, which is not
@@ -287,7 +403,7 @@ public object MaterialTypeScale {
        */
       val lineHeightPx = typed.getDimension(attrs.indexOf(android.R.attr.lineHeight), 0f)
       val lineHeightSp =
-          if (lineHeightPx > 0f && density > 0f) lineHeightPx / density else Float.NaN
+          if (lineHeightPx > 0f) unscaledSp(context, lineHeightPx) else Float.NaN
 
       return Appearance(sizeSp, weight, lineHeightSp)
     } finally {
