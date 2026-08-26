@@ -23,6 +23,7 @@
 #import <CoreText/CoreText.h>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/attributedstring/TextRoleMetrics.h>
 #include <react/renderer/components/view/accessibilityPropsConversions.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/textlayoutmanager/RCTFontProperties.h>
@@ -268,6 +269,54 @@ inline static CGFloat RCTScaledMultiplierForRamp(const DynamicTypeRamp &dynamicT
   }
   os_unfair_lock_unlock(&lock);
   return multiplier;
+}
+
+/*
+ * Tells the layout layer how big each text role currently is.
+ *
+ * The sizes here are the ones text is actually drawn at — the platform's base
+ * size for the role, scaled by the user's Dynamic Type setting — because what
+ * reads them is a margin that has to sit correctly beside that text. See
+ * `TextRoleMetrics`.
+ *
+ * Published rather than looked up because the reader cannot ask: resolving a
+ * role needs UIKit, and layout does not run on a UI thread. This is the side of
+ * the boundary that can ask.
+ *
+ * Every ramp, not just the six a heading uses. The property accepts all eleven,
+ * and a role that resolved to nothing here would leave its element computing a
+ * margin from the fallback while its text used the platform's size — the
+ * two would disagree, and only for the roles nobody thought to list.
+ */
+void RCTPublishTextRoleMetrics(void)
+{
+  for (size_t index = 0; index < kDynamicTypeRampCount; index++) {
+    const DynamicTypeRamp ramp = (DynamicTypeRamp)index;
+    UIFont *font = RCTPreferredFontForDynamicTypeRamp(ramp);
+    if (font == nil) {
+      continue;
+    }
+    // The same two steps the text itself takes: the base size at the default
+    // content size, then the scaling for the user's setting. Taking
+    // `preferredFontForTextStyle:` at the CURRENT size instead would look
+    // simpler and would double-apply the scaling, which is the mistake the
+    // memo above exists to avoid.
+    const CGFloat base = font.pointSize;
+    TextRoleMetrics::publish(ramp, (Float)(base * RCTScaledMultiplierForRamp(ramp, base)));
+  }
+
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    // The published sizes are only right for the text size in force when they
+    // were taken. Without this, changing the text size in Settings would resize
+    // every heading and leave its margins at the old scale.
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIContentSizeCategoryDidChangeNotification
+                                                      object:nil
+                                                       queue:[NSOperationQueue mainQueue]
+                                                  usingBlock:^(NSNotification *_Nonnull) {
+                                                    RCTPublishTextRoleMetrics();
+                                                  }];
+  });
 }
 
 inline static CGFloat RCTEffectiveFontSizeMultiplierFromTextAttributes(const TextAttributes &textAttributes)

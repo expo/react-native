@@ -2647,6 +2647,186 @@
       "height": 16
     }
   },
+  "em-margin-resolves-against-the-elements-own-size": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "measured": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 80,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "em-margin-ignores-the-inherited-size": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 100
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "measured": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 80,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "em-margin-follows-a-size-stated-in-em": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 120
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "measured": {
+      "x": 0,
+      "y": 50,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 100,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "em-margin-scales-with-the-inherited-size": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 140
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "measured": {
+      "x": 0,
+      "y": 60,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 120,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "rem-margin-is-one-size-for-the-whole-tree": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 164
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "small": {
+      "x": 0,
+      "y": 36,
+      "width": 40,
+      "height": 20
+    },
+    "gap": {
+      "x": 0,
+      "y": 72,
+      "width": 40,
+      "height": 20
+    },
+    "large": {
+      "x": 0,
+      "y": 108,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 144,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "em-and-rem-differ-on-the-same-element": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 260
+    },
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "viaRem": {
+      "x": 0,
+      "y": 36,
+      "width": 40,
+      "height": 20
+    },
+    "gap": {
+      "x": 0,
+      "y": 72,
+      "width": 40,
+      "height": 20
+    },
+    "viaEm": {
+      "x": 0,
+      "y": 156,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 0,
+      "y": 240,
+      "width": 40,
+      "height": 20
+    }
+  },
   "margin-collapses-out-of-a-block-containers-bottom-edge": {
     "root": {
       "x": 0,

@@ -125,6 +125,12 @@ class FabricUIManagerBinding : public jni::HybridClass<FabricUIManagerBinding>,
 
   void setPixelDensity(float pointScaleFactor);
 
+  /**
+   * Records what the app's theme says a text role's size is, for the layout
+   * layer to resolve `em`-relative margins against. See `TextRoleMetrics`.
+   */
+  void publishTextRoleSize(jni::alias_ref<jstring> roleName, jfloat sizeDp);
+
   void driveCxxAnimations();
 
   void driveAnimationBackend(jlong frameTimeNanos);
