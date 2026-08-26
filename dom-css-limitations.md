@@ -250,6 +250,7 @@ rather than going quiet.
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
+- `link-title-is-not-idn-decoded` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPTextLinkInteraction.mm`
 - `list-style-type-additive-scripts` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
