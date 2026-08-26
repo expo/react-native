@@ -293,6 +293,18 @@ public class TextAttributeProps private constructor() {
     if (fontWeight == ReactConstants.UNSET) {
       fontWeight = appearance.fontWeight
     }
+    /*
+     * The leading that belongs to the type. Material states a line height for
+     * every step, and taking the size without it leaves text the right size
+     * sitting on the wrong rhythm.
+     *
+     * `lineHeight` is NaN when nothing has set one — it is not seeded with a
+     * default the way `fontSize` is — so "the author stated none" is directly
+     * representable here and needs no flag.
+     */
+    if (java.lang.Float.isNaN(lineHeight) && !java.lang.Float.isNaN(appearance.lineHeightSp)) {
+      lineHeight = appearance.lineHeightSp
+    }
   }
 
   private fun setFontStyle(fontStyleString: String?) {

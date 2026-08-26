@@ -40,8 +40,23 @@ import android.util.TypedValue
  */
 public object MaterialTypeScale {
 
-  /** What a theme says a role is. Sizes are in scaled pixels, as the theme states them. */
-  public data class Appearance(val textSizeSp: Float, val fontWeight: Int)
+  /**
+   * What a theme says a role is. Sizes are in scaled pixels, as the theme states them.
+   *
+   * The LINE HEIGHT is part of the answer, not a detail. Material states one for every step —
+   * Headline Large is 32sp of type on 40sp of line, Title Large 22 on 28, Body Large 16 on 24 —
+   * and it is the vertical rhythm that belongs to the type we just took from the theme. Taking the
+   * size and leaving the leading behind gets text that is the right size and sits wrongly, which
+   * is the kind of thing that reads as "not quite a native app" without being nameable.
+   *
+   * `lineHeightSp` is NaN where the theme states none; the font's own leading then applies, which
+   * is what a text appearance without a line height is asking for.
+   */
+  public data class Appearance(
+      val textSizeSp: Float,
+      val fontWeight: Int,
+      val lineHeightSp: Float,
+  )
 
   /**
    * The roles the element vocabulary names. Deliberately short: these are the six a heading can
@@ -67,6 +82,7 @@ public object MaterialTypeScale {
               android.R.attr.textSize,
               android.R.attr.textFontWeight,
               android.R.attr.fontFamily,
+              android.R.attr.lineHeight,
           )
           .sortedArray()
 
@@ -263,7 +279,17 @@ public object MaterialTypeScale {
             family != null && family.endsWith("-thin") -> 100
             else -> 400
           }
-      return Appearance(sizeSp, weight)
+      /*
+       * `android:lineHeight` is API 28 and Material states it alongside the
+       * appcompat-namespaced `lineHeight`; a theme older than that, or one
+       * that states neither, leaves this at zero and the font's own leading
+       * stands.
+       */
+      val lineHeightPx = typed.getDimension(attrs.indexOf(android.R.attr.lineHeight), 0f)
+      val lineHeightSp =
+          if (lineHeightPx > 0f && density > 0f) lineHeightPx / density else Float.NaN
+
+      return Appearance(sizeSp, weight, lineHeightSp)
     } finally {
       typed.recycle()
     }
