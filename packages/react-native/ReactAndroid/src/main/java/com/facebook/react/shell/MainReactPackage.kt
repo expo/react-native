@@ -62,6 +62,7 @@ import com.facebook.react.views.text.ReactTextViewManager
 import com.facebook.react.views.text.SelectableTextViewManager
 import com.facebook.react.views.textinput.ReactTextInputManager
 import com.facebook.react.views.unimplementedview.ReactUnimplementedViewManager
+import com.facebook.react.views.view.ElementBoxViewManager
 import com.facebook.react.views.view.ElementButtonViewManager
 import com.facebook.react.views.view.ElementCheckboxViewManager
 import com.facebook.react.views.view.ElementRangeViewManager
@@ -171,6 +172,8 @@ constructor(private val config: MainPackageConfig? = null) :
       // The interactive flavor of the generic box: `<button>` and the other
       // pressable elements, whose press state comes from Android's own touch
       // dispatch rather than the JS responder system.
+      // The box a block-level element generates; a plain view unless it is a link.
+      ElementBoxViewManager(),
       ElementButtonViewManager(),
       // `<input type="range">`: a real SeekBar, which claims its own drag inside a scroll
       // container the way the platform intends.
@@ -234,6 +237,7 @@ constructor(private val config: MainPackageConfig? = null) :
       SelectableTextViewManager.REACT_CLASS to
           ModuleSpec.viewManagerSpec { SelectableTextViewManager() },
       ReactViewManager.REACT_CLASS to ModuleSpec.viewManagerSpec { ReactViewManager() },
+      ElementBoxViewManager.REACT_CLASS to ModuleSpec.viewManagerSpec { ElementBoxViewManager() },
       ElementButtonViewManager.REACT_CLASS to
           ModuleSpec.viewManagerSpec { ElementButtonViewManager() },
       ElementRangeViewManager.REACT_CLASS to

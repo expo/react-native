@@ -16,9 +16,12 @@ internal object FabricNameComponentMapping {
       // Intrinsic DOM elements (expo-intrinsics).
       // <div> is an ordinary block element now, backed by the generic box.
       // The box-backed flavor an element is swapped onto when its display
-      // generates a box (ElementBoxShadowNode.h). A plain view: everything
-      // that distinguishes it is layout, not drawing.
-      "element-box" to "RCTView",
+      // generates a box (ElementBoxShadowNode.h).
+      //
+      // NOT remapped onto "RCTView" any more: it has `ElementBoxViewManager`,
+      // so that a block `<a href>` can be told it is a link and draw the press
+      // feedback a tappable box gets on this platform. It is still a plain view
+      // for every other element that reaches it — see `ElementBoxView`.
       // <img> shares `ImageShadowNode` in C++ (see `ImgTagComponentName`), so it
       // mounts the same view the framework's own <Image> does. It was a plain
       // "RCTView" until the element's view config learned to send `source` as a
