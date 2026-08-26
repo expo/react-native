@@ -26,9 +26,18 @@ import {createRef} from 'react';
 
 import '@react-native/expo-intrinsics-poc';
 
-// Safari, 16px root: `p { margin-block: 16px }`, and the footer has none of its
-// own, so adjacent-sibling collapsing leaves max(16, 0) = 16.
-const EXPECTED_GAP = 16;
+/*
+ * The containing block states a font size, so the paragraph's `em` has a known
+ * base and this file needs no root: `p { margin-block: 1em }` resolves against
+ * the paragraph's own computed size, which here is not the root's. Stating the
+ * base also keeps the file off the platform's body size, which differs by
+ * design (17 on iOS, 16 on Android).
+ */
+const FONT_SIZE = 20;
+
+// `p { margin-block: 1em }`, and the footer has none of its own, so
+// adjacent-sibling collapsing leaves max(1em, 0) = 1em = FONT_SIZE.
+const EXPECTED_GAP = FONT_SIZE;
 
 function rectOf(ref: {current: HostInstance | null}) {
   const rect = ref.current?.getBoundingClientRect();
@@ -46,7 +55,7 @@ test('a paragraph inside a blockquote still pushes its sibling down', () => {
   Fantom.runTask(() => {
     root.render(
       // $FlowFixMe[prop-missing] elements from the catalog
-      <blockquote style={{width: 300}}>
+      <blockquote style={{width: 300, fontSize: FONT_SIZE}}>
         {/* $FlowFixMe[prop-missing] */}
         <p ref={para}>A quotation.</p>
         {/* $FlowFixMe[prop-missing] */}
@@ -75,7 +84,7 @@ test('the same paragraph at the top level behaves identically', () => {
   Fantom.runTask(() => {
     root.render(
       // $FlowFixMe[prop-missing] elements from the catalog
-      <div style={{width: 300}}>
+      <div style={{width: 300, fontSize: FONT_SIZE}}>
         {/* $FlowFixMe[prop-missing] */}
         <p ref={para}>A paragraph.</p>
         {/* $FlowFixMe[prop-missing] */}
@@ -87,4 +96,33 @@ test('the same paragraph at the top level behaves identically', () => {
   const p = rectOf(para);
   const a = rectOf(after);
   expect(a.y - (p.y + p.height)).toBeCloseTo(EXPECTED_GAP, 0);
+});
+
+test('the gap follows the inherited font size', () => {
+  /*
+   * Move the size the paragraph inherits and the margin moves with it. A `rem`
+   * or a fixed length would hold still through all three rows, so a single row
+   * could not tell the three apart.
+   */
+  for (const size of [10, 20, 33]) {
+    const para = createRef<HostInstance>();
+    const after = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+
+    Fantom.runTask(() => {
+      root.render(
+        // $FlowFixMe[prop-missing] elements from the catalog
+        <div style={{width: 300, fontSize: size}}>
+          {/* $FlowFixMe[prop-missing] */}
+          <p ref={para}>A paragraph.</p>
+          {/* $FlowFixMe[prop-missing] */}
+          <footer ref={after}>after</footer>
+        </div>,
+      );
+    });
+
+    const p = rectOf(para);
+    const a = rectOf(after);
+    expect(a.y - (p.y + p.height)).toBeCloseTo(size, 0);
+  }
 });

@@ -6,6 +6,8 @@
  */
 
 #import "TextLayoutManager.h"
+
+#import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
 #import "RCTTextLayoutManager.h"
 
 #import <optional>
@@ -28,6 +30,16 @@ static std::optional<AttributedString> placeholderIfEmpty(const AttributedString
 TextLayoutManager::TextLayoutManager(const std::shared_ptr<const ContextContainer> & /*contextContainer*/)
 {
   nativeTextLayoutManager_ = wrapManagedObject([RCTTextLayoutManager new]);
+  /*
+   * Before anything is laid out, not when the first string is measured.
+   *
+   * A heading's MARGIN is computed while the shadow tree is built, and its text
+   * is measured afterwards — so a registry filled lazily by measurement is
+   * always one commit behind the margins that read it, and on a screen that
+   * commits once it is simply never filled. Publishing from here puts the
+   * sizes in place before the first tree exists.
+   */
+  RCTPublishTextRoleMetrics();
 }
 
 std::shared_ptr<void> TextLayoutManager::getNativeTextLayoutManager() const

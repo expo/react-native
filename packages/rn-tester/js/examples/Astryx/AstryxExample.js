@@ -39,12 +39,19 @@ import {Skeleton} from '../../astryx/vendor/Skeleton/Skeleton';
 import {StatusDot} from '../../astryx/vendor/StatusDot/StatusDot';
 // $FlowFixMe[cannot-resolve-module] vendored TypeScript source
 import {Step, Stepper} from '../../astryx/vendor/Stepper';
+import {
+  borderVars,
+  colorVars,
+  radiusVars,
+  shadowVars,
+  spacingVars,
+  // $FlowFixMe[cannot-resolve-module] vendored TypeScript token definitions
+} from '../../astryx/vendor/theme/tokens.stylex';
 // $FlowFixMe[cannot-resolve-module]
 import {VStack} from '../../astryx/vendor/VStack/VStack';
 import {
   DEMO_THEME,
   DemoContent,
-  semanticColor,
   usePublishRects,
 } from '../TextChildren/TextChildrenShared';
 // Resolved to js/astryx/stylex-rn.js by the Metro alias — same module the
@@ -55,7 +62,7 @@ import * as React from 'react';
 import {useRef, useState} from 'react';
 import {View, useColorScheme, useWindowDimensions} from 'react-native';
 
-// The element catalog and Astryx's reset on top of it
+// Registers the extra intrinsics Astryx needs (<p>, <button> as div aliases).
 import '../../astryx/dom';
 
 // Consumer-side StyleX (the xstyle escape hatch Astryx documents), including
@@ -182,9 +189,9 @@ function ButtonCase(): React.Node {
  * padding via calc(var() - var()) precisely so border + padding equals the
  * 16px padding token — and sized cards must honor width.
  */
-// Inline-element geometry on device: the <b> inside a bare-text run publishes
-// its rect, so the CDP check proves iOS supplies per-fragment rects from
-// CoreText rather than leaving them empty
+// Inline-element geometry on device (T14 platform half): the <b> inside a
+// bare-text run publishes its rect, so the CDP check proves iOS is supplying
+// per-fragment rects from CoreText rather than leaving them empty.
 function InlineMetricsCase(): React.Node {
   const runRef = useRef<React.ElementRef<typeof View> | null>(null);
   const boldRef = useRef<React.ElementRef<typeof View> | null>(null);
@@ -279,7 +286,7 @@ function CardCases(): React.Node {
   );
 }
 
-// CSS custom-property INHERITANCE across elements — the pattern real
+// M3: CSS custom-property INHERITANCE across elements — the pattern real
 // Astryx components use. `Card` declares --container-padding-inline-start;
 // a descendant reads it (Section's negative-margin "escape the parent's
 // padding" trick), and a nested element *shadows* it to 0px for its own
@@ -410,18 +417,29 @@ function InputCase(): React.Node {
 // `position-try-fallbacks`, flipping when it would leave the viewport; the
 // dialog is promoted into the top layer with a backdrop, escaping the
 // clipping and stacking of everything around it.
+/*
+ * The tokens are REFERENCED, not spelled.
+ *
+ * A hand-written `var(--border-width)` only resolves if something else has
+ * already imported the module that defines that token — the table is filled by
+ * `defineVars` at import time. Nothing on this screen did, so every one of
+ * these resolved to nothing: the popover lost its whole surface, and
+ * `borderWidth` reached Android as the literal string, where a float setter
+ * threw and red-boxed the screen. Going through the token objects is what the
+ * vendored components do, and it cannot come apart this way.
+ */
 const overlayStyles = stylex.create({
   surface: {
-    backgroundColor: 'var(--color-background-popover)',
-    borderRadius: 'var(--radius-container)',
-    borderWidth: 'var(--border-width)',
+    backgroundColor: colorVars['--color-background-popover'],
+    borderRadius: radiusVars['--radius-container'],
+    borderWidth: borderVars['--border-width'],
     borderStyle: 'solid',
-    borderColor: 'var(--color-border-emphasized)',
-    paddingInlineStart: 'var(--spacing-4)',
-    paddingInlineEnd: 'var(--spacing-4)',
-    paddingBlockStart: 'var(--spacing-3)',
-    paddingBlockEnd: 'var(--spacing-3)',
-    boxShadow: 'var(--shadow-high)',
+    borderColor: colorVars['--color-border-emphasized'],
+    paddingInlineStart: spacingVars['--spacing-4'],
+    paddingInlineEnd: spacingVars['--spacing-4'],
+    paddingBlockStart: spacingVars['--spacing-3'],
+    paddingBlockEnd: spacingVars['--spacing-3'],
+    boxShadow: shadowVars['--shadow-high'],
   },
 });
 
@@ -435,8 +453,10 @@ function AnchoredPopover(): React.Node {
   const openPopover = () => {
     const node = anchorRef.current;
     // Measure through the DOM box rather than `measureInWindow`. The rect is
-    // read synchronously, so opening never depends on a callback firing. An
-    // element whose box is not a rectangle also mounts
+    // read synchronously, so opening never depends on a callback firing — the
+    // old code called `setOpen` *inside* `measureInWindow`, so any anchor
+    // whose callback did not fire left the button doing nothing at all, with
+    // no error to go on. An element whose box is not a rectangle also mounts
     // an unsized view on purpose (see `TextShadowNode::getMountedLayoutMetrics`),
     // and `getBoundingClientRect()` reports the real box in that case where a
     // view measurement would report zero.
@@ -477,7 +497,8 @@ function AnchoredPopover(): React.Node {
           onClose={() => setOpen(false)}
           {...stylex.props(overlayStyles.surface)}
           // The surface style has to be merged, not replaced: a bare `style`
-          // prop after the spread wins outright.
+          // prop after the spread wins outright, which left the popover
+          // unstyled and see-through over the page.
           style={[
             stylex.props(overlayStyles.surface).style,
             {
@@ -512,7 +533,9 @@ function ModalDialog(): React.Node {
         open={open}
         {...stylex.props(overlayStyles.surface)}
         // Centred in the viewport, which is what `showModal()` does on the
-        // web: `margin: auto` in the UA stylesheet's `dialog:modal` rule
+        // web — `margin: auto` in the UA stylesheet's `dialog:modal` rule. A
+        // fixed `top` looked arbitrary, and looked scroll-dependent even
+        // though the top layer is viewport-anchored.
         style={[
           stylex.props(overlayStyles.surface).style,
           {
@@ -554,115 +577,17 @@ function ModalDialog(): React.Node {
 // One string that exercises all three `white-space` axes at once: a run of
 // spaces, a segment break, and a line too long for the container. What each
 // value does to it is what tells them apart.
-const WHITE_SPACE_SAMPLE =
-  'spaced   out\nafter a newline, then a line long enough that it has to wrap somewhere';
-
-const WHITE_SPACE_CASES = [
-  // Collapses the spaces and the newline, yet still refuses to wrap, so this
-  // is one long line running off the edge
-  {value: 'nowrap', why: 'one line, overflowing'},
-  // Keeps the newline but collapses the run of spaces, and wraps. The value a
-  // two-value model cannot express at all.
-  {value: 'pre-line', why: 'break kept, spaces collapsed'},
-  // Keeps everything and still wraps — `pre` without the overflow.
-  {value: 'pre-wrap', why: 'all kept, still wraps'},
-];
-
-// The tinted surface behind <pre> and the white-space samples: a semantic
-// color, so it darkens with the scheme and dark-mode text stays legible on it
-const CODE_SURFACE = semanticColor('secondarySystemBackgroundColor', '#f4f4f6');
-
-function ElementGapsCases(): React.Node {
-  return (
-    <View style={{gap: 12}}>
-      {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
-      <div style={{display: 'block'}}>
-        {'A forced break splits this run'}
-        {/* $FlowFixMe[not-a-component] intrinsic <br> tag */}
-        <br />
-        {'onto a second line, while a literal'}
-        {'\n'}
-        {'newline in the source collapses to a space.'}
-      </div>
-      {/* <pre>: white-space is preserved, so the indentation and the blank
-          line below survive exactly as written — and copy that way too. */}
-      {/* $FlowFixMe[not-a-component] intrinsic <pre> tag */}
-      <pre
-        style={{
-          backgroundColor: CODE_SURFACE,
-          padding: 8,
-          borderRadius: 6,
-        }}>
-        {'function greet(name) {\n    return `hi ${name}`;\n}\n' +
-          '// a deliberately long line that would wrap in normal text but must not here'}
-      </pre>
-      {/* The three `white-space` axes, one case each — the values that a
-          two-value model gets wrong. Same string every time, so the only
-          thing varying is the property. */}
-      {WHITE_SPACE_CASES.map(({value, why}) => (
-        <View key={value} style={{gap: 2}}>
-          <View
-            // $FlowFixMe[incompatible-type] cascade to bare text
-            style={{color: DEMO_THEME.muted, fontSize: 12}}>
-            {`white-space: ${value} — ${why}`}
-          </View>
-          {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
-          <div
-            style={{
-              whiteSpace: value,
-              backgroundColor: CODE_SURFACE,
-              padding: 6,
-              borderRadius: 6,
-            }}>
-            {WHITE_SPACE_SAMPLE}
-          </div>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function TextareaCase(): React.Node {
-  const [text, setText] = useState('Two lines,\nedited here.');
-  return (
-    <View style={{gap: 12}}>
-      {/* $FlowFixMe[not-a-component] intrinsic <textarea> tag */}
-      <textarea
-        rows={3}
-        value={text}
-        onChange={(e: $FlowFixMe) => setText(e.target.value)}
-        style={{
-          borderWidth: 1,
-          borderColor: DEMO_THEME.border,
-          color: DEMO_THEME.fg,
-          borderRadius: 6,
-          padding: 8,
-        }}
-      />
-      {/* Tabular figures: the count changes on every keystroke, and with
-          proportional digits each change shifted the word beside it — a 1 is
-          narrower than a 0 in this face. A counter is exactly what
-          `font-variant-numeric: tabular-nums` is for. */}
-      <View
-        // $FlowFixMe[incompatible-type] cascade to bare text
-        style={{opacity: 0.6, fontVariant: ['tabular-nums']}}>
-        {`${text.length} characters`}
-      </View>
-    </View>
-  );
-}
 
 function StartingStyleCases(): React.Node {
   const [generation, setGeneration] = useState(0);
   // Everything lives in the stylex blocks: a literal `style=` attribute after
-  // the spread would REPLACE the resolved style, and with `@starting-style`
+  // the spread would replace the resolved style, and with `@starting-style`
   // riding native transitions the transition declarations are part of that
   // style. Box colors are tokens, light-dark() pairs, so the section rethemes.
   const entry = stylex.create({
     box: {
-      // Content-sized, centered by construction: these are block containers,
-      // and justify-content is inert in CSS block flow, so a fixed height
-      // would top-align the text as a browser does
+      // Content-sized, so nothing needs vertical centring: these are block
+      // containers, and justify-content is inert in CSS block flow
       borderRadius: 6,
       paddingInline: 10,
       paddingBlock: 7,
@@ -1035,7 +960,8 @@ const selectableStyles = stylex.create({
   card: {
     borderWidth: 2,
     // Real Astryx tokens, every one a light-dark() pair; an invented token
-    // name would silently take its light-only fallback in dark mode
+    // name silently takes its light-only fallback and turns the card white in
+    // dark mode
     borderColor: 'var(--color-border-emphasized)',
     backgroundColor: 'var(--color-background-card)',
     color: 'var(--color-text-primary)',
@@ -1118,40 +1044,6 @@ export default {
     "Meta's Astryx design system, running on React Native with the original " +
     'Astryx source code.',
   examples: [
-    {
-      name: 'forcedBreaks',
-      title: 'Forced breaks and white-space',
-      description:
-        'A <br> is a forced line break that survives CSS whitespace ' +
-        'collapsing — an ordinary newline in the source becomes a space ' +
-        '(css-text-3 §3), which is the difference the first block shows. ' +
-        'Below it, <pre> and the white-space axes that a two-value model ' +
-        'gets wrong.',
-      render: (): React.Node => (
-        <DemoContent
-          code={
-            '<div>\n' +
-            "  {'A forced break splits this run'}<br />\n" +
-            "  {'onto a second line, while a literal'}{'\\n'}\n" +
-            "  {'newline collapses to a space.'}\n" +
-            '</div>'
-          }>
-          <ElementGapsCases />
-        </DemoContent>
-      ),
-    },
-    {
-      name: 'textarea',
-      title: '<textarea>',
-      description:
-        'A behavioural element on React Native’s multiline TextInput, sized ' +
-        'in rows as on the web.',
-      render: (): React.Node => (
-        <DemoContent code={'<textarea rows={3} value={text} onChange={…} />'}>
-          <TextareaCase />
-        </DemoContent>
-      ),
-    },
     {
       name: 'nativeTransitions',
       title: 'CSS transitions — native interaction states',
@@ -1289,12 +1181,15 @@ export default {
       description:
         'The renderer implements css-grid-2 natively and reads track lists ' +
         'as CSS strings, so authoring grid through stylex needs no new ' +
-        'machinery: the twelve longhands pass through while the shorthands ' +
-        '(gridColumn, gridGap), which have no RN property, are dropped. ' +
-        'Top: auto-fill + minmax, which needs no breakpoints. Bottom: a ' +
-        'track list built from a token and calc(), which is the part worth ' +
-        'proving — resolution reaches inside the track list, not just ' +
-        'single values.',
+        'machinery — only for the runtime to stop dropping it. It used to: ' +
+        '`grid` is on the dropped-property list for the shorthands ' +
+        '(gridColumn, gridGap) that have no RN property, and the longhands ' +
+        'went with them, so a StyleX-authored grid silently laid out as a ' +
+        'block. The twelve longhands the renderer does implement are now ' +
+        'allow-listed through. Top: auto-fill + minmax, which needs no ' +
+        'breakpoints. Bottom: a track list built from a token and calc(), ' +
+        'which is the part worth proving — resolution reaches inside the ' +
+        'track list, not just single values.',
       render: (): React.Node => (
         <DemoContent
           code={
@@ -1716,7 +1611,7 @@ export default {
             <span
               style={{
                 display: 'inline-flex',
-                // No `flexDirection` here on purpose: `row` is the CSS initial
+                // No `flexDirection` on purpose: `row` is the CSS initial
                 // value and the UA stylesheet supplies it to intrinsics, so
                 // this reads as it would on the web
                 gap: 4,
