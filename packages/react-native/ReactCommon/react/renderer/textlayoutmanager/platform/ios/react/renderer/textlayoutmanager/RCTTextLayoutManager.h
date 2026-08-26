@@ -24,6 +24,9 @@ NS_ASSUME_NONNULL_BEGIN
 using RCTTextLayoutFragmentEnumerationBlock =
     void (^)(CGRect fragmentRect, NSString *_Nonnull fragmentText, NSString *value);
 
+/** One fragment's rects, one per line it occupies. */
+using RCTTextLayoutLineRectGroupBlock = void (^)(NSArray<NSValue *> *lineRects, NSString *value);
+
 /**
  * The layout manager every RCTTextLayoutManager text storage uses. It gives
  * wrapped ranges CSS background semantics: TextKit extends a wrapped range's
@@ -106,6 +109,38 @@ using RCTTextLayoutFragmentEnumerationBlock =
                    paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
                                  frame:(CGRect)frame
                                atPoint:(CGPoint)point;
+
+/**
+ * The link at `point`, or nil where there is none.
+ *
+ * The value is whatever `NSLinkAttributeName` holds for that character — an
+ * `NSURL` normally, an `NSString` for a destination NSURL would not parse.
+ *
+ * `outRects` is filled with the ENCLOSING RECTS of the whole link, in the
+ * frame's coordinate space, not just the line the touch landed on. A link that
+ * wraps is several rects, and the platform's context menu lifts all of them
+ * together — which is what makes the preview look like the link rather than
+ * like a rectangle drawn around part of it.
+ */
+- (nullable id)getLinkWithAttributedString:(facebook::react::AttributedString)attributedString
+                       paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
+                                     frame:(CGRect)frame
+                                   atPoint:(CGPoint)point
+                                     rects:(nullable NSMutableArray<NSValue *> *)outRects;
+
+/**
+ * Every line rect of each fragment carrying `enumerateAttribute`, grouped by
+ * fragment: a link that wraps reports one rect per line, in one call.
+ *
+ * Distinct from `getRectWithAttributedString:`, which reports a single rect per
+ * fragment — right for an accessibility element, and wrong for anything that
+ * has to PAINT the fragment, which is why this exists.
+ */
+- (void)getLineRectGroupsWithAttributedString:(facebook::react::AttributedString)attributedString
+                          paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
+                           enumerateAttribute:(NSString *)enumerateAttribute
+                                        frame:(CGRect)frame
+                                   usingBlock:(RCTTextLayoutLineRectGroupBlock)block;
 
 - (void)getRectWithAttributedString:(const facebook::react::AttributedString &)attributedString
                 paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
