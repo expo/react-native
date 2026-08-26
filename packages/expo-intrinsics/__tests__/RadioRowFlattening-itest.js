@@ -192,6 +192,15 @@ describe("a row holding a radio takes the platform's row padding", () => {
     };
   }
 
+  /*
+   * These are IOS's numbers, in a host that reports itself as Android.
+   *
+   * Fantom emulates the Android layout dialect but builds the renderer's
+   * default C++ host, which is the one iOS uses — so the row padding it sees is
+   * iOS's 16/48. Android's real answer is no padding at all: it has a real
+   * `RadioButton`, presents no list, and takes neither the padding nor the
+   * forced view. Nothing here covers that; it is checked on the emulator.
+   */
   test('its content is inset on both sides', () => {
     const offsets = childOffsets((row, child) => (
       <View ref={row}>

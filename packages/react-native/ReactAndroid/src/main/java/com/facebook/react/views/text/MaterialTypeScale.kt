@@ -9,7 +9,6 @@ package com.facebook.react.views.text
 
 import android.content.Context
 import android.util.TypedValue
-import androidx.annotation.VisibleForTesting
 
 /**
  * Material's type scale, read from the app's THEME rather than copied into this file.
@@ -90,39 +89,46 @@ public object MaterialTypeScale {
   @Volatile private var resolved: Map<String, Appearance>? = null
 
   /**
-   * Whether what is cached came from MATERIAL rather than the framework fallback.
+   * Whether resolution is finished, by either route: Material answered in full, or the caller ran
+   * out of better contexts.
    *
-   * The distinction is what lets a later, better context upgrade the answer. Priming happens first
-   * from the Application, whose theme may not carry the Material attributes even though the app
-   * uses them — that attempt still succeeds through [FRAMEWORK_FALLBACK], and latching on it would
-   * freeze a three-step scale in place while the Activity's theme had the full six.
+   * Both halves matter. Latching on the first non-empty answer froze a three-step framework scale
+   * in place while the Activity's theme had Material's six; never latching re-resolved on every
+   * measure for any app Material never fully answers for.
    */
-  @Volatile private var resolvedFromMaterial: Boolean = false
+  @Volatile private var settled: Boolean = false
 
   /**
    * Resolves the scale from [context]'s theme.
    *
-   * Cheap to call repeatedly — once Material has answered, the common case is a single volatile
-   * read. Until then each call is another chance at a context whose theme carries the Material
-   * attributes, because the first context offered is an Application and its theme may not.
+   * Cheap to call repeatedly — once settled, the common case is a single volatile read.
+   *
+   * [definitive] is the caller saying it has nothing better to offer. The first context available
+   * is an Application, whose theme may not carry the Material attributes even where the app uses
+   * them, so an early answer has to stay provisional; but it cannot stay provisional forever.
+   * Without this the scale re-resolved on EVERY measure — six attribute lookups under a lock, on
+   * the layout path — for any app whose theme never yields the full Material set. Which is every
+   * AppCompat app: precisely the ones the framework fallback exists to serve.
    */
   @JvmStatic
-  public fun primeFrom(context: Context) {
-    if (resolvedFromMaterial) {
+  public fun primeFrom(context: Context, definitive: Boolean) {
+    if (settled) {
       return
     }
     synchronized(this) {
-      if (resolvedFromMaterial) {
+      if (settled) {
         return
       }
       val material = mutableSetOf<String>()
       val attempt = resolveAll(context, material)
-      // Kept only if it is the first answer or a better one: a fallback result
-      // must not freeze out the Material scale a later context can still give.
+      // Kept if it is the first answer or a better one: a fallback result must
+      // not freeze out the Material scale a later context can still give.
       if (attempt.isNotEmpty() && (resolved == null || material.isNotEmpty())) {
         resolved = attempt
-        resolvedFromMaterial = material.size == ROLES.size
       }
+      // Settled once Material has answered in full, or once the caller has run
+      // out of better contexts to try.
+      settled = material.size == ROLES.size || (definitive && resolved != null)
     }
   }
 
@@ -163,13 +169,6 @@ public object MaterialTypeScale {
           else -> return null
         }
     return resolved?.get(materialRole)
-  }
-
-  /** Test seam: forget what was resolved, so a different theme can be measured. */
-  @JvmStatic
-  @VisibleForTesting
-  public fun resetForTests() {
-    synchronized(this) { resolved = null }
   }
 
   private fun resolveAll(context: Context, material: MutableSet<String>): Map<String, Appearance> {
@@ -240,7 +239,6 @@ public object MaterialTypeScale {
     if (styleRes == null) {
       return null
     }
-    val value = TypedValue().apply { resourceId = styleRes }
 
     /*
      * SORTED, because `obtainStyledAttributes(int, int[])` requires it.
@@ -252,7 +250,7 @@ public object MaterialTypeScale {
      * `IllegalArgumentException` from a letter-spacing calculation.
      */
     val attrs = ATTRS
-    val typed = context.obtainStyledAttributes(value.resourceId, attrs)
+    val typed = context.obtainStyledAttributes(styleRes, attrs)
     try {
       val sizePx = typed.getDimension(attrs.indexOf(android.R.attr.textSize), 0f)
       if (sizePx <= 0f) {
