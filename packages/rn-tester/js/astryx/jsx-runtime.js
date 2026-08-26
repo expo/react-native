@@ -92,8 +92,9 @@ type DescendantRegistrar = (
   pseudos: ReadonlySet<string>,
 ) => () => void;
 
-const DescendantRegistryContext: React.Context<ReadonlyArray<DescendantRegistrar>> =
-  React.createContext<ReadonlyArray<DescendantRegistrar>>([]);
+const DescendantRegistryContext: React.Context<
+  ReadonlyArray<DescendantRegistrar>,
+> = React.createContext<ReadonlyArray<DescendantRegistrar>>([]);
 
 /**
  * For an element that asks about descendants: the collected answers, and the
@@ -108,36 +109,39 @@ function useDescendantMarkers(asks: boolean): {
     ReadonlyMap<string, ReadonlySet<string>>,
   >(() => new Map());
   // Reference counts, so two descendants reporting the same pseudo do not
-  // cancel each other when only one unmounts.
+  // cancel each other when one unmounts
   const countsRef = React.useRef<Map<string, Map<string, number>>>(new Map());
 
-  const register = React.useCallback<DescendantRegistrar>((markerId, pseudos) => {
-    const counts = countsRef.current;
-    const forMarker = counts.get(markerId) ?? new Map<string, number>();
-    counts.set(markerId, forMarker);
-    for (const pseudo of pseudos) {
-      forMarker.set(pseudo, (forMarker.get(pseudo) ?? 0) + 1);
-    }
-    setReported(snapshotCounts(counts));
-    return () => {
-      const current = countsRef.current.get(markerId);
-      if (current == null) {
-        return;
-      }
+  const register = React.useCallback<DescendantRegistrar>(
+    (markerId, pseudos) => {
+      const counts = countsRef.current;
+      const forMarker = counts.get(markerId) ?? new Map<string, number>();
+      counts.set(markerId, forMarker);
       for (const pseudo of pseudos) {
-        const next = (current.get(pseudo) ?? 0) - 1;
-        if (next > 0) {
-          current.set(pseudo, next);
-        } else {
-          current.delete(pseudo);
+        forMarker.set(pseudo, (forMarker.get(pseudo) ?? 0) + 1);
+      }
+      setReported(snapshotCounts(counts));
+      return () => {
+        const current = countsRef.current.get(markerId);
+        if (current == null) {
+          return;
         }
-      }
-      if (current.size === 0) {
-        countsRef.current.delete(markerId);
-      }
-      setReported(snapshotCounts(countsRef.current));
-    };
-  }, []);
+        for (const pseudo of pseudos) {
+          const next = (current.get(pseudo) ?? 0) - 1;
+          if (next > 0) {
+            current.set(pseudo, next);
+          } else {
+            current.delete(pseudo);
+          }
+        }
+        if (current.size === 0) {
+          countsRef.current.delete(markerId);
+        }
+        setReported(snapshotCounts(countsRef.current));
+      };
+    },
+    [],
+  );
 
   const chain = React.useMemo(
     () => (asks ? [...parentChain, register] : parentChain),
@@ -288,6 +292,7 @@ function markedChildren(children: unknown): unknown {
  * on an inherited custom property, then publishes its own declarations to the
  * subtree.
  */
+
 function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   const inheritedScope = React.useContext(VarScopeContext);
   const parentDescriptor = React.useContext(ElementDescriptorContext);
@@ -302,6 +307,7 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
     __startingStyle,
     __stylexMarker,
     __stylexWhen,
+    __stylexAnswersPress,
     __astryxIndex,
     __astryxCount,
     className,
@@ -543,9 +549,19 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
     ? composeInteractionHandlers(rest, interactionHandlers)
     : rest;
   /*
-   * The `when.*` blocks this element deferred, settled now that the marker
-   * state is known, layered over everything else so a matching condition wins
-   * the same way the generated rule would.
+   * A button whose own styles answer a press tells the platform to stay out of
+   * it, since two responses on different clocks show as a button that goes dark
+   * and then changes colour; a button that answers nothing needs the platform's.
+   */
+  const pressProps =
+    __astryxTag === 'button' &&
+    (css.dependsOnStates || __stylexAnswersPress === true)
+      ? {...stateProps, authorStatesPressFeedback: true}
+      : stateProps;
+  /*
+   * The deferred `when.*` blocks, settled now that the marker state is known and
+   * layered over everything else so a matching condition wins as the generated
+   * rule would.
    */
   const whenResolved = resolveWhen(
     flattenStyleForWhen(mergedStyle),
@@ -558,8 +574,12 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
 
   const hostProps =
     styleWithWhen != null
-      ? {...stateProps, style: styleWithWhen, children: markedChildren(children)}
-      : {...stateProps, children: markedChildren(children)};
+      ? {
+          ...pressProps,
+          style: styleWithWhen,
+          children: markedChildren(children),
+        }
+      : {...pressProps, children: markedChildren(children)};
   if (mapped != null) {
     // Behavior-mapped element (e.g. <input> → TextInput). For most of these
     // children are noise (a TextInput renders any it is given as text), so

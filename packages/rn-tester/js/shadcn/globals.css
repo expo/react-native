@@ -121,6 +121,13 @@ h1, h2, h3, h4, h5, h6, p, blockquote, figure, pre {
 button {
   background-color: transparent;
   padding: 0;
+  /*
+   * Preflight's `color: inherit`: `outline` and `ghost` name no text colour and
+   * inherit `--foreground` from the page, and without this they would keep the
+   * user-agent's `ButtonText`, chosen against the platform's button surface
+   * rather than the theme's.
+   */
+  color: inherit;
 }
 
 h1, h2, h3, h4, h5, h6 {
