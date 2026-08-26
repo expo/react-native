@@ -1273,6 +1273,19 @@ constexpr static MapBuffer::Key TA_KEY_VERTICAL_ALIGN = 32;
 // The numeric baseline shift (points; positive raises) — symbolic list
 // markers centre their ink with it. Must match TextAttributeProps.kt.
 constexpr static MapBuffer::Key TA_KEY_BASELINE_SHIFT = 33;
+/*
+ * The text ROLE an element names — `title1`, `headline`.
+ *
+ * One vocabulary for both platforms, mapped to each platform's own scale where
+ * it is resolved: iOS asks `preferredFontForTextStyle:`, Android asks the theme
+ * for a Material text appearance (see MaterialTypeScale.kt). A second, Material
+ * -named property was tried first and is the reason this is one: adding it made
+ * every launch abort inside `RawPropsParser::prepare`, in props priming, before
+ * any text existed.
+ *
+ * Must match `TA_KEY_TEXT_ROLE` in TextAttributeProps.kt.
+ */
+constexpr static MapBuffer::Key TA_KEY_TEXT_ROLE = 34;
 constexpr static MapBuffer::Key TA_KEY_LINE_HEIGHT = 11;
 constexpr static MapBuffer::Key TA_KEY_ALIGNMENT = 12;
 constexpr static MapBuffer::Key TA_KEY_BEST_WRITING_DIRECTION = 13;
@@ -1522,6 +1535,12 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
       effectsBuilder.putMapBuffer(i, effectBuilder.build());
     }
     builder.putMapBuffer(TA_KEY_TEXT_EFFECTS, effectsBuilder.build());
+  }
+  if (textAttributes.dynamicTypeRamp.has_value()) {
+    // The role, for hosts that resolve it from the platform. iOS reads the
+    // enum directly; Android reads this string and maps it to a Material text
+    // appearance.
+    builder.putString(TA_KEY_TEXT_ROLE, toString(*textAttributes.dynamicTypeRamp));
   }
   return builder.build();
 }

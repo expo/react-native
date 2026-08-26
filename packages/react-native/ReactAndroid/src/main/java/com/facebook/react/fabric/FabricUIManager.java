@@ -91,6 +91,7 @@ import com.facebook.react.uimanager.events.FabricEventDispatcher;
 import com.facebook.react.uimanager.events.RCTEventEmitter;
 import com.facebook.react.uimanager.events.SynchronousEventReceiver;
 import com.facebook.react.views.text.PreparedLayout;
+import com.facebook.react.views.text.MaterialTypeScale;
 import com.facebook.react.views.text.ReactTextViewManager;
 import com.facebook.react.views.text.ReactTextViewManagerCallback;
 import com.facebook.react.views.text.ReactTypefaceUtils;
@@ -270,6 +271,14 @@ public class FabricUIManager
 
     mViewManagerRegistry = viewManagerRegistry;
     mReactApplicationContext.registerComponentCallbacks(viewManagerRegistry);
+
+    // Resolve the type scale from the theme, once, HERE rather than at the
+    // measure entry. The span builders take an AssetManager and never a
+    // Context, so the theme is out of reach by the time a font is chosen — and
+    // a spannable can be built before anything is measured, which is exactly
+    // what happened: priming in measureText left the first text with an
+    // unresolved role and no size at all.
+    MaterialTypeScale.primeFrom(mReactApplicationContext);
   }
 
   @Override
@@ -654,6 +663,13 @@ public class FabricUIManager
       @Nullable float[] floatExclusionsDip) {
 
     ViewManager textViewManager = mViewManagerRegistry.get(ReactTextViewManager.REACT_CLASS);
+
+    // Prime the type scale here too. The constructor runs before any Activity
+    // exists, and an Application's theme does not necessarily carry the one an
+    // Activity runs under — priming latches only on success, so this is the
+    // attempt that has a themed context to offer.
+    android.app.Activity activity = mReactApplicationContext.getCurrentActivity();
+    MaterialTypeScale.primeFrom(activity != null ? activity : mReactApplicationContext);
 
     return TextLayoutManager.measureText(
         mReactApplicationContext.getAssets(),
