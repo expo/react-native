@@ -255,3 +255,4 @@ rather than going quiet.
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
