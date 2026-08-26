@@ -127,4 +127,13 @@ static inline std::shared_ptr<const facebook::react::EventEmitter> RCTUnwrapEven
   return nullptr;
 }
 
+
+/*
+ * Publishes the platform's current size for every text role, for the layout
+ * layer to resolve `em`-relative margins against. See `TextRoleMetrics`.
+ *
+ * Idempotent; installs its own text-size-change observer on first call.
+ */
+void RCTPublishTextRoleMetrics(void);
+
 NS_ASSUME_NONNULL_END

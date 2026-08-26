@@ -168,6 +168,26 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
     return measuresOwnInlineRun_;
   }
 
+  /*
+   * Resolve the styles that could not be resolved when the props were parsed,
+   * because they are stated relative to a font size the cascade had not yet
+   * decided.
+   *
+   * css-values-4 §5.1.1 gives two bases and they are different values: `em` is
+   * this element's OWN computed font size, and `rem` is the ROOT element's.
+   * Both are handed in rather than looked up, because the only place either is
+   * known is the configure walk that computes them — the walk holds the
+   * element's computed size, and it is the walk that applies the reader's
+   * text-size setting to both.
+   *
+   * Called once per configure pass on every node, so an override must be
+   * idempotent: it runs again on the next pass over the same style it already
+   * wrote, and must reach the same answer.
+   */
+  virtual void applyCascadeDependentStyles(
+      Float /*emBase*/,
+      Float /*remBase*/) {}
+
   const std::vector<int> &getAnonymousTextContentChildIndices() const
   {
     return anonymousTextContentChildIndices_;
@@ -497,6 +517,8 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    */
   std::shared_ptr<const TextAttributes> receivedTextAttributes_{
       defaultCascadeTextAttributes()};
+
+
 
 
   /*

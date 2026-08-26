@@ -1606,6 +1606,365 @@
     }
   },
   {
+    "name": "em-margin-resolves-against-the-elements-own-size",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": "gap-checks",
+    "why": "A margin in `em` is a multiple of the element's own computed font-size, so a 20px element with `margin-block: 1em` is pushed 20px down (css-values-4 5.1.1).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "50px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "fontSize": "20px",
+            "marginBlock": "1em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "em-margin-ignores-the-inherited-size",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": "gap-checks",
+    "why": "The SAME tree under a different inherited size. The element states its own 20px, so both cases must place `measured` identically — an `em` resolved against the inherited size instead would move by 30px.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "10px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block",
+            "fontSize": "20px",
+            "marginBlock": "1em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "em-margin-follows-a-size-stated-in-em",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": "gap-checks",
+    "why": "The element sizes itself in `em` too: 30px inherited, `font-size: 2em` makes it 60, and `margin-block: 0.5em` is then 30. The two `em`s multiply different sizes one step apart, which is the case a single-base implementation gets wrong.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "30px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "fontSize": "2em",
+            "marginBlock": "0.5em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "em-margin-scales-with-the-inherited-size",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": "gap-checks",
+    "why": "The element states no size, so its computed size is the inherited 40px and `margin-block: 1em` is 40 — four times the 10px case above, from one declaration.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "40px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block",
+            "marginBlock": "1em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "rem-margin-is-one-size-for-the-whole-tree",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": "gap-checks",
+    "why": "Two elements at 8px and 64px, both `margin-block: 1rem`: `rem` names the root, so both margins are equal — the property that separates it from `em`, asserted without naming the root's number, which differs per engine by design.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "30px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "small",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "fontSize": "8px",
+            "marginBlock": "1rem"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "gap",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "large",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30",
+            "display": "block",
+            "fontSize": "64px",
+            "marginBlock": "1rem"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "em-and-rem-differ-on-the-same-element",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": "gap-checks",
+    "why": "Two elements at the same 64px, one with an `em` margin and one with a `rem`: the first is pushed by 64 and the second by the root's size. This is the case that fails when `em` is implemented as `rem` — every other case here passes under that bug.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "30px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "viaRem",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759",
+            "display": "block",
+            "fontSize": "64px",
+            "marginBlock": "1rem"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "gap",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "viaEm",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de",
+            "display": "block",
+            "fontSize": "64px",
+            "marginBlock": "1em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
     "name": "margin-collapses-out-of-a-block-containers-bottom-edge",
     "withText": false,
     "heightOnly": false,
@@ -1631,7 +1990,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#30b0c7"
           }
         },
         {
@@ -1640,7 +1999,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff9500",
+            "backgroundColor": "#0a84ff",
             "display": "block",
             "marginBlock": "20px"
           }
@@ -1651,7 +2010,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#34c759"
           }
         }
       ]

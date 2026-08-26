@@ -281,7 +281,39 @@ public class FabricUIManager
     // Provisional: an Application's theme may not carry the Material
     // attributes even where the app uses them.
     MaterialTypeScale.primeFrom(mReactApplicationContext, /* definitive */ false);
+    publishTextRoleSizes(mReactApplicationContext);
   }
+
+  /**
+   * Sends the theme's type scale to the layout layer.
+   *
+   * A heading states the spec's `em` FACTOR for its block margin and the
+   * renderer multiplies it by the size the heading is drawn at — which on this
+   * platform comes from the theme, and which the layout layer has no context to
+   * ask for. So it is published, here, right after the scale that produces it
+   * is primed.
+   *
+   * Published at BOTH priming sites, and deliberately: the constructor's
+   * attempt runs before any tree exists, which is what the first commit's
+   * margins need, and the measure-time attempt is the first with an Activity's
+   * theme to offer. Where those two disagree — an Application theme without the
+   * Material attributes under an Activity that has them — the first commit's
+   * margins are computed from the provisional scale. That is the same lag the
+   * TEXT already has, from the same provisional answer, so the margin stays
+   * consistent with the type it belongs to rather than acquiring a lag of its
+   * own.
+   */
+  private void publishTextRoleSizes(Context context) {
+    FabricUIManagerBinding binding = mBinding;
+    if (binding == null) {
+      return;
+    }
+    for (Map.Entry<String, Float> role :
+        MaterialTypeScale.roleSizesDp(context).entrySet()) {
+      binding.publishTextRoleSize(role.getKey(), role.getValue());
+    }
+  }
+
 
   @Override
   @UiThread
@@ -675,6 +707,7 @@ public class FabricUIManager
     // settles the question; without an Activity this stays provisional.
     MaterialTypeScale.primeFrom(
         activity != null ? activity : mReactApplicationContext, /* definitive */ activity != null);
+    publishTextRoleSizes(activity != null ? activity : mReactApplicationContext);
 
     return TextLayoutManager.measureText(
         mReactApplicationContext.getAssets(),

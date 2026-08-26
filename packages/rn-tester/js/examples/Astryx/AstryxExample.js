@@ -39,12 +39,19 @@ import {Skeleton} from '../../astryx/vendor/Skeleton/Skeleton';
 import {StatusDot} from '../../astryx/vendor/StatusDot/StatusDot';
 // $FlowFixMe[cannot-resolve-module] vendored TypeScript source
 import {Step, Stepper} from '../../astryx/vendor/Stepper';
+import {
+  borderVars,
+  colorVars,
+  radiusVars,
+  shadowVars,
+  spacingVars,
+  // $FlowFixMe[cannot-resolve-module] vendored TypeScript token definitions
+} from '../../astryx/vendor/theme/tokens.stylex';
 // $FlowFixMe[cannot-resolve-module]
 import {VStack} from '../../astryx/vendor/VStack/VStack';
 import {
   DEMO_THEME,
   DemoContent,
-  semanticColor,
   usePublishRects,
 } from '../TextChildren/TextChildrenShared';
 // Resolved to js/astryx/stylex-rn.js by the Metro alias — same module the
@@ -411,18 +418,29 @@ function InputCase(): React.Node {
 // `position-try-fallbacks`, flipping when it would leave the viewport; the
 // dialog is promoted into the top layer with a backdrop, escaping the
 // clipping and stacking of everything around it.
+/*
+ * The tokens are REFERENCED, not spelled.
+ *
+ * A hand-written `var(--border-width)` only resolves if something else has
+ * already imported the module that defines that token — the table is filled by
+ * `defineVars` at import time. Nothing on this screen did, so every one of
+ * these resolved to nothing: the popover lost its whole surface, and
+ * `borderWidth` reached Android as the literal string, where a float setter
+ * threw and red-boxed the screen. Going through the token objects is what the
+ * vendored components do, and it cannot come apart this way.
+ */
 const overlayStyles = stylex.create({
   surface: {
-    backgroundColor: 'var(--color-background-popover)',
-    borderRadius: 'var(--radius-container)',
-    borderWidth: 'var(--border-width)',
+    backgroundColor: colorVars['--color-background-popover'],
+    borderRadius: radiusVars['--radius-container'],
+    borderWidth: borderVars['--border-width'],
     borderStyle: 'solid',
-    borderColor: 'var(--color-border-emphasized)',
-    paddingInlineStart: 'var(--spacing-4)',
-    paddingInlineEnd: 'var(--spacing-4)',
-    paddingBlockStart: 'var(--spacing-3)',
-    paddingBlockEnd: 'var(--spacing-3)',
-    boxShadow: 'var(--shadow-high)',
+    borderColor: colorVars['--color-border-emphasized'],
+    paddingInlineStart: spacingVars['--spacing-4'],
+    paddingInlineEnd: spacingVars['--spacing-4'],
+    paddingBlockStart: spacingVars['--spacing-3'],
+    paddingBlockEnd: spacingVars['--spacing-3'],
+    boxShadow: shadowVars['--shadow-high'],
   },
 });
 
@@ -560,104 +578,9 @@ function ModalDialog(): React.Node {
 // One string that exercises all three `white-space` axes at once: a run of
 // spaces, a segment break, and a line too long for the container. What each
 // value does to it is what tells them apart.
-const WHITE_SPACE_SAMPLE =
-  'spaced   out\nafter a newline, then a line long enough that it has to wrap somewhere';
 
-const WHITE_SPACE_CASES = [
-  // Collapses the spaces and the newline, yet still refuses to wrap — so this
-  // is one long line running off the edge. Was treated as plain `normal`.
-  {value: 'nowrap', why: 'one line, overflowing'},
-  // Keeps the newline but collapses the run of spaces, and wraps. The value a
-  // two-value model cannot express at all.
-  {value: 'pre-line', why: 'break kept, spaces collapsed'},
-  // Keeps everything and still wraps — `pre` without the overflow.
-  {value: 'pre-wrap', why: 'all kept, still wraps'},
-];
 
-// The tinted surface behind <pre> and the white-space samples. A semantic
-// color, so it darkens with the scheme — the hardcoded near-white it replaces
-// left dark-mode text (which follows labelColor) illegible on a light box.
-const CODE_SURFACE = semanticColor('secondarySystemBackgroundColor', '#f4f4f6');
 
-function ElementGapsCases(): React.Node {
-  return (
-    <View style={{gap: 12}}>
-      {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
-      <div style={{display: 'block'}}>
-        {'A forced break splits this run'}
-        {/* $FlowFixMe[not-a-component] intrinsic <br> tag */}
-        <br />
-        {'onto a second line, while a literal'}
-        {'\n'}
-        {'newline in the source collapses to a space.'}
-      </div>
-      {/* <pre>: white-space is preserved, so the indentation and the blank
-          line below survive exactly as written — and copy that way too. */}
-      {/* $FlowFixMe[not-a-component] intrinsic <pre> tag */}
-      <pre
-        style={{
-          backgroundColor: CODE_SURFACE,
-          padding: 8,
-          borderRadius: 6,
-        }}>
-        {'function greet(name) {\n    return `hi ${name}`;\n}\n' +
-          '// a deliberately long line that would wrap in normal text but must not here'}
-      </pre>
-      {/* The three `white-space` axes, one case each — the values that a
-          two-value model gets wrong. Same string every time, so the only
-          thing varying is the property. */}
-      {WHITE_SPACE_CASES.map(({value, why}) => (
-        <View key={value} style={{gap: 2}}>
-          <View
-            // $FlowFixMe[incompatible-type] cascade to bare text
-            style={{color: DEMO_THEME.muted, fontSize: 12}}>
-            {`white-space: ${value} — ${why}`}
-          </View>
-          {/* $FlowFixMe[not-a-component] intrinsic <div> tag */}
-          <div
-            style={{
-              whiteSpace: value,
-              backgroundColor: CODE_SURFACE,
-              padding: 6,
-              borderRadius: 6,
-            }}>
-            {WHITE_SPACE_SAMPLE}
-          </div>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function TextareaCase(): React.Node {
-  const [text, setText] = useState('Two lines,\nedited here.');
-  return (
-    <View style={{gap: 12}}>
-      {/* $FlowFixMe[not-a-component] intrinsic <textarea> tag */}
-      <textarea
-        rows={3}
-        value={text}
-        onChange={(e: $FlowFixMe) => setText(e.target.value)}
-        style={{
-          borderWidth: 1,
-          borderColor: DEMO_THEME.border,
-          color: DEMO_THEME.fg,
-          borderRadius: 6,
-          padding: 8,
-        }}
-      />
-      {/* Tabular figures: the count changes on every keystroke, and with
-          proportional digits each change shifted the word beside it — a 1 is
-          narrower than a 0 in this face. A counter is exactly what
-          `font-variant-numeric: tabular-nums` is for. */}
-      <View
-        // $FlowFixMe[incompatible-type] cascade to bare text
-        style={{opacity: 0.6, fontVariant: ['tabular-nums']}}>
-        {`${text.length} characters`}
-      </View>
-    </View>
-  );
-}
 
 function StartingStyleCases(): React.Node {
   const [generation, setGeneration] = useState(0);
@@ -1131,43 +1054,6 @@ export default {
     "Meta's Astryx design system, running on React Native with the original " +
     'Astryx source code.',
   examples: [
-    {
-      name: 'forcedBreaks',
-      title: 'Forced breaks and white-space',
-      description:
-        'A <br> is a forced line break that survives CSS whitespace ' +
-        'collapsing — an ordinary newline in the source becomes a space ' +
-        '(css-text-3 §3), which is the difference the first block shows. ' +
-        'Below it, <pre> and the white-space axes that a two-value model ' +
-        'gets wrong.',
-      render: (): React.Node => (
-        <DemoContent
-          code={
-            '<div>\n' +
-            "  {'A forced break splits this run'}<br />\n" +
-            "  {'onto a second line, while a literal'}{'\\n'}\n" +
-            "  {'newline collapses to a space.'}\n" +
-            '</div>'
-          }>
-          <ElementGapsCases />
-        </DemoContent>
-      ),
-    },
-    {
-      name: 'textarea',
-      title: '<textarea>',
-      description:
-        'A behavioural element on React Native’s multiline TextInput, sized ' +
-        'in rows as on the web. It shared a screen with <br> for no better ' +
-        'reason than that both were new at the time; they have nothing to do ' +
-        'with each other.',
-      render: (): React.Node => (
-        <DemoContent
-          code={'<textarea rows={3} value={text} onChange={…} />'}>
-          <TextareaCase />
-        </DemoContent>
-      ),
-    },
     {
       name: 'nativeTransitions',
       title: 'CSS transitions — native interaction states',

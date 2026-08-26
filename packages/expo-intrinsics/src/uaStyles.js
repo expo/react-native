@@ -27,17 +27,20 @@
  *
  * Divergences from the web, stated rather than discovered:
  *  - DOM-CSS-LIMITATION(no-em-units): browsers express these in `em`; we have
- *    no font-relative units, so values are points, computed once against the
- *    root size below. They do not track the user's font size the way the web
- *    does.
+ *    no font-relative units, so a value stated in `em` or `rem` cannot be
+ *    written as one. It travels instead as a FACTOR in a property of its own —
+ *    `uaFontSizeEm`, `uaMarginBlockEm`, `uaMarginBlockRem` — and the renderer
+ *    multiplies it by the size the element is actually drawn at.
  *
- *    Computing them here does not mean computing them all against the root.
- *    `em` resolves against the element's OWN font-size, so a rule on an element
- *    that resizes itself — every heading — has to be multiplied by that size and
- *    not by the root's. See the headings below, where getting this wrong put h1
- *    at half its margin and h6 at half again too much, in the same table.
+ *    It has to be the renderer that does it. `em` resolves against a font-size
+ *    this file does not know: a platform text role decides it for every
+ *    heading, and an ancestor's `fontSize` can decide it for anything. Every
+ *    attempt to multiply it out here was really a `rem` — right at the root
+ *    and wrong everywhere else, which put h1 at half its margin and h6 at half
+ *    again too much in the same table.
  *  - DOM-CSS-DEVIATION(root-font-size-is-native-not-16px): the root is the
- *    platform's body text size rather than the web's 16px. See `ROOT_FONT_SIZE`.
+ *    platform's body text size rather than the web's 16px, and lives in the
+ *    renderer (`kDefaultFontSize`) rather than here.
  *  - DOM-CSS-LIMITATION(no-quirks-mode): no `quirks.css` equivalent, since
  *    there is no quirks mode to be compatible with.
  *  - DOM-CSS-DEVIATION(native-form-widgets): form controls are platform-drawn
@@ -144,85 +147,85 @@ export type UAStyle = {[string]: unknown};
  * stated weight is a design decision. A stated SIZE would be a copied metric,
  * which is the thing this exists to avoid.
  */
-/**
- * Whether this host can resolve a text ROLE into a font.
- *
- * A role is a question for the platform — `preferredFontForTextStyle:` on iOS,
- * a Material text appearance from the theme on Android — and naming one is only
- * useful where something can answer. Fantom has neither: it runs the renderer's
- * C++ against a stub host on a desktop, with no UIKit and no Android theme, and
- * reports itself as `android` because that is the layout dialect it emulates.
- *
- * Naming a role there produced headings with NO SIZE AT ALL, which is exactly
- * what `HeadingMargins-itest` caught — every level collapsed to the default and
- * the margin ratios it pins went with them.
- *
- * Asking about the TEST GLOBAL is unlovely and it is the honest question:
- * "is anything here able to answer?", not "which OS is this?". A capability
- * flag published from native would be the better shape if this needs to
- * generalise.
- */
-function hostResolvesTextRoles(): boolean {
-  const isFantom =
-    // $FlowFixMe[cannot-resolve-name] the test host's marker
-    typeof global !== 'undefined' && global.$$RunTests$$ != null;
-  return !isFantom && (Platform.OS === 'ios' || Platform.OS === 'android');
-}
-
 function headingType(
   role: string,
   webScale: number,
+  marginEm: number,
   statedWeight?: string,
 ): {[string]: unknown} {
-  if (hostResolvesTextRoles()) {
-    // The platform resolves the role: iOS asks
-    // `preferredFontForTextStyle:`, Android maps it onto Material's scale and
-    // asks the app's THEME. No size is stated on either — that is the point,
-    // and a theme with nothing to say falls back to the framework's own text
-    // appearances rather than to nothing.
-    return statedWeight != null
-      ? {dynamicTypeRamp: role, fontWeight: statedWeight}
-      : {dynamicTypeRamp: role};
-  }
-  // Anywhere else — the web, and Fantom — the browser's ladder stands.
-  return {fontSize: webScale * EM, fontWeight: 'bold'};
+  return {
+    // The platform's own name for this text. iOS asks
+    // `preferredFontForTextStyle:` for it; Android maps it onto Material's
+    // scale and asks the app's theme. Neither is consulted here, and no size is
+    // stated below that would pre-empt them.
+    dynamicTypeRamp: role,
+
+    /*
+     * What the WEB says, in the user-agent origin channel.
+     *
+     * Stated on every host, including the ones that resolve roles, and that is
+     * the point: these are not a platform branch, they are the sheet's own
+     * declaration, and the renderer uses them only where the role resolves to
+     * nothing. This file used to ask which host it was running on — really,
+     * whether it was under the test runner — because a stated `fontSize` was
+     * indistinguishable from an author's and would have beaten the platform.
+     * With a channel of its own there is nothing to ask.
+     *
+     * It is also what makes an unresolvable role harmless. Before, a role that
+     * answered with nothing left the text with no size at all, which surfaces
+     * as a crash out of a letter-spacing calculation.
+     *
+     * A FACTOR, like the margin beside it — but the two multiply DIFFERENT
+     * sizes, and that difference is the whole of css-values-4 §5.1.1. A
+     * font-size's `em` is the size the element INHERITED; a margin's `em` is
+     * the element's own resulting size. Only the renderer holds either, so
+     * both travel unresolved.
+     *
+     * This used to be resolved here, against the root — which is `rem`. A
+     * heading normally sits at the root's size, so the two agreed and the
+     * substitution went unnoticed until a heading appeared inside a container
+     * that had restyled its text, where it stayed at the root's size instead
+     * of doubling the size around it.
+     */
+    uaFontSizeEm: webScale,
+    uaFontWeight: 'bold',
+
+    // `html.css`'s own margin figure, resolved by the renderer against the size
+    // the heading is actually drawn at. See `uaMarginBlockEm` in BaseViewProps.h.
+    uaMarginBlockEm: marginEm,
+
+    /*
+     * h5 and h6 state a weight OUTRIGHT, and are the one deliberate departure.
+     * Subheadline and Footnote are secondary-text roles delivered regular, and a
+     * heading at that size and weight stops reading as a heading — so the SIZE
+     * is still the platform's and only the weight is ours. A stated weight is a
+     * design decision; a stated size would be a copied metric.
+     */
+    ...(statedWeight != null ? {fontWeight: statedWeight} : {}),
+  };
 }
 
-/**
- * The root font size, in points — what `1em` means in this stylesheet.
+/*
+ * The root font size — `rem` — does not live in this file.
  *
- * A browser's root is 16px. This one is the platform's own body text size, and
- * that choice is the deliberate one: iOS sets body copy at 17pt
- * (`UIFont.systemFontSize`) and Material's `bodyLarge` is 16sp, so a document
- * built from these elements reads at the size everything else on the phone
- * does. React Native's own default of 14 is neither the web's figure nor either
- * platform's, and prose left at it came out noticeably small next to any native
- * app.
+ * It used to: a `Platform.select` of 17 and 16, kept in step by hand with
+ * `kDefaultFontSize` in `TextAttributes.cpp`. Two copies of one metric on
+ * either side of the bridge, and under Fantom they disagreed. Now that every
+ * font-relative value here travels as a FACTOR, nothing in JavaScript needs to
+ * know the number, and the renderer's copy is the only one.
+ *
+ * What the number IS, and why, is documented where it now solely lives. The
+ * short version: iOS sets body copy at 17pt (`UIFont.systemFontSize`) and
+ * Material's `bodyLarge` is 16sp, so a document built from these elements reads
+ * at the size everything else on the phone does.
  *
  * DOM-CSS-DEVIATION(root-font-size-is-native-not-16px): documents here are not
- * 16px-rooted, so a length quoted in `em` resolves to a different number of
- * points than the same stylesheet would produce in a browser — and to a
- * different number on each platform. Proportions are preserved, absolute sizes
- * are not.
- *
- * This must stay in step with `kDefaultFontSize` in `TextAttributes.cpp`, which
- * is where text with no `font-size` of its own gets the same platform size
- * from. The two are one metric written on each side of the bridge: this one is
- * the base for the `em`-derived values in this sheet — the heading sizes and
- * the margins computed from them — and that one is the initial value every
- * element, bare string and `<Text>` starts at.
- *
- * It is ONE default in ONE place over there on purpose, and the comment beside
- * it says why: seeding only the element cascade gave a bare string the native
- * size while a plain `<Text>` kept React Native's 14, which breaks the
- * invariant that `<View>{'hi'}</View>` measures the same as
- * `<View><Text>hi</Text></View>`.
+ * 16px-rooted like a browser's, so a length quoted in `em` or `rem` resolves to
+ * a different number of points than the same stylesheet would produce in a
+ * browser — and to a different number on each platform. Proportions are
+ * preserved, absolute sizes are not. This is why the conformance tests for
+ * these units assert RATIOS and never point values.
  */
-const ROOT_FONT_SIZE: number = Platform.select({
-  ios: 17,
-  android: 16,
-  default: 16,
-});
 /*
  * The colour text is drawn in when nothing else decides it.
  *
@@ -238,8 +241,6 @@ const ROOT_FONT_SIZE: number = Platform.select({
  * was fixed — it returned a ColorStateList's resource ID as though it were
  * ARGB, which drew as fully transparent text. See `ColorPropConverterTest`.
  */
-
-const EM = ROOT_FONT_SIZE;
 
 /*
  * `<button>`'s platform chrome, hoisted and typed.
@@ -560,54 +561,50 @@ const uaStyles: {[string]: UAStyle} = {
   // Block-level containers. `display` comes from the element's registration
   // (they alias <div>), so only the box metrics belong here.
   /*
-   * `<p>` uses the SHORTHAND, like every other block element here, and a
-   * previous attempt to write it as longhands was reverted. Both halves of that
-   * are load-bearing.
+   * The block margins here are the spec's own `em` figures, passed to the
+   * renderer as factors. `html.css` says `p { margin-block: 1em }`, and `em` in
+   * a margin resolves against the ELEMENT's computed font-size — which this
+   * file cannot know, because a platform text role or an ancestor's `fontSize`
+   * may have decided it.
    *
-   * The bug it was working around is real: with `marginBlock: EM` a paragraph
-   * gets no vertical margin on either DEVICE, so two adjacent `<p>`s sit one
-   * line apart and the space *between* paragraphs equals the line spacing
-   * *inside* one — on the most common block element in HTML.
-   * `DOM-CSS-LIMITATION(paragraph-margin-shorthand-dropped)` tracks it. Ruled
-   * out already, so nobody repeats it: not the value, the container, the
-   * position in the tree, margin support, or margin collapsing; not the style's
-   * shape (`<dl>` has the byte-identical `{marginBlock: EM}` and works, as do
-   * `<figure>`, `<blockquote>` and `<h1>`–`<h6>`); not the sheet failing to
-   * reach the element (a throwaway tag with a view config verified identical to
-   * `<p>`'s gets its margin). It is specific to this tag and below JavaScript.
+   * They were `marginBlock: ROOT_FONT_SIZE` — a `rem` wearing an `em`'s name.
+   * It agreed with `em` for a paragraph at the root's size and disagreed for
+   * every other one: a `<p>` inside a container with larger text kept the
+   * root's margin, and `<pre>`, which sets `font-size: 0.8125em`, was 23% too
+   * loose.
    *
-   * Writing longhands here DID restore the gap on both devices — and broke
-   * something worse, which is why it is gone.
+   * Routing them through `uaMarginBlockEm` also retires
+   * `DOM-CSS-LIMITATION(paragraph-margin-shorthand-dropped)`, where `<p>` — and
+   * only `<p>` — lost its vertical margin on both devices while `<dl>` kept a
+   * byte-identical declaration. Whatever consumed it below JavaScript, this
+   * value never travels as `marginBlock` at all now.
    *
-   * `applyAliasedProps` treats `marginBlock` as an alias WITH precedence: it
-   * sets `Edge::Vertical` unconditionally. The longhands are aliases WITHOUT
-   * precedence: they fill `Edge::Top`/`Bottom` only when those are still
-   * undefined. So a UA longhand BEATS an author shorthand — `<p style={{
-   * marginBlock: 0 }}>` sets Vertical to 0, leaves Top/Bottom undefined, and
-   * the user-agent's 16pt then fills them in. The cascade runs backwards, on
-   * the one element authors most often restyle.
+   * The fix that was tried and reverted — writing `marginTop`/`marginBottom`
+   * longhands — is worth recording, because it says why a SEPARATE property is
+   * the right shape and a differently-spelled margin is not. Longhands restored
+   * the gap on both devices and inverted the cascade doing it:
+   * `applyAliasedProps` treats `marginBlock` as an alias WITH precedence and
+   * the longhands as aliases WITHOUT, so `<p style={{marginBlock: 0}}>` left
+   * Top/Bottom undefined and the user-agent's 16pt filled them in — a UA
+   * default an author could not override, on the one element authors restyle
+   * most. `uaMarginBlockEm` has no such contest to lose: an author's margin
+   * lands in `marginBlock` and the renderer checks for it explicitly before
+   * writing anything of its own.
    *
-   * Two tests in `DomElementsCatalog-itest` say exactly that, and both failed:
-   * "<p> is block-level" (40 expected, 104 measured — four 16pt margins that
-   * should not have been there) and, on the nose, "an author style beats the UA
-   * default". A user-agent default that cannot be overridden is a worse defect
-   * than a missing default, so the gap goes back to being a known bug rather
-   * than being bought at that price.
-   *
-   * Fantom does not reproduce the device bug — it measures the correct gap
-   * either way — so no Fantom test can guard a fix for it. It DID catch the
-   * regression above, which is the part that matters here.
+   * Regression coverage for that inversion is the two `DomElementsCatalog-itest`
+   * cases it broke: "<p> is block-level" and "an author style beats the UA
+   * default".
    */
-  p: {marginBlock: EM},
-  blockquote: {marginBlock: EM, marginInline: 40},
-  figure: {marginBlock: EM, marginInline: 40},
+  p: {uaMarginBlockEm: 1},
+  blockquote: {uaMarginBlockEm: 1, marginInline: 40},
+  figure: {uaMarginBlockEm: 1, marginInline: 40},
   // `white-space: pre` is the whole point of <pre>: browsers set it in
   // html.css, and it is what preserves the newlines and space runs an author
   // wrote — in the rendering and on the clipboard alike.
   pre: {
-    marginBlock: EM,
+    uaMarginBlockEm: 1,
     fontFamily: MONOSPACE,
-    fontSizeEm: 0.8125,
+    uaFontSizeEm: 0.8125,
     whiteSpace: 'pre',
   },
   /*
@@ -667,39 +664,24 @@ const uaStyles: {[string]: UAStyle} = {
    *
    * DOM-CSS-DEVIATION(headings-use-the-platform-type-scale)
    *
-   * DOM-CSS-LIMITATION(heading-margins-follow-the-web-ladder): the margins
-   * below are still `spec figure x the WEB ladder's size`, because `em` in a
-   * margin resolves against the element's own font-size and this file no longer
-   * knows what that is on iOS — the platform decides it after layout has been
-   * described. The proportions therefore hold against 2em/1.5em/... rather than
-   * against Title 1/Title 2/..., which leaves an h1's margin a few points
-   * generous. Fixing it properly means resolving the margin natively too.
+   * The MARGINS are the spec's own `em` figures, passed through as factors and
+   * resolved by the renderer against the size the heading is actually drawn at.
+   * They have to be: `em` in a margin resolves against the element's own
+   * font-size, and for a heading that is not the root size. Multiplying by a
+   * fixed root size here would get h4 right by luck — h4 is 1em — and everything
+   * else wrong in both directions, h1 and h2 at about half the margin they
+   * should have and h6 about half again too large.
    *
-   * The margins are written as two factors on purpose. `html.css` gives them in
-   * `em`, and `em` in a margin resolves against **the element's own font-size**
-   * — which for a heading is not the root size. Multiplying the spec's figure
-   * by a fixed root EM gets h4 right by luck (h4 is 1em) and everything else
-   * wrong in both directions at once: h1 and h2 come out at roughly half the
-   * margin they should have, while h6 comes out about 50% too large. On screen
-   * that reads as an h1 sitting too close to what precedes it and the small
-   * headings drifting apart, which looks like a margin-collapsing fault and is
-   * not one.
-   *
-   * Left as `spec figure × own font-size` rather than folded into a single
-   * constant so the derivation stays checkable against the spec.
+   * Nothing about the SPACING comes from the platform. Neither iOS nor Android
+   * says what the gap above a heading should be; the ratio stays the web's, and
+   * only the size it multiplies is the platform's.
    */
-  h1: {...headingType('title1', 2), marginBlock: 0.67 * (2 * EM)},
-  h2: {...headingType('title2', 1.5), marginBlock: 0.83 * (1.5 * EM)},
-  h3: {...headingType('title3', 1.17), marginBlock: 1.0 * (1.17 * EM)},
-  h4: {...headingType('headline', 1), marginBlock: 1.33 * EM},
-  h5: {
-    ...headingType('subheadline', 0.83, '600'),
-    marginBlock: 1.67 * (0.83 * EM),
-  },
-  h6: {
-    ...headingType('footnote', 0.67, '600'),
-    marginBlock: 2.33 * (0.67 * EM),
-  },
+  h1: headingType('title1', 2, 0.67),
+  h2: headingType('title2', 1.5, 0.83),
+  h3: headingType('title3', 1.17, 1.0),
+  h4: headingType('headline', 1, 1.33),
+  h5: headingType('subheadline', 0.83, 1.67, '600'),
+  h6: headingType('footnote', 0.67, 2.33, '600'),
 
   // Lists. The 40pt inline-start padding is the gutter an `outside` marker
   // hangs in, which is where the list container generates them (css-lists-3
@@ -765,14 +747,14 @@ const uaStyles: {[string]: UAStyle} = {
   address: {fontStyle: 'italic'},
   // <menu> is a list: the HTML Standard groups it with dir/ol/ul for margins
   // and with dir/ul for the disc marker.
-  menu: {marginBlock: EM, paddingInlineStart: 40, listStyleType: 'disc'},
+  menu: {uaMarginBlockEm: 1, paddingInlineStart: 40, listStyleType: 'disc'},
   // Scripting is always enabled here, so <noscript> content never renders —
   // `@media (scripting) { noscript { display: none !important } }`. There is no
   // no-scripting mode to fall back to, so this is unconditional.
   noscript: {display: 'none'},
-  ul: {marginBlock: EM, paddingInlineStart: 40},
-  ol: {marginBlock: EM, paddingInlineStart: 40},
-  dl: {marginBlock: EM},
+  ul: {uaMarginBlockEm: 1, paddingInlineStart: 40},
+  ol: {uaMarginBlockEm: 1, paddingInlineStart: 40},
+  dl: {uaMarginBlockEm: 1},
   dd: {marginInlineStart: 40},
 
   // Form controls. Browsers give <button> `display: inline-block`, which is
@@ -880,7 +862,7 @@ const uaStyles: {[string]: UAStyle} = {
    * is currently carried, and the alternative is drawing nothing at all.
    */
   abbr: {textDecorationLine: 'underline', textDecorationStyle: 'dotted'},
-  small: {fontSizeEm: 0.8333},
+  small: {uaFontSizeEm: 0.8333},
   /*
    * Monospace text is also SMALLER — `13px` against a 16px root, which every
    * browser applies and which measuring Chrome is the only way to discover.
@@ -888,9 +870,9 @@ const uaStyles: {[string]: UAStyle} = {
    * nominal size reads noticeably larger than the surrounding proportional
    * text, so `<code>` in a sentence looked oversized next to it.
    */
-  code: {fontFamily: MONOSPACE, fontSizeEm: 0.8125},
-  kbd: {fontFamily: MONOSPACE, fontSizeEm: 0.8125},
-  samp: {fontFamily: MONOSPACE, fontSizeEm: 0.8125},
+  code: {fontFamily: MONOSPACE, uaFontSizeEm: 0.8125},
+  kbd: {fontFamily: MONOSPACE, uaFontSizeEm: 0.8125},
+  samp: {fontFamily: MONOSPACE, uaFontSizeEm: 0.8125},
   s: {textDecorationLine: 'line-through'},
   del: {textDecorationLine: 'line-through'},
   ins: {textDecorationLine: 'underline'},
@@ -903,8 +885,8 @@ const uaStyles: {[string]: UAStyle} = {
    * They had NO user-agent style at all, so both rendered as ordinary text and
    * the elements did nothing visible — registered, inherited from, and inert.
    */
-  sup: {fontSizeEm: 0.8333, verticalAlign: 'super'},
-  sub: {fontSizeEm: 0.8333, verticalAlign: 'sub'},
+  sup: {uaFontSizeEm: 0.8333, verticalAlign: 'super'},
+  sub: {uaFontSizeEm: 0.8333, verticalAlign: 'sub'},
 };
 
 /**
