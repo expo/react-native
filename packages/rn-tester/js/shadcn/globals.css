@@ -122,6 +122,17 @@ h1, h2, h3, h4, h5, h6, p, blockquote, figure, pre {
 button {
   background-color: transparent;
   padding: 0;
+  /*
+   * Preflight's `color: inherit`, and it is load-bearing rather than tidying.
+   * Four of the six button variants name their own text colour; `outline` and
+   * `ghost` do not, because on the web they inherit `--foreground` from the
+   * page. Without this they kept the user-agent's `ButtonText`, which is
+   * chosen to contrast with the PLATFORM's button surface — and these two
+   * have replaced that surface with the theme's own. In dark mode that left
+   * an unreadable label on both, and on "Open dialog", which is an outline
+   * button too.
+   */
+  color: inherit;
 }
 
 h1, h2, h3, h4, h5, h6 {
