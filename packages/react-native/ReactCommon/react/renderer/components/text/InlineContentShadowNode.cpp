@@ -61,8 +61,15 @@ std::string defaultRoleForNode(const ShadowNode& node) {
   const auto name = provider != nullptr && !provider->domNodeName().empty()
       ? provider->domNodeName()
       : std::string{node.getComponentName()};
+  // Treat only an anchor with a destination as a link: HTML-AAM maps an `<a>`
+  // without `href` to a generic role, and the `<a>` component likewise adds
+  // its implicit `link` role only when `href` is set
   if (name == "a") {
-    return "link";
+    const auto* textProps =
+        dynamic_cast<const BaseTextProps*>(node.getProps().get());
+    return textProps != nullptr && !textProps->textAttributes.href.empty()
+        ? "link"
+        : std::string{};
   }
   if (name == "button") {
     return "button";
