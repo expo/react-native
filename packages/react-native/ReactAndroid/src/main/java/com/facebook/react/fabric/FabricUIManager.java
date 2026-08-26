@@ -278,7 +278,9 @@ public class FabricUIManager
     // a spannable can be built before anything is measured, which is exactly
     // what happened: priming in measureText left the first text with an
     // unresolved role and no size at all.
-    MaterialTypeScale.primeFrom(mReactApplicationContext);
+    // Provisional: an Application's theme may not carry the Material
+    // attributes even where the app uses them.
+    MaterialTypeScale.primeFrom(mReactApplicationContext, /* definitive */ false);
   }
 
   @Override
@@ -669,7 +671,10 @@ public class FabricUIManager
     // Activity runs under — priming latches only on success, so this is the
     // attempt that has a themed context to offer.
     android.app.Activity activity = mReactApplicationContext.getCurrentActivity();
-    MaterialTypeScale.primeFrom(activity != null ? activity : mReactApplicationContext);
+    // An Activity's theme is the best context there is, so an answer from one
+    // settles the question; without an Activity this stays provisional.
+    MaterialTypeScale.primeFrom(
+        activity != null ? activity : mReactApplicationContext, /* definitive */ activity != null);
 
     return TextLayoutManager.measureText(
         mReactApplicationContext.getAssets(),
