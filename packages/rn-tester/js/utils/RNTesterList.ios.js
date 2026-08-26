@@ -80,6 +80,12 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'UI',
   },
   {
+    key: 'LinkBehaviorExample',
+    pinned: true,
+    module: require('../examples/HTMLElements/LinkBehaviorExample').default,
+    category: 'UI',
+  },
+  {
     key: 'HTMLGroupingExample',
     pinned: true,
     module: require('../examples/HTMLElements/HTMLGroupingExample').default,
