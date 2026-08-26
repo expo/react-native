@@ -90,7 +90,21 @@ const ANDROID: {[string]: ColorValue} = {
   ButtonText: PlatformColor('?attr/colorOnSecondaryContainer'),
   Field: PlatformColor('?attr/colorSurface'),
   FieldText: PlatformColor('?attr/colorOnSurface'),
-  LinkText: PlatformColor('?attr/colorPrimary'),
+  /*
+   * `textColorLink`, the FRAMEWORK's own link colour, not `colorPrimary`.
+   *
+   * Material's guidance for links in body text does say `primary`, and that is
+   * right in a Material 3 theme where `primary` is chosen against the surface.
+   * It is not a safe default: `colorPrimary` is a BRAND colour, and an app on
+   * an AppCompat or Material 2 theme has one picked for a light app bar. In
+   * dark mode that rendered links very nearly black on a near-black surface —
+   * legible only if you knew where to look. Measured on the emulator.
+   *
+   * `?android:attr/textColorLink` is defined by every theme, is what `URLSpan`
+   * itself uses, and is specified against the theme's text background — so it
+   * has the contrast this needs by construction rather than by luck.
+   */
+  LinkText: PlatformColor('?android:attr/textColorLink'),
   GrayText: PlatformColor('?android:attr/textColorTertiary'),
 };
 

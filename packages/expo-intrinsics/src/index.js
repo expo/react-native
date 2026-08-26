@@ -274,9 +274,49 @@ registerInlineAlias('em', 'inline-text');
 // `:visited` is deliberately not attempted; see the limitations note.
 const anchorLinkUAStyle: UAStyle = {
   ...uaStyleFor('a'),
-  // Chrome and Safari's `-webkit-link`.
-  color: '#0000EE',
-  textDecorationLine: 'underline',
+  /*
+   * The PLATFORM's link colour, not the browser's `-webkit-link` blue.
+   *
+   * `#0000EE` is a fixed sRGB value: it does not move for dark mode, for
+   * increased contrast, or for a Material You palette, so a document in dark
+   * mode got 1990s hyperlink blue on near-black — legible, and unmistakably not
+   * a native app. `LinkText` resolves to `UIColor.linkColor` on iOS and
+   * `?android:attr/textColorLink` on Android, both of which re-resolve per
+   * trait collection and per configuration, so the theme arrives without this
+   * file knowing the theme exists.
+   *
+   * Android names the LINK colour specifically rather than `colorPrimary`,
+   * which is what this used to say: `colorPrimary` is the app's brand accent —
+   * it tints buttons and switches, and under Material You it follows the
+   * wallpaper, so links would have changed colour with the user's home screen
+   * and could collide with a nearby filled button. `textColorLink` is the
+   * platform's own answer for this exact question and is what a `TextView`
+   * with `autoLink` uses.
+   *
+   * The token was already defined for all three platforms and simply was not
+   * being used here.
+   */
+  color: systemColor('LinkText'),
+  /*
+   * UNDERLINED ON ANDROID ONLY, because that is where the platform underlines.
+   *
+   * Asked rather than assumed: `UITextView`'s default `linkTextAttributes`
+   * contains a colour and no underline attribute at all, so an underlined link
+   * in an iOS document reads as a web page — pinned in
+   * `EXPLinkTextAttributesTests`. Android is the opposite: `URLSpan` sets
+   * `setUnderlineText(true)` in `updateDrawState`, and Material's guidance for
+   * links in body text asks for the underline explicitly.
+   *
+   * DOM-CSS-DEVIATION(ios-links-are-not-underlined): `html.css` underlines
+   * every `a:link` and iOS does not.
+   *
+   * The accessibility tradeoff is real and is the platform's to make: without
+   * an underline the link is distinguished from body text by COLOUR ALONE,
+   * which WCAG 1.4.1 warns against. iOS's answer is that its link colour clears
+   * the contrast bar against label colour; an author who disagrees can state
+   * `textDecorationLine` and win, as with any user-agent default.
+   */
+  textDecorationLine: Platform.OS === 'ios' ? 'none' : 'underline',
 };
 // The host `<a>` renders. Registered under its own name because the tag is a
 // component — see Anchor.js: an anchor with an href is a link and has to carry

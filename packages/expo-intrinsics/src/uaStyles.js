@@ -49,11 +49,19 @@
  *    rather than described here. This sheet carries only what the renderer
  *    itself draws: label typography and colour, content insets, touch-target
  *    minimums.
- *  - DOM-CSS-LIMITATION(no-visited-links): `<a href>` gets the unvisited link
- *    colour and underline (`a:link`), but `:visited` is not evaluated — that
- *    needs history state we do not have, so a followed link never changes
- *    colour. An anchor with no `href` is correctly left unstyled, as in a
- *    browser.
+ *  - DOM-CSS-DEVIATION(no-visited-links): `<a href>` gets the link colour and
+ *    underline (`a:link`) and `:visited` is NOT evaluated, so a followed link
+ *    never changes colour. Partly because it would need history state we do not
+ *    have — and deliberately, because the thing it would change to is the web's
+ *    purple, which no native app on either platform does. A link here keeps the
+ *    system tint whether or not it has been followed.
+ *
+ *    The colour is `LinkText` from `systemColors.js`, which is
+ *    `UIColor.linkColor` on iOS and `?android:attr/textColorLink` on Android —
+ *    adaptive tokens, so dark mode and Material You arrive on their own. Not
+ *    `-webkit-link`'s fixed `#0000EE`, which cannot move.
+ *
+ *    An anchor with no `href` is correctly left unstyled, as in a browser.
  */
 
 import type {ColorValue} from 'react-native';
