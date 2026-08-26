@@ -107,6 +107,7 @@ constexpr float facebook::react::kElementSelectMinTouchWidth;
 constexpr float facebook::react::kSymbolicMarkerBaselineShiftEm;
 constexpr float facebook::react::kSymbolicMarkerFontScale;
 constexpr int facebook::react::kSymbolicMarkerGapSpaces;
+constexpr size_t facebook::react::kDynamicTypeRampCount;
 constexpr uint32_t facebook::react::INITIAL_BUCKETS_SIZE;
 constexpr uint32_t facebook::react::kRendererAbiVersion;
 static const facebook::react::LayoutMetrics facebook::react::EmptyLayoutMetrics;
@@ -942,6 +943,8 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public BaseViewProps() = default;
   public BaseViewProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseViewProps& sourceProps, const facebook::react::RawProps& rawProps, const std::function<bool(const std::string&)>& filterObjectKeys = nullptr, bool parseInheritedTextProps = true);
   public Float inheritedFontSize;
+  public Float inheritedFontSizeEm;
+  public Float inheritedFontSizeRem;
   public Float inheritedLetterSpacing;
   public Float inheritedLineHeight;
   public Float opacity;
@@ -949,6 +952,9 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public Float outlineWidth;
   public Float shadowOpacity;
   public Float shadowRadius;
+  public Float uaFontSizeEm;
+  public Float uaMarginBlockEm;
+  public Float uaMarginBlockRem;
   public bool collapsable;
   public bool collapsableChildren;
   public bool computeHasInheritedTextProps() const;
@@ -989,6 +995,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public std::optional<facebook::react::FontStyle> inheritedFontStyle;
   public std::optional<facebook::react::FontVariant> inheritedFontVariant;
   public std::optional<facebook::react::FontWeight> inheritedFontWeight;
+  public std::optional<facebook::react::FontWeight> uaFontWeight;
   public std::optional<facebook::react::TextAlignment> inheritedTextAlign;
   public std::optional<facebook::react::TextTransform> inheritedTextTransform;
   public std::optional<facebook::react::WhiteSpace> inheritedWhiteSpace;
@@ -2837,6 +2844,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   LeafYogaNode,
   MeasurableYogaNode,
   None,
+  ResolvesRelativeLength,
   RootNodeKind,
   SubtreeHasCascadeDependents,
   TextCascadeConsumer,
@@ -3129,6 +3137,13 @@ class facebook::react::TextProps : public facebook::react::Props, public faceboo
   public TextProps() = default;
   public TextProps(const facebook::react::PropsParserContext& context, const facebook::react::TextProps& sourceProps, const facebook::react::RawProps& rawProps);
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
+}
+
+class facebook::react::TextRoleMetrics {
+  public static bool publishByName(const std::string& roleName, Float pointSize);
+  public static std::optional<Float> sizeOf(facebook::react::DynamicTypeRamp ramp);
+  public static void publish(facebook::react::DynamicTypeRamp ramp, Float pointSize);
+  public static void reset();
 }
 
 class facebook::react::TextShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::TextComponentName, facebook::react::LayoutableShadowNode, facebook::react::TextProps, facebook::react::TextEventEmitter>, public facebook::react::BaseTextShadowNode {
@@ -3451,6 +3466,7 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public virtual const std::shared_ptr<const facebook::react::TextAttributes>* getStoredCascade() const;
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
   public virtual void appendChild(const std::shared_ptr<const facebook::react::ShadowNode>& child) override;
+  public virtual void applyCascadeDependentStyles(Float, Float);
   public virtual void completeClone(const facebook::react::ShadowNode&, const facebook::react::ShadowNodeFragment&) override;
   public virtual void dirtyLayout() override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;

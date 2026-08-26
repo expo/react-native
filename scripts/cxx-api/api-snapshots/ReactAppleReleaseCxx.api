@@ -3227,6 +3227,7 @@ constexpr float facebook::react::kElementSelectMinTouchWidth;
 constexpr float facebook::react::kSymbolicMarkerBaselineShiftEm;
 constexpr float facebook::react::kSymbolicMarkerFontScale;
 constexpr int facebook::react::kSymbolicMarkerGapSpaces;
+constexpr size_t facebook::react::kDynamicTypeRampCount;
 constexpr uint32_t facebook::react::INITIAL_BUCKETS_SIZE;
 constexpr uint32_t facebook::react::kRendererAbiVersion;
 static const facebook::react::LayoutMetrics facebook::react::EmptyLayoutMetrics;
@@ -3713,6 +3714,8 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::Cursor cursor;
   public facebook::react::EdgeInsets hitSlop;
   public facebook::react::Float inheritedFontSize;
+  public facebook::react::Float inheritedFontSizeEm;
+  public facebook::react::Float inheritedFontSizeRem;
   public facebook::react::Float inheritedLetterSpacing;
   public facebook::react::Float inheritedLineHeight;
   public facebook::react::Float opacity;
@@ -3720,6 +3723,9 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::Float outlineWidth;
   public facebook::react::Float shadowOpacity;
   public facebook::react::Float shadowRadius;
+  public facebook::react::Float uaFontSizeEm;
+  public facebook::react::Float uaMarginBlockEm;
+  public facebook::react::Float uaMarginBlockRem;
   public facebook::react::Isolation isolation;
   public facebook::react::OutlineStyle outlineStyle;
   public facebook::react::PointerEventsMode pointerEvents;
@@ -3738,6 +3744,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public std::optional<facebook::react::FontStyle> inheritedFontStyle;
   public std::optional<facebook::react::FontVariant> inheritedFontVariant;
   public std::optional<facebook::react::FontWeight> inheritedFontWeight;
+  public std::optional<facebook::react::FontWeight> uaFontWeight;
   public std::optional<facebook::react::TextAlignment> inheritedTextAlign;
   public std::optional<facebook::react::TextTransform> inheritedTextTransform;
   public std::optional<facebook::react::WhiteSpace> inheritedWhiteSpace;
@@ -5186,6 +5193,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   LeafYogaNode,
   MeasurableYogaNode,
   None,
+  ResolvesRelativeLength,
   RootNodeKind,
   SubtreeHasCascadeDependents,
   TextCascadeConsumer,
@@ -5312,6 +5320,13 @@ class facebook::react::TextNodeProps : public facebook::react::Props {
 class facebook::react::TextNodeShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::TextNodeComponentName, facebook::react::ShadowNode, facebook::react::TextNodeProps> {
   public const std::string& getText() const;
   public static facebook::react::ShadowNodeTraits BaseTraits();
+}
+
+class facebook::react::TextRoleMetrics {
+  public static bool publishByName(const std::string& roleName, facebook::react::Float pointSize);
+  public static std::optional<facebook::react::Float> sizeOf(facebook::react::DynamicTypeRamp ramp);
+  public static void publish(facebook::react::DynamicTypeRamp ramp, facebook::react::Float pointSize);
+  public static void reset();
 }
 
 class facebook::react::TouchEventEmitter : public facebook::react::EventEmitter {
@@ -5462,6 +5477,7 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
   public virtual void appendChild(const std::shared_ptr<const facebook::react::ShadowNode>& child) override;
+  public virtual void applyCascadeDependentStyles(facebook::react::Float, facebook::react::Float);
   public virtual void completeClone(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment) override;
   public virtual void dirtyLayout() override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;

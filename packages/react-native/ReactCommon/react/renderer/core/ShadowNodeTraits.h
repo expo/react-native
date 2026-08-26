@@ -153,6 +153,18 @@ class ShadowNodeTraits {
     // ParagraphShadowNode is the one declarer — old React Native's "<Text> is
     // a style boundary" contract, expressed in the web's own vocabulary.
     UACascadeBoundary = 1 << 22,
+
+    // This node resolves a length against a font size the cascade decides —
+    // `margin-block: 1em`, `margin-block: 1rem`. It observes the cascade while
+    // holding no text, and the dependents optimisation would otherwise skip it:
+    // nothing below such a node consumes the cascade, so the walk would never
+    // hand it one and its `em` would resolve against the default font size
+    // rather than the inherited one.
+    //
+    // It cannot reuse TextCascadeConsumer, which is overloaded: that trait also
+    // marks where LINE BOXES live, so a text-free <div> carrying it would start
+    // answering `baseline()` from a box that has none.
+    ResolvesRelativeLength = 1 << 23,
   };
 
   /*

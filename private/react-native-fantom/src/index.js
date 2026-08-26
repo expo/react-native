@@ -45,6 +45,15 @@ export type RootConfig = {
   viewportHeight?: number,
   devicePixelRatio?: number,
   fontScale?: number,
+  /**
+   * The user's text-size setting, as the multiplier the platform reports.
+   *
+   * Defaults to 1 — the size everything is authored at. Raising it is how a
+   * test says "the reader has turned text up": on a device this is Dynamic
+   * Type or Android's font scale, and it moves text and the lengths resolved
+   * from it without moving anything stated in points.
+   */
+  fontSizeMultiplier?: number,
   viewportOffsetX?: number,
   viewportOffsetY?: number,
 };
@@ -126,7 +135,8 @@ class Root {
     this.#viewportHeight = config?.viewportHeight ?? DEFAULT_VIEWPORT_HEIGHT;
     this.#devicePixelRatio =
       config?.devicePixelRatio ?? DEFAULT_DEVICE_PIXEL_RATIO;
-    this.#fontScale = config?.fontScale ?? DEFAULT_FONT_SCALE;
+    this.#fontScale =
+      config?.fontScale ?? config?.fontSizeMultiplier ?? DEFAULT_FONT_SCALE;
     this.#viewportOffsetX = config?.viewportOffsetX ?? 0;
     this.#viewportOffsetY = config?.viewportOffsetY ?? 0;
 
