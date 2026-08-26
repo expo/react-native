@@ -67,6 +67,43 @@ DEFERRED, and architectural rather than hard: closing it means the reconciler
 telling the host when a display change crosses that boundary, which is an
 upstream React concern rather than something this fork decides alone.
 
+**`no-author-facing-em-lengths`** — `text-conformance/cases.js`
+`em` and `rem` resolve for `font-size` (`fontSizeEm`, `fontSizeRem`) and for
+the user-agent block margin (`uaMarginBlockEm`, `uaMarginBlockRem`), but there
+is no way for an AUTHOR to write a relative length on an arbitrary layout
+property — `width: '1.5em'` is not a value React Native styles take. A style
+value here is a resolved number, and at the moment one is written there is no
+font size to resolve against; carrying the unit through would mean a unit in
+Yoga's `StyleLength`, which is part of its public C API and reaches the Java
+and Objective-C bindings. The corpus translates an author's `margin-block: 1em`
+into the user-agent channel, which is a different cascade origin — fine for
+geometry, wrong for a case about precedence.
+
+DEFERRED. One of the four that a single relative-length channel would close —
+see `no-em-units`. The cost is real (a unit in Yoga's `StyleLength`, which is
+public C API), which is why it is one piece of work rather than a quick fix.
+
+**`rem-root-is-the-unstylable-surface-root`** — `Libraries/Text/__tests__/RelativeFontSize-itest.js`
+`rem` resolves against the surface root — the node the layout walk starts from
+— and everything an app renders is already a child of it. So an app has no way
+to state the root's font size the way a page styles `<html>`, and `rem` is the
+platform's body size for the life of the surface. The native lever for moving
+all text at once is the user's own text-size setting, which arrives as
+`fontSizeMultiplier` and scales resolved sizes after the fact rather than
+through this base.
+
+**`no-author-facing-em-lengths`** — `text-conformance/cases.js`
+`em` and `rem` resolve for `font-size` (`fontSizeEm`, `fontSizeRem`) and for
+the user-agent block margin (`uaMarginBlockEm`, `uaMarginBlockRem`), but there
+is no way for an AUTHOR to write a relative length on an arbitrary layout
+property — `width: '1.5em'` is not a value React Native styles take. A style
+value here is a resolved number, and at the moment one is written there is no
+font size to resolve against; carrying the unit through would mean a unit in
+Yoga's `StyleLength`, which is part of its public C API and reaches the Java
+and Objective-C bindings. The corpus translates an author's `margin-block: 1em`
+into the user-agent channel, which is a different cascade origin — fine for
+geometry, wrong for a case about precedence.
+
 **`rem-root-is-the-unstylable-surface-root`** — `Libraries/Text/__tests__/RelativeFontSize-itest.js`
 `rem` resolves against the surface root — the node the layout walk starts from
 — and everything an app renders is already a child of it. So an app has no way
@@ -89,9 +126,11 @@ value and nothing here has asked for it.
 
 All in `packages/expo-intrinsics/src/uaStyles.js`.
 
-**`no-em-units`** — browsers express UA defaults in `em`; we have no
-font-relative units, so the sheet stores points computed against a 16px root.
-They therefore do not track the user's font size the way the web does.
+**`no-em-units`** — browsers express UA defaults in `em`; the sheet cannot.
+Font sizes and block margins travel as factors (`uaFontSizeEm`,
+`uaMarginBlockEm`, `uaMarginBlockRem`) that the renderer multiplies by the
+drawn size, so those track the font. Any other `em` length in the web's sheet
+is written here as points.
 
 DEFERRED, and the same missing capability as `no-author-facing-em-lengths` and
 the shim's `rem-fixed-root` and `unitless-line-height-needs-local-font-size`.
@@ -212,7 +251,6 @@ rather than going quiet.
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
-- `heading-margins-follow-the-web-ladder` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
