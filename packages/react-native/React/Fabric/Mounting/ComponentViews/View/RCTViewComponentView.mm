@@ -49,6 +49,8 @@
 #import <React/RCTComponentViewFactory.h>
 #import <react/renderer/components/view/ElementBoxShadowNode.h>
 
+#import "EXPTextLinkInteraction.h"
+
 // Per-run text painting lives in its own file: it is a self-contained concept,
 // and this class is the one every React Native change touches.
 #import "RCTAnonymousTextRunView.h"
@@ -155,8 +157,8 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   // One paint view per anonymous text run, interleaved with mounted children in
   // document order. Internal, never differ-driven.
   NSMutableArray<RCTAnonymousTextRunView *> *_textRunViews;
-  // Chrome installed from OUTSIDE by a host, kept out of the mount indices.
-  // See `-addHostChromeSubview:`.
+  EXPTextLinkInteraction *_textLinkInteraction;
+  // Chrome installed from outside by a host, kept out of the mount indices
   NSMutableArray<UIView *> *_hostChromeSubviews;
 #if !TARGET_OS_TV
   // Installed only while this View both paints text and asks for it to be
@@ -525,6 +527,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // Re-establish authored paint order relative to mounted children.
   [self setNeedsLayout];
   [self _updateTextSelectionInteraction];
+  [self _updateTextLinkInteraction];
 }
 
 // Interleaves the internal per-run paint views with mounted child views in
@@ -599,6 +602,196 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 }
 
 #if !TARGET_OS_TV
+/*
+ * iOS's own press-and-hold behaviour for a link this view drew.
+ *
+ * Installed only when some run actually carries one — the check is over the C++
+ * fragments, so it costs a walk of the runs and no text shaping. A view whose
+ * text has no link adds no gesture recognizer and behaves exactly as before.
+ */
+- (void)_updateTextLinkInteraction
+{
+  BOOL wanted = NO;
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    if ([runView containsLink]) {
+      wanted = YES;
+      break;
+    }
+  }
+  if (_textLinkInteraction == nil) {
+    if (!wanted) {
+      return;
+    }
+    __weak __typeof(self) weakSelf = self;
+    _textLinkInteraction = [[EXPTextLinkInteraction alloc]
+        initWithView:self
+            resolver:^id _Nullable(
+                CGPoint point, NSMutableArray<NSValue *> *rects, UIView *_Nullable *_Nullable outLinkView) {
+              return [weakSelf _linkAtPoint:point rects:rects linkView:outLinkView];
+            }];
+  }
+  [_textLinkInteraction setInstalled:wanted];
+}
+
+/*
+ * A lift is a picture of glyphs this view drew. If the view leaves the screen
+ * while the OS is showing that picture, the picture has to go with it.
+ *
+ * Recycling already tears the interaction down, but an ordinary unmount does
+ * not: the view is simply removed, and UIKit would go on floating a lifted link
+ * over the app until the user dismissed it — offering Open on a URL belonging to
+ * a screen they have already left. Leaving the window is the signal that covers
+ * both, because a recycled view leaves it too.
+ */
+- (void)didMoveToWindow
+{
+  [super didMoveToWindow];
+  if ([self _observesSafeAreaInsets]) {
+    [self setNeedsLayout];
+  }
+  if (self.window == nil) {
+    [_textLinkInteraction dismissMenuIfPresenting];
+  }
+}
+
+/*
+ * The link under a point, resolved through the same run views and the same
+ * `containerFrame` that painting and touch hit-testing use — so the menu lifts
+ * the glyphs the user actually pressed. Runs do not overlap, so the first one
+ * containing the point answers.
+ */
+- (nullable id)_linkAtPoint:(CGPoint)point
+                      rects:(NSMutableArray<NSValue *> *)rects
+                   linkView:(UIView *_Nullable *_Nullable)outLinkView
+{
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    if (id link = [runView linkAtContainerPoint:point rects:rects]) {
+      /*
+       * The link's OWN VIEW, not the run's.
+       *
+       * Every link is painted by a view of its own precisely so that a lift can
+       * be handed a real view — something UIKit can hide, animate and put back
+       * by itself, the way it does for a `UITextView`. Handing back the run
+       * instead would be handing back the whole paragraph.
+       */
+      if (outLinkView != nullptr) {
+        *outLinkView = [self _viewForLinkContentInRects:rects fallingBackTo:[runView linkViewAtContainerPoint:point]];
+      }
+      return link;
+    }
+  }
+  return nil;
+}
+
+/*
+ * Where a view was LAID OUT, ignoring any transform it is wearing.
+ *
+ * `frame` cannot be used for this. UIKit documents it as undefined once
+ * `transform` is not the identity, and it really is: it reports the bounding
+ * box of the transformed shape, so a 72pt square turned 45° claims a frame of
+ * about 102pt. Anything animating a rotation or a scale — which is most things
+ * worth putting inside a link — therefore never matched the line box the text
+ * laid it out in, fell through to the glyph view, and lifted an EMPTY CHIP,
+ * because a link whose whole content is that view has no glyphs of its own.
+ *
+ * `center` and `bounds` are the pair that survives a transform: the view's own
+ * transform is applied about its anchor point and moves neither. That is also
+ * the geometry the question is really asking about — the box the line was laid
+ * out around, not wherever an animation has since swung the pixels.
+ */
+static CGRect RCTUntransformedFrame(UIView *view)
+{
+  const CGSize size = view.bounds.size;
+  const CGPoint anchor = view.layer.anchorPoint;
+  const CGPoint position = view.center;
+  // `center` is the anchor point's position, which is the middle only for the
+  // default anchor; `transform-origin` can move it.
+  return CGRectMake(position.x - size.width * anchor.x, position.y - size.height * anchor.y, size.width, size.height);
+}
+
+/*
+ * The view that IS this link's content, for the OS to lift.
+ *
+ * A link is not always glyphs. `<a><img></a>` puts an image inside the anchor,
+ * and that image is already a MOUNTED VIEW of its own, riding in the text as an
+ * attachment — so the thing to lift is that view, not a drawing of the text
+ * around it. The same holds for anything else an author nests in a link: a
+ * video, a custom component. Whatever it is, it is a real view and UIKit can
+ * hide, lift and restore it natively.
+ *
+ * This is the difference between pointing at content that exists and
+ * manufacturing a copy of it. Earlier versions captured the link's pixels into
+ * an image, which meant the capture had to learn about every kind of content
+ * separately — and silently produced an EMPTY chip for `<a><img>`, because an
+ * image is not painted by the text run at all.
+ *
+ * A mounted child counts only if it sits INSIDE the link's own rects: an image
+ * merely on the same line belongs to the sentence, not to the link. The rects
+ * come from the link's CHARACTER RANGE, and an attachment character carries
+ * `href` like any other, so an `<img>` written inside the `<a>` is in that
+ * range and an `<img>` beside it is not — pinned from the text stack's side by
+ * `EXPAtomicInlineLinkRangeTests`.
+ *
+ * Which leaves the case where the link's content is a picture AND words. Two
+ * different views draw those halves — the image is a mounted subview, the text
+ * is painted by the run — so no single child is the whole link, and the answer
+ * is this container, which draws both.
+ *
+ * Handing back a container is only safe because the interaction CLIPS its lift
+ * to the link's own box (`EXPLinkPress.liftBox`). Without that it pictures the
+ * view's whole bounds and aims at the view's centre, which put the page's
+ * surroundings in the chip and started it in the wrong place — the first
+ * attempt at this shipped exactly that. A child is still preferred wherever one
+ * really is the link, because UIKit can hide and restore a real view natively.
+ */
+- (nullable UIView *)_viewForLinkContentInRects:(NSArray<NSValue *> *)rects fallingBackTo:(nullable UIView *)glyphView
+{
+  if (rects.count == 0) {
+    return glyphView;
+  }
+  CGRect linkBounds = CGRectNull;
+  for (NSValue *value in rects) {
+    linkBounds = CGRectIsNull(linkBounds) ? value.CGRectValue : CGRectUnion(linkBounds, value.CGRectValue);
+  }
+  if (CGRectIsNull(linkBounds)) {
+    return glyphView;
+  }
+  for (UIView *subview in self.currentContainerView.subviews) {
+    if ([subview isKindOfClass:[RCTAnonymousTextRunView class]] || subview.hidden) {
+      continue;
+    }
+    if ([self isHostChromeSubview:subview]) {
+      continue;
+    }
+    // Grown by a point: an attachment's box and the line rect around it are
+    // computed by different paths and agree only to within rounding.
+    const CGRect grown = CGRectInset(linkBounds, -1, -1);
+    const CGRect frame = RCTUntransformedFrame(subview);
+    if (!CGRectContainsRect(grown, frame)) {
+      continue;
+    }
+    /*
+     * The child is the link when it spans the link's INLINE extent.
+     *
+     * Not full containment: a line box is routinely TALLER than the picture
+     * sitting on it, because the leading belongs to the line rather than to the
+     * image, so an `<a><img></a>` would fail a height test and be treated as a
+     * region of its container — which lifts a slab of line padding around the
+     * picture instead of the picture. Width is the honest question, because a
+     * picture beside a caption spans only part of the link and a picture that is
+     * the whole link spans all of it.
+     */
+    const CGRect frameNow = RCTUntransformedFrame(subview);
+    const BOOL spansTheLink =
+        frameNow.origin.x <= CGRectGetMinX(linkBounds) + 1 && CGRectGetMaxX(frameNow) >= CGRectGetMaxX(linkBounds) - 1;
+    if (spansTheLink) {
+      return subview;
+    }
+    return self;
+  }
+  return glyphView;
+}
+
 - (void)_updateTextSelectionInteraction
 {
   BOOL wanted = [self _hasSelectableText];
@@ -1219,14 +1412,6 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   }
 }
 
-- (void)didMoveToWindow
-{
-  [super didMoveToWindow];
-  if ([self _observesSafeAreaInsets]) {
-    [self setNeedsLayout];
-  }
-}
-
 - (BOOL)isJSResponder
 {
   return _isJSResponder;
@@ -1298,6 +1483,15 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   }
   // No runs left, so this tears the selection interaction down with them.
   [self _updateTextSelectionInteraction];
+  /*
+   * The link interaction is torn down OUTRIGHT rather than re-derived.
+   *
+   * `_updateTextLinkInteraction` asks the pooled run views whether they contain
+   * a link, and a pooled run still holds the text it was recycled with — so
+   * asking would answer "yes" and leave a long-press recognizer installed on a
+   * view that is about to be handed to something else entirely.
+   */
+  [_textLinkInteraction setInstalled:NO];
 
   [self _clearPixelStateForRecycle];
 

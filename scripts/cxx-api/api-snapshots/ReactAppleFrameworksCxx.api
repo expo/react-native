@@ -389,6 +389,10 @@ interface EXPElementTextAreaComponentView : public EXPElementControlComponentVie
 interface EXPElementTextInputComponentView : public EXPElementControlComponentView {
 }
 
+interface EXPLinkPreviewCard : public UIViewController {
+  public virtual static _Nullable instancetype cardForURL:(_Nullable NSURL* url);
+}
+
 interface EXPRadioRunList : public NSObject {
   public virtual static BOOL containerHasRuns:(UIView* container);
   public virtual static void announceRadio:row:inContainer:(UIView<EXPRadioRunMember>* radio, UIView* row, UIView* container);
@@ -396,6 +400,12 @@ interface EXPRadioRunList : public NSObject {
   public virtual static void radioDidChange:(UIView<EXPRadioRunMember>* radio);
   public virtual static void scheduleRegroupFor:(UIView* container);
   public virtual static void withdrawRow:fromContainer:(UIView* row, UIView* container);
+}
+
+interface EXPTextLinkInteraction : public NSObject <UIContextMenuInteractionDelegate> {
+  public virtual instancetype initWithView:resolver:(UIView* view, EXPTextLinkResolver resolver);
+  public virtual void dismissMenuIfPresenting();
+  public virtual void setInstalled:(BOOL wanted);
 }
 
 interface EventEmitterCallbackWrapper : public NSObject {
@@ -677,8 +687,12 @@ interface RCTAnimatedNode : public NSObject {
 interface RCTAnonymousTextRunView : public UIView {
   public facebook::react::ViewState::TextRun _run;
   public std::weak_ptr<const facebook::react::TextLayoutManager> _layoutManager;
+  public virtual BOOL containsLink();
   public virtual NSArray* accessibilityLeavesInContainer:(id container);
+  public virtual _Nullable UIView* linkViewAtContainerPoint:(CGPoint point);
+  public virtual _Nullable id linkAtContainerPoint:rects:(CGPoint point, _Nullable NSMutableArray<NSValue*>* outRects);
   public virtual facebook::react::SharedTouchEventEmitter touchEventEmitterAtContainerPoint:(CGPoint point);
+  public virtual static BOOL isLinkGlyphView:(UIView* view);
   public virtual void invalidateAccessibilityElements();
   public virtual void setContainerBounds:(CGRect containerBounds);
   public virtual void updateRun:(const facebook::react::ViewState::TextRun& run);
@@ -1982,6 +1996,7 @@ interface RCTTextInputComponentView : public RCTViewComponentView {
 
 interface RCTTextLayoutManager : public NSObject {
   public virtual _Nullable NSTextStorage* cachedRunTextStorageForAttributedString:width:(const facebook::react::AttributedString& attributedString, CGFloat width);
+  public virtual _Nullable id getLinkWithAttributedString:paragraphAttributes:frame:atPoint:rects:(facebook::react::AttributedString attributedString, facebook::react::ParagraphAttributes paragraphAttributes, CGRect frame, CGPoint point, _Nullable NSMutableArray<NSValue*>* outRects);
   public virtual facebook::react::LinesMeasurements getLinesForAttributedString:paragraphAttributes:size:(const facebook::react::AttributedString& attributedString, facebook::react::ParagraphAttributes paragraphAttributes, CGSize size);
   public virtual facebook::react::TextMeasurement measureAttributedString:paragraphAttributes:layoutContext:layoutConstraints:(const facebook::react::AttributedString& attributedString, facebook::react::ParagraphAttributes paragraphAttributes, facebook::react::TextLayoutContext layoutContext, facebook::react::LayoutConstraints layoutConstraints);
   public virtual facebook::react::TextMeasurement measureNSAttributedString:paragraphAttributes:layoutContext:layoutConstraints:(NSAttributedString* attributedString, facebook::react::ParagraphAttributes paragraphAttributes, facebook::react::TextLayoutContext layoutContext, facebook::react::LayoutConstraints layoutConstraints);
@@ -1989,6 +2004,7 @@ interface RCTTextLayoutManager : public NSObject {
   public virtual std::vector<facebook::react::Rect> getFragmentRectsWithAttributedString:paragraphAttributes:size:exclusions:(facebook::react::AttributedString attributedString, facebook::react::ParagraphAttributes paragraphAttributes, CGSize size, const std::vector<facebook::react::FloatExclusion>& exclusions);
   public virtual void drawAttributedString:paragraphAttributes:frame:drawHighlightPath:(const facebook::react::AttributedString& attributedString, facebook::react::ParagraphAttributes paragraphAttributes, CGRect frame, void(^)(UIBezierPath* highlightPath) block);
   public virtual void drawTextStorage:attributedString:frame:drawHighlightPath:(NSTextStorage* textStorage, const facebook::react::AttributedString& attributedString, CGRect frame, void(^)(UIBezierPath* highlightPath) block);
+  public virtual void getLineRectGroupsWithAttributedString:paragraphAttributes:enumerateAttribute:frame:usingBlock:(facebook::react::AttributedString attributedString, facebook::react::ParagraphAttributes paragraphAttributes, NSString* enumerateAttribute, CGRect frame, RCTTextLayoutLineRectGroupBlock block);
   public virtual void getRectWithAttributedString:paragraphAttributes:enumerateAttribute:frame:usingBlock:(const facebook::react::AttributedString& attributedString, facebook::react::ParagraphAttributes paragraphAttributes, NSString* enumerateAttribute, CGRect frame, RCTTextLayoutFragmentEnumerationBlock block);
 }
 
