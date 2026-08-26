@@ -200,6 +200,27 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<AccessibilityRole> accessibilityRole{};
   std::optional<Role> role{};
 
+  /*
+   * The URL an `<a href>` points at, carried down to the run that draws it.
+   *
+   * A link is not a view. Inside a paragraph it is a RANGE OF GLYPHS, so the
+   * only thing that can hold its destination is the text attributes of the
+   * fragment those glyphs came from — the same route
+   * `accessibilityRole: 'link'` already takes to reach VoiceOver.
+   *
+   * Native rather than JavaScript-only because the platform's own link
+   * interaction needs it: on iOS this becomes `NSLinkAttributeName`, which is
+   * UIKit's own key for "this range is a link", and the context-menu
+   * interaction reads it back at the touched point. JavaScript never sees this
+   * copy; the component keeps its own `href` prop for the click default.
+   *
+   * NOT INHERITED, unlike most attributes here. A link's destination belongs to
+   * the anchor, and cascading it would make every nested run — a `<b>` inside
+   * the link, and then anything after it that happened to share attributes —
+   * claim the same URL.
+   */
+  std::string href{};
+
 #pragma mark - Operations
 
   void apply(TextAttributes textAttributes);
