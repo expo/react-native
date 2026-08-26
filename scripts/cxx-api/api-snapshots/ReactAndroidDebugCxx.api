@@ -1304,6 +1304,7 @@ class facebook::react::ElementBoxProps : public facebook::react::HostPlatformVie
   public ElementBoxProps() = default;
   public ElementBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
   public int start;
+  public std::string href;
   public std::string listStylePositionValue;
   public std::string listStyleTypeValue;
   public std::string nodeName;
@@ -3027,6 +3028,7 @@ class facebook::react::TextAttributes : public facebook::react::DebugStringConve
   public std::optional<facebook::react::WritingDirection> baseWritingDirection;
   public std::optional<std::string> fontVariationSettings;
   public std::string fontFamily;
+  public std::string href;
   public std::vector<facebook::react::TextEffectInfo> textEffects;
   public void apply(facebook::react::TextAttributes textAttributes);
 }
