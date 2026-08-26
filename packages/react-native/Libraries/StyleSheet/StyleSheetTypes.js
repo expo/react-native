@@ -908,6 +908,17 @@ export type ____InheritableTextStyle_Internal = Readonly<{
    * for an absolute size.
    */
   fontSizeEm?: number,
+  /**
+   * A font size in `rem`: a multiple of the ROOT element's font size
+   * (css-values-4 5.1.1). Unlike `fontSizeEm` it does not compound through
+   * nesting — every `rem` in a tree names the same size, whatever it is nested
+   * inside.
+   *
+   * On the root element itself there is no root above it to name, so the spec's
+   * rule applies: `rem` there resolves against font-size's initial value, which
+   * is the platform's body text size.
+   */
+  fontSizeRem?: number,
   fontStyle?: 'normal' | 'italic',
   /**
    * Specifies font weight. The values 'normal' and 'bold' are supported
@@ -1092,6 +1103,61 @@ export type ____ViewStyle_InternalBase = Readonly<{
     | 'title2'
     | 'title1'
     | 'largeTitle',
+
+  /**
+   * The `em` factor for this element's own font-size, used only where the text
+   * role this element names resolves to nothing.
+   *
+   * A factor rather than a size, because `font-size: 2em` resolves against the
+   * size the element INHERITED (css-values-4 §5.1.1) and only the renderer has
+   * that. Sending the product meant sending `2 × root`, which is `rem`: right
+   * for a heading at the top of a document and wrong for one inside anything
+   * that had restyled its text.
+   *
+   * Separate from `fontSize` on purpose. An author writes `fontSize`, and a
+   * user-agent value sitting in that property would beat the platform's role on
+   * every device — so the sheet writes this instead and the renderer decides
+   * which applies. That is what lets the sheet state a size unconditionally
+   * rather than branching on which host it is running on.
+   */
+  uaFontSizeEm?: number,
+
+  /**
+   * The user-agent stylesheet's own font-weight, on the same condition as
+   * `uaFontSizeEm`.
+   *
+   * Both platforms carry weight at the BOTTOM of their heading scale — every
+   * iOS Title is regular — so the web's `bold` must not be stated outright, or
+   * it would override the platform on exactly the elements a role exists to
+   * style.
+   */
+  uaFontWeight?: ____FontWeight_Internal,
+
+  /**
+   * The `em` factor for this element's block margin, resolved by the renderer
+   * against the font-size the element is actually drawn at.
+   *
+   * For the user-agent stylesheet, which is the only thing that writes it.
+   * `h1 { margin-block: 0.67em }` cannot be multiplied out in JavaScript once
+   * the size comes from the platform, because nothing in JavaScript knows what
+   * `preferredFontForTextStyle:` is going to answer — so the factor travels and
+   * the renderer finishes the multiplication.
+   *
+   * Separate from `marginBlock` on purpose: an author who states a margin
+   * states `marginBlock`, and the renderer leaves this one alone when they
+   * have. That is how a user-agent default gives way to an author's here.
+   */
+  uaMarginBlockEm?: number,
+
+  /**
+   * The same declaration stated in `rem` — resolved against the ROOT element's
+   * font size instead of this element's own.
+   *
+   * `em` and `rem` differ only in which size they multiply, and an element
+   * states one or the other. The renderer asserts against both being set,
+   * because a declaration that meant both would have no answer.
+   */
+  uaMarginBlockRem?: number,
 }>;
 
 export type ____ViewStyle_InternalCore = Readonly<{

@@ -65,6 +65,7 @@
 		E7DB216222B2F3EC005AC45F /* RNTesterTestModule.m in Sources */ = {isa = PBXBuildFile; fileRef = E7DB215D22B2F3EC005AC45F /* RNTesterTestModule.m */; };
 		E7DB216722B2F69F005AC45F /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7DB213022B2C649005AC45F /* JavaScriptCore.framework */; };
 		E7DB218C22B41FCD005AC45F /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7DB218B22B41FCD005AC45F /* XCTest.framework */; };
+		EE1000000000000000020200 /* EXPTextRoleMetricsTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = EE1000000000000000020100 /* EXPTextRoleMetricsTests.mm */; };
 		F0D621C32BBB9E38005960AC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F0D621C22BBB9E38005960AC /* PrivacyInfo.xcprivacy */; };
 		F1A0B1C23D4E5F6071829302 /* RCTTurboModuleArrayBufferTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = F1A0B1C23D4E5F6071829301 /* RCTTurboModuleArrayBufferTests.mm */; };
 		F21C6F81E0567D716DE48FDF /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1F1EA7DEBB1E4574EE0503 /* ExpoModulesProvider.swift */; };
@@ -184,6 +185,7 @@
 		E7DB215722B2F332005AC45F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E7DB215D22B2F3EC005AC45F /* RNTesterTestModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RNTesterTestModule.m; sourceTree = "<group>"; };
 		E7DB218B22B41FCD005AC45F /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		EE1000000000000000020100 /* EXPTextRoleMetricsTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPTextRoleMetricsTests.mm; sourceTree = "<group>"; };
 		F0D621C22BBB9E38005960AC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F1A0B1C23D4E5F6071829301 /* RCTTurboModuleArrayBufferTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTTurboModuleArrayBufferTests.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -398,6 +400,7 @@
 				AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */,
 				AB0DE1F0000000000000CF00 /* EXPHostChromeMountIndexTests.mm */,
 				AB0DE1F0000000000000D300 /* EXPPlatformTextRoleTests.mm */,
+				EE1000000000000000020100 /* EXPTextRoleMetricsTests.mm */,
 				AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */,
 				AB0DE1F000000000000000F2 /* EXPSelectMenuDismissTrackingTests.mm */,
 				E7DB20C722B2BAA5005AC45F /* RCTFormatErrorTests.m */,
@@ -895,6 +898,7 @@
 				AB0DE1F0000000000000EA00 /* EXPLineHeightInkTests.mm in Sources */,
 				AB0DE1F0000000000000CE00 /* EXPHostChromeMountIndexTests.mm in Sources */,
 				AB0DE1F0000000000000D200 /* EXPPlatformTextRoleTests.mm in Sources */,
+				EE1000000000000000020200 /* EXPTextRoleMetricsTests.mm in Sources */,
 				AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */,
 				AB0DE1F000000000000000F1 /* EXPSelectMenuDismissTrackingTests.mm in Sources */,
 				E7DB20DB22B2BAA6005AC45F /* RCTNativeAnimatedNodesManagerTests.m in Sources */,

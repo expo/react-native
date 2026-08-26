@@ -215,6 +215,32 @@ const GROUPED_PAGE = {
   paddingBottom: 12,
 };
 
+
+/*
+ * The page a run of radios needs behind it, inside a form.
+ *
+ * A run of radios draws as the platform's inset-grouped list, and that card is
+ * `secondarySystemGroupedBackground` — white in light mode, which is also the
+ * colour of the block the form sits on. The rows and their separators then had
+ * nothing to sit on. iOS answers this with the PAGE rather than an edge around
+ * the card (Settings is the argument), so the group gets the page colour. Same
+ * treatment the `<fieldset>` takes, for the same reason.
+ */
+const RADIO_GROUP_PAGE = {
+  backgroundColor: GROUPED_PAGE_COLOR,
+  // The page colour alone is invisible here: the block the form sits on is
+  // already that grey, so the group blended into it and only the white list
+  // card showed. The hairline is what makes it read as a container — the same
+  // pairing `<fieldset>` uses, which is the other place a run of radios needs
+  // somewhere to sit.
+  borderWidth: 1,
+  borderColor: SEPARATOR_COLOR,
+  borderRadius: 10,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  marginBottom: 6,
+};
+
 function Case({title, note, children, readout, grouped}) {
   return (
     <View style={grouped === true ? GROUPED_PAGE : {marginBottom: 8}}>
@@ -1134,13 +1160,26 @@ function WholeForm() {
                 by side in one flex row gave the list a single row with both
                 labels in it and no control at all — "MonthlyYearly" in a white
                 pill. */}
-            <View style={RADIO_ROW}>
-              <input type="radio" name="tier" value="monthly" defaultChecked />
-              <Text style={CONTROL_LABEL}>Monthly</Text>
-            </View>
-            <View style={RADIO_ROW}>
-              <input type="radio" name="tier" value="yearly" />
-              <Text style={CONTROL_LABEL}>Yearly</Text>
+            <View style={RADIO_GROUP_PAGE}>
+              {/* The rows get a level of their own: the platform's list card
+                  is chrome drawn behind them and sized to their container, so
+                  with the rows directly inside the page the card covered the
+                  page's padding and the grey never showed. */}
+              <View>
+                <View style={RADIO_ROW}>
+                  <input
+                    type="radio"
+                    name="tier"
+                    value="monthly"
+                    defaultChecked
+                  />
+                  <Text style={CONTROL_LABEL}>Monthly</Text>
+                </View>
+                <View style={RADIO_ROW}>
+                  <input type="radio" name="tier" value="yearly" />
+                  <Text style={CONTROL_LABEL}>Yearly</Text>
+                </View>
+              </View>
             </View>
 
             <Text style={NOTE}>notes</Text>
@@ -1154,17 +1193,21 @@ function WholeForm() {
                 submitted (HTML §4.10.18.6), so the chooser can live inside
                 the form — where the submit row needs to be — without
                 touching the payload. Selection is fully controlled. */}
-            {['get', 'post'].map(m => (
-              <View key={m} style={RADIO_ROW}>
-                <input
-                  type="radio"
-                  value={m}
-                  checked={method === m}
-                  onChange={() => setMethod(m)}
-                />
-                <Text style={CONTROL_LABEL}>{m.toUpperCase()}</Text>
+            <View style={RADIO_GROUP_PAGE}>
+              <View>
+                {['get', 'post'].map(m => (
+                  <View key={m} style={RADIO_ROW}>
+                    <input
+                      type="radio"
+                      value={m}
+                      checked={method === m}
+                      onChange={() => setMethod(m)}
+                    />
+                    <Text style={CONTROL_LABEL}>{m.toUpperCase()}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
+            </View>
 
             <View style={{...ROW, marginTop: 4}}>
               <button type="submit">Submit</button>

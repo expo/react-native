@@ -43,6 +43,26 @@ namespace facebook::react {
  * that keeps `<View>{'hi'}</View>` and `<View><Text>hi</Text></View>` the same
  * size.
  */
+namespace {
+/*
+ * The factor the text beside a relative LENGTH is actually drawn at.
+ *
+ * The reader's text-size setting belongs to the device, not to any element, so
+ * it arrives on the layout context and this is all there is to it.
+ *
+ * `allowFontScaling` and `maxFontSizeMultiplier` would narrow it — an element
+ * that opts out of scaling must not grow a margin past text that stopped
+ * growing — but both are `<Text>` properties and neither reaches the element
+ * cascade, so nothing here could read them today except as code that never
+ * runs. If they are ever cascaded, this function is where they belong.
+ */
+Float usedFontScale(Float contextMultiplier) {
+  return (!std::isnan(contextMultiplier) && contextMultiplier > 0)
+      ? contextMultiplier
+      : 1.0f;
+}
+} // namespace
+
 const std::shared_ptr<const TextAttributes>&
 YogaLayoutableShadowNode::defaultCascadeTextAttributes() {
   static const auto instance = std::make_shared<const TextAttributes>(
@@ -86,6 +106,8 @@ static bool inheritableTextPropsDiffer(
   // NaN-aware compares for the optional-by-NaN Float props.
   const std::pair<Float, Float> floatPairs[] = {
       {a.inheritedFontSize, b.inheritedFontSize},
+      {a.inheritedFontSizeEm, b.inheritedFontSizeEm},
+      {a.inheritedFontSizeRem, b.inheritedFontSizeRem},
       {a.inheritedLetterSpacing, b.inheritedLetterSpacing},
       {a.inheritedLineHeight, b.inheritedLineHeight}};
   for (const auto& [x, y] : floatPairs) {
@@ -454,6 +476,8 @@ void YogaLayoutableShadowNode::appendChild(
         const auto childTraits = layoutableChild->getTraits();
         if (!childTraits.check(ShadowNodeTraits::Trait::InheritanceBoundary) &&
             (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
+            childTraits.check(
+                ShadowNodeTraits::Trait::ResolvesRelativeLength) ||
              childTraits.check(
                  ShadowNodeTraits::Trait::SubtreeHasCascadeDependents))) {
           traits_.set(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
@@ -490,6 +514,8 @@ void YogaLayoutableShadowNode::appendChild(
       const auto childTraits = yogaLayoutableChild->getTraits();
       if (!childTraits.check(ShadowNodeTraits::Trait::InheritanceBoundary) &&
           (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
+            childTraits.check(
+                ShadowNodeTraits::Trait::ResolvesRelativeLength) ||
            childTraits.check(
                ShadowNodeTraits::Trait::SubtreeHasCascadeDependents))) {
         traits_.set(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
@@ -850,6 +876,8 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
           continue;
         }
         if (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
+            childTraits.check(
+                ShadowNodeTraits::Trait::ResolvesRelativeLength) ||
             childTraits.check(
                 ShadowNodeTraits::Trait::SubtreeHasCascadeDependents)) {
           hasDependents = true;
@@ -1327,10 +1355,49 @@ void YogaLayoutableShadowNode::configureYogaTree(
       baseViewProps->applyInheritedTextAttributes(*next);
       effectiveCascade = std::move(next);
     }
+
     if (getTraits().check(ShadowNodeTraits::Trait::TextCascadeConsumer)) {
       setInheritedCascade(effectiveCascade);
     }
   }
+
+  /*
+   * The base an `em` LENGTH on this element multiplies: its own computed font
+   * size, at the scale it is actually DRAWN at.
+   *
+   * Not the same `em` as the one on `font-size` itself, which is the INHERITED
+   * size — that one is resolved inside the fold, where the parent's value is
+   * still in hand. Two rules, one unit, one step apart (css-values-4 §5.1.1).
+   *
+   * ## Why a length scales here and a font-size does not
+   *
+   * The user's text-size setting arrives as a multiplier that the TEXT layer
+   * applies when it draws. A font-size therefore must be left unscaled — it
+   * will be scaled later, and scaling it here would apply the setting twice.
+   * A margin has no such later step: layout is the last word on it, so its
+   * base has to be the size the text beside it ends up at.
+   *
+   * Without this, a paragraph's `margin-block: 1em` froze while its text grew.
+   * Measured on iOS between the standard text size and the largest
+   * accessibility one: the paragraph's text went from 20.33pt to 72.67, and
+   * its margin from 16.67 to 17. A heading's margin doubled with its heading,
+   * because a heading resolves through `TextRoleMetrics`, whose sizes are
+   * published already scaled — so the two spellings of one rule disagreed
+   * about the same setting, and only the one with a platform text role behaved.
+   */
+  const Float usedScale = usedFontScale(fontSizeMultiplier);
+  const Float emBase = effectiveCascade->fontSize * usedScale;
+  /*
+   * `rem` is the ROOT element's size, which is font-size's initial value: the
+   * root here is the surface root, and an app has no way to state a size on it
+   * (`DOM-CSS-LIMITATION(rem-root-is-the-unstylable-surface-root)`). It was
+   * propagated down the walk until it was noticed that it could not differ
+   * from that value — four bytes on `TextAttributes` and a write per node, for
+   * a number that was always the same one.
+   */
+  const Float remBase =
+      TextAttributes::defaultTextAttributes().fontSize * usedScale;
+  applyCascadeDependentStyles(emBase, remBase);
 
   // Recursively propagate the configuration to child nodes. If a child was
   // already configured as part of a previous ShadowTree generation, we only
@@ -1359,6 +1426,8 @@ void YogaLayoutableShadowNode::configureYogaTree(
         : effectiveCascade;
     const bool childObservesCascade = childIsBoundary ||
         childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
+        // A relative LENGTH reads the cascade without any text to show for it.
+        childTraits.check(ShadowNodeTraits::Trait::ResolvesRelativeLength) ||
         childTraits.check(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
     const bool cascadeChanged = stringChildrenEnabled &&
         childObservesCascade &&

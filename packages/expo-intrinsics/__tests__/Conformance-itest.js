@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @fantom_flags enableStringChildren:true enableYogaDisplayBlock:true
  * @noflow
  * @format
  */
@@ -45,16 +46,13 @@ import '@react-native/expo-intrinsics-poc';
 /* Rounding only — the corpus is constructed so CSS fixes every coordinate. */
 const TOLERANCE = 0.5;
 
-function toStyle(css) {
-  const out = {};
-  for (const [key, value] of Object.entries(css ?? {})) {
-    out[key] =
-      typeof value === 'string' && /^-?\d+(\.\d+)?px$/.test(value)
-        ? parseFloat(value)
-        : value;
-  }
-  return out;
-}
+/*
+ * The corpus's own CSS-to-React-Native translation, imported rather than
+ * reimplemented. A local copy here drifted behind the one in
+ * `gen-device-screen.js` and made a working `em` implementation look like six
+ * failures — the styles it built carried `1em` through as a string.
+ */
+const {toStyle, runGapChecks} = require('../../../text-conformance/cases');
 
 function render(node, refs, key) {
   if (typeof node === 'string') {
@@ -168,6 +166,25 @@ for (const testCase of CORPUS) {
     test.skip(`${label} — device-only: needs real line breaking`, () => {});
     continue;
   }
+  /*
+   * A case that checks GAPS between its own boxes instead of diffing every
+   * rect against Safari's. For the units whose base is the root font size —
+   * 16px in a browser, the platform's body size here — the absolute numbers
+   * differ by design, and for the rest it keeps the case pointed at the
+   * margins rather than at a container height that is a separate question.
+   */
+  if (testCase.bounded === 'gap-checks') {
+    test(`${testCase.name} (gap checks — see the case)`, () => {
+      const problems = runGapChecks(testCase, measure(testCase.tree));
+      if (problems.length > 0) {
+        throw new Error(
+          `${testCase.name}\n  ${testCase.why}\n  ${problems.join('\n  ')}`,
+        );
+      }
+    });
+    continue;
+  }
+
   if (testCase.bounded === 'line-taller-than-box') {
     /*
      * The line box is the box plus the strut's descent below the baseline, and
