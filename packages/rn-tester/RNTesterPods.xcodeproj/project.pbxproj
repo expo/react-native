@@ -31,6 +31,9 @@
 		AB0DE1F0000000000000CC00 /* EXPElementRadioHitAreaTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000CD00 /* EXPElementRadioHitAreaTests.mm */; };
 		AB0DE1F0000000000000CE00 /* EXPHostChromeMountIndexTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000CF00 /* EXPHostChromeMountIndexTests.mm */; };
 		AB0DE1F0000000000000D200 /* EXPPlatformTextRoleTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000D300 /* EXPPlatformTextRoleTests.mm */; };
+		AB0DE1F0000000000000E600 /* RCTViewPressObserverTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000E700 /* RCTViewPressObserverTests.mm */; };
+		AB0DE1F0000000000000E800 /* EXPHostChromeZOrderTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000E900 /* EXPHostChromeZOrderTests.mm */; };
+		AB0DE1F0000000000000EA00 /* EXPLineHeightInkTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */; };
 		C175B6D9ED9336FB66637943 /* libPods-RNTester.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C706D402EE4AF9BE838CBA9 /* libPods-RNTester.a */; };
 		CD10C7A5290BD4EB0033E1ED /* RCTEventEmitterTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CD10C7A4290BD4EB0033E1ED /* RCTEventEmitterTests.m */; };
 		E62F11832A5C6580000BF1C8 /* FlexibleSizeExampleView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 27F441E81BEBE5030039B79C /* FlexibleSizeExampleView.mm */; };
@@ -67,6 +70,7 @@
 		E7DB218C22B41FCD005AC45F /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7DB218B22B41FCD005AC45F /* XCTest.framework */; };
 		EE1000000000000000020200 /* EXPTextRoleMetricsTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = EE1000000000000000020100 /* EXPTextRoleMetricsTests.mm */; };
 		EE1000000000000000030200 /* EXPLinkTextAttributesTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = EE1000000000000000030100 /* EXPLinkTextAttributesTests.mm */; };
+		EE1000000000000000040200 /* EXPTextLinkInteractionTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = EE1000000000000000040100 /* EXPTextLinkInteractionTests.mm */; };
 		F0D621C32BBB9E38005960AC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F0D621C22BBB9E38005960AC /* PrivacyInfo.xcprivacy */; };
 		F1A0B1C23D4E5F6071829302 /* RCTTurboModuleArrayBufferTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = F1A0B1C23D4E5F6071829301 /* RCTTurboModuleArrayBufferTests.mm */; };
 		F21C6F81E0567D716DE48FDF /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1F1EA7DEBB1E4574EE0503 /* ExpoModulesProvider.swift */; };
@@ -124,6 +128,9 @@
 		AB0DE1F0000000000000CD00 /* EXPElementRadioHitAreaTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPElementRadioHitAreaTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000CF00 /* EXPHostChromeMountIndexTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPHostChromeMountIndexTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000D300 /* EXPPlatformTextRoleTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPPlatformTextRoleTests.mm; sourceTree = "<group>"; };
+		AB0DE1F0000000000000E700 /* RCTViewPressObserverTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTViewPressObserverTests.mm; sourceTree = "<group>"; };
+		AB0DE1F0000000000000E900 /* EXPHostChromeZOrderTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPHostChromeZOrderTests.mm; sourceTree = "<group>"; };
+		AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPLineHeightInkTests.mm; sourceTree = "<group>"; };
 		AC474BFB29BBD4A1002BDAED /* RNTester.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = RNTester.xctestplan; path = RNTester/RNTester.xctestplan; sourceTree = "<group>"; };
 		B0E70A8A05E03E868F8703FE /* Pods-RNTesterIntegrationTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RNTesterIntegrationTests.release.xcconfig"; path = "Target Support Files/Pods-RNTesterIntegrationTests/Pods-RNTesterIntegrationTests.release.xcconfig"; sourceTree = "<group>"; };
 		BCA18AEDF7FE87DD94B97367 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-RNTester/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
@@ -188,6 +195,7 @@
 		E7DB218B22B41FCD005AC45F /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		EE1000000000000000020100 /* EXPTextRoleMetricsTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPTextRoleMetricsTests.mm; sourceTree = "<group>"; };
 		EE1000000000000000030100 /* EXPLinkTextAttributesTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPLinkTextAttributesTests.mm; sourceTree = "<group>"; };
+		EE1000000000000000040100 /* EXPTextLinkInteractionTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPTextLinkInteractionTests.mm; sourceTree = "<group>"; };
 		F0D621C22BBB9E38005960AC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F1A0B1C23D4E5F6071829301 /* RCTTurboModuleArrayBufferTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTTurboModuleArrayBufferTests.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -404,6 +412,7 @@
 				AB0DE1F0000000000000D300 /* EXPPlatformTextRoleTests.mm */,
 				EE1000000000000000020100 /* EXPTextRoleMetricsTests.mm */,
 				EE1000000000000000030100 /* EXPLinkTextAttributesTests.mm */,
+				EE1000000000000000040100 /* EXPTextLinkInteractionTests.mm */,
 				AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */,
 				AB0DE1F000000000000000F2 /* EXPSelectMenuDismissTrackingTests.mm */,
 				E7DB20C722B2BAA5005AC45F /* RCTFormatErrorTests.m */,
@@ -903,6 +912,7 @@
 				AB0DE1F0000000000000D200 /* EXPPlatformTextRoleTests.mm in Sources */,
 				EE1000000000000000020200 /* EXPTextRoleMetricsTests.mm in Sources */,
 				EE1000000000000000030200 /* EXPLinkTextAttributesTests.mm in Sources */,
+				EE1000000000000000040200 /* EXPTextLinkInteractionTests.mm in Sources */,
 				AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */,
 				AB0DE1F000000000000000F1 /* EXPSelectMenuDismissTrackingTests.mm in Sources */,
 				E7DB20DB22B2BAA6005AC45F /* RCTNativeAnimatedNodesManagerTests.m in Sources */,
