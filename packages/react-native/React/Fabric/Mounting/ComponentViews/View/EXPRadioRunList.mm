@@ -120,7 +120,6 @@
 @property (nonatomic, strong) NSMutableArray<EXPRadioRun *> *runs;
 @property (nonatomic, assign) BOOL regroupScheduled;
 - (CGRect)frameOfRow:(UIView *)row;
-- (CGFloat)heightOfRow:(UIView *)row;
 /** Makes the WHOLE row choose its radio, the way a list row behaves. */
 - (void)attachPressRecognizerTo:(UIView *)row;
 @end
@@ -270,11 +269,6 @@
 {
   NSValue *frame = [_frameForRow objectForKey:row];
   return frame != nil ? frame.CGRectValue : row.frame;
-}
-
-- (CGFloat)heightOfRow:(UIView *)row
-{
-  return CGRectGetHeight([self frameOfRow:row]);
 }
 
 /*

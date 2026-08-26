@@ -1071,10 +1071,14 @@ export type ____ViewStyle_InternalBase = Readonly<{
    * override. Inherited like the other text properties here — the role belongs
    * to the element, and the text inside it is a run that has to receive it.
    *
-   * iOS only today. Android's equivalent is a Material text appearance
-   * resolved from the theme, which is a separate key because the two scales do
-   * not correspond: iOS has eleven roles, Material fifteen plus emphasized
-   * variants, and a shared enum could only lose from both.
+   * ONE key for both platforms, resolved differently on each: iOS asks
+   * `preferredFontForTextStyle:` for the same name, and Android maps it onto
+   * Material's scale and asks the app's theme. The vocabulary is iOS's because
+   * it is React Native's existing `dynamicTypeRamp`; the mapping to Material
+   * lives on the Android side, where the two scales differ.
+   *
+   * A host that cannot resolve a role — a test host with neither UIKit nor an
+   * Android theme — leaves the text at whatever else decided its size.
    */
   dynamicTypeRamp?:
     | 'caption2'

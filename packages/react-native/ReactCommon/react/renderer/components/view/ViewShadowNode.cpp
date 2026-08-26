@@ -225,7 +225,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
   }
 
   bool holdsRadio = false;
-  {
+  if (HostPlatformViewTraitsInitializer::treatsRadioRowsAsListRows()) {
     /*
      * A row holding an `<input type="radio">` is a row, and has to survive as
      * one.
@@ -252,11 +252,16 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
      *
      * Stated as a child scan for the same reason the text-content check is:
      * this runs where the children are already known, and the answer cannot
-     * come from the props of the node itself. The scan is unconditional rather
-     * than a fallback for views that would otherwise flatten, because the same
-     * answer decides the row's user-agent PADDING below — and a row that draws
-     * a background already forms a view, so a scan skipped on that ground would
-     * leave exactly those rows unpadded.
+     * come from the props of the node itself. It is not a fallback for views
+     * that would otherwise flatten, because the same answer decides the row's
+     * user-agent PADDING below — and a row that draws a background already
+     * forms a view, so a scan skipped on that ground would leave exactly those
+     * rows unpadded.
+     *
+     * It runs only where the platform actually presents radios as a list.
+     * Elsewhere — Android, which has a real `RadioButton` — the row is an
+     * ordinary row, and neither the forced view nor the scan that decides it
+     * buys anything.
      */
     for (const auto &child : this->getChildren()) {
       if (child->getComponentHandle() == ElementRadioShadowNode::Handle()) {
@@ -339,7 +344,8 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
   BaseShadowNode::appendChild(child);
   // See the header: a row holding a radio has to survive flattening, and this
   // is the moment the initial tree learns it holds one.
-  if (child->getComponentHandle() == ElementRadioShadowNode::Handle()) {
+  if (HostPlatformViewTraitsInitializer::treatsRadioRowsAsListRows() &&
+      child->getComponentHandle() == ElementRadioShadowNode::Handle()) {
     this->traits_.set(ShadowNodeTraits::Trait::FormsView);
     this->traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
     this->applyRadioRowPaddingIfNeeded();
