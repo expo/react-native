@@ -1,0 +1,12 @@
+{
+  // Per-repo verify profile — see expo-sandbox-mcp LLP 0020 (Layer 4).
+  // Capability fields are ENFORCEMENT inputs: the agent tool allowlist, the
+  // scoped-token mint body, and which publish steps run.
+  "repo": "facebook/react-native",
+  "runner": "eas",
+  "fix": "comment", // fixes go INSIDE the findings comment (details + diff); never a PR or second comment
+  "ghaSandbox": false,
+  "bot": { "login": "expo-bot" },
+  "budgets": { "sandboxes": 2, "builds": 0, "ttlSeconds": 10800 },
+  "phases": { "investigate": 5400, "critic": 900, "revise": 1800 }
+}
