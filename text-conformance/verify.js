@@ -33,7 +33,7 @@
  * pixel comparison there would report font differences as layout bugs.
  */
 
-const {CASES} = require('./cases');
+const {CASES, runGapChecks} = require('./cases');
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
@@ -173,17 +173,35 @@ function compare(expected, actual) {
       continue;
     }
 
-    if (testCase.bounded === 'clipped-sits-above-unclipped') {
     /*
-     * Where the unclipped box hangs below the baseline is its text's descent,
-     * a font metric. What CSS fixes, and what is asserted: both boxes keep
-     * their declared size and their places along the line, the clipping one
-     * sits at the top of the line because its bottom margin edge IS its
-     * baseline, and the other sits strictly lower.
+     * A case whose numbers differ between engines by design — anything
+     * resolved from the root font size, which is 16px in a browser and the
+     * platform's body size on a device. It states what survives that instead,
+     * in checks of its own; see `gapReader` in cases.js.
      */
+    if (testCase.bounded === 'gap-checks') {
+      const problems = runGapChecks(testCase, got);
+      exactChecks += 1;
+      if (problems.length > 0) {
+        failures.push({name, detail: problems.join('; '), why: testCase.why});
+      }
+      continue;
+    }
+
+    if (testCase.bounded === 'clipped-sits-above-unclipped') {
+      /*
+       * Where the unclipped box hangs below the baseline is its text's descent,
+       * a font metric. What CSS fixes, and what is asserted: both boxes keep
+       * their declared size and their places along the line, the clipping one
+       * sits at the top of the line because its bottom margin edge IS its
+       * baseline, and the other sits strictly lower.
+       */
       const {plain, clipped, root: rootRect} = got;
       const problems = [];
-      for (const [key, rect] of [['plain', plain], ['clipped', clipped]]) {
+      for (const [key, rect] of [
+        ['plain', plain],
+        ['clipped', clipped],
+      ]) {
         if (Math.abs(rect.width - want[key].width) > TOLERANCE) {
           problems.push(`${key}.width ${rect.width} vs ${want[key].width}`);
         }

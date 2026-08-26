@@ -86,6 +86,38 @@ class AbstractViewShadowNode
   void applyRadioRowPaddingIfNeeded();
 
   /*
+   * Resolves the user-agent sheet's block margin against the font-size the
+   * element is ACTUALLY drawn at.
+   *
+   * See `BaseViewProps::uaMarginBlockEm`: the sheet states the spec's `em`
+   * factor and the size comes from the platform, so the multiplication has to
+   * happen somewhere that can see both. This is that place.
+   *
+   * `emBase` and `remBase` are the two bases css-values-4 §5.1.1 defines; NaN
+   * for either means the walk has not decided one, and the function falls back
+   * as documented at its definition.
+   */
+  void applyRelativeBlockMarginIfNeeded(Float emBase, Float remBase);
+
+  void applyCascadeDependentStyles(Float emBase, Float remBase) override
+  {
+    applyRelativeBlockMarginIfNeeded(emBase, remBase);
+  }
+
+  /*
+   * Whether the element's OWN style stated a block margin, asked before any
+   * user-agent value was written over it.
+   *
+   * The question has to be captured rather than re-asked, because answering it
+   * means looking at the Yoga style — and by the second configure pass the
+   * only block margin there may be one this class wrote itself. Re-asking
+   * would see that and conclude the author had stated it, so a user-agent
+   * margin would freeze at whatever the first pass computed and never follow
+   * the font size again.
+   */
+  bool authoredBlockMargin_{false};
+
+  /*
    * Positions the atomic inline-level children of this View's anonymous inline
    * boxes, such as the replaced `<img>` and atomic `display: 'inline'`
    * elements, at the frames their run's line layout gave them.

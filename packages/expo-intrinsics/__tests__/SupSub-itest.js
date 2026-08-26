@@ -35,11 +35,12 @@ test('sup and sub are raised and lowered, and smaller', () => {
   // stating the ratio is what makes it right at every inherited size, and on
   // platforms whose root is not 16. See RelativeFontSize-itest for the
   // resolved sizes.
-  expect(uaStyleFor('sup').fontSizeEm).toBeCloseTo(0.8333, 3);
-  expect(uaStyleFor('sub').fontSizeEm).toBeCloseTo(0.8333, 3);
+  expect(uaStyleFor('sup').uaFontSizeEm).toBeCloseTo(0.8333, 3);
+  expect(uaStyleFor('sub').uaFontSizeEm).toBeCloseTo(0.8333, 3);
 });
 
 test('they are smaller than surrounding text, not the same size', () => {
-  expect(Number(uaStyleFor('sup').fontSizeEm)).toBeLessThan(1);
-  expect(Number(uaStyleFor('sub').fontSizeEm)).toBeLessThan(1);
+  // With no font-size at all they would match their parent exactly
+  expect(Number(uaStyleFor('sup').uaFontSizeEm)).toBeLessThan(1);
+  expect(Number(uaStyleFor('sub').uaFontSizeEm)).toBeLessThan(1);
 });
