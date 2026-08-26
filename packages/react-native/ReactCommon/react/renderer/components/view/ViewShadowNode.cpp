@@ -178,7 +178,7 @@ static_assert(
     sizeof(ViewShadowNode) <= 1024,
     "ViewShadowNode grew past its memory budget");
 static_assert(
-    sizeof(TextAttributes) <= 216,
+    sizeof(TextAttributes) <= 240,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
     sizeof(ViewProps) <= 1424,
@@ -189,14 +189,44 @@ static_assert(
     sizeof(ViewShadowNode) <= 1080,
     "ViewShadowNode grew past its memory budget");
 static_assert(
-    // Sized for the numeric `baselineShift`, which symbolic list markers use
-    // to centre their ink and which `vertical-align: <length>` will also use,
-    // and for the em and rem font sizes and `vertical-align` (`fontSizeEm`,
-    // `fontSizeRem`, `uaFontSizeEm`, `verticalAlign`): three Floats and a
-    // one-byte optional enum, so that a size declared relative to the
-    // inherited or the root font size can be resolved where the cascade is.
-    // Measured on an iphonesimulator Release build.
-    sizeof(TextAttributes) <= 352,
+    // Sized for the numeric `baselineShift` (symbolic list
+    // markers centre their ink with it; it will also carry
+    // `vertical-align: <length>`). One Float plus alignment padding — moved
+    // consciously, per the note above.
+    //
+    // Sized for the em and rem font sizes and `vertical-align`
+    // (`fontSizeEm`, `fontSizeRem`, `uaFontSizeEm`, `verticalAlign`): three
+    // Floats and a one-byte optional enum, so that a size declared relative to
+    // the inherited or the root font size can be resolved where the cascade
+    // is. Measured on an iphonesimulator Release build.
+    //
+    // Sized for `href`: a `std::string`, 24 bytes, so that a
+    // link inside a paragraph can say where it points: a link is a RANGE OF
+    // GLYPHS, and the fragment's attributes are the only thing that travels
+    // with a range. The struct already carries `fontFamily` on the same terms.
+    //
+    // The cost is footprint, not work: an empty string is stored inline, so a
+    // fragment without a link allocates nothing and copies nothing extra
+    // beyond the 24 bytes.
+    //
+    // The obvious alternative DOES NOT WORK, and is written down here because
+    // it is the first thing anyone will reach for — this author included, who
+    // built it before finding out.
+    //
+    // The destination belongs to the ELEMENT rather than to each of its
+    // fragments, so reading it from `Fragment::parentShadowView`'s props would
+    // cost nothing per fragment. But those props are always null:
+    // `shadowViewFromShadowNode` in `BaseTextShadowNode.cpp` clears `props` and
+    // `state` deliberately, to avoid retain cycles. Measured, not assumed — a
+    // probe over the fragments of a real paragraph printed `props=0x0` for
+    // every one, with `componentHandle` populated beside it, which is why the
+    // event emitter reachable through the same ShadowView is not evidence that
+    // the props are.
+    //
+    // A fragment's own attributes are therefore the only thing that travels
+    // with a range of glyphs, which makes this the right home and not a
+    // shortcut.
+    sizeof(TextAttributes) <= 376,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
     sizeof(ViewProps) <= 1952,

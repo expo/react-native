@@ -245,6 +245,7 @@ TEST(BaseTextShadowNodeTest, inlineAccessibilityPreservesSemanticOrder) {
               .props([]() {
                 auto props = std::make_shared<InlineTextProps>();
                 props->nodeName = "a";
+                props->textAttributes.href = "https://example.com/terms";
                 props->accessibilityLabel = "terms and conditions";
                 return props;
               })
@@ -262,6 +263,28 @@ TEST(BaseTextShadowNodeTest, inlineAccessibilityPreservesSemanticOrder) {
       content.elements[1].kind, InlineAccessibilityElement::Kind::Element);
   EXPECT_NE(content.elements[1].tag, 0);
   EXPECT_EQ(content.elements[2].label, " first.");
+}
+
+TEST(BaseTextShadowNodeTest, inlineAccessibilityAnchorWithoutHrefIsNotALink) {
+  auto builder = inlineContentComponentBuilder();
+  auto shadowNode = builder.build(
+      Element<InlineContentShadowNode>().children({
+          rawTextElement("Jump "),
+          Element<InlineTextShadowNode>()
+              .props([]() {
+                auto props = std::make_shared<InlineTextProps>();
+                props->nodeName = "a";
+                return props;
+              })
+              .children({rawTextElement("here")}),
+      }));
+
+  const auto content = accessibilityContentOf(*shadowNode);
+
+  ASSERT_EQ(content.elements.size(), 1);
+  EXPECT_EQ(
+      content.elements[0].kind, InlineAccessibilityElement::Kind::StaticText);
+  EXPECT_EQ(content.elements[0].label, "Jump here");
 }
 
 TEST(BaseTextShadowNodeTest, inlineAccessibilityOmitsHiddenSemanticContent) {
