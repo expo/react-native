@@ -254,6 +254,21 @@ static TextAttributes convertRawProp(
       sourceTextAttributes.role,
       defaultTextAttributes.role);
 
+  /*
+   * `href`, so a link inside a paragraph knows where it points.
+   *
+   * Defaulted from the DEFAULT rather than from `sourceTextAttributes`, unlike
+   * its neighbours: those cascade a parent's value into a child that states
+   * none, which is right for a colour and wrong for a destination — it would
+   * make the text after an anchor part of the link.
+   */
+  textAttributes.href = convertRawProp(
+      context,
+      rawProps,
+      "href",
+      defaultTextAttributes.href,
+      defaultTextAttributes.href);
+
   // Color (accessed in this order by ViewProps)
   textAttributes.opacity = convertRawProp(
       context,
