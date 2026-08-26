@@ -49,12 +49,16 @@ public object MaterialTypeScale {
    */
   private val ROLES: List<String> =
       listOf(
+          "displaySmall",
           "headlineLarge",
           "headlineMedium",
           "headlineSmall",
           "titleLarge",
           "titleMedium",
           "titleSmall",
+          "bodyLarge",
+          "bodySmall",
+          "labelSmall",
       )
 
   /** The attributes read from a text appearance, sorted as the framework requires. */
@@ -119,21 +123,33 @@ public object MaterialTypeScale {
    * to both platforms. What differs is where it lands: iOS asks `preferredFontForTextStyle:` for the
    * same name, and here it is mapped onto Material's scale first.
    *
-   * The mapping is a design decision and the two scales made it an easy one. Material has six steps
-   * that fit a document's headings — Headline Large/Medium/Small then Title Large/Medium/Small —
-   * against iOS's four above body text, so where iOS runs out and falls to secondary-text roles,
-   * Material still has titles.
+   * The mapping is a design decision and the two scales made the heading half an easy one: Material
+   * has six steps that fit a document's headings — Headline Large/Medium/Small then Title
+   * Large/Medium/Small — against iOS's four above body text, so where iOS runs out and falls to
+   * secondary-text roles, Material still has titles.
+   *
+   * EVERY role is mapped, not only the six a heading uses, and that is a correctness requirement
+   * rather than completeness for its own sake. The style key accepts all eleven of React Native's
+   * ramps; naming one clears the size the cascade would otherwise have carried, on the promise that
+   * the platform supplies a replacement. A role that resolved to nothing left the text with NO SIZE
+   * AT ALL, which surfaces as `FontSize should be a positive value` from a letter-spacing
+   * calculation — a crash reachable from a plain, valid stylesheet.
    */
   @JvmStatic
   public fun forRole(role: String): Appearance? {
     val materialRole =
         when (role) {
+          "largeTitle" -> "displaySmall"
           "title1" -> "headlineLarge"
           "title2" -> "headlineMedium"
           "title3" -> "headlineSmall"
           "headline" -> "titleLarge"
           "subheadline" -> "titleMedium"
           "footnote" -> "titleSmall"
+          "body" -> "bodyLarge"
+          "callout" -> "bodyLarge"
+          "caption1" -> "bodySmall"
+          "caption2" -> "labelSmall"
           else -> return null
         }
     return resolved?.get(materialRole)
@@ -161,12 +177,16 @@ public object MaterialTypeScale {
    */
   private val FRAMEWORK_FALLBACK: Map<String, Int> =
       mapOf(
+          "displaySmall" to android.R.attr.textAppearanceLarge,
           "headlineLarge" to android.R.attr.textAppearanceLarge,
           "headlineMedium" to android.R.attr.textAppearanceLarge,
           "headlineSmall" to android.R.attr.textAppearanceMedium,
           "titleLarge" to android.R.attr.textAppearanceMedium,
           "titleMedium" to android.R.attr.textAppearanceMedium,
           "titleSmall" to android.R.attr.textAppearanceSmall,
+          "bodyLarge" to android.R.attr.textAppearanceMedium,
+          "bodySmall" to android.R.attr.textAppearanceSmall,
+          "labelSmall" to android.R.attr.textAppearanceSmall,
       )
 
   /** The style a theme attribute points at, or null where the theme states none. */
