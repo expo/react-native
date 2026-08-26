@@ -50,6 +50,7 @@
 
 // Per-run text painting lives in its own file: it is a self-contained concept,
 // and this class is the one every React Native change touches.
+#import "EXPTextLinkInteraction.h"
 #import "RCTAnonymousTextRunView.h"
 
 using namespace facebook::react;
@@ -154,6 +155,7 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   // One paint view per anonymous text run, interleaved with mounted children in
   // document order (text-children-plan.md §3.B). Internal, never differ-driven.
   NSMutableArray<RCTAnonymousTextRunView *> *_textRunViews;
+  EXPTextLinkInteraction *_textLinkInteraction;
   // Chrome installed from OUTSIDE by a host, kept out of the mount indices.
   // See `-addHostChromeSubview:`.
   NSMutableArray<UIView *> *_hostChromeSubviews;
@@ -525,6 +527,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // Re-establish authored paint order relative to mounted children.
   [self setNeedsLayout];
   [self _updateTextSelectionInteraction];
+  [self _updateTextLinkInteraction];
 }
 
 // Interleaves the internal per-run paint views with mounted child views in
@@ -605,6 +608,79 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 }
 
 #if !TARGET_OS_TV
+/*
+ * iOS's own press-and-hold behaviour for a link this view drew.
+ *
+ * Installed only when some run actually carries one — the check is over the C++
+ * fragments, so it costs a walk of the runs and no text shaping. A view whose
+ * text has no link adds no gesture recognizer and behaves exactly as before.
+ */
+- (void)_updateTextLinkInteraction
+{
+  BOOL wanted = NO;
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    if ([runView containsLink]) {
+      wanted = YES;
+      break;
+    }
+  }
+  if (_textLinkInteraction == nil) {
+    if (!wanted) {
+      return;
+    }
+    __weak __typeof(self) weakSelf = self;
+    _textLinkInteraction = [[EXPTextLinkInteraction alloc]
+        initWithView:self
+            resolver:^id _Nullable(
+                CGPoint point, NSMutableArray<NSValue *> *rects, UIView *_Nullable *_Nullable outSourceView) {
+              return [weakSelf _linkAtPoint:point rects:rects sourceView:outSourceView];
+            }];
+  }
+  [_textLinkInteraction setInstalled:wanted];
+}
+
+/*
+ * A lift is a picture of glyphs this view drew. If the view leaves the screen
+ * while the OS is showing that picture, the picture has to go with it.
+ *
+ * Recycling already tears the interaction down, but an ordinary unmount does
+ * not: the view is simply removed, and UIKit would go on floating a lifted link
+ * over the app until the user dismissed it — offering Open on a URL belonging to
+ * a screen they have already left. Leaving the window is the signal that covers
+ * both, because a recycled view leaves it too.
+ */
+- (void)didMoveToWindow
+{
+  [super didMoveToWindow];
+  if (self.window == nil) {
+    [_textLinkInteraction dismissMenuIfPresenting];
+  }
+}
+
+/*
+ * The link under a point, resolved through the same run views and the same
+ * `containerFrame` that painting and touch hit-testing use — so the menu lifts
+ * the glyphs the user actually pressed. Runs do not overlap, so the first one
+ * containing the point answers.
+ */
+- (nullable id)_linkAtPoint:(CGPoint)point
+                      rects:(NSMutableArray<NSValue *> *)rects
+                 sourceView:(UIView *_Nullable *_Nullable)outSourceView
+{
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    if (id link = [runView linkAtContainerPoint:point rects:rects]) {
+      // The run that drew these glyphs is what the lift is snapshotted from:
+      // it paints on a clear background, so the text lifts without the page's
+      // background coming with it.
+      if (outSourceView != nullptr) {
+        *outSourceView = runView;
+      }
+      return link;
+    }
+  }
+  return nil;
+}
+
 - (void)_updateTextSelectionInteraction
 {
   BOOL wanted = [self _hasSelectableText];
@@ -1233,6 +1309,15 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   }
   // No runs left, so this tears the selection interaction down with them.
   [self _updateTextSelectionInteraction];
+  /*
+   * The link interaction is torn down OUTRIGHT rather than re-derived.
+   *
+   * `_updateTextLinkInteraction` asks the pooled run views whether they contain
+   * a link, and a pooled run still holds the text it was recycled with — so
+   * asking would answer "yes" and leave a long-press recognizer installed on a
+   * view that is about to be handed to something else entirely.
+   */
+  [_textLinkInteraction setInstalled:NO];
 
   [self _clearPixelStateForRecycle];
 
