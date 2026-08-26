@@ -7,6 +7,8 @@
 
 #include "BaseViewProps.h"
 
+#include <react/renderer/attributedstring/TextRoleMetrics.h>
+
 #include <react/renderer/components/view/TransitionConversions.h>
 
 #include <algorithm>
@@ -124,6 +126,24 @@ BaseViewProps::BaseViewProps(
                     sourceProps.inheritedFontSize,
                     std::numeric_limits<Float>::quiet_NaN())
               : sourceProps.inheritedFontSize),
+      inheritedFontSizeEm(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "fontSizeEm",
+                    sourceProps.inheritedFontSizeEm,
+                    std::numeric_limits<Float>::quiet_NaN())
+              : sourceProps.inheritedFontSizeEm),
+      inheritedFontSizeRem(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "fontSizeRem",
+                    sourceProps.inheritedFontSizeRem,
+                    std::numeric_limits<Float>::quiet_NaN())
+              : sourceProps.inheritedFontSizeRem),
       inheritedFontFamily(
           parseInheritedTextProps && stringChildrenEnabled
               ? convertRawProp(
@@ -214,6 +234,30 @@ BaseViewProps::BaseViewProps(
                     sourceProps.inheritedWhiteSpace,
                     {})
               : sourceProps.inheritedWhiteSpace),
+      uaMarginBlockEm(convertRawProp(
+          context,
+          rawProps,
+          "uaMarginBlockEm",
+          sourceProps.uaMarginBlockEm,
+          std::numeric_limits<Float>::quiet_NaN())),
+      uaMarginBlockRem(convertRawProp(
+          context,
+          rawProps,
+          "uaMarginBlockRem",
+          sourceProps.uaMarginBlockRem,
+          std::numeric_limits<Float>::quiet_NaN())),
+      uaFontSizeEm(convertRawProp(
+          context,
+          rawProps,
+          "uaFontSizeEm",
+          sourceProps.uaFontSizeEm,
+          std::numeric_limits<Float>::quiet_NaN())),
+      uaFontWeight(convertRawProp(
+          context,
+          rawProps,
+          "uaFontWeight",
+          sourceProps.uaFontWeight,
+          {})),
       borderRadii(convertRawProp(
           context,
           rawProps,
@@ -566,6 +610,7 @@ BaseViewProps::BaseViewProps(
 
 bool BaseViewProps::computeHasInheritedTextProps() const {
   return inheritedColor || !std::isnan(inheritedFontSize) ||
+      !std::isnan(inheritedFontSizeEm) || !std::isnan(inheritedFontSizeRem) ||
       !inheritedFontFamily.empty() || inheritedFontWeight.has_value() ||
       inheritedFontStyle.has_value() || inheritedFontVariant.has_value() ||
       !std::isnan(inheritedLetterSpacing) || !std::isnan(inheritedLineHeight) ||
@@ -603,6 +648,8 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundColor);
     RAW_SET_PROP_SWITCH_CASE(inheritedColor, "color");
     RAW_SET_PROP_SWITCH_CASE(inheritedFontSize, "fontSize");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontSizeEm, "fontSizeEm");
+    RAW_SET_PROP_SWITCH_CASE(inheritedFontSizeRem, "fontSizeRem");
     RAW_SET_PROP_SWITCH_CASE(inheritedFontFamily, "fontFamily");
     RAW_SET_PROP_SWITCH_CASE(inheritedFontWeight, "fontWeight");
     RAW_SET_PROP_SWITCH_CASE(inheritedFontStyle, "fontStyle");
@@ -613,6 +660,10 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE(inheritedTextTransform, "textTransform");
     RAW_SET_PROP_SWITCH_CASE(inheritedWhiteSpace, "whiteSpace");
     RAW_SET_PROP_SWITCH_CASE(inheritedDynamicTypeRamp, "dynamicTypeRamp");
+    RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockEm);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockRem);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(uaFontSizeEm);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(uaFontWeight);
     RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundImage);
     RAW_SET_PROP_SWITCH_CASE(backgroundImage, "experimental_backgroundImage");
     RAW_SET_PROP_SWITCH_CASE(backgroundSize, "experimental_backgroundSize");
@@ -847,9 +898,14 @@ void BaseViewProps::applyInheritedTextAttributes(
   if (inheritedColor) {
     textAttributes.foregroundColor = inheritedColor;
   }
-  if (!std::isnan(inheritedFontSize)) {
-    textAttributes.fontSize = inheritedFontSize;
-  }
+  /*
+   * Deferred: whether a platform text role answers is decided below, and the
+   * role outranks the user-agent sheet's own size. Everything else about the
+   * decision is knowable now and read now, because
+   * `textAttributes.fontSize` still holds the INHERITED size at this point and
+   * an `em` resolves against exactly that.
+   */
+  const Float inheritedSizeForEm = textAttributes.fontSize;
   if (!inheritedFontFamily.empty()) {
     textAttributes.fontFamily = inheritedFontFamily;
   }
@@ -871,32 +927,54 @@ void BaseViewProps::applyInheritedTextAttributes(
   if (inheritedTextAlign) {
     textAttributes.alignment = inheritedTextAlign;
   }
+  /*
+   * Whether anything can turn this element's text role into a font. Asked
+   * ONCE, because the size and the weight must not answer it differently — a
+   * heading drawn at the sheet's size in the platform's weight would be
+   * neither.
+   */
+  const bool platformAnswers = inheritedDynamicTypeRamp.has_value() &&
+      TextRoleMetrics::sizeOf(*inheritedDynamicTypeRamp).has_value();
+
+  /*
+   * The size, decided for EVERY element rather than only for one that names a
+   * role. It used to sit inside the role branch, which is how `<pre>` — a
+   * block element with `font-size: 0.8125em` and no role at all — never got a
+   * size of its own, and passed its parent's straight through.
+   *
+   * `nullopt` means this element declares nothing, so the inherited size
+   * stands. See `resolveFontSize` for why an engaged NaN is a different answer
+   * from no answer.
+   */
+  if (const auto resolved = TextAttributes::resolveFontSize(
+          inheritedFontSize,
+          inheritedFontSizeEm,
+          inheritedFontSizeRem,
+          uaFontSizeEm,
+          platformAnswers,
+          inheritedSizeForEm)) {
+    textAttributes.fontSize = *resolved;
+  }
+
   if (inheritedDynamicTypeRamp) {
     textAttributes.dynamicTypeRamp = inheritedDynamicTypeRamp;
     /*
      * A role supplies the size and the weight, so it has to CLEAR what it
-     * supersedes — but only where this element stated neither.
-     *
-     * There is no such thing as an unsized run to fall through to. The
-     * cascade is seeded with the platform's default text attributes, so
-     * `fontSize` arrives already carrying the body size and `weight` may
-     * carry an ancestor's. A platform role that only filled in blanks would
-     * therefore never fill anything, which is exactly how this first behaved:
-     * every heading rendered at body size while faithfully carrying a role
-     * nothing consulted.
-     *
-     * Clearing them is also the correct cascade. A role stated on THIS element
-     * is a user-agent declaration on the element, and a declaration beats an
-     * inherited value — `font-size: 2em` on `h1` wins over a size cascaded in
-     * from a `<div>` above it. What it must not beat is an explicit size or
-     * weight on the element itself, which is why each is guarded by whether
-     * this element stated one.
+     * supersedes — but only where this element stated neither. There is no
+     * such thing as an unsized run to fall through to: the cascade is seeded
+     * with the platform's default text attributes, so a role that only filled
+     * in blanks would never fill anything, which is exactly how this first
+     * behaved — every heading rendered at body size while faithfully carrying
+     * a role nothing consulted.
      */
-    if (std::isnan(inheritedFontSize)) {
-      textAttributes.fontSize = std::numeric_limits<Float>::quiet_NaN();
-    }
     if (!inheritedFontWeight.has_value()) {
-      textAttributes.fontWeight.reset();
+      // Same rule, same reason: cleared so the platform's font supplies it,
+      // and only stood in for where no platform will.
+      if (!platformAnswers && uaFontWeight.has_value()) {
+        textAttributes.fontWeight = uaFontWeight;
+      } else {
+        textAttributes.fontWeight.reset();
+      }
     }
   }
   if (inheritedTextTransform) {

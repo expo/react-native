@@ -208,6 +208,11 @@ const validAttributesForNonEventProps = {
   // supplies the font. Inherited with the rest of this group: the role is set
   // on the element and the text inside it is a run that has to receive it.
   dynamicTypeRamp: true,
+  // The user-agent sheet's own-`em` margin factor; see BaseViewProps.h.
+  uaMarginBlockEm: true,
+  uaMarginBlockRem: true,
+  uaFontSizeEm: true,
+  uaFontWeight: true,
   // `transition` (css-transitions-1). Delivered as the four longhands and
   // zipped in the renderer, which is also where the animation runs — these
   // never reach JavaScript again once set.

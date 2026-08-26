@@ -33,7 +33,7 @@
  * pixel comparison there would report font differences as layout bugs.
  */
 
-const {CASES} = require('./cases');
+const {CASES, runGapChecks} = require('./cases');
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
@@ -169,6 +169,21 @@ function compare(expected, actual) {
           detail: `run box is ${got.root.height}, not line-height ${declared} + the reserved shift ink ${shiftedFontSize} = ${wantHeight}`,
           why: testCase.why,
         });
+      }
+      continue;
+    }
+
+    /*
+     * A case whose numbers differ between engines by design — anything
+     * resolved from the root font size, which is 16px in a browser and the
+     * platform's body size on a device. It states what survives that instead,
+     * in checks of its own; see `gapReader` in cases.js.
+     */
+    if (testCase.bounded === 'gap-checks') {
+      const problems = runGapChecks(testCase, got);
+      exactChecks += 1;
+      if (problems.length > 0) {
+        failures.push({name, detail: problems.join('; '), why: testCase.why});
       }
       continue;
     }

@@ -80,6 +80,7 @@ interface Spec extends TurboModule {
     devicePixelRatio: number,
     viewportOffsetX?: number,
     viewportOffsetY?: number,
+    fontSizeMultiplier?: number,
   ) => RootTag;
   stopSurface: (surfaceId: RootTag) => void;
   enqueueNativeEvent: (

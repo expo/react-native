@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 #include <functional>
 #include <limits>
 
@@ -83,6 +85,17 @@ enum class DynamicTypeRamp : uint8_t {
   Title1,
   LargeTitle
 };
+
+/*
+ * How many ramps there are, for anything that keeps one slot per ramp.
+ *
+ * Derived from the last enumerator rather than written down, so that adding a
+ * ramp anywhere in the list — the end, or the middle, which shifts `LargeTitle`
+ * — grows the count with it. A hand-maintained literal would go stale silently
+ * and the new ramp would index out of bounds.
+ */
+constexpr size_t kDynamicTypeRampCount =
+    static_cast<size_t>(DynamicTypeRamp::LargeTitle) + 1;
 
 enum class EllipsizeMode {
   Clip, // Do not add ellipsize, simply clip.
