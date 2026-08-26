@@ -20,6 +20,72 @@
 
 using namespace facebook::react;
 
+@interface RCTAnonymousTextRunView ()
+/** Draws this run's text with a clip; see `-drawRect:` for why it is shared. */
+- (void)drawTextClippedTo:(nullable NSArray<NSValue *> *)includeRects
+                excluding:(nullable NSArray<NSValue *> *)excludeRects
+                   offset:(CGPoint)offset;
+@end
+
+/*
+ * One link's glyphs, as a view.
+ *
+ * It draws the SAME text its run does, from the same layout, clipped to the
+ * link's own line rects — so there is no snapshot anywhere and nothing can go
+ * stale: the link is live text that happens to have its own layer.
+ *
+ * Its whole reason to exist is that `UITargetedPreview` wants a view. Given
+ * one, UIKit hides it, lifts it and puts it back by itself, as it does for a
+ * `UITextView`.
+ */
+@interface RCTLinkGlyphView : UIView
+@property (nonatomic, weak) RCTAnonymousTextRunView *run;
+@property (nonatomic, copy) NSArray<NSValue *> *linkRects;
+@end
+
+/*
+ * Whether any of a run's text has the link role, which is what
+ * `-linkRectGroups` finds its rects by, read from the fragments as
+ * `RCTNSTextAttributesFromTextAttributes` writes it: `role` first, then
+ * `accessibilityRole`. Not `-containsLink`, which asks for an `href`.
+ */
+static BOOL RCTRunHasLinkRole(const facebook::react::AttributedString &attributedString)
+{
+  for (const auto &fragment : attributedString.getFragments()) {
+    const auto &attributes = fragment.textAttributes;
+    if (attributes.role.has_value() ? attributes.role == facebook::react::Role::Link
+                                    : attributes.accessibilityRole == facebook::react::AccessibilityRole::Link) {
+      return YES;
+    }
+  }
+  return NO;
+}
+
+@implementation RCTLinkGlyphView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    self.opaque = NO;
+    self.backgroundColor = [UIColor clearColor];
+    // The run owns hit-testing and accessibility for its links; this view is
+    // pixels only, and must be invisible to both.
+    self.userInteractionEnabled = NO;
+    self.isAccessibilityElement = NO;
+    self.accessibilityElementsHidden = YES;
+  }
+  return self;
+}
+
+- (void)drawRect:(CGRect)rect
+{
+  // Drawn in the RUN's coordinate space, shifted back by where this view sits
+  // inside it, then clipped to the link. The run paints the exact complement.
+  [_run drawTextClippedTo:_linkRects excluding:nil offset:CGPointMake(-self.frame.origin.x, -self.frame.origin.y)];
+}
+
+@end
+
 /*
  * One authored accessibility leaf of a run: static text, or a semantic inline
  * element such as a link.
@@ -209,9 +275,10 @@ static NSString *_Nullable RCTInlineAccessibilityValue(const InlineAccessibility
   NSArray *_Nullable _cachedAccessibilityElements;
   // The container the cached elements were made for; they name it as theirs
   __weak id _cachedAccessibilityContainer;
-  // The link rects, and which of them a finger is currently on.
-  NSArray<NSValue *> *_cachedLinkRects;
-  NSArray<NSValue *> *_pressedLinkRects;
+  // The on-screen rects of every link in this run, and any the OS is currently
+  // displaying a copy of — which this view must therefore not paint as well.
+  NSArray<NSArray<NSValue *> *> *_cachedLinkRectGroups;
+  NSMutableArray<RCTLinkGlyphView *> *_linkViews;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -350,6 +417,27 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 
 - (void)drawRect:(CGRect)rect
 {
+  /*
+   * The run paints everything EXCEPT its links.
+   *
+   * Each link is painted by a view of its own (`RCTLinkGlyphView`, below), and
+   * that is not a detail of the lift — it is what makes the lift possible at
+   * all. `UITargetedPreview` is built around a VIEW it can hide, animate and
+   * put back; a link that is merely a range of glyphs inside a bigger drawing
+   * gives it nothing to work with, which is why earlier attempts had to
+   * snapshot the glyphs, cover them, hide them, and then guess when UIKit was
+   * finished. A link that IS a view needs none of that.
+   *
+   * The two clips are exact complements of one set of rects, so no pixel is
+   * painted twice and none is missed.
+   */
+  [self drawTextClippedTo:nil excluding:[self linkRects] offset:CGPointZero];
+}
+
+- (void)drawTextClippedTo:(nullable NSArray<NSValue *> *)includeRects
+                excluding:(nullable NSArray<NSValue *> *)excludeRects
+                   offset:(CGPoint)offset
+{
   RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
   if (!nativeTextLayoutManager) {
     // A silent blank: the run's layout manager is gone, so NOTHING paints
@@ -395,37 +483,42 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   NSTextStorage *cachedTextStorage = _run.runTag != 0
       ? [nativeTextLayoutManager cachedRunTextStorageForAttributedString:_run.attributedString width:frame.size.width]
       : nil;
+  CGContextRef context = UIGraphicsGetCurrentContext();
+  if (context != NULL) {
+    CGContextSaveGState(context);
+    CGContextTranslateCTM(context, offset.x, offset.y);
+    if (includeRects != nil) {
+      CGContextBeginPath(context);
+      for (NSValue *value in includeRects) {
+        CGContextAddRect(context, value.CGRectValue);
+      }
+      CGContextClip(context);
+    }
+    if (excludeRects.count > 0) {
+      // Even-odd: the whole canvas minus each rect leaves everything but them.
+      UIBezierPath *path = [UIBezierPath bezierPathWithRect:CGRectInset(self.bounds, -offset.x - 1e4, -offset.y - 1e4)];
+      for (NSValue *value in excludeRects) {
+        [path appendPath:[UIBezierPath bezierPathWithRect:value.CGRectValue]];
+      }
+      path.usesEvenOddFillRule = YES;
+      [path addClip];
+    }
+  }
+
   if (cachedTextStorage != nil) {
     [nativeTextLayoutManager drawTextStorage:cachedTextStorage
                             attributedString:_run.attributedString
                                        frame:frame
                            drawHighlightPath:nil];
-    [self drawPressedLinkWash];
-    return;
+  } else {
+    [nativeTextLayoutManager drawAttributedString:_run.attributedString
+                              paragraphAttributes:facebook::react::ParagraphAttributes {}
+                                            frame:frame
+                                drawHighlightPath:nil];
   }
-  [nativeTextLayoutManager drawAttributedString:_run.attributedString
-                            paragraphAttributes:facebook::react::ParagraphAttributes {}
-                                          frame:frame
-                              drawHighlightPath:nil];
-  [self drawPressedLinkWash];
-}
 
-/*
- * Painted over the glyphs rather than under them, and rounded, which is what a
- * browser's link highlight looks like on both platforms. `labelColor` at a low
- * alpha rather than a fixed grey so it stays visible in dark mode.
- */
-- (void)drawPressedLinkWash
-{
-  if (_pressedLinkRects.count == 0) {
-    return;
-  }
-  [[[UIColor labelColor] colorWithAlphaComponent:0.18] setFill];
-  for (NSValue *value in _pressedLinkRects) {
-    // Grown slightly so the wash covers ascenders and descenders rather than
-    // clipping the text it is meant to sit behind.
-    CGRect rect = CGRectInset(value.CGRectValue, -2, -1);
-    [[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:3] fill];
+  if (context != NULL) {
+    CGContextRestoreGState(context);
   }
 }
 
@@ -514,10 +607,10 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 - (void)invalidateAccessibilityElements
 {
   _cachedAccessibilityElements = nil;
-  _cachedLinkRects = nil;
-  _pressedLinkRects = nil;
+  _cachedLinkRectGroups = nil;
   // A run only claims touches when it has a link in it; see `-pointInside:`.
   self.userInteractionEnabled = [self linkRects].count > 0;
+  [self updateLinkViews];
 }
 
 /*
@@ -538,37 +631,130 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
  * The on-screen rects of every link in this run, in the run view's own
  * coordinate space.
  *
- * Shared by press feedback, and placed through the same
+ * Shared by hit-testing and the link views, and placed through the same
  * `-textOriginInRunView` as the accessibility leaves, so the two can never
  * disagree about where a link is.
  */
 - (NSArray<NSValue *> *)linkRects
 {
-  if (_cachedLinkRects != nil) {
-    return _cachedLinkRects;
+  NSMutableArray<NSValue *> *flat = [NSMutableArray array];
+  for (NSArray<NSValue *> *group in [self linkRectGroups]) {
+    [flat addObjectsFromArray:group];
+  }
+  return flat;
+}
+
+/*
+ * Each link in this run, as the rects it actually occupies — one per line.
+ *
+ * Grouped per link rather than flattened because a link that WRAPS has to lift
+ * as one shape while two different links in the same run lift separately, and
+ * because the group is what a link's own view is sized and clipped from.
+ *
+ * A single rect per link was the old shape of this, and it was wrong twice
+ * over: it covered only the FIRST line of a wrapped link, so the link's view
+ * held only that line's glyphs and a touch on the second line found no view to
+ * lift; and every link in the run shared one group, so two links lifted
+ * together.
+ */
+- (NSArray<NSArray<NSValue *> *> *)linkRectGroups
+{
+  if (_cachedLinkRectGroups != nil) {
+    return _cachedLinkRectGroups;
+  }
+  // Skip laying the text out when none of it has the link role, which is most
+  // runs: every run is asked on each state update, and the layout is a TextKit
+  // pass of its own on the main thread
+  if (!RCTRunHasLinkRole(_run.attributedString)) {
+    _cachedLinkRectGroups = @[];
+    return _cachedLinkRectGroups;
   }
   RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
   if (nativeTextLayoutManager == nil) {
     return @[];
   }
 
-  NSMutableArray<NSValue *> *rects = [NSMutableArray array];
+  NSMutableArray<NSArray<NSValue *> *> *groups = [NSMutableArray array];
   const CGRect frame = self.containerFrame;
   const CGPoint offset = [self textOriginInRunView];
 
-  [nativeTextLayoutManager getRectWithAttributedString:_run.attributedString
+  [nativeTextLayoutManager getLineRectGroupsWithAttributedString:_run.attributedString
       paragraphAttributes:facebook::react::ParagraphAttributes {}
       enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
       frame:CGRectMake(0, 0, frame.size.width, frame.size.height)
-      usingBlock:^(CGRect fragmentRect, NSString *_Nonnull fragmentText, NSString *value) {
+      usingBlock:^(NSArray<NSValue *> *lineRects, NSString *value) {
         if (![value isEqualToString:@"link"]) {
           return;
         }
-        [rects addObject:[NSValue valueWithCGRect:CGRectOffset(fragmentRect, offset.x, offset.y)]];
+        NSMutableArray<NSValue *> *shifted = [NSMutableArray arrayWithCapacity:lineRects.count];
+        for (NSValue *rect in lineRects) {
+          [shifted addObject:[NSValue valueWithCGRect:CGRectOffset(rect.CGRectValue, offset.x, offset.y)]];
+        }
+        [groups addObject:shifted];
       }];
 
-  _cachedLinkRects = rects;
-  return _cachedLinkRects;
+  _cachedLinkRectGroups = groups;
+  return _cachedLinkRectGroups;
+}
+
+/*
+ * One view per link, rebuilt whenever the text is.
+ *
+ * Grouped by CONTIGUOUS RECTS: a link that wraps has one rect per line and they
+ * must lift together as a single shape, so they share a view. Two different
+ * links in the same run get two views, because they lift separately.
+ */
+- (void)updateLinkViews
+{
+  if (_linkViews == nil) {
+    _linkViews = [NSMutableArray new];
+  }
+  NSArray<NSArray<NSValue *> *> *groups = [self linkRectGroups];
+
+  while (_linkViews.count > groups.count) {
+    [_linkViews.lastObject removeFromSuperview];
+    [_linkViews removeLastObject];
+  }
+  for (NSUInteger i = 0; i < groups.count; i++) {
+    NSArray<NSValue *> *group = groups[i];
+    RCTLinkGlyphView *view;
+    if (i < _linkViews.count) {
+      view = _linkViews[i];
+    } else {
+      view = [[RCTLinkGlyphView alloc] initWithFrame:CGRectZero];
+      view.run = self;
+      [_linkViews addObject:view];
+    }
+    if (view.superview != self) {
+      [self addSubview:view];
+    }
+    CGRect bounds = CGRectNull;
+    for (NSValue *value in group) {
+      bounds = CGRectIsNull(bounds) ? value.CGRectValue : CGRectUnion(bounds, value.CGRectValue);
+    }
+    view.frame = CGRectIsNull(bounds) ? CGRectZero : bounds;
+    view.linkRects = group;
+    [view setNeedsDisplay];
+  }
+}
+
+/** The view drawing the link at this point, in the owning View's space. */
++ (BOOL)isLinkGlyphView:(UIView *)view
+{
+  return [view isKindOfClass:[RCTLinkGlyphView class]];
+}
+
+- (nullable UIView *)linkViewAtContainerPoint:(CGPoint)point
+{
+  const CGPoint local = CGPointMake(point.x - self.frame.origin.x, point.y - self.frame.origin.y);
+  for (RCTLinkGlyphView *view in _linkViews) {
+    for (NSValue *value in view.linkRects) {
+      if (CGRectContainsPoint(value.CGRectValue, local)) {
+        return view;
+      }
+    }
+  }
+  return nil;
 }
 
 /*
@@ -576,9 +762,9 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
  *
  * The view covers the whole content box, so claiming everything would make it
  * the hit-test target for taps meant for sibling views. Answering only inside a
- * link's glyphs keeps the run invisible to every other touch, which is what lets
- * press feedback exist at all without disturbing the gesture arbitration around
- * it.
+ * link's glyphs keeps the run invisible to every other touch, so the long-press
+ * interaction can reach a link without disturbing the gesture arbitration
+ * around it.
  */
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
 {
@@ -593,65 +779,15 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 #pragma mark - Press feedback
 
 /*
- * `:active` for a link, drawn where the link is.
- *
- * A browser on either platform paints a translucent wash over a link's own rects
- * while it is held — not over the line, and not over the paragraph. Because the
- * anchor has no view, this is the only place that knows which glyphs to cover.
- *
- * The press releases on cancel as well as on lift, which is what makes a link
- * inside a scroll view behave: the scroll claims the gesture, UIKit cancels the
- * touch, and the highlight goes away without JavaScript being asked.
+ * A held link deliberately gets no feedback of its own. iOS is the authority
+ * for how text behaves in an iOS app: a `UITextView` carrying a real
+ * `NSLinkAttributeName` is pixel-identical to its resting state through the
+ * early part of a touch, and the first thing that appears is the lift below.
+ * Safari's tap highlight is a web convention, and React Native's own
+ * `isHighlighted` grey rounded rect is not a UIKit behaviour. A lifted link is
+ * covered by a picture of itself rather than hidden here, so this view has no
+ * part in the lift at all.
  */
-- (void)setPressedLinkRectsForPoint:(CGPoint)point
-{
-  NSMutableArray<NSValue *> *pressed = [NSMutableArray array];
-  for (NSValue *value in [self linkRects]) {
-    if (CGRectContainsPoint(value.CGRectValue, point)) {
-      [pressed addObject:value];
-    }
-  }
-  if (pressed.count == 0 && _pressedLinkRects == nil) {
-    return;
-  }
-  _pressedLinkRects = pressed.count > 0 ? pressed : nil;
-  [self setNeedsDisplay];
-}
-
-- (void)clearPressedLink
-{
-  if (_pressedLinkRects == nil) {
-    return;
-  }
-  _pressedLinkRects = nil;
-  [self setNeedsDisplay];
-}
-
-- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-  [self setPressedLinkRectsForPoint:[touches.anyObject locationInView:self]];
-  [super touchesBegan:touches withEvent:event];
-}
-
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-  // Sliding off the link un-highlights it and sliding back on restores it, as a
-  // held control does.
-  [self setPressedLinkRectsForPoint:[touches.anyObject locationInView:self]];
-  [super touchesMoved:touches withEvent:event];
-}
-
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-  [self clearPressedLink];
-  [super touchesEnded:touches withEvent:event];
-}
-
-- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-  [self clearPressedLink];
-  [super touchesCancelled:touches withEvent:event];
-}
 
 /*
  * Not a container of its own: the owning view presents this run's leaves, in
@@ -735,6 +871,50 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   _cachedAccessibilityElements = leaves;
   _cachedAccessibilityContainer = container;
   return _cachedAccessibilityElements;
+}
+
+- (BOOL)containsLink
+{
+  // Asked of the C++ fragments rather than the built NSAttributedString: this
+  // runs on every commit that changes a run, and building the attributed string
+  // to answer a yes/no question would be paying text-shaping costs for it.
+  for (const auto &fragment : _run.attributedString.getFragments()) {
+    if (!fragment.textAttributes.href.empty()) {
+      return YES;
+    }
+  }
+  return NO;
+}
+
+- (nullable id)linkAtContainerPoint:(CGPoint)point rects:(nullable NSMutableArray<NSValue *> *)outRects
+{
+  CGRect frame = self.containerFrame;
+  const auto hitShiftInk = _run.attributedString.baselineShiftInkOverflow();
+  frame.origin.y += hitShiftInk.top;
+  frame.size.height -= hitShiftInk.top + hitShiftInk.bottom;
+  if (!CGRectContainsPoint(frame, point)) {
+    return nil;
+  }
+  RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
+  if (!nativeTextLayoutManager) {
+    return nil;
+  }
+
+  NSMutableArray<NSValue *> *localRects = outRects != nil ? [NSMutableArray array] : nil;
+  CGPoint localPoint = CGPointMake(point.x - frame.origin.x, point.y - frame.origin.y);
+  id link = [nativeTextLayoutManager getLinkWithAttributedString:_run.attributedString
+                                             paragraphAttributes:facebook::react::ParagraphAttributes {}
+                                                           frame:frame
+                                                         atPoint:localPoint
+                                                           rects:localRects];
+  if (link == nil) {
+    return nil;
+  }
+  // Back into the owning View's space, which is what the interaction works in.
+  for (NSValue *value in localRects) {
+    [outRects addObject:[NSValue valueWithCGRect:CGRectOffset(value.CGRectValue, frame.origin.x, frame.origin.y)]];
+  }
+  return link;
 }
 
 // Resolves a touch (in the owning View's coordinate space) to an inline

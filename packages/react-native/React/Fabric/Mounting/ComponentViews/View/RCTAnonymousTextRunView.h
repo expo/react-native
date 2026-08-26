@@ -51,6 +51,40 @@ NS_ASSUME_NONNULL_BEGIN
 - (facebook::react::SharedTouchEventEmitter)touchEventEmitterAtContainerPoint:(CGPoint)point;
 
 /**
+ * The link at `point`, in the owning View's coordinate space, or nil.
+ *
+ * The value is UIKit's own `NSLinkAttributeName` payload — an `NSURL`, or an
+ * `NSString` for a destination that would not parse. `outRects`, when given, is
+ * filled with the link's enclosing rects in that same space, so the platform's
+ * context menu can lift exactly the glyphs the link occupies rather than a
+ * rectangle around them.
+ *
+ * Shares `containerFrame` with painting and with touch resolution, for the same
+ * reason they share it: a link must lift where it was drawn.
+ */
+- (nullable id)linkAtContainerPoint:(CGPoint)point rects:(nullable NSMutableArray<NSValue *> *)outRects;
+
+/**
+ * The view that draws the link at this point, or nil.
+ *
+ * Every link in a run is painted by a view of its own, so a lift can be handed
+ * a real view rather than a snapshot of some glyphs. `point` is in the owning
+ * View's coordinate space, as everywhere else in this class.
+ */
+- (nullable UIView *)linkViewAtContainerPoint:(CGPoint)point;
+
+/**
+ * Whether `view` is one of the views this class uses to paint a link's glyphs.
+ *
+ * The lift asks, because glyphs and everything else want opposite treatment
+ * from `UIPreviewParameters` — see `-[EXPTextLinkInteraction _parametersForLift:]`.
+ */
++ (BOOL)isLinkGlyphView:(UIView *)view;
+
+/** Whether any fragment in this run carries an `href`. */
+- (BOOL)containsLink;
+
+/**
  * Takes a new run from the owning View's state, announcing any live-region
  * leaf whose text changed since the previous run.
  */
