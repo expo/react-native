@@ -554,6 +554,10 @@ const ROOT_FONT_SIZE = 16;
 // size rather than a length.
 const UNITLESS_NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)$/;
 
+// A length in `em`: a multiple of a font size, so it cannot be converted until
+// one is known.
+const EM_LENGTH = /^([+-]?(?:\d+\.?\d*|\.\d+))em$/;
+
 /**
  * The properties the renderer's text cascade inherits — the ones for which an
  * author's explicit `inherit` has a value to resolve to. Mirrors the
@@ -909,9 +913,20 @@ function convertValue(prop: string, value: string): unknown {
   // number", once per text element.
   //
   // 16 is the root size the tokens are written against, and their own comments
-  // confirm it: 0.875 × 16 = 14, 0.75 × 16 = 12. RN has no document root to
-  // read a user-adjusted value from, so this is a constant rather than a
-  // lookup. DOM-CSS-LIMITATION(rem-fixed-root)
+  // confirm it: 0.875 × 16 = 14, 0.75 × 16 = 12.
+  //
+  // Half of this is now addressable and half is not, checked rather than
+  // assumed. `fontSizeRem` is author-facing (`StyleSheetTypes`), so a rem FONT
+  // SIZE could resolve against the real root — which on a device is the
+  // platform body size and tracks the user's text-size setting, where 16 does
+  // not. That is a behaviour change to every token, so it wants deciding
+  // rather than slipping in.
+  //
+  // Every other property has no such channel: the only relative-length props
+  // that exist are `fontSizeEm`, `fontSizeRem` and the three UA-sheet ones, so
+  // a rem PADDING or WIDTH has nothing to resolve against and stays a
+  // constant. See `no-author-facing-em-lengths`.
+  // DOM-CSS-LIMITATION(rem-fixed-root)
   const rem = /^[+-]?(\d+\.?\d*|\.\d+)rem$/.exec(value);
   if (rem != null) {
     return parseFloat(value) * ROOT_FONT_SIZE;
@@ -974,6 +989,18 @@ const PSEUDO_ORDER: ReadonlyArray<[string, (InteractionState) => boolean]> = [
   [':active', s => s.pressed === true],
   [':disabled', s => s.disabled === true],
 ];
+
+/*
+ * The pseudo-classes that answer a FINGER, as opposed to focus or being
+ * disabled. A component that styles either of these is drawing its own press,
+ * and the platform's press feedback must stay out of its way — two answers to
+ * one touch, on different clocks, is what a device showed as a button going
+ * one colour on press and another on hold.
+ *
+ * A touch reports as a hover on the way to a press in this runtime, so a
+ * component that styled only hover still answers the finger.
+ */
+const PRESS_ANSWERING_PSEUDOS = [':hover', ':active'];
 
 // The OS accessibility setting behind `prefers-reduced-motion`, cached so the
 // synchronous style-resolution path can read it. Seeded and kept fresh by
@@ -1113,9 +1140,10 @@ export function resolveDeclarations(
   }
 
   const out: {[string]: unknown} = {};
-  // Held back until the whole block is resolved: a unitless line-height needs
-  // the font size, which may be declared after it.
+  // Held back until the whole block is resolved: a unitless line-height and an
+  // `em` length both need the font size, which may be declared after them.
   let unitlessLineHeight: ?number = null;
+  const emLengths: Map<string, number> = new Map();
   for (const prop of Object.keys(merged)) {
     if (prop.startsWith('--')) {
       continue; // consumed via `scope`
@@ -1220,10 +1248,41 @@ export function resolveDeclarations(
     if (resolved === '') {
       continue;
     }
+    if (resolved === 'inherit') {
+      // The value the parent computed. For a property the renderer's cascade
+      // inherits, an explicit null says "nothing from this layer" — the merge
+      // cancels the layers below and the cascade supplies the value, which is
+      // what `inherit` computes to. For any other property there is no
+      // inherited value to fall back on and no way to read the parent's here.
+      // The stylesheet path already did this; a stylex value written straight
+      // in the component reached the renderer as the literal string.
+      if (INHERITED_PROPERTIES.has(prop)) {
+        out[prop] = null;
+      }
+      continue;
+    }
     if (prop === 'lineHeight' && UNITLESS_NUMBER.test(resolved)) {
       // Remember it as a RATIO rather than converting now — resolving it needs
       // the font size, which may appear later in this same loop.
       unitlessLineHeight = parseFloat(resolved);
+      continue;
+    }
+    if (prop === 'borderStyle' && resolved === 'none') {
+      // `border-style: none` forces the USED border width to zero (CSS2 §8.5.3)
+      // — which is how it reads here, since React Native's `borderStyle` takes
+      // solid, dotted or dashed and has no way to say "no border". Passing the
+      // literal through was rejected outright and left the width standing.
+      out.borderWidth = 0;
+      continue;
+    }
+    const em = EM_LENGTH.exec(resolved);
+    if (em != null && prop !== 'fontSize') {
+      // Same deferral as the ratio above, and the same base: on a LENGTH, `em`
+      // is the element's own computed font size (css-values-4 §5.1.1). On
+      // `font-size` it is the INHERITED one instead, which is a step further
+      // up than anything here can see, so that case falls through and is
+      // handled with the rest of the unresolvable values below.
+      emLengths.set(prop, parseFloat(em[1]));
       continue;
     }
     out[prop] = convertValue(prop, resolved);
@@ -1235,6 +1294,22 @@ export function resolveDeclarations(
   // told RN the line was 1.6667pt tall — collapsing the line box, which with
   // `alignItems: center` pushed the text to the top of its container. Astryx
   // writes every line-height this way, so it affected all of its text.
+  for (const [prop, ratio] of emLengths) {
+    const fontSize = out.fontSize;
+    if (typeof fontSize === 'number') {
+      out[prop] = ratio * fontSize;
+    } else {
+      // As with the ratio below: the font size is inherited rather than
+      // declared here, so there is nothing to multiply by.
+      // DOM-CSS-LIMITATION(unitless-line-height-needs-local-font-size)
+      warnOnce(
+        `em-length:${prop}`,
+        `Dropping ${prop}: ${ratio}em with no fontSize in the same style to ` +
+          'resolve it against.',
+      );
+    }
+  }
+
   if (unitlessLineHeight != null) {
     const fontSize = out.fontSize;
     if (typeof fontSize === 'number') {
@@ -1244,6 +1319,12 @@ export function resolveDeclarations(
       // way to resolve it at this point. Emitting the bare ratio would be
       // actively wrong, so leave `lineHeight` unset and let RN use its own —
       // wrong spacing beats a collapsed line box.
+      //
+      // Still true, checked: the relative-length props are `fontSizeEm`,
+      // `fontSizeRem` and three UA-sheet ones. There is no `lineHeightEm`, so
+      // a unitless ratio has nothing to multiply by until one exists — which
+      // is the same missing channel as `no-author-facing-em-lengths`, not a
+      // separate problem.
       // DOM-CSS-LIMITATION(unitless-line-height-needs-local-font-size)
       warnOnce(
         'unitless-line-height',
@@ -1357,6 +1438,17 @@ export function propsWithState(
     }
   }
 
+  /*
+   * Whether these styles answer a press — decided HERE, and not from the
+   * resolved style, because `resolveDeclarations` drops every `:`-prefixed key
+   * as it converts declarations. By the time a style reaches the element there
+   * is nothing left to look for, which is exactly the mistake that let the
+   * three-colour button survive a fix and four passing tests.
+   */
+  const answersPress = PRESS_ANSWERING_PSEUDOS.some(
+    pseudo => merged[pseudo] != null,
+  );
+
   const style = resolveDeclarations(merged, state, null, false);
   const result: StyleXProps = {};
   if (Object.keys(style).length > 0) {
@@ -1369,6 +1461,9 @@ export function propsWithState(
     // resolved styles instead — inline wins per property, exactly as an
     // inline style beats a class.
     result.__stylexStyle = style;
+  }
+  if (answersPress) {
+    result.__stylexAnswersPress = true;
   }
   if (declaredVars != null) {
     result.__stylexVars = declaredVars;
@@ -1600,14 +1695,6 @@ function markerIdOf(namespace: unknown): string {
   }
   return MARKER_ID_BY_SYMBOL.get(DEFAULT_MARKER.marker) ?? 'm1';
 }
-
-/** The marker id a `props()` result is applying to its element, if any. */
-export function markerOfProps(styleProps: StyleXProps): string | null {
-  // $FlowFixMe[prop-missing] set by props() below
-  const id = styleProps.__stylexMarker;
-  return typeof id === 'string' ? id : null;
-}
-
 const WHEN_KIND_SELECTOR: {[string]: string} = {
   ancestor: 'where-ancestor',
   descendant: 'where-descendant',

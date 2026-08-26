@@ -1220,9 +1220,10 @@ function resolveInlineElementComponent(
     const flat = flatten(style);
 
     /*
-     * BLOCKIFICATION (css-display-3 §2.7). `position: absolute` and `fixed`
-     * compute `display: inline` to `block`, and the box leaves flow entirely
-     * (CSS2 §9.7) — it contributes nothing to the line it was written in.
+     * BLOCKIFICATION (css-display-3 §2.7). `position: absolute`, `fixed` and a
+     * `float` other than `none` all compute `display: inline` to `block`, and
+     * the box leaves flow entirely (CSS2 §9.7) — it contributes nothing to the
+     * line it was written in.
      *
      * Done here because this is where the element's display is computed, and
      * because the alternative is worse: an inline element is backed by a text
@@ -1240,6 +1241,13 @@ function resolveInlineElementComponent(
      */
     const position = flat?.position;
     if (position === 'absolute' || position === 'fixed') {
+      return boxComponentName;
+    }
+    // The float row of the same table. A floated `<span>` that stayed
+    // text-backed sat in the run instead: it took no width, so it intruded on
+    // nothing and the next float packed straight over it.
+    const float = flat?.float;
+    if (typeof float === 'string' && float !== 'none') {
       return boxComponentName;
     }
 
