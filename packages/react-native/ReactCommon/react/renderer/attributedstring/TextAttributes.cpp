@@ -186,6 +186,14 @@ void TextAttributes::apply(TextAttributes textAttributes) {
       ? textAttributes.accessibilityRole
       : accessibilityRole;
   role = textAttributes.role.has_value() ? textAttributes.role : role;
+  /*
+   * REPLACED, not inherited-through. Every other attribute here falls back to
+   * the ancestor's value when the child states none; a link's destination must
+   * not. A `<b>` inside an `<a>` would otherwise inherit the URL, and so would
+   * the plain text after the anchor closed, since fragments that compare equal
+   * share attributes — making a whole paragraph one link.
+   */
+  href = textAttributes.href;
   textEffects = !textAttributes.textEffects.empty() ? textAttributes.textEffects
                                                     : textEffects;
 }
@@ -214,6 +222,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              isPressable,
              layoutDirection,
              accessibilityRole,
+             href,
              role,
              textTransform,
              whiteSpace,
@@ -239,6 +248,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              rhs.isPressable,
              rhs.layoutDirection,
              rhs.accessibilityRole,
+             rhs.href,
              rhs.role,
              rhs.textTransform,
              rhs.whiteSpace,
@@ -400,6 +410,7 @@ SharedDebugStringConvertibleList TextAttributes::getDebugProps() const {
           accessibilityRole,
           textAttributes.accessibilityRole),
       debugStringConvertibleItem("role", role, textAttributes.role),
+      debugStringConvertibleItem("href", href, textAttributes.href),
   };
 }
 #endif
