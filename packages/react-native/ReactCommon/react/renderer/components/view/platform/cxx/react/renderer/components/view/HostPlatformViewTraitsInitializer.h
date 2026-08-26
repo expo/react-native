@@ -49,6 +49,21 @@ inline bool isKeyboardFocusable(const ViewProps & /*props*/)
  * cannot drift. Android has a real `RadioButton` and no list, so it takes
  * none.
  */
+/**
+ * Whether this platform presents a run of `<input type="radio">` as its own
+ * list, and therefore treats each row as a list row.
+ *
+ * One predicate for the whole rule, because the parts only make sense
+ * together: a row must survive flattening BECAUSE something hosts it, and it
+ * takes the platform's row padding for the same reason. A platform with a real
+ * radio control has an ordinary row and should pay for neither — nor for the
+ * scan that decides it, which runs for every view on every commit.
+ */
+inline bool treatsRadioRowsAsListRows()
+{
+  return true;
+}
+
 struct RadioRowPadding {
   float start;
   float end;
