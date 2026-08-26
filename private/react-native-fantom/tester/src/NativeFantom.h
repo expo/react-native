@@ -83,7 +83,8 @@ class NativeFantom : public NativeFantomCxxSpec<NativeFantom> {
       double viewportHeight,
       double devicePixelRatio,
       double viewportOffsetX,
-      double viewportOffsetY);
+      double viewportOffsetY,
+      double fontSizeMultiplier);
 
   void stopSurface(jsi::Runtime &runtime, SurfaceId surfaceId);
 

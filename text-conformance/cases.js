@@ -116,6 +116,23 @@ function span(children, style, m) {
   return {tag: 'span', m, style: style ?? {}, children};
 }
 
+/*
+ * How far two gaps may differ and still be the same length.
+ *
+ * A gap is `y₂ − (y₁ + h₁)`: three coordinates, each snapped to a whole device
+ * pixel independently, so comparing two gaps accumulates the snapping at both
+ * ends. On the densest screen in this matrix — the Android emulator at 420dpi,
+ * density 2.625 — one pixel is 0.381pt, and two of them is 0.762. That is
+ * exactly the disagreement this file first reported: two `1rem` margins
+ * measured 16.38 and 15.62, both of them 16 snapped different ways.
+ *
+ * 1pt is the round number above that bound. It is a sixteenth of the quantity
+ * these cases assert and a forty-eighth of the difference they exist to catch
+ * (16 against 64), so it separates a real failure from the grid by a wide
+ * margin rather than being slack tuned until the suite went green.
+ */
+const GAP_TOLERANCE = 1;
+
 const CASES = [
   {
     name: 'atomic-inlines-in-a-row',
@@ -554,6 +571,213 @@ const CASES = [
     ]),
   },
 
+  /* ------------------------------------------------------- em and rem -- */
+  /*
+   * `em` and `rem` are font-relative, and this corpus deliberately refuses to
+   * compare anything a font decides. These cases work anyway because they
+   * measure MARGINS: a margin stated in `em` is `factor × the element's own
+   * computed font-size`, and both operands are numbers CSS fixes exactly. No
+   * ascent, descent or advance width takes part, so Safari's coordinates are
+   * pinnable to the pixel like every other case here.
+   *
+   * Every case ends with a zero-margin box, so the margin under test is always
+   * an INTERIOR gap between two siblings. Adjacent siblings collapse to the
+   * larger of the two margins (CSS 2.1 §8.3.1), and a zero-margin neighbour
+   * makes that `max(m, 0) = m` — the margin itself, isolated. Without the
+   * spacer the last gap is the container's bottom edge instead, which is a
+   * different question and has a case of its own.
+   *
+   * Each case states the base it resolves against, never inheriting it from
+   * the document. That is not tidiness: the root font size is 16px in Safari
+   * and the PLATFORM's body size on a device — 17 on iOS, 16 on Android
+   * (`DOM-CSS-DEVIATION(root-font-size-is-native-not-16px)`) — so a case that
+   * leant on the root would disagree across engines for the one reason that is
+   * not a bug. `rem` has no such option, which is why the `rem` cases below
+   * compare two of their own boxes rather than naming a number.
+   */
+  {
+    name: 'em-margin-resolves-against-the-elements-own-size',
+    bounded: 'gap-checks',
+    gapChecks: gap => exactGaps(gap, 20, [
+      ['before', 'measured'],
+      ['measured', 'after'],
+    ]),
+    why: 'A margin in `em` is a multiple of the element\'s own computed font-size, so a 20px element with `margin-block: 1em` is pushed 20px down (css-values-4 5.1.1).',
+    tree: root(
+      [
+        marginBox('before', 40, 20),
+        marginBox('measured', 40, 20, {
+          display: 'block',
+          fontSize: '20px',
+          marginBlock: '1em',
+        }),
+        marginBox('after', 40, 20),
+      ],
+      {fontSize: '50px'},
+    ),
+  },
+  {
+    name: 'em-margin-ignores-the-inherited-size',
+    bounded: 'gap-checks',
+    gapChecks: gap => exactGaps(gap, 20, [
+      ['before', 'measured'],
+      ['measured', 'after'],
+    ]),
+    why: 'The SAME tree under a different inherited size. The element states its own 20px, so both cases must place `measured` identically — an `em` resolved against the inherited size instead would move by 30px.',
+    tree: root(
+      [
+        marginBox('before', 40, 20),
+        marginBox('measured', 40, 20, {
+          display: 'block',
+          fontSize: '20px',
+          marginBlock: '1em',
+        }),
+        marginBox('after', 40, 20),
+      ],
+      {fontSize: '10px'},
+    ),
+  },
+  {
+    name: 'em-margin-follows-a-size-stated-in-em',
+    bounded: 'gap-checks',
+    gapChecks: gap => exactGaps(gap, 30, [
+      ['before', 'measured'],
+      ['measured', 'after'],
+    ]),
+    why: 'The element sizes itself in `em` too: 30px inherited, `font-size: 2em` makes it 60, and `margin-block: 0.5em` is then 30. The two `em`s multiply different sizes one step apart, which is the case a single-base implementation gets wrong.',
+    tree: root(
+      [
+        marginBox('before', 40, 20),
+        marginBox('measured', 40, 20, {
+          display: 'block',
+          fontSize: '2em',
+          marginBlock: '0.5em',
+        }),
+        marginBox('after', 40, 20),
+      ],
+      {fontSize: '30px'},
+    ),
+  },
+  {
+    name: 'em-margin-scales-with-the-inherited-size',
+    bounded: 'gap-checks',
+    gapChecks: gap => exactGaps(gap, 40, [
+      ['before', 'measured'],
+      ['measured', 'after'],
+    ]),
+    why: 'The element states no size, so its computed size is the inherited 40px and `margin-block: 1em` is 40 — four times the 10px case above, from one declaration.',
+    tree: root(
+      [
+        marginBox('before', 40, 20),
+        marginBox('measured', 40, 20, {
+          display: 'block',
+          marginBlock: '1em',
+        }),
+        marginBox('after', 40, 20),
+      ],
+      {fontSize: '40px'},
+    ),
+  },
+  {
+    name: 'rem-margin-is-one-size-for-the-whole-tree',
+    bounded: 'gap-checks',
+    gapChecks: gap => {
+      // Every gap here is one `rem`, so they must all be EQUAL — and that is
+      // all this case may assert. The number itself is the root font size,
+      // 16 in a browser and the platform's body size on a device
+      // (`DOM-CSS-DEVIATION(root-font-size-is-native-not-16px)`), so pinning
+      // it to Safari's 16 would fail on iOS's 17 for the one reason that is
+      // not a bug.
+      const first = gap('before', 'small');
+      const problems = [];
+      if (!(first > 0)) {
+        problems.push(`the first rem margin is ${first}, not a real gap`);
+      }
+      for (const [a, b] of [
+        ['small', 'gap'],
+        ['gap', 'large'],
+        ['large', 'after'],
+      ]) {
+        if (Math.abs(gap(a, b) - first) > GAP_TOLERANCE) {
+          problems.push(
+            `${a}→${b} is ${gap(a, b)} but ${'before'}→small is ${first}; ` +
+              'one rem must be one number whatever the element states',
+          );
+        }
+      }
+      return problems;
+    },
+    why: 'Two elements at 8px and 64px, both `margin-block: 1rem`: `rem` names the root, so both margins are equal — the property that separates it from `em`, asserted without naming the root\'s number, which differs per engine by design.',
+    tree: root(
+      [
+        marginBox('before', 40, 20),
+        marginBox('small', 40, 20, {
+          display: 'block',
+          fontSize: '8px',
+          marginBlock: '1rem',
+        }),
+        // Zero-margin spacers, because adjacent siblings COLLAPSE to the
+        // larger of the two margins (CSS 2.1 §8.3.1). Without one between
+        // them, the gap reported is `max(small's bottom, large's top)` and
+        // says nothing about either on its own — which is exactly how the
+        // first draft of this case read 64 where it meant 16.
+        marginBox('gap', 40, 20),
+        marginBox('large', 40, 20, {
+          display: 'block',
+          fontSize: '64px',
+          marginBlock: '1rem',
+        }),
+        marginBox('after', 40, 20),
+      ],
+      {fontSize: '30px'},
+    ),
+  },
+  {
+    name: 'em-and-rem-differ-on-the-same-element',
+    bounded: 'gap-checks',
+    gapChecks: gap => {
+      const viaRem = gap('before', 'viaRem');
+      const viaEm = gap('gap', 'viaEm');
+      const problems = [];
+      // The `em` side IS pinnable: the element states `font-size: 64px`, so
+      // `1em` is 64 in every engine and nothing about the root takes part.
+      if (Math.abs(viaEm - 64) > GAP_TOLERANCE) {
+        problems.push(`em margin is ${viaEm}, not 1em of the stated 64px`);
+      }
+      // The `rem` side is the root's size, which differs per engine by design
+      // — so the only thing to assert is that it is NOT the em's answer.
+      if (Math.abs(viaRem - viaEm) <= GAP_TOLERANCE) {
+        problems.push(
+          `rem margin ${viaRem} equals the em margin ${viaEm}; on an element ` +
+            'at 64px they must differ, and matching is exactly what `em` ' +
+            'implemented as `rem` produces',
+        );
+      }
+      if (!(viaRem > 0)) {
+        problems.push(`rem margin is ${viaRem}, not a real gap`);
+      }
+      return problems;
+    },
+    why: 'Two elements at the same 64px, one with an `em` margin and one with a `rem`: the first is pushed by 64 and the second by the root\'s size. This is the case that fails when `em` is implemented as `rem` — every other case here passes under that bug.',
+    tree: root(
+      [
+        marginBox('before', 40, 20),
+        marginBox('viaRem', 40, 20, {
+          display: 'block',
+          fontSize: '64px',
+          marginBlock: '1rem',
+        }),
+        marginBox('gap', 40, 20),
+        marginBox('viaEm', 40, 20, {
+          display: 'block',
+          fontSize: '64px',
+          marginBlock: '1em',
+        }),
+        marginBox('after', 40, 20),
+      ],
+      {fontSize: '30px'},
+    ),
+  },
   {
     name: 'margin-collapses-out-of-a-block-containers-bottom-edge',
     why: 'A block container\'s last child\'s bottom margin collapses THROUGH its bottom edge (CSS 2.1 8.3.1), so the container measures as if the margin were outside it — 60, not 80.',
@@ -609,4 +833,122 @@ function toHTML(node) {
   return `<${node.tag}${attrs.length ? ' ' + attrs.join(' ') : ''}>${children}</${node.tag}>`;
 }
 
-module.exports = {CASES, toHTML, styleToCss};
+/* -------------------------------------------------- native translation -- */
+
+/*
+ * The corpus is written in CSS, so every target renders it in its own spelling.
+ * This is React Native's, and it lives HERE — beside the corpus — because it
+ * used to live in three places and they drifted.
+ *
+ * The drift was not theoretical: `gen-device-screen.js` learned to translate
+ * `em` and `rem`, `Conformance-itest.js` did not, and the Fantom loop reported
+ * six clean failures for a feature that was working — the styles it built
+ * carried the strings straight through, so nothing had a margin at all. One
+ * corpus, one translation, emitted into the generated screen from this same
+ * source.
+ *
+ * A length in px becomes the number a React Native style takes. A length in em
+ * or rem becomes the FACTOR property the renderer resolves — the only channel
+ * that can carry one, because a React Native style value is a resolved number,
+ * and at the moment a style is written there is no font size to resolve
+ * against.
+ *
+ * DOM-CSS-LIMITATION(no-author-facing-em-lengths): an author's margin-block in
+ * em is translated into uaMarginBlockEm, which is the USER-AGENT origin rather
+ * than the author's. Nothing in this corpus competes for those margins, so the
+ * geometry under test is unaffected — but the two are not the same
+ * declaration, and a case that turned on the cascade's origins would have to
+ * say so rather than lean on this.
+ *
+ * Written without template literals on purpose: it is emitted verbatim into a
+ * generated file, from inside one.
+ */
+function toStyle(css) {
+  const out = {};
+  for (const [key, value] of Object.entries(css ?? {})) {
+    const relative =
+      typeof value === 'string'
+        ? /^(-?\d+(?:\.\d+)?)(em|rem)$/.exec(value)
+        : null;
+    if (relative != null) {
+      const factor = parseFloat(relative[1]);
+      const unit = relative[2] === 'em' ? 'Em' : 'Rem';
+      if (key === 'fontSize') {
+        out['fontSize' + unit] = factor;
+      } else if (key === 'marginBlock') {
+        out['uaMarginBlock' + unit] = factor;
+      } else {
+        throw new Error(
+          key +
+            ': ' +
+            value +
+            ' — no channel carries a relative length for this property; see ' +
+            'DOM-CSS-LIMITATION(no-author-facing-em-lengths)',
+        );
+      }
+    } else if (typeof value === 'string' && /^-?\d+(\.\d+)?px$/.test(value)) {
+      out[key] = parseFloat(value);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+/* ----------------------------------------------------------- relative -- */
+
+/*
+ * The vertical gap between two measured boxes, as a case's own checks see it.
+ *
+ * `bounded: 'gap-checks'` exists for the values that differ between engines
+ * BY DESIGN — everything resolved from the root font size, which is 16px in a
+ * browser and the platform's body size on a device. Pinning those to Safari's
+ * number would fail on iOS for the one reason that is not a bug, and dropping
+ * the cases would leave `rem` untested. So the case states what survives the
+ * root changing, which is also what the spec actually says: that every `rem`
+ * in a tree is the same number, and that it is not the same number as `em` on
+ * an element the root's size does not describe.
+ */
+
+/*
+ * Every listed gap is exactly `want`, to the device's pixel rounding.
+ *
+ * For the `em` cases, whose base is a font size the element STATES in px — so
+ * the answer is one number in every engine, and the case can name it.
+ */
+function exactGaps(gap, want, pairs) {
+  const problems = [];
+  for (const [a, b] of pairs) {
+    if (Math.abs(gap(a, b) - want) > GAP_TOLERANCE) {
+      problems.push(a + '→' + b + ' is ' + gap(a, b) + ', not ' + want);
+    }
+  }
+  return problems;
+}
+
+function gapReader(rects) {
+  return (a, b) => {
+    const first = rects[a];
+    const second = rects[b];
+    if (first == null || second == null) {
+      throw new Error(`gap(${a}, ${b}): one of those boxes reported no rect`);
+    }
+    return Number((second.y - (first.y + first.height)).toFixed(3));
+  };
+}
+
+/*
+ * Run a case's own checks against one engine's rects, and return the problems.
+ *
+ * Used on Safari as well as on the devices. A case that is wrong about the spec
+ * must not become the standard the native engines are held to, and the cheapest
+ * way to find out is to hold the browser to it first.
+ */
+function runGapChecks(testCase, rects) {
+  if (testCase.gapChecks == null) {
+    return [];
+  }
+  return testCase.gapChecks(gapReader(rects));
+}
+
+module.exports = {CASES, toHTML, styleToCss, runGapChecks, toStyle};

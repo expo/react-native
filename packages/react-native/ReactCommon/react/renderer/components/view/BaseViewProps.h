@@ -86,6 +86,24 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // unless the flag is on); folded into the cascade in `configureYogaTree`.
   SharedColor inheritedColor{};
   Float inheritedFontSize{std::numeric_limits<Float>::quiet_NaN()};
+  /*
+   * `font-size` stated in `em` and `rem` — factors, resolved against the
+   * inherited size and the root's respectively (css-values-4 §5.1.1).
+   *
+   * They live beside `inheritedFontSize` rather than being folded into it,
+   * because neither can be resolved where a style is parsed: one needs the
+   * cascade and the other the root, and a prop object has seen neither. Both
+   * are resolved in `applyInheritedTextAttributes`, which runs at the one
+   * point in the walk that holds both.
+   *
+   * Their absence here is what made `<pre>`'s `font-size: 0.8125em` vanish: the
+   * factor reached `<Text>` (whose props DO carry one) and nothing else, so a
+   * block element stating an `em` size passed its parent's size through
+   * untouched, and every descendant resolved against a size `<pre>` was not
+   * drawn in.
+   */
+  Float inheritedFontSizeEm{std::numeric_limits<Float>::quiet_NaN()};
+  Float inheritedFontSizeRem{std::numeric_limits<Float>::quiet_NaN()};
   std::string inheritedFontFamily{""};
   std::optional<FontWeight> inheritedFontWeight{};
   std::optional<FontStyle> inheritedFontStyle{};
@@ -114,6 +132,97 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // `white-space`, inherited like the rest of these: a `<pre>` sets it and
   // every run inside keeps it.
   std::optional<WhiteSpace> inheritedWhiteSpace{};
+
+  /*
+   * # The user-agent origin
+   *
+   * What the user-agent stylesheet declares, carried in properties AN AUTHOR
+   * NEVER WRITES. That separation is the whole point of them.
+   *
+   * CSS resolves a conflict between a user-agent rule and an author's by their
+   * ORIGIN — the author wins, always, whatever the specificity. This renderer
+   * has nowhere to put an origin: `uaStyle` is merged into `props.style` before
+   * anything native sees it, so by then a user-agent value and an author's are
+   * the same bytes in the same slot and no amount of care downstream can tell
+   * them apart.
+   *
+   * These give the sheet its own slot for the three declarations where that
+   * actually bites. Because an author writes `marginBlock`, `fontSize` and
+   * `fontWeight` — never these — the renderer can see which of the two spoke,
+   * and can let the author win and the platform win while still having the
+   * sheet's value to fall back on.
+   *
+   * That is what removed the stylesheet's branch on which host it was running
+   * on. It used to ask whether anything could resolve a text role and state a
+   * size only where nothing could, because a stated size was indistinguishable
+   * from an author's; with a channel of its own it states the size ALWAYS, and
+   * the renderer decides. One declaration, right on every host.
+   *
+   * Not inherited. Each belongs to the element the sheet matched.
+   */
+
+  /*
+   * The spec's own-`em` factor for this element's block margin —
+   * `h1 { margin-block: 0.67em }` is 0.67 here.
+   *
+   * A FACTOR rather than a length, because `em` in a margin resolves against
+   * the element's own font-size and the stylesheet does not know what that is:
+   * the platform decides it from the text role. Stating the product, as it did,
+   * means an h1 rendered at Title 1's 28pt carrying a margin computed for 34.
+   */
+  Float uaMarginBlockEm{std::numeric_limits<Float>::quiet_NaN()};
+
+  /*
+   * The same declaration stated in `rem` — resolved against the ROOT element's
+   * font size rather than this element's own.
+   *
+   * A separate slot rather than a unit tag beside the factor, because the two
+   * differ only in which size they multiply and a slot each says that without
+   * anything having to be decoded. An element states one or the other; stating
+   * both is a stylesheet bug and is asserted against where they are read.
+   */
+  Float uaMarginBlockRem{std::numeric_limits<Float>::quiet_NaN()};
+
+  /*
+   * The spec's `em` factor for this element's own font-size —
+   * `h1 { font-size: 2em }` is 2 here.
+   *
+   * Used only where the text ROLE this element names resolves to nothing: on a
+   * host with no type scale to ask, and on any platform where a role fails to
+   * resolve. The second case used to leave text with NO SIZE AT ALL, which
+   * surfaces as `FontSize should be a positive value` from a letter-spacing
+   * calculation — a crash reachable from a plain, valid stylesheet. With a
+   * value in this channel it is not reachable at all.
+   *
+   * A FACTOR, like `uaMarginBlockEm` beside it, but resolved against a
+   * DIFFERENT size — and that difference is the whole of css-values-4 §5.1.1.
+   * `em` in a margin is the element's OWN font size; `em` in a font-size is
+   * the size it INHERITED, because the property being resolved is the one that
+   * would otherwise be the answer. So a heading inside a 20pt container is
+   * 40pt, and its margin is `0.67 × 40`, not `0.67 × 20`.
+   *
+   * This used to arrive pre-multiplied by the root, which is `rem`, not `em`.
+   * A heading only ever sat at the root's size in practice, so the two agreed
+   * and nothing noticed — until a heading appeared inside anything that had
+   * restyled its text, where it stayed stubbornly at the root's size. Stating
+   * the factor also retires a disagreement the sheet could not win: the root
+   * is defined on both sides of the JS/C++ boundary and under Fantom the two
+   * differ, 17 against 16. A factor has no root in it to disagree about.
+   */
+  Float uaFontSizeEm{std::numeric_limits<Float>::quiet_NaN()};
+
+  /*
+   * The sheet's own font-weight — `bold` for a heading, on the web.
+   *
+   * Used on the same condition as [uaFontSizeEm]: only where the role resolves
+   * to nothing. It cannot simply be STATED, because that is what the platform
+   * branch it replaced was avoiding — both platforms carry weight at the BOTTOM
+   * of their heading scale, the inverse of the web. Every iOS Title is regular
+   * and Material is regular through Display, Headline and Title Large, so a
+   * stated `bold` would override the platform's own answer on exactly the
+   * elements the role exists to style.
+   */
+  std::optional<FontWeight> uaFontWeight{};
 
   /*
    * Whether ANY inheritable text prop above is set — computed once at parse.
