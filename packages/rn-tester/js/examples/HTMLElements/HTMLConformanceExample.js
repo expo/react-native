@@ -1374,7 +1374,7 @@ const CORPUS = [
     }
   },
   {
-    "name": "margin-collapses-out-of-a-block-containers-bottom-edge",
+    "name": "em-margin-resolves-against-the-elements-own-size",
     "withText": false,
     "tree": {
       "tag": "div",
@@ -1382,7 +1382,7 @@ const CORPUS = [
       "style": {
         "width": "300px",
         "lineHeight": "20px",
-        "fontSize": "16px"
+        "fontSize": "50px"
       },
       "children": [
         {
@@ -1402,7 +1402,8 @@ const CORPUS = [
             "height": "20px",
             "backgroundColor": "#ff9500",
             "display": "block",
-            "marginBlock": "20px"
+            "fontSize": "20px",
+            "marginBlock": "1em"
           }
         },
         {
@@ -1412,6 +1413,316 @@ const CORPUS = [
             "width": "40px",
             "height": "20px",
             "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "em-margin-ignores-the-inherited-size",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "10px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block",
+            "fontSize": "20px",
+            "marginBlock": "1em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "em-margin-follows-a-size-stated-in-em",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "30px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "fontSize": "2em",
+            "marginBlock": "0.5em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "em-margin-scales-with-the-inherited-size",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "40px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block",
+            "marginBlock": "1em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "rem-margin-is-one-size-for-the-whole-tree",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "30px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "small",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "fontSize": "8px",
+            "marginBlock": "1rem"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "gap",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "large",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30",
+            "display": "block",
+            "fontSize": "64px",
+            "marginBlock": "1rem"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "em-and-rem-differ-on-the-same-element",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "30px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "viaRem",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759",
+            "display": "block",
+            "fontSize": "64px",
+            "marginBlock": "1rem"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "gap",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "viaEm",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de",
+            "display": "block",
+            "fontSize": "64px",
+            "marginBlock": "1em"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "margin-collapses-out-of-a-block-containers-bottom-edge",
+    "withText": false,
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "measured",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff",
+            "display": "block",
+            "marginBlock": "20px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
           }
         }
       ]
@@ -1427,7 +1738,27 @@ const CORPUS = [
 function toStyle(css) {
   const out = {};
   for (const [key, value] of Object.entries(css ?? {})) {
-    if (typeof value === 'string' && /^-?d+(.d+)?px$/.test(value)) {
+    const relative =
+      typeof value === 'string'
+        ? /^(-?\d+(?:\.\d+)?)(em|rem)$/.exec(value)
+        : null;
+    if (relative != null) {
+      const factor = parseFloat(relative[1]);
+      const unit = relative[2] === 'em' ? 'Em' : 'Rem';
+      if (key === 'fontSize') {
+        out['fontSize' + unit] = factor;
+      } else if (key === 'marginBlock') {
+        out['uaMarginBlock' + unit] = factor;
+      } else {
+        throw new Error(
+          key +
+            ': ' +
+            value +
+            ' — no channel carries a relative length for this property; see ' +
+            'DOM-CSS-LIMITATION(no-author-facing-em-lengths)',
+        );
+      }
+    } else if (typeof value === 'string' && /^-?\d+(\.\d+)?px$/.test(value)) {
       out[key] = parseFloat(value);
     } else {
       out[key] = value;

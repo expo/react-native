@@ -65,6 +65,13 @@ internal class FabricUIManagerBinding : HybridClassBase() {
 
   external fun setPixelDensity(pointScaleFactor: Float)
 
+  /**
+   * Tells the layout layer what the app's theme says a text role's size is, in
+   * dp, so that a heading's `em`-relative margin can resolve against the size
+   * its text is actually drawn at. See `TextRoleMetrics` on the C++ side.
+   */
+  external fun publishTextRoleSize(roleName: String, sizeDp: Float)
+
   external fun setConstraints(
       surfaceId: Int,
       minWidth: Float,
