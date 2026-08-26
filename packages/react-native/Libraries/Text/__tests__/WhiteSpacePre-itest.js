@@ -14,11 +14,14 @@ import {createRef} from 'react';
 import {View} from 'react-native';
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 
-// The type size the measurements are calibrated against; the document default
-// is the platform's body size and differs per platform
+// The type size these measurements are calibrated against. The document's
+// default size is the platform's body size (17pt on iOS, 16sp on Android), so a
+// fixture that leaves it unset measures differently per platform
 const FONT_SIZE = 14;
 
-// Shrink-to-fit, so a reading is the text's width rather than the parent's
+// The element under test is measured directly and made shrink-to-fit: a block
+// container otherwise fills its parent, so every reading would be the parent's
+// width rather than the text's.
 function boxOf(render: ({current: HostInstance | null}) => React.Node) {
   const ref = createRef<HostInstance>();
   const root = Fantom.createRoot();
@@ -38,9 +41,34 @@ function boxOf(render: ({current: HostInstance | null}) => React.Node) {
 const SHRINK = {alignSelf: 'flex-start'};
 
 // The deterministic measurer bills 10pt per character, so a width is a
-// character count
-// One line of <pre>, measured: its line height follows the document root, so
-// two lines are asserted as twice this rather than as a number
+// character count — which is exactly what "did the whitespace survive?" asks.
+/*
+ * One line of `<pre>`, measured rather than assumed.
+ *
+ * `<pre>` carries its own `font-size: 0.8125em` from the user-agent sheet, so
+ * its line height follows the document root — which is the platform's body
+ * size, not a fixed 16. Asserting `40` for two lines silently encoded one
+ * platform's root; asserting `2 × this` says what the test means, which is that
+ * the newline produced a second line.
+ */
+/*
+ * `height` is two lines of `<pre>` rather than one.
+ *
+ * Bounded rather than equated, because each line box is ceiled to a whole
+ * device pixel on its own — Yoga rounds a text node UP so a glyph is never
+ * clipped — so twice a one-line measurement can exceed a two-line one by up to
+ * a pixel. That is 1/3pt at this scale factor; the difference actually being
+ * asserted, one line against two, is fifty times larger.
+ *
+ * The upper bound matters as much as the lower: without it this would also
+ * pass for three lines, which is a different bug in the same neighbourhood.
+ */
+function expectTwoLines(height: number) {
+  const line = PRE_LINE();
+  expect(height).toBeGreaterThan(1.5 * line);
+  expect(height).toBeLessThanOrEqual(2 * line);
+}
+
 const PRE_LINE = (): number =>
   boxOf(ref => (
     // $FlowExpectedError[not-a-component] intrinsic <pre> tag
@@ -83,7 +111,7 @@ describe('white-space: pre preserves what normal collapses', () => {
     ));
     // Collapsed: one line of "aa bb". Preserved: two lines of "aa".
     expect(collapsed.height).toBe(20);
-    expect(preserved.height).toBeCloseTo(2 * PRE_LINE(), 1);
+    expectTwoLines(preserved.height);
   });
 
   it('keeps leading whitespace that a block would trim', () => {
@@ -115,7 +143,9 @@ describe('white-space: pre preserves what normal collapses', () => {
       </pre>
     ));
     // Every space survives on both sides of the <span>: "a  " + "b  c" = 7
-    // characters. Not a <b>, which the measurer bills at 12pt a character.
+    // characters. Deliberately not a <b>: the measurer bills bold at 12pt a
+    // character rather than 10, which makes the sum say more about the
+    // measurer than about inheritance.
     expect(preserved.width).toBe(70);
   });
 
@@ -131,8 +161,9 @@ describe('white-space: pre preserves what normal collapses', () => {
 });
 
 describe('white-space: pre does not wrap', () => {
-  // The other half of `pre`: no wrapping, invisible unless a line is long
-  // enough to wrap
+  // The other half of `pre`. Preserving whitespace but still folding long
+  // lines gets the characters right and the layout wrong — and it is the half
+  // that is invisible unless a line is long enough to wrap.
   it('keeps a long line on one line where normal text wraps', () => {
     const long = 'aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj';
     const wrapped = boxOf(ref => (
@@ -141,8 +172,9 @@ describe('white-space: pre does not wrap', () => {
         {long}
       </div>
     ));
-    // Shrink-to-fit so the reading is the content's width; a block-level <pre>
-    // is as wide as its container and its content overflows
+    // Shrink-to-fit so the reading is the CONTENT's width. A block-level <pre>
+    // is as wide as its container and its content overflows — which is what
+    // the web does, and why the box alone cannot show whether it wrapped.
     const unwrapped = boxOf(ref => (
       // $FlowExpectedError[not-a-component] intrinsic <pre> tag
       <pre ref={ref} style={SHRINK}>
@@ -164,7 +196,7 @@ describe('white-space: pre does not wrap', () => {
         {'aaaaaaaa\nbb'}
       </pre>
     ));
-    expect(box.height).toBeCloseTo(2 * PRE_LINE(), 1);
+    expectTwoLines(box.height);
     expect(box.width).toBe(80);
   });
 });
