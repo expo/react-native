@@ -51,6 +51,36 @@ NS_ASSUME_NONNULL_BEGIN
 - (facebook::react::SharedTouchEventEmitter)touchEventEmitterAtContainerPoint:(CGPoint)point;
 
 /**
+ * The link at `point`, in the owning View's coordinate space, or nil.
+ *
+ * The value is UIKit's own `NSLinkAttributeName` payload — an `NSURL`, or an
+ * `NSString` for a destination that would not parse. `outRects`, when given, is
+ * filled with the link's enclosing rects in that same space, so the platform's
+ * context menu can lift exactly the glyphs the link occupies rather than a
+ * rectangle around them.
+ *
+ * Shares `containerFrame` with painting and with touch resolution, for the same
+ * reason they share it: a link must lift where it was drawn.
+ */
+- (nullable id)linkAtContainerPoint:(CGPoint)point rects:(nullable NSMutableArray<NSValue *> *)outRects;
+
+/**
+ * Glyph rects this run must not paint, given in the owning View's space.
+ *
+ * Set while — and only while — UIKit is displaying its own copy of those
+ * glyphs, so they are never on screen twice. The interaction knows when that is
+ * because UIKit hides the cover view it was handed, and this is slaved to that.
+ *
+ * Pass nil to paint normally again.
+ */
+- (void)setSuppressedContainerRects:(nullable NSArray<NSValue *> *)rects;
+
+/** Whether any fragment in this run carries an `href`. */
+- (BOOL)containsLink;
+
+
+
+/**
  * Discards the cached accessibility elements. Called when the run changes,
  * because those elements are positioned on fragment rects that only the current
  * text and layout can produce.
