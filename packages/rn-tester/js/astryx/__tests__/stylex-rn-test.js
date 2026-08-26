@@ -517,6 +517,71 @@ describe('unitless line-height', () => {
   });
 });
 
+describe('em lengths', () => {
+  // `em` on a LENGTH is the element's own computed font size (css-values-4
+  // §5.1.1), so it resolves like the ratio above. Tailwind's `tracking-tight`
+  // is `letter-spacing: -0.025em`, and passing the literal through reached the
+  // renderer as a string it rejects outright.
+  it('resolves against the font size in the same block', () => {
+    const {style} = stylex.props({fontSize: '16px', letterSpacing: '-0.025em'});
+    expect(style).toMatchObject({fontSize: 16, letterSpacing: -0.4});
+  });
+
+  it('resolves regardless of declaration order', () => {
+    const {style} = stylex.props({letterSpacing: '0.1em', fontSize: '20px'});
+    expect(style).toMatchObject({letterSpacing: 2});
+  });
+
+  // On `font-size` itself `em` is the INHERITED size, a step further up than
+  // anything here can see — so it must NOT be resolved against the size being
+  // declared, which would be circular.
+  it('does not resolve em on font-size against itself', () => {
+    const {style} = stylex.props({fontSize: '2em'});
+    expect(style?.fontSize).not.toBe(4);
+  });
+});
+
+describe('CSS-wide keywords', () => {
+  // `inherit` on a property the renderer's cascade inherits becomes an
+  // explicit null: the merge cancels the layers below and the cascade supplies
+  // the value, which is what `inherit` computes to. The stylesheet path always
+  // did this; a stylex value written straight in a component did not, and
+  // reached the renderer as the literal string.
+  it('turns inherit on an inherited property into an explicit null', () => {
+    const {style} = stylex.props({lineHeight: 'inherit', color: 'inherit'});
+    expect(style).toMatchObject({lineHeight: null, color: null});
+  });
+
+  // `white-space` is inherited by the renderer's cascade and carries a
+  // user-agent declaration (`pre` on <pre>), which is the case where dropping
+  // and nulling differ: only an explicit null cancels the layer below.
+  it('nulls inherit on white-space, which has a user-agent declaration', () => {
+    const {style} = stylex.props({whiteSpace: 'inherit'});
+    expect(style).toMatchObject({whiteSpace: null});
+  });
+
+  it('drops inherit on a property with no inherited value to take', () => {
+    const {style} = stylex.props({padding: 'inherit'});
+    expect(style?.padding).toBe(undefined);
+  });
+});
+
+describe('border-style: none', () => {
+  // React Native's `borderStyle` takes solid, dotted or dashed and has no way
+  // to say "no border". CSS says `none` forces the used width to zero
+  // (CSS2 §8.5.3), which is the translation.
+  it('becomes a zero border width', () => {
+    const {style} = stylex.props({borderStyle: 'none', borderColor: 'red'});
+    expect(style?.borderWidth).toBe(0);
+    expect(style?.borderStyle).toBe(undefined);
+  });
+
+  it('leaves a real border style alone', () => {
+    const {style} = stylex.props({borderStyle: 'dashed'});
+    expect(style?.borderStyle).toBe('dashed');
+  });
+});
+
 describe('CSS Grid', () => {
   // The renderer implements css-grid-2 natively and reads track lists as CSS
   // strings, so the runtime's job is only to NOT drop them. It used to: `grid`

@@ -35,10 +35,10 @@ import {Kbd} from '../../astryx/vendor/Kbd/Kbd';
 import {ProgressBar} from '../../astryx/vendor/ProgressBar/ProgressBar';
 // $FlowFixMe[cannot-resolve-module]
 import {Skeleton} from '../../astryx/vendor/Skeleton/Skeleton';
-// $FlowFixMe[cannot-resolve-module] vendored TypeScript source
-import {Step, Stepper} from '../../astryx/vendor/Stepper';
 // $FlowFixMe[cannot-resolve-module]
 import {StatusDot} from '../../astryx/vendor/StatusDot/StatusDot';
+// $FlowFixMe[cannot-resolve-module] vendored TypeScript source
+import {Step, Stepper} from '../../astryx/vendor/Stepper';
 // $FlowFixMe[cannot-resolve-module]
 import {VStack} from '../../astryx/vendor/VStack/VStack';
 import {

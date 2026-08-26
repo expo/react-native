@@ -23,11 +23,10 @@
  * `@stylexjs/stylex` through a Metro alias that Jest does not have.
  */
 
-import * as React from 'react';
-import TestRenderer from 'react-test-renderer';
-
 import {jsx} from '../jsx-runtime';
 import * as stylex from '../stylex-rn';
+import * as React from 'react';
+import TestRenderer from 'react-test-renderer';
 
 const marker = stylex.defineMarker();
 

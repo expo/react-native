@@ -174,7 +174,21 @@ const CONTROL_ROW = {
  * screen while every other string on it, each carrying its own themed colour,
  * was fine.
  */
-const CONTROL_LABEL = {color: LABEL_COLOR};
+const CONTROL_LABEL = {
+  color: LABEL_COLOR,
+  /*
+   * The label wraps its own text rather than moving below the control.
+   *
+   * These rows are `flex-wrap: wrap`, so a label too long for the space left
+   * beside the control is carried WHOLE onto the next line — the control
+   * alone on one line and its label under it, which reads as two unrelated
+   * things. "Unlabelled, for comparison" did exactly that at 393pt, the
+   * iPhone 15 Pro's width, while fitting at 402pt. Shrinking instead keeps it
+   * where a settings row keeps it: beside the control, wrapped to the width
+   * that is actually left.
+   */
+  flexShrink: 1,
+};
 
 /*
  * `grouped` gives a case the page a platform list needs behind it.
@@ -1115,9 +1129,16 @@ function WholeForm() {
             <Text style={NOTE}>
               tier (radio — only the checked one is submitted)
             </Text>
+            {/* One row per radio. A run of radios draws as the platform's
+                grouped list, and a list row is a row: putting two of them side
+                by side in one flex row gave the list a single row with both
+                labels in it and no control at all — "MonthlyYearly" in a white
+                pill. */}
             <View style={RADIO_ROW}>
               <input type="radio" name="tier" value="monthly" defaultChecked />
               <Text style={CONTROL_LABEL}>Monthly</Text>
+            </View>
+            <View style={RADIO_ROW}>
               <input type="radio" name="tier" value="yearly" />
               <Text style={CONTROL_LABEL}>Yearly</Text>
             </View>
@@ -1133,19 +1154,17 @@ function WholeForm() {
                 submitted (HTML §4.10.18.6), so the chooser can live inside
                 the form — where the submit row needs to be — without
                 touching the payload. Selection is fully controlled. */}
-            <View style={RADIO_ROW}>
-              {['get', 'post'].map(m => (
-                <View key={m} style={RADIO_ROW}>
-                  <input
-                    type="radio"
-                    value={m}
-                    checked={method === m}
-                    onChange={() => setMethod(m)}
-                  />
-                  <Text style={CONTROL_LABEL}>{m.toUpperCase()}</Text>
-                </View>
-              ))}
-            </View>
+            {['get', 'post'].map(m => (
+              <View key={m} style={RADIO_ROW}>
+                <input
+                  type="radio"
+                  value={m}
+                  checked={method === m}
+                  onChange={() => setMethod(m)}
+                />
+                <Text style={CONTROL_LABEL}>{m.toUpperCase()}</Text>
+              </View>
+            ))}
 
             <View style={{...ROW, marginTop: 4}}>
               <button type="submit">Submit</button>

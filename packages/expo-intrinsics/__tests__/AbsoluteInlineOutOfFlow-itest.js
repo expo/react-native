@@ -83,6 +83,39 @@ describe('an absolutely positioned inline element', () => {
     expect(widthOf(withHidden)).toBe(widthOf(plain));
   });
 
+  it('keeps the hidden text in the tree, since that is what it is for', () => {
+    // The other half of the rule, and the half that would regress silently.
+    // "Contributes nothing to the line" is one step from "is not mounted", and
+    // a visually-hidden span that stops being mounted still passes every
+    // layout assertion here while destroying the only reason it exists: the
+    // text is invisible so that assistive technology, and nothing else, reads
+    // it. On a device this shows up as a TalkBack node beside the label.
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{width: 400}}>
+          <View style={{display: 'block', alignSelf: 'flex-start'}}>
+            {'Cart'}
+            {/* $FlowFixMe[prop-missing] intrinsic */}
+            <span
+              style={{
+                position: 'absolute',
+                width: 1,
+                height: 1,
+                overflow: 'hidden',
+              }}>
+              {'completed'}
+            </span>
+          </View>
+        </View>,
+      );
+    });
+
+    expect(
+      JSON.stringify(root.getRenderedOutput({props: []}).toJSX()) ?? '',
+    ).toContain('completed');
+  });
+
   it('still lays out in the line when it is not positioned', () => {
     // The control: without `position: absolute` the same span is ordinary
     // inline content and DOES lengthen the line, so the test above is
