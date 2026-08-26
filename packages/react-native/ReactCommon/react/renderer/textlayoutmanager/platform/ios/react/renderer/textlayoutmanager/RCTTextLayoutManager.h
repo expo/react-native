@@ -105,6 +105,24 @@ using RCTTextLayoutFragmentEnumerationBlock =
                                  frame:(CGRect)frame
                                atPoint:(CGPoint)point;
 
+/**
+ * The link at `point`, or nil where there is none.
+ *
+ * The value is whatever `NSLinkAttributeName` holds for that character — an
+ * `NSURL` normally, an `NSString` for a destination NSURL would not parse.
+ *
+ * `outRects` is filled with the ENCLOSING RECTS of the whole link, in the
+ * frame's coordinate space, not just the line the touch landed on. A link that
+ * wraps is several rects, and the platform's context menu lifts all of them
+ * together — which is what makes the preview look like the link rather than
+ * like a rectangle drawn around part of it.
+ */
+- (nullable id)getLinkWithAttributedString:(facebook::react::AttributedString)attributedString
+                       paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
+                                     frame:(CGRect)frame
+                                   atPoint:(CGPoint)point
+                                     rects:(nullable NSMutableArray<NSValue *> *)outRects;
+
 - (void)getRectWithAttributedString:(facebook::react::AttributedString)attributedString
                 paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
                  enumerateAttribute:(NSString *)enumerateAttribute
