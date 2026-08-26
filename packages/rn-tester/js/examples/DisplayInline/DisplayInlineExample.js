@@ -88,6 +88,163 @@ export default {
       ),
     },
     {
+      name: 'baseline',
+      title: 'Baseline alignment of an atomic inline',
+      description:
+        'An atomic inline box — inline-block, inline-flex, an <img> — is ' +
+        'baseline-aligned by default. Its baseline here is its bottom border ' +
+        'edge, so that edge should sit ON the text baseline, and the line has ' +
+        'to stay tall enough for the text’s descender BELOW it. The text is ' +
+        'all x-height characters, so the bottom of the glyphs is the ' +
+        'baseline; the box bottom should line up with it exactly.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<View style={{display: 'block'}}>\n" +
+            "  {'xxx '}\n" +
+            "  <span style={{display: 'inline-block', width: 24, height: 40,\n" +
+            "                backgroundColor: '#c33'}} />\n" +
+            "  {' xxx'}\n" +
+            '</View>'
+          }>
+          <View style={{gap: 10}}>
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 24,
+                  height: 40,
+                  backgroundColor: '#c33',
+                }}
+              />
+              {' xxx'}
+            </View>
+            {/* With in-flow text the baseline is that text's, not the bottom
+                edge (CSS2 §10.8.1): the inner glyphs must sit on the SAME
+                baseline as the outer ones. */}
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  paddingHorizontal: 4,
+                  paddingTop: 16,
+                  backgroundColor: '#39c',
+                }}>
+                {'xxx'}
+              </span>
+              {' xxx'}
+            </View>
+            {/* A third offset, deliberately unlike the other two: padding
+                BELOW the text pushes the box's baseline well above its bottom
+                edge. Two probes cannot tell a correct formula from a wrong one
+                when one of them has a zero offset — the empty box's baseline IS
+                its bottom edge, so every candidate agrees on it. */}
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  paddingHorizontal: 4,
+                  paddingBottom: 24,
+                  backgroundColor: '#7a3',
+                }}>
+                {'xxx'}
+              </span>
+              {' xxx'}
+            </View>
+            {/* The case that actually stresses the placement: a box SHORTER
+                than the text beside it. In the probes above the box is the
+                tallest thing on its line, so its top coincides with the line
+                fragment's top and several different formulas would agree by
+                accident. Here the text sets the line's ascent instead. */}
+            {/* $FlowExpectedError[incompatible-type] `fontSize` on a View is
+                honoured at runtime — text attributes cascade to text children —
+                but ViewStyle does not model inherited text properties yet.
+                DOM-CSS-LIMITATION(view-style-text-inheritance) */}
+            <View style={{display: 'block', fontSize: 40}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 10,
+                  height: 10,
+                  backgroundColor: '#93c',
+                }}
+              />
+              {' xxx'}
+            </View>
+            {/* Both at once: shorter than the line AND a non-zero baseline
+                offset. The two cases above each vary only one of those, so
+                each still leaves one term of the placement untested. */}
+            {/* $FlowExpectedError[incompatible-type] `fontSize` on a View is
+                honoured at runtime — text attributes cascade to text children —
+                but ViewStyle does not model inherited text properties yet.
+                DOM-CSS-LIMITATION(view-style-text-inheritance) */}
+            <View style={{display: 'block', fontSize: 40}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  fontSize: 10,
+                  paddingHorizontal: 4,
+                  paddingBottom: 6,
+                  backgroundColor: '#c39',
+                }}>
+                {'xxx'}
+              </span>
+              {' xxx'}
+            </View>
+            {/* overflow other than `visible` is the rule's second escape hatch
+                (CSS2 §10.8.1): the box aligns by its bottom edge whatever its
+                content, because a clipped line box is not something you can
+                sensibly align a line to. This pink box has the SAME content and
+                padding as the one above it, so the only thing that may move it
+                is the overflow. Its bottom should sit on the baseline. */}
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <span> tag */}
+              <span
+                style={{
+                  display: 'inline-block',
+                  paddingHorizontal: 4,
+                  paddingBottom: 24,
+                  overflow: 'hidden',
+                  backgroundColor: '#f80',
+                }}>
+                {'xxx'}
+              </span>
+              {' xxx'}
+            </View>
+            {/* A replaced element. CSS2 §10.8.1 gives an inline replaced box
+                the same treatment as a box with no line boxes: its baseline is
+                its bottom margin edge, so the image's bottom should sit on the
+                text baseline exactly as the empty red box does. A data URI so
+                the probe never depends on the network. */}
+            <View style={{display: 'block'}}>
+              {'xxx '}
+              {/* $FlowExpectedError[not-a-component] intrinsic <img> tag */}
+              <img
+                source={{
+                  uri:
+                    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB' +
+                    'CAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+                }}
+                style={{width: 30, height: 30, backgroundColor: '#333'}}
+              />
+              {' xxx'}
+            </View>
+          </View>
+        </DemoContent>
+      ),
+    },
+    {
       title: 'Un-sized inline View: contents flow like a <span>',
       description:
         'With auto size and all-inline contents, the contents join the surrounding flow with the inline View’s inheritable text props applied; taps target the inner View.',
@@ -194,7 +351,10 @@ export default {
         'canonical visually-hidden block — position:absolute on a 1x1 clipped ' +
         'box, the way a component says "assistive technology only" — ended up ' +
         'laying its screen-reader text out as visible words and squeezing the ' +
-        'real label until it wrapped. Both lines below must be the same width.',
+        'real label until it wrapped. Both lines below must be the same width, ' +
+        'and the word "completed" must not appear on either — it is there, and ' +
+        'invisible, which is the whole point: assistive technology still reads ' +
+        'it. TalkBack lists it as its own node beside the two "Cart"s.',
       render: (): React.Node => (
         <DemoContent
           code={

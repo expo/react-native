@@ -29,6 +29,7 @@
 
 import type {ElementDescriptor} from './css';
 import type {VarScope} from './stylex-rn';
+import type {MarkerState} from './stylex-rn';
 
 import {
   cssVersion,
@@ -46,12 +47,10 @@ import {
   EMPTY_MARKER_STATE,
   hasDescendantConditions,
   hasMarkers,
-  markerOfProps,
   parseTransformString,
   resolveInherited,
   resolveWhen,
 } from './stylex-rn';
-import type {MarkerState} from './stylex-rn';
 import {CurrentColorContext} from './svg/CurrentColor';
 import {Svg, SvgCircle, SvgLine, SvgPath, SvgRect} from './svg/Svg';
 import {useInteractionState} from './useInteractionState';
@@ -322,6 +321,7 @@ function markedChildren(children: unknown): unknown {
  * on an inherited custom property, then publishes its own declarations to the
  * subtree.
  */
+
 function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   const inheritedScope = React.useContext(VarScopeContext);
   const parentDescriptor = React.useContext(ElementDescriptorContext);
@@ -336,6 +336,7 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
     __startingStyle,
     __stylexMarker,
     __stylexWhen,
+    __stylexAnswersPress,
     __astryxIndex,
     __astryxCount,
     className,
@@ -583,6 +584,19 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
     ? composeInteractionHandlers(rest, interactionHandlers)
     : rest;
   /*
+   * A button whose own styles answer a press tells the platform to stay out of
+   * it. Both responding at once puts two effects on different clocks — the
+   * platform's instantly, the author's over its transition — which was
+   * reported from a device as a button that goes dark and then changes colour.
+   * A button that answers NOTHING is the opposite failure, and the more common
+   * one, so this says which case it is rather than picking one for everybody.
+   */
+  const pressProps =
+    __astryxTag === 'button' &&
+    (css.dependsOnStates || __stylexAnswersPress === true)
+      ? {...stateProps, authorStatesPressFeedback: true}
+      : stateProps;
+  /*
    * The `when.*` blocks this element deferred, settled now that the marker
    * state is known, layered over everything else so a matching condition wins
    * the same way the generated rule would.
@@ -598,8 +612,8 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
 
   const hostProps =
     styleWithWhen != null
-      ? {...stateProps, style: styleWithWhen, children: markedChildren(children)}
-      : {...stateProps, children: markedChildren(children)};
+      ? {...pressProps, style: styleWithWhen, children: markedChildren(children)}
+      : {...pressProps, children: markedChildren(children)};
   if (mapped != null) {
     // Behavior-mapped element (e.g. <input> → TextInput). For most of these
     // children are noise — a TextInput renders any it is given as text — so
