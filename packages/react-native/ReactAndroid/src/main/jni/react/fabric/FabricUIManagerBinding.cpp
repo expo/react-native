@@ -7,6 +7,8 @@
 
 #include "FabricUIManagerBinding.h"
 
+#include <react/renderer/attributedstring/TextRoleMetrics.h>
+
 #include "AndroidAnimationChoreographer.h"
 #include "AndroidEventBeat.h"
 #include "ComponentFactory.h"
@@ -49,6 +51,21 @@ std::shared_ptr<Scheduler> FabricUIManagerBinding::getScheduler() {
 
 void FabricUIManagerBinding::setPixelDensity(float pointScaleFactor) {
   pointScaleFactor_ = pointScaleFactor;
+}
+
+void FabricUIManagerBinding::publishTextRoleSize(
+    jni::alias_ref<jstring> roleName,
+    jfloat sizeDp) {
+  /*
+   * Android's type scale is resolved in Kotlin, from the app's THEME, and the
+   * layout layer here needs the resulting size to resolve a heading's
+   * `em`-relative margin against it. See `TextRoleMetrics`.
+   *
+   * In dp, which is what Yoga lays out in and what the size has already been
+   * converted to on the Kotlin side — including the user's font scale, so a
+   * margin computed from it grows with the text beside it.
+   */
+  TextRoleMetrics::publishByName(roleName->toStdString(), sizeDp);
 }
 
 void FabricUIManagerBinding::driveCxxAnimations() {
@@ -858,6 +875,8 @@ void FabricUIManagerBinding::registerNatives() {
           "setConstraints", FabricUIManagerBinding::setConstraints),
       makeNativeMethod(
           "setPixelDensity", FabricUIManagerBinding::setPixelDensity),
+      makeNativeMethod(
+          "publishTextRoleSize", FabricUIManagerBinding::publishTextRoleSize),
       makeNativeMethod(
           "driveCxxAnimations", FabricUIManagerBinding::driveCxxAnimations),
       makeNativeMethod(

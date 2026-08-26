@@ -9,6 +9,7 @@
 
 #include "CloneWithLayoutMetrics.h"
 
+#include <cmath>
 #include <functional>
 #include <limits>
 #include <optional>
@@ -16,6 +17,8 @@
 #include <unordered_map>
 #include <vector>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/attributedstring/TextAttributes.h>
+#include <react/renderer/attributedstring/TextRoleMetrics.h>
 #include <react/renderer/components/view/BaseViewProps.h>
 #include <react/renderer/components/view/ElementBoxShadowNode.h>
 // Included for its `extern` declaration, not just for the type: a `const` at
@@ -44,6 +47,19 @@
 namespace facebook::react {
 
 namespace {
+/*
+ * These read the NODE's style, not `props.yogaStyle`, and the distinction is
+ * not cosmetic. The flow-relative names — `marginBlock`, `paddingInline` — are
+ * not stored in `yogaStyle` at all; they are separate alias fields that
+ * `YogaLayoutableShadowNode::applyAliasedProps` folds onto the node's style,
+ * with PRECEDENCE over the physical edges. Asking `props.yogaStyle` therefore
+ * misses exactly the spellings an author of an HTML-element tree is most likely
+ * to have written, and a user-agent default would overwrite them.
+ *
+ * `updateYogaProps` runs from the Yoga base's constructor, before `initialize`,
+ * so by the time these are called the aliases are already applied.
+ */
+
 /** Whether the author stated horizontal padding of their own, on any edge. */
 bool authoredHorizontalPadding(const yoga::Style& style)
 {
@@ -51,6 +67,18 @@ bool authoredHorizontalPadding(const yoga::Style& style)
        {yoga::Edge::Start, yoga::Edge::End, yoga::Edge::Left, yoga::Edge::Right, yoga::Edge::Horizontal,
         yoga::Edge::All}) {
     if (style.padding(edge).isDefined()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Whether the author stated a block margin of their own, on any edge. */
+bool authoredBlockMargin(const yoga::Style& style)
+{
+  for (auto edge :
+       {yoga::Edge::Top, yoga::Edge::Bottom, yoga::Edge::Vertical, yoga::Edge::All}) {
+    if (style.margin(edge).isDefined()) {
       return true;
     }
   }
@@ -279,6 +307,29 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
     this->applyRadioRowPaddingIfNeeded();
   }
 
+  // Asked HERE, at the one moment the Yoga style holds only what the element
+  // itself declared: `initialize()` runs from the constructor, before any
+  // configure pass has had the chance to write a user-agent margin over it.
+  this->authoredBlockMargin_ = authoredBlockMargin(this->yogaNode_.style());
+
+  // Whether this element reads the cascade for a LENGTH. See the trait: it is
+  // how the configure walk knows to hand a cascade to a node with no text in
+  // it, which the dependents optimisation would otherwise skip.
+  if (std::isfinite(viewProps.uaMarginBlockEm) ||
+      std::isfinite(viewProps.uaMarginBlockRem)) {
+    this->traits_.set(ShadowNodeTraits::Trait::ResolvesRelativeLength);
+  } else {
+    this->traits_.unset(ShadowNodeTraits::Trait::ResolvesRelativeLength);
+  }
+
+  // A first answer from what is knowable this early — a role resolves to a
+  // platform size without needing a cascade, which is every heading. Anything
+  // resolving against a font size instead is corrected by the configure pass,
+  // which is the first moment that size exists.
+  this->applyRelativeBlockMarginIfNeeded(
+      std::numeric_limits<Float>::quiet_NaN(),
+      std::numeric_limits<Float>::quiet_NaN());
+
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       viewProps.displayInline) {
     // Atomic `display:'inline'` boxes are positioned by their container's
@@ -321,6 +372,120 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
  * A DEFAULT, not an override: a row that states its own horizontal padding
  * keeps it, exactly as a user-agent stylesheet gives way to an author's.
  */
+/*
+ * The heading margin, resolved against the size the heading is drawn at.
+ *
+ * `h1 { margin-block: 0.67em }` is one multiplication, but neither operand used
+ * to be available in the same place. The sheet knows the factor and not the
+ * size — the platform decides that from the text role. The text layer learns
+ * the size and has no business setting margins. So the sheet sends the FACTOR
+ * (`uaMarginBlockEm`), the text layer publishes the SIZE (`TextRoleMetrics`), and
+ * they meet here, in the only layer that writes margins.
+ *
+ * Before this, the sheet stated the product and computed it against the size
+ * the WEB would have used: an `<h1>` drawn at Title 1's 28pt carried the 22.8pt
+ * margin belonging to 34pt. The type came from the platform and the rhythm
+ * around it did not.
+ *
+ * ## What it does NOT do
+ *
+ * It does not take spacing from the platform. Neither iOS nor Android states
+ * what the gap above a heading should be, and inventing one from a system
+ * metric would be a guess wearing a native badge. The FACTOR here is the web's,
+ * unchanged; only the size it multiplies is the platform's. `em` means what it
+ * has always meant, and finally has the right value to resolve against.
+ *
+ * ## Falling back
+ *
+ * Where the platform published nothing — Fantom, or any host with no type scale
+ * — this resolves against the font-size the cascade carried, which on such a
+ * host is the web ladder's. Same code path, same factor, and the answer comes
+ * out as the web's ladder. The fallback is not a degraded mode; it is the
+ * correct result for a host with no platform to ask.
+ *
+ * ## Precedence
+ *
+ * A default, not an override. An author who writes `marginBlock` (or `marginTop`,
+ * or `margin`) keeps it untouched — `uaMarginBlockEm` is a separate property that
+ * only the user-agent sheet writes, so an author's margin and this one can never
+ * be confused for one another. That separation is what lets a user-agent value
+ * lose to an author's here, which is the precedence a UA sheet has on the web
+ * and which merging both into one `style` cannot express.
+ */
+template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::
+    applyRelativeBlockMarginIfNeeded(Float emBase, Float remBase) {
+  const auto& viewProps = static_cast<const ViewPropsT&>(*this->props_);
+  const Float emFactor = viewProps.uaMarginBlockEm;
+  const Float remFactor = viewProps.uaMarginBlockRem;
+  // `isfinite` rather than `isnan`: unstated is the common exit, and an
+  // infinite factor — reachable from an author writing `Infinity` — would
+  // otherwise produce a margin Yoga cannot lay out. A NEGATIVE factor is left
+  // alone, because a negative margin is meaningful CSS.
+  const bool hasEm = std::isfinite(emFactor);
+  const bool hasRem = std::isfinite(remFactor);
+  if (!hasEm && !hasRem) {
+    return;
+  }
+  react_native_assert(
+      !(hasEm && hasRem) &&
+      "a user-agent block margin is stated in one unit or the other");
+  if (this->authoredBlockMargin_) {
+    return;
+  }
+
+  /*
+   * `rem` names one size for the whole document, so there is nothing about
+   * THIS element to consult: the base arrives from the root and the only
+   * fallback is the initial value the root itself starts from.
+   */
+  Float fontSize = std::numeric_limits<Float>::quiet_NaN();
+  if (hasRem) {
+    fontSize = remBase;
+  } else {
+    /*
+     * `em` is this element's own computed font size. In order of authority:
+     *
+     *  1. what the platform says this role is — the case this exists for, and
+     *     the only one that tracks the user's text-size setting. The cascade
+     *     cannot supply this one: where a platform role answers, the cascade
+     *     deliberately carries NO size, so that the platform's own font is
+     *     asked for downstream and brings its weight and leading with it;
+     *  2. the size the CASCADE computed for this element — the spec's answer,
+     *     and the only one that sees an ancestor's `font-size`. The sheet's
+     *     own stand-in for an unresolved role is already folded into it, so
+     *     this step covers that case too rather than repeating it;
+     *  3. the element's own declaration, for the one call that happens before
+     *     a cascade exists (see `initialize`);
+     *  4. the renderer's default, for an element that states none of these.
+     *
+     * Every step is a real font-size for this element, so the margin is `em`
+     * against something true at each one.
+     */
+    if (viewProps.inheritedDynamicTypeRamp.has_value()) {
+      if (const auto published =
+              TextRoleMetrics::sizeOf(*viewProps.inheritedDynamicTypeRamp)) {
+        fontSize = *published;
+      }
+    }
+    if (std::isnan(fontSize)) {
+      fontSize = emBase;
+    }
+    if (std::isnan(fontSize)) {
+      fontSize = viewProps.inheritedFontSize;
+    }
+  }
+  if (std::isnan(fontSize) || fontSize <= 0) {
+    fontSize = TextAttributes::defaultTextAttributes().fontSize;
+  }
+
+  const Float margin = (hasRem ? remFactor : emFactor) * fontSize;
+  auto style = this->yogaNode_.style();
+  style.setMargin(yoga::Edge::Top, yoga::StyleLength::points(margin));
+  style.setMargin(yoga::Edge::Bottom, yoga::StyleLength::points(margin));
+  this->yogaNode_.setStyle(style);
+}
+
 template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT>
 void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::
     applyRadioRowPaddingIfNeeded() {
@@ -328,9 +493,8 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
   if (padding.start == 0 && padding.end == 0) {
     return;
   }
-  const auto& authored = static_cast<const ViewPropsT&>(*this->props_).yogaStyle;
   auto style = this->yogaNode_.style();
-  if (authoredHorizontalPadding(authored)) {
+  if (authoredHorizontalPadding(style)) {
     return;
   }
   style.setPadding(yoga::Edge::Start, yoga::StyleLength::points(padding.start));
