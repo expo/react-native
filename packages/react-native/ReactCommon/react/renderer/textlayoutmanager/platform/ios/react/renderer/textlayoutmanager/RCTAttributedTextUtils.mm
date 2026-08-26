@@ -605,6 +605,61 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
     attributes[RCTAttributedStringIsHighlightedAttributeName] = @YES;
   }
 
+  /*
+   * The URL goes in `NSLinkAttributeName` — UIKit's OWN key for "this range is
+   * a link", not a private one of ours.
+   *
+   * Using the platform's key rather than inventing a parallel attribute is the
+   * point. It is what `UITextView` reads, what the context-menu interaction
+   * looks for, and what any future host that puts this attributed string in a
+   * real text view would already understand. Nothing about it is inert: the
+   * long-press interaction resolves a touch to a link by asking the attributed
+   * string for this attribute at that character index.
+   *
+   * It does NOT style anything. TextKit draws a link however the attributed
+   * string says to, and the colour and underline come from the user-agent
+   * sheet a layer above — which is why an author's `color` on an `<a>` still
+   * wins, and why iOS's no-underline convention is expressible at all.
+   */
+  if (!textAttributes.href.empty()) {
+    NSString *href = [NSString stringWithUTF8String:textAttributes.href.c_str()];
+    NSURL *url = href != nil ? [NSURL URLWithString:href] : nil;
+    // A string NSURL will not parse is kept as a STRING: `NSLinkAttributeName`
+    // accepts either, and dropping the attribute would leave the range with no
+    // way to say it is a link at all. The interaction handles both.
+    attributes[NSLinkAttributeName] = url ?: href;
+
+    /*
+     * And then say, explicitly, whether it is underlined.
+     *
+     * `NSLayoutManager` UNDERLINES A LINK BY ITSELF. The attribute is not only
+     * a destination to TextKit; it is also a style, inherited from the macOS
+     * text system, and an absent `NSUnderlineStyleAttributeName` means "use the
+     * link default" rather than "no underline". So adding the destination
+     * silently put the web's underline back on iOS — where UIKit's own
+     * `linkTextAttributes` has none — undoing the deviation a layer above and
+     * looking exactly like the regression it was.
+     *
+     * Turning it off takes BOTH lines below, which is worth stating because the
+     * obvious one alone does nothing: `NSUnderlineStyleNone` is ignored for a
+     * link range — measured, not assumed; the underline was still on screen
+     * with the style explicitly set to none and a unit test asserting it. What
+     * removes it is drawing it in a CLEAR colour. The style is still stated,
+     * because it is the correct declaration and costs nothing if a future
+     * TextKit starts honouring it.
+     *
+     * Underline colour does not affect layout, so this changes ink only.
+     *
+     * Only where the cascade resolved to NO underline. An author who asked for
+     * one keeps it — the attribute is already set by then, and this whole
+     * branch is skipped.
+     */
+    if (attributes[NSUnderlineStyleAttributeName] == nil) {
+      attributes[NSUnderlineStyleAttributeName] = @(NSUnderlineStyleNone);
+      attributes[NSUnderlineColorAttributeName] = UIColor.clearColor;
+    }
+  }
+
   if (textAttributes.role.has_value()) {
     std::string roleStr = toString(textAttributes.role.value());
     attributes[RCTTextAttributesAccessibilityRoleAttributeName] = [NSString stringWithUTF8String:roleStr.c_str()];
