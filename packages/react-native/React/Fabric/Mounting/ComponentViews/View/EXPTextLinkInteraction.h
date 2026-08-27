@@ -14,19 +14,16 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * `rects` is filled in the host view's coordinate space. A link that wraps
  * across lines has several.
- */
-/**
- * `outSourceView`, when set, is the view whose pixels the lift should be taken
- * from — the run that drew the glyphs, which paints on a CLEAR background.
  *
- * Snapshotting the host view instead brings the page's own background up with
- * the text, so the lifted link floats on a slab of it. Left unset by a caller
- * that has no such view, in which case the host is used.
+ * `outLinkView` is set to the view that DRAWS that link — the view whose glyphs
+ * they are, or the mounted view the link's content already is (`<a><img>`).
+ * Not a copy of it and not a snapshot: the actual view, which is what lets
+ * UIKit lift it natively. A resolver that cannot name one resolves no link.
  */
 typedef id _Nullable (^EXPTextLinkResolver)(
     CGPoint point,
     NSMutableArray<NSValue *> *rects,
-    UIView *_Nullable *_Nullable outSourceView);
+    UIView *_Nullable *_Nullable outLinkView);
 
 
 /**
@@ -46,30 +43,37 @@ typedef id _Nullable (^EXPTextLinkResolver)(
  *
  * ## Which parts are Apple's, and which are ours
  *
- * Worth stating plainly, because the answer is "nearly all of it, with one
- * deliberate exception".
+ * Worth stating plainly, because the answer is "all of it".
  *
  * Apple's, used as documented: `UIContextMenuInteraction` and its delegate;
  * `UIContextMenuConfiguration`; `UITargetedPreview`; `UIPreviewParameters`,
  * built with `initWithTextLineRects:` — the initialiser that exists for exactly
- * this, so the lift's padding, corner radius and multi-line joining are UIKit's
- * numbers and not copied ones; `UIMenu`/`UIAction`; `dismissMenu`. Both
- * generations of the preview callbacks are implemented, so no path UIKit can
- * take is unanswered.
+ * this, so the lift's padding, corner radius, platter colour and multi-line
+ * joining are UIKit's numbers and not copied ones; `UIPreviewTarget`;
+ * `UIMenu`/`UIAction`; `dismissMenu`. Both generations of the preview callbacks
+ * are implemented, so no path UIKit can take is unanswered.
  *
- * OURS, and unavoidable: the preview's VIEW. `UITargetedPreview` expects the
- * view the user is interacting with, and for a link in a paragraph no such view
- * exists — the link is a range of glyphs inside text this renderer draws in one
- * pass. So the glyphs are captured and stood up as a view of their own. That is
- * within the API's contract (it asks only for a view in a window) but it is
- * scaffolding UIKit would not need if this were a `UITextView`, and the
- * suppression that stops the original drawing underneath is entirely ours.
+ * OURS: only the choice of WHICH view is the link, and the container the lift
+ * is targeted into. Both are answers to questions the API asks.
  *
- * The documented alternative for a preview that is not itself in place —
- * `UIPreviewTarget(container:center:)` — was tried first and is WORSE here:
- * UIKit tears its preview down between the highlight and the menu, and with
- * nothing real to put back it left a hole, then an empty chip on dismissal.
- * Giving it a real view is what makes it behave.
+ * ## The one thing that had to change for that to be true
+ *
+ * `UITargetedPreview` is built around a view the OS can see, and for a long
+ * time no such view existed here: a link was a range of glyphs inside a
+ * paragraph this renderer draws in one pass. Every attempt to work around that
+ * — snapshot the glyphs, stand the picture up as a view, hide the real text
+ * underneath — needed to know when UIKit had FINISHED in order to put the text
+ * back, and UIKit does not say. There is no callback for an interaction it
+ * abandons, and `willEndForConfiguration:` arrives only sometimes. That one gap
+ * is where the holes in paragraphs, the blank chips, the ghosting and the
+ * double outlines all came from; they were not separate bugs.
+ *
+ * So each link is now painted by a VIEW OF ITS OWN (see
+ * `RCTAnonymousTextRunView`), and this hands UIKit that view. UIKit hides it,
+ * lifts it and restores it exactly as it does for a `UITextView`, and there is
+ * no state of ours to unwind. Nothing is copied, so nothing can go stale — and
+ * a link whose content is already a view, like `<a><img>`, lifts as that view
+ * rather than as a drawing that never contained it.
  *
  * ## Why it cannot simply be a `UITextView`
  *
