@@ -160,6 +160,24 @@ static NSArray<NSNumber *> *UIColorAsNSUInt(UIColor *color)
 
 - (void)testGenerateFallbacks
 {
+  /*
+   * Pinned to LIGHT, and pinned before the first colour is read.
+   *
+   * Every value below is a DYNAMIC colour: `UIColor.labelColor` resolves
+   * against whatever trait collection is current when it is unwrapped. The
+   * expectations used to be built here and the trait collection forced
+   * afterwards, so on a simulator set to dark the expected side resolved dark
+   * and the actual side light, and all 70 comparisons failed at once — with
+   * `XCTAssertEqual(red1, red2)` and no message, which says nothing about
+   * appearance and sent me looking at the renderer.
+   */
+  id savedTraitCollection = [UITraitCollection currentTraitCollection];
+  [self addTeardownBlock:^{
+    [UITraitCollection setCurrentTraitCollection:savedTraitCollection];
+  }];
+  [UITraitCollection
+      setCurrentTraitCollection:[UITraitCollection traitCollectionWithUserInterfaceStyle:UIUserInterfaceStyleLight]];
+
   NSDictionary<NSString *, NSArray<NSNumber *> *> *semanticColors = @{
     // https://developer.apple.com/documentation/uikit/uicolor/ui_element_colors
     // Label Colors
@@ -201,13 +219,6 @@ static NSArray<NSNumber *> *UIColorAsNSUInt(UIColor *color)
     @"clearColor" : UIColorAsNSUInt(UIColor.clearColor),
   };
 
-  id savedTraitCollection = nil;
-
-  savedTraitCollection = [UITraitCollection currentTraitCollection];
-
-  [UITraitCollection
-      setCurrentTraitCollection:[UITraitCollection traitCollectionWithUserInterfaceStyle:UIUserInterfaceStyleLight]];
-
   for (NSString *semanticColor in semanticColors) {
     id json = RCTJSONParse([NSString stringWithFormat:@"{ \"semantic\": \"%@\" }", semanticColor], nil);
     UIColor *value = [RCTConvert UIColor:json];
@@ -226,13 +237,13 @@ static NSArray<NSNumber *> *UIColorAsNSUInt(UIColor *color)
     NSUInteger blue2 = rgba[2] * 255;
     NSUInteger alpha2 = rgba[3] * 255;
 
-    XCTAssertEqual(red1, red2);
-    XCTAssertEqual(green1, green2);
-    XCTAssertEqual(blue1, blue2);
-    XCTAssertEqual(alpha1, alpha2);
+    // Named, so a failure says WHICH colour and which channel rather than just
+    // that two numbers differ.
+    XCTAssertEqual(red1, red2, @"%@ red (light appearance)", semanticColor);
+    XCTAssertEqual(green1, green2, @"%@ green (light appearance)", semanticColor);
+    XCTAssertEqual(blue1, blue2, @"%@ blue (light appearance)", semanticColor);
+    XCTAssertEqual(alpha1, alpha2, @"%@ alpha (light appearance)", semanticColor);
   }
-
-  [UITraitCollection setCurrentTraitCollection:savedTraitCollection];
 }
 
 @end
