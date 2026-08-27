@@ -358,9 +358,9 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Yoga node as `mutable` here to avoid `static_cast`ing the pointer to this
    * all the time.
    */
-  // Held by value, so an element that generates no box — a span-like inline
-  // that folds into its parent's inline formatting context — still carries a
-  // Yoga node it never uses.
+  // DOM-CSS-LIMITATION(eager-yoga-node): held by value, so an element that
+  // generates no box — a span-like inline that folds into its parent's inline
+  // formatting context — still carries a Yoga node it never uses.
   mutable yoga::Node yogaNode_;
 
  private:
