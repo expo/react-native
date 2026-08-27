@@ -1005,7 +1005,10 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
       textLayoutContext,
       constraintsForWhiteSpace(
           textAttributes.whiteSpace,
-          LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize}));
+          LayoutConstraints{
+              .minimumSize = boxSize,
+              .maximumSize = boxSize,
+              .floatExclusions = floatExclusions()}));
 
   // `measurement.attachments` is parallel to the attachment fragments in the
   // measured string, which preserves the order of `attachments`. The box
@@ -1140,7 +1143,10 @@ InlineContentShadowNode::stampFromString(
   // in it sat on three.
   const auto placementConstraints = constraintsForWhiteSpace(
       attributedString.getBaseTextAttributes().whiteSpace,
-      LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
+      LayoutConstraints{
+          .minimumSize = boxSize,
+          .maximumSize = boxSize,
+          .floatExclusions = floatExclusions()});
 
   // The measurement pass already produced these under that width, which is
   // what decides where fragments land. Re-measuring here was a second full

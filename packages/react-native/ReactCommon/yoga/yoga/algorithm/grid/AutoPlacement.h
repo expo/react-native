@@ -219,6 +219,10 @@ struct AutoPlacement {
     // same seam the transposition uses — is what keeps named areas out of the
     // placement algorithm entirely.
     const auto& templateAreas = node->style().gridTemplateAreas();
+    // A name that matches no area yields nullptr, so the item falls through
+    // to line-based or auto placement: `DOM-CSS-LIMITATION(grid-unknown-area-name)`.
+    // css-grid-2 §8.3 places it against implicit lines carrying that name
+    // instead, creating implicit tracks outside the grid.
     auto areaOf = [&](const yoga::Node* c) -> const GridAreaRect* {
       return templateAreas.empty() ? nullptr
                                    : templateAreas.find(c->style().gridArea());
