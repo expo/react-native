@@ -65,15 +65,21 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable id)linkAtContainerPoint:(CGPoint)point rects:(nullable NSMutableArray<NSValue *> *)outRects;
 
 /**
- * Glyph rects this run must not paint, given in the owning View's space.
+ * The view that draws the link at this point, or nil.
  *
- * Set while — and only while — UIKit is displaying its own copy of those
- * glyphs, so they are never on screen twice. The interaction knows when that is
- * because UIKit hides the cover view it was handed, and this is slaved to that.
- *
- * Pass nil to paint normally again.
+ * Every link in a run is painted by a view of its own, so a lift can be handed
+ * a real view rather than a snapshot of some glyphs. `point` is in the owning
+ * View's coordinate space, as everywhere else in this class.
  */
-- (void)setSuppressedContainerRects:(nullable NSArray<NSValue *> *)rects;
+- (nullable UIView *)linkViewAtContainerPoint:(CGPoint)point;
+
+/**
+ * Whether `view` is one of the views this class uses to paint a link's glyphs.
+ *
+ * The lift asks, because glyphs and everything else want opposite treatment
+ * from `UIPreviewParameters` — see `-[EXPTextLinkInteraction _parametersForLift:]`.
+ */
++ (BOOL)isLinkGlyphView:(UIView *)view;
 
 /** Whether any fragment in this run carries an `href`. */
 - (BOOL)containsLink;

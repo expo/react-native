@@ -18,6 +18,57 @@
 
 using namespace facebook::react;
 
+@interface RCTAnonymousTextRunView ()
+/** Draws this run's text with a clip; see `-drawRect:` for why it is shared. */
+- (void)drawTextClippedTo:(nullable NSArray<NSValue *> *)includeRects
+                excluding:(nullable NSArray<NSValue *> *)excludeRects
+                   offset:(CGPoint)offset;
+@end
+
+/*
+ * One link's glyphs, as a view.
+ *
+ * It draws the SAME text its run does, from the same layout, clipped to the
+ * link's own line rects — so there is no snapshot anywhere and nothing can go
+ * stale: the link is live text that happens to have its own layer.
+ *
+ * Its whole reason to exist is that `UITargetedPreview` wants a VIEW. Given
+ * one, UIKit hides it, lifts it and puts it back by itself, which is what a
+ * `UITextView` gets for free and what every earlier version of this had to
+ * fake with captures, covers and guesses about when the OS had finished.
+ */
+@interface RCTLinkGlyphView : UIView
+@property (nonatomic, weak) RCTAnonymousTextRunView *run;
+@property (nonatomic, copy) NSArray<NSValue *> *linkRects;
+@end
+
+@implementation RCTLinkGlyphView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    self.opaque = NO;
+    self.backgroundColor = [UIColor clearColor];
+    // The run owns hit-testing and accessibility for its links; this view is
+    // pixels only, and must be invisible to both.
+    self.userInteractionEnabled = NO;
+    self.isAccessibilityElement = NO;
+    self.accessibilityElementsHidden = YES;
+  }
+  return self;
+}
+
+- (void)drawRect:(CGRect)rect
+{
+  // Drawn in the RUN's coordinate space, shifted back by where this view sits
+  // inside it, then clipped to the link. The run paints the exact complement.
+  [_run drawTextClippedTo:_linkRects
+                excluding:nil
+                   offset:CGPointMake(-self.frame.origin.x, -self.frame.origin.y)];
+}
+
+@end
+
 @implementation RCTAnonymousTextRunView {
   // Rebuilt when the run changes; walking the layout for every accessibility
   // query would re-lay-out the text on each one.
@@ -25,7 +76,7 @@ using namespace facebook::react;
   // The on-screen rects of every link in this run, and any the OS is currently
   // displaying a copy of — which this view must therefore not paint as well.
   NSArray<NSValue *> *_cachedLinkRects;
-  NSArray<NSValue *> *_suppressedRects;
+  NSMutableArray<RCTLinkGlyphView *> *_linkViews;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -181,6 +232,27 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 
 - (void)drawRect:(CGRect)rect
 {
+  /*
+   * The run paints everything EXCEPT its links.
+   *
+   * Each link is painted by a view of its own (`RCTLinkGlyphView`, below), and
+   * that is not a detail of the lift — it is what makes the lift possible at
+   * all. `UITargetedPreview` is built around a VIEW it can hide, animate and
+   * put back; a link that is merely a range of glyphs inside a bigger drawing
+   * gives it nothing to work with, which is why earlier attempts had to
+   * snapshot the glyphs, cover them, hide them, and then guess when UIKit was
+   * finished. A link that IS a view needs none of that.
+   *
+   * The two clips are exact complements of one set of rects, so no pixel is
+   * painted twice and none is missed.
+   */
+  [self drawTextClippedTo:nil excluding:[self linkRects] offset:CGPointZero];
+}
+
+- (void)drawTextClippedTo:(nullable NSArray<NSValue *> *)includeRects
+                excluding:(nullable NSArray<NSValue *> *)excludeRects
+                   offset:(CGPoint)offset
+{
   RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
   if (!nativeTextLayoutManager) {
     // A silent blank: the run's layout manager is gone, so NOTHING paints
@@ -235,9 +307,27 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
       ? [nativeTextLayoutManager cachedRunTextStorageForAttributedString:_run.attributedString
                                                                    width:frame.size.width]
       : nil;
-  // Withhold the glyphs the OS is displaying a copy of, for exactly as long as
-  // it is displaying them. Everything else in the run paints as usual.
-  const BOOL suppressing = [self applySuppressionClipIfNeeded];
+  CGContextRef context = UIGraphicsGetCurrentContext();
+  if (context != NULL) {
+    CGContextSaveGState(context);
+    CGContextTranslateCTM(context, offset.x, offset.y);
+    if (includeRects != nil) {
+      CGContextBeginPath(context);
+      for (NSValue *value in includeRects) {
+        CGContextAddRect(context, value.CGRectValue);
+      }
+      CGContextClip(context);
+    }
+    if (excludeRects.count > 0) {
+      // Even-odd: the whole canvas minus each rect leaves everything but them.
+      UIBezierPath *path = [UIBezierPath bezierPathWithRect:CGRectInset(self.bounds, -offset.x - 1e4, -offset.y - 1e4)];
+      for (NSValue *value in excludeRects) {
+        [path appendPath:[UIBezierPath bezierPathWithRect:value.CGRectValue]];
+      }
+      path.usesEvenOddFillRule = YES;
+      [path addClip];
+    }
+  }
 
   if (cachedTextStorage != nil) {
     [nativeTextLayoutManager drawTextStorage:cachedTextStorage
@@ -251,59 +341,12 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
                                 drawHighlightPath:nil];
   }
 
-  if (suppressing) {
-    CGContextRestoreGState(UIGraphicsGetCurrentContext());
+  if (context != NULL) {
+    CGContextRestoreGState(context);
   }
 }
 
-/*
- * Clips the suppressed rects OUT of the drawing context by even-odd filling:
- * the whole bounds, minus each rect, leaves everything except those rects
- * paintable. Returns whether the caller owes a `CGContextRestoreGState`.
- *
- * A clip rather than painting over them afterwards, because there is nothing
- * correct to paint them over WITH — the background behind a run is whatever its
- * ancestors drew, which may be an image, a gradient, or nothing at all.
- */
-- (BOOL)applySuppressionClipIfNeeded
-{
-  if (_suppressedRects.count == 0) {
-    return NO;
-  }
-  CGContextRef context = UIGraphicsGetCurrentContext();
-  if (context == NULL) {
-    return NO;
-  }
-  CGContextSaveGState(context);
-  UIBezierPath *path = [UIBezierPath bezierPathWithRect:self.bounds];
-  for (NSValue *value in _suppressedRects) {
-    [path appendPath:[UIBezierPath bezierPathWithRect:value.CGRectValue]];
-  }
-  path.usesEvenOddFillRule = YES;
-  [path addClip];
-  return YES;
-}
 
-- (void)setSuppressedContainerRects:(nullable NSArray<NSValue *> *)rects
-{
-  NSArray<NSValue *> *converted = nil;
-  if (rects.count > 0) {
-    // The interaction works in the owning View's space, this view paints in its
-    // own; the same conversion `linkRects` applies, in the same direction.
-    NSMutableArray<NSValue *> *local = [NSMutableArray arrayWithCapacity:rects.count];
-    for (NSValue *value in rects) {
-      [local addObject:[NSValue valueWithCGRect:CGRectOffset(value.CGRectValue,
-                                                             -self.frame.origin.x,
-                                                             -self.frame.origin.y)]];
-    }
-    converted = local;
-  }
-  if (converted == nil && _suppressedRects == nil) {
-    return;
-  }
-  _suppressedRects = converted;
-  [self setNeedsDisplay];
-}
 
 
 // Resolves a touch (in the owning View's coordinate space) to an inline
@@ -361,10 +404,9 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 {
   _cachedAccessibilityElements = nil;
   _cachedLinkRects = nil;
-  // Rects from the OLD layout would blank a hole somewhere in the new one.
-  _suppressedRects = nil;
   // A run only claims touches when it has a link in it; see `-pointInside:`.
   self.userInteractionEnabled = [self linkRects].count > 0;
+  [self updateLinkViews];
 }
 
 /*
@@ -405,6 +447,71 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 
   _cachedLinkRects = rects;
   return _cachedLinkRects;
+}
+
+/*
+ * One view per link, rebuilt whenever the text is.
+ *
+ * Grouped by CONTIGUOUS RECTS: a link that wraps has one rect per line and they
+ * must lift together as a single shape, so they share a view. Two different
+ * links in the same run get two views, because they lift separately.
+ */
+- (void)updateLinkViews
+{
+  if (_linkViews == nil) {
+    _linkViews = [NSMutableArray new];
+  }
+  NSArray<NSValue *> *rects = [self linkRects];
+  // Every link in this run currently lifts as one shape. Splitting rects by
+  // which link they belong to needs the fragment identity the layout walk
+  // already has; until that is threaded through, one view per run's links is
+  // correct for the common case of a single link per run.
+  NSArray<NSArray<NSValue *> *> *groups = rects.count > 0 ? @[ rects ] : @[];
+
+  while (_linkViews.count > groups.count) {
+    [_linkViews.lastObject removeFromSuperview];
+    [_linkViews removeLastObject];
+  }
+  for (NSUInteger i = 0; i < groups.count; i++) {
+    NSArray<NSValue *> *group = groups[i];
+    RCTLinkGlyphView *view;
+    if (i < _linkViews.count) {
+      view = _linkViews[i];
+    } else {
+      view = [[RCTLinkGlyphView alloc] initWithFrame:CGRectZero];
+      view.run = self;
+      [_linkViews addObject:view];
+    }
+    if (view.superview != self) {
+      [self addSubview:view];
+    }
+    CGRect bounds = CGRectNull;
+    for (NSValue *value in group) {
+      bounds = CGRectIsNull(bounds) ? value.CGRectValue : CGRectUnion(bounds, value.CGRectValue);
+    }
+    view.frame = CGRectIsNull(bounds) ? CGRectZero : bounds;
+    view.linkRects = group;
+    [view setNeedsDisplay];
+  }
+}
+
+/** The view drawing the link at this point, in the owning View's space. */
++ (BOOL)isLinkGlyphView:(UIView *)view
+{
+  return [view isKindOfClass:[RCTLinkGlyphView class]];
+}
+
+- (nullable UIView *)linkViewAtContainerPoint:(CGPoint)point
+{
+  const CGPoint local = CGPointMake(point.x - self.frame.origin.x, point.y - self.frame.origin.y);
+  for (RCTLinkGlyphView *view in _linkViews) {
+    for (NSValue *value in view.linkRects) {
+      if (CGRectContainsPoint(value.CGRectValue, local)) {
+        return view;
+      }
+    }
+  }
+  return nil;
 }
 
 /*
