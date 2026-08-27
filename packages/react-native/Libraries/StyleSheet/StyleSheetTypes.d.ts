@@ -75,6 +75,7 @@ export interface FlexStyle {
     | 'inline-grid-lanes'
     | undefined;
   float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end' | undefined;
+  verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle' | undefined;
   clear?:
     | 'none'
     | 'left'
@@ -710,7 +711,6 @@ export interface TextStyleIOS extends ViewStyle {
 
 export interface TextStyleAndroid extends ViewStyle {
   textAlignVertical?: 'auto' | 'top' | 'bottom' | 'center' | undefined;
-  verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle' | undefined;
   includeFontPadding?: boolean | undefined;
 }
 

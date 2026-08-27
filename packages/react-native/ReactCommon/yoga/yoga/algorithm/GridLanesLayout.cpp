@@ -177,7 +177,9 @@ void calculateGridLanesLayoutInternal(
   }
   size_t trackCount = expandedTracks.size();
 
-  // Collect the in-flow items and their grid-axis placements.
+  // Collect the in-flow items and their grid-axis placements, in document
+  // order: `DOM-CSS-LIMITATION(lanes-order)`. css-grid-3 §2.1 reorders items
+  // by `order` first, which neither Yoga nor React Native's style surface has.
   std::vector<LaneItem> items;
   items.reserve(node->getChildCount());
   for (auto child : node->getLayoutChildren()) {
@@ -245,6 +247,12 @@ void calculateGridLanesLayoutInternal(
     }
   }
 
+  // Baseline alignment WITHIN the grid-axis tracks, as for a regular grid
+  // container (css-grid-3 §6.5). `DOM-CSS-LIMITATION(lanes-baseline-export)`:
+  // the container does not export a first/last baseline set of its own in the
+  // stacking axis — "the highest alignment baseline among the grid items
+  // placed first in each track" — which matters only when a lanes container is
+  // itself a baseline-aligned flex or grid item.
   BaselineItemGroups baselineGroups;
   {
     auto& columnTracks = inlineIsGridAxis ? gridAxisTracks : stackingAxisTracks;
@@ -898,8 +906,9 @@ void calculateGridLanesLayoutInternal(
   // at the end of its own algorithm; without the same tail here an absolute
   // child of a lanes container simply keeps whatever layout it last had.
   //
-  // (TODO, as in Grid: a grid-area should be able to serve as the containing
-  // block. Until then the container's content box is used.)
+  // `DOM-CSS-LIMITATION(lanes-abspos-containing-block)`, as in Grid: css-grid-3
+  // §8 lets a grid area serve as the containing block for an out-of-flow child.
+  // Until then the container's content box is used.
   if (nodeStyle.positionType() != PositionType::Static ||
       node->alwaysFormsContainingBlock() || depth == 1) {
     for (auto child : node->getLayoutChildren()) {
