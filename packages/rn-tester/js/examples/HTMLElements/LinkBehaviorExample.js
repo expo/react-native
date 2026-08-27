@@ -14,8 +14,8 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 
 import {LABEL_COLOR, SECONDARY_COLOR} from './themed';
 import * as React from 'react';
-import {useState} from 'react';
-import {Platform, ScrollView, Text} from 'react-native';
+import {useEffect, useRef, useState} from 'react';
+import {Animated, Easing, Platform, ScrollView, Text} from 'react-native';
 
 import '@react-native/expo-intrinsics-poc';
 
@@ -80,11 +80,10 @@ function InlineLink(): React.Node {
           : 'Tap to open. Links take the theme’s colour and Android’s underline.'}
       </Note>
       <p>
-        A paragraph with{' '}
-        {/* $FlowExpectedError[not-a-component] intrinsic */}
+        A paragraph with {/* $FlowExpectedError[not-a-component] intrinsic */}
         <a href="https://reactnative.dev/">a link inside it</a> and ordinary
-        text after, so the link has to be found among the glyphs rather than
-        by hit-testing a view.
+        text after, so the link has to be found among the glyphs rather than by
+        hit-testing a view.
       </p>
       <p>
         A link long enough to{' '}
@@ -115,9 +114,55 @@ function LinkedImage(): React.Node {
         />
       </a>
       <Note>
-        The anchor stays inline, so the image rides in the text as an
-        attachment and carries the link with it.
+        The anchor stays inline, so the image rides in the text as an attachment
+        and carries the link with it.
       </Note>
+    </Screen>
+  );
+}
+
+function LiveLink(): React.Node {
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 1600,
+        easing: Easing.linear,
+        // Driven natively, so the square keeps turning even while JavaScript is
+        // idle and while a menu is up.
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [spin]);
+
+  return (
+    <Screen>
+      <Note>
+        The square keeps turning under the menu. The lift is rendered once, so
+        the chip is a still of the moment you pressed.
+      </Note>
+      {/* $FlowExpectedError[not-a-component] intrinsic */}
+      <a href="https://reactnative.dev/">
+        <Animated.View
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 10,
+            backgroundColor: '#2563eb',
+            transform: [
+              {
+                rotate: spin.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                }),
+              },
+            ],
+          }}
+        />
+      </a>
     </Screen>
   );
 }
@@ -186,6 +231,12 @@ export default {
       name: 'image',
       title: 'A link wrapping an image',
       render: (): React.Node => <LinkedImage />,
+    },
+    {
+      name: 'live',
+      title: 'A link wrapping a moving view',
+      description: 'What the OS lifts when the content is animating.',
+      render: (): React.Node => <LiveLink />,
     },
     {
       name: 'block',
