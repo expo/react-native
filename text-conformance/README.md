@@ -98,11 +98,12 @@ Run `node oracle.js` (real Safari), then `node verify.js ios|android` with the
 corpus through Fantom for a fast fix-and-check loop; the device is the
 authority.
 
-**All 39 cases pass on both platforms — 307 exact checks each, re-measured
-2026-08-29 against builds made from this tree** (iOS: `xcodebuild` +
+**All 54 cases pass on both platforms — 508 exact checks each, re-measured
+2026-08-30 against builds made from this tree** (iOS: `xcodebuild` +
 `simctl install`; Android: `installDebug`, with the native symbol checked in
 the built `libreactnative.so` first, because "BUILD SUCCESSFUL" against stale
-prefab headers is a silent no-op). Fantom runs the same corpus at 39/39.
+prefab headers is a silent no-op). Fantom runs the same corpus at 52 asserted
+and 2 skipped, the two being the `text-align` cases its measurer cannot place.
 
 Numbers in a README age badly. This section has twice claimed a pass that did
 not reproduce, both times because it was written from a run nobody re-checked

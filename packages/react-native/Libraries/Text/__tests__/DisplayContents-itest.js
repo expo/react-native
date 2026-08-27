@@ -14,12 +14,12 @@ import {createRef} from 'react';
 import {View} from 'react-native';
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 
-// The type size the measurements are calibrated against; the document default
-// is the platform's body size and differs per platform
+// Pinned: the document's default font size is the platform's body size, which
+// differs per platform, and nothing here is about the type size
 const FONT_SIZE = 14;
 
-// `display: contents` is upstream's; these pin that it survives the fork's
-// block and inline display handling and composes with text children, where the
+// `display: contents` is upstream's; these cover its interaction with this
+// fork's block and inline display handling and with text children, where the
 // run is built from the element tree
 function rectOf(render: ({current: HostInstance | null}) => React.Node) {
   const ref = createRef<HostInstance>();
@@ -39,8 +39,8 @@ function rectOf(render: ({current: HostInstance | null}) => React.Node) {
 
 describe('display: contents', () => {
   it('flattens the box: children become flex items of the grandparent', () => {
-    // Shrink-to-fit, so the row reports its content's width. Flattened, the
-    // two 50pt boxes are items of the row: 100 across.
+    // Shrink-to-fit, so the row reports its content's width. Flattened, the two
+    // 50pt boxes are items of the row: 100 across.
     const flattened = rectOf(ref => (
       <View ref={ref} style={{flexDirection: 'row', alignSelf: 'flex-start'}}>
         <View style={{display: 'contents'}}>
@@ -49,7 +49,7 @@ describe('display: contents', () => {
         </View>
       </View>
     ));
-    // Not flattened, the wrapper is one item whose column stacks them: 50 across
+    // Not flattened, the wrapper is one item and its column stacks them: 50 across
     const nested = rectOf(ref => (
       <View ref={ref} style={{flexDirection: 'row', alignSelf: 'flex-start'}}>
         <View>
@@ -91,9 +91,41 @@ describe('display: contents', () => {
     expect(box.height).toBe(20);
   });
 
-  // Generating no box does not stop the element inheriting to its children
-  // (css-display-3 §3.1). The absolute height keeps the comparison from
-  // passing because neither side applied the size.
+  // <span> is inline-level whatever its `display` says and joins a run without
+  // `display: contents` being consulted; a block-level <div> that generates no
+  // box must not interrupt the line either
+  it('a block-level contents box does not interrupt the line', () => {
+    const box = rectOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <div> tag
+      <div ref={ref} style={{alignSelf: 'flex-start'}}>
+        {'aa'}
+        {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+        <div style={{display: 'contents'}}>{'bb'}</div>
+      </div>
+    ));
+    expect(box.width).toBe(40);
+    expect(box.height).toBe(20);
+  });
+
+  it('nested contents boxes are transparent all the way down', () => {
+    const box = rectOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <div> tag
+      <div ref={ref} style={{alignSelf: 'flex-start'}}>
+        {'aa'}
+        {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+        <div style={{display: 'contents'}}>
+          {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+          <div style={{display: 'contents'}}>{'bb'}</div>
+        </div>
+      </div>
+    ));
+    expect(box.width).toBe(40);
+    expect(box.height).toBe(20);
+  });
+
+  // Generating no box does not stop inheritance (css-display-3 §3.1). The
+  // absolute height keeps the comparison from passing because neither side
+  // applied the size.
   it('a contents box styles the text it wraps, like an inline box', () => {
     const viaContents = rectOf(ref => (
       // $FlowExpectedError[not-a-component] intrinsic <div> tag
@@ -114,8 +146,8 @@ describe('display: contents', () => {
     expect(viaContents.height).toBe(viaSpan.height);
   });
 
-  // A block-level child becomes a block-level box of the grandparent, not an
-  // inline on a line
+  // A block-level child becomes a block-level box of the grandparent rather
+  // than joining the line
   it('a block-level child inside a contents box still breaks the line', () => {
     const box = rectOf(ref => (
       // $FlowExpectedError[not-a-component] intrinsic <div> tag

@@ -114,7 +114,10 @@ function flattenTracks(list) {
     }
     if (autoRepeat != null) return {tracks: null, autoRepeat: null}; // two auto-repeats: invalid
     autoRepeat = {
-      type: t.n === 'auto-fit' ? 'YGGridAutoRepeatAutoFit' : 'YGGridAutoRepeatAutoFill',
+      type:
+        t.n === 'auto-fit'
+          ? 'YGGridAutoRepeatAutoFit'
+          : 'YGGridAutoRepeatAutoFill',
       startIndex: flat.length,
       trackCount: t.tracks.length,
     };
@@ -140,8 +143,10 @@ function unsupportedReason(c) {
   for (const t of [...fc.tracks, ...fr_.tracks]) {
     if (trackToCpp(t) == null) return `track ${t.t}`;
   }
-  if (k.autoFlow != null &&
-      !['row', 'row dense', 'column', 'column dense'].includes(k.autoFlow))
+  if (
+    k.autoFlow != null &&
+    !['row', 'row dense', 'column', 'column dense'].includes(k.autoFlow)
+  )
     return `grid-auto-flow:${k.autoFlow}`;
   if (k.justifyContent != null && JUSTIFY[k.justifyContent] == null)
     return `justify-content:${k.justifyContent}`;
@@ -153,8 +158,10 @@ function unsupportedReason(c) {
     return `justify-items:${k.justifyItems}`;
   for (const it of c.items) {
     if (it.order != null) return 'order';
-    if (Array.isArray(it.col) || Array.isArray(it.row)) return 'two-line placement';
-    if (it.colEnd != null && typeof it.colEnd !== 'number') return 'colEnd form';
+    if (Array.isArray(it.col) || Array.isArray(it.row))
+      return 'two-line placement';
+    if (it.colEnd != null && typeof it.colEnd !== 'number')
+      return 'colEnd form';
   }
   return null;
 }
@@ -189,11 +196,15 @@ w('namespace gridconf {');
 w('');
 w('constexpr float kUnset = -1e9f;');
 w('');
-w('enum class TrackKind { Points, Percent, Fr, Auto, Minmax, MaxContent, FitContent };');
+w(
+  'enum class TrackKind { Points, Percent, Fr, Auto, Minmax, MaxContent, FitContent };',
+);
 w('enum class PlacementKind { Auto, Line, Span };');
 w('');
 w('struct SimpleTrack { TrackKind kind; float value; };');
-w('struct Track { TrackKind kind; float value; SimpleTrack min; SimpleTrack max; };');
+w(
+  'struct Track { TrackKind kind; float value; SimpleTrack min; SimpleTrack max; };',
+);
 w('struct Placement { PlacementKind kind; int value; };');
 w('struct Rect { float x, y, w, h; };');
 w('');
@@ -267,9 +278,11 @@ expected.cases.forEach((c, idx) => {
   }
 
   if (k.areas != null && k.areas.length) {
-    w(`static const char* const kAreas${idx}[] = {${k.areas
-      .map(r => JSON.stringify(r))
-      .join(', ')}};`);
+    w(
+      `static const char* const kAreas${idx}[] = {${k.areas
+        .map(r => JSON.stringify(r))
+        .join(', ')}};`,
+    );
   }
 
   const items = c.items.map((it, i) => {
@@ -294,14 +307,17 @@ expected.cases.forEach((c, idx) => {
     w('};');
   }
 
-  const esc = s => String(s ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const esc = s =>
+    String(s ?? '')
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"');
   caseVars.push(
     `  {"${c.id}", "${c.group}", "${esc(c.note)}", "${c.tier}", ` +
       `${reason ? `"${esc(reason)}"` : 'nullptr'}, ` +
       `${optF(k.width)}, ${optF(k.height)}, ` +
       `${optF(k.gap)}, ${optF(k.rowGap)}, ${optF(k.colGap)}, ` +
       `${f(k.padding ?? 0)}, ${f(k.border ?? 0)}, ` +
-      `${{'row': 0, 'row dense': 1, 'column': 2, 'column dense': 3}[k.autoFlow ?? 'row'] ?? 0}, ` +
+      `${{row: 0, 'row dense': 1, column: 2, 'column dense': 3}[k.autoFlow ?? 'row'] ?? 0}, ` +
       `${k.display === 'grid-lanes' ? 1 : 0}, ` +
       `${flowTolerance(k).type}, ${f(flowTolerance(k).value)}, ${optF(k.fontSize)}, ` +
       `${k.areas != null && k.areas.length ? `kAreas${idx}` : 'nullptr'}, ${k.areas?.length ?? 0}, ` +
