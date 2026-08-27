@@ -12,7 +12,7 @@
 #import "EXPSampledBackground.h"
 #import "RCTAnonymousTextRunView.h"
 
-
+#import <React/RCTUtils.h>
 
 /*
  * A view standing over the link while UIKit animates, and the preview aimed at
@@ -50,14 +50,70 @@
 @property (nonatomic, copy) NSArray<NSValue *> *rects;
 /** The view that draws this link. Weak: the paragraph may recycle under us. */
 @property (nonatomic, weak) UIView *linkView;
-/** The preview handed to UIKit, kept so the same one can be handed back. */
-@property (nonatomic, strong, nullable) UITargetedPreview *preview;
-/** Where that preview was aimed, so a lift that MOVES is noticed. */
-@property (nonatomic, assign) CGPoint previewCenter;
-/** The empty stand-in the DISMISSAL morphs into — see `_vanishingPreviewForConfiguration:`. */
-@property (nonatomic, strong, nullable) UIView *nothing;
-@property (nonatomic, strong, nullable) UITargetedPreview *vanishing;
-@property (nonatomic, assign) CGPoint vanishingCenter;
+/** What the lift shows: a picture of the link, taken before anything dimmed. */
+@property (nonatomic, strong) EXPStandIn *lift;
+/** What the dismissal morphs into: nothing, at the link's size and place. */
+@property (nonatomic, strong) EXPStandIn *dismissal;
+/** The colour the link sat on, sampled before the press dimmed anything. */
+@property (nonatomic, strong, nullable) UIColor *platterColor;
+/*
+ * The box the lift shows, in `linkView`'s own coordinates — `CGRectNull` when
+ * that is simply the view's bounds.
+ *
+ * It is set when the view handed over draws MORE than the link and no smaller
+ * view is the link: `<a><img>caption</a>`, whose two halves are drawn by a
+ * mounted subview and by the text run, so the only thing drawing both is the
+ * container. A picture of the container's whole bounds is a picture of the
+ * page, aimed at the middle of the page — so the picture is clipped to this box
+ * and aimed at it instead.
+ */
+@property (nonatomic, assign) CGRect liftBox;
+@end
+
+/*
+ * The card a link whose content is a PICTURE morphs into: that picture, at the
+ * size it already had.
+ *
+ * A context menu morphs its lift into whatever it presents, so the lift needs a
+ * destination — and for a link made of words that destination is `LPLinkView`,
+ * the platform's own link preview. For a link that IS an image, it is not:
+ * lifting a 70pt logo and then replacing it with a URL pill twice its width
+ * reads as the chip jumping, which is what a device showed. iOS previews an
+ * image link by previewing the image, and so does this.
+ *
+ * The picture is a second copy, not the lift's own: that one is UIKit's for the
+ * duration of the interaction.
+ */
+@interface EXPLinkContentCard : UIViewController
++ (nullable instancetype)cardShowing:(nullable UIView *)picture ofSize:(CGSize)size;
+@end
+
+@implementation EXPLinkContentCard {
+  UIView *_picture;
+  CGSize _size;
+}
+
++ (nullable instancetype)cardShowing:(nullable UIView *)picture ofSize:(CGSize)size
+{
+  if (picture == nil || size.width <= 0 || size.height <= 0) {
+    return nil;
+  }
+  EXPLinkContentCard *card = [[EXPLinkContentCard alloc] initWithNibName:nil bundle:nil];
+  card->_picture = picture;
+  card->_size = size;
+  card.preferredContentSize = size;
+  return card;
+}
+
+- (void)viewDidLoad
+{
+  [super viewDidLoad];
+  // Clear, so the card is the picture and not a platter behind it.
+  self.view.backgroundColor = UIColor.clearColor;
+  _picture.frame = CGRectMake(0, 0, _size.width, _size.height);
+  [self.view addSubview:_picture];
+}
+
 @end
 
 @implementation EXPLinkPress
@@ -81,6 +137,35 @@
  * a test. `-drawViewHierarchyInRect:` rather than `-[CALayer renderInContext:]`,
  * which draws the model layer and misses what UIKit renders for itself.
  */
+/*
+ * A picture of PART of a view, as a view of that part's size.
+ *
+ * The context is translated so the requested box lands at the origin: the
+ * result is the box, not the view with the box somewhere inside it. That
+ * matters because a `UITargetedPreview` is placed by its own centre — a picture
+ * carrying the whole page would be aimed at the page's middle however it were
+ * masked afterwards.
+ */
+static UIView *_Nullable EXPPictureOfViewRect(UIView *view, CGRect box)
+{
+  if (CGRectIsEmpty(box)) {
+    return nil;
+  }
+  UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat preferredFormat];
+  format.opaque = NO;
+  const CGRect bounds = CGRectMake(0, 0, box.size.width, box.size.height);
+  UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithBounds:bounds format:format];
+  UIImage *image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+    CGContextTranslateCTM(context.CGContext, -box.origin.x, -box.origin.y);
+    [view drawViewHierarchyInRect:view.bounds afterScreenUpdates:NO];
+  }];
+  UIImageView *picture = [[UIImageView alloc] initWithImage:image];
+  picture.bounds = bounds;
+  // A picture takes no touches: the link beneath it is what the finger is on.
+  picture.userInteractionEnabled = NO;
+  return picture;
+}
+
 static UIView *_Nullable EXPPictureOfView(UIView *view)
 {
   const CGRect bounds = view.bounds;
@@ -190,11 +275,57 @@ static UIView *_Nullable EXPPictureOfView(UIView *view)
   for (NSValue *value in rects) {
     [local addObject:[NSValue valueWithCGRect:[view convertRect:value.CGRectValue toView:linkView]]];
   }
-  lift.rects = local;
+  press.rects = local;
+  /*
+   * Sampled now, before anything dims. By the time UIKit asks for the press the
+   * page is dimming and the chip is rising, and the same link reports a different
+   * colour at each of those moments.
+   */
+  press.platterColor = EXPSampledBackgroundColor(linkView, local);
+  /*
+   * Taken now for the same reason: a picture taken later catches the page mid-dim
+   * and the row mid-highlight.
+   */
+  /*
+   * When the container itself was handed back, no single child is the link, and
+   * the lift is the link's own box within it rather than the whole container.
+   */
+  press.liftBox = CGRectNull;
+  if (linkView == self->_view && local.count > 0) {
+    CGRect box = CGRectNull;
+    for (NSValue *value in local) {
+      box = CGRectIsNull(box) ? value.CGRectValue : CGRectUnion(box, value.CGRectValue);
+    }
+    press.liftBox = box;
+  }
+  press.lift.view = CGRectIsNull(press.liftBox) ? EXPPictureOfView(linkView)
+                                                : EXPPictureOfViewRect(linkView, press.liftBox);
 
   UIContextMenuConfiguration *configuration = [self _configurationForPress:press];
   [_pressesByConfiguration setObject:press forKey:configuration];
   return configuration;
+}
+
+/*
+ * A card showing the link's own content, for a link whose content is a view.
+ *
+ * Nil for a link made of glyphs, and nil for one drawn by its container (an
+ * image AND words): the first has no picture of its own to show, and the second
+ * is a region rather than a thing, so the platform's link preview is the better
+ * destination for both.
+ */
+- (nullable UIViewController *)_contentCardForPress:(EXPLinkPress *)press
+{
+  UIView *linkView = press.linkView;
+  if (linkView == nil || linkView == _view || !CGRectIsNull(press.liftBox)) {
+    return nil;
+  }
+  if ([RCTAnonymousTextRunView isLinkGlyphView:linkView]) {
+    return nil;
+  }
+  // A SECOND picture: the lift's own belongs to UIKit for the interaction.
+  UIView *picture = EXPPictureOfView(linkView);
+  return [EXPLinkContentCard cardShowing:picture ofSize:linkView.bounds.size];
 }
 
 /** The destination, and a menu built from it. */
@@ -203,7 +334,20 @@ static UIView *_Nullable EXPPictureOfView(UIView *view)
   __weak __typeof(self) weakSelf = self;
   return [UIContextMenuConfiguration configurationWithIdentifier:nil
       previewProvider:^UIViewController * {
-        return [EXPLinkPreviewCard cardForURL:press.url];
+        /*
+         * A link that IS a picture previews as that picture, at the size it
+         * already had, so the menu's morph has nothing to travel: the chip is
+         * the image before and after. A link made of WORDS has no such
+         * destination of its own and gets `LPLinkView`, the platform's own link
+         * preview — the same one Messages and Notes draw.
+         *
+         * Getting this wrong is visible rather than subtle. A 70pt logo lifting
+         * and then being replaced by a URL pill twice its width was reported
+         * from a device as the chip suddenly jumping to something larger than
+         * the view it came from.
+         */
+        UIViewController *content = [weakSelf _contentCardForPress:press];
+        return content ?: [EXPLinkPreviewCard cardForURL:press.url];
       }
       actionProvider:^UIMenu *(NSArray<UIMenuElement *> *suggested) {
         // The press is captured, not looked up: the menu is this
@@ -318,6 +462,34 @@ static NSString *RCTMenuTitleForHref(NSString *_Nullable href)
   return CGRectIsNull(union_) ? CGRectZero : union_;
 }
 
+
+/*
+ * `src` composited over `dst`, so a translucent surface can be handed to a
+ * preview as one opaque colour.
+ *
+ * Returns nil when there is nothing to composite onto — a caller with no
+ * sampled page colour is better off with UIKit's own platter than with a
+ * colour invented here.
+ */
+static UIColor *_Nullable EXPColorOver(UIColor *src, UIColor *_Nullable dst)
+{
+  if (dst == nil) {
+    return nil;
+  }
+  CGFloat sr, sg, sb, sa, dr, dg, db, da;
+  if (![src getRed:&sr green:&sg blue:&sb alpha:&sa] || ![dst getRed:&dr green:&dg blue:&db alpha:&da]) {
+    return nil;
+  }
+  const CGFloat a = sa + da * (1 - sa);
+  if (a <= 0) {
+    return nil;
+  }
+  return [UIColor colorWithRed:(sr * sa + dr * da * (1 - sa)) / a
+                         green:(sg * sa + dg * da * (1 - sa)) / a
+                          blue:(sb * sa + db * da * (1 - sa)) / a
+                         alpha:a];
+}
+
 /*
  * How the press is dressed.
  *
@@ -331,10 +503,49 @@ static NSString *RCTMenuTitleForHref(NSString *_Nullable href)
  * corner radius, the platter colour and the way wrapped lines join into one
  * shape.
  */
-- (UIPreviewParameters *)_parametersForLift:(UIView *)linkView rects:(NSArray<NSValue *> *)rects
+- (UIPreviewParameters *)_parametersForPress:(EXPLinkPress *)press
 {
-  if ([RCTAnonymousTextRunView isLinkGlyphView:linkView]) {
-    return [[UIPreviewParameters alloc] initWithTextLineRects:rects];
+  UIView *linkView = press.linkView;
+  /*
+   * The link's own shape, for a view that paints a whole RUN: the link is some
+   * of its lines, and `initWithTextLineRects:` is what turns those into one
+   * shape — the padding, the corner radius and the way wrapped lines join are
+   * UIKit's.
+   *
+   * Only a run view qualifies. Anything else handed over here is a view whose
+   * bounds ARE the link, because the preview is a picture of that view's whole
+   * bounds, centred on that view (see `_previewOf:`). Hand over something
+   * larger and the chip is a picture of everything around the link, placed
+   * where that larger view sits — which is exactly what a container did.
+   */
+  const BOOL drawsMoreThanTheLink =
+      [RCTAnonymousTextRunView isLinkGlyphView:linkView] || !CGRectIsNull(press.liftBox);
+  if (drawsMoreThanTheLink && press.rects.count > 0) {
+    /*
+     * Rebased onto the picture. `press.rects` are in the link view's space; a
+     * clipped picture starts at the link box's origin, so the shape has to be
+     * expressed relative to that or the mask lands off the chip entirely.
+     */
+    NSArray<NSValue *> *shape = press.rects;
+    if (!CGRectIsNull(press.liftBox)) {
+      NSMutableArray<NSValue *> *rebased = [NSMutableArray arrayWithCapacity:press.rects.count];
+      for (NSValue *value in press.rects) {
+        [rebased addObject:[NSValue valueWithCGRect:CGRectOffset(value.CGRectValue,
+                                                                 -press.liftBox.origin.x,
+                                                                 -press.liftBox.origin.y)]];
+      }
+      shape = rebased;
+    }
+    UIPreviewParameters *parameters = [[UIPreviewParameters alloc] initWithTextLineRects:shape];
+    // Everything else about a text press is UIKit's — the shape, the padding,
+    // the corner radius, the way wrapped lines join. Only the platter COLOUR is
+    // overridden, and only because UIKit's answer is the window's background
+    // rather than this link's. Measured once, when the press began: see
+    // `EXPSampledBackgroundColor` and `EXPLinkPress.platterColor`.
+    if (press.platterColor != nil) {
+      parameters.backgroundColor = press.platterColor;
+    }
+    return parameters;
   }
 
   UIPreviewParameters *parameters = [[UIPreviewParameters alloc] init];
@@ -354,8 +565,23 @@ static NSString *RCTMenuTitleForHref(NSString *_Nullable href)
    */
   UIColor *own = nil;
   CGColorRef layerColor = linkView.layer.backgroundColor;
-  if (layerColor != NULL && CGColorGetAlpha(layerColor) > 0.99) {
+  const CGFloat ownAlpha = layerColor != NULL ? CGColorGetAlpha(layerColor) : 0.0;
+  if (ownAlpha > 0.99) {
     own = [UIColor colorWithCGColor:layerColor];
+  } else if (ownAlpha > 0.0) {
+    /*
+     * A surface of its own, but a see-through one.
+     *
+     * UIKit does not render the view's background into the preview, so a
+     * translucent one had nothing behind it and the chip lifted TRANSLUCENT:
+     * the page slid under it and showed through, while a text link beside it
+     * lifted on a solid platter. `display: block; background: #00000010` — a
+     * tint, which is how anyone writes a pressable row — was exactly that.
+     *
+     * Composite the author's colour over the page's, which is what the eye
+     * was seeing before the lift began.
+     */
+    own = EXPColorOver([UIColor colorWithCGColor:layerColor], press.platterColor);
   }
   parameters.backgroundColor = own ?: UIColor.clearColor;
   return parameters;
@@ -407,7 +633,10 @@ static NSString *RCTMenuTitleForHref(NSString *_Nullable href)
     return nil;
   }
   if (press.dismissal.view == nil) {
-    press.dismissal.view = [[UIView alloc] initWithFrame:linkView.bounds];
+    // The same box the lift used, so the menu shrinks back onto the link rather
+    // than onto the container that happened to draw it.
+    const CGRect box = CGRectIsNull(press.liftBox) ? linkView.bounds : press.liftBox;
+    press.dismissal.view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, box.size.width, box.size.height)];
     press.dismissal.view.userInteractionEnabled = NO;
   }
 
@@ -444,12 +673,36 @@ static NSString *RCTMenuTitleForHref(NSString *_Nullable href)
     return nil;
   }
 
-  const CGPoint center = [linkView.superview convertPoint:linkView.center toView:window];
+  /*
+   * Aimed at the LINK, which is the view's centre only when the view is the
+   * link. With a clipped lift the picture is the link's box, so it has to be
+   * placed over that box rather than over the middle of the container.
+   */
+  const CGPoint centerInLinkView = CGRectIsNull(press.liftBox)
+      ? CGPointMake(CGRectGetMidX(linkView.bounds), CGRectGetMidY(linkView.bounds))
+      : CGPointMake(CGRectGetMidX(press.liftBox), CGRectGetMidY(press.liftBox));
+  const CGPoint center = [linkView convertPoint:centerInLinkView toView:window];
   if (standIn.preview != nil && fabs(standIn.center.x - center.x) < 0.5 && fabs(standIn.center.y - center.y) < 0.5) {
     return standIn.preview;
   }
 
-  UIPreviewParameters *parameters = [self _parametersForLift:linkView rects:lift.rects];
+  UIView *shown = standIn.view;
+  if (shown == nil) {
+    // No picture: the link itself, rather than no press at all, because an
+    // unanswered preview makes UIKit press the whole paragraph. It is already in
+    // place, so none of the positioning below applies.
+    shown = linkView;
+  } else {
+    if (shown.superview != window) {
+      // One stand-in at a time. A press beginning while another dismisses has
+      // its own, and the earlier one has no work left.
+      [self _takeStandInsOutUnless:press];
+      [window addSubview:shown];
+      _pressInWindow = press;
+    }
+    shown.center = center;
+  }
+
   UIPreviewTarget *target = [[UIPreviewTarget alloc] initWithContainer:window center:center];
   standIn.preview = [[UITargetedPreview alloc] initWithView:shown parameters:parameters target:target];
   standIn.center = center;
