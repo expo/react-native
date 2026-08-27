@@ -20,11 +20,7 @@
 'use strict';
 
 const {cases} = require('./cases.js');
-const {
-  containerCss,
-  itemChildHtml,
-  itemCss,
-} = require('./serialize.js');
+const {containerCss, itemChildHtml, itemCss} = require('./serialize.js');
 const {execSync, spawn} = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -173,9 +169,12 @@ function driver(method, urlPath, body) {
   if (body != null) {
     args.push('-d', JSON.stringify(body));
   }
-  const out = execSync(`curl ${args.map(a => `'${a.replace(/'/g, "'\\''")}'`).join(' ')}`, {
-    maxBuffer: 256 * 1024 * 1024,
-  }).toString();
+  const out = execSync(
+    `curl ${args.map(a => `'${a.replace(/'/g, "'\\''")}'`).join(' ')}`,
+    {
+      maxBuffer: 256 * 1024 * 1024,
+    },
+  ).toString();
   // A successful DELETE answers with an empty body.
   return out.trim() === '' ? null : JSON.parse(out);
 }
@@ -274,7 +273,8 @@ async function main() {
     const results = {};
     for (let start = 0; start < cases.length; start += CHUNK) {
       const res = driver('POST', `/session/${sid}/execute/sync`, {
-        script: 'return JSON.stringify(window.__measure(arguments[0], arguments[1]))',
+        script:
+          'return JSON.stringify(window.__measure(arguments[0], arguments[1]))',
         args: [start, Math.min(start + CHUNK, cases.length)],
       });
       if (typeof res?.value !== 'string') {
@@ -287,7 +287,9 @@ async function main() {
       const part = JSON.parse(res.value);
       measured = measured ?? part;
       Object.assign(results, part.results);
-      process.stdout.write(`\r  measured ${Object.keys(results).length}/${cases.length}`);
+      process.stdout.write(
+        `\r  measured ${Object.keys(results).length}/${cases.length}`,
+      );
     }
     process.stdout.write('\n');
     measured.results = results;
@@ -323,7 +325,10 @@ async function main() {
         container: c.container,
         items: c.items,
         oracleDivergence: c.oracleDivergence ?? null,
-        expected: zeroHiddenItems(c, applyDivergence(c, measured.results[c.id])),
+        expected: zeroHiddenItems(
+          c,
+          applyDivergence(c, measured.results[c.id]),
+        ),
       })),
     };
     fs.writeFileSync(OUT, JSON.stringify(payload, null, 1));

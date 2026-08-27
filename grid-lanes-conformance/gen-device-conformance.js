@@ -175,12 +175,18 @@ w('');
 w('/**');
 w(' * The grid / grid-lanes conformance corpus, rendered on a real device.');
 w(' *');
-w(' * Every expected value was measured in Safari; this screen renders the same');
-w(' * cases through the platform and publishes what they actually measured, for');
+w(
+  ' * Every expected value was measured in Safari; this screen renders the same',
+);
+w(
+  ' * cases through the platform and publishes what they actually measured, for',
+);
 w(' * packages/rn-tester/scripts/grid-conformance-verify.js to compare.');
 w(' *');
 w(' * Fantom runs the same engine, so this is not about the algorithm — it is');
-w(' * about everything Fantom does not have: the pixel grid, the platform view');
+w(
+  ' * about everything Fantom does not have: the pixel grid, the platform view',
+);
 w(' * sizing, the shadow tree crossing to the UI thread.');
 w(' *');
 w(` * ${usable.length} cases; ${skipped} not expressible as RN styles.`);
@@ -193,21 +199,29 @@ w("import {ScrollView, Text, View} from 'react-native';");
 w('');
 w('// Themed, so the screen is not black text on a black page in dark mode.');
 w('// $FlowFixMe[untyped-import] `themed` is @noflow: it reads PlatformColor.');
-w("import {LABEL_COLOR, SECONDARY_COLOR, TERTIARY_COLOR} from '../HTMLElements/themed';");
+w(
+  "import {LABEL_COLOR, SECONDARY_COLOR, TERTIARY_COLOR} from '../HTMLElements/themed';",
+);
 w('');
 w('// Each case renders inside a wrapper of the width the oracle used, so the');
 w('// device viewport does not change the layout under test.');
 w('const ORACLE_WIDTH = 900;');
 w('');
-w('// The corpus states no colours — it is a layout corpus — so it used to draw');
-w('// a screen of nothing at all. Painting a box moves nothing, so the tints are');
+w(
+  '// The corpus states no colours — it is a layout corpus — so it used to draw',
+);
+w(
+  '// a screen of nothing at all. Painting a box moves nothing, so the tints are',
+);
 w('// free, and without them there is no way to see that the screen even ran.');
 w("const ITEM_TINT = 'rgba(10, 132, 255, 0.35)';");
 w("const CONTAINER_TINT = 'rgba(120, 120, 128, 0.12)';");
 w('');
 w('type Rect = {x: number, y: number, w: number, h: number};');
 w('');
-w('/** What the CDP reader finds on the global: one entry per case, keyed by id. */');
+w(
+  '/** What the CDP reader finds on the global: one entry per case, keyed by id. */',
+);
 w('type CaseEntry = {container?: Rect, items: {[string]: Rect}};');
 w('');
 w('function publish(caseId: string, key: string, rect: Rect) {');
@@ -234,13 +248,17 @@ w('  containerStyle: {...},');
 w('  items: Array<{style: {...}, childHeight: ?number}>,');
 w('}): React.Node {');
 w('  return (');
-w("    <View style={{paddingTop: 10}}>");
-w("      <Text style={{fontSize: 10, color: TERTIARY_COLOR}}>");
+w('    <View style={{paddingTop: 10}}>');
+w('      <Text style={{fontSize: 10, color: TERTIARY_COLOR}}>');
 w('        {id}');
 w('      </Text>');
 w('      {/* Clipped to the screen on purpose. The case is laid out at the');
-w('          900pt width the oracle used, and an unclipped one makes the SCROLL');
-w("          VIEW's content 900 wide — which is why its indicator sat far off to");
+w(
+  '          900pt width the oracle used, and an unclipped one makes the SCROLL',
+);
+w(
+  "          VIEW's content 900 wide — which is why its indicator sat far off to",
+);
 w('          the right instead of at the edge of the screen. Clipping changes');
 w('          what is visible, never what is measured. */}');
 w("      <View style={{width: '100%', overflow: 'hidden'}}>");
@@ -281,11 +299,7 @@ w('  style: {...},');
 w('  items: Array<{style: {...}, childHeight: ?number}>,');
 w('}> = [');
 for (const c of usable) {
-  w(
-    `  {id: ${json(c.id)}, style: ${json(c.style)}, items: ${json(
-      c.items,
-    )}},`,
-  );
+  w(`  {id: ${json(c.id)}, style: ${json(c.style)}, items: ${json(c.items)}},`);
 }
 w('];');
 w('');
@@ -294,18 +308,32 @@ w('  return (');
 w('    <ScrollView');
 w('      style={{flex: 1}}');
 w('      contentContainerStyle={{paddingHorizontal: 12, paddingBottom: 24}}>');
-w("      <View style={{paddingVertical: 12, gap: 6}}>");
-w("        <Text style={{fontSize: 15, fontWeight: '600', color: LABEL_COLOR}}>");
+w('      <View style={{paddingVertical: 12, gap: 6}}>');
+w(
+  "        <Text style={{fontSize: 15, fontWeight: '600', color: LABEL_COLOR}}>",
+);
 w(`          {'Grid conformance corpus — ${usable.length} cases'}`);
 w('        </Text>');
-w("        <Text style={{fontSize: 12, color: SECONDARY_COLOR, lineHeight: 17}}>");
+w(
+  '        <Text style={{fontSize: 12, color: SECONDARY_COLOR, lineHeight: 17}}>',
+);
 w('          {');
-w("            'Every case is laid out at the 900pt width the Safari oracle ' +");
-w("            'used, so only its left edge fits on a phone, and the boxes are ' +");
-w("            'tinted so the packing is visible at all. This screen is not ' +");
-w("            'meant to be read case by case: it exists so the measured rects ' +");
+w(
+  "            'Every case is laid out at the 900pt width the Safari oracle ' +",
+);
+w(
+  "            'used, so only its left edge fits on a phone, and the boxes are ' +",
+);
+w(
+  "            'tinted so the packing is visible at all. This screen is not ' +",
+);
+w(
+  "            'meant to be read case by case: it exists so the measured rects ' +",
+);
 w("            'can be published and compared. Run ' +");
-w("            'packages/rn-tester/scripts/grid-conformance-verify.js to check ' +");
+w(
+  "            'packages/rn-tester/scripts/grid-conformance-verify.js to check ' +",
+);
 w("            'every rect against Safari.'");
 w('          }');
 w('        </Text>');
@@ -326,16 +354,20 @@ w('export default {');
 w("  title: 'Grid Conformance',");
 w("  category: 'Layout',");
 w('  description:');
-w("    'Renders the whole grid / grid-lanes conformance corpus and publishes " +
-  "every measured rect, for grid-conformance-verify.js to compare against " +
-  "Safari. Not meant to be read — meant to be measured.',");
+w(
+  "    'Renders the whole grid / grid-lanes conformance corpus and publishes " +
+    'every measured rect, for grid-conformance-verify.js to compare against ' +
+    "Safari. Not meant to be read — meant to be measured.',",
+);
 w('  examples: [');
 w('    {');
 w("      title: 'All cases',");
 w("      name: 'all',");
 w('      // The screen owns its scrolling. Without this the example container');
 w('      // pads around it, which insets the ScrollView itself: the indicator');
-w("      // floats off the display's right edge and the content gains a second");
+w(
+  "      // floats off the display's right edge and the content gains a second",
+);
 w('      // frame of chrome. The padding belongs INSIDE, on the content.');
 w('      fullBleed: true,');
 w('      render: (): React.Node => <AllCases />,');
