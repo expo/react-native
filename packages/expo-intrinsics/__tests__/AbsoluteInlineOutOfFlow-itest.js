@@ -29,11 +29,10 @@
 
 import type {HostInstance} from 'react-native';
 
+import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
-import {Text, View} from 'react-native';
-
-import * as Fantom from '@react-native/fantom';
+import {View} from 'react-native';
 
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 import '@react-native/expo-intrinsics-poc';

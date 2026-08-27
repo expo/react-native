@@ -216,14 +216,13 @@ function headingType(
 /*
  * The root font size — `rem` — does not live in this file.
  *
- * It used to: a `Platform.select` of 17 and 16, kept in step by hand with
- * `kDefaultFontSize` in `TextAttributes.cpp`. Two copies of one metric on
- * either side of the bridge, and under Fantom they disagreed. Now that every
- * font-relative value here travels as a FACTOR, nothing in JavaScript needs to
- * know the number, and the renderer's copy is the only one.
+ * Every font-relative value here travels as a FACTOR, so nothing in JavaScript
+ * needs the number and the renderer holds the only copy: `kDefaultFontSize` in
+ * `TextAttributes.cpp`. One metric in one place, rather than two that have to
+ * be kept in step across the bridge.
  *
- * What the number IS, and why, is documented where it now solely lives. The
- * short version: iOS sets body copy at 17pt (`UIFont.systemFontSize`) and
+ * What the number IS, and why, is documented where it lives. The short
+ * version: iOS sets body copy at 17pt (`UIFont.systemFontSize`) and
  * Material's `bodyLarge` is 16sp, so a document built from these elements reads
  * at the size everything else on the phone does.
  *
@@ -575,33 +574,14 @@ const uaStyles: {[string]: UAStyle} = {
    * file cannot know, because a platform text role or an ancestor's `fontSize`
    * may have decided it.
    *
-   * They were `marginBlock: ROOT_FONT_SIZE` — a `rem` wearing an `em`'s name.
-   * It agreed with `em` for a paragraph at the root's size and disagreed for
-   * every other one: a `<p>` inside a container with larger text kept the
-   * root's margin, and `<pre>`, which sets `font-size: 0.8125em`, was 23% too
-   * loose.
+   * A channel of its own, not a differently-spelled `marginBlock`. An author's
+   * margin lands in `marginBlock`, and the renderer checks for one there before
+   * writing anything — which is how a user-agent default gives way to an
+   * author's. Spelling it as any kind of margin here puts the two values in one
+   * slot, where the aliasing table decides precedence instead of the cascade.
    *
-   * Routing them through `uaMarginBlockEm` also retires
-   * `DOM-CSS-LIMITATION(paragraph-margin-shorthand-dropped)`, where `<p>` — and
-   * only `<p>` — lost its vertical margin on both devices while `<dl>` kept a
-   * byte-identical declaration. Whatever consumed it below JavaScript, this
-   * value never travels as `marginBlock` at all now.
-   *
-   * The fix that was tried and reverted — writing `marginTop`/`marginBottom`
-   * longhands — is worth recording, because it says why a SEPARATE property is
-   * the right shape and a differently-spelled margin is not. Longhands restored
-   * the gap on both devices and inverted the cascade doing it:
-   * `applyAliasedProps` treats `marginBlock` as an alias WITH precedence and
-   * the longhands as aliases WITHOUT, so `<p style={{marginBlock: 0}}>` left
-   * Top/Bottom undefined and the user-agent's 16pt filled them in — a UA
-   * default an author could not override, on the one element authors restyle
-   * most. `uaMarginBlockEm` has no such contest to lose: an author's margin
-   * lands in `marginBlock` and the renderer checks for it explicitly before
-   * writing anything of its own.
-   *
-   * Regression coverage for that inversion is the two `DomElementsCatalog-itest`
-   * cases it broke: "<p> is block-level" and "an author style beats the UA
-   * default".
+   * `DomElementsCatalog-itest` holds that precedence: "<p> is block-level" and
+   * "an author style beats the UA default".
    */
   p: {uaMarginBlockEm: 1},
   blockquote: {uaMarginBlockEm: 1, marginInline: 40},
@@ -863,11 +843,12 @@ const uaStyles: {[string]: UAStyle} = {
    * A border cannot do that — it would box the element rather than underline
    * its lines.
    *
-   * Browsers scope this to `abbr[title]`, on the reasoning that the affordance
-   * promises an expansion. There is no attribute selector here, and `title`
-   * does not reach the native side yet (see *Not built yet*), so it is
-   * unconditional: an `<abbr>` is an abbreviation whether or not the expansion
-   * is currently carried, and the alternative is drawing nothing at all.
+   * `DOM-CSS-DEVIATION(abbr-underline-is-unconditional)`: browsers scope this
+   * to `abbr[title]`, on the reasoning that the affordance promises an
+   * expansion. There is no attribute selector here, and `title` does not reach
+   * the native side yet (see *Not built yet*), so it is unconditional: an
+   * `<abbr>` is an abbreviation whether or not the expansion is currently
+   * carried, and the alternative is drawing nothing at all.
    */
   abbr: {textDecorationLine: 'underline', textDecorationStyle: 'dotted'},
   small: {uaFontSizeEm: 0.8333},

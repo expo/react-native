@@ -79,19 +79,6 @@ const BORDER = 1;
  */
 type Style = {readonly [string]: unknown};
 
-/*
- * Merge a caller's style over the helper's defaults, caller wins.
- *
- * Both sides arrive as `Style` — indexed — on purpose. Flow refuses to spread
- * an indexed object AFTER explicit keys, because the indexer could overwrite
- * them in a way it cannot track, so the defaults cannot be written inline at
- * the spread. Naming them as a parameter makes both operands indexed and the
- * spread legal, with the precedence still stated by the order.
- */
-function withDefaults(defaults: Style, style: Style): Style {
-  return {...defaults, ...style};
-}
-
 /** The resolved block-start margin of a `<View>` carrying `style`. */
 function marginAtScale(style: Style, fontSizeMultiplier: number): number {
   const parentRef = createRef<unknown>();

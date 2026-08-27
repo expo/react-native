@@ -19,18 +19,15 @@
 
 'use strict';
 
+const {cases} = require('./cases.js');
+const {
+  containerCss,
+  itemChildHtml,
+  itemCss,
+} = require('./serialize.js');
 const {execSync, spawn} = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-const {cases} = require('./cases.js');
-const {
-  trackToCss,
-  toleranceToCss,
-  containerCss,
-  itemCss,
-  placementToCss,
-  itemChildHtml,
-} = require('./serialize.js');
 
 const DRIVER_PORT = 4457;
 const PAGE_PORT = 8793;
@@ -177,7 +174,7 @@ function driver(method, urlPath, body) {
     args.push('-d', JSON.stringify(body));
   }
   const out = execSync(`curl ${args.map(a => `'${a.replace(/'/g, "'\\''")}'`).join(' ')}`, {
-    maxBuffer: 1 << 28,
+    maxBuffer: 256 * 1024 * 1024,
   }).toString();
   // A successful DELETE answers with an empty body.
   return out.trim() === '' ? null : JSON.parse(out);

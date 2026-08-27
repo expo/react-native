@@ -11,10 +11,12 @@
  */
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 import type {HostInstance} from 'react-native';
+
 import * as Fantom from '@react-native/fantom';
 import nullthrows from 'nullthrows';
 import * as React from 'react';
 import {createRef} from 'react';
+
 import '@react-native/expo-intrinsics-poc';
 
 /**

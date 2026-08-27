@@ -18,15 +18,29 @@
 
 'use strict';
 
+const {placementToCss, trackToCss} = require('./serialize.js');
 const path = require('node:path');
-const {trackToCss, placementToCss} = require('./serialize.js');
+
 const expected = require(path.join(__dirname, 'expected.json'));
 
 // Styles React Native can express. Grid-lanes cases and the sizing keywords
 // Yoga has no representation for are left out, and counted in the header so
 // the coverage claim stays honest.
+/*
+ * The corpus states `display` in CSS, which spells the outer and inner display
+ * as two words. React Native takes a single keyword for each combination.
+ */
+const RN_DISPLAY = {
+  grid: 'grid',
+  'grid-lanes': 'grid-lanes',
+  'inline-grid': 'inline-grid',
+  'inline grid-lanes': 'inline-grid-lanes',
+};
+
+const isInlineLevel = display => display.startsWith('inline');
+
 function rnStyle(container) {
-  if (container.display !== 'grid' && container.display !== 'grid-lanes') {
+  if (!(container.display in RN_DISPLAY)) {
     return null;
   }
   // A case the ORACLE could not decide is not evidence either way.
@@ -36,7 +50,7 @@ function rnStyle(container) {
     return null;
   }
 
-  const style = {display: container.display};
+  const style = {display: RN_DISPLAY[container.display]};
   // max-content and fit-content are supported; min-content as a MAXIMUM is
   // not distinguishable from auto in Yoga, so those cases stay out rather
   // than asserting a value the engine cannot mean.
@@ -184,8 +198,8 @@ w(' * prop, the track-list parser, the props wiring, and layout as the app sees'
 w(' * it through getBoundingClientRect().');
 w(' *');
 w(` * ${usable.length} cases; ${skipped} corpus cases are not expressible as RN styles`);
-w(' * (min-content as a maximum, inline-level containers, order, and the');
-w(' * percentage flow-tolerance Safari cannot adjudicate).');
+w(' * (min-content as a maximum, order, and the percentage flow-tolerance');
+w(' * Safari cannot adjudicate).');
 w(' */');
 w('');
 w("import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';");
@@ -230,19 +244,40 @@ for (const [group, groupCases] of byGroup) {
   for (const c of groupCases) {
     w(`  it(${json(`${c.id}: ${c.note ?? ''}`.trim())}, () => {`);
     w('    const containerRef = createRef<HostInstance>();');
-    w(
-      `    const itemRefs = [${c.items
-        .map(() => 'createRef<HostInstance>()')
-        .join(', ')}];`,
-    );
+    // Every reader of `itemRefs` is emitted per item, so an empty container
+    // reads it nowhere and the binding would only be an unused one.
+    if (c.items.length > 0) {
+      w(
+        `    const itemRefs = [${c.items
+          .map(() => 'createRef<HostInstance>()')
+          .join(', ')}];`,
+      );
+    }
     w('    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});');
     w('    Fantom.runTask(() => {');
     w('      root.render(');
+    // An inline-level box is only inline-level inside a BLOCK container; a
+    // flex container blockifies it (css-display-3 §2.7) and it would fill the
+    // line instead of shrink-wrapping. The surface root is a flex container,
+    // so these cases need a block box to sit in — which is also the box the
+    // browser measured them in.
+    if (isInlineLevel(c.container.display)) {
+      w(`        <View style={{display: 'block', width: VIEWPORT_WIDTH}}>`);
+    }
     w('        <View');
     w('          collapsable={false}');
     w('          ref={containerRef}');
     w(`          /* $FlowExpectedError[incompatible-type] grid style keys */`);
-    w(`          style={${json(c.style)}}>`);
+    // A container with no items writes no children, and an element with no
+    // children is written self-closing. It carries the comma itself unless a
+    // block wrapper is still to be closed after it.
+    const containerIsEmpty = c.itemStyles.length === 0;
+    const containerOpenEnd = !containerIsEmpty
+      ? '>'
+      : isInlineLevel(c.container.display)
+        ? ' />'
+        : ' />,';
+    w(`          style={${json(c.style)}}${containerOpenEnd}`);
     c.itemStyles.forEach((s, i) => {
       const childHeight = c.items[i].childHeight;
       w('          <View');
@@ -259,7 +294,14 @@ for (const [group, groupCases] of byGroup) {
         w('          </View>');
       }
     });
-    w('        </View>,');
+    if (isInlineLevel(c.container.display)) {
+      if (!containerIsEmpty) {
+        w('        </View>');
+      }
+      w('        </View>,');
+    } else if (!containerIsEmpty) {
+      w('        </View>,');
+    }
     w('      );');
     w('    });');
     w('    const container = rectOf(containerRef);');

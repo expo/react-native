@@ -16,6 +16,7 @@
 #include <react/debug/react_native_assert.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
+#include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/core/Sealable.h>
 #include <react/renderer/core/ShadowNode.h>
@@ -86,6 +87,16 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void layoutTree(LayoutContext layoutContext, LayoutConstraints layoutConstraints) override;
 
   void layout(LayoutContext layoutContext) override;
+
+  /*
+   * The floats intruding on this node's own content, in its coordinates.
+   *
+   * Placed by the block container that owns them and handed down through the
+   * layout results; a line box overlapping one of these shortens beside it
+   * (CSS2 §9.5). Empty for content no float reaches, which is almost all of
+   * it.
+   */
+  std::vector<FloatExclusion> floatExclusions() const;
 
   Size measureContent(
       const LayoutContext &layoutContext,
@@ -161,11 +172,26 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * in authored order (text-children-plan.md §3.B).
    */
   /*
-   * Whether this container measures its own inline run, its single anonymous
-   * box having been elided from the Yoga tree.
+   * The anonymous box this container measures ITSELF, or nullptr when it has
+   * none — because it has no inline content, or because the content is mixed
+   * with block-level siblings and the box is an ordinary Yoga child.
+   *
+   * Every caller that has to treat an elided box specially asks here, so the
+   * rule lives in one place. The assertion states what elision means: exactly
+   * one box, and no Yoga children, because the container took the box's place
+   * in the Yoga tree.
    */
-  bool measuresOwnInlineRun() const {
-    return measuresOwnInlineRun_;
+  YogaLayoutableShadowNode *elidedInlineRun() const {
+    if (!measuresOwnInlineRun_) {
+      return nullptr;
+    }
+    react_native_assert(
+        anonymousTextContentChildren_.size() == 1 &&
+        yogaLayoutableChildren_.empty() &&
+        "a container measuring its own run has one box and no Yoga children");
+    return anonymousTextContentChildren_.size() == 1
+        ? anonymousTextContentChildren_[0].get()
+        : nullptr;
   }
 
   /*
@@ -385,25 +411,20 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    *
    * A predicate that names only one of them is wrong, and wrong in a way that
    * is very hard to see: the layout looks correct for every tree that happens
-   * to contain a text node, and collapses for trees that do not. Three separate
-   * defects came from exactly that mistake —
-   *
-   *   - `appendChild` tested only `isInlineTextContent` when deciding whether a
-   *     container needed its inline rebuild, so a run made *only* of atomic
-   *     inlines was laid out as block children and stacked vertically. A single
-   *     space anywhere in the run fixed it, which is why it was mistaken for a
-   *     bug about text;
-   *   - `ViewShadowNode::layoutInlineAttachments` tested only
-   *     `isInlineFlowContent` when recursing for attachments, so an `<img>`
-   *     inside an `<a>` was never placed and simply vanished;
-   *   - `InlineElementMetrics` had the union right, which is what showed the
-   *     other two were wrong rather than the design being unclear.
+   * to contain a text node, and collapses for trees that do not.
    *
    * So the union has a name, and callers ask for it rather than assembling it.
    * If you are about to write `isInlineTextContent(x) || something`, this is
    * the function you want.
    */
   static bool isInlineLevelContent(const ShadowNode &child);
+
+  /*
+   * A `display:'contents'` box holding only inline-level content. It produces
+   * no box, so rather than interrupting a run it joins one as an inline flow
+   * box and its content lands on the line (css-display-3 §3.1).
+   */
+  static bool isTransparentInlineBox(const ShadowNode &child);
 
  private:
 
