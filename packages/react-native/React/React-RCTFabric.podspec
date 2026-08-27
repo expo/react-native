@@ -49,7 +49,9 @@ Pod::Spec.new do |s|
   s.header_dir             = header_dir
   s.module_name            = module_name
   s.weak_framework         = "JavaScriptCore"
-  s.framework              = "MobileCoreServices"
+  # LinkPresentation draws the card a long press on `<a href>` lifts into —
+  # `LPLinkView`, the platform's own link preview. See EXPTextLinkInteraction.
+  s.frameworks             = "MobileCoreServices", "LinkPresentation"
   s.pod_target_xcconfig    = {
     "HEADER_SEARCH_PATHS" => header_search_paths,
     "OTHER_CFLAGS" => "$(inherited) " + new_arch_flags,
