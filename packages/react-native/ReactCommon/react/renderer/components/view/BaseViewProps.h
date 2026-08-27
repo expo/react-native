@@ -55,12 +55,11 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // `enableStringChildren` ONCE and forwards the answer; this one takes it as
   // a plain bool.
   //
-  // Reading the flag at each of the twelve probe sites instead cost more than
-  // the probes did: the getter is a cross-module call that ends in a
-  // sequentially-consistent atomic load, it does not inline, and it is paid
-  // whether the flag is on or off. Twelve of them per View, on every props
-  // construction, measured about 0.4ms on a 1,365-View mount — larger than
-  // the entire cost of the feature it was gating.
+  // Reading the flag at each probe site instead would cost more than the probes
+  // do. The getter is a cross-module call ending in a sequentially-consistent
+  // atomic load, it does not inline, and it is paid whether the flag is on or
+  // off — so asking it once per View is cheaper than asking it once per
+  // property.
   struct ResolvedFlag {};
 
   BaseViewProps(
@@ -201,13 +200,10 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
    * would otherwise be the answer. So a heading inside a 20pt container is
    * 40pt, and its margin is `0.67 × 40`, not `0.67 × 20`.
    *
-   * This used to arrive pre-multiplied by the root, which is `rem`, not `em`.
-   * A heading only ever sat at the root's size in practice, so the two agreed
-   * and nothing noticed — until a heading appeared inside anything that had
-   * restyled its text, where it stayed stubbornly at the root's size. Stating
-   * the factor also retires a disagreement the sheet could not win: the root
-   * is defined on both sides of the JS/C++ boundary and under Fantom the two
-   * differ, 17 against 16. A factor has no root in it to disagree about.
+   * A factor rather than a resolved size for a second reason too: the root is
+   * defined on both sides of the JS/C++ boundary and the two need not agree —
+   * under Fantom they are 17 and 16. A factor carries no root to disagree
+   * about.
    */
   Float uaFontSizeEm{std::numeric_limits<Float>::quiet_NaN()};
 
@@ -255,10 +251,6 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
    * <Text> (UA `all: 'initial'`) therefore stays a boundary under `revert`
    * and loses it under `unset`; every other element inherits under both.
    */
-  const BaseViewProps *asBaseViewProps() const override {
-    return this;
-  }
-
   bool isInheritanceBoundary(bool uaDeclaresBoundary) const override {
     switch (cascadeReset) {
       case CascadeReset::Initial:
