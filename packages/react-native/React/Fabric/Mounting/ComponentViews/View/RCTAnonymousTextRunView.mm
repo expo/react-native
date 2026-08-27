@@ -75,7 +75,7 @@ using namespace facebook::react;
   NSArray<UIAccessibilityElement *> *_cachedAccessibilityElements;
   // The on-screen rects of every link in this run, and any the OS is currently
   // displaying a copy of — which this view must therefore not paint as well.
-  NSArray<NSValue *> *_cachedLinkRects;
+  NSArray<NSArray<NSValue *> *> *_cachedLinkRectGroups;
   NSMutableArray<RCTLinkGlyphView *> *_linkViews;
 }
 
@@ -403,7 +403,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
 - (void)invalidateAccessibilityElements
 {
   _cachedAccessibilityElements = nil;
-  _cachedLinkRects = nil;
+  _cachedLinkRectGroups = nil;
   // A run only claims touches when it has a link in it; see `-pointInside:`.
   self.userInteractionEnabled = [self linkRects].count > 0;
   [self updateLinkViews];
@@ -419,34 +419,63 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
  */
 - (NSArray<NSValue *> *)linkRects
 {
-  if (_cachedLinkRects != nil) {
-    return _cachedLinkRects;
+  NSMutableArray<NSValue *> *flat = [NSMutableArray array];
+  for (NSArray<NSValue *> *group in [self linkRectGroups]) {
+    [flat addObjectsFromArray:group];
+  }
+  return flat;
+}
+
+/*
+ * Each link in this run, as the rects it actually occupies — one per line.
+ *
+ * Grouped per link rather than flattened because a link that WRAPS has to lift
+ * as one shape while two different links in the same run lift separately, and
+ * because the group is what a link's own view is sized and clipped from.
+ *
+ * A single rect per link was the old shape of this, and it was wrong twice
+ * over: it covered only the FIRST line of a wrapped link, so the link's view
+ * held only that line's glyphs and a touch on the second line found no view to
+ * lift; and every link in the run shared one group, so two links lifted
+ * together.
+ */
+- (NSArray<NSArray<NSValue *> *> *)linkRectGroups
+{
+  if (_cachedLinkRectGroups != nil) {
+    return _cachedLinkRectGroups;
   }
   RCTTextLayoutManager *nativeTextLayoutManager = self.nativeTextLayoutManager;
   if (nativeTextLayoutManager == nil) {
     return @[];
   }
 
-  NSMutableArray<NSValue *> *rects = [NSMutableArray array];
+  NSMutableArray<NSArray<NSValue *> *> *groups = [NSMutableArray array];
   const CGRect frame = self.containerFrame;
   const CGPoint offset =
       CGPointMake(frame.origin.x - self.frame.origin.x, frame.origin.y - self.frame.origin.y);
 
   [nativeTextLayoutManager
-      getRectWithAttributedString:_run.attributedString
-              paragraphAttributes:facebook::react::ParagraphAttributes{}
-               enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
-                            frame:CGRectMake(0, 0, frame.size.width, frame.size.height)
-                       usingBlock:^(CGRect fragmentRect, NSString *_Nonnull fragmentText, NSString *value) {
-                         if (![value isEqualToString:@"link"]) {
-                           return;
-                         }
-                         [rects addObject:[NSValue valueWithCGRect:CGRectOffset(
-                                                                       fragmentRect, offset.x, offset.y)]];
-                       }];
+      getLineRectGroupsWithAttributedString:_run.attributedString
+                        paragraphAttributes:facebook::react::ParagraphAttributes{}
+                         enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
+                                      frame:CGRectMake(0, 0, frame.size.width, frame.size.height)
+                                 usingBlock:^(NSArray<NSValue *> *lineRects, NSString *value) {
+                                   if (![value isEqualToString:@"link"]) {
+                                     return;
+                                   }
+                                   NSMutableArray<NSValue *> *shifted =
+                                       [NSMutableArray arrayWithCapacity:lineRects.count];
+                                   for (NSValue *rect in lineRects) {
+                                     [shifted addObject:[NSValue valueWithCGRect:CGRectOffset(
+                                                                                     rect.CGRectValue,
+                                                                                     offset.x,
+                                                                                     offset.y)]];
+                                   }
+                                   [groups addObject:shifted];
+                                 }];
 
-  _cachedLinkRects = rects;
-  return _cachedLinkRects;
+  _cachedLinkRectGroups = groups;
+  return _cachedLinkRectGroups;
 }
 
 /*
@@ -461,12 +490,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   if (_linkViews == nil) {
     _linkViews = [NSMutableArray new];
   }
-  NSArray<NSValue *> *rects = [self linkRects];
-  // Every link in this run currently lifts as one shape. Splitting rects by
-  // which link they belong to needs the fragment identity the layout walk
-  // already has; until that is threaded through, one view per run's links is
-  // correct for the common case of a single link per run.
-  NSArray<NSArray<NSValue *> *> *groups = rects.count > 0 ? @[ rects ] : @[];
+  NSArray<NSArray<NSValue *> *> *groups = [self linkRectGroups];
 
   while (_linkViews.count > groups.count) {
     [_linkViews.lastObject removeFromSuperview];
