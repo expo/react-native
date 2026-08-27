@@ -60,7 +60,7 @@ describe('checkable footprint states the control, not a wish', () => {
  * flows after it, and nothing can land underneath. It is also where HTML puts
  * the control.
  *
- * The height is the load-bearing half — Yoga measures the row and UIKit draws
+ * The height is the half that shows — Yoga measures the row and UIKit draws
  * the cell behind it, and if they disagree the disagreement is visible. A row
  * measured at its label's 20pt got a section 20pt tall, UIKit drew its cell
  * taller, and each group showed its first row with the rest clipped square.
@@ -103,7 +103,9 @@ describe('a radio reserves the box for what its platform draws', () => {
     // real RadioButton; iOS has no radio control and lets the list's accessory
     // be the indicator, so the element itself takes no width at all.
     expect(RADIO_FOOTPRINT_BY_PLATFORM.ios.width).toBe(0);
-    expect(RADIO_FOOTPRINT_BY_PLATFORM.android.width).toBeGreaterThanOrEqual(48);
+    expect(RADIO_FOOTPRINT_BY_PLATFORM.android.width).toBeGreaterThanOrEqual(
+      48,
+    );
   });
 
   test("the iOS box is the platform's standard row height", () => {
