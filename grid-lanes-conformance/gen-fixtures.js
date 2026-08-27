@@ -14,6 +14,7 @@
 'use strict';
 
 const path = require('node:path');
+
 const expected = require(path.join(__dirname, 'expected.json'));
 
 const out = [];
@@ -100,26 +101,26 @@ const ALIGN = {
 // be — its count depends on the container size — so the pattern is emitted
 // once and described positionally for the engine to expand.
 function flattenTracks(list) {
-  const out = [];
+  const flat = [];
   let autoRepeat = null;
   for (const t of list ?? []) {
     if (t.t !== 'repeat') {
-      out.push(t);
+      flat.push(t);
       continue;
     }
     if (typeof t.n === 'number') {
-      for (let i = 0; i < t.n; i++) out.push(...t.tracks);
+      for (let i = 0; i < t.n; i++) flat.push(...t.tracks);
       continue;
     }
     if (autoRepeat != null) return {tracks: null, autoRepeat: null}; // two auto-repeats: invalid
     autoRepeat = {
       type: t.n === 'auto-fit' ? 'YGGridAutoRepeatAutoFit' : 'YGGridAutoRepeatAutoFill',
-      startIndex: out.length,
+      startIndex: flat.length,
       trackCount: t.tracks.length,
     };
-    out.push(...t.tracks);
+    flat.push(...t.tracks);
   }
-  return {tracks: out, autoRepeat};
+  return {tracks: flat, autoRepeat};
 }
 
 function unsupportedReason(c) {

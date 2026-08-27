@@ -14,11 +14,11 @@ import '@react-native/expo-intrinsics-poc';
 
 import type {HostInstance} from 'react-native';
 
-import ensureInstance from 'react-native/src/private/__tests__/utilities/ensureInstance';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
 import {View} from 'react-native';
+import ensureInstance from 'react-native/src/private/__tests__/utilities/ensureInstance';
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 
 /*

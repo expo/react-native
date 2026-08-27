@@ -134,6 +134,868 @@ function span(children, style, m) {
 const GAP_TOLERANCE = 1;
 
 const CASES = [
+  /* ------------------------------------- PROBE batch 2 -- */
+  {
+    name: 'PROBE-text-align-center-centres-the-line',
+    why: 'text-align centres the line box contents, not the container.',
+    deviceOnly: "Fantom's measurer places every line at the container's inline start, so it cannot answer where a line is aligned",
+    tree: root([box('a', 40, 20), box('b', 60, 20)], {textAlign: 'center'}),
+  },
+  {
+    name: 'PROBE-text-align-right-packs-to-the-end',
+    compositeX: true,
+    why: 'text-align:right puts the line contents against the inline end.',
+    deviceOnly: "Fantom's measurer places every line at the container's inline start, so it cannot answer where a line is aligned",
+    tree: root([box('a', 40, 20), box('b', 60, 20)], {textAlign: 'right'}),
+  },
+  {
+    name: 'text-align-does-not-move-a-block-child',
+    compositeX: true,
+    why: 'text-align aligns the contents of a LINE box. A block-level child is not on a line, so it fills the container and stays at the inline start — the horizontal twin of vertical-align-does-not-move-a-block-child.',
+    deviceOnly: "Fantom's measurer places every line at the container's inline start, so it cannot answer where a line is aligned",
+    tree: root([
+      {tag: 'div', m: 'blockChild', style: {display: 'block', height: '20px', backgroundColor: '#0a84ff'}},
+      box('inlineBox', 40, 20),
+    ], {textAlign: 'right'}),
+  },
+  {
+    name: 'text-align-inherits-into-a-nested-block',
+    compositeX: true,
+    why: 'text-align is inherited, so a nested block container with no value of its own aligns its line the way the ancestor does.',
+    deviceOnly: "Fantom's measurer places every line at the container's inline start, so it cannot answer where a line is aligned",
+    tree: root([
+      {tag: 'div', m: 'nested', style: {display: 'block', backgroundColor: '#e5e5ea'},
+       children: [box('inlineBox', 40, 20)]},
+    ], {textAlign: 'right'}),
+  },
+  {
+    name: 'PROBE-border-box-keeps-padding-inside-the-width',
+    why: 'box-sizing:border-box makes the declared width include padding, so the content box shrinks.',
+    tree: root([
+      {tag: 'div', m: 'outer', style: {boxSizing: 'border-box', width: '200px', paddingLeft: '30px', paddingRight: '30px', display: 'block'},
+       children: [marginBox('inner', 999, 20, {display: 'block', width: 'auto'})]},
+    ]),
+  },
+  {
+    name: 'PROBE-display-contents-child-joins-the-parent-flow',
+    why: 'display:contents removes the box, so its children are laid out as if they were the parent\'s.',
+    tree: root([
+      box('before', 40, 20),
+      // No `m`: a display:contents element generates no box, so there is
+      // nothing of its own to measure — the browser reports a degenerate rect.
+      {tag: 'div', style: {display: 'contents'}, children: [box('inner', 40, 20)]},
+      box('after', 40, 20),
+    ]),
+  },
+  {
+    name: 'contents-with-block-children-stacks-them-in-the-outer-flow',
+    why: 'The case above covers inline children. A display:contents wrapper holding BLOCK children is the other half: they stack in the grandparent\'s flow, so a run before them is broken exactly as if the wrapper were not written.',
+    tree: root([
+      box('before', 40, 20),
+      {tag: 'div', style: {display: 'contents'}, children: [
+        {tag: 'div', m: 'first', style: {display: 'block', height: '20px', backgroundColor: '#0a84ff'}},
+        {tag: 'div', m: 'second', style: {display: 'block', height: '20px', backgroundColor: '#34c759'}},
+      ]},
+    ]),
+  },
+  {
+    name: 'margins-collapse-through-a-contents-wrapper',
+    why: 'A display:contents element generates no box, so there is no edge for margins to stop at: its child\'s top margin collapses with the preceding sibling\'s bottom margin as though they were siblings.',
+    tree: root([
+      {tag: 'div', m: 'before', style: {display: 'block', height: '20px', marginBottom: '30px', backgroundColor: '#0a84ff'}},
+      {tag: 'div', style: {display: 'contents'}, children: [
+        {tag: 'div', m: 'inner', style: {display: 'block', height: '20px', marginTop: '20px', backgroundColor: '#34c759'}},
+      ]},
+    ]),
+  },
+  {
+    /*
+     * An inline-block's baseline is normally the baseline of its last line
+     * box. When its overflow is not `visible` it is the bottom MARGIN EDGE
+     * instead (CSS2 10.8.1), so the box sits higher on the line — its bottom
+     * rests on the baseline rather than hanging below it by its text's
+     * descent.
+     *
+     * Both boxes carry the same text so the only difference between them is
+     * `overflow`, and they share a line so they share a baseline. An earlier
+     * version of this case used EMPTY boxes, where the rule cannot apply at
+     * all: with no in-flow line boxes the baseline is the bottom margin edge
+     * whatever `overflow` says, and Safari measures the two identically. It
+     * passed everywhere while adjudicating nothing.
+     */
+    name: 'overflow-hidden-inline-block-aligns-by-its-bottom-margin-edge',
+    bounded: 'clipped-sits-above-unclipped',
+    fontDependent:
+      'How far the unclipped box hangs below the baseline is its text\'s ' +
+      'descent, a font metric — Safari puts it 24pt lower. The SIGN is what ' +
+      'CSS fixes, and that is what is asserted.',
+    why: "An inline-block whose overflow is not visible takes its bottom margin edge as its baseline, so it sits higher on the line than an identical one that does not clip.",
+    tree: root([
+      {tag: 'span', m: 'plain', style: {display: 'inline-block', width: '40px', height: '40px', backgroundColor: '#0a84ff'}, children: ['Ag']},
+      {tag: 'span', m: 'clipped', style: {display: 'inline-block', overflow: 'hidden', width: '40px', height: '40px', backgroundColor: '#34c759'}, children: ['Ag']},
+    ]),
+  },
+  {
+    name: 'PROBE-percentage-width-resolves-against-the-container',
+    why: 'A percentage width resolves against the containing block content box.',
+    tree: root([
+      marginBox('half', 999, 20, {display: 'block', width: '50%'}),
+    ]),
+  },
+  {
+    name: 'PROBE-max-width-caps-a-block',
+    why: 'max-width caps a block that would otherwise fill its container.',
+    tree: root([
+      marginBox('capped', 999, 20, {display: 'block', width: 'auto', maxWidth: '120px'}),
+    ]),
+  },
+
+  /* --------------------------------- sizing, position and contexts -- */
+  /*
+   * Rules the rest of the corpus does not reach: what clamps a box's size,
+   * what a relative offset does to its siblings, which box a percentage
+   * padding resolves against, and what stops a margin collapsing.
+   */
+  {
+    name: 'auto-inline-margins-centre-a-block',
+    why: 'A block-level box with a definite width and both inline margins auto takes the leftover space equally (CSS2 §10.3.3) — `margin: 0 auto`.',
+    tree: root([
+      marginBox('centred', 200, 20, {display: 'block', marginLeft: 'auto', marginRight: 'auto'}),
+    ]),
+  },
+  {
+    name: 'one-auto-inline-margin-takes-all-the-leftover',
+    why: 'With only the start margin auto, it absorbs the whole leftover and the box sits against the end edge.',
+    tree: root([
+      marginBox('pushed', 200, 20, {display: 'block', marginLeft: 'auto'}),
+    ]),
+  },
+  {
+    name: 'a-percentage-min-height-against-an-auto-parent-does-not-apply',
+    why: 'A percentage min-height resolves against the containing block height; with that auto it does not apply (CSS2 §10.7).',
+    tree: root([
+      {tag: 'div', m: 'parent', style: {display: 'block', backgroundColor: '#ff9500'},
+       children: [marginBox('child', 100, 20, {display: 'block', minHeight: '50%'})]},
+    ]),
+  },
+  {
+    name: 'relative-percentage-offset-resolves-against-the-container',
+    why: 'A percentage `left` on a relatively positioned box resolves against the containing block WIDTH.',
+    tree: root([
+      marginBox('shifted', 100, 20, {display: 'block', position: 'relative', left: '10%'}),
+    ]),
+  },
+  {
+    name: 'a-relative-box-given-both-left-and-right-uses-left',
+    why: 'Relative offsets on opposite sides are over-constrained: one is ignored, and in a left-to-right container it is `right` (CSS2 §9.4.3). The box moves right by the LEFT value, not by the difference.',
+    tree: root([
+      marginBox('shifted', 100, 20, {display: 'block', position: 'relative', left: '30px', right: '10px'}),
+    ]),
+  },
+  {
+    name: 'a-relative-box-given-both-top-and-bottom-uses-top',
+    why: 'The block-axis twin: `bottom` is the one ignored, so the box moves down by the TOP value and its siblings do not move at all.',
+    tree: root([
+      marginBox('shifted', 100, 20, {display: 'block', position: 'relative', top: '15px', bottom: '5px'}),
+      {tag: 'div', m: 'after', style: {display: 'block', height: '20px', backgroundColor: '#34c759'}},
+    ]),
+  },
+  {
+    name: 'a-percentage-top-offset-resolves-against-the-container-height',
+    why: 'Unlike `left`, a percentage `top` resolves against the containing block HEIGHT — so it needs a definite one to apply at all.',
+    tree: root([
+      {tag: 'div', m: 'holder', style: {display: 'block', height: '100px', backgroundColor: '#e5e5ea'},
+       children: [marginBox('shifted', 100, 20, {display: 'block', position: 'relative', top: '25%'})]},
+    ]),
+  },
+  {
+    name: 'margins-collapse-through-several-empty-siblings',
+    why: 'A chain of empty blocks collapses through: the single gap is the largest margin in the chain, not their sum.',
+    tree: root([
+      marginBox('first', 100, 20, {display: 'block', marginBlockEnd: '10px'}),
+      {tag: 'div', style: {display: 'block', marginBlock: '25px'}},
+      {tag: 'div', style: {display: 'block', marginBlock: '15px'}},
+      marginBox('last', 100, 20, {display: 'block', marginBlockStart: '10px'}),
+    ]),
+  },
+  {
+    name: 'vertical-align-does-not-move-a-block-child',
+    why: 'vertical-align applies to inline-level boxes and table cells; a block-level child ignores it.',
+    tree: root([
+      marginBox('a', 100, 20, {display: 'block', verticalAlign: 'bottom'}),
+      marginBox('b', 100, 20, {display: 'block'}),
+    ]),
+  },
+  {
+    name: 'a-float-and-a-following-block-share-the-band',
+    why: 'A float is taken out of flow, so a following in-flow BLOCK box starts at the container edge and overlaps it — only line boxes shorten.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '100px', height: '40px', backgroundColor: '#0a84ff'}},
+      marginBox('after', 200, 20, {display: 'block'}),
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'rtl-float-inline-start-packs-against-the-right',
+    why: 'float:inline-start is the LOGICAL side, so under direction:rtl it packs against the right edge (css-logical-1).',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'inline-start', width: '100px', height: '30px', backgroundColor: '#0a84ff'}},
+    ], {direction: 'rtl', overflow: 'hidden'}),
+  },
+  {
+    name: 'rtl-float-inline-end-packs-against-the-left',
+    why: 'The mirror of the case above: under direction:rtl an inline-end float packs against the LEFT edge.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'inline-end', width: '100px', height: '30px', backgroundColor: '#34c759'}},
+    ], {direction: 'rtl', overflow: 'hidden'}),
+  },
+  {
+    name: 'an-rtl-float-is-inset-by-the-containers-padding',
+    why: "A float's inline position is measured from the container's content edge, so the padding on the side it packs against insets it — under rtl that is the RIGHT padding for an inline-start float.",
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'inline-start', width: '100px', height: '30px', backgroundColor: '#af52de'}},
+    ], {direction: 'rtl', overflow: 'hidden', boxSizing: 'border-box', paddingLeft: '15px', paddingRight: '25px'}),
+  },
+  {
+    name: 'rtl-places-a-block-child-from-the-right',
+    why: 'Under direction:rtl a block child with a definite width sits against the inline start, which is the RIGHT edge (css-writing-modes-4 §2).',
+    tree: root([
+      marginBox('child', 100, 20, {display: 'block'}),
+    ], {direction: 'rtl'}),
+  },
+  {
+    name: 'an-absolute-child-positions-from-the-padding-box',
+    why: 'An absolutely positioned child offsets from its containing block PADDING box, so the container padding is included (CSS2 §10.1).',
+    tree: root([
+      {tag: 'div', m: 'holder', style: {display: 'block', position: 'relative', boxSizing: 'border-box', padding: '10px', height: '60px', backgroundColor: '#30b0c7'},
+       children: [
+         {tag: 'div', m: 'abs', style: {position: 'absolute', top: '5px', left: '5px', width: '40px', height: '20px', backgroundColor: '#ff3b30'}},
+       ]},
+    ]),
+  },
+  /*
+   * The rest of absolute positioning inside a BLOCK container. Two cases
+   * reached it before, both with `top`/`left` stated. What was never asked is
+   * what happens when an offset is omitted — the static position (CSS2 §10.6.4)
+   * — and that is the rule a block container has to answer for itself, since
+   * the position it hands back is the one the child would have had in the flow.
+   */
+  {
+    name: 'an-absolute-child-with-no-offsets-sits-at-its-static-position',
+    why: 'With every offset auto, an absolutely positioned box stays where it would have been in the flow (CSS2 §10.6.4) — so it sits below the block box before it, not at the top of the container.',
+    tree: root([
+      {tag: 'div', m: 'holder', style: {display: 'block', position: 'relative', height: '100px', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'first', style: {height: '30px', backgroundColor: '#0a84ff'}},
+         {tag: 'div', m: 'abs', style: {position: 'absolute', width: '40px', height: '20px', backgroundColor: '#ff3b30'}},
+       ]},
+    ]),
+  },
+  {
+    name: 'an-absolute-child-offsets-from-the-bottom-and-right',
+    why: 'bottom and right offset from the containing block\'s padding box on the far side, so the box is placed by its own bottom-right corner.',
+    tree: root([
+      {tag: 'div', m: 'holder', style: {display: 'block', position: 'relative', boxSizing: 'border-box', padding: '10px', height: '100px', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'abs', style: {position: 'absolute', bottom: '5px', right: '5px', width: '40px', height: '20px', backgroundColor: '#ff3b30'}},
+       ]},
+    ]),
+  },
+  {
+    name: 'opposite-offsets-size-an-auto-width-absolute-box',
+    why: 'With left and right both given and width auto, the box stretches between them (CSS2 §10.3.7) rather than shrinking to fit.',
+    tree: root([
+      {tag: 'div', m: 'holder', style: {display: 'block', position: 'relative', height: '60px', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'abs', style: {position: 'absolute', left: '20px', right: '50px', height: '20px', backgroundColor: '#ff3b30'}},
+       ]},
+    ]),
+  },
+  {
+    name: 'an-absolute-child-does-not-take-space-in-the-flow',
+    why: 'An out-of-flow box contributes nothing to its container\'s block size, so the box after it sits where it would with the absolute one absent.',
+    tree: root([
+      {tag: 'div', m: 'holder', style: {display: 'block', position: 'relative', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'first', style: {height: '20px', backgroundColor: '#0a84ff'}},
+         {tag: 'div', m: 'abs', style: {position: 'absolute', top: '0px', left: '0px', width: '40px', height: '90px', backgroundColor: '#ff3b30'}},
+         {tag: 'div', m: 'after', style: {height: '20px', backgroundColor: '#34c759'}},
+       ]},
+    ]),
+  },
+  {
+    name: 'an-absolute-box-does-not-collapse-margins-with-its-siblings',
+    why: "An out-of-flow box's margins never collapse with anything (CSS2 §8.3.1), and it is not between its siblings, so the two in-flow margins collapse with each other straight through it.",
+    tree: root([
+      {tag: 'div', m: 'holder', style: {display: 'block', position: 'relative', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'first', style: {height: '20px', marginBottom: '30px', backgroundColor: '#0a84ff'}},
+         {tag: 'div', m: 'abs', style: {position: 'absolute', width: '40px', height: '20px', marginTop: '100px', backgroundColor: '#ff3b30'}},
+         {tag: 'div', m: 'after', style: {height: '20px', marginTop: '20px', backgroundColor: '#34c759'}},
+       ]},
+    ]),
+  },
+  {
+    name: 'nested-percentage-widths-compound',
+    why: 'A percentage width resolves against the parent CONTENT box, so 50% of 50% of 300 is 75.',
+    tree: root([
+      {tag: 'div', m: 'outer', style: {display: 'block', width: '50%', backgroundColor: '#0a84ff'},
+       children: [marginBox('inner', 999, 20, {display: 'block', width: '50%'})]},
+    ]),
+  },
+  {
+    name: 'a-percentage-min-width-resolves-against-the-container',
+    why: 'A percentage min-width resolves against the containing block width and can widen a narrower box.',
+    tree: root([
+      marginBox('clamped', 40, 20, {display: 'block', minWidth: '40%'}),
+    ]),
+  },
+  {
+    name: 'a-border-reduces-the-content-box-under-border-box',
+    why: 'Under box-sizing:border-box the declared width includes the border, so a child filling the container is narrower by both borders.',
+    tree: root([
+      {tag: 'div', m: 'outer', style: {display: 'block', boxSizing: 'border-box', width: '200px', borderLeftWidth: '15px', borderRightWidth: '15px', borderLeftStyle: 'solid', borderRightStyle: 'solid', borderLeftColor: '#af52de', borderRightColor: '#af52de'},
+       children: [marginBox('inner', 999, 20, {display: 'block', width: 'auto'})]},
+    ]),
+  },
+  {
+    name: 'a-block-container-ignores-gap',
+    why: 'gap applies to flex, grid and multi-column — not to a block container, whose children are separated by their margins alone.',
+    tree: root([
+      marginBox('first', 100, 20, {display: 'block'}),
+      marginBox('second', 100, 20, {display: 'block'}),
+    ], {gap: '30px'}),
+  },
+  {
+    name: 'content-box-percentage-padding-resolves-against-the-width',
+    why: 'Under box-sizing:content-box the declared width is the CONTENT width and a percentage padding — resolved against the containing block width — adds to it.',
+    tree: root([
+      {tag: 'div', m: 'padded', style: {display: 'block', boxSizing: 'content-box', width: '100px', height: '20px', paddingLeft: '10%', backgroundColor: '#af52de'}},
+    ]),
+  },
+  {
+    name: 'percentage-margin-resolves-against-the-width',
+    why: 'A percentage margin resolves against the containing block WIDTH in both axes (CSS2 §8.3), so a 10% top margin on a 300pt container is 30.',
+    tree: root([
+      marginBox('shifted', 100, 20, {display: 'block', marginTop: '10%'}),
+    ]),
+  },
+  {
+    name: 'a-percentage-height-against-an-auto-height-parent-is-auto',
+    why: 'A percentage height resolves against the containing block height; when that is auto the percentage does not apply and the box is content-sized (CSS2 §10.5).',
+    tree: root([
+      {tag: 'div', m: 'parent', style: {display: 'block', backgroundColor: '#30b0c7'},
+       children: [marginBox('child', 100, 20, {display: 'block', height: '50%'})]},
+    ]),
+  },
+  {
+    name: 'a-percentage-height-against-a-definite-parent-applies',
+    why: 'The other half of CSS2 §10.5: once the containing block has a definite height, a percentage height resolves against it.',
+    tree: root([
+      {tag: 'div', m: 'parent', style: {display: 'block', height: '80px', backgroundColor: '#30b0c7'},
+       children: [{tag: 'div', m: 'child', style: {display: 'block', height: '50%', backgroundColor: '#ff3b30'}}]},
+    ]),
+  },
+  {
+    name: 'a-percentage-height-resolves-against-the-content-box',
+    why: "A percentage height resolves against the containing block's CONTENT height, so the parent's padding is excluded from what the percentage is taken of.",
+    tree: root([
+      {tag: 'div', m: 'parent', style: {display: 'block', boxSizing: 'content-box', height: '80px', paddingTop: '10px', paddingBottom: '10px', backgroundColor: '#30b0c7'},
+       children: [{tag: 'div', m: 'child', style: {display: 'block', height: '50%', backgroundColor: '#ff3b30'}}]},
+    ]),
+  },
+  {
+    name: 'a-negative-inline-margin-pulls-a-block-out',
+    why: 'A negative inline-start margin moves a block box outside its container content edge.',
+    tree: root([
+      marginBox('pulled', 100, 20, {display: 'block', marginLeft: '-20px'}),
+    ]),
+  },
+  {
+    name: 'clear-both-drops-below-floats-on-both-sides',
+    why: 'clear:both puts the box below the lowest edge of floats on either side.',
+    tree: root([
+      {tag: 'div', m: 'left', style: {float: 'left', width: '80px', height: '30px', backgroundColor: '#0a84ff'}},
+      {tag: 'div', m: 'right', style: {float: 'right', width: '80px', height: '50px', backgroundColor: '#34c759'}},
+      {tag: 'div', m: 'cleared', style: {clear: 'both', display: 'block', width: '40px', height: '20px', backgroundColor: '#ff3b30'}},
+    ], {overflow: 'hidden'}),
+  },
+  /*
+   * The one argument `calculateBlockLayout` still passes differently from the
+   * flex path: `constrainMaxSizeForMode` gets `ownerWidth` where flex gives it
+   * `availableInnerWidth`. Inside, that value resolves the child's PERCENTAGE
+   * MARGIN — the same quantity whose own bug was fixed at a different call
+   * site — and the result is added to the max size before the clamp. So a
+   * child needs BOTH a percentage margin and a max size, under a width-less
+   * block that makes the two widths differ, for the difference to show at all.
+   */
+  {
+    name: 'a-max-width-clamps-against-a-percentage-margin',
+    why: "A max-width clamps the border box to 150 whatever the margin is. The clamp is applied to the MARGIN box with the margin added back, so a margin resolved against the wrong width would clamp at the wrong place and leave the box wider than its max.",
+    tree: root([
+      {tag: 'div', m: 'looseParent', style: {display: 'block'},
+       children: [
+         {tag: 'div', m: 'container', style: {display: 'block', width: '200px', backgroundColor: '#e5e5ea'},
+          children: [
+            {tag: 'div', m: 'clamped', style: {display: 'block', maxWidth: '150px', marginLeft: '10%', height: '20px', backgroundColor: '#ff3b30'}},
+          ]},
+       ]},
+    ]),
+  },
+  {
+    name: 'a-max-height-clamps-against-a-percentage-margin',
+    why: 'The block-axis twin, where a percentage margin still resolves against the WIDTH — so the same wrong base would reach the height clamp.',
+    tree: root([
+      {tag: 'div', m: 'looseParent', style: {display: 'block'},
+       children: [
+         {tag: 'div', m: 'container', style: {display: 'block', width: '200px', height: '200px', backgroundColor: '#e5e5ea'},
+          children: [
+            {tag: 'div', m: 'clamped', style: {display: 'block', height: '180px', maxHeight: '100px', marginTop: '10%', backgroundColor: '#ff3b30'}},
+          ]},
+       ]},
+    ]),
+  },
+  {
+    name: 'min-width-beats-max-width-when-they-conflict',
+    why: 'When min-width is larger than max-width, min wins (CSS2 §10.4).',
+    tree: root([
+      marginBox('conflicted', 40, 20, {display: 'block', minWidth: '180px', maxWidth: '90px'}),
+    ]),
+  },
+  /*
+   * `box-sizing` crossed with the min/max clamps. Which box a length names is
+   * settled per property, and min/max are not the same property as `width` —
+   * so a case stating one does not cover the other. Every case here states
+   * `box-sizing` outright: React Native defaults to border-box where CSS
+   * defaults to content-box, and leaving it implicit measures that difference
+   * instead of the rule.
+   */
+  {
+    name: 'min-width-under-border-box-includes-the-padding',
+    why: 'Under border-box every length names the border box, min-width included — so a 120pt min-width on a box with 20pt of padding leaves 80pt of content, not 120.',
+    tree: root([
+      {tag: 'div', m: 'clamped', style: {display: 'block', boxSizing: 'border-box', width: '40px', minWidth: '120px', height: '30px', paddingLeft: '20px', paddingRight: '20px', backgroundColor: '#0a84ff'},
+       children: [{tag: 'div', m: 'inner', style: {display: 'block', height: '10px', backgroundColor: '#ff3b30'}}]},
+    ]),
+  },
+  {
+    name: 'min-width-under-content-box-excludes-the-padding',
+    why: 'Under content-box the same 120pt min-width names the CONTENT box, so the border box comes out 40pt wider and the inner box is the full 120.',
+    tree: root([
+      {tag: 'div', m: 'clamped', style: {display: 'block', boxSizing: 'content-box', width: '40px', minWidth: '120px', height: '30px', paddingLeft: '20px', paddingRight: '20px', backgroundColor: '#0a84ff'},
+       children: [{tag: 'div', m: 'inner', style: {display: 'block', height: '10px', backgroundColor: '#ff3b30'}}]},
+    ]),
+  },
+  {
+    name: 'a-max-height-does-not-move-the-children',
+    why: 'A max-height caps the container only. Its children keep the positions the flow gave them and overflow past the capped edge.',
+    tree: root([
+      {tag: 'div', m: 'capped', style: {display: 'block', maxHeight: '30px', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'first', style: {display: 'block', height: '20px', backgroundColor: '#0a84ff'}},
+         {tag: 'div', m: 'second', style: {display: 'block', height: '20px', backgroundColor: '#34c759'}},
+       ]},
+    ]),
+  },
+  {
+    name: 'an-auto-width-beats-auto-margins',
+    why: 'With width auto, the box fills the container and auto margins become zero (CSS2 §10.3.3) — there is no leftover to share.',
+    tree: root([
+      marginBox('filled', 999, 20, {display: 'block', width: 'auto', marginLeft: 'auto', marginRight: 'auto'}),
+    ]),
+  },
+  {
+    name: 'a-percentage-width-resolves-against-the-content-box',
+    why: 'A percentage width resolves against the containing block CONTENT box, so the container padding is excluded from the base.',
+    tree: root([
+      {tag: 'div', m: 'padded', style: {display: 'block', boxSizing: 'border-box', width: '200px', paddingLeft: '20px', paddingRight: '20px', backgroundColor: '#30b0c7'},
+       children: [marginBox('half', 999, 20, {display: 'block', width: '50%'})]},
+    ]),
+  },
+  {
+    name: 'float-margins-never-collapse',
+    why: 'A float\'s margins never collapse — not with its own, not with its neighbours\' (CSS2 §8.3.1) — so two stacked floats are separated by the SUM of their block margins.',
+    tree: root([
+      {tag: 'div', m: 'f1', style: {float: 'left', width: '300px', height: '20px', marginBottom: '20px', backgroundColor: '#0a84ff'}},
+      {tag: 'div', m: 'f2', style: {float: 'left', width: '300px', height: '20px', marginTop: '30px', backgroundColor: '#34c759'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-float-with-padding-and-border-takes-its-whole-box',
+    why: 'A float packs by its MARGIN box, so padding and border widen the space it takes from the line.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', boxSizing: 'content-box', width: '60px', height: '20px', paddingLeft: '10px', paddingRight: '10px', borderLeftWidth: '5px', borderRightWidth: '5px', borderLeftStyle: 'solid', borderRightStyle: 'solid', borderLeftColor: '#af52de', borderRightColor: '#af52de', backgroundColor: '#ff9500'}},
+      {tag: 'div', m: 'second', style: {float: 'left', width: '100px', height: '20px', backgroundColor: '#30b0c7'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-percentage-width-float-resolves-against-the-container',
+    why: 'A float with a percentage width resolves it against the containing block, like any other box.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '25%', height: '20px', backgroundColor: '#ff3b30'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'opposite-floats-share-one-line',
+    why: 'A left and a right float on the same line pack against opposite edges and do not push each other down while they fit.',
+    tree: root([
+      {tag: 'div', m: 'left', style: {float: 'left', width: '100px', height: '20px', backgroundColor: '#0a84ff'}},
+      {tag: 'div', m: 'right', style: {float: 'right', width: '100px', height: '20px', backgroundColor: '#34c759'}},
+    ], {overflow: 'hidden'}),
+  },
+  /*
+   * The remaining conditions in CSS2 §8.3.1. The rules that STOP a collapse
+   * were covered one at a time (border, padding, `overflow`); the ones below
+   * are the conditions on the box's own SIZE, which nothing reached, plus the
+   * sign rule for two negatives.
+   */
+  {
+    name: 'a-definite-height-stops-the-bottom-margin-collapsing-out',
+    why: "A last child's bottom margin collapses out of its parent only while the parent's height is auto (CSS2 §8.3.1). Given a height, the parent's bottom edge is fixed and the margin stays inside it.",
+    tree: root([
+      {tag: 'div', m: 'parent', style: {height: '60px', backgroundColor: '#e5e5ea'}, children: [
+        {tag: 'div', m: 'child', style: {height: '20px', marginBottom: '30px', backgroundColor: '#0a84ff'}},
+      ]},
+      {tag: 'div', m: 'after', style: {height: '20px', backgroundColor: '#34c759'}},
+    ]),
+  },
+  {
+    name: 'a-min-height-stops-a-block-collapsing-through',
+    why: "An empty block collapses through only when its min-height is zero too (CSS2 §8.3.1). A min-height separates its own top and bottom margins, so they no longer collapse with each other.",
+    tree: root([
+      {tag: 'div', m: 'before', style: {height: '20px', backgroundColor: '#0a84ff'}},
+      {tag: 'div', m: 'empty', style: {minHeight: '10px', marginTop: '20px', marginBottom: '20px'}},
+      {tag: 'div', m: 'after', style: {height: '20px', backgroundColor: '#34c759'}},
+    ]),
+  },
+  {
+    name: 'two-negative-margins-collapse-to-the-most-negative',
+    why: 'Collapsing takes the maximum of the positive margins and the minimum of the negative ones, then adds them — so two negatives give the MORE negative of the pair, never their sum.',
+    tree: root([
+      {tag: 'div', m: 'first', style: {height: '20px', marginBottom: '-10px', backgroundColor: '#0a84ff'}},
+      {tag: 'div', m: 'second', style: {height: '20px', marginTop: '-30px', backgroundColor: '#34c759'}},
+    ], {paddingTop: '40px'}),
+  },
+  {
+    name: 'auto-margins-do-not-centre-a-float',
+    why: "A float's auto margins compute to zero (CSS2 §10.3.5), not to the leftover space, so it packs against the edge rather than centring.",
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '100px', height: '20px', marginLeft: 'auto', marginRight: 'auto', backgroundColor: '#af52de'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-max-width-caps-a-float',
+    why: 'max-width applies to a float like any other box, and the capped width is what the next float packs against.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '200px', maxWidth: '80px', height: '20px', backgroundColor: '#ff9500'}},
+      {tag: 'div', m: 'second', style: {float: 'left', width: '40px', height: '20px', backgroundColor: '#30b0c7'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-float-is-offset-by-its-own-inline-margin',
+    why: "A left float's margin box sits at the content edge, so its border box is inset by its own left margin.",
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '100px', height: '30px', marginLeft: '20px', backgroundColor: '#af52de'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-right-float-is-offset-by-its-own-inline-margin',
+    why: 'The same for a right float: its margin box is packed against the end edge, so the border box is inset by its right margin.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'right', width: '100px', height: '30px', marginRight: '20px', backgroundColor: '#30b0c7'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-negative-margin-on-a-float-pulls-it-out',
+    why: 'A negative inline margin moves a float outside the container content edge.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '100px', height: '30px', marginLeft: '-20px', backgroundColor: '#0a84ff'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'clear-left-ignores-a-right-float',
+    why: 'clear:left drops below left floats only, so a right float beside it is not cleared.',
+    tree: root([
+      {tag: 'div', m: 'right', style: {float: 'right', width: '80px', height: '50px', backgroundColor: '#34c759'}},
+      {tag: 'div', m: 'cleared', style: {clear: 'left', display: 'block', width: '40px', height: '20px', backgroundColor: '#ff3b30'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'min-width-clamps-a-narrower-box',
+    why: 'min-width wins over a smaller declared width (CSS2 §10.4).',
+    tree: root([
+      marginBox('clamped', 40, 20, {display: 'block', minWidth: '120px'}),
+    ]),
+  },
+  {
+    name: 'min-height-clamps-a-shorter-box',
+    why: 'min-height wins over a smaller declared height.',
+    tree: root([
+      marginBox('clamped', 100, 10, {display: 'block', minHeight: '50px'}),
+    ]),
+  },
+  {
+    name: 'max-height-caps-a-taller-box',
+    why: 'max-height caps a declared height.',
+    tree: root([
+      marginBox('capped', 100, 200, {display: 'block', maxHeight: '40px'}),
+    ]),
+  },
+  {
+    name: 'aspect-ratio-sizes-the-axis-that-is-auto',
+    why: 'With one axis given, aspect-ratio determines the other (css-sizing-4 §4).',
+    tree: root([
+      {tag: 'div', m: 'ratio', style: {display: 'block', width: '120px', aspectRatio: '3 / 1', backgroundColor: '#0a84ff'}},
+    ]),
+  },
+  {
+    /*
+     * The other direction of the ratio: the HEIGHT is definite and the width
+     * is derived. It needs a shrink-to-fit context to show, because a
+     * block-level box with an auto width in normal flow fills its container
+     * and the ratio never reaches the inline axis — so the box sits inside an
+     * inline-block, which shrink-wraps to its content.
+     */
+    name: 'aspect-ratio-sizes-the-width-from-a-definite-height',
+    why: 'With the height given and the width shrink-to-fit, aspect-ratio determines the width (css-sizing-4 §4).',
+    tree: root([
+      {tag: 'span', m: 'wrapper', style: {display: 'inline-block', verticalAlign: 'top'},
+       children: [
+         {tag: 'div', m: 'ratio', style: {display: 'block', height: '20px', aspectRatio: '2 / 1', backgroundColor: '#0a84ff'}},
+       ]},
+    ]),
+  },
+  {
+    name: 'relative-offset-does-not-move-the-next-box',
+    why: 'A relatively positioned box is offset from where it would have been, and the space it left stays reserved (CSS2 §9.4.3).',
+    tree: root([
+      marginBox('shifted', 100, 20, {display: 'block', position: 'relative', left: '30px', top: '10px'}),
+      marginBox('after', 100, 20, {display: 'block'}),
+    ]),
+  },
+  {
+    name: 'percentage-padding-resolves-against-the-width',
+    why: 'A percentage padding resolves against the containing block WIDTH in both axes (CSS2 §8.4).',
+    tree: root([
+      {tag: 'div', m: 'padded', style: {display: 'block', paddingTop: '10%', backgroundColor: '#34c759'}},
+    ]),
+  },
+  {
+    name: 'border-box-includes-the-border-in-the-width',
+    why: 'box-sizing:border-box makes the declared width include the border, not only the padding.',
+    tree: root([
+      {tag: 'div', m: 'outer', style: {boxSizing: 'border-box', width: '200px', borderLeftWidth: '20px', borderRightWidth: '20px', borderLeftStyle: 'solid', borderRightStyle: 'solid', borderLeftColor: '#af52de', borderRightColor: '#af52de', display: 'block'},
+       children: [marginBox('inner', 999, 20, {display: 'block', width: 'auto'})]},
+    ]),
+  },
+  {
+    /*
+     * `hidden` is the only value this can be written with. The rule is
+     * "overflow other than visible", and the engine tests exactly that — so
+     * `scroll` takes the same path — but a browser reserves a scrollbar gutter
+     * on a scroll container and a device does not, which put the container at
+     * 67 against 50 for reasons that have nothing to do with the collapse. The
+     * coordinate this case turns on, the child's y, was 30 either way.
+     */
+    name: 'overflow-hidden-stops-a-margin-collapsing-through',
+    why: 'overflow other than visible establishes a block formatting context, so a child margin cannot collapse out of it (CSS2 §8.3.1).',
+    tree: root([
+      {tag: 'div', m: 'context', style: {display: 'block', overflow: 'hidden', backgroundColor: '#ff9500'},
+       children: [marginBox('child', 100, 20, {display: 'block', marginTop: '30px'})]},
+      marginBox('after', 100, 20, {display: 'block'}),
+    ]),
+  },
+  {
+    name: 'padding-stops-the-parent-child-collapse',
+    why: 'A parent padding separates the two top edges, so the margins do not collapse (CSS2 §8.3.1) — the padding counterpart of the border case above.',
+    tree: root([
+      {tag: 'div', m: 'parent', style: {display: 'block', paddingTop: '10px', backgroundColor: '#30b0c7'},
+       children: [marginBox('child', 100, 20, {display: 'block', marginTop: '40px'})]},
+    ]),
+  },
+  {
+    name: 'a-negative-top-margin-pulls-the-box-up',
+    why: 'A negative margin moves a block up over its predecessor.',
+    tree: root([
+      marginBox('first', 100, 40, {display: 'block'}),
+      marginBox('second', 100, 20, {display: 'block', marginTop: '-15px'}),
+    ]),
+  },
+
+  /* ------------------------------------------- margins and floats -- */
+  /*
+   * Block-level behaviour the rest of the corpus does not reach: what
+   * collapsing does between siblings, through an empty box, and when a border
+   * separates two edges; and where floats sit, pack and are cleared.
+   *
+   * Each float case gives its root `overflow: hidden` so the case is its own
+   * block formatting context. Without it a float that overflows escapes into
+   * the NEXT case on the shared page and moves its boxes — which is what put a
+   * left float at x=120 the first time these ran.
+   */
+  {
+    name: 'adjacent-siblings-collapse-to-the-larger',
+    why: 'Adjacent siblings collapse to max(20, 30) = 30 (CSS 2.1 8.3.1).',
+    tree: root([
+      marginBox('a', 40, 20, {display: 'block', marginBlockEnd: '20px'}),
+      marginBox('b', 40, 20, {display: 'block', marginBlockStart: '30px'}),
+      marginBox('after', 40, 20),
+    ]),
+  },
+  {
+    name: 'a-border-stops-the-parent-child-collapse',
+    why: 'A border on the parent separates the edges, so the child margin stays inside.',
+    tree: root([
+      marginBox('before', 40, 20),
+      {tag: 'div', m: 'parent', style: {width: '300px', display: 'block', borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: '#000'},
+       children: [marginBox('child', 40, 20, {display: 'block', marginBlockStart: '25px'})]},
+      marginBox('after', 40, 20),
+    ]),
+  },
+  {
+    name: 'an-empty-block-collapses-through',
+    why: 'An empty block with no border or padding collapses its own margins through, leaving max(20, 30).',
+    tree: root([
+      marginBox('a', 40, 20),
+      {tag: 'div', m: 'empty', style: {display: 'block', marginBlockStart: '20px', marginBlockEnd: '30px'}},
+      marginBox('b', 40, 20),
+    ]),
+  },
+  {
+    name: 'negative-and-positive-margins-combine',
+    why: 'Collapsing adds the largest positive and the most negative: 30 + (-10) = 20.',
+    tree: root([
+      marginBox('a', 40, 20, {display: 'block', marginBlockEnd: '30px'}),
+      marginBox('b', 40, 20, {display: 'block', marginBlockStart: '-10px'}),
+      marginBox('after', 40, 20),
+    ]),
+  },
+  {
+    name: 'a-float-shrinks-to-fit',
+    why: 'A float with auto width takes its content width rather than filling the line. Content narrower than the container, so max-content and fit-content agree — the case beside it is the one that separates them.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', display: 'block'},
+       children: [box('inner', 40, 20)]},
+      marginBox('after', 40, 20),
+    ], {overflow: 'hidden'}),
+  },
+  {
+    /*
+     * A float with `width: auto` is SHRINK-TO-FIT: min(max(min-content,
+     * available), max-content) (CSS2 §10.3.5). The case beside this one uses a
+     * single 40pt box, where max-content and fit-content are both 40 and the
+     * distinction cannot show. Here the content is 360 wide in a 300 container,
+     * so max-content overflows and shrink-to-fit wraps.
+     */
+    name: 'a-float-with-auto-width-shrinks-to-the-available-space',
+    why: 'A float wider than its container at max-content is capped at the available width and its content wraps.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', display: 'block'},
+       children: [box('c1', 120, 20), box('c2', 120, 20), box('c3', 120, 20)]},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'two-floats-pack-then-wrap',
+    why: 'Floats pack along the line until one does not fit, then drop below.',
+    tree: root([
+      {tag: 'div', m: 'f1', style: {float: 'left', width: '120px', height: '20px', backgroundColor: '#0a84ff'}},
+      {tag: 'div', m: 'f2', style: {float: 'left', width: '120px', height: '20px', backgroundColor: '#34c759'}},
+      {tag: 'div', m: 'f3', style: {float: 'left', width: '120px', height: '20px', backgroundColor: '#ff9500'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'clear-drops-below-the-float',
+    why: 'A cleared block sits below the float rather than beside it.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '100px', height: '40px', backgroundColor: '#af52de'}},
+      {tag: 'div', m: 'cleared', style: {clear: 'left', display: 'block', width: '40px', height: '20px', backgroundColor: '#ff3b30'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-line-shortens-beside-a-float',
+    deviceOnly:
+      "Fantom's text layout manager is a model and implements no exclusion " +
+      'support, so it reports the run unshortened whatever the engine does. ' +
+      'Both devices assert it in verify.js.',
+    why: 'The behaviour floats exist for (CSS2 §9.5): a line box overlapping a float shortens beside it, so boxes on the float\'s lines start after it and boxes below it start at the container edge.',
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '120px', height: '40px', backgroundColor: '#af52de'}},
+      box('a', 60, 20),
+      box('b', 60, 20),
+      box('c', 60, 20),
+      box('d', 60, 20),
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-plain-block-does-not-contain-its-floats',
+    why: 'Only an independent formatting context grows to enclose its floats (CSS2 §10.6.7). A plain block in another block\'s flow reports the height it would have had without them, which is why `overflow: hidden` is the classic way to make a container hold them up.',
+    tree: root([
+      {tag: 'div', m: 'plain', style: {display: 'block', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'floated', style: {float: 'left', width: '100px', height: '40px', backgroundColor: '#af52de'}},
+       ]},
+      {tag: 'div', m: 'after', style: {display: 'block', height: '20px', backgroundColor: '#34c759'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'a-float-does-not-escape-an-inner-formatting-context',
+    why: 'A float is contained by the block formatting context it is in, so one inside an `overflow: hidden` child intrudes on nothing outside it — the box after that child starts below it, not beside the float.',
+    tree: root([
+      {tag: 'div', m: 'inner', style: {display: 'block', overflow: 'hidden', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'floated', style: {float: 'left', width: '100px', height: '40px', backgroundColor: '#af52de'}},
+       ]},
+      {tag: 'div', m: 'after', style: {display: 'block', height: '20px', backgroundColor: '#34c759'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'floating-an-inline-blockifies-it',
+    why: 'A float is block-level whatever `display` says: `inline` computes to `block` (css-display-3 §2.7), so the stated width and height apply where on an inline box they would not.',
+    tree: root([
+      {tag: 'span', m: 'floated', style: {float: 'left', display: 'inline', width: '100px', height: '30px', backgroundColor: '#af52de'}},
+      {tag: 'div', m: 'second', style: {float: 'left', width: '40px', height: '30px', backgroundColor: '#30b0c7'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'absolute-positioning-cancels-float',
+    why: "An absolutely positioned box's `float` computes to `none` (CSS2 §9.7), so it is placed by its offsets and intrudes on nothing — the in-flow box beside it starts at the container's edge.",
+    tree: root([
+      {tag: 'div', m: 'holder', style: {display: 'block', position: 'relative', backgroundColor: '#e5e5ea'},
+       children: [
+         {tag: 'div', m: 'abs', style: {position: 'absolute', float: 'left', top: '0px', left: '0px', width: '100px', height: '40px', backgroundColor: '#ff3b30'}},
+         {tag: 'div', m: 'inflow', style: {display: 'block', height: '20px', backgroundColor: '#34c759'}},
+       ]},
+    ]),
+  },
+  {
+    name: 'a-float-can-clear-another-float',
+    why: '`clear` applies to a float as much as to an in-flow box (CSS2 §9.5.2), so the second float drops below the first instead of packing beside it — even though there is room.',
+    tree: root([
+      {tag: 'div', m: 'first', style: {float: 'left', width: '100px', height: '40px', backgroundColor: '#af52de'}},
+      {tag: 'div', m: 'second', style: {float: 'left', clear: 'left', width: '40px', height: '20px', backgroundColor: '#ff3b30'}},
+    ], {overflow: 'hidden'}),
+  },
+  {
+    name: 'clearance-absorbs-a-smaller-top-margin',
+    why: "Clearance is the shortfall between where the box would have been WITH its margin and the float's bottom edge (CSS2 §9.5.2), not a floor the margin is added to — so a 25pt margin under a float ending at 40 lands the border edge at 40, not 65.",
+    tree: root([
+      {tag: 'div', m: 'floated', style: {float: 'left', width: '100px', height: '40px', backgroundColor: '#af52de'}},
+      {tag: 'div', m: 'cleared', style: {clear: 'left', display: 'block', height: '20px', marginTop: '25px', backgroundColor: '#ff3b30'}},
+    ], {overflow: 'hidden'}),
+  },
+
+  {
+    /*
+     * `direction: rtl` reverses the inline axis: the line starts at the right
+     * edge and boxes are placed leftwards (css-writing-modes-4 §2).
+     */
+    name: 'rtl-inline-run-starts-at-the-right-edge',
+    knownGap:
+      'DOM-CSS-LIMITATION(rtl-inline-run-not-reordered) — the run is ' +
+      'right-aligned but its boxes keep their logical order. Safari 260/200, ' +
+      'both platforms 200/240.',
+    why: 'In an RTL block the first box sits against the right edge and the next one to its left.',
+    tree: root([box('first', 40, 20), box('second', 60, 20)], {direction: 'rtl'}),
+  },
   {
     name: 'atomic-inlines-in-a-row',
     why: 'Three sized atomic inlines with no text: x is the running sum of widths and nothing else.',
@@ -148,6 +1010,26 @@ const CASES = [
       box('c', 100, 20),
       box('d', 100, 20),
     ]),
+  },
+  {
+    name: 'nowrap-keeps-atomic-inlines-on-one-line',
+    compositeX: true,
+    why: 'The same four boxes under `white-space: nowrap` stay on one line and overflow the container rather than breaking — the rule holds for atomic inlines, not only for text.',
+    tree: root([
+      box('a', 100, 20),
+      box('b', 100, 20),
+      box('c', 100, 20),
+      box('d', 100, 20),
+    ], {whiteSpace: 'nowrap'}),
+  },
+  {
+    name: 'nowrap-does-not-stop-a-block-child-breaking-the-run',
+    why: 'white-space governs breaking WITHIN a line. A block-level child is not on the line at all, so it still ends the run and starts its own.',
+    tree: root([
+      box('a', 40, 20),
+      {tag: 'div', m: 'blockChild', style: {display: 'block', height: '20px', backgroundColor: '#0a84ff'}},
+      box('b', 40, 20),
+    ], {whiteSpace: 'nowrap'}),
   },
   {
     name: 'atomic-inline-taller-than-line-height',
@@ -214,6 +1096,25 @@ const CASES = [
     ]),
   },
   {
+    name: 'inline-grid-atomic',
+    why: 'display:inline-grid is the inline-level form of grid: it sits on the line like an inline-block rather than starting a new one.',
+    tree: root([
+      box('before', 40, 20),
+      {
+        tag: 'span',
+        m: 'grid',
+        style: {
+          display: 'inline-grid',
+          width: '80px',
+          height: '20px',
+          verticalAlign: 'top',
+        },
+        children: [box('gridchild', 20, 20)],
+      },
+      box('after', 40, 20),
+    ]),
+  },
+  {
     name: 'inline-flex-lays-out-its-children',
     why: 'Its children are flex items in a row, so the second starts after the first — inside the flex box, not on the outer line.',
     tree: root([
@@ -242,6 +1143,24 @@ const CASES = [
       box('before', 40, 20),
       span([box('inner', 40, 20)], {paddingLeft: '10px', paddingRight: '10px'}),
       box('after', 40, 20),
+    ]),
+  },
+  {
+    name: 'vertical-padding-on-an-inline-does-not-grow-the-line',
+    why: 'The other half of the rule beside it: vertical padding on a non-replaced inline box is drawn but does not enter the line box height (CSS2 §10.6.1), so neither the line nor the box after it moves.',
+    tree: root([
+      box('before', 40, 20),
+      span([box('inner', 40, 20)], {paddingTop: '15px', paddingBottom: '15px'}),
+      {tag: 'div', m: 'nextLine', style: {display: 'block', height: '20px', backgroundColor: '#34c759'}},
+    ]),
+  },
+  {
+    name: 'vertical-margins-on-an-inline-have-no-effect',
+    why: 'Vertical margins on a non-replaced inline box do not apply at all (CSS2 §8.3), so the inner box sits exactly where it would without them.',
+    tree: root([
+      box('before', 40, 20),
+      span([box('inner', 40, 20)], {marginTop: '20px', marginBottom: '20px'}),
+      {tag: 'div', m: 'nextLine', style: {display: 'block', height: '20px', backgroundColor: '#34c759'}},
     ]),
   },
   {
