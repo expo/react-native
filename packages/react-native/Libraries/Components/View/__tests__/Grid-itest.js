@@ -24,9 +24,9 @@
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 341 cases; 7 corpus cases are not expressible as RN styles
- * (min-content as a maximum, inline-level containers, order, and the
- * percentage flow-tolerance Safari cannot adjudicate).
+ * 343 cases; 5 corpus cases are not expressible as RN styles
+ * (min-content as a maximum, order, and the percentage flow-tolerance
+ * Safari cannot adjudicate).
  */
 
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
@@ -8706,7 +8706,6 @@ describe("lanes-dense", () => {
 describe("lanes-empty", () => {
   it("lanes-empty-0124: no items", () => {
     const containerRef = createRef<HostInstance>();
-    const itemRefs: Array<{current: HostInstance | null}> = [];
     const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
     Fantom.runTask(() => {
       root.render(
@@ -8714,8 +8713,7 @@ describe("lanes-empty", () => {
           collapsable={false}
           ref={containerRef}
           /* $FlowExpectedError[incompatible-type] grid style keys */
-          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr","gap":10}}>
-        </View>,
+          style={{"display":"grid-lanes","width":600,"gridTemplateColumns":"1fr 1fr","gap":10}} />,
       );
     });
     const container = rectOf(containerRef);
@@ -12871,6 +12869,127 @@ describe("lanes-nested", () => {
       expectClose(r.y - container.y, 80, 'lanes-nested-0179 item[3].y');
       expectClose(r.width, 295, 'lanes-nested-0179 item[3].w');
       expectClose(r.height, 50, 'lanes-nested-0179 item[3].h');
+    }
+  });
+});
+
+describe("inline-level-container", () => {
+  it("inline-level-container-0180: inline grid-lanes shrink-wraps", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{display: 'block', width: VIEWPORT_WIDTH}}>
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"inline-grid-lanes","gridTemplateColumns":"100px 100px 100px","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+        </View>
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 320, 'inline-level-container-0180 container.width');
+    expectClose(container.height, 60, 'inline-level-container-0180 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'inline-level-container-0180 item[0].x');
+      expectClose(r.y - container.y, 0, 'inline-level-container-0180 item[0].y');
+      expectClose(r.width, 100, 'inline-level-container-0180 item[0].w');
+      expectClose(r.height, 40, 'inline-level-container-0180 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 110, 'inline-level-container-0180 item[1].x');
+      expectClose(r.y - container.y, 0, 'inline-level-container-0180 item[1].y');
+      expectClose(r.width, 100, 'inline-level-container-0180 item[1].w');
+      expectClose(r.height, 60, 'inline-level-container-0180 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 220, 'inline-level-container-0180 item[2].x');
+      expectClose(r.y - container.y, 0, 'inline-level-container-0180 item[2].y');
+      expectClose(r.width, 100, 'inline-level-container-0180 item[2].w');
+      expectClose(r.height, 30, 'inline-level-container-0180 item[2].h');
+    }
+  });
+  it("inline-level-container-0181: inline-grid shrink-wraps", () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [createRef<HostInstance>(), createRef<HostInstance>(), createRef<HostInstance>()];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{display: 'block', width: VIEWPORT_WIDTH}}>
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{"display":"inline-grid","gridTemplateColumns":"100px 100px 100px","gap":10}}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":40}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":60}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{"height":30}}
+          />
+        </View>
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 320, 'inline-level-container-0181 container.width');
+    expectClose(container.height, 60, 'inline-level-container-0181 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 0, 'inline-level-container-0181 item[0].x');
+      expectClose(r.y - container.y, 0, 'inline-level-container-0181 item[0].y');
+      expectClose(r.width, 100, 'inline-level-container-0181 item[0].w');
+      expectClose(r.height, 40, 'inline-level-container-0181 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 110, 'inline-level-container-0181 item[1].x');
+      expectClose(r.y - container.y, 0, 'inline-level-container-0181 item[1].y');
+      expectClose(r.width, 100, 'inline-level-container-0181 item[1].w');
+      expectClose(r.height, 60, 'inline-level-container-0181 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 220, 'inline-level-container-0181 item[2].x');
+      expectClose(r.y - container.y, 0, 'inline-level-container-0181 item[2].y');
+      expectClose(r.width, 100, 'inline-level-container-0181 item[2].w');
+      expectClose(r.height, 30, 'inline-level-container-0181 item[2].h');
     }
   });
 });

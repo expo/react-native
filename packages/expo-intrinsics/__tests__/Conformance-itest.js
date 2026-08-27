@@ -38,21 +38,19 @@ import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 
-const CORPUS = require('../../../text-conformance/corpus.json');
-const EXPECTED = require('../../../text-conformance/expected.json');
-
-import '@react-native/expo-intrinsics-poc';
-
-/* Rounding only — the corpus is constructed so CSS fixes every coordinate. */
-const TOLERANCE = 0.5;
-
 /*
  * The corpus's own CSS-to-React-Native translation, imported rather than
  * reimplemented. A local copy here drifted behind the one in
  * `gen-device-screen.js` and made a working `em` implementation look like six
  * failures — the styles it built carried `1em` through as a string.
  */
-const {toStyle, runGapChecks} = require('../../../text-conformance/cases');
+const {runGapChecks, toStyle} = require('../../../text-conformance/cases');
+const CORPUS = require('../../../text-conformance/corpus.json');
+const EXPECTED = require('../../../text-conformance/expected.json');
+
+import '@react-native/expo-intrinsics-poc';
+/* Rounding only — the corpus is constructed so CSS fixes every coordinate. */
+const TOLERANCE = 0.5;
 
 function render(node, refs, key) {
   if (typeof node === 'string') {
@@ -185,6 +183,27 @@ for (const testCase of CORPUS) {
     continue;
   }
 
+  if (testCase.bounded === 'clipped-sits-above-unclipped') {
+  /*
+   * Where the unclipped box hangs below the baseline is its text's descent,
+   * a font metric. What CSS fixes, and what is asserted: both boxes keep
+   * their declared size and their places along the line, the clipping one
+   * sits at the top of the line because its bottom margin edge IS its
+   * baseline, and the other sits strictly lower.
+   */
+    test(`${testCase.name} (bounded — the descent is font-dependent)`, () => {
+      const got = measure(testCase.tree);
+      for (const key of ['plain', 'clipped']) {
+        expect(got[key].width).toBe(want[key].width);
+        expect(got[key].height).toBe(want[key].height);
+        expect(got[key].x).toBe(want[key].x);
+      }
+      expect(got.clipped.y).toBe(got.root.y);
+      expect(got.plain.y).toBeGreaterThan(got.clipped.y);
+    });
+    continue;
+  }
+
   if (testCase.bounded === 'line-taller-than-box') {
     /*
      * The line box is the box plus the strut's descent below the baseline, and
@@ -219,6 +238,15 @@ for (const testCase of CORPUS) {
       expect(short.y).toBeGreaterThan(tall.y);
       expect(short.y + short.height).toBeLessThan(tall.y + tall.height);
     });
+    continue;
+  }
+  if (testCase.deviceOnly != null) {
+    // Fantom's measurer answers a different question than a real text engine
+    // for this case, so a failure here would report the harness rather than
+    // the product. Named so the reason is visible rather than left implied by
+    // an absence, and still asserted against both devices in verify.js.
+    // eslint-disable-next-line jest/no-disabled-tests
+    test.skip(`${label} — device-only: ${testCase.deviceOnly}`, () => {});
     continue;
   }
   if (testCase.knownGap != null) {

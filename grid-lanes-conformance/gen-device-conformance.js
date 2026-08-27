@@ -22,8 +22,9 @@
 
 'use strict';
 
+const {placementToCss, trackToCss} = require('./serialize.js');
 const path = require('node:path');
-const {trackToCss, placementToCss} = require('./serialize.js');
+
 const expected = require(path.join(__dirname, 'expected.json'));
 
 function rnStyle(container) {

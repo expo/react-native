@@ -13,7 +13,6 @@
 import type {RNTesterModule} from '../../types/RNTesterTypes';
 
 import {
-  BASE_FONT_SIZE,
   DEMO_THEME,
   DemoContent,
   ThemingNote,

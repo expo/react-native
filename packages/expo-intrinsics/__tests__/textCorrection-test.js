@@ -19,9 +19,9 @@
  * then the form owner, then on).
  */
 
-import FormContext from '../src/FormContext';
 import type {AutocorrectValue} from '../src/TextCorrection';
 
+import FormContext from '../src/FormContext';
 import {
   SpellcheckScope,
   useAutocorrect,

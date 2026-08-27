@@ -32,11 +32,10 @@
  * reports only base view props, so it cannot see these two.
  */
 
+import Input from '../src/Input';
 import * as React from 'react';
 import {useState} from 'react';
 import TestRenderer from 'react-test-renderer';
-
-import Input from '../src/Input';
 
 /** The props `<input>` handed down to its host element. */
 function hostProps(renderer: $FlowFixMe): $FlowFixMe {
