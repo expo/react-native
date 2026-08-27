@@ -84,8 +84,11 @@ function measure(tree) {
     // does not let margins collapse through it, which the browser's <body>
     // does. Without this the corpus compares two different trees.
     root.render(
-      React.createElement('div', {style: {display: 'block'}},
-        render(tree, refs, 'case')),
+      React.createElement(
+        'div',
+        {style: {display: 'block'}},
+        render(tree, refs, 'case'),
+      ),
     );
   });
   const rootRect = refs.root?.getBoundingClientRect();
@@ -183,6 +186,27 @@ for (const testCase of CORPUS) {
     continue;
   }
 
+  if (testCase.bounded === 'clipped-sits-above-unclipped') {
+    /*
+     * Where the unclipped box hangs below the baseline is its text's descent,
+     * a font metric. What CSS fixes, and what is asserted: both boxes keep
+     * their declared size and their places along the line, the clipping one
+     * sits at the top of the line because its bottom margin edge IS its
+     * baseline, and the other sits strictly lower.
+     */
+    test(`${testCase.name} (bounded — the descent is font-dependent)`, () => {
+      const got = measure(testCase.tree);
+      for (const key of ['plain', 'clipped']) {
+        expect(got[key].width).toBe(want[key].width);
+        expect(got[key].height).toBe(want[key].height);
+        expect(got[key].x).toBe(want[key].x);
+      }
+      expect(got.clipped.y).toBe(got.root.y);
+      expect(got.plain.y).toBeGreaterThan(got.clipped.y);
+    });
+    continue;
+  }
+
   if (testCase.bounded === 'line-taller-than-box') {
     /*
      * The line box is the box plus the strut's descent below the baseline, and
@@ -217,6 +241,15 @@ for (const testCase of CORPUS) {
       expect(short.y).toBeGreaterThan(tall.y);
       expect(short.y + short.height).toBeLessThan(tall.y + tall.height);
     });
+    continue;
+  }
+  if (testCase.deviceOnly != null) {
+    // Fantom's measurer answers a different question than a real text engine
+    // for this case, so a failure here would report the harness rather than
+    // the product. Named so the reason is visible rather than left implied by
+    // an absence, and still asserted against both devices in verify.js.
+    // eslint-disable-next-line jest/no-disabled-tests
+    test.skip(`${label} — device-only: ${testCase.deviceOnly}`, () => {});
     continue;
   }
   if (testCase.knownGap != null) {

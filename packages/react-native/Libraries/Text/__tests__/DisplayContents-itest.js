@@ -102,6 +102,39 @@ describe('display: contents', () => {
     expect(box.height).toBe(20);
   });
 
+  // The case above passes for a reason that does not generalise: <span> is
+  // inline-level whatever its `display` says, so it joins a run without
+  // `display: contents` being consulted at all. A <div> is block-level, and a
+  // box that generates no box must not interrupt the line either.
+  it('a block-level contents box does not interrupt the line', () => {
+    const box = rectOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <div> tag
+      <div ref={ref} style={{alignSelf: 'flex-start'}}>
+        {'aa'}
+        {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+        <div style={{display: 'contents'}}>{'bb'}</div>
+      </div>
+    ));
+    expect(box.width).toBe(40);
+    expect(box.height).toBe(20);
+  });
+
+  it('nested contents boxes are transparent all the way down', () => {
+    const box = rectOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <div> tag
+      <div ref={ref} style={{alignSelf: 'flex-start'}}>
+        {'aa'}
+        {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+        <div style={{display: 'contents'}}>
+          {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+          <div style={{display: 'contents'}}>{'bb'}</div>
+        </div>
+      </div>
+    ));
+    expect(box.width).toBe(40);
+    expect(box.height).toBe(20);
+  });
+
   // Generating no box does not stop the element inheriting to its children,
   // so text it wraps is styled by it exactly as an inline box would style it
   // (css-display-3 §3.1). Stated as a comparison AND an absolute height: the

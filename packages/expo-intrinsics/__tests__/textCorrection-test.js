@@ -41,7 +41,7 @@ function SpellcheckProbe({
 }: {
   own: boolean | void,
   type: string,
-  report: (boolean) => void,
+  report: boolean => void,
 }) {
   report(useSpellcheck(own, type));
   return null;
@@ -54,7 +54,7 @@ function AutocorrectProbe({
 }: {
   own: AutocorrectValue | void,
   type: string,
-  report: (boolean) => void,
+  report: boolean => void,
 }) {
   report(useAutocorrect(own, type));
   return null;
@@ -63,7 +63,7 @@ function AutocorrectProbe({
 /** Renders `node` inside `wrap` and returns what the probe in it computed. */
 function render(
   probe: ((boolean) => void) => React.Node,
-  wrap: (React.Node) => React.Node,
+  wrap: React.Node => React.Node,
 ): boolean {
   let seen: boolean | void;
   TestRenderer.act(() => {
@@ -87,7 +87,7 @@ function render(
 
 const spellcheck = (
   own: boolean | void,
-  wrap: (React.Node) => React.Node = node => node,
+  wrap: React.Node => React.Node = node => node,
   type: string = 'text',
 ): boolean =>
   render(
@@ -98,7 +98,7 @@ const spellcheck = (
 const autocorrect = (
   own: AutocorrectValue | void,
   type: string,
-  wrap: (React.Node) => React.Node = node => node,
+  wrap: React.Node => React.Node = node => node,
 ): boolean =>
   render(
     report => <AutocorrectProbe own={own} type={type} report={report} />,
