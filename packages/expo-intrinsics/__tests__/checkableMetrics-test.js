@@ -41,44 +41,20 @@ describe('checkable footprint states the control, not a wish', () => {
   });
 });
 
-/*
- * A radio's box on iOS holds the CHECKMARK, and where that mark lives is a
- * layout decision before it is a visual one.
- *
- * UIKit has no radio control — `PickerStyle.radioGroup` is macOS-only — so a
- * run of radios is presented as the platform's list and the chosen row carries
- * a checkmark. The question is whose box the mark sits in, and the answer is
- * forced: the list cell's trailing accessory occupies space the cell reserves
- * INSIDE itself, but a row's contents were positioned by Yoga across the row's
- * full width and cannot be re-flowed afterwards. A row with anything at its
- * trailing edge had the checkmark drawn straight through it — a price at the
- * end of a row and the mark rendered on top of one another.
- *
- * In the element's own box the space is reserved by the layout that already
- * exists: `<input type="radio">` is a box in the row, the author's content
- * flows after it, and nothing can land underneath. It is also where HTML puts
- * the control.
- *
- * The height is the load-bearing half — Yoga measures the row and UIKit draws
- * the cell behind it, and if they disagree the disagreement is visible. A row
- * measured at its label's 20pt got a section 20pt tall, UIKit drew its cell
- * taller, and each group showed its first row with the rest clipped square.
- *
- * 52 is the platform's STANDARD ROW HEIGHT, not the HIG's 44pt minimum target.
- * Measured against Settings on the same device: its rows are 52pt, and a 44pt
- * row reads as cramped beside them.
- *
- * This replaced two earlier attempts, both pinned by tests that are now gone: a
- * 22pt ring in a 22pt box (half the HIG minimum, reported as hard to hit), then
- * a 22pt ring in a 44pt box with the target beyond it (which measured correctly
- * and still looked like a small control in a lot of air). What went in both
- * cases was the RING, not the box.
+/**
+ * A radio's box on iOS is zero wide and its row is the platform's standard
+ * height. UIKit has no radio control, so a run of radios is presented as the
+ * platform's list with a checkmark on the chosen row, drawn by the list's
+ * trailing accessory; the element itself has no ink, so it takes no width.
+ * Yoga measures the row and UIKit draws the cell behind it at that height, so
+ * a row holding a radio is never shorter than the platform's 52pt standard
+ * row (Settings' rows measure 52; the HIG's 44 is the minimum target and reads
+ * as cramped beside them).
  */
 describe('a radio reserves the box for what its platform draws', () => {
   test('iOS draws nothing, but still reserves the platform row height', () => {
     expect(RADIO_FOOTPRINT_BY_PLATFORM.ios).toEqual({
-      // No ink: the checkmark is the list's own accessory, and a second one
-      // here put two checkmarks on the chosen row.
+      // No ink: the checkmark is the list's own accessory
       width: 0,
       height: 52,
       marginInlineEnd: 0,
@@ -97,11 +73,11 @@ describe('a radio reserves the box for what its platform draws', () => {
   });
 
   test('only the platform that draws a control reserves width for one', () => {
-    // A box is reserved if and only if there is ink to put in it. Android has a
-    // real RadioButton; iOS has no radio control and lets the list's accessory
-    // be the indicator, so the element itself takes no width at all.
+    // A box is reserved only where there is ink to put in it
     expect(RADIO_FOOTPRINT_BY_PLATFORM.ios.width).toBe(0);
-    expect(RADIO_FOOTPRINT_BY_PLATFORM.android.width).toBeGreaterThanOrEqual(48);
+    expect(RADIO_FOOTPRINT_BY_PLATFORM.android.width).toBeGreaterThanOrEqual(
+      48,
+    );
   });
 
   test("the iOS box is the platform's standard row height", () => {

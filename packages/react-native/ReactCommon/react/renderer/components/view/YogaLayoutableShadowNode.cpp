@@ -202,7 +202,7 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
   updateYogaChildren();
 
   // Asked once per node construction, so both halves are kept cheap: the
-  // boundary query is virtual on Props rather than an RTTI cast, and the
+  // boundary query is a virtual on Props rather than an RTTI cast, and the
   // trait check runs first because a node that is neither a user-agent
   // boundary nor carrying an `all` declaration is the overwhelming majority.
   if (props_ != nullptr &&
@@ -450,6 +450,8 @@ void YogaLayoutableShadowNode::appendChild(
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       getAnonymousTextContentFactory() != nullptr &&
       (isInlineLevelContent(*childNode) ||
+       // Generates no box, but the content it hoists into a run does.
+       isTransparentInlineBox(*childNode) ||
        !anonymousTextContentChildren_.empty())) {
     // Inline-level content joined (or its runs may have shifted). The Yoga
     // children need rebuilding with fresh anonymous boxes — but doing it per
@@ -723,6 +725,14 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       appendToInlineRun(i);
       continue;
     }
+    // Generates no box, so it must not interrupt the run: it joins as an
+    // inline flow box, which puts the content it wraps on the same line with
+    // its inherited text styles applied (css-display-3 §3.1).
+    if (inlineLayoutEnabled && containerIsBlock &&
+        isTransparentInlineBox(*getChildren()[i])) {
+      appendToInlineRun(i);
+      continue;
+    }
     if (auto yogaLayoutableChild =
             YogaLayoutableShadowNode::asYogaLayoutable(getChildren()[i])) {
       if (inlineLayoutEnabled && containerIsBlock &&
@@ -912,6 +922,14 @@ static bool isInlineLevelBox(const ShadowNode& child) {
   // both are excluded here: an absolutely-positioned box, and a FLOATED one.
   // Each must stay an ordinary Yoga child so the code that places it — the
   // absolute pass, or the float band search — can see it at all.
+  //
+  // An inline ELEMENT reaches this only once it is box-backed. It is inline by
+  // the `InlineText` trait otherwise, and the trait cannot test props, so the
+  // blockification the trait would need happens earlier, when the element
+  // picks its backing (`resolveInlineElementComponent`). Both halves are
+  // required: box-backing alone leaves `display:'inline'` in the style and the
+  // box rejoins the run here, and this test alone never sees a text-backed
+  // element.
   const auto* props =
       dynamic_cast<const YogaStylableProps*>(child.getProps().get());
   return props != nullptr && props->displayInline &&
@@ -937,6 +955,17 @@ bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   return child.getTraits().check(ShadowNodeTraits::Trait::InlineText);
 }
 
+static bool displaysAsContents(const ShadowNode& child) {
+  // Absolutely-positioned boxes are excluded: they are out of flow, and a run
+  // holds in-flow content only. Such a box stays an ordinary Yoga child so
+  // absolute layout can position it.
+  const auto* props =
+      dynamic_cast<const YogaStylableProps*>(child.getProps().get());
+  return props != nullptr &&
+      props->yogaStyle.display() == yoga::Display::Contents &&
+      props->yogaStyle.positionType() != yoga::PositionType::Absolute;
+}
+
 static bool authorDisplayBlockifies(const ShadowNode& child) {
   const auto* props =
       dynamic_cast<const YogaStylableProps*>(child.getProps().get());
@@ -948,9 +977,37 @@ bool YogaLayoutableShadowNode::isAtomicInline(const ShadowNode& child) {
 }
 
 bool YogaLayoutableShadowNode::isInlineLevelContent(const ShadowNode& child) {
-  // The union, in one place; see the header for why callers ask for it rather
-  // than for either half.
-  return isInlineTextContent(child) || isInlineLevelBox(child);
+  // The union, in one place. The header says why asking for half of it is the
+  // easy mistake to make.
+  return isInlineTextContent(child) || isInlineLevelBox(child) ||
+      isTransparentInlineBox(child);
+}
+
+bool YogaLayoutableShadowNode::isTransparentInlineBox(const ShadowNode& child) {
+  // A `display:'contents'` element generates no box of its own; its children
+  // are laid out as though they were children of its parent
+  // (css-display-3 §3.1). Yoga applies that rule for block and flex layout by
+  // hoisting the children itself, but the run scan in `updateYogaChildren`
+  // walks *shadow* children and would see a block-level element interrupting
+  // a run it should be invisible to.
+  //
+  // A box whose content is entirely inline-level satisfies the rule by joining
+  // the run as an inline flow box: the text engine descends into it, so its
+  // content lands on the same line and still inherits its text styles, and the
+  // box contributes nothing of its own. With block-level children among them
+  // that does not hold — those need to become Yoga children of the grandparent
+  // — so such a box stays an ordinary child and Yoga's hoisting handles it.
+  if (!displaysAsContents(child) || child.getChildren().empty()) {
+    return false;
+  }
+  // Nested transparent boxes are inline-level content in their own right, so
+  // this descends through them.
+  for (const auto& grandChild : child.getChildren()) {
+    if (!isInlineLevelContent(*grandChild)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
@@ -961,6 +1018,11 @@ bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
   // an RN View is an opaque native box, closer to a replaced element, so the
   // web's "non-replaced inline boxes ignore width/height" rule is
   // deliberately not applied.
+  if (isTransparentInlineBox(child)) {
+    // Generates no box at all, so there is nothing to size and no decoration
+    // to paint: its content always flows into the surrounding line.
+    return true;
+  }
   if (!isInlineLevelBox(child)) {
     return false;
   }
@@ -984,7 +1046,7 @@ bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
     // web). Block-level content inside an inline box would require
     // block-in-inline splitting (CSS2 §9.2.1.1); such boxes — and ones with
     // absolutely-positioned children — fall back to atomic inline.
-    if (!isInlineTextContent(*grandChild) && !isInlineLevelBox(*grandChild)) {
+    if (!isInlineLevelContent(*grandChild)) {
       return false;
     }
   }
@@ -1167,10 +1229,9 @@ std::string domNameOf(const ShadowNode& node) {
 ListMarkerSink* markerSinkOf(const YogaLayoutableShadowNode& item) {
   // An item whose content is all inline measures its own run, and its box is
   // not among the Yoga children at all.
-  if (item.measuresOwnInlineRun() &&
-      item.getAnonymousTextContentChildren().size() == 1) {
-    return const_cast<ListMarkerSink*>(dynamic_cast<const ListMarkerSink*>(
-        item.getAnonymousTextContentChildren()[0].get()));
+  if (auto* box = item.elidedInlineRun()) {
+    return const_cast<ListMarkerSink*>(
+        dynamic_cast<const ListMarkerSink*>(box));
   }
   // Otherwise the anonymous IFC box is a Yoga child, never a shadow-tree
   // child, so this walks the layoutable children rather than `getChildren()`.
@@ -1344,26 +1405,18 @@ void YogaLayoutableShadowNode::configureYogaTree(
    * A margin has no such later step: layout is the last word on it, so its
    * base has to be the size the text beside it ends up at.
    *
-   * Without this, a paragraph's `margin-block: 1em` froze while its text grew.
-   * Measured on iOS between the standard text size and the largest
-   * accessibility one: the paragraph's text went from 20.33pt to 72.67, and
-   * its margin from 16.67 to 17. A heading's margin doubled with its heading,
-   * because a heading resolves through `TextRoleMetrics`, whose sizes are
-   * published already scaled — so the two spellings of one rule disagreed
-   * about the same setting, and only the one with a platform text role behaved.
+   * A heading needs no such step here: it resolves through `TextRoleMetrics`,
+   * whose sizes are published already scaled.
    */
   const Float usedScale = usedFontScale(fontSizeMultiplier);
   const Float emBase = effectiveCascade->fontSize * usedScale;
   /*
-   * `rem` is the ROOT element's size, which is font-size's initial value: the
-   * root here is the surface root, and an app has no way to state a size on it
-   * (`DOM-CSS-LIMITATION(rem-root-is-the-unstylable-surface-root)`). It was
-   * propagated down the walk until it was noticed that it could not differ
-   * from that value — four bytes on `TextAttributes` and a write per node, for
-   * a number that was always the same one.
+   * `rem` is the ROOT element's size, which here is font-size's initial value:
+   * the root is the surface root, and an app has no way to state a size on it
+   * (`DOM-CSS-LIMITATION(rem-root-is-the-unstylable-surface-root)`), so it
+   * cannot differ from that value and is read rather than carried.
    */
-  const Float remBase =
-      TextAttributes::defaultTextAttributes().fontSize * usedScale;
+  const Float remBase = TextAttributes::initialFontSize() * usedScale;
   applyCascadeDependentStyles(emBase, remBase);
 
   // Recursively propagate the configuration to child nodes. If a child was
@@ -1444,8 +1497,8 @@ void YogaLayoutableShadowNode::configureYogaTree(
   // walks, so it would never be configured and the cascade would stop dead at
   // the container: its text would fall back to the default font. Configure it
   // here with the cascade its container resolved.
-  if (measuresOwnInlineRun_ && anonymousTextContentChildren_.size() == 1) {
-    auto& box = *anonymousTextContentChildren_[0];
+  if (auto* boxPtr = elidedInlineRun()) {
+    auto& box = *boxPtr;
     box.ensureUnsealed();
     box.receivedTextAttributes_ = effectiveCascade;
     box.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
@@ -1703,8 +1756,8 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
   // being the container's own inline formatting context means — and everything
   // downstream (run publishing, fragment rects, attachment placement) reads
   // that frame.
-  if (measuresOwnInlineRun_ && anonymousTextContentChildren_.size() == 1) {
-    auto& box = *anonymousTextContentChildren_[0];
+  if (auto* boxPtr = elidedInlineRun()) {
+    auto& box = *boxPtr;
     box.yogaNode_.setLayoutDirection(yogaNode_.getLayout().direction());
     auto boxMetrics = getLayoutMetrics();
     boxMetrics.frame = getLayoutMetrics().getContentFrame();
@@ -1857,8 +1910,8 @@ Float YogaLayoutableShadowNode::baseline(
     Size size) const {
   // With the anonymous box elided, the run's baseline is this container's:
   // the box is where the line boxes live, and Yoga has no child to ask.
-  if (measuresOwnInlineRun_ && anonymousTextContentChildren_.size() == 1) {
-    return anonymousTextContentChildren_[0]->baseline(layoutContext, size);
+  if (auto* box = elidedInlineRun()) {
+    return box->baseline(layoutContext, size);
   }
   return LayoutableShadowNode::baseline(layoutContext, size);
 }
@@ -1868,8 +1921,8 @@ Size YogaLayoutableShadowNode::measureContent(
     const LayoutConstraints& layoutConstraints) const {
   // The elided anonymous box: this container is the run's block container, so
   // it measures the run the box would have measured.
-  if (measuresOwnInlineRun_ && anonymousTextContentChildren_.size() == 1) {
-    auto& box = *anonymousTextContentChildren_[0];
+  if (auto* boxPtr = elidedInlineRun()) {
+    auto& box = *boxPtr;
     // The box resolves logical edges from its own Yoga node's LAID OUT
     // direction, and an elided box is never laid out. Hand it this
     // container's, which Yoga has already resolved by the time it asks us to
@@ -1878,6 +1931,24 @@ Size YogaLayoutableShadowNode::measureContent(
     return box.measureContent(layoutContext, layoutConstraints);
   }
   return LayoutableShadowNode::measureContent(layoutContext, layoutConstraints);
+}
+
+std::vector<FloatExclusion> YogaLayoutableShadowNode::floatExclusions() const {
+  const auto& inherited = yogaNode_.getLayout().inheritedFloats();
+  std::vector<FloatExclusion> exclusions;
+  exclusions.reserve(inherited.size());
+  for (const auto& placed : inherited) {
+    // A float eats into the side it packs against, and leaves the other
+    // alone; the band is already in this node's coordinates.
+    const bool left = placed.side == yoga::FloatSide::Left;
+    exclusions.push_back(
+        FloatExclusion{
+            .blockStart = placed.blockStart,
+            .blockEnd = placed.blockEnd,
+            .leftInset = left ? placed.inlineExtent : 0.0f,
+            .rightInset = left ? 0.0f : placed.inlineExtent});
+  }
+  return exclusions;
 }
 
 YGSize YogaLayoutableShadowNode::yogaNodeMeasureCallbackConnector(
@@ -1919,9 +1990,15 @@ YGSize YogaLayoutableShadowNode::yogaNodeMeasureCallbackConnector(
       break;
   }
 
+  // The floats this content sits beside, handed down by the block container
+  // that placed them and already in this node's coordinates. Carried in the
+  // constraints so a measurement taken beside a float is never served from
+  // cache for the same box away from one.
   auto size = shadowNode.measureContent(
       threadLocalLayoutContext,
-      {.minimumSize = minimumSize, .maximumSize = maximumSize});
+      {.minimumSize = minimumSize,
+       .maximumSize = maximumSize,
+       .floatExclusions = shadowNode.floatExclusions()});
 
 #ifdef REACT_NATIVE_DEBUG
   bool widthInBounds = size.width + kDefaultEpsilon >= minimumSize.width &&

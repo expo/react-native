@@ -148,8 +148,14 @@ describe("a row holding a radio takes the platform's row padding", () => {
     Fantom.runTask(() => {
       root.render(markup(row, child));
     });
-    const rowBox = ensureInstance(row.current, ReactNativeElement).getBoundingClientRect();
-    const childBox = ensureInstance(child.current, ReactNativeElement).getBoundingClientRect();
+    const rowBox = ensureInstance(
+      row.current,
+      ReactNativeElement,
+    ).getBoundingClientRect();
+    const childBox = ensureInstance(
+      child.current,
+      ReactNativeElement,
+    ).getBoundingClientRect();
     return {
       start: childBox.x - rowBox.x,
       end: rowBox.x + rowBox.width - (childBox.x + childBox.width),

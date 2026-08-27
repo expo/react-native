@@ -271,6 +271,7 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   one layer switch, `wantsExtendedDynamicRangeContent`; iOS 26's
   `preferredDynamicRange` names all three limits. Platform wall.
 
+
 ## Performance
 
 **`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`
@@ -310,6 +311,34 @@ a real screen first. Background in `element-model-design.md`.
   not resolve.
 - **`subgrid` is not implemented.**
 
+## CSS Grid Lanes
+
+Section-by-section coverage is in `grid-lanes-spec-coverage.md`; these are the
+divergences.
+
+- **`DOM-CSS-LIMITATION(lanes-order)` — `order` is not supported.** css-grid-3
+  §2.1 reorders items before placement. Neither Yoga nor React Native's style
+  surface has `order`, so this is not a lanes limitation so much as an engine
+  one, and it applies equally to flex and grid.
+- **`DOM-CSS-LIMITATION(lanes-baseline-export)` — a lanes container does not
+  export a baseline.** Baseline alignment *inside* the grid-axis tracks works
+  as it does for a regular grid container (css-grid-3 §6.5). What is missing is
+  the container's own first/last baseline set in the stacking axis — "the
+  highest alignment baseline among the grid items placed first in each track" —
+  which matters only when a lanes container is itself a baseline-aligned flex
+  or grid item.
+- **`DOM-CSS-LIMITATION(lanes-abspos-containing-block)` — a grid area cannot be
+  the containing block for an out-of-flow child.** css-grid-3 §8 lets
+  `grid-column`/`grid-row` on an absolutely-positioned child pick out a grid
+  area; the container's content box is used instead. Grid carries the same TODO,
+  and the two should be fixed together.
+- **Safari is not the oracle for §6.3 and §6.4.** It does not implement
+  stacking-axis self alignment at all, and it distributes the stacking axis as
+  though the lanes had rows. The affected cases keep Safari's grid-axis
+  measurements and take spec-derived stacking positions, declared in `cases.js`
+  and derived in `stacking-alignment-test.cpp`. Recorded here because a future
+  Safari that fixes either one will make those cases look like regressions.
+
 ---
 
 ## Not limitations, though they look like ones
@@ -344,6 +373,7 @@ had a marker, but forty-eight markers had no entry, and the file still read as
 complete. The check now runs both ways, so an unindexed marker fails a test
 rather than going quiet.
 
+- `abbr-underline-is-unconditional` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
@@ -362,6 +392,9 @@ rather than going quiet.
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
+- `lanes-abspos-containing-block` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
+- `lanes-baseline-export` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
+- `lanes-order` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
 - `link-title-is-not-idn-decoded` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPTextLinkInteraction.mm`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`

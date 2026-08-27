@@ -18,6 +18,7 @@
 #include <react/debug/react_native_assert.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
+#include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/core/Sealable.h>
 #include <react/renderer/core/ShadowNode.h>
@@ -88,6 +89,16 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void layoutTree(LayoutContext layoutContext, LayoutConstraints layoutConstraints) override;
 
   void layout(LayoutContext layoutContext) override;
+
+  /*
+   * The floats intruding on this node's own content, in its coordinates.
+   *
+   * Placed by the block container that owns them and handed down through the
+   * layout results; a line box overlapping one of these shortens beside it
+   * (CSS2 §9.5). Empty for content no float reaches, which is almost all of
+   * it.
+   */
+  std::vector<FloatExclusion> floatExclusions() const;
 
   Size measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const override;
 
@@ -168,12 +179,24 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   int listDepth_{0};
 
   /*
-   * Whether this container measures its own inline run, its single anonymous
-   * box having been elided from the Yoga tree.
+   * The anonymous box this container measures ITSELF, or nullptr when it has
+   * none — because it has no inline content, or because the content is mixed
+   * with block-level siblings and the box is an ordinary Yoga child.
+   *
+   * Every caller that has to treat an elided box specially asks here, so the
+   * rule lives in one place. The assertion states what elision means: exactly
+   * one box, and no Yoga children, because the container took the box's place
+   * in the Yoga tree.
    */
-  bool measuresOwnInlineRun() const
+  YogaLayoutableShadowNode *elidedInlineRun() const
   {
-    return measuresOwnInlineRun_;
+    if (!measuresOwnInlineRun_) {
+      return nullptr;
+    }
+    react_native_assert(
+        anonymousTextContentChildren_.size() == 1 && yogaLayoutableChildren_.empty() &&
+        "a container measuring its own run has one box and no Yoga children");
+    return anonymousTextContentChildren_.size() == 1 ? anonymousTextContentChildren_[0].get() : nullptr;
   }
 
   /*
@@ -253,6 +276,13 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * it rather than assembling it from `isInlineTextContent(x) || ...`.
    */
   static bool isInlineLevelContent(const ShadowNode &child);
+
+  /*
+   * A `display:'contents'` box holding only inline-level content. It produces
+   * no box, so rather than interrupting a run it joins one as an inline flow
+   * box and its content lands on the line (css-display-3 §3.1).
+   */
+  static bool isTransparentInlineBox(const ShadowNode &child);
 
   /*
    * Cascade storage hooks. Only CONSUMER nodes — paragraphs and anonymous IFC

@@ -57,10 +57,11 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // `enableStringChildren` ONCE and forwards the answer; this one takes it as
   // a plain bool.
   //
-  // The flag is read once rather than at each of the twelve probe sites: the
-  // getter is a cross-module call that ends in a sequentially-consistent
+  // Reading the flag at each probe site instead would cost more than the probes
+  // do. The getter is a cross-module call ending in a sequentially-consistent
   // atomic load, it does not inline, and it is paid whether the flag is on or
-  // off.
+  // off — so asking it once per View is cheaper than asking it once per
+  // property.
   struct ResolvedFlag {};
 
   BaseViewProps(
@@ -203,13 +204,10 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
    * would otherwise be the answer. So a heading inside a 20pt container is
    * 40pt, and its margin is `0.67 × 40`, not `0.67 × 20`.
    *
-   * This used to arrive pre-multiplied by the root, which is `rem`, not `em`.
-   * A heading only ever sat at the root's size in practice, so the two agreed
-   * and nothing noticed — until a heading appeared inside anything that had
-   * restyled its text, where it stayed stubbornly at the root's size. Stating
-   * the factor also retires a disagreement the sheet could not win: the root
-   * is defined on both sides of the JS/C++ boundary and under Fantom the two
-   * differ, 17 against 16. A factor has no root in it to disagree about.
+   * A factor rather than a resolved size for a second reason too: the root is
+   * defined on both sides of the JS/C++ boundary and the two need not agree —
+   * under Fantom they are 17 and 16. A factor carries no root to disagree
+   * about.
    */
   Float uaFontSizeEm{std::numeric_limits<Float>::quiet_NaN()};
 

@@ -577,7 +577,7 @@ void AbstractViewShadowNode<
     }
   }
   if (std::isnan(fontSize) || fontSize <= 0) {
-    fontSize = TextAttributes::defaultTextAttributes().fontSize;
+    fontSize = TextAttributes::initialFontSize();
   }
 
   const Float margin = (hasRem ? remFactor : emFactor) * fontSize;
@@ -1224,12 +1224,10 @@ std::optional<Float> lastInFlowLineBoxBaseline(
     const LayoutContext& layoutContext) {
   // An elided anonymous box is not a Yoga child, but it is exactly where this
   // container's line boxes live: the container IS the run's block container.
-  if (node.measuresOwnInlineRun() &&
-      node.getAnonymousTextContentChildren().size() == 1) {
+  if (auto* box = node.elidedInlineRun()) {
     const auto contentFrame = node.getLayoutMetrics().getContentFrame();
     return contentFrame.origin.y +
-        node.getAnonymousTextContentChildren()[0]->lastLineBaseline(
-            layoutContext, contentFrame.size);
+        box->lastLineBaseline(layoutContext, contentFrame.size);
   }
 
   const auto& children = node.getYogaLayoutableChildren();

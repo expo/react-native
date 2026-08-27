@@ -274,7 +274,7 @@ export default {
       render: (): React.Node => (
         <DemoContent
           code={
-            "<View style={{\n" +
+            '<View style={{\n' +
             "  display: 'grid',\n" +
             "  gridTemplateColumns: '1fr 1fr 1fr',\n" +
             '  gap: 10,\n' +
@@ -303,9 +303,7 @@ export default {
         'device to see the column count change.',
       render: (): React.Node => (
         <DemoContent
-          code={
-            "gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))'"
-          }>
+          code={"gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))'"}>
           <View
             // $FlowExpectedError[incompatible-type] grid style keys
             style={{
@@ -330,13 +328,14 @@ export default {
       render: (): React.Node => (
         <DemoContent
           code={
-            "// auto-fill: empty tracks remain\n" +
+            '// auto-fill: empty tracks remain\n' +
             "gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))'\n" +
             '\n' +
             '// auto-fit: empty tracks collapse\n' +
             "gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))'"
           }>
-          <Text style={{color: DEMO_THEME.muted, fontSize: 12, marginBottom: 4}}>
+          <Text
+            style={{color: DEMO_THEME.muted, fontSize: 12, marginBottom: 4}}>
             auto-fill
           </Text>
           <View
@@ -351,7 +350,8 @@ export default {
               <Cell key={i} index={i} height={32} />
             ))}
           </View>
-          <Text style={{color: DEMO_THEME.muted, fontSize: 12, marginBottom: 4}}>
+          <Text
+            style={{color: DEMO_THEME.muted, fontSize: 12, marginBottom: 4}}>
             auto-fit
           </Text>
           <View
@@ -505,7 +505,7 @@ export default {
       render: (): React.Node => (
         <DemoContent
           code={
-            "gridTemplateColumns:\n" +
+            'gridTemplateColumns:\n' +
             "  '60px repeat(auto-fill, minmax(70px, 1fr)) 60px'"
           }>
           <View
@@ -557,8 +557,7 @@ export default {
         'justify-items and align-items place an item within its track. ' +
         '`stretch` is the default and fills it.',
       render: (): React.Node => (
-        <DemoContent
-          code={"justifyItems: 'center', alignItems: 'center'"}>
+        <DemoContent code={"justifyItems: 'center', alignItems: 'center'"}>
           <View
             // $FlowExpectedError[incompatible-type] grid style keys
             style={{
@@ -593,8 +592,8 @@ export default {
       render: (): React.Node => (
         <DemoContent
           code={
-            "gridTemplateAreas:\n" +
-            "  '\"header header\" \"sidebar main\" \"footer footer\"'\n" +
+            'gridTemplateAreas:\n' +
+            '  \'"header header" "sidebar main" "footer footer"\'\n' +
             "gridTemplateColumns: '90px 1fr'\n" +
             "// then:  gridArea: 'header'"
           }>
@@ -724,7 +723,7 @@ export default {
       render: (): React.Node => (
         <DemoContent
           code={
-            "<View style={{\n" +
+            '<View style={{\n' +
             "  display: 'grid',\n" +
             "  gridTemplateColumns: '1fr 1fr',\n" +
             '  gap: 10,\n' +

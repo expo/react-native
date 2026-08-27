@@ -37,22 +37,28 @@ test('an anchor-nested img displaces the text before it', () => {
       <div style={{width: 360}}>
         {/* $FlowFixMe[prop-missing] */}
         <div>
-          Visit{' '}
-          {/* $FlowFixMe[prop-missing] */}
+          Visit {/* $FlowFixMe[prop-missing] */}
           <a href="https://reactnative.dev">
             {/* $FlowFixMe[prop-missing] */}
-            <img ref={img} src="https://x/l.png" style={{width: 20, height: 20}} />{' '}
+            <img
+              ref={img}
+              src="https://x/l.png"
+              style={{width: 20, height: 20}}
+            />{' '}
             reactnative.dev
           </a>{' '}
-          for docs. Deep:{' '}
-          {/* $FlowFixMe[prop-missing] */}
+          for docs. Deep: {/* $FlowFixMe[prop-missing] */}
           <span>
             {/* $FlowFixMe[prop-missing] */}
             <b>
               {/* $FlowFixMe[prop-missing] */}
               <em>
                 {/* $FlowFixMe[prop-missing] */}
-                <img ref={deep} src="https://x/l.png" style={{width: 20, height: 20}} />
+                <img
+                  ref={deep}
+                  src="https://x/l.png"
+                  style={{width: 20, height: 20}}
+                />
               </em>
             </b>
           </span>
