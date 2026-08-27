@@ -1208,6 +1208,72 @@ void drawInlineBoxDecorations(
   return nil;
 }
 
+
+/*
+ * ONE TIGHT RECT PER LINE, from GLYPH POSITIONS.
+ *
+ * Both of the obvious APIs are wrong, and both were tried here first and looked
+ * plausible enough on screen to waste a build each:
+ *
+ *  - `boundingRectForGlyphRange:` widens to the whole line fragment, and to the
+ *    container's full width once the range spans a line break.
+ *  - `enumerateEnclosingRectsForGlyphRange:` is built for selection
+ *    highlighting and MERGES contiguous full-width lines into one tall rect —
+ *    regardless of what is passed for `withinSelectedGlyphRange:`.
+ *
+ * Either way a wrapped link lifted the ordinary words around it as well as
+ * itself, and those words then showed twice: once in the raised chip and once
+ * on the page under it, where only the link had been hidden.
+ *
+ * Shared by the hit test and by the rects the renderer paints links from, so
+ * the two cannot disagree about where a link is. They DID disagree: the paint
+ * side used `enumerateEnclosingRectsForGlyphRange:` and stopped after the first
+ * rect, so a link that wrapped was painted — and lifted — as its first line
+ * only, while a touch on its second line resolved to a link with no view to
+ * lift.
+ */
+static void RCTAppendLineRectsForGlyphRange(
+    NSLayoutManager *layoutManager,
+    NSTextContainer *textContainer,
+    NSRange glyphRange,
+    NSMutableArray<NSValue *> *outRects)
+{
+  [layoutManager
+      enumerateLineFragmentsForGlyphRange:glyphRange
+                               usingBlock:^(
+                                   CGRect lineRect,
+                                   CGRect usedRect,
+                                   NSTextContainer *__unused lineContainer,
+                                   NSRange lineGlyphRange,
+                                   BOOL *__unused stop) {
+                                 NSRange onThisLine = NSIntersectionRange(lineGlyphRange, glyphRange);
+                                 if (onThisLine.length == 0) {
+                                   return;
+                                 }
+                                 // `locationForGlyphAtIndex:` is relative to the
+                                 // line fragment's origin.
+                                 CGFloat startX =
+                                     lineRect.origin.x + [layoutManager locationForGlyphAtIndex:onThisLine.location].x;
+                                 NSUInteger endGlyph = NSMaxRange(onThisLine);
+                                 CGFloat endX;
+                                 if (endGlyph < NSMaxRange(lineGlyphRange)) {
+                                   endX = lineRect.origin.x + [layoutManager locationForGlyphAtIndex:endGlyph].x;
+                                 } else {
+                                   // The range runs to the end of this line;
+                                   // `usedRect` is where the content stops.
+                                   endX = CGRectGetMaxX(usedRect);
+                                 }
+                                 if (endX <= startX) {
+                                   return;
+                                 }
+                                 [outRects addObject:[NSValue valueWithCGRect:CGRectMake(
+                                                                                  startX,
+                                                                                  usedRect.origin.y,
+                                                                                  endX - startX,
+                                                                                  usedRect.size.height)]];
+                               }];
+}
+
 - (nullable id)getLinkWithAttributedString:(AttributedString)attributedString
                        paragraphAttributes:(ParagraphAttributes)paragraphAttributes
                                      frame:(CGRect)frame
@@ -1265,62 +1331,46 @@ void drawInlineBoxDecorations(
 
   if (outRects != nil) {
     NSRange glyphRange = [layoutManager glyphRangeForCharacterRange:linkRange actualCharacterRange:NULL];
-    /*
-     * ONE TIGHT RECT PER LINE, from GLYPH POSITIONS.
-     *
-     * This is the same formulation `getRectWithAttributedString:` already uses
-     * for an inline element's fragment rects, and for the same reason: both of
-     * the obvious APIs are wrong, and both were tried here first and looked
-     * plausible enough on screen to waste a build each.
-     *
-     *  - `boundingRectForGlyphRange:` widens to the whole line fragment, and to
-     *    the container's full width once the range spans a line break.
-     *  - `enumerateEnclosingRectsForGlyphRange:` is built for selection
-     *    highlighting and MERGES contiguous full-width lines into one tall
-     *    rect — regardless of what is passed for `withinSelectedGlyphRange:`.
-     *
-     * Either way a wrapped link lifted the ordinary words around it as well as
-     * itself, and those words then showed twice: once in the raised chip and
-     * once on the page under it, where only the link had been hidden.
-     */
-    [layoutManager
-        enumerateLineFragmentsForGlyphRange:glyphRange
-                                 usingBlock:^(
-                                     CGRect lineRect,
-                                     CGRect usedRect,
-                                     NSTextContainer *__unused lineContainer,
-                                     NSRange lineGlyphRange,
-                                     BOOL *__unused stop) {
-                                   NSRange onThisLine = NSIntersectionRange(lineGlyphRange, glyphRange);
-                                   if (onThisLine.length == 0) {
-                                     return;
-                                   }
-                                   // `locationForGlyphAtIndex:` is relative to
-                                   // the line fragment's origin.
-                                   CGFloat startX = lineRect.origin.x +
-                                       [layoutManager locationForGlyphAtIndex:onThisLine.location].x;
-                                   NSUInteger endGlyph = NSMaxRange(onThisLine);
-                                   CGFloat endX;
-                                   if (endGlyph < NSMaxRange(lineGlyphRange)) {
-                                     endX = lineRect.origin.x +
-                                         [layoutManager locationForGlyphAtIndex:endGlyph].x;
-                                   } else {
-                                     // The link runs to the end of this line;
-                                     // `usedRect` is where the content stops.
-                                     endX = CGRectGetMaxX(usedRect);
-                                   }
-                                   if (endX <= startX) {
-                                     return;
-                                   }
-                                   [outRects
-                                       addObject:[NSValue valueWithCGRect:CGRectMake(
-                                                                              startX,
-                                                                              usedRect.origin.y,
-                                                                              endX - startX,
-                                                                              usedRect.size.height)]];
-                                 }];
+    RCTAppendLineRectsForGlyphRange(layoutManager, textContainer, glyphRange, outRects);
   }
   return link;
+}
+
+
+- (void)getLineRectGroupsWithAttributedString:(AttributedString)attributedString
+                          paragraphAttributes:(ParagraphAttributes)paragraphAttributes
+                           enumerateAttribute:(NSString *)enumerateAttribute
+                                        frame:(CGRect)frame
+                                   usingBlock:(RCTTextLayoutLineRectGroupBlock)block
+{
+  NSTextStorage *textStorage = [self
+      _textStorageAndLayoutManagerWithAttributesString:[self _nsAttributedStringFromAttributedString:attributedString]
+                                   paragraphAttributes:paragraphAttributes
+                                                  size:frame.size];
+  NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
+  NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
+  [layoutManager ensureLayoutForTextContainer:textContainer];
+
+  NSRange glyphRange = [layoutManager glyphRangeForTextContainer:textContainer];
+  NSRange characterRange = [layoutManager characterRangeForGlyphRange:glyphRange actualGlyphRange:NULL];
+
+  [textStorage enumerateAttribute:enumerateAttribute
+                          inRange:characterRange
+                          options:0
+                       usingBlock:^(NSString *value, NSRange range, BOOL *__unused pause) {
+                         if (value == nullptr) {
+                           return;
+                         }
+                         NSMutableArray<NSValue *> *rects = [NSMutableArray array];
+                         RCTAppendLineRectsForGlyphRange(
+                             layoutManager,
+                             textContainer,
+                             [layoutManager glyphRangeForCharacterRange:range actualCharacterRange:NULL],
+                             rects);
+                         if (rects.count > 0) {
+                           block(rects, value);
+                         }
+                       }];
 }
 
 - (void)getRectWithAttributedString:(AttributedString)attributedString
