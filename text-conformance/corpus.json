@@ -1,22 +1,24 @@
 [
   {
-    "name": "atomic-inlines-in-a-row",
+    "name": "PROBE-text-align-center-centres-the-line",
     "withText": false,
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": "Fantom's measurer places every line at the container's inline start, so it cannot answer where a line is aligned",
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
     "bounded": null,
-    "why": "Three sized atomic inlines with no text: x is the running sum of widths and nothing else.",
+    "why": "text-align centres the line box contents, not the container.",
     "tree": {
       "tag": "div",
       "m": "root",
       "style": {
         "width": "300px",
         "lineHeight": "20px",
-        "fontSize": "16px"
+        "fontSize": "16px",
+        "textAlign": "center"
       },
       "children": [
         {
@@ -40,6 +42,4199 @@
             "verticalAlign": "top",
             "backgroundColor": "#34c759"
           }
+        }
+      ]
+    }
+  },
+  {
+    "name": "PROBE-text-align-right-packs-to-the-end",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": "Fantom's measurer places every line at the container's inline start, so it cannot answer where a line is aligned",
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "text-align:right puts the line contents against the inline end.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "textAlign": "right"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "text-align-does-not-move-a-block-child",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": "Fantom's measurer places every line at the container's inline start, so it cannot answer where a line is aligned",
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "text-align aligns the contents of a LINE box. A block-level child is not on a line, so it fills the container and stays at the inline start — the horizontal twin of vertical-align-does-not-move-a-block-child.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "textAlign": "right"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "blockChild",
+          "style": {
+            "display": "block",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "inlineBox",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "text-align-inherits-into-a-nested-block",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": "Fantom's measurer places every line at the container's inline start, so it cannot answer where a line is aligned",
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "text-align is inherited, so a nested block container with no value of its own aligns its line the way the ancestor does.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "textAlign": "right"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "nested",
+          "style": {
+            "display": "block",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "inlineBox",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "PROBE-border-box-keeps-padding-inside-the-width",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "box-sizing:border-box makes the declared width include padding, so the content box shrinks.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "outer",
+          "style": {
+            "boxSizing": "border-box",
+            "width": "200px",
+            "paddingLeft": "30px",
+            "paddingRight": "30px",
+            "display": "block"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "inner",
+              "style": {
+                "width": "auto",
+                "height": "20px",
+                "backgroundColor": "#0a84ff",
+                "display": "block"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "PROBE-display-contents-child-joins-the-parent-flow",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "display:contents removes the box, so its children are laid out as if they were the parent's.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "display": "contents"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff9500"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "contents-with-block-children-stacks-them-in-the-outer-flow",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The case above covers inline children. A display:contents wrapper holding BLOCK children is the other half: they stack in the grandparent's flow, so a run before them is broken exactly as if the wrapper were not written.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "display": "contents"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "first",
+              "style": {
+                "display": "block",
+                "height": "20px",
+                "backgroundColor": "#0a84ff"
+              }
+            },
+            {
+              "tag": "div",
+              "m": "second",
+              "style": {
+                "display": "block",
+                "height": "20px",
+                "backgroundColor": "#34c759"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "margins-collapse-through-a-contents-wrapper",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A display:contents element generates no box, so there is no edge for margins to stop at: its child's top margin collapses with the preceding sibling's bottom margin as though they were siblings.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "display": "block",
+            "height": "20px",
+            "marginBottom": "30px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "display": "contents"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "inner",
+              "style": {
+                "display": "block",
+                "height": "20px",
+                "marginTop": "20px",
+                "backgroundColor": "#34c759"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "overflow-hidden-inline-block-aligns-by-its-bottom-margin-edge",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": "How far the unclipped box hangs below the baseline is its text's descent, a font metric — Safari puts it 24pt lower. The SIGN is what CSS fixes, and that is what is asserted.",
+    "bounded": "clipped-sits-above-unclipped",
+    "why": "An inline-block whose overflow is not visible takes its bottom margin edge as its baseline, so it sits higher on the line than an identical one that does not clip.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "plain",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "40px",
+            "backgroundColor": "#0a84ff"
+          },
+          "children": [
+            "Ag"
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "clipped",
+          "style": {
+            "display": "inline-block",
+            "overflow": "hidden",
+            "width": "40px",
+            "height": "40px",
+            "backgroundColor": "#34c759"
+          },
+          "children": [
+            "Ag"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "PROBE-percentage-width-resolves-against-the-container",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage width resolves against the containing block content box.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "half",
+          "style": {
+            "width": "50%",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "PROBE-max-width-caps-a-block",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "max-width caps a block that would otherwise fill its container.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "capped",
+          "style": {
+            "width": "auto",
+            "height": "20px",
+            "backgroundColor": "#0a84ff",
+            "display": "block",
+            "maxWidth": "120px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "auto-inline-margins-centre-a-block",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A block-level box with a definite width and both inline margins auto takes the leftover space equally (CSS2 §10.3.3) — `margin: 0 auto`.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "centred",
+          "style": {
+            "width": "200px",
+            "height": "20px",
+            "backgroundColor": "#34c759",
+            "display": "block",
+            "marginLeft": "auto",
+            "marginRight": "auto"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "one-auto-inline-margin-takes-all-the-leftover",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "With only the start margin auto, it absorbs the whole leftover and the box sits against the end edge.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "pushed",
+          "style": {
+            "width": "200px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "marginLeft": "auto"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-percentage-min-height-against-an-auto-parent-does-not-apply",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage min-height resolves against the containing block height; with that auto it does not apply (CSS2 §10.7).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "parent",
+          "style": {
+            "display": "block",
+            "backgroundColor": "#ff9500"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "child",
+              "style": {
+                "width": "100px",
+                "height": "20px",
+                "backgroundColor": "#af52de",
+                "display": "block",
+                "minHeight": "50%"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "relative-percentage-offset-resolves-against-the-container",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage `left` on a relatively positioned box resolves against the containing block WIDTH.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "shifted",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30",
+            "display": "block",
+            "position": "relative",
+            "left": "10%"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-relative-box-given-both-left-and-right-uses-left",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Relative offsets on opposite sides are over-constrained: one is ignored, and in a left-to-right container it is `right` (CSS2 §9.4.3). The box moves right by the LEFT value, not by the difference.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "shifted",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block",
+            "position": "relative",
+            "left": "30px",
+            "right": "10px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-relative-box-given-both-top-and-bottom-uses-top",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The block-axis twin: `bottom` is the one ignored, so the box moves down by the TOP value and its siblings do not move at all.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "shifted",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff",
+            "display": "block",
+            "position": "relative",
+            "top": "15px",
+            "bottom": "5px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "display": "block",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-percentage-top-offset-resolves-against-the-container-height",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Unlike `left`, a percentage `top` resolves against the containing block HEIGHT — so it needs a definite one to apply at all.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "holder",
+          "style": {
+            "display": "block",
+            "height": "100px",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "shifted",
+              "style": {
+                "width": "100px",
+                "height": "20px",
+                "backgroundColor": "#34c759",
+                "display": "block",
+                "position": "relative",
+                "top": "25%"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "margins-collapse-through-several-empty-siblings",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A chain of empty blocks collapses through: the single gap is the largest margin in the chain, not their sum.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "first",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "marginBlockEnd": "10px"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "display": "block",
+            "marginBlock": "25px"
+          }
+        },
+        {
+          "tag": "div",
+          "style": {
+            "display": "block",
+            "marginBlock": "15px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "last",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#af52de",
+            "display": "block",
+            "marginBlockStart": "10px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "vertical-align-does-not-move-a-block-child",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "vertical-align applies to inline-level boxes and table cells; a block-level child ignores it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "a",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30",
+            "display": "block",
+            "verticalAlign": "bottom"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "b",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-float-and-a-following-block-share-the-band",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float is taken out of flow, so a following in-flow BLOCK box starts at the container edge and overlaps it — only line boxes shorten.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "40px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "200px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff",
+            "display": "block"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "rtl-float-inline-start-packs-against-the-right",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "float:inline-start is the LOGICAL side, so under direction:rtl it packs against the right edge (css-logical-1).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "direction": "rtl",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "inline-start",
+            "width": "100px",
+            "height": "30px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "rtl-float-inline-end-packs-against-the-left",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The mirror of the case above: under direction:rtl an inline-end float packs against the LEFT edge.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "direction": "rtl",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "inline-end",
+            "width": "100px",
+            "height": "30px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "an-rtl-float-is-inset-by-the-containers-padding",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float's inline position is measured from the container's content edge, so the padding on the side it packs against insets it — under rtl that is the RIGHT padding for an inline-start float.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "direction": "rtl",
+        "overflow": "hidden",
+        "boxSizing": "border-box",
+        "paddingLeft": "15px",
+        "paddingRight": "25px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "inline-start",
+            "width": "100px",
+            "height": "30px",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "rtl-places-a-block-child-from-the-right",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Under direction:rtl a block child with a definite width sits against the inline start, which is the RIGHT edge (css-writing-modes-4 §2).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "direction": "rtl"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "child",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#34c759",
+            "display": "block"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "an-absolute-child-positions-from-the-padding-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An absolutely positioned child offsets from its containing block PADDING box, so the container padding is included (CSS2 §10.1).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "holder",
+          "style": {
+            "display": "block",
+            "position": "relative",
+            "boxSizing": "border-box",
+            "padding": "10px",
+            "height": "60px",
+            "backgroundColor": "#30b0c7"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "abs",
+              "style": {
+                "position": "absolute",
+                "top": "5px",
+                "left": "5px",
+                "width": "40px",
+                "height": "20px",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "an-absolute-child-with-no-offsets-sits-at-its-static-position",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "With every offset auto, an absolutely positioned box stays where it would have been in the flow (CSS2 §10.6.4) — so it sits below the block box before it, not at the top of the container.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "holder",
+          "style": {
+            "display": "block",
+            "position": "relative",
+            "height": "100px",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "first",
+              "style": {
+                "height": "30px",
+                "backgroundColor": "#0a84ff"
+              }
+            },
+            {
+              "tag": "div",
+              "m": "abs",
+              "style": {
+                "position": "absolute",
+                "width": "40px",
+                "height": "20px",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "an-absolute-child-offsets-from-the-bottom-and-right",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "bottom and right offset from the containing block's padding box on the far side, so the box is placed by its own bottom-right corner.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "holder",
+          "style": {
+            "display": "block",
+            "position": "relative",
+            "boxSizing": "border-box",
+            "padding": "10px",
+            "height": "100px",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "abs",
+              "style": {
+                "position": "absolute",
+                "bottom": "5px",
+                "right": "5px",
+                "width": "40px",
+                "height": "20px",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "opposite-offsets-size-an-auto-width-absolute-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "With left and right both given and width auto, the box stretches between them (CSS2 §10.3.7) rather than shrinking to fit.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "holder",
+          "style": {
+            "display": "block",
+            "position": "relative",
+            "height": "60px",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "abs",
+              "style": {
+                "position": "absolute",
+                "left": "20px",
+                "right": "50px",
+                "height": "20px",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "an-absolute-child-does-not-take-space-in-the-flow",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An out-of-flow box contributes nothing to its container's block size, so the box after it sits where it would with the absolute one absent.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "holder",
+          "style": {
+            "display": "block",
+            "position": "relative",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "first",
+              "style": {
+                "height": "20px",
+                "backgroundColor": "#0a84ff"
+              }
+            },
+            {
+              "tag": "div",
+              "m": "abs",
+              "style": {
+                "position": "absolute",
+                "top": "0px",
+                "left": "0px",
+                "width": "40px",
+                "height": "90px",
+                "backgroundColor": "#ff3b30"
+              }
+            },
+            {
+              "tag": "div",
+              "m": "after",
+              "style": {
+                "height": "20px",
+                "backgroundColor": "#34c759"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "an-absolute-box-does-not-collapse-margins-with-its-siblings",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An out-of-flow box's margins never collapse with anything (CSS2 §8.3.1), and it is not between its siblings, so the two in-flow margins collapse with each other straight through it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "holder",
+          "style": {
+            "display": "block",
+            "position": "relative",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "first",
+              "style": {
+                "height": "20px",
+                "marginBottom": "30px",
+                "backgroundColor": "#0a84ff"
+              }
+            },
+            {
+              "tag": "div",
+              "m": "abs",
+              "style": {
+                "position": "absolute",
+                "width": "40px",
+                "height": "20px",
+                "marginTop": "100px",
+                "backgroundColor": "#ff3b30"
+              }
+            },
+            {
+              "tag": "div",
+              "m": "after",
+              "style": {
+                "height": "20px",
+                "marginTop": "20px",
+                "backgroundColor": "#34c759"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "nested-percentage-widths-compound",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage width resolves against the parent CONTENT box, so 50% of 50% of 300 is 75.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "outer",
+          "style": {
+            "display": "block",
+            "width": "50%",
+            "backgroundColor": "#0a84ff"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "inner",
+              "style": {
+                "width": "50%",
+                "height": "20px",
+                "backgroundColor": "#ff9500",
+                "display": "block"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-percentage-min-width-resolves-against-the-container",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage min-width resolves against the containing block width and can widen a narrower box.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "clamped",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de",
+            "display": "block",
+            "minWidth": "40%"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-border-reduces-the-content-box-under-border-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Under box-sizing:border-box the declared width includes the border, so a child filling the container is narrower by both borders.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "outer",
+          "style": {
+            "display": "block",
+            "boxSizing": "border-box",
+            "width": "200px",
+            "borderLeftWidth": "15px",
+            "borderRightWidth": "15px",
+            "borderLeftStyle": "solid",
+            "borderRightStyle": "solid",
+            "borderLeftColor": "#af52de",
+            "borderRightColor": "#af52de"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "inner",
+              "style": {
+                "width": "auto",
+                "height": "20px",
+                "backgroundColor": "#ff3b30",
+                "display": "block"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-block-container-ignores-gap",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "gap applies to flex, grid and multi-column — not to a block container, whose children are separated by their margins alone.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "gap": "30px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "first",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "second",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff",
+            "display": "block"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "content-box-percentage-padding-resolves-against-the-width",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Under box-sizing:content-box the declared width is the CONTENT width and a percentage padding — resolved against the containing block width — adds to it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "padded",
+          "style": {
+            "display": "block",
+            "boxSizing": "content-box",
+            "width": "100px",
+            "height": "20px",
+            "paddingLeft": "10%",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "percentage-margin-resolves-against-the-width",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage margin resolves against the containing block WIDTH in both axes (CSS2 §8.3), so a 10% top margin on a 300pt container is 30.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "shifted",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#34c759",
+            "display": "block",
+            "marginTop": "10%"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-percentage-height-against-an-auto-height-parent-is-auto",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage height resolves against the containing block height; when that is auto the percentage does not apply and the box is content-sized (CSS2 §10.5).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "parent",
+          "style": {
+            "display": "block",
+            "backgroundColor": "#30b0c7"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "child",
+              "style": {
+                "width": "100px",
+                "height": "50%",
+                "backgroundColor": "#ff9500",
+                "display": "block"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-percentage-height-against-a-definite-parent-applies",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The other half of CSS2 §10.5: once the containing block has a definite height, a percentage height resolves against it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "parent",
+          "style": {
+            "display": "block",
+            "height": "80px",
+            "backgroundColor": "#30b0c7"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "child",
+              "style": {
+                "display": "block",
+                "height": "50%",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-percentage-height-resolves-against-the-content-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage height resolves against the containing block's CONTENT height, so the parent's padding is excluded from what the percentage is taken of.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "parent",
+          "style": {
+            "display": "block",
+            "boxSizing": "content-box",
+            "height": "80px",
+            "paddingTop": "10px",
+            "paddingBottom": "10px",
+            "backgroundColor": "#30b0c7"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "child",
+              "style": {
+                "display": "block",
+                "height": "50%",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-negative-inline-margin-pulls-a-block-out",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A negative inline-start margin moves a block box outside its container content edge.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "pulled",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#af52de",
+            "display": "block",
+            "marginLeft": "-20px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "clear-both-drops-below-floats-on-both-sides",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "clear:both puts the box below the lowest edge of floats on either side.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "left",
+          "style": {
+            "float": "left",
+            "width": "80px",
+            "height": "30px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "right",
+          "style": {
+            "float": "right",
+            "width": "80px",
+            "height": "50px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "cleared",
+          "style": {
+            "clear": "both",
+            "display": "block",
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-max-width-clamps-against-a-percentage-margin",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A max-width clamps the border box to 150 whatever the margin is. The clamp is applied to the MARGIN box with the margin added back, so a margin resolved against the wrong width would clamp at the wrong place and leave the box wider than its max.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "looseParent",
+          "style": {
+            "display": "block"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "container",
+              "style": {
+                "display": "block",
+                "width": "200px",
+                "backgroundColor": "#e5e5ea"
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "m": "clamped",
+                  "style": {
+                    "display": "block",
+                    "maxWidth": "150px",
+                    "marginLeft": "10%",
+                    "height": "20px",
+                    "backgroundColor": "#ff3b30"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-max-height-clamps-against-a-percentage-margin",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The block-axis twin, where a percentage margin still resolves against the WIDTH — so the same wrong base would reach the height clamp.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "looseParent",
+          "style": {
+            "display": "block"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "container",
+              "style": {
+                "display": "block",
+                "width": "200px",
+                "height": "200px",
+                "backgroundColor": "#e5e5ea"
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "m": "clamped",
+                  "style": {
+                    "display": "block",
+                    "height": "180px",
+                    "maxHeight": "100px",
+                    "marginTop": "10%",
+                    "backgroundColor": "#ff3b30"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "min-width-beats-max-width-when-they-conflict",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "When min-width is larger than max-width, min wins (CSS2 §10.4).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "conflicted",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30",
+            "display": "block",
+            "minWidth": "180px",
+            "maxWidth": "90px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "min-width-under-border-box-includes-the-padding",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Under border-box every length names the border box, min-width included — so a 120pt min-width on a box with 20pt of padding leaves 80pt of content, not 120.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "clamped",
+          "style": {
+            "display": "block",
+            "boxSizing": "border-box",
+            "width": "40px",
+            "minWidth": "120px",
+            "height": "30px",
+            "paddingLeft": "20px",
+            "paddingRight": "20px",
+            "backgroundColor": "#0a84ff"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "inner",
+              "style": {
+                "display": "block",
+                "height": "10px",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "min-width-under-content-box-excludes-the-padding",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Under content-box the same 120pt min-width names the CONTENT box, so the border box comes out 40pt wider and the inner box is the full 120.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "clamped",
+          "style": {
+            "display": "block",
+            "boxSizing": "content-box",
+            "width": "40px",
+            "minWidth": "120px",
+            "height": "30px",
+            "paddingLeft": "20px",
+            "paddingRight": "20px",
+            "backgroundColor": "#0a84ff"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "inner",
+              "style": {
+                "display": "block",
+                "height": "10px",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-max-height-does-not-move-the-children",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A max-height caps the container only. Its children keep the positions the flow gave them and overflow past the capped edge.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "capped",
+          "style": {
+            "display": "block",
+            "maxHeight": "30px",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "first",
+              "style": {
+                "display": "block",
+                "height": "20px",
+                "backgroundColor": "#0a84ff"
+              }
+            },
+            {
+              "tag": "div",
+              "m": "second",
+              "style": {
+                "display": "block",
+                "height": "20px",
+                "backgroundColor": "#34c759"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "an-auto-width-beats-auto-margins",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "With width auto, the box fills the container and auto margins become zero (CSS2 §10.3.3) — there is no leftover to share.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "filled",
+          "style": {
+            "width": "auto",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block",
+            "marginLeft": "auto",
+            "marginRight": "auto"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-percentage-width-resolves-against-the-content-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage width resolves against the containing block CONTENT box, so the container padding is excluded from the base.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "padded",
+          "style": {
+            "display": "block",
+            "boxSizing": "border-box",
+            "width": "200px",
+            "paddingLeft": "20px",
+            "paddingRight": "20px",
+            "backgroundColor": "#30b0c7"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "half",
+              "style": {
+                "width": "50%",
+                "height": "20px",
+                "backgroundColor": "#0a84ff",
+                "display": "block"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "float-margins-never-collapse",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float's margins never collapse — not with its own, not with its neighbours' (CSS2 §8.3.1) — so two stacked floats are separated by the SUM of their block margins.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "f1",
+          "style": {
+            "float": "left",
+            "width": "300px",
+            "height": "20px",
+            "marginBottom": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "f2",
+          "style": {
+            "float": "left",
+            "width": "300px",
+            "height": "20px",
+            "marginTop": "30px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-float-with-padding-and-border-takes-its-whole-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float packs by its MARGIN box, so padding and border widen the space it takes from the line.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "boxSizing": "content-box",
+            "width": "60px",
+            "height": "20px",
+            "paddingLeft": "10px",
+            "paddingRight": "10px",
+            "borderLeftWidth": "5px",
+            "borderRightWidth": "5px",
+            "borderLeftStyle": "solid",
+            "borderRightStyle": "solid",
+            "borderLeftColor": "#af52de",
+            "borderRightColor": "#af52de",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "second",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-percentage-width-float-resolves-against-the-container",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float with a percentage width resolves it against the containing block, like any other box.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "25%",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "opposite-floats-share-one-line",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A left and a right float on the same line pack against opposite edges and do not push each other down while they fit.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "left",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "right",
+          "style": {
+            "float": "right",
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-definite-height-stops-the-bottom-margin-collapsing-out",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A last child's bottom margin collapses out of its parent only while the parent's height is auto (CSS2 §8.3.1). Given a height, the parent's bottom edge is fixed and the margin stays inside it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "parent",
+          "style": {
+            "height": "60px",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "child",
+              "style": {
+                "height": "20px",
+                "marginBottom": "30px",
+                "backgroundColor": "#0a84ff"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-min-height-stops-a-block-collapsing-through",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An empty block collapses through only when its min-height is zero too (CSS2 §8.3.1). A min-height separates its own top and bottom margins, so they no longer collapse with each other.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "empty",
+          "style": {
+            "minHeight": "10px",
+            "marginTop": "20px",
+            "marginBottom": "20px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "two-negative-margins-collapse-to-the-most-negative",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Collapsing takes the maximum of the positive margins and the minimum of the negative ones, then adds them — so two negatives give the MORE negative of the pair, never their sum.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "paddingTop": "40px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "first",
+          "style": {
+            "height": "20px",
+            "marginBottom": "-10px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "second",
+          "style": {
+            "height": "20px",
+            "marginTop": "-30px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "auto-margins-do-not-centre-a-float",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float's auto margins compute to zero (CSS2 §10.3.5), not to the leftover space, so it packs against the edge rather than centring.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "20px",
+            "marginLeft": "auto",
+            "marginRight": "auto",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-max-width-caps-a-float",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "max-width applies to a float like any other box, and the capped width is what the next float packs against.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "200px",
+            "maxWidth": "80px",
+            "height": "20px",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "second",
+          "style": {
+            "float": "left",
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-float-is-offset-by-its-own-inline-margin",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A left float's margin box sits at the content edge, so its border box is inset by its own left margin.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "30px",
+            "marginLeft": "20px",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-right-float-is-offset-by-its-own-inline-margin",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The same for a right float: its margin box is packed against the end edge, so the border box is inset by its right margin.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "right",
+            "width": "100px",
+            "height": "30px",
+            "marginRight": "20px",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-negative-margin-on-a-float-pulls-it-out",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A negative inline margin moves a float outside the container content edge.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "30px",
+            "marginLeft": "-20px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "clear-left-ignores-a-right-float",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "clear:left drops below left floats only, so a right float beside it is not cleared.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "right",
+          "style": {
+            "float": "right",
+            "width": "80px",
+            "height": "50px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "cleared",
+          "style": {
+            "clear": "left",
+            "display": "block",
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "min-width-clamps-a-narrower-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "min-width wins over a smaller declared width (CSS2 §10.4).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "clamped",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759",
+            "display": "block",
+            "minWidth": "120px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "min-height-clamps-a-shorter-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "min-height wins over a smaller declared height.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "clamped",
+          "style": {
+            "width": "100px",
+            "height": "10px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "minHeight": "50px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "max-height-caps-a-taller-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "max-height caps a declared height.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "capped",
+          "style": {
+            "width": "100px",
+            "height": "200px",
+            "backgroundColor": "#af52de",
+            "display": "block",
+            "maxHeight": "40px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "aspect-ratio-sizes-the-axis-that-is-auto",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "With one axis given, aspect-ratio determines the other (css-sizing-4 §4).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "ratio",
+          "style": {
+            "display": "block",
+            "width": "120px",
+            "aspectRatio": "3 / 1",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "aspect-ratio-sizes-the-width-from-a-definite-height",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "With the height given and the width shrink-to-fit, aspect-ratio determines the width (css-sizing-4 §4).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "wrapper",
+          "style": {
+            "display": "inline-block",
+            "verticalAlign": "top"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "ratio",
+              "style": {
+                "display": "block",
+                "height": "20px",
+                "aspectRatio": "2 / 1",
+                "backgroundColor": "#0a84ff"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "relative-offset-does-not-move-the-next-box",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A relatively positioned box is offset from where it would have been, and the space it left stays reserved (CSS2 §9.4.3).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "shifted",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30",
+            "display": "block",
+            "position": "relative",
+            "left": "30px",
+            "top": "10px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "percentage-padding-resolves-against-the-width",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A percentage padding resolves against the containing block WIDTH in both axes (CSS2 §8.4).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "padded",
+          "style": {
+            "display": "block",
+            "paddingTop": "10%",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "border-box-includes-the-border-in-the-width",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "box-sizing:border-box makes the declared width include the border, not only the padding.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "outer",
+          "style": {
+            "boxSizing": "border-box",
+            "width": "200px",
+            "borderLeftWidth": "20px",
+            "borderRightWidth": "20px",
+            "borderLeftStyle": "solid",
+            "borderRightStyle": "solid",
+            "borderLeftColor": "#af52de",
+            "borderRightColor": "#af52de",
+            "display": "block"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "inner",
+              "style": {
+                "width": "auto",
+                "height": "20px",
+                "backgroundColor": "#0a84ff",
+                "display": "block"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "overflow-hidden-stops-a-margin-collapsing-through",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "overflow other than visible establishes a block formatting context, so a child margin cannot collapse out of it (CSS2 §8.3.1).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "context",
+          "style": {
+            "display": "block",
+            "overflow": "hidden",
+            "backgroundColor": "#ff9500"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "child",
+              "style": {
+                "width": "100px",
+                "height": "20px",
+                "backgroundColor": "#34c759",
+                "display": "block",
+                "marginTop": "30px"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "padding-stops-the-parent-child-collapse",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A parent padding separates the two top edges, so the margins do not collapse (CSS2 §8.3.1) — the padding counterpart of the border case above.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "parent",
+          "style": {
+            "display": "block",
+            "paddingTop": "10px",
+            "backgroundColor": "#30b0c7"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "child",
+              "style": {
+                "width": "100px",
+                "height": "20px",
+                "backgroundColor": "#af52de",
+                "display": "block",
+                "marginTop": "40px"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-negative-top-margin-pulls-the-box-up",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A negative margin moves a block up over its predecessor.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "first",
+          "style": {
+            "width": "100px",
+            "height": "40px",
+            "backgroundColor": "#ff3b30",
+            "display": "block"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "second",
+          "style": {
+            "width": "100px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7",
+            "display": "block",
+            "marginTop": "-15px"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "adjacent-siblings-collapse-to-the-larger",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Adjacent siblings collapse to max(20, 30) = 30 (CSS 2.1 8.3.1).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "a",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff",
+            "display": "block",
+            "marginBlockEnd": "20px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "b",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759",
+            "display": "block",
+            "marginBlockStart": "30px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-border-stops-the-parent-child-collapse",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A border on the parent separates the edges, so the child margin stays inside.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "before",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "parent",
+          "style": {
+            "width": "300px",
+            "display": "block",
+            "borderTopWidth": "1px",
+            "borderTopStyle": "solid",
+            "borderTopColor": "#000"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "child",
+              "style": {
+                "width": "40px",
+                "height": "20px",
+                "backgroundColor": "#ff3b30",
+                "display": "block",
+                "marginBlockStart": "25px"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "an-empty-block-collapses-through",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An empty block with no border or padding collapses its own margins through, leaving max(20, 30).",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "a",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "empty",
+          "style": {
+            "display": "block",
+            "marginBlockStart": "20px",
+            "marginBlockEnd": "30px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "b",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "negative-and-positive-margins-combine",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Collapsing adds the largest positive and the most negative: 30 + (-10) = 20.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "a",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff9500",
+            "display": "block",
+            "marginBlockEnd": "30px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "b",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#af52de",
+            "display": "block",
+            "marginBlockStart": "-10px"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-float-shrinks-to-fit",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float with auto width takes its content width rather than filling the line. Content narrower than the container, so max-content and fit-content agree — the case beside it is the one that separates them.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "display": "block"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#30b0c7"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-float-with-auto-width-shrinks-to-the-available-space",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float wider than its container at max-content is capped at the available width and its content wraps.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "display": "block"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "c1",
+              "style": {
+                "display": "inline-block",
+                "width": "120px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#34c759"
+              }
+            },
+            {
+              "tag": "span",
+              "m": "c2",
+              "style": {
+                "display": "inline-block",
+                "width": "120px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff9500"
+              }
+            },
+            {
+              "tag": "span",
+              "m": "c3",
+              "style": {
+                "display": "inline-block",
+                "width": "120px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "two-floats-pack-then-wrap",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Floats pack along the line until one does not fit, then drop below.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "f1",
+          "style": {
+            "float": "left",
+            "width": "120px",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "f2",
+          "style": {
+            "float": "left",
+            "width": "120px",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "f3",
+          "style": {
+            "float": "left",
+            "width": "120px",
+            "height": "20px",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "clear-drops-below-the-float",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A cleared block sits below the float rather than beside it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "40px",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "cleared",
+          "style": {
+            "clear": "left",
+            "display": "block",
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-line-shortens-beside-a-float",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": "Fantom's text layout manager is a model and implements no exclusion support, so it reports the run unshortened whatever the engine does. Both devices assert it in verify.js.",
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The behaviour floats exist for (CSS2 §9.5): a line box overlapping a float shortens beside it, so boxes on the float's lines start after it and boxes below it start at the container edge.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "120px",
+            "height": "40px",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "c",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "d",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-plain-block-does-not-contain-its-floats",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Only an independent formatting context grows to enclose its floats (CSS2 §10.6.7). A plain block in another block's flow reports the height it would have had without them, which is why `overflow: hidden` is the classic way to make a container hold them up.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "plain",
+          "style": {
+            "display": "block",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "floated",
+              "style": {
+                "float": "left",
+                "width": "100px",
+                "height": "40px",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "display": "block",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-float-does-not-escape-an-inner-formatting-context",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float is contained by the block formatting context it is in, so one inside an `overflow: hidden` child intrudes on nothing outside it — the box after that child starts below it, not beside the float.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "inner",
+          "style": {
+            "display": "block",
+            "overflow": "hidden",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "floated",
+              "style": {
+                "float": "left",
+                "width": "100px",
+                "height": "40px",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "after",
+          "style": {
+            "display": "block",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "floating-an-inline-blockifies-it",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "A float is block-level whatever `display` says: `inline` computes to `block` (css-display-3 §2.7), so the stated width and height apply where on an inline box they would not.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "display": "inline",
+            "width": "100px",
+            "height": "30px",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "second",
+          "style": {
+            "float": "left",
+            "width": "40px",
+            "height": "30px",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "absolute-positioning-cancels-float",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "An absolutely positioned box's `float` computes to `none` (CSS2 §9.7), so it is placed by its offsets and intrudes on nothing — the in-flow box beside it starts at the container's edge.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "holder",
+          "style": {
+            "display": "block",
+            "position": "relative",
+            "backgroundColor": "#e5e5ea"
+          },
+          "children": [
+            {
+              "tag": "div",
+              "m": "abs",
+              "style": {
+                "position": "absolute",
+                "float": "left",
+                "top": "0px",
+                "left": "0px",
+                "width": "100px",
+                "height": "40px",
+                "backgroundColor": "#ff3b30"
+              }
+            },
+            {
+              "tag": "div",
+              "m": "inflow",
+              "style": {
+                "display": "block",
+                "height": "20px",
+                "backgroundColor": "#34c759"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "a-float-can-clear-another-float",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "`clear` applies to a float as much as to an in-flow box (CSS2 §9.5.2), so the second float drops below the first instead of packing beside it — even though there is room.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "first",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "40px",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "second",
+          "style": {
+            "float": "left",
+            "clear": "left",
+            "width": "40px",
+            "height": "20px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "clearance-absorbs-a-smaller-top-margin",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Clearance is the shortfall between where the box would have been WITH its margin and the float's bottom edge (CSS2 §9.5.2), not a floor the margin is added to — so a 25pt margin under a float ending at 40 lands the border edge at 40, not 65.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "overflow": "hidden"
+      },
+      "children": [
+        {
+          "tag": "div",
+          "m": "floated",
+          "style": {
+            "float": "left",
+            "width": "100px",
+            "height": "40px",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "cleared",
+          "style": {
+            "clear": "left",
+            "display": "block",
+            "height": "20px",
+            "marginTop": "25px",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "rtl-inline-run-starts-at-the-right-edge",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": "DOM-CSS-LIMITATION(rtl-inline-run-not-reordered) — the run is right-aligned but its boxes keep their logical order. Safari 260/200, both platforms 200/240.",
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "In an RTL block the first box sits against the right edge and the next one to its left.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "direction": "rtl"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "first",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "second",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "atomic-inlines-in-a-row",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Three sized atomic inlines with no text: x is the running sum of widths and nothing else.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "60px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
         },
         {
           "tag": "span",
@@ -49,7 +4244,7 @@
             "width": "30px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff9500"
+            "backgroundColor": "#0a84ff"
           }
         }
       ]
@@ -61,6 +4256,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -83,7 +4279,7 @@
             "width": "100px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#34c759"
           }
         },
         {
@@ -94,7 +4290,7 @@
             "width": "100px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#ff9500"
           }
         },
         {
@@ -105,7 +4301,7 @@
             "width": "100px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#af52de"
           }
         },
         {
@@ -116,7 +4312,132 @@
             "width": "100px",
             "height": "20px",
             "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "nowrap-keeps-atomic-inlines-on-one-line",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The same four boxes under `white-space: nowrap` stay on one line and overflow the container rather than breaking — the rule holds for atomic inlines, not only for text.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "whiteSpace": "nowrap"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
             "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "c",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#34c759"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "d",
+          "style": {
+            "display": "inline-block",
+            "width": "100px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "nowrap-does-not-stop-a-block-child-breaking-the-run",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "white-space governs breaking WITHIN a line. A block-level child is not on the line at all, so it still ends the run and starts its own.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px",
+        "whiteSpace": "nowrap"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "a",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "div",
+          "m": "blockChild",
+          "style": {
+            "display": "block",
+            "height": "20px",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "b",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
           }
         }
       ]
@@ -128,6 +4449,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -150,7 +4472,7 @@
             "width": "40px",
             "height": "50px",
             "verticalAlign": "top",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#30b0c7"
           }
         }
       ]
@@ -162,6 +4484,7 @@
     "heightOnly": true,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -186,6 +4509,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -208,7 +4532,7 @@
             "width": "40px",
             "height": "10px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff9500"
+            "backgroundColor": "#0a84ff"
           }
         }
       ]
@@ -220,6 +4544,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -242,7 +4567,7 @@
             "width": "200px",
             "height": "10px",
             "verticalAlign": "top",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#34c759"
           }
         },
         {
@@ -253,7 +4578,7 @@
             "width": "200px",
             "height": "10px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#ff9500"
           }
         }
       ]
@@ -265,6 +4590,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -287,7 +4613,7 @@
             "width": "200px",
             "height": "50px",
             "verticalAlign": "top",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#af52de"
           }
         },
         {
@@ -298,7 +4624,7 @@
             "width": "200px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#ff3b30"
           }
         }
       ]
@@ -310,11 +4636,64 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
     "bounded": null,
     "why": "An inline box establishes no formatting context, so a box inside a <span> is on the same line at the same x as if it were a direct child.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        },
+        {
+          "tag": "span",
+          "style": {},
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#0a84ff"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "nested-three-deep",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Depth is irrelevant to the IFC.",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -341,57 +4720,6 @@
           "children": [
             {
               "tag": "span",
-              "m": "inner",
-              "style": {
-                "display": "inline-block",
-                "width": "40px",
-                "height": "20px",
-                "verticalAlign": "top",
-                "backgroundColor": "#ff9500"
-              }
-            }
-          ]
-        }
-      ]
-    }
-  },
-  {
-    "name": "nested-three-deep",
-    "withText": false,
-    "heightOnly": false,
-    "needsLineBreaking": false,
-    "knownGap": null,
-    "sameX": null,
-    "deltaX": null,
-    "fontDependent": null,
-    "bounded": null,
-    "why": "Depth is irrelevant to the IFC.",
-    "tree": {
-      "tag": "div",
-      "m": "root",
-      "style": {
-        "width": "300px",
-        "lineHeight": "20px",
-        "fontSize": "16px"
-      },
-      "children": [
-        {
-          "tag": "span",
-          "m": "before",
-          "style": {
-            "display": "inline-block",
-            "width": "40px",
-            "height": "20px",
-            "verticalAlign": "top",
-            "backgroundColor": "#af52de"
-          }
-        },
-        {
-          "tag": "span",
-          "style": {},
-          "children": [
-            {
-              "tag": "span",
               "style": {},
               "children": [
                 {
@@ -406,7 +4734,7 @@
                         "width": "40px",
                         "height": "20px",
                         "verticalAlign": "top",
-                        "backgroundColor": "#ff3b30"
+                        "backgroundColor": "#ff9500"
                       }
                     }
                   ]
@@ -424,6 +4752,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -450,7 +4779,7 @@
                 "width": "40px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#30b0c7"
+                "backgroundColor": "#af52de"
               }
             }
           ]
@@ -463,7 +4792,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#ff3b30"
           }
         }
       ]
@@ -475,6 +4804,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -497,7 +4827,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#30b0c7"
           }
         },
         {
@@ -518,7 +4848,7 @@
                 "width": "20px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#ff9500"
+                "backgroundColor": "#0a84ff"
               }
             }
           ]
@@ -531,7 +4861,76 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "inline-grid-atomic",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "display:inline-grid is the inline-level form of grid: it sits on the line like an inline-block rather than starting a new one.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff9500"
+          }
+        },
+        {
+          "tag": "span",
+          "m": "grid",
+          "style": {
+            "display": "inline-grid",
+            "width": "80px",
+            "height": "20px",
+            "verticalAlign": "top"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "gridchild",
+              "style": {
+                "display": "inline-block",
+                "width": "20px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#af52de"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#ff3b30"
           }
         }
       ]
@@ -543,6 +4942,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -575,7 +4975,7 @@
                 "width": "30px",
                 "height": "30px",
                 "verticalAlign": "top",
-                "backgroundColor": "#ff3b30"
+                "backgroundColor": "#30b0c7"
               }
             },
             {
@@ -586,7 +4986,7 @@
                 "width": "30px",
                 "height": "30px",
                 "verticalAlign": "top",
-                "backgroundColor": "#30b0c7"
+                "backgroundColor": "#0a84ff"
               }
             }
           ]
@@ -600,6 +5000,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -622,7 +5023,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#34c759"
           }
         },
         {
@@ -638,7 +5039,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#ff9500"
           }
         }
       ]
@@ -650,11 +5051,142 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
     "bounded": null,
     "why": "Horizontal padding on an inline box DOES apply (css-inline-3), so the inner box is pushed right by it.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#af52de"
+          }
+        },
+        {
+          "tag": "span",
+          "style": {
+            "paddingLeft": "10px",
+            "paddingRight": "10px"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#ff3b30"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "span",
+          "m": "after",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#30b0c7"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "vertical-padding-on-an-inline-does-not-grow-the-line",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "The other half of the rule beside it: vertical padding on a non-replaced inline box is drawn but does not enter the line box height (CSS2 §10.6.1), so neither the line nor the box after it moves.",
+    "tree": {
+      "tag": "div",
+      "m": "root",
+      "style": {
+        "width": "300px",
+        "lineHeight": "20px",
+        "fontSize": "16px"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "m": "before",
+          "style": {
+            "display": "inline-block",
+            "width": "40px",
+            "height": "20px",
+            "verticalAlign": "top",
+            "backgroundColor": "#0a84ff"
+          }
+        },
+        {
+          "tag": "span",
+          "style": {
+            "paddingTop": "15px",
+            "paddingBottom": "15px"
+          },
+          "children": [
+            {
+              "tag": "span",
+              "m": "inner",
+              "style": {
+                "display": "inline-block",
+                "width": "40px",
+                "height": "20px",
+                "verticalAlign": "top",
+                "backgroundColor": "#34c759"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "m": "nextLine",
+          "style": {
+            "display": "block",
+            "height": "20px",
+            "backgroundColor": "#34c759"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "vertical-margins-on-an-inline-have-no-effect",
+    "withText": false,
+    "heightOnly": false,
+    "needsLineBreaking": false,
+    "knownGap": null,
+    "deviceOnly": null,
+    "sameX": null,
+    "deltaX": null,
+    "fontDependent": null,
+    "bounded": null,
+    "why": "Vertical margins on a non-replaced inline box do not apply at all (CSS2 §8.3), so the inner box sits exactly where it would without them.",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -678,8 +5210,8 @@
         {
           "tag": "span",
           "style": {
-            "paddingLeft": "10px",
-            "paddingRight": "10px"
+            "marginTop": "20px",
+            "marginBottom": "20px"
           },
           "children": [
             {
@@ -696,14 +5228,12 @@
           ]
         },
         {
-          "tag": "span",
-          "m": "after",
+          "tag": "div",
+          "m": "nextLine",
           "style": {
-            "display": "inline-block",
-            "width": "40px",
+            "display": "block",
             "height": "20px",
-            "verticalAlign": "top",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#34c759"
           }
         }
       ]
@@ -715,6 +5245,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -737,7 +5268,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#ff3b30"
           }
         },
         {
@@ -748,7 +5279,7 @@
             "width": "40px",
             "height": "40px",
             "verticalAlign": "top",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#30b0c7"
           }
         }
       ]
@@ -760,6 +5291,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -782,7 +5314,7 @@
             "width": "40px",
             "height": "40px",
             "verticalAlign": "top",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#0a84ff"
           }
         },
         {
@@ -793,7 +5325,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "bottom",
-            "backgroundColor": "#ff9500"
+            "backgroundColor": "#34c759"
           }
         }
       ]
@@ -805,6 +5337,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": "CSS defines `middle` against the parent's X-HEIGHT (CSS2 §10.8.1), not the middle of the line box — so its offset is a fact about a font file and cannot be pinned across three engines. What IS pinned: it lands strictly between `top` and `bottom`, and inside the line box.",
@@ -827,7 +5360,7 @@
             "width": "40px",
             "height": "40px",
             "verticalAlign": "top",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#ff9500"
           }
         },
         {
@@ -838,7 +5371,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "middle",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#af52de"
           }
         }
       ]
@@ -850,6 +5383,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": "The line box is the box plus the strut's descent below the baseline, which is a font metric: Safari 44, iOS 44.33, Android 43.81 for the same 40pt box. Pinning it exactly compares fonts, not layout.",
@@ -883,6 +5417,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -905,7 +5440,7 @@
             "width": "40px",
             "height": "60px",
             "verticalAlign": "top",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#ff3b30"
           }
         }
       ]
@@ -917,6 +5452,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -939,7 +5475,7 @@
             "width": "150px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#30b0c7"
           }
         },
         {
@@ -950,7 +5486,7 @@
             "width": "150px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#0a84ff"
           }
         },
         {
@@ -961,7 +5497,7 @@
             "width": "10px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff9500"
+            "backgroundColor": "#34c759"
           }
         }
       ]
@@ -973,6 +5509,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -995,7 +5532,7 @@
             "width": "200px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#ff9500"
           }
         },
         {
@@ -1010,7 +5547,7 @@
                 "width": "150px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#ff3b30"
+                "backgroundColor": "#af52de"
               }
             }
           ]
@@ -1024,6 +5561,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1047,7 +5585,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#ff3b30"
           }
         },
         " between ",
@@ -1059,7 +5597,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#30b0c7"
           }
         },
         " end"
@@ -1072,6 +5610,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1095,7 +5634,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#0a84ff"
           }
         },
         {
@@ -1113,7 +5652,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff9500"
+            "backgroundColor": "#34c759"
           }
         },
         " after"
@@ -1126,6 +5665,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1150,7 +5690,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#ff9500"
           }
         },
         {
@@ -1161,7 +5701,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#af52de"
           }
         }
       ]
@@ -1173,6 +5713,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1195,7 +5736,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#ff3b30"
           }
         },
         {
@@ -1216,7 +5757,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#30b0c7"
           }
         }
       ]
@@ -1228,6 +5769,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1250,7 +5792,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#0a84ff"
           }
         },
         {
@@ -1265,7 +5807,7 @@
                 "width": "40px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#ff9500"
+                "backgroundColor": "#34c759"
               }
             }
           ]
@@ -1279,6 +5821,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1301,7 +5844,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#ff9500"
           }
         },
         {
@@ -1321,7 +5864,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#af52de"
           }
         }
       ]
@@ -1333,6 +5876,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1356,7 +5900,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#ff3b30"
           }
         },
         " more ",
@@ -1368,7 +5912,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#30b0c7"
           }
         },
         " after"
@@ -1381,6 +5925,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1409,7 +5954,7 @@
                 "width": "40px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#34c759"
+                "backgroundColor": "#0a84ff"
               }
             },
             " end"
@@ -1424,7 +5969,7 @@
             "width": "40px",
             "height": "20px",
             "verticalAlign": "top",
-            "backgroundColor": "#ff9500"
+            "backgroundColor": "#34c759"
           }
         },
         " done"
@@ -1437,6 +5982,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": [
       [
         "plain",
@@ -1470,7 +6016,7 @@
                 "width": "40px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#af52de"
+                "backgroundColor": "#ff9500"
               }
             }
           ]
@@ -1489,7 +6035,7 @@
                 "width": "40px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#ff3b30"
+                "backgroundColor": "#af52de"
               }
             }
           ]
@@ -1503,6 +6049,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": [
       [
         "one",
@@ -1536,7 +6083,7 @@
                 "width": "40px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#30b0c7"
+                "backgroundColor": "#ff3b30"
               }
             }
           ]
@@ -1555,7 +6102,7 @@
                 "width": "40px",
                 "height": "20px",
                 "verticalAlign": "top",
-                "backgroundColor": "#0a84ff"
+                "backgroundColor": "#30b0c7"
               }
             }
           ]
@@ -1569,6 +6116,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1611,6 +6159,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1631,7 +6180,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#0a84ff"
           }
         },
         {
@@ -1640,7 +6189,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff9500",
+            "backgroundColor": "#34c759",
             "display": "block",
             "fontSize": "20px",
             "marginBlock": "1em"
@@ -1652,7 +6201,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#ff9500"
           }
         }
       ]
@@ -1664,6 +6213,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1684,7 +6234,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#af52de"
           }
         },
         {
@@ -1693,7 +6243,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#30b0c7",
+            "backgroundColor": "#ff3b30",
             "display": "block",
             "fontSize": "20px",
             "marginBlock": "1em"
@@ -1705,7 +6255,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#30b0c7"
           }
         }
       ]
@@ -1717,6 +6267,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1737,7 +6288,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#0a84ff"
           }
         },
         {
@@ -1746,7 +6297,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff9500",
+            "backgroundColor": "#34c759",
             "display": "block",
             "fontSize": "2em",
             "marginBlock": "0.5em"
@@ -1758,7 +6309,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#ff9500"
           }
         }
       ]
@@ -1770,6 +6321,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1790,7 +6342,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#af52de"
           }
         },
         {
@@ -1799,7 +6351,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#30b0c7",
+            "backgroundColor": "#ff3b30",
             "display": "block",
             "marginBlock": "1em"
           }
@@ -1810,7 +6362,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#30b0c7"
           }
         }
       ]
@@ -1822,6 +6374,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1842,7 +6395,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#0a84ff"
           }
         },
         {
@@ -1851,7 +6404,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff9500",
+            "backgroundColor": "#34c759",
             "display": "block",
             "fontSize": "8px",
             "marginBlock": "1rem"
@@ -1863,7 +6416,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#af52de"
+            "backgroundColor": "#ff9500"
           }
         },
         {
@@ -1872,7 +6425,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff3b30",
+            "backgroundColor": "#af52de",
             "display": "block",
             "fontSize": "64px",
             "marginBlock": "1rem"
@@ -1884,7 +6437,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#ff3b30"
           }
         }
       ]
@@ -1896,6 +6449,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1916,7 +6470,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#0a84ff"
+            "backgroundColor": "#30b0c7"
           }
         },
         {
@@ -1925,7 +6479,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#34c759",
+            "backgroundColor": "#0a84ff",
             "display": "block",
             "fontSize": "64px",
             "marginBlock": "1rem"
@@ -1937,7 +6491,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff9500"
+            "backgroundColor": "#34c759"
           }
         },
         {
@@ -1946,7 +6500,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#af52de",
+            "backgroundColor": "#ff9500",
             "display": "block",
             "fontSize": "64px",
             "marginBlock": "1em"
@@ -1958,7 +6512,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#ff3b30"
+            "backgroundColor": "#af52de"
           }
         }
       ]
@@ -1970,6 +6524,7 @@
     "heightOnly": false,
     "needsLineBreaking": false,
     "knownGap": null,
+    "deviceOnly": null,
     "sameX": null,
     "deltaX": null,
     "fontDependent": null,
@@ -1990,7 +6545,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#30b0c7"
+            "backgroundColor": "#ff3b30"
           }
         },
         {
@@ -1999,7 +6554,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#0a84ff",
+            "backgroundColor": "#30b0c7",
             "display": "block",
             "marginBlock": "20px"
           }
@@ -2010,7 +6565,7 @@
           "style": {
             "width": "40px",
             "height": "20px",
-            "backgroundColor": "#34c759"
+            "backgroundColor": "#0a84ff"
           }
         }
       ]
