@@ -237,3 +237,139 @@ static const CGFloat kBox = 72;
 }
 
 @end
+
+#pragma mark - The rects a wrapped link occupies
+
+/*
+ * A link that WRAPS occupies one rect per line, and everything downstream needs
+ * all of them: the view that paints the link is sized from them, the run paints
+ * the exact complement, and a touch resolves through them.
+ *
+ * They used to come from `getRectWithAttributedString:`, which reports a single
+ * rect per fragment. A wrapped link therefore existed, everywhere but the hit
+ * test, as its FIRST LINE ONLY — so it was painted and lifted as one line, and
+ * a press on its second line found a link with no view to lift, which UIKit
+ * answered with a preview of its own.
+ */
+@interface EXPWrappedLinkRectTests : XCTestCase
+@end
+
+@implementation EXPWrappedLinkRectTests {
+  RCTTextLayoutManager *_layoutManager;
+}
+
+- (void)setUp
+{
+  [super setUp];
+  _layoutManager = [RCTTextLayoutManager new];
+}
+
+- (AttributedString)_stringWithLinkText:(const std::string &)linkText trailing:(const std::string &)trailing
+{
+  auto base = TextAttributes::defaultTextAttributes();
+  base.fontSize = 15;
+
+  auto linkAttributes = base;
+  linkAttributes.href = "https://reactnative.dev/";
+  linkAttributes.role = facebook::react::Role::Link;
+
+  auto string = AttributedString{};
+  auto link = AttributedString::Fragment{};
+  link.string = linkText;
+  link.textAttributes = linkAttributes;
+  string.appendFragment(std::move(link));
+
+  if (!trailing.empty()) {
+    auto rest = AttributedString::Fragment{};
+    rest.string = trailing;
+    rest.textAttributes = base;
+    string.appendFragment(std::move(rest));
+  }
+  string.setBaseTextAttributes(base);
+  return string;
+}
+
+- (NSArray<NSArray<NSValue *> *> *)_groupsFor:(AttributedString)string width:(CGFloat)width
+{
+  NSMutableArray<NSArray<NSValue *> *> *groups = [NSMutableArray array];
+  [_layoutManager getLineRectGroupsWithAttributedString:string
+                                    paragraphAttributes:ParagraphAttributes{}
+                                     enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
+                                                  frame:CGRectMake(0, 0, width, 400)
+                                             usingBlock:^(NSArray<NSValue *> *lineRects, NSString *value) {
+                                               if ([value isEqualToString:@"link"]) {
+                                                 [groups addObject:lineRects];
+                                               }
+                                             }];
+  return groups;
+}
+
+- (void)testAWrappedLinkReportsEveryLineItOccupies
+{
+  // Narrow enough that the link cannot fit on one line.
+  auto string = [self _stringWithLinkText:"a link long enough that it has to wrap onto a second line" trailing:""];
+  NSArray<NSArray<NSValue *> *> *groups = [self _groupsFor:string width:160];
+
+  XCTAssertEqual(groups.count, 1u, @"one link is one group, however many lines it takes");
+  XCTAssertGreaterThan(
+      groups.firstObject.count, 1u, @"a wrapped link must report a rect per line, not just its first");
+
+  CGRect union_ = CGRectNull;
+  for (NSValue *rect in groups.firstObject) {
+    union_ = CGRectIsNull(union_) ? rect.CGRectValue : CGRectUnion(union_, rect.CGRectValue);
+  }
+  const CGFloat oneLine = CGRectGetHeight(groups.firstObject.firstObject.CGRectValue);
+  XCTAssertGreaterThan(
+      CGRectGetHeight(union_), oneLine * 1.5, @"the rects together must span more than the first line");
+
+  /*
+   * And the contrast that makes the assertion above mean something: the
+   * per-FRAGMENT API, on this same string, reports one rect covering only the
+   * first line. That is what the renderer used to paint links from, and it is
+   * why this second API had to exist.
+   */
+  __block NSUInteger fragmentRects = 0;
+  __block CGRect firstFragmentRect = CGRectNull;
+  [_layoutManager getRectWithAttributedString:string
+                          paragraphAttributes:ParagraphAttributes{}
+                           enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
+                                        frame:CGRectMake(0, 0, 160, 400)
+                                   usingBlock:^(CGRect rect, NSString *text, NSString *value) {
+                                     if ([value isEqualToString:@"link"]) {
+                                       fragmentRects++;
+                                       if (CGRectIsNull(firstFragmentRect)) {
+                                         firstFragmentRect = rect;
+                                       }
+                                     }
+                                   }];
+  XCTAssertEqual(fragmentRects, 1u, @"the per-fragment API reports a single rect");
+  XCTAssertLessThan(
+      CGRectGetHeight(firstFragmentRect),
+      CGRectGetHeight(union_),
+      @"...and it is SHORTER than the link really is — the bug this replaced");
+}
+
+- (void)testAnUnwrappedLinkIsStillJustOneRect
+{
+  auto string = [self _stringWithLinkText:"short" trailing:" and ordinary words after it"];
+  NSArray<NSArray<NSValue *> *> *groups = [self _groupsFor:string width:400];
+
+  XCTAssertEqual(groups.count, 1u);
+  XCTAssertEqual(groups.firstObject.count, 1u, @"a link on one line occupies one rect");
+}
+
+- (void)testALinkDoesNotClaimTheOrdinaryWordsAfterIt
+{
+  /*
+   * The rect must hug the link's glyphs. Widening it to the line — which both
+   * of the obvious TextKit APIs do — lifted the words after the link as well,
+   * and those words then showed twice: once raised, once on the page beneath.
+   */
+  auto string = [self _stringWithLinkText:"link" trailing:" and a good deal of ordinary text after it"];
+  NSArray<NSArray<NSValue *> *> *groups = [self _groupsFor:string width:400];
+
+  const CGRect linkRect = groups.firstObject.firstObject.CGRectValue;
+  XCTAssertLessThan(CGRectGetMaxX(linkRect), 200.0, @"the rect stops at the link, not at the line's end");
+}
+
+@end
