@@ -818,11 +818,12 @@ const uaStyles: {[string]: UAStyle} = {
    * A border cannot do that — it would box the element rather than underline
    * its lines.
    *
-   * Browsers scope this to `abbr[title]`, on the reasoning that the affordance
-   * promises an expansion. There is no attribute selector here, and `title`
-   * does not reach the native side yet (see *Not built yet*), so it is
-   * unconditional: an `<abbr>` is an abbreviation whether or not the expansion
-   * is currently carried, and the alternative is drawing nothing at all.
+   * `DOM-CSS-DEVIATION(abbr-underline-is-unconditional)`: browsers scope this
+   * to `abbr[title]`, on the reasoning that the affordance promises an
+   * expansion. There is no attribute selector here, and `title` does not reach
+   * the native side yet (see *Not built yet*), so it is unconditional: an
+   * `<abbr>` is an abbreviation whether or not the expansion is currently
+   * carried, and the alternative is drawing nothing at all.
    */
   abbr: {textDecorationLine: 'underline', textDecorationStyle: 'dotted'},
   small: {uaFontSizeEm: 0.8333},
