@@ -8,8 +8,10 @@
 #import <UIKit/UIKit.h>
 #import <XCTest/XCTest.h>
 
+#import <react/renderer/attributedstring/AttributedString.h>
 #import <react/renderer/attributedstring/TextAttributes.h>
 #import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
+#import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
 
 using namespace facebook::react;
 
@@ -151,6 +153,87 @@ using namespace facebook::react;
   NSDictionary<NSAttributedStringKey, id> *ns = RCTNSTextAttributesFromTextAttributes(attributes);
 
   XCTAssertNotEqualObjects(ns[NSUnderlineStyleAttributeName], @(NSUnderlineStyleNone));
+}
+
+@end
+
+#pragma mark - Which link is under a point
+
+/*
+ * Three links side by side, each wrapping something that is not glyphs.
+ *
+ * `<a><img></a><a><img></a>` puts three ATTACHMENT characters next to each
+ * other, and the whole question of which link the user pressed comes down to
+ * mapping a point to one of three characters that look nothing like text. This
+ * is asserted here rather than by pressing the simulator because a synthetic
+ * long press turned out not to land where it was aimed — every tap arrived at
+ * the same point — which is exactly the kind of instrument failure that reads
+ * as a product bug.
+ */
+@interface EXPAdjacentLinkHitTests : XCTestCase
+@end
+
+@implementation EXPAdjacentLinkHitTests {
+  RCTTextLayoutManager *_layoutManager;
+}
+
+static const CGFloat kBox = 72;
+
+- (void)setUp
+{
+  [super setUp];
+  _layoutManager = [RCTTextLayoutManager new];
+}
+
+/** Three boxes in a row, each carrying a different `href`. */
+- (AttributedString)_threeAdjacentLinks
+{
+  auto base = TextAttributes::defaultTextAttributes();
+  base.fontSize = 15;
+
+  auto string = AttributedString{};
+  for (const std::string &name : {"one", "two", "three"}) {
+    auto attributes = base;
+    attributes.href = "https://reactnative.dev/" + name;
+
+    auto fragment = AttributedString::Fragment{};
+    fragment.string = AttributedString::Fragment::AttachmentCharacter();
+    fragment.textAttributes = attributes;
+    auto metrics = LayoutMetrics{};
+    metrics.frame.size = {kBox, kBox};
+    fragment.parentShadowView.layoutMetrics = metrics;
+    fragment.atomicInlineBaseline = kBox;
+    string.appendFragment(std::move(fragment));
+  }
+  string.setBaseTextAttributes(base);
+  return string;
+}
+
+- (nullable NSString *)_linkAtX:(CGFloat)x
+{
+  auto string = [self _threeAdjacentLinks];
+  const CGRect frame = CGRectMake(0, 0, kBox * 3 + 40, 120);
+  id link = [_layoutManager getLinkWithAttributedString:string
+                                    paragraphAttributes:ParagraphAttributes{}
+                                                  frame:frame
+                                                atPoint:CGPointMake(x, kBox / 2)
+                                                  rects:nil];
+  return [link isKindOfClass:[NSURL class]] ? ((NSURL *)link).absoluteString : [link description];
+}
+
+- (void)testEachOfThreeAdjacentLinksAnswersForItsOwnBox
+{
+  XCTAssertEqualObjects([self _linkAtX:kBox * 0.5], @"https://reactnative.dev/one");
+  XCTAssertEqualObjects([self _linkAtX:kBox * 1.5], @"https://reactnative.dev/two");
+  XCTAssertEqualObjects([self _linkAtX:kBox * 2.5], @"https://reactnative.dev/three");
+}
+
+- (void)testTheBoundaryBetweenTwoLinksBelongsToTheBoxItIsInside
+{
+  // Just inside each edge of the middle box. An off-by-one here is invisible
+  // in the middle of a box and obvious at its edges.
+  XCTAssertEqualObjects([self _linkAtX:kBox + 2], @"https://reactnative.dev/two");
+  XCTAssertEqualObjects([self _linkAtX:kBox * 2 - 2], @"https://reactnative.dev/two");
 }
 
 @end
