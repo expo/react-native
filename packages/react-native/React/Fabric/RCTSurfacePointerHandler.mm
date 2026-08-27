@@ -88,6 +88,27 @@ struct ActivePointer {
   UIScrollView *initialScrollView;
   CGPoint initialScrollOffset;
 
+  /**
+   * Where this pointer went down, so a DRAG can cancel the press.
+   *
+   * The scroll check below catches a press that scrolled the page. It cannot
+   * catch a press the user dragged away from when nothing scrolled — at the top
+   * of a list, inside a non-scrolling box, or while some other recognizer holds
+   * the pan. Moving a finger off what you pressed is how you change your mind on
+   * a touch screen, and it has to work whether or not anything moved underneath.
+   */
+  CGPoint initialClientPoint;
+
+  /**
+   * Whether the enclosing scroll view moved at ANY point during this gesture.
+   *
+   * Sticky, because comparing the offset only at pointer-up misses the case that
+   * matters most: dragging UP at the top of a page rubber-bands and springs back
+   * to exactly the offset it started at, so a press that visibly scrolled looked
+   * like one that never moved, and the tap still counted.
+   */
+  bool didScroll;
+
   /*
    * Current timestamp of the pointer event
    */
@@ -575,11 +596,13 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
     activePointer.initialComponentView = FindClosestFabricManagedTouchableView(touch.view);
 
     UpdateActivePointerWithUITouch(activePointer, touch, event, _rootComponentView);
+    activePointer.initialClientPoint = activePointer.clientPoint;
 
     activePointer.initialScrollView = RCTEnclosingScrollView(touch.view);
     activePointer.initialScrollOffset = activePointer.initialScrollView != nil
         ? activePointer.initialScrollView.contentOffset
         : CGPointZero;
+    activePointer.didScroll = false;
 
     _activePointers.emplace(touch, activePointer);
   }
@@ -593,6 +616,13 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
       continue;
     }
     UpdateActivePointerWithUITouch(iterator->second, touch, event, _rootComponentView);
+    // Latch a scroll the moment it happens; by pointer-up it may have sprung
+    // back to where it started.
+    ActivePointer &pointer = iterator->second;
+    if (pointer.initialScrollView != nil &&
+        !CGPointEqualToPoint(pointer.initialScrollView.contentOffset, pointer.initialScrollOffset)) {
+      pointer.didScroll = true;
+    }
   }
 }
 
@@ -701,11 +731,34 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
           // like the web. Detected by the enclosing scroll view's contentOffset
           // changing between pointer-down and now — timing-independent, unlike a
           // movement or `isDragging` heuristic (which misses a pause-then-scroll).
-          const bool scrolledDuringGesture = activePointer.initialScrollView != nil &&
-              !CGPointEqualToPoint(
-                  activePointer.initialScrollView.contentOffset, activePointer.initialScrollOffset);
-          if (pointerEvent.isPrimary && pointerEvent.button == 0 && !scrolledDuringGesture &&
-              IsPointerWithinInitialTree(activePointer)) {
+          const bool scrolledDuringGesture = activePointer.didScroll ||
+              (activePointer.initialScrollView != nil &&
+               !CGPointEqualToPoint(
+                   activePointer.initialScrollView.contentOffset, activePointer.initialScrollOffset));
+          /*
+           * A finger dragged off what it pressed cancels the press, whether or
+           * not anything scrolled — the same slop UIKit gives a control and a
+           * long press, and what a mobile browser does to a tap.
+           *
+           * The scroll test above cannot stand in for this. A `<a>` spanning two
+           * lines, pressed and then dragged upward to get out of it, NAVIGATED:
+           * the drag was held by the context-menu recognizer so the scroll view
+           * never moved, its offset never changed, and the press still counted.
+           * Dropping the finger somewhere else is the one way out of a tap on a
+           * touch screen, so it must not depend on the page happening to move.
+           *
+           * Touch only. A mouse drag inside an element still clicks it on the
+           * web, and pointer types that are not fingers keep that behaviour.
+           */
+          const bool isTouch = pointerEvent.pointerType == "touch";
+          const CGFloat dx = activePointer.clientPoint.x - activePointer.initialClientPoint.x;
+          const CGFloat dy = activePointer.clientPoint.y - activePointer.initialClientPoint.y;
+          // 10pt: `UILongPressGestureRecognizer.allowableMovement`'s default, and
+          // about where a scroll view decides a touch was a pan.
+          const bool draggedOffDuringGesture = isTouch && (dx * dx + dy * dy) > (10.0 * 10.0);
+          const bool willClick = pointerEvent.isPrimary && pointerEvent.button == 0 && !scrolledDuringGesture &&
+              !draggedOffDuringGesture && IsPointerWithinInitialTree(activePointer);
+          if (willClick) {
             eventEmitter->onClick(std::move(pointerEvent));
           }
           break;
