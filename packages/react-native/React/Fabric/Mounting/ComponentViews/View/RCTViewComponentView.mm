@@ -696,7 +696,23 @@ static CGRect RCTUntransformedFrame(UIView *view)
  * image is not painted by the text run at all.
  *
  * A mounted child counts only if it sits INSIDE the link's own rects: an image
- * merely on the same line belongs to the sentence, not to the link.
+ * merely on the same line belongs to the sentence, not to the link. The rects
+ * come from the link's CHARACTER RANGE, and an attachment character carries
+ * `href` like any other, so an `<img>` written inside the `<a>` is in that
+ * range and an `<img>` beside it is not — pinned from the text stack's side by
+ * `EXPAtomicInlineLinkRangeTests`.
+ *
+ * Which leaves the case where the link's content is a picture AND words. Two
+ * different views draw those halves — the image is a mounted subview, the text
+ * is painted by the run — so no single child is the whole link, and the answer
+ * is this container, which draws both.
+ *
+ * Handing back a container is only safe because the interaction CLIPS its lift
+ * to the link's own box (`EXPLinkPress.liftBox`). Without that it pictures the
+ * view's whole bounds and aims at the view's centre, which put the page's
+ * surroundings in the chip and started it in the wrong place — the first
+ * attempt at this shipped exactly that. A child is still preferred wherever one
+ * really is the link, because UIKit can hide and restore a real view natively.
  */
 - (nullable UIView *)_viewForLinkContentInRects:(NSArray<NSValue *> *)rects
                                   fallingBackTo:(nullable UIView *)glyphView
@@ -720,9 +736,29 @@ static CGRect RCTUntransformedFrame(UIView *view)
     }
     // Grown by a point: an attachment's box and the line rect around it are
     // computed by different paths and agree only to within rounding.
-    if (CGRectContainsRect(CGRectInset(linkBounds, -1, -1), RCTUntransformedFrame(subview))) {
+    const CGRect grown = CGRectInset(linkBounds, -1, -1);
+    const CGRect frame = RCTUntransformedFrame(subview);
+    if (!CGRectContainsRect(grown, frame)) {
+      continue;
+    }
+    /*
+     * The child is the link when it spans the link's INLINE extent.
+     *
+     * Not full containment: a line box is routinely TALLER than the picture
+     * sitting on it, because the leading belongs to the line rather than to the
+     * image, so an `<a><img></a>` would fail a height test and be treated as a
+     * region of its container — which lifts a slab of line padding around the
+     * picture instead of the picture. Width is the honest question, because a
+     * picture beside a caption spans only part of the link and a picture that is
+     * the whole link spans all of it.
+     */
+    const CGRect frameNow = RCTUntransformedFrame(subview);
+    const BOOL spansTheLink = frameNow.origin.x <= CGRectGetMinX(linkBounds) + 1 &&
+        CGRectGetMaxX(frameNow) >= CGRectGetMaxX(linkBounds) - 1;
+    if (spansTheLink) {
       return subview;
     }
+    return self;
   }
   return glyphView;
 }
