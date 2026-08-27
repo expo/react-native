@@ -203,6 +203,84 @@
   XCTAssertNotNil(picture.superview, @"and the image stays in the page");
 }
 
+- (void)testAMixedLinkLiftsTheContainerCLIPPEDToTheLink
+{
+  /*
+   * `<a><img>caption</a>`: the image is a mounted subview, the words are
+   * painted by the run, so no single child is the link and the container is
+   * what draws both.
+   *
+   * Handing back the container is only correct because the lift is CLIPPED to
+   * the link's box. The first attempt was not, and a device showed exactly what
+   * that means: a chip full of the content around the link, starting in the
+   * wrong place. So the assertion is not "which view" — it is the SIZE AND
+   * PLACE of what UIKit is given, which is what was actually wrong.
+   */
+  UIImageView *picture = [[UIImageView alloc] initWithFrame:CGRectMake(40, 10, 40, 20)];
+  [_host addSubview:picture];
+  _linkView = _host;
+  _linkRects = @[
+    [NSValue valueWithCGRect:CGRectMake(40, 10, 40, 20)],
+    [NSValue valueWithCGRect:CGRectMake(80, 10, 90, 20)],
+  ];
+
+  UITargetedPreview *preview = [self _liftFor:[self _configurationAt:CGPointMake(50, 20)]];
+
+  XCTAssertNotNil(preview);
+  // The link's union is (40,10)-(170,30): 130 x 20. NOT the host's 320 x 200.
+  XCTAssertEqualWithAccuracy(preview.view.bounds.size.width, 130.0, 0.5, @"the chip is the link's width");
+  XCTAssertEqualWithAccuracy(preview.view.bounds.size.height, 20.0, 0.5, @"the chip is the link's height");
+  XCTAssertLessThan(
+      preview.view.bounds.size.width, _host.bounds.size.width, @"and never the whole container");
+
+  // Aimed at the link's centre (105, 20) in the host, not the host's (160, 100).
+  XCTAssertEqualWithAccuracy(preview.target.center.x, 105.0, 0.5, @"aimed at the link, not the container");
+  XCTAssertEqualWithAccuracy(preview.target.center.y, 20.0, 0.5);
+
+  XCTAssertNotNil(picture.superview, @"and the image stays in the page");
+}
+
+- (void)testAskingForTheLiftTWICEGivesTheSameChip
+{
+  /*
+   * Reported from a device: a chip with image content "suddenly jumps to show a
+   * chip larger than the original view".
+   *
+   * A lift is not one question. UIKit ends the lift effect when the menu
+   * presents and asks the delegate again, so every answer after the first has
+   * to match the first — and an answer it does not like falls back to lifting
+   * the whole interaction view, which is exactly "larger than the original".
+   *
+   * Asserted as a sequence because that is what was wrong: each answer on its
+   * own was right.
+   */
+  UIImageView *picture = [[UIImageView alloc] initWithFrame:CGRectMake(40, 10, 40, 20)];
+  [_host addSubview:picture];
+  _linkView = _host;
+  _linkRects = @[
+    [NSValue valueWithCGRect:CGRectMake(40, 10, 40, 20)],
+    [NSValue valueWithCGRect:CGRectMake(80, 10, 90, 20)],
+  ];
+
+  UIContextMenuConfiguration *configuration = [self _configurationAt:CGPointMake(50, 20)];
+  UITargetedPreview *first = [self _liftFor:configuration];
+  UITargetedPreview *second = [self _liftFor:configuration];
+
+  XCTAssertNotNil(first);
+  XCTAssertNotNil(second, @"a second ask must still be answered, or UIKit lifts the whole view");
+  XCTAssertTrue(
+      CGSizeEqualToSize(first.view.bounds.size, second.view.bounds.size),
+      @"the chip must not change size between asks: %@ then %@",
+      NSStringFromCGSize(first.view.bounds.size),
+      NSStringFromCGSize(second.view.bounds.size));
+  XCTAssertEqualWithAccuracy(first.target.center.x, second.target.center.x, 0.5, @"nor move");
+  XCTAssertEqualWithAccuracy(first.target.center.y, second.target.center.y, 0.5);
+  XCTAssertLessThan(
+      second.view.bounds.size.width,
+      _host.bounds.size.width,
+      @"and never grow to the whole interaction view");
+}
+
 #pragma mark - Where it is aimed
 
 - (void)testTheLiftIsTargetedIntoTheWindowSoNothingCanClipIt
@@ -466,26 +544,47 @@ static void ComponentsOf(UIColor *colour, CGFloat *out)
   XCTAssertTrue([_host _viewForLinkContentInRects:_linkRects fallingBackTo:_glyphView] == child);
 }
 
-- (void)testALinkOfBOTHAPictureAndWordsLiftsTheWholeLink
+- (void)testAPictureLiftsEvenWhenItsLineIsTallerThanItIs
 {
   /*
-   * `<a><img>caption</a>`, and the case that made a device show half a link.
+   * `<a><img></a>` where the line box has leading: the link's rect is TALLER
+   * than the picture, because the leading belongs to the line and not to the
+   * image.
    *
-   * TWO DIFFERENT VIEWS draw the halves: the image is a mounted subview, the
-   * words are painted by the text run. So no single CHILD is the link. Handing
-   * back the image lifts the picture without the words; falling through to the
-   * glyph view lifts the words without the picture. The thing that draws both
-   * is this container, and the preview masks it to the link's own rects.
+   * A containment test fails here and hands back the container, which lifts a
+   * slab of line padding around the picture rather than the picture — visible
+   * on a device as a chip bigger than the image, with the image floating inside
+   * it. So the question is the INLINE extent, which the picture does span.
+   */
+  RCTViewComponentView *picture = [self _mountChildWithFrame:CGRectMake(20, 24, 72, 72)];
+  NSArray<NSValue *> *lineTallerThanThePicture =
+      @[ [NSValue valueWithCGRect:CGRectMake(20, 20, 72, 80)] ];
+
+  XCTAssertTrue(
+      [_host _viewForLinkContentInRects:lineTallerThanThePicture fallingBackTo:_glyphView] == picture,
+      @"the picture spans the link, so the picture lifts");
+}
+
+- (void)testWhatLiftsIsAlwaysAViewWhoseBoundsAreTheLink
+{
+  /*
+   * The invariant this method exists to keep, and the one that was broken by
+   * trying to be cleverer.
    *
-   * The two are asserted TOGETHER because the difference between them is the
-   * whole rule — not "is there an image" but "does the image COVER the link":
+   * Whatever is handed back becomes a PICTURE OF ITS WHOLE BOUNDS, centred on
+   * itself (`EXPPictureOfView`, `_previewOf:`). So the only safe answers are a
+   * view whose bounds are the link, or the glyph view, which the interaction
+   * knows to mask to the link's line rects. Returning a CONTAINER — on the
+   * reasoning that it is the only thing drawing both halves of an
+   * `<a><img>caption</a>` — makes the chip a picture of everything around the
+   * link, placed where the container is. On a device that read as a chip full
+   * of neighbouring content, starting in the wrong place, for every link whose
+   * content was not plain text.
    *
-   *   picture alone  -> the picture IS the link  -> lift the picture
-   *   picture + words -> it is only part of it   -> lift the container
-   *
-   * `EXPAtomicInlineLinkRangeTests` below pins the other half of this, that the
-   * rects handed in really do span an image inside the link. Without that, the
-   * mixed branch here would be unreachable.
+   * A child is returned only when it COVERS the link; otherwise the container
+   * is, and the interaction clips its lift to the link's box — see
+   * `testAMixedLinkLiftsTheContainerCLIPPEDToTheLink`, which pins the
+   * size and place that makes returning a container safe at all.
    */
   RCTViewComponentView *picture = [self _mountChildWithFrame:CGRectMake(20, 20, 72, 72)];
 
@@ -494,9 +593,8 @@ static void ComponentsOf(UIColor *colour, CGFloat *out)
     [NSValue valueWithCGRect:CGRectMake(20, 20, 72, 72)],
     [NSValue valueWithCGRect:CGRectMake(92, 20, 90, 72)],
   ];
-  XCTAssertTrue(
-      [_host _viewForLinkContentInRects:pictureAndWords fallingBackTo:_glyphView] == _host,
-      @"a link of a picture AND words lifts the container that draws both");
+  UIView *lifted = [_host _viewForLinkContentInRects:pictureAndWords fallingBackTo:_glyphView];
+  XCTAssertTrue(lifted == _host, @"no child is the whole link, so the container draws it");
 
   // `_linkRects` is exactly the picture's box: the picture IS the whole link.
   XCTAssertTrue(
