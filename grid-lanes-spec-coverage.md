@@ -36,16 +36,14 @@ platforms:
 container cannot honour it. The corpus keeps the case (`lanes-order-0113`) and
 every harness reports it as unsupported rather than skipping it.
 
-`display: 'grid-lanes'` and `'inline-grid-lanes'` both parse and both produce
-lanes layout inside. The *outer* display does not differ: an inline-level lanes
-container is laid out as block-level, so it fills its parent rather than
-shrink-wrapping. That is a box-generation question, not a lanes one — the
-inline-level displays are resolved in `YogaStylableProps` and never reach Yoga
-— and closing it means adding `inline-grid`/`inline-grid-lanes` to
-`displayInline`/`displayInlineAtomic` there. Left alone deliberately on this
-branch: it changes box generation shared with the `display: 'inline'` work.
-The two corpus cases (`inline-level-container-0180/0181`) hold Safari's numbers
-for when it is done.
+`display: 'grid-lanes'` and `'inline-grid-lanes'` both parse, both produce
+lanes layout inside, and the *outer* displays differ as they should: an
+inline-level lanes container sits on a line and shrink-wraps to its content.
+The inline-level displays never reach Yoga — they are resolved at box
+generation in `YogaStylableProps` — so `inline-grid` and `inline-grid-lanes`
+are members of `displayInline`/`displayInlineAtomic` there alongside
+`inline-block`. The two corpus cases (`inline-level-container-0180/0181`) hold
+Safari's numbers and are asserted.
 
 §2.3 is the rule that the grid axis is the inline axis unless **only** rows
 were given — the "brick" layout that grows sideways. Covered by
@@ -219,7 +217,7 @@ The full Fantom suite is unaffected: 3,508 passing, nothing failing.
 
 Seven cases run in no consumer, each for a stated reason: three percentage
 `flow-tolerance` cases Safari cannot adjudicate (covered by the C++ test
-instead), `order`, two inline-level containers, and `min-content` as a
+instead), `order`, and `min-content` as a
 *maximum*, which Yoga cannot distinguish from `auto`. Harnesses report these as
 UNSUPPORTED with the reason rather than skipping them, because coverage that
 shrinks quietly reads as a pass.

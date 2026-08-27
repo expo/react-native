@@ -26,18 +26,33 @@ const expected = require(path.join(__dirname, 'expected.json'));
 // Styles React Native can express. Grid-lanes cases and the sizing keywords
 // Yoga has no representation for are left out, and counted in the header so
 // the coverage claim stays honest.
+/*
+ * The corpus states `display` in CSS, which spells the outer and inner display
+ * as two words. React Native takes a single keyword for each combination.
+ */
+const RN_DISPLAY = {
+  grid: 'grid',
+  'grid-lanes': 'grid-lanes',
+  'inline-grid': 'inline-grid',
+  'inline grid-lanes': 'inline-grid-lanes',
+};
+
+const isInlineLevel = display => display.startsWith('inline');
+
 function rnStyle(container) {
-  if (container.display !== 'grid' && container.display !== 'grid-lanes') {
+  if (!(container.display in RN_DISPLAY)) {
     return null;
   }
   // A case the ORACLE could not decide is not evidence either way.
   if (container.oracleLimitation != null) return null;
-  if (container.autoFlow != null &&
-      !['row', 'row dense', 'column', 'column dense'].includes(container.autoFlow)) {
+  if (
+    container.autoFlow != null &&
+    !['row', 'row dense', 'column', 'column dense'].includes(container.autoFlow)
+  ) {
     return null;
   }
 
-  const style = {display: container.display};
+  const style = {display: RN_DISPLAY[container.display]};
   // max-content and fit-content are supported; min-content as a MAXIMUM is
   // not distinguishable from auto in Yoga, so those cases stay out rather
   // than asserting a value the engine cannot mean.
@@ -172,33 +187,53 @@ w('');
 w('/**');
 w(' * CSS Grid layout, checked end to end through React Native.');
 w(' *');
-w(' * Every expected number here was measured in real Safari, which implements');
+w(
+  ' * Every expected number here was measured in real Safari, which implements',
+);
 w(' * CSS Grid natively — see grid-lanes-conformance/oracle.js. The only');
-w(' * exception is the stacking-axis position in a handful of grid-lanes cases,');
-w(' * where Safari does not implement css-grid-3 §6.4 and mis-distributes §6.3;');
-w(' * those are derived from the spec in stacking-alignment-test.cpp and marked');
+w(
+  ' * exception is the stacking-axis position in a handful of grid-lanes cases,',
+);
+w(
+  ' * where Safari does not implement css-grid-3 §6.4 and mis-distributes §6.3;',
+);
+w(
+  ' * those are derived from the spec in stacking-alignment-test.cpp and marked',
+);
 w(' * in cases.js with the reason.');
 w(' *');
-w(' * The C++ harness (grid-lanes-conformance/replay.cpp) proves the same cases');
-w(' * against Yoga directly. This suite proves the rest of the path: the style');
-w(' * prop, the track-list parser, the props wiring, and layout as the app sees');
+w(
+  ' * The C++ harness (grid-lanes-conformance/replay.cpp) proves the same cases',
+);
+w(
+  ' * against Yoga directly. This suite proves the rest of the path: the style',
+);
+w(
+  ' * prop, the track-list parser, the props wiring, and layout as the app sees',
+);
 w(' * it through getBoundingClientRect().');
 w(' *');
-w(` * ${usable.length} cases; ${skipped} corpus cases are not expressible as RN styles`);
-w(' * (min-content as a maximum, inline-level containers, order, and the');
-w(' * percentage flow-tolerance Safari cannot adjudicate).');
+w(
+  ` * ${usable.length} cases; ${skipped} corpus cases are not expressible as RN styles`,
+);
+w(' * (min-content as a maximum, order, and the percentage flow-tolerance');
+w(' * Safari cannot adjudicate).');
 w(' */');
 w('');
 w("import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';");
 w('');
 w("import type {HostInstance} from 'react-native';");
 w('');
-w("import ensureInstance from '../../../../src/private/__tests__/utilities/ensureInstance';");
+w(
+  "import ensureInstance from '../../../../src/private/__tests__/utilities/ensureInstance';",
+);
 w("import * as Fantom from '@react-native/fantom';");
 w("import * as React from 'react';");
 w("import {createRef} from 'react';");
 w("import {View} from 'react-native';");
-w("import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';");
+w(
+  "import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';",
+);
 w('');
 w('// Sub-pixel rounding differs between engines; everything else must match.');
 w('const TOLERANCE = 0.75;');
@@ -207,7 +242,9 @@ w('// The browser measured every case inside a 900px-wide wrapper.');
 w('const VIEWPORT_WIDTH = 900;');
 w('');
 w('function rectOf(ref: {current: HostInstance | null}) {');
-w('  return ensureInstance(ref.current, ReactNativeElement).getBoundingClientRect();');
+w(
+  '  return ensureInstance(ref.current, ReactNativeElement).getBoundingClientRect();',
+);
 w('}');
 w('');
 w('function expectClose(actual: number, expected: number, what: string) {');
@@ -231,25 +268,48 @@ for (const [group, groupCases] of byGroup) {
   for (const c of groupCases) {
     w(`  it(${json(`${c.id}: ${c.note ?? ''}`.trim())}, () => {`);
     w('    const containerRef = createRef<HostInstance>();');
-    w(
-      `    const itemRefs = [${c.items
-        .map(() => 'createRef<HostInstance>()')
-        .join(', ')}];`,
-    );
+    // Every reader of `itemRefs` is emitted per item, so an empty container
+    // reads it nowhere and the binding would only be an unused one.
+    if (c.items.length > 0) {
+      w(
+        `    const itemRefs = [${c.items
+          .map(() => 'createRef<HostInstance>()')
+          .join(', ')}];`,
+      );
+    }
     w('    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});');
     w('    Fantom.runTask(() => {');
     w('      root.render(');
+    // An inline-level box is only inline-level inside a BLOCK container; a
+    // flex container blockifies it (css-display-3 §2.7) and it would fill the
+    // line instead of shrink-wrapping. The surface root is a flex container,
+    // so these cases need a block box to sit in — which is also the box the
+    // browser measured them in.
+    if (isInlineLevel(c.container.display)) {
+      w(`        <View style={{display: 'block', width: VIEWPORT_WIDTH}}>`);
+    }
     w('        <View');
     w('          collapsable={false}');
     w('          ref={containerRef}');
     w(`          /* $FlowExpectedError[incompatible-type] grid style keys */`);
-    w(`          style={${json(c.style)}}>`);
+    // A container with no items writes no children, and an element with no
+    // children is written self-closing. It carries the comma itself unless a
+    // block wrapper is still to be closed after it.
+    const containerIsEmpty = c.itemStyles.length === 0;
+    const containerOpenEnd = !containerIsEmpty
+      ? '>'
+      : isInlineLevel(c.container.display)
+        ? ' />'
+        : ' />,';
+    w(`          style={${json(c.style)}}${containerOpenEnd}`);
     c.itemStyles.forEach((s, i) => {
       const childHeight = c.items[i].childHeight;
       w('          <View');
       w('            collapsable={false}');
       w(`            ref={itemRefs[${i}]}`);
-      w(`            /* $FlowExpectedError[incompatible-type] grid style keys */`);
+      w(
+        `            /* $FlowExpectedError[incompatible-type] grid style keys */`,
+      );
       if (childHeight == null) {
         w(`            style={${json(s)}}`);
         w('          />');
@@ -260,7 +320,14 @@ for (const [group, groupCases] of byGroup) {
         w('          </View>');
       }
     });
-    w('        </View>,');
+    if (isInlineLevel(c.container.display)) {
+      if (!containerIsEmpty) {
+        w('        </View>');
+      }
+      w('        </View>,');
+    } else if (!containerIsEmpty) {
+      w('        </View>,');
+    }
     w('      );');
     w('    });');
     w('    const container = rectOf(containerRef);');
