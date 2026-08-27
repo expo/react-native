@@ -632,8 +632,8 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     _textLinkInteraction = [[EXPTextLinkInteraction alloc]
         initWithView:self
             resolver:^id _Nullable(
-                CGPoint point, NSMutableArray<NSValue *> *rects, UIView *_Nullable *_Nullable outSourceView) {
-              return [weakSelf _linkAtPoint:point rects:rects sourceView:outSourceView];
+                CGPoint point, NSMutableArray<NSValue *> *rects, UIView *_Nullable *_Nullable outLinkView) {
+              return [weakSelf _linkAtPoint:point rects:rects linkView:outLinkView];
             }];
   }
   [_textLinkInteraction setInstalled:wanted];
@@ -665,20 +665,134 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
  */
 - (nullable id)_linkAtPoint:(CGPoint)point
                       rects:(NSMutableArray<NSValue *> *)rects
-                 sourceView:(UIView *_Nullable *_Nullable)outSourceView
+                   linkView:(UIView *_Nullable *_Nullable)outLinkView
 {
   for (RCTAnonymousTextRunView *runView in _textRunViews) {
     if (id link = [runView linkAtContainerPoint:point rects:rects]) {
-      // The run that drew these glyphs is what the lift is snapshotted from:
-      // it paints on a clear background, so the text lifts without the page's
-      // background coming with it.
-      if (outSourceView != nullptr) {
-        *outSourceView = runView;
+      /*
+       * The link's OWN VIEW, not the run's.
+       *
+       * Every link is painted by a view of its own precisely so that a lift can
+       * be handed a real view — something UIKit can hide, animate and put back
+       * by itself, the way it does for a `UITextView`. Handing back the run
+       * instead would be handing back the whole paragraph.
+       */
+      if (outLinkView != nullptr) {
+        *outLinkView = [self _viewForLinkContentInRects:rects fallingBackTo:[runView linkViewAtContainerPoint:point]];
       }
       return link;
     }
   }
   return nil;
+}
+
+/*
+ * Where a view was LAID OUT, ignoring any transform it is wearing.
+ *
+ * `frame` cannot be used for this. UIKit documents it as undefined once
+ * `transform` is not the identity, and it really is: it reports the bounding
+ * box of the transformed shape, so a 72pt square turned 45° claims a frame of
+ * about 102pt. Anything animating a rotation or a scale — which is most things
+ * worth putting inside a link — therefore never matched the line box the text
+ * laid it out in, fell through to the glyph view, and lifted an EMPTY CHIP,
+ * because a link whose whole content is that view has no glyphs of its own.
+ *
+ * `center` and `bounds` are the pair that survives a transform: the view's own
+ * transform is applied about its anchor point and moves neither. That is also
+ * the geometry the question is really asking about — the box the line was laid
+ * out around, not wherever an animation has since swung the pixels.
+ */
+static CGRect RCTUntransformedFrame(UIView *view)
+{
+  const CGSize size = view.bounds.size;
+  const CGPoint anchor = view.layer.anchorPoint;
+  const CGPoint position = view.center;
+  // `center` is the anchor point's position, which is the middle only for the
+  // default anchor; `transform-origin` can move it.
+  return CGRectMake(position.x - size.width * anchor.x, position.y - size.height * anchor.y, size.width, size.height);
+}
+
+/*
+ * The view that IS this link's content, for the OS to lift.
+ *
+ * A link is not always glyphs. `<a><img></a>` puts an image inside the anchor,
+ * and that image is already a MOUNTED VIEW of its own, riding in the text as an
+ * attachment — so the thing to lift is that view, not a drawing of the text
+ * around it. The same holds for anything else an author nests in a link: a
+ * video, a custom component. Whatever it is, it is a real view and UIKit can
+ * hide, lift and restore it natively.
+ *
+ * This is the difference between pointing at content that exists and
+ * manufacturing a copy of it. Earlier versions captured the link's pixels into
+ * an image, which meant the capture had to learn about every kind of content
+ * separately — and silently produced an EMPTY chip for `<a><img>`, because an
+ * image is not painted by the text run at all.
+ *
+ * A mounted child counts only if it sits INSIDE the link's own rects: an image
+ * merely on the same line belongs to the sentence, not to the link. The rects
+ * come from the link's CHARACTER RANGE, and an attachment character carries
+ * `href` like any other, so an `<img>` written inside the `<a>` is in that
+ * range and an `<img>` beside it is not — pinned from the text stack's side by
+ * `EXPAtomicInlineLinkRangeTests`.
+ *
+ * Which leaves the case where the link's content is a picture AND words. Two
+ * different views draw those halves — the image is a mounted subview, the text
+ * is painted by the run — so no single child is the whole link, and the answer
+ * is this container, which draws both.
+ *
+ * Handing back a container is only safe because the interaction CLIPS its lift
+ * to the link's own box (`EXPLinkPress.liftBox`). Without that it pictures the
+ * view's whole bounds and aims at the view's centre, which put the page's
+ * surroundings in the chip and started it in the wrong place — the first
+ * attempt at this shipped exactly that. A child is still preferred wherever one
+ * really is the link, because UIKit can hide and restore a real view natively.
+ */
+- (nullable UIView *)_viewForLinkContentInRects:(NSArray<NSValue *> *)rects fallingBackTo:(nullable UIView *)glyphView
+{
+  if (rects.count == 0) {
+    return glyphView;
+  }
+  CGRect linkBounds = CGRectNull;
+  for (NSValue *value in rects) {
+    linkBounds = CGRectIsNull(linkBounds) ? value.CGRectValue : CGRectUnion(linkBounds, value.CGRectValue);
+  }
+  if (CGRectIsNull(linkBounds)) {
+    return glyphView;
+  }
+  for (UIView *subview in self.currentContainerView.subviews) {
+    if ([subview isKindOfClass:[RCTAnonymousTextRunView class]] || subview.hidden) {
+      continue;
+    }
+    if ([self isHostChromeSubview:subview]) {
+      continue;
+    }
+    // Grown by a point: an attachment's box and the line rect around it are
+    // computed by different paths and agree only to within rounding.
+    const CGRect grown = CGRectInset(linkBounds, -1, -1);
+    const CGRect frame = RCTUntransformedFrame(subview);
+    if (!CGRectContainsRect(grown, frame)) {
+      continue;
+    }
+    /*
+     * The child is the link when it spans the link's INLINE extent.
+     *
+     * Not full containment: a line box is routinely TALLER than the picture
+     * sitting on it, because the leading belongs to the line rather than to the
+     * image, so an `<a><img></a>` would fail a height test and be treated as a
+     * region of its container — which lifts a slab of line padding around the
+     * picture instead of the picture. Width is the honest question, because a
+     * picture beside a caption spans only part of the link and a picture that is
+     * the whole link spans all of it.
+     */
+    const CGRect frameNow = RCTUntransformedFrame(subview);
+    const BOOL spansTheLink =
+        frameNow.origin.x <= CGRectGetMinX(linkBounds) + 1 && CGRectGetMaxX(frameNow) >= CGRectGetMaxX(linkBounds) - 1;
+    if (spansTheLink) {
+      return subview;
+    }
+    return self;
+  }
+  return glyphView;
 }
 
 - (void)_updateTextSelectionInteraction
