@@ -153,7 +153,10 @@ internal object TextLayoutManager {
   private const val DEFAULT_ADJUST_FONT_SIZE_TO_FIT = false
 
   private const val TEXT_WIDTH_MODE_LONGEST_LINE = "longest-line"
-  /** Far below a pixel and far above the error of a dp→px round trip; see [wholePixelsCovering] */
+  /**
+   * Far below a pixel and far above the error of a dp→px round trip; see [wholePixelsWithin] and
+   * [wholePixelsCovering]
+   */
   private const val WIDTH_ROUND_TRIP_TOLERANCE_PX = 0.01f
 
   private val tagToSpannableCache = ConcurrentHashMap<Int, Spannable>()
@@ -1361,6 +1364,18 @@ internal object TextLayoutManager {
   }
 
   /**
+   * The whole pixels an AT_MOST width allows, forgiving the float error of a width this class
+   * reported itself.
+   *
+   * A measured width leaves here as whole pixels over the density and comes back as pixels again
+   * when layout re-measures at it — 330px at 2.625 is 125.714286dp, which returns as 329.99997px.
+   * A plain floor loses the very pixel the text was measured at, and the text wraps: measured at
+   * its own width, "Enabled — compare" came back two lines tall and "Reset" broke inside the word.
+   */
+  private fun wholePixelsWithin(width: Float): Int =
+      floor(width + WIDTH_ROUND_TRIP_TOLERANCE_PX).toInt()
+
+  /**
    * The whole pixels an atomic inline's placeholder occupies: never fewer than the box was laid
    * out at, forgiving the float error of the dp -> px conversion.
    *
@@ -1396,7 +1411,7 @@ internal object TextLayoutManager {
     // layout as a BoringLayout
     if (
         boring != null &&
-            (widthYogaMeasureMode == YogaMeasureMode.UNDEFINED || boring.width <= floor(width))
+            (widthYogaMeasureMode == YogaMeasureMode.UNDEFINED || boring.width <= wholePixelsWithin(width))
     ) {
       // Guard uses floor() but layout width below uses ceil() for EXACTLY mode intentionally:
       // text that barely fails the floor-based guard falls through to StaticLayout, which also
@@ -1421,7 +1436,7 @@ internal object TextLayoutManager {
     val layoutWidth =
         when (widthYogaMeasureMode) {
           YogaMeasureMode.EXACTLY -> ceil(width).toInt()
-          YogaMeasureMode.AT_MOST -> min(desiredWidth, floor(width).toInt())
+          YogaMeasureMode.AT_MOST -> min(desiredWidth, wholePixelsWithin(width))
           else -> desiredWidth
         }
     val enableStartOverhang = widthYogaMeasureMode == YogaMeasureMode.EXACTLY
