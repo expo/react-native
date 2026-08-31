@@ -15,123 +15,150 @@ import type {RNTesterModule, RNTesterModuleInfo} from '../types/RNTesterTypes';
 import * as RNTesterListFbInternal from './RNTesterListFbInternal';
 
 const Components: Array<RNTesterModuleInfo> = [
-  // ---- Fork work: text children / css-display / Astryx ----
-  // Pinned to the head of the list (see RNTesterModuleInfo.pinned) while
-  // these are the features under active development. Mirrors the iOS list.
+  // ---- Fork work, grouped and kept at the head of the list. A demo's
+  // `group` is what puts it under a named section; see testerStateUtils.
+  // HTML Elements
   {
-    key: 'SharedTextBenchmarkExample',
-    module: require('../examples/DeviceBench/SharedTextBenchmarkExample')
+    key: 'HTMLConformanceExample',
+    group: 'HTML Elements',
+    module: require('../examples/HTMLElements/HTMLConformanceExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLTextLevelExample',
+    group: 'HTML Elements',
+    module: require('../examples/HTMLElements/HTMLTextLevelExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLGroupingExample',
+    group: 'HTML Elements',
+    module: require('../examples/HTMLElements/HTMLGroupingExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLEmbeddedExample',
+    group: 'HTML Elements',
+    module: require('../examples/HTMLElements/HTMLEmbeddedExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLFormsExample',
+    group: 'HTML Elements',
+    module: require('../examples/HTMLElements/HTMLFormsExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'ListsExample',
+    group: 'HTML Elements',
+    module: require('../examples/Lists/ListsExample').default,
+  },
+  {
+    key: 'LinkBehaviorExample',
+    group: 'HTML Elements',
+    module: require('../examples/HTMLElements/LinkBehaviorExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'IntrinsicElementsExample',
+    group: 'HTML Elements',
+    module: require('../examples/TextChildren/IntrinsicElementsExample')
       .default,
     category: 'Basic',
   },
   {
+    key: 'HTMLIntrinsicsDocExample',
+    group: 'HTML Elements',
+    module: require('../examples/HTMLElements/HTMLIntrinsicsDocExample')
+      .default,
+    category: 'UI',
+  },
+  // Text Children
+  {
+    key: 'StringChildrenExample',
+    group: 'Text Children',
+    module: require('../examples/TextChildren/StringChildrenExample').default,
+    category: 'Basic',
+  },
+  // CSS Layout
+  {
+    key: 'DisplayBlockExample',
+    group: 'CSS Layout',
+    module: require('../examples/DisplayBlock/DisplayBlockExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'DisplayInlineExample',
+    group: 'CSS Layout',
+    module: require('../examples/DisplayInline/DisplayInlineExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'DisplayContentsExample',
+    group: 'CSS Layout',
+    category: 'UI',
+    module: require('../examples/DisplayContents/DisplayContentsExample')
+      .default,
+  },
+  {
+    key: 'GridExample',
+    group: 'CSS Layout',
+    module: require('../examples/Grid/GridExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'GridLanesExample',
+    group: 'CSS Layout',
+    module: require('../examples/Grid/GridLanesExample').default,
+    category: 'UI',
+  },
+  {
+    // A harness, not a demo: it renders the whole conformance corpus so the
+    // rects can be read back over CDP. Deliberately not pinned.
+    key: 'GridConformanceExample',
+    group: 'CSS Layout',
+    module: require('../examples/Grid/GridConformanceExample').default,
+    category: 'UI',
+  },
+  // Design Systems
+  {
+    key: 'AstryxExample',
+    group: 'Design Systems',
+    module: require('../examples/Astryx/AstryxExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'IconsExample',
+    group: 'Design Systems',
+    module: require('../examples/Astryx/IconsExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'ShadcnExample',
+    group: 'Design Systems',
+    module: require('../examples/Astryx/ShadcnExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'RadixExample',
+    group: 'Design Systems',
+    module: require('../examples/Astryx/RadixExample').default,
+    category: 'UI',
+  },
+  // Native UI
+  {
     key: 'NativeButtonExample',
+    group: 'Native UI',
     module: require('../examples/NativeGestures/NativeButtonExample').default,
     category: 'UI',
   },
   {
     key: 'ExpoUISmokeExample',
+    group: 'Native UI',
     module: require('../examples/ExpoUI/ExpoUISmokeExample').default,
     category: 'UI',
   },
-  {
-    key: 'AstryxExample',
-    module: require('../examples/Astryx/AstryxExample').default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'IconsExample',
-    module: require('../examples/Astryx/IconsExample').default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'StringChildrenExample',
-    module: require('../examples/TextChildren/StringChildrenExample').default,
-    category: 'Basic',
-    pinned: true,
-  },
-  {
-    key: 'ListsExample',
-    module: require('../examples/Lists/ListsExample').default,
-  },
-  {
-    key: 'IntrinsicElementsExample',
-    module: require('../examples/TextChildren/IntrinsicElementsExample')
-      .default,
-    category: 'Basic',
-    pinned: true,
-  },
-  {
-    key: 'HTMLConformanceExample',
-    module: require('../examples/HTMLElements/HTMLConformanceExample').default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'HTMLFormsExample',
-    module: require('../examples/HTMLElements/HTMLFormsExample').default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'HTMLTextLevelExample',
-    module: require('../examples/HTMLElements/HTMLTextLevelExample').default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'LinkBehaviorExample',
-    pinned: true,
-    module: require('../examples/HTMLElements/LinkBehaviorExample').default,
-    category: 'UI',
-  },
-  {
-    key: 'HTMLGroupingExample',
-    module: require('../examples/HTMLElements/HTMLGroupingExample').default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'HTMLEmbeddedExample',
-    module: require('../examples/HTMLElements/HTMLEmbeddedExample').default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'HTMLIntrinsicsDocExample',
-    module: require('../examples/HTMLElements/HTMLIntrinsicsDocExample')
-      .default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'DisplayBlockExample',
-    module: require('../examples/DisplayBlock/DisplayBlockExample').default,
-    category: 'UI',
-    pinned: true,
-  },
-  {
-    key: 'DisplayInlineExample',
-    module: require('../examples/DisplayInline/DisplayInlineExample').default,
-    category: 'UI',
-    pinned: true,
-  },
 
-  {
-    key: 'CascadeExample',
-    pinned: true,
-    module: require('../examples/Cascade/CascadeExample').default,
-    category: 'UI',
-  },
-  {
-    key: 'DeviceTextBenchmarkExample',
-    pinned: true,
-    module: require('../examples/DeviceBench/DeviceTextBenchmarkExample')
-      .default,
-    category: 'UI',
-  }, // ---- Upstream RNTester components ----
   {
     key: 'DrawerLayoutAndroid',
     category: 'UI',
@@ -272,65 +299,47 @@ const Components: Array<RNTesterModuleInfo> = [
 
 const APIs: Array<RNTesterModuleInfo> = (
   [
-    // ---- Fork work, pinned for quick access (same pattern as Components):
-    // the renderer's CSS transitions and display: contents coverage.
+    // CSS Styling
     {
-      key: 'ShadcnExample',
-      pinned: true,
-      module: require('../examples/Astryx/ShadcnExample').default,
-      category: 'UI',
-    },
-    {
-      key: 'RadixExample',
-      pinned: true,
-      module: require('../examples/Astryx/RadixExample').default,
+      key: 'CascadeExample',
+      group: 'CSS Styling',
+      module: require('../examples/Cascade/CascadeExample').default,
       category: 'UI',
     },
     {
       key: 'CSSStylesheetsExample',
-      pinned: true,
+      group: 'CSS Styling',
       module: require('../examples/Astryx/CSSStylesheetsExample').default,
       category: 'UI',
     },
     {
-      key: 'GridLanesExample',
-      pinned: true,
-      module: require('../examples/Grid/GridLanesExample').default,
-      category: 'UI',
-    },
-    {
-      key: 'GridExample',
-      pinned: true,
-      module: require('../examples/Grid/GridExample').default,
-      category: 'UI',
-    },
-    {
-      // A harness, not a demo: it renders the whole conformance corpus so the
-      // rects can be read back over CDP. Deliberately not pinned.
-      key: 'GridConformanceExample',
-      module: require('../examples/Grid/GridConformanceExample').default,
-      category: 'UI',
-    },
-    {
-      key: 'CSSAnimationsExample',
-      pinned: true,
-      module: require('../examples/CSSAnimations/CSSAnimationsExample').default,
-      category: 'UI',
-    },
-    {
       key: 'CSSTransitionsExample',
-      pinned: true,
+      group: 'CSS Styling',
       module: require('../examples/CSSTransitions/CSSTransitionsExample')
         .default,
       category: 'UI',
     },
     {
-      key: 'DisplayContentsExample',
-      pinned: true,
+      key: 'CSSAnimationsExample',
+      group: 'CSS Styling',
+      module: require('../examples/CSSAnimations/CSSAnimationsExample').default,
       category: 'UI',
-      module: require('../examples/DisplayContents/DisplayContentsExample')
-        .default,
     },
+    // Benchmarks
+    {
+      key: 'SharedTextBenchmarkExample',
+      group: 'Benchmarks',
+      module: require('../examples/DeviceBench/SharedTextBenchmarkExample')
+        .default,
+      category: 'Basic',
+    },
+    {
+      key: 'DeviceTextBenchmarkExample',
+      group: 'Benchmarks',
+      module: require('../examples/DeviceBench/DeviceTextBenchmarkExample')
+        .default,
+      category: 'UI',
+    }, // ---- Upstream RNTester components ----
     {
       key: 'AccessibilityExample',
       category: 'Basic',
