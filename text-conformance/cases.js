@@ -133,6 +133,41 @@ function span(children, style, m) {
  */
 const GAP_TOLERANCE = 1;
 
+
+/*
+ * Reading order for the corpus, as sections.
+ *
+ * The device screen is 134 cases long and was one undifferentiated scroll, so
+ * finding "the float ones" meant reading every label on the way past. These
+ * are the groups the corpus already had as banner comments in this file, cut
+ * finer where a group had grown large enough to hide things.
+ *
+ * Presentation only: every comparison is keyed by case NAME, in `verify.js`
+ * and in the Fantom runner alike, so grouping changes what is on the screen
+ * and nothing about what is checked.
+ */
+const SECTIONS = [
+  ['Writing direction', /^(an-)?rtl-/],
+  ['Text alignment', /text-align|^vertical-align-does-not-move/],
+  ['Margin collapsing', /collapse|collapses|^adjacent-siblings|^negative-and-positive|^two-negative-margins|^a-negative-top-margin|^padding-stops|^a-border-stops|^an-empty-block/],
+  ['Floats and clearance', /float|^clear/],
+  ['Positioning', /^(an-)?absolute|^absolute-|^relative-|^a-relative-|^opposite-offsets/],
+  ['display: contents', /^contents-|display-contents/],
+  ['Box model and sizing', /^(a-)?(percentage|max-|min-|nested-percentage)|border-box|content-box|aspect-ratio|^a-block-container-ignores-gap|^an-auto-width|^auto-inline-margins|^one-auto-inline-margin|^a-negative-inline-margin|^percentage-|^min-width|^min-height|^max-height/],
+  ['em and rem', /^(em|rem)-|^em-and-rem/],
+  ['Inline formatting', /./],
+];
+
+/** The section a case is shown under. Falls through to inline formatting. */
+function sectionFor(name) {
+  for (const [title, pattern] of SECTIONS) {
+    if (pattern.test(name)) {
+      return title;
+    }
+  }
+  return SECTIONS[SECTIONS.length - 1][0];
+}
+
 const CASES = [
   /* ------------------------------------- PROBE batch 2 -- */
   {
@@ -1870,4 +1905,4 @@ function runGapChecks(testCase, rects) {
   return testCase.gapChecks(gapReader(rects));
 }
 
-module.exports = {CASES, toHTML, styleToCss, runGapChecks, toStyle};
+module.exports = {CASES, SECTIONS, sectionFor, toHTML, styleToCss, runGapChecks, toStyle};

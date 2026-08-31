@@ -23,7 +23,7 @@
  * of those looks exactly like a real bug.
  */
 
-import {TERTIARY_COLOR} from './themed';
+import {LABEL_COLOR, TERTIARY_COLOR} from './themed';
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {ScrollView, Text, View} from 'react-native';
@@ -36,6 +36,7 @@ const CORPUS = [
   {
     "name": "PROBE-text-align-center-centres-the-line",
     "withText": false,
+    "section": "Text alignment",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -74,6 +75,7 @@ const CORPUS = [
   {
     "name": "PROBE-text-align-right-packs-to-the-end",
     "withText": false,
+    "section": "Text alignment",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -112,6 +114,7 @@ const CORPUS = [
   {
     "name": "text-align-does-not-move-a-block-child",
     "withText": false,
+    "section": "Text alignment",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -148,6 +151,7 @@ const CORPUS = [
   {
     "name": "text-align-inherits-into-a-nested-block",
     "withText": false,
+    "section": "Text alignment",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -185,6 +189,7 @@ const CORPUS = [
   {
     "name": "PROBE-border-box-keeps-padding-inside-the-width",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -223,6 +228,7 @@ const CORPUS = [
   {
     "name": "PROBE-display-contents-child-joins-the-parent-flow",
     "withText": false,
+    "section": "display: contents",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -279,6 +285,7 @@ const CORPUS = [
   {
     "name": "contents-with-block-children-stacks-them-in-the-outer-flow",
     "withText": false,
+    "section": "display: contents",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -331,6 +338,7 @@ const CORPUS = [
   {
     "name": "margins-collapse-through-a-contents-wrapper",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -374,6 +382,7 @@ const CORPUS = [
   {
     "name": "overflow-hidden-inline-block-aligns-by-its-bottom-margin-edge",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -416,6 +425,7 @@ const CORPUS = [
   {
     "name": "PROBE-percentage-width-resolves-against-the-container",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -441,6 +451,7 @@ const CORPUS = [
   {
     "name": "PROBE-max-width-caps-a-block",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -467,6 +478,7 @@ const CORPUS = [
   {
     "name": "auto-inline-margins-centre-a-block",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -494,6 +506,7 @@ const CORPUS = [
   {
     "name": "one-auto-inline-margin-takes-all-the-leftover",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -520,6 +533,7 @@ const CORPUS = [
   {
     "name": "a-percentage-min-height-against-an-auto-parent-does-not-apply",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -556,6 +570,7 @@ const CORPUS = [
   {
     "name": "relative-percentage-offset-resolves-against-the-container",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -583,6 +598,7 @@ const CORPUS = [
   {
     "name": "a-relative-box-given-both-left-and-right-uses-left",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -611,6 +627,7 @@ const CORPUS = [
   {
     "name": "a-relative-box-given-both-top-and-bottom-uses-top",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -648,6 +665,7 @@ const CORPUS = [
   {
     "name": "a-percentage-top-offset-resolves-against-the-container-height",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -686,6 +704,7 @@ const CORPUS = [
   {
     "name": "margins-collapse-through-several-empty-siblings",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -737,6 +756,7 @@ const CORPUS = [
   {
     "name": "vertical-align-does-not-move-a-block-child",
     "withText": false,
+    "section": "Text alignment",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -773,6 +793,7 @@ const CORPUS = [
   {
     "name": "a-float-and-a-following-block-share-the-band",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -809,6 +830,7 @@ const CORPUS = [
   {
     "name": "rtl-float-inline-start-packs-against-the-right",
     "withText": false,
+    "section": "Writing direction",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -836,6 +858,7 @@ const CORPUS = [
   {
     "name": "rtl-float-inline-end-packs-against-the-left",
     "withText": false,
+    "section": "Writing direction",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -863,6 +886,7 @@ const CORPUS = [
   {
     "name": "an-rtl-float-is-inset-by-the-containers-padding",
     "withText": false,
+    "section": "Writing direction",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -893,6 +917,7 @@ const CORPUS = [
   {
     "name": "rtl-places-a-block-child-from-the-right",
     "withText": false,
+    "section": "Writing direction",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -919,6 +944,7 @@ const CORPUS = [
   {
     "name": "an-absolute-child-positions-from-the-padding-box",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -960,6 +986,7 @@ const CORPUS = [
   {
     "name": "an-absolute-child-with-no-offsets-sits-at-its-static-position",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1005,6 +1032,7 @@ const CORPUS = [
   {
     "name": "an-absolute-child-offsets-from-the-bottom-and-right",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1046,6 +1074,7 @@ const CORPUS = [
   {
     "name": "opposite-offsets-size-an-auto-width-absolute-box",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1084,6 +1113,7 @@ const CORPUS = [
   {
     "name": "an-absolute-child-does-not-take-space-in-the-flow",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1138,6 +1168,7 @@ const CORPUS = [
   {
     "name": "an-absolute-box-does-not-collapse-margins-with-its-siblings",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1193,6 +1224,7 @@ const CORPUS = [
   {
     "name": "nested-percentage-widths-compound",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1229,6 +1261,7 @@ const CORPUS = [
   {
     "name": "a-percentage-min-width-resolves-against-the-container",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1255,6 +1288,7 @@ const CORPUS = [
   {
     "name": "a-border-reduces-the-content-box-under-border-box",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1297,6 +1331,7 @@ const CORPUS = [
   {
     "name": "a-block-container-ignores-gap",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1333,6 +1368,7 @@ const CORPUS = [
   {
     "name": "content-box-percentage-padding-resolves-against-the-width",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1360,6 +1396,7 @@ const CORPUS = [
   {
     "name": "percentage-margin-resolves-against-the-width",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1386,6 +1423,7 @@ const CORPUS = [
   {
     "name": "a-percentage-height-against-an-auto-height-parent-is-auto",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1421,6 +1459,7 @@ const CORPUS = [
   {
     "name": "a-percentage-height-against-a-definite-parent-applies",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1456,6 +1495,7 @@ const CORPUS = [
   {
     "name": "a-percentage-height-resolves-against-the-content-box",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1494,6 +1534,7 @@ const CORPUS = [
   {
     "name": "a-negative-inline-margin-pulls-a-block-out",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1520,6 +1561,7 @@ const CORPUS = [
   {
     "name": "clear-both-drops-below-floats-on-both-sides",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1567,6 +1609,7 @@ const CORPUS = [
   {
     "name": "a-max-width-clamps-against-a-percentage-margin",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1613,6 +1656,7 @@ const CORPUS = [
   {
     "name": "a-max-height-clamps-against-a-percentage-margin",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1660,6 +1704,7 @@ const CORPUS = [
   {
     "name": "min-width-beats-max-width-when-they-conflict",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1687,6 +1732,7 @@ const CORPUS = [
   {
     "name": "min-width-under-border-box-includes-the-padding",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1727,6 +1773,7 @@ const CORPUS = [
   {
     "name": "min-width-under-content-box-excludes-the-padding",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1767,6 +1814,7 @@ const CORPUS = [
   {
     "name": "a-max-height-does-not-move-the-children",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1811,6 +1859,7 @@ const CORPUS = [
   {
     "name": "an-auto-width-beats-auto-margins",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1838,6 +1887,7 @@ const CORPUS = [
   {
     "name": "a-percentage-width-resolves-against-the-content-box",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1877,6 +1927,7 @@ const CORPUS = [
   {
     "name": "float-margins-never-collapse",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1915,6 +1966,7 @@ const CORPUS = [
   {
     "name": "a-float-with-padding-and-border-takes-its-whole-box",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1960,6 +2012,7 @@ const CORPUS = [
   {
     "name": "a-percentage-width-float-resolves-against-the-container",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -1986,6 +2039,7 @@ const CORPUS = [
   {
     "name": "opposite-floats-share-one-line",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2022,6 +2076,7 @@ const CORPUS = [
   {
     "name": "a-definite-height-stops-the-bottom-margin-collapsing-out",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2064,6 +2119,7 @@ const CORPUS = [
   {
     "name": "a-min-height-stops-a-block-collapsing-through",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2104,6 +2160,7 @@ const CORPUS = [
   {
     "name": "two-negative-margins-collapse-to-the-most-negative",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2138,6 +2195,7 @@ const CORPUS = [
   {
     "name": "auto-margins-do-not-centre-a-float",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2166,6 +2224,7 @@ const CORPUS = [
   {
     "name": "a-max-width-caps-a-float",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2203,6 +2262,7 @@ const CORPUS = [
   {
     "name": "a-float-is-offset-by-its-own-inline-margin",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2230,6 +2290,7 @@ const CORPUS = [
   {
     "name": "a-right-float-is-offset-by-its-own-inline-margin",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2257,6 +2318,7 @@ const CORPUS = [
   {
     "name": "a-negative-margin-on-a-float-pulls-it-out",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2284,6 +2346,7 @@ const CORPUS = [
   {
     "name": "clear-left-ignores-a-right-float",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2321,6 +2384,7 @@ const CORPUS = [
   {
     "name": "min-width-clamps-a-narrower-box",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2347,6 +2411,7 @@ const CORPUS = [
   {
     "name": "min-height-clamps-a-shorter-box",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2373,6 +2438,7 @@ const CORPUS = [
   {
     "name": "max-height-caps-a-taller-box",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2399,6 +2465,7 @@ const CORPUS = [
   {
     "name": "aspect-ratio-sizes-the-axis-that-is-auto",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2424,6 +2491,7 @@ const CORPUS = [
   {
     "name": "aspect-ratio-sizes-the-width-from-a-definite-height",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2459,6 +2527,7 @@ const CORPUS = [
   {
     "name": "relative-offset-does-not-move-the-next-box",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2497,6 +2566,7 @@ const CORPUS = [
   {
     "name": "percentage-padding-resolves-against-the-width",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2521,6 +2591,7 @@ const CORPUS = [
   {
     "name": "border-box-includes-the-border-in-the-width",
     "withText": false,
+    "section": "Box model and sizing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2563,6 +2634,7 @@ const CORPUS = [
   {
     "name": "overflow-hidden-stops-a-margin-collapsing-through",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2610,6 +2682,7 @@ const CORPUS = [
   {
     "name": "padding-stops-the-parent-child-collapse",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2647,6 +2720,7 @@ const CORPUS = [
   {
     "name": "a-negative-top-margin-pulls-the-box-up",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2683,6 +2757,7 @@ const CORPUS = [
   {
     "name": "adjacent-siblings-collapse-to-the-larger",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2729,6 +2804,7 @@ const CORPUS = [
   {
     "name": "a-border-stops-the-parent-child-collapse",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2786,6 +2862,7 @@ const CORPUS = [
   {
     "name": "an-empty-block-collapses-through",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2828,6 +2905,7 @@ const CORPUS = [
   {
     "name": "negative-and-positive-margins-combine",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2874,6 +2952,7 @@ const CORPUS = [
   {
     "name": "a-float-shrinks-to-fit",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2920,6 +2999,7 @@ const CORPUS = [
   {
     "name": "a-float-with-auto-width-shrinks-to-the-available-space",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -2979,6 +3059,7 @@ const CORPUS = [
   {
     "name": "two-floats-pack-then-wrap",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3025,6 +3106,7 @@ const CORPUS = [
   {
     "name": "clear-drops-below-the-float",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3062,6 +3144,7 @@ const CORPUS = [
   {
     "name": "a-line-shortens-beside-a-float",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3132,6 +3215,7 @@ const CORPUS = [
   {
     "name": "a-plain-block-does-not-contain-its-floats",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3177,6 +3261,7 @@ const CORPUS = [
   {
     "name": "a-float-does-not-escape-an-inner-formatting-context",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3223,6 +3308,7 @@ const CORPUS = [
   {
     "name": "floating-an-inline-blockifies-it",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3260,6 +3346,7 @@ const CORPUS = [
   {
     "name": "absolute-positioning-cancels-float",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3308,6 +3395,7 @@ const CORPUS = [
   {
     "name": "a-float-can-clear-another-float",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3345,6 +3433,7 @@ const CORPUS = [
   {
     "name": "clearance-absorbs-a-smaller-top-margin",
     "withText": false,
+    "section": "Floats and clearance",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3382,6 +3471,7 @@ const CORPUS = [
   {
     "name": "rtl-inline-run-starts-at-the-right-edge",
     "withText": false,
+    "section": "Writing direction",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3420,6 +3510,7 @@ const CORPUS = [
   {
     "name": "atomic-inlines-in-a-row",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3468,6 +3559,7 @@ const CORPUS = [
   {
     "name": "atomic-inlines-wrap",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3527,6 +3619,7 @@ const CORPUS = [
   {
     "name": "nowrap-keeps-atomic-inlines-on-one-line",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3587,6 +3680,7 @@ const CORPUS = [
   {
     "name": "nowrap-does-not-stop-a-block-child-breaking-the-run",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3634,6 +3728,7 @@ const CORPUS = [
   {
     "name": "atomic-inline-taller-than-line-height",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3660,6 +3755,7 @@ const CORPUS = [
   {
     "name": "text-only-honours-line-height",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3676,6 +3772,7 @@ const CORPUS = [
   {
     "name": "short-box-alone-honours-line-height",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3702,6 +3799,7 @@ const CORPUS = [
   {
     "name": "line-height-is-a-floor-not-a-ceiling",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3739,6 +3837,7 @@ const CORPUS = [
   {
     "name": "a-tall-line-pushes-the-next-line-down",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3776,6 +3875,7 @@ const CORPUS = [
   {
     "name": "nested-in-one-inline",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3819,6 +3919,7 @@ const CORPUS = [
   {
     "name": "nested-three-deep",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3874,6 +3975,7 @@ const CORPUS = [
   {
     "name": "nested-then-sibling",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3917,6 +4019,7 @@ const CORPUS = [
   {
     "name": "inline-flex-atomic",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -3977,6 +4080,7 @@ const CORPUS = [
   {
     "name": "inline-grid-atomic",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4037,6 +4141,7 @@ const CORPUS = [
   {
     "name": "inline-flex-lays-out-its-children",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4086,6 +4191,7 @@ const CORPUS = [
   {
     "name": "empty-inline-between-boxes",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4128,6 +4234,7 @@ const CORPUS = [
   {
     "name": "inline-with-padding-around-box",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4185,6 +4292,7 @@ const CORPUS = [
   {
     "name": "vertical-padding-on-an-inline-does-not-grow-the-line",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4240,6 +4348,7 @@ const CORPUS = [
   {
     "name": "vertical-margins-on-an-inline-have-no-effect",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4295,6 +4404,7 @@ const CORPUS = [
   {
     "name": "vertical-align-top-vs-default",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4332,6 +4442,7 @@ const CORPUS = [
   {
     "name": "vertical-align-bottom",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4369,6 +4480,7 @@ const CORPUS = [
   {
     "name": "vertical-align-middle",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4406,6 +4518,7 @@ const CORPUS = [
   {
     "name": "baseline-aligned-box-alone",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4431,6 +4544,7 @@ const CORPUS = [
   {
     "name": "atomic-inline-alone-on-line",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4457,6 +4571,7 @@ const CORPUS = [
   {
     "name": "wrap-boundary-exact",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4505,6 +4620,7 @@ const CORPUS = [
   {
     "name": "nested-inline-wrap",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4548,6 +4664,7 @@ const CORPUS = [
   {
     "name": "box-between-text",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4588,6 +4705,7 @@ const CORPUS = [
   {
     "name": "inline-then-block-then-inline",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4634,6 +4752,7 @@ const CORPUS = [
   {
     "name": "container-padding-offsets-the-run",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4673,6 +4792,7 @@ const CORPUS = [
   {
     "name": "absolute-child-among-inline-content",
     "withText": false,
+    "section": "Positioning",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4720,6 +4840,7 @@ const CORPUS = [
   {
     "name": "nested-block-containers-each-all-inline",
     "withText": false,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4763,6 +4884,7 @@ const CORPUS = [
   {
     "name": "display-none-child-keeps-the-run-contiguous",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4809,6 +4931,7 @@ const CORPUS = [
   {
     "name": "a-block-child-breaks-the-run",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4849,6 +4972,7 @@ const CORPUS = [
   {
     "name": "box-in-inline-with-text",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4897,6 +5021,7 @@ const CORPUS = [
   {
     "name": "encoding-does-not-move-a-box",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -4950,6 +5075,7 @@ const CORPUS = [
   {
     "name": "a-run-of-spaces-is-one-space",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5003,6 +5129,7 @@ const CORPUS = [
   {
     "name": "a-shifted-run-does-not-grow-the-line",
     "withText": true,
+    "section": "Inline formatting",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5037,6 +5164,7 @@ const CORPUS = [
   {
     "name": "em-margin-resolves-against-the-elements-own-size",
     "withText": false,
+    "section": "em and rem",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5082,6 +5210,7 @@ const CORPUS = [
   {
     "name": "em-margin-ignores-the-inherited-size",
     "withText": false,
+    "section": "em and rem",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5127,6 +5256,7 @@ const CORPUS = [
   {
     "name": "em-margin-follows-a-size-stated-in-em",
     "withText": false,
+    "section": "em and rem",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5172,6 +5302,7 @@ const CORPUS = [
   {
     "name": "em-margin-scales-with-the-inherited-size",
     "withText": false,
+    "section": "em and rem",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5216,6 +5347,7 @@ const CORPUS = [
   {
     "name": "rem-margin-is-one-size-for-the-whole-tree",
     "withText": false,
+    "section": "em and rem",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5282,6 +5414,7 @@ const CORPUS = [
   {
     "name": "em-and-rem-differ-on-the-same-element",
     "withText": false,
+    "section": "em and rem",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5348,6 +5481,7 @@ const CORPUS = [
   {
     "name": "margin-collapses-out-of-a-block-containers-bottom-edge",
     "withText": false,
+    "section": "Margin collapsing",
     "tree": {
       "tag": "div",
       "m": "root",
@@ -5390,6 +5524,15 @@ const CORPUS = [
     }
   }
 ];
+
+// The section order, so the screen reads in the order the corpus was written
+// rather than in whatever order the cases happen to appear.
+const SECTION_ORDER = ["Writing direction","Text alignment","Margin collapsing","Floats and clearance","Positioning","display: contents","Box model and sizing","em and rem","Inline formatting"];
+
+const BY_SECTION = SECTION_ORDER.map(title => ({
+  title,
+  cases: CORPUS.filter(c => c.section === title),
+})).filter(group => group.cases.length > 0);
 
 /*
  * The corpus writes CSS lengths as strings ("40px") because that is what the
@@ -5498,10 +5641,28 @@ function Case({caseData, onMeasured}) {
 
   return (
     <View style={{marginBottom: 24}}>
-      <Text style={{fontSize: 10, color: TERTIARY_COLOR}}>{caseData.name}</Text>
+      {/* Full-contrast, not the quiet tertiary: a case title is how you find
+          the case you came for among 134 and how you name the one that
+          disagrees. Matches the corpus page's case-label rule. */}
+      <Text style={{fontSize: 10, color: LABEL_COLOR}}>{caseData.name}</Text>
       {/* A block container, so the case root is not a flex item — see the
-          note beside the render function above. */}
-      <div style={{display: 'block'}}>
+          note beside the render function above.
+
+          The edge is an OUTLINE rather than a border: a border would take 2pt
+          out of the width every case is measured at, and these coordinates are
+          compared against Safari's to the pixel. An outline is painted outside
+          the box and takes part in no layout. */}
+      <div
+        style={{
+          display: 'block',
+          outlineWidth: 1,
+          outlineStyle: 'solid',
+          // TERTIARY rather than the separator colour: Android has no
+          // framework colour attribute for a divider, so themed.js falls back
+          // to a translucent BLACK there — invisible on a dark screen, which
+          // is the exact failure these outlines were added to avoid.
+          outlineColor: TERTIARY_COLOR,
+        }}>
         {render(caseData.tree, refs, caseData.name)}
       </div>
     </View>
@@ -5545,8 +5706,28 @@ function ConformanceScreen() {
       <Text style={{fontSize: 11, color: TERTIARY_COLOR, marginBottom: 8}}>
         {status}
       </Text>
-      {CORPUS.map(c => (
-        <Case key={c.name} caseData={c} onMeasured={onMeasured} />
+      {BY_SECTION.map(group => (
+        <View key={group.title}>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: '600',
+              marginTop: 18,
+              marginBottom: 10,
+              // Stated, because an author colour is what these headings get by
+              // default and React Native's default is black — which on a dark
+              // screen is a heading that is not there at all.
+              color: LABEL_COLOR,
+            }}>
+            {group.title}
+            <Text style={{fontWeight: '400', color: TERTIARY_COLOR}}>
+              {'  ' + String(group.cases.length)}
+            </Text>
+          </Text>
+          {group.cases.map(c => (
+            <Case key={c.name} caseData={c} onMeasured={onMeasured} />
+          ))}
+        </View>
       ))}
     </ScrollView>
   );
