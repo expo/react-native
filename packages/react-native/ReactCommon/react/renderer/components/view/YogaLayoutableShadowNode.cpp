@@ -1229,10 +1229,31 @@ void YogaLayoutableShadowNode::updateYogaProps() {
   if (result.margin(yoga::Edge::Bottom).isUndefined()) {
     result.setMargin(yoga::Edge::Bottom, props.marginBlockEnd);
   }
-  if (result.padding(yoga::Edge::Top).isUndefined()) {
+  /*
+   * Block-axis padding longhands, applied like their INLINE counterparts:
+   * whenever they are stated, not only when the physical edge is silent.
+   *
+   * `paddingInlineStart`/`End` are set unconditionally a few lines above, and
+   * `paddingBlockStart`/`End` used to be conditional. Nothing justifies the
+   * asymmetry, and it is not harmless: a style that carries BOTH a physical
+   * reset and a logical longhand — which is what a compiled StyleX style is,
+   * and what every Astryx component ships — arrives here flattened, with
+   * `paddingTop: 0` sitting next to `paddingBlockStart: 8`. The zero counts as
+   * defined, so the 8 was discarded and the element lost its padding.
+   *
+   * Astryx's own Button writes `paddingBlockStart: var(--spacing-2)`, so every
+   * Astryx button collapsed onto its line box: 22pt tall instead of 38.
+   *
+   * React Native flattens styles by key and keeps no source order, so "the
+   * later declaration wins" cannot be answered here. Between the two, the
+   * LONGHAND is the more specific statement of intent, and matching the inline
+   * axis makes the two axes behave the same way — which is the property most
+   * worth having.
+   */
+  if (props.paddingBlockStart.isDefined()) {
     result.setPadding(yoga::Edge::Top, props.paddingBlockStart);
   }
-  if (result.padding(yoga::Edge::Bottom).isUndefined()) {
+  if (props.paddingBlockEnd.isDefined()) {
     result.setPadding(yoga::Edge::Bottom, props.paddingBlockEnd);
   }
 
@@ -1780,20 +1801,78 @@ static EdgeInsets calculateOverflowInset(
   return overflowInset;
 }
 
+/*
+ * Where the container's own inline run sits inside its content box.
+ *
+ * `align-content` on a block container (css-align-3 §5.3) treats the contents
+ * as a SINGLE alignment subject. Yoga implements that for a container with
+ * Yoga children by offsetting them, but a container whose content is BARE TEXT
+ * has none: the run is an elided anonymous box that Yoga never sees, so the
+ * offset had nothing to move and the text stayed at the block-start edge.
+ *
+ * That is every `<button>` whose label is text, which is most of them. The
+ * user-agent sheet gives a button `align-content: center` and a 44pt minimum
+ * touch height, and its label is ~34pt of content — so the 10pt of slack all
+ * fell below the words and the label sat visibly high in the pill.
+ *
+ * The run is measured again here rather than remembered from Yoga's measure
+ * pass, which would have cost a field on `LayoutResults` — a struct every Yoga
+ * node in every tree carries, and one already at its memory budget. The
+ * measurement is the same question Yoga just asked, with the same constraints,
+ * so the text measure cache answers it; and nothing reaches this at all unless
+ * the container asked to be aligned.
+ */
+Rect YogaLayoutableShadowNode::alignedInlineRunFrame(
+    YogaLayoutableShadowNode& box,
+    const LayoutContext& layoutContext) const {
+  auto contentFrame = getLayoutMetrics().getContentFrame();
+
+  const auto align = yogaNode_.style().alignContent();
+  // The positional values, plus the distribution values that collapse onto
+  // them for a single subject — the same set the Yoga block path aligns by.
+  const bool toCenter = align == yoga::Align::Center ||
+      align == yoga::Align::SpaceAround || align == yoga::Align::SpaceEvenly;
+  const bool toEnd = align == yoga::Align::FlexEnd;
+  if (!toCenter && !toEnd) {
+    return contentFrame;
+  }
+
+  auto constraints = LayoutConstraints{};
+  constraints.maximumSize = Size{
+      .width = contentFrame.size.width,
+      .height = std::numeric_limits<Float>::infinity()};
+  constraints.layoutDirection = getLayoutMetrics().layoutDirection;
+  constraints.floatExclusions = floatExclusions();
+  const auto runSize = box.measureContent(layoutContext, constraints);
+
+  const Float freeSpace = contentFrame.size.height - runSize.height;
+  // Only ever moves the run DOWN, for the reason the Yoga path gives: content
+  // taller than its box stays anchored at the block-start edge rather than
+  // spilling out of the top, where it could not be scrolled back into view.
+  if (!(freeSpace > 0)) {
+    return contentFrame;
+  }
+
+  contentFrame.origin.y += toEnd ? freeSpace : freeSpace / 2;
+  contentFrame.size.height = runSize.height;
+  return contentFrame;
+}
+
 void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
   // Reading data from a dirtied node does not make sense.
   react_native_assert(!YGNodeIsDirty(&yogaNode_));
 
   // An elided anonymous box gets no frame from Yoga, because it is not a Yoga
-  // child. It fills this container's content box by definition — that is what
-  // being the container's own inline formatting context means — and everything
+  // child. It fills this container's content box — that is what being the
+  // container's own inline formatting context means — and everything
   // downstream (run publishing, fragment rects, attachment placement) reads
-  // that frame.
+  // that frame. `align-content` is the one thing that moves it off the
+  // block-start edge.
   if (auto* boxPtr = elidedInlineRun()) {
     auto& box = *boxPtr;
     box.yogaNode_.setLayoutDirection(yogaNode_.getLayout().direction());
     auto boxMetrics = getLayoutMetrics();
-    boxMetrics.frame = getLayoutMetrics().getContentFrame();
+    boxMetrics.frame = alignedInlineRunFrame(box, layoutContext);
     box.ensureUnsealed();
     box.setLayoutMetrics(boxMetrics);
   }
@@ -1970,7 +2049,7 @@ Size YogaLayoutableShadowNode::measureContent(
 }
 
 std::vector<FloatExclusion> YogaLayoutableShadowNode::floatExclusions() const {
-  const auto& inherited = yogaNode_.getLayout().inheritedFloats;
+  const auto& inherited = yogaNode_.getLayout().inheritedFloats();
   std::vector<FloatExclusion> exclusions;
   exclusions.reserve(inherited.size());
   for (const auto& placed : inherited) {
