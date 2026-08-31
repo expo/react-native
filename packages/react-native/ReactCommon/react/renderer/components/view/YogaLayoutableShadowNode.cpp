@@ -1355,10 +1355,25 @@ void YogaLayoutableShadowNode::updateYogaProps() {
   if (result.margin(yoga::Edge::Bottom).isUndefined()) {
     result.setMargin(yoga::Edge::Bottom, props.marginBlockEnd);
   }
-  if (result.padding(yoga::Edge::Top).isUndefined()) {
+  /*
+   * Block-axis padding longhands, applied like their INLINE counterparts:
+   * whenever they are stated, not only when the physical edge is silent.
+   *
+   * A style that carries both a physical reset and a logical longhand, as a
+   * compiled StyleX style does (every Astryx component is written this way),
+   * arrives here flattened, with `paddingTop: 0` beside
+   * `paddingBlockStart: 8`. The zero counts as defined, so deferring to the
+   * physical edge would drop the padding the longhand states.
+   *
+   * React Native flattens styles by key and keeps no source order, so "the
+   * later declaration wins" cannot be answered here. Between the two, the
+   * LONGHAND is the more specific statement of intent, and it is what the
+   * inline axis applies too, so the two axes behave the same way.
+   */
+  if (props.paddingBlockStart.isDefined()) {
     result.setPadding(yoga::Edge::Top, props.paddingBlockStart);
   }
-  if (result.padding(yoga::Edge::Bottom).isUndefined()) {
+  if (props.paddingBlockEnd.isDefined()) {
     result.setPadding(yoga::Edge::Bottom, props.paddingBlockEnd);
   }
 
