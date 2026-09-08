@@ -18,5 +18,9 @@
   "exports": {
     ".": "./tsconfig.json"
   },
-  "files": ["README.md", "tsconfig.json", "tsconfig.strict.json"]
+  "files": [
+    "README.md",
+    "tsconfig.json",
+    "tsconfig.strict.json"
+  ]
 }
