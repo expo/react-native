@@ -29,6 +29,7 @@ import typeof ExceptionsManager from '../Libraries/Core/ExceptionsManager';
 import typeof RawEventEmitter from '../Libraries/Core/RawEventEmitter';
 import typeof ReactFiberErrorDialog from '../Libraries/Core/ReactFiberErrorDialog';
 import typeof RCTEventEmitter from '../Libraries/EventEmitter/RCTEventEmitter';
+import type {Spec as FabricUIManager} from '../Libraries/ReactNative/FabricUIManager';
 import typeof {
   createPublicInstance,
   createPublicRootInstance,
@@ -77,6 +78,9 @@ module.exports = {
   },
   get UIManager(): UIManager {
     return require('../Libraries/ReactNative/UIManager').default;
+  },
+  get fabricUIManager(): ?FabricUIManager {
+    return require('../Libraries/ReactNative/FabricUIManager').getFabricUIManager();
   },
   // TODO: Remove when React has migrated to `createAttributePayload` and `diffAttributePayloads`
   get deepDiffer(): deepDiffer {
