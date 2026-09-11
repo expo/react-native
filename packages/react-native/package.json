@@ -143,7 +143,7 @@
   },
   "peerDependencies": {
     "@types/react": "^19.1.1",
-    "react": "^19.2.3"
+    "react": "^19.3.0"
   },
   "peerDependenciesMeta": {
     "@types/react": {
@@ -173,7 +173,7 @@
     "react-devtools-core": "^6.1.5",
     "react-refresh": "^0.14.0",
     "regenerator-runtime": "^0.13.2",
-    "scheduler": "0.27.0",
+    "scheduler": "0.28.0",
     "semver": "^7.1.3",
     "stacktrace-parser": "^0.1.10",
     "tinyglobby": "^0.2.15",
