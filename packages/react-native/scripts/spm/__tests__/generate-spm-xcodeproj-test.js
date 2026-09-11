@@ -151,6 +151,56 @@ describe('scheme pre-action', () => {
       updated,
     );
   });
+
+  // Xcode always runs a scheme pre-action's scriptText under the shell named
+  // by shellToInvoke (default /bin/sh), independent of a
+  // PBXShellScriptBuildPhase's own shellPath — the sync script needs bash
+  // (`set -o pipefail`), so pin it here too.
+  it('pins shellToInvoke to bash on a freshly generated scheme', () => {
+    const result = generateXcscheme('MyApp', 'TARGET_UUID', 'MyApp', 'SCRIPT');
+    expect(result).toContain('shellToInvoke = "/bin/bash"');
+  });
+
+  it('adds shellToInvoke to a scheme injected before this attribute existed', () => {
+    // Simulates a scheme written by an older RN version — no shellToInvoke.
+    const legacy = generateXcscheme(
+      'MyApp',
+      'TARGET_UUID',
+      'MyApp',
+      'SCRIPT',
+    ).replace('\n               shellToInvoke = "/bin/bash">', '>');
+    expect(legacy).not.toContain('shellToInvoke');
+    const updated = addPreActionToScheme(legacy, 'TARGET_UUID', 'SCRIPT');
+    expect(updated).toContain('shellToInvoke = "/bin/bash"');
+    expect(addPreActionToScheme(updated, 'TARGET_UUID', 'SCRIPT')).toBe(
+      updated,
+    );
+  });
+
+  it('refreshes shellToInvoke when it appears before scriptText', () => {
+    const reordered = generateXcscheme(
+      'MyApp',
+      'TARGET_UUID',
+      'MyApp',
+      'SCRIPT',
+    ).replace(
+      'scriptText = "SCRIPT"\n               shellToInvoke = "/bin/bash">',
+      'shellToInvoke = "/bin/bash"\n               scriptText = "SCRIPT">',
+    );
+    const updated = addPreActionToScheme(reordered, 'TARGET_UUID', 'SCRIPT');
+    expect(updated.match(/shellToInvoke/g)).toHaveLength(1);
+  });
+
+  it('refreshes shellToInvoke with no spaces around the equals sign', () => {
+    const unspaced = generateXcscheme(
+      'MyApp',
+      'TARGET_UUID',
+      'MyApp',
+      'SCRIPT',
+    ).replace('shellToInvoke = "/bin/bash"', 'shellToInvoke="/bin/bash"');
+    const updated = addPreActionToScheme(unspaced, 'TARGET_UUID', 'SCRIPT');
+    expect(updated.match(/shellToInvoke/g)).toHaveLength(1);
+  });
 });
 
 describe('sync scripts', () => {
