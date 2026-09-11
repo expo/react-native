@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<d9d665005b8706625e48e615f44af4b8>>
+ * @generated SignedSource<<51d7012509e3e0f2fe1caef5dc1060a0>>
  * @flow strict
  * @noformat
  */
@@ -175,7 +175,7 @@ export const enableImperativeEvents: Getter<boolean> = createJavaScriptFlagGette
 /**
  * When enabled, the React Native renderer dispatches events through the W3C EventTarget API (addEventListener/dispatchEvent) instead of the legacy plugin-based system.
  */
-export const enableNativeEventTargetEventDispatching: Getter<boolean> = createJavaScriptFlagGetter('enableNativeEventTargetEventDispatching', false);
+export const enableNativeEventTargetEventDispatching: Getter<boolean> = createJavaScriptFlagGetter('enableNativeEventTargetEventDispatching', true);
 
 /**
  * Enable the external inspection API for DevTools to communicate with the Inspector overlay.

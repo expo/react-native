@@ -1033,9 +1033,8 @@ const definitions: FeatureFlagDefinitions = {
       // TODO: This should be "canary" now but the OSS renderer cannot be upgraded with the necessary changes until React 19.3.0 is released.
       ossReleaseStage: 'none',
     },
-    // TODO: This feature flag should be shipped and clean up now, but the OSS renderer cannot be upgraded with the necessary changes until React 19.3.0 is released.
     enableNativeEventTargetEventDispatching: {
-      defaultValue: false,
+      defaultValue: true,
       metadata: {
         dateAdded: '2026-04-13',
         description:
