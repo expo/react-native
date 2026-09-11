@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<7505981b27be5298787edef4d80527e8>>
+ * @generated SignedSource<<909f4afa6f96b4e77577432e4d98ba76>>
  */
 
 /**
@@ -197,6 +197,11 @@ bool NativeReactNativeFeatureFlags::enableImageTransparentTintColor(
 bool NativeReactNativeFeatureFlags::enableImmediateUpdateModeForContentOffsetChanges(
     jsi::Runtime& /*runtime*/) {
   return ReactNativeFeatureFlags::enableImmediateUpdateModeForContentOffsetChanges();
+}
+
+bool NativeReactNativeFeatureFlags::enableImperativeEvents(
+    jsi::Runtime& /*runtime*/) {
+  return ReactNativeFeatureFlags::enableImperativeEvents();
 }
 
 bool NativeReactNativeFeatureFlags::enableImperativeFocus(

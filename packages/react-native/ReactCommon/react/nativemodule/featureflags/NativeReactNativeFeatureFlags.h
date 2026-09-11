@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<be495e72a7b96977ec6d029710d669a3>>
+ * @generated SignedSource<<88f2554b7033d38f5b275eac1d52ae6e>>
  */
 
 /**
@@ -99,6 +99,8 @@ class NativeReactNativeFeatureFlags
   bool enableImageTransparentTintColor(jsi::Runtime& runtime);
 
   bool enableImmediateUpdateModeForContentOffsetChanges(jsi::Runtime& runtime);
+
+  bool enableImperativeEvents(jsi::Runtime& runtime);
 
   bool enableImperativeFocus(jsi::Runtime& runtime);
 

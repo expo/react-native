@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<915bf918212b9898319de61d4cadaa13>>
+ * @generated SignedSource<<e991f910f4be27f532c6b81c436bcdf1>>
  */
 
 /**
@@ -84,6 +84,8 @@ public interface ReactNativeFeatureFlagsProvider {
   @DoNotStrip public fun enableImageTransparentTintColor(): Boolean
 
   @DoNotStrip public fun enableImmediateUpdateModeForContentOffsetChanges(): Boolean
+
+  @DoNotStrip public fun enableImperativeEvents(): Boolean
 
   @DoNotStrip public fun enableImperativeFocus(): Boolean
 

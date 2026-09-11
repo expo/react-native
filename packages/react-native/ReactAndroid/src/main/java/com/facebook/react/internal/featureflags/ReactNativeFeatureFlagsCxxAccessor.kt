@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<68aefd0293540d56f57e8badc0de04c8>>
+ * @generated SignedSource<<a1c52a57a980eaab23d92416340a6734>>
  */
 
 /**
@@ -51,6 +51,7 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
   private var enableImagePrefetchingAndroidCache: Boolean? = null
   private var enableImageTransparentTintColorCache: Boolean? = null
   private var enableImmediateUpdateModeForContentOffsetChangesCache: Boolean? = null
+  private var enableImperativeEventsCache: Boolean? = null
   private var enableImperativeFocusCache: Boolean? = null
   private var enableInteropViewManagerClassLookUpOptimizationIOSCache: Boolean? = null
   private var enableIntersectionObserverByDefaultCache: Boolean? = null
@@ -382,6 +383,15 @@ internal class ReactNativeFeatureFlagsCxxAccessor : ReactNativeFeatureFlagsAcces
     if (cached == null) {
       cached = ReactNativeFeatureFlagsCxxInterop.enableImmediateUpdateModeForContentOffsetChanges()
       enableImmediateUpdateModeForContentOffsetChangesCache = cached
+    }
+    return cached
+  }
+
+  override fun enableImperativeEvents(): Boolean {
+    var cached = enableImperativeEventsCache
+    if (cached == null) {
+      cached = ReactNativeFeatureFlagsCxxInterop.enableImperativeEvents()
+      enableImperativeEventsCache = cached
     }
     return cached
   }

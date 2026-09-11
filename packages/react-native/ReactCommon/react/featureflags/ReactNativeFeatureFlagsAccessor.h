@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<f1b22a1d1c09d8ef57f866c85915ee47>>
+ * @generated SignedSource<<da1dce235a114d2f92849e751bf48125>>
  */
 
 /**
@@ -65,6 +65,7 @@ class ReactNativeFeatureFlagsAccessor {
   bool enableImagePrefetchingAndroid();
   bool enableImageTransparentTintColor();
   bool enableImmediateUpdateModeForContentOffsetChanges();
+  bool enableImperativeEvents();
   bool enableImperativeFocus();
   bool enableInteropViewManagerClassLookUpOptimizationIOS();
   bool enableIntersectionObserverByDefault();
@@ -131,7 +132,7 @@ class ReactNativeFeatureFlagsAccessor {
   std::unique_ptr<ReactNativeFeatureFlagsProvider> currentProvider_;
   bool wasOverridden_;
 
-  std::array<std::atomic<const char*>, 86> accessedFeatureFlags_;
+  std::array<std::atomic<const char*>, 87> accessedFeatureFlags_;
 
   std::atomic<std::optional<bool>> commonTestFlag_;
   std::atomic<std::optional<bool>> cdpInteractionMetricsEnabled_;
@@ -164,6 +165,7 @@ class ReactNativeFeatureFlagsAccessor {
   std::atomic<std::optional<bool>> enableImagePrefetchingAndroid_;
   std::atomic<std::optional<bool>> enableImageTransparentTintColor_;
   std::atomic<std::optional<bool>> enableImmediateUpdateModeForContentOffsetChanges_;
+  std::atomic<std::optional<bool>> enableImperativeEvents_;
   std::atomic<std::optional<bool>> enableImperativeFocus_;
   std::atomic<std::optional<bool>> enableInteropViewManagerClassLookUpOptimizationIOS_;
   std::atomic<std::optional<bool>> enableIntersectionObserverByDefault_;

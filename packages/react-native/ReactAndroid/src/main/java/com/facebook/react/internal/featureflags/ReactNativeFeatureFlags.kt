@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<b7ef80c2c39c734ae511fe6457b89ce7>>
+ * @generated SignedSource<<de19deb8eaa373fc2048f5a9453674b7>>
  */
 
 /**
@@ -215,6 +215,12 @@ public object ReactNativeFeatureFlags {
    */
   @JvmStatic
   public fun enableImmediateUpdateModeForContentOffsetChanges(): Boolean = accessor.enableImmediateUpdateModeForContentOffsetChanges()
+
+  /**
+   * When enabled, ReactNativeElement and ReadOnlyText expose the public EventTarget API (addEventListener, removeEventListener, dispatchEvent). When disabled, those methods are removed from those final classes.
+   */
+  @JvmStatic
+  public fun enableImperativeEvents(): Boolean = accessor.enableImperativeEvents()
 
   /**
    * Enable ref.focus() and ref.blur() for all views, not just TextInput.

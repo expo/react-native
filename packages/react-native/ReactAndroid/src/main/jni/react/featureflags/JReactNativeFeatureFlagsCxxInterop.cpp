@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<177c5cc7f6e970a2d4454c32d7f777ef>>
+ * @generated SignedSource<<dc98fadf7aac306d7cdb4f5ab511f690>>
  */
 
 /**
@@ -222,6 +222,12 @@ class ReactNativeFeatureFlagsJavaProvider
   bool enableImmediateUpdateModeForContentOffsetChanges() override {
     static const auto method =
         getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableImmediateUpdateModeForContentOffsetChanges");
+    return method(javaProvider_);
+  }
+
+  bool enableImperativeEvents() override {
+    static const auto method =
+        getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableImperativeEvents");
     return method(javaProvider_);
   }
 
@@ -714,6 +720,11 @@ bool JReactNativeFeatureFlagsCxxInterop::enableImmediateUpdateModeForContentOffs
   return ReactNativeFeatureFlags::enableImmediateUpdateModeForContentOffsetChanges();
 }
 
+bool JReactNativeFeatureFlagsCxxInterop::enableImperativeEvents(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
+  return ReactNativeFeatureFlags::enableImperativeEvents();
+}
+
 bool JReactNativeFeatureFlagsCxxInterop::enableImperativeFocus(
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
   return ReactNativeFeatureFlags::enableImperativeFocus();
@@ -1113,6 +1124,9 @@ void JReactNativeFeatureFlagsCxxInterop::registerNatives() {
       makeNativeMethod(
         "enableImmediateUpdateModeForContentOffsetChanges",
         JReactNativeFeatureFlagsCxxInterop::enableImmediateUpdateModeForContentOffsetChanges),
+      makeNativeMethod(
+        "enableImperativeEvents",
+        JReactNativeFeatureFlagsCxxInterop::enableImperativeEvents),
       makeNativeMethod(
         "enableImperativeFocus",
         JReactNativeFeatureFlagsCxxInterop::enableImperativeFocus),

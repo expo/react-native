@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<eab10e240a16c8ef3f659bd8ded290f0>>
+ * @generated SignedSource<<c17b71e1b754ff1773bb370681de06e4>>
  */
 
 /**
@@ -121,6 +121,9 @@ class JReactNativeFeatureFlagsCxxInterop
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop>);
 
   static bool enableImmediateUpdateModeForContentOffsetChanges(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop>);
+
+  static bool enableImperativeEvents(
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop>);
 
   static bool enableImperativeFocus(
