@@ -17,6 +17,9 @@ import org.gradle.api.plugins.AppliedPlugin
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 
 internal object JdkConfiguratorUtils {
+  /** Marks the root project once the build-wide toolchain sweep has run */
+  private const val JAVA_TOOLCHAINS_CONFIGURED = "react.internal.javaToolchainsConfigured"
+
   /**
    * Function that takes care of configuring the JDK toolchain for all the projects. As we do decide
    * the JDK version based on the AGP version that RNGP brings over, here we can safely configure
@@ -27,9 +30,28 @@ internal object JdkConfiguratorUtils {
     if (input.hasProperty(INTERNAL_DISABLE_JAVA_VERSION_ALIGNMENT)) {
       return
     }
-    input.rootProject.allprojects { project ->
+    // The sweep below reaches every project in the build, so a second run is redundant and
+    // harmful: AGP finalizes a project's DSL as it evaluates, and registering `finalizeDsl` on an
+    // already-evaluated project fails with "It is too late to call `finalizeDsl`". Only a build
+    // with more than one app sweeps twice.
+    val rootProject = input.rootProject
+    val alreadySwept = rootProject.extensions.extraProperties
+    if (alreadySwept.has(JAVA_TOOLCHAINS_CONFIGURED)) {
+      return
+    }
+    alreadySwept.set(JAVA_TOOLCHAINS_CONFIGURED, true)
+    rootProject.allprojects { project ->
       // Allows every single module to set react.internal.disableJavaVersionAlignment also.
       if (project.hasProperty(INTERNAL_DISABLE_JAVA_VERSION_ALIGNMENT)) {
+        return@allprojects
+      }
+      /*
+       * A project whose DSL AGP has already finalized cannot be given a `finalizeDsl` callback (AGP
+       * 9 fails the build), and evaluation is what finalizes it; an autolinked library that applies
+       * this plugin the old way, as react-native-screens does, is evaluated before the app that
+       * sweeps
+       */
+      if (project.state.executed) {
         return@allprojects
       }
 

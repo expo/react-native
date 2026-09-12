@@ -7,6 +7,7 @@
 
 package com.facebook.react
 
+import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import com.android.build.gradle.internal.tasks.factory.dependsOn
@@ -386,6 +387,13 @@ class ReactPlugin : Plugin<Project> {
         ) { task ->
           task.autolinkInputFile.set(rootGeneratedAutolinkingFile)
           task.generatedOutputDirectory.set(generatedAutolinkingJavaDir)
+          // Read lazily: this callback fires while AGP is being applied, before the app's
+          // `android {}` block has set the namespace
+          task.applicationNamespace.set(
+              project.provider {
+                project.extensions.findByType(ApplicationExtension::class.java)?.namespace
+              }
+          )
         }
 
     // We also need to generate code for C++ Autolinking
