@@ -22,6 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * UIView class for <View> component.
  */
+@class EXPMaterialSurface;
+
 @interface RCTViewComponentView : UIView <RCTComponentViewProtocol, RCTTouchableComponentViewProtocol> {
  @protected
   facebook::react::LayoutMetrics _layoutMetrics;
@@ -30,15 +32,37 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 /**
- * The material hooks the base class calls and the element box answers.
+ * The material this view wears — a blur behind its content, or a glass that
+ * WRAPS it — owned here and nowhere else.
  *
- * Declared here because `-currentContainerView` is the base's and the material
- * is the subclass's: the base has to ask a question only the box can answer.
- * Both return nil for every view without a material, which is nearly all of
- * them.
+ * Three things have to agree about a material: where React's children go (a
+ * wrapping material holds them in its effect view's content view), where the
+ * host goes (chrome, behind the children, in this view's bookkeeping), and
+ * that both are undone when the view is recycled. The box, the button and the
+ * accessory each used to own their own surface and each had to remember the
+ * teardown before this class removed the host as chrome; the one that forgot
+ * kept a surface whose host was gone, and the next element's children were
+ * mounted into a detached view — the composer's `+` came back invisible after
+ * a screen was popped and pushed. So the lifecycle lives with the code that
+ * mounts the children and removes the chrome: a subclass asks for a keyword
+ * and configures the surface, and nothing else.
  */
+- (nullable EXPMaterialSurface *)exp_material;
+/** The material, made if there is none — for a fill or a strength set before the keyword. */
+- (EXPMaterialSurface *_Nonnull)exp_ensureMaterial;
+/** Applies the keyword into the chrome container and lays the material out. Empty, with no fill, removes it. */
+- (void)exp_applyMaterialKeyword:(nullable NSString *)keyword fade:(CGFloat)fade;
+/** Lays the material out for this view's shape, on every layout. A subclass with overhangs overrides. */
+- (void)exp_layOutMaterial;
+/** The container React's children go in when the material wraps them, else nil. */
 - (nullable UIView *)exp_glassChildContainerView;
+/** The material's host view, else nil. */
 - (nullable UIView *)exp_materialHostView;
+/**
+ * The glass a presentation zooms out of: the material's effect view here; a
+ * subclass whose glass is drawn by something else answers with that.
+ */
+- (nullable UIView *)exp_glassView;
 
 /**
  * Given by a CHILD the shape this view should be LIFTED in.
