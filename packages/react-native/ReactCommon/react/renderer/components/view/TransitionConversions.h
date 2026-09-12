@@ -21,8 +21,17 @@
 
 namespace facebook::react {
 
-// A comma-separated CSS list, split at the top level only: `steps(4, jump-end)`
-// is one value
+/*
+ * Reading the `transition-*` longhands (css-transitions-1 §2): comma-separated
+ * lists zipped by index, a shorter list repeating against
+ * `transition-property`
+ */
+
+/*
+ * A comma-separated CSS list, split at the top level only, since
+ * `steps(4, jump-end)` and `cubic-bezier(.1, .2, .3, .4)` carry commas of
+ * their own. The same function splits a function's arguments.
+ */
 inline std::vector<std::string> splitTransitionList(const std::string &value)
 {
   std::vector<std::string> parts;
@@ -30,6 +39,7 @@ inline std::vector<std::string> splitTransitionList(const std::string &value)
   int depth = 0;
   const auto flush = [&](size_t end) {
     auto part = value.substr(start, end - start);
+    // Trim, since `opacity, transform` is as valid as `opacity,transform`
     auto first = part.find_first_not_of(" \t\n");
     auto last = part.find_last_not_of(" \t\n");
     if (first != std::string::npos) {
@@ -70,11 +80,21 @@ inline std::optional<TransitionProperty> parseTransitionProperty(const std::stri
   if (value == "transform") {
     return TransitionProperty::Transform;
   }
-  // `none`, and a property this can't interpolate: it applies immediately
+  if (value == "height") {
+    return TransitionProperty::Height;
+  }
+  if (value == "padding-bottom" || value == "paddingBottom") {
+    return TransitionProperty::PaddingBottom;
+  }
+  // `none`, and every property this cannot interpolate; CSS says such a
+  // property does not transition and the value applies immediately
   return std::nullopt;
 }
 
-// A CSS <time>, or a bare number of milliseconds
+/*
+ * A CSS <time>: `200ms`, `0.2s`, or a bare number of milliseconds as React
+ * Native styles use elsewhere
+ */
 inline Float parseTransitionTime(const std::string &value)
 {
   try {
@@ -122,6 +142,9 @@ inline TransitionTimingFunction parseTransitionTimingFunction(const std::string 
         } catch (...) {
           return {};
         }
+        // css-easing-1 §2.3: `start`/`jump-start` jump at each interval's
+        // beginning, `end`/`jump-end` (the default) at its end; `jump-none`
+        // and `jump-both` also change how many jumps span the interval
         auto position = StepPosition::JumpEnd;
         if (args.size() > 1) {
           if (args[1] == "start" || args[1] == "jump-start") {
@@ -146,17 +169,19 @@ inline TransitionTimingFunction parseTransitionTimingFunction(const std::string 
         try {
           return {std::stof(args[0]), std::stof(args[1]), std::stof(args[2]), std::stof(args[3])};
         } catch (...) {
+          // Falls through to `ease`
         }
       }
     }
   }
-  // `ease`, and anything unrecognized
+  // `ease`, and anything unrecognised
   return {};
 }
 
 /*
- * The transitions the four longhands declare (css-transitions-1 §2):
- * `transition-property` drives the count, and a shorter list repeats
+ * Builds the zipped transition list from the four longhands;
+ * `transition-property` drives the count, as a duration without a property
+ * animates nothing.
  */
 inline Transitions buildTransitions(
     const std::string &properties,
@@ -181,6 +206,7 @@ inline Transitions buildTransitions(
     }
     Transition transition;
     transition.property = *property;
+    // Shorter lists repeat, per css-transitions-1 §2
     if (!durationList.empty()) {
       transition.duration = parseTransitionTime(durationList[i % durationList.size()]);
     }
@@ -190,7 +216,8 @@ inline Transitions buildTransitions(
     if (!timingFunctionList.empty()) {
       transition.timingFunction = parseTransitionTimingFunction(timingFunctionList[i % timingFunctionList.size()]);
     }
-    // A zero-duration transition is no transition
+    // A zero-duration transition is no transition; keeping it would start an
+    // interpolator that finishes on its first frame
     if (transition.duration > 0.0f) {
       transitions.push_back(transition);
     }
@@ -199,8 +226,10 @@ inline Transitions buildTransitions(
 }
 
 /*
- * The animation the longhands declare. `animationKeyframes` is a JSON array of
- * stops: an offset, colors as integers, transforms as CSS strings.
+ * Building a CSS animation from the wire format: `animationKeyframes` is a
+ * JSON array of stops (offset + resolved declarations, colors already ints,
+ * transforms as CSS strings), and the longhands are the same CSS strings the
+ * transition parser reads.
  */
 inline std::optional<CSSAnimation> buildAnimation(
     const std::string &keyframesJson,
@@ -248,6 +277,7 @@ inline std::optional<CSSAnimation> buildAnimation(
     animation.keyframes.push_back(std::move(keyframe));
   }
   if (animation.keyframes.size() < 2) {
+    // A single stop animates nothing
     return std::nullopt;
   }
 
