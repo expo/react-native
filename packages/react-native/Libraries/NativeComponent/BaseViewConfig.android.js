@@ -459,6 +459,7 @@ const validAttributesForNonEventProps = {
   borderStartStartRadius: true,
   borderStyle: true,
   hitSlop: true,
+  experimental_environmentSafeAreaInsets: true,
   pointerEvents: true,
   nativeBackgroundAndroid: true,
   nativeForegroundAndroid: true,

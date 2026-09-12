@@ -449,6 +449,8 @@ const validAttributesForNonEventProps = {
 
   direction: true,
 
+  experimental_environmentSafeAreaInsets: true,
+
   focusable: true,
 
   style: ReactNativeStyleAttributes,

@@ -17,6 +17,7 @@
 #include <react/renderer/components/view/TransitionPrimitives.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/EnvironmentValues.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -270,12 +271,14 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   }
 
   /*
-   * What `transition` and `animation` declare on this view, side-allocated:
+   * Rare document-environment and CSS motion declarations, side-allocated:
    * empty on nearly every view, and hundreds of bytes inline. The raw
    * longhands are kept because a props clone carries only the keys that
    * changed, so an update re-parses from them. Null means none declared.
    */
-  struct CssMotion {
+  struct CssExtras {
+    // Absent means inherit the surface or containing document.
+    std::optional<EdgeInsets> environmentSafeAreaInsets{};
     std::string transitionPropertyRaw{};
     std::string transitionDurationRaw{};
     std::string transitionDelayRaw{};
@@ -293,15 +296,16 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
     bool isEmpty() const
     {
-      return transitionPropertyRaw.empty() && transitionDurationRaw.empty() && transitionDelayRaw.empty() &&
+      return !environmentSafeAreaInsets && transitionPropertyRaw.empty() && transitionDurationRaw.empty() && transitionDelayRaw.empty() &&
           transitionTimingFunctionRaw.empty() && animationKeyframesRaw.empty() && animationDurationRaw.empty() &&
           animationDelayRaw.empty() && animationTimingFunctionRaw.empty() && animationIterationCountRaw.empty() &&
           animationDirectionRaw.empty() && animationFillModeRaw.empty();
     }
 
-    bool rawsEqual(const CssMotion &other) const
+    bool rawsEqual(const CssExtras &other) const
     {
-      return transitionPropertyRaw == other.transitionPropertyRaw &&
+      return environmentSafeAreaInsets == other.environmentSafeAreaInsets &&
+          transitionPropertyRaw == other.transitionPropertyRaw &&
           transitionDurationRaw == other.transitionDurationRaw && transitionDelayRaw == other.transitionDelayRaw &&
           transitionTimingFunctionRaw == other.transitionTimingFunctionRaw &&
           animationKeyframesRaw == other.animationKeyframesRaw && animationDurationRaw == other.animationDurationRaw &&
@@ -312,18 +316,18 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
     }
   };
 
-  std::shared_ptr<const CssMotion> cssMotion{};
+  std::shared_ptr<const CssExtras> cssExtras{};
 
   const Transitions &transitions() const
   {
     static const Transitions kNone{};
-    return cssMotion == nullptr ? kNone : cssMotion->transitions;
+    return cssExtras == nullptr ? kNone : cssExtras->transitions;
   }
 
   const std::optional<CSSAnimation> &animation() const
   {
     static const std::optional<CSSAnimation> kNone{};
-    return cssMotion == nullptr ? kNone : cssMotion->animation;
+    return cssExtras == nullptr ? kNone : cssExtras->animation;
   }
 
   /*
@@ -436,6 +440,18 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   bool removeClippedSubviews{false};
 
 #pragma mark - Convenience Methods
+
+  const std::optional<EdgeInsets> &environmentSafeAreaInsets() const
+  {
+    static const std::optional<EdgeInsets> kNone{};
+    return cssExtras == nullptr ? kNone : cssExtras->environmentSafeAreaInsets;
+  }
+
+  EnvironmentValues resolveEnvironment(const EnvironmentValues &inherited) const
+  {
+    const auto &declared = environmentSafeAreaInsets();
+    return declared ? inherited.withSafeAreaInsets(*declared) : inherited;
+  }
 
   CascadedBorderWidths getBorderWidths() const;
   BorderMetrics resolveBorderMetrics(const LayoutMetrics &layoutMetrics) const;
