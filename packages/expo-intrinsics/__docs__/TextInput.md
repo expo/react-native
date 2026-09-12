@@ -46,6 +46,18 @@ path when a handler is present — a field without one types exactly as it did
 before — so keep the handler cheap, and use `onInput` for anything that only
 observes.
 
+The dispatch rides Meta's event-beat design rather than going around it — the
+model documented on `EventBeat.h`, where `requestSynchronous` runs a beat via
+`RuntimeScheduler::executeNowOnTheSameThread` with both threads stopped. What
+that design does not promise is an answer *before the asking callback
+returns*: the marked beat still waits for whatever induces it, and measured,
+a handler dispatched that way ran only after the text-field delegate had
+already committed the character. `EventBeat::flushSynchronouslyNow` is the
+addition that closes it — the request paired with the induce, run now, on the
+calling thread — reached through `EventEmitter::experimental_dispatchSyncNow`
+with `CancelableEventDecision` carrying `preventDefault`/`setValue` back
+across the flush.
+
 **You usually do not need it.** A controlled input already works the way it does
 on the web: the character lands, `onInput` runs, and the value is written back
 if it disagrees. `onBeforeInput` is for the stricter requirement that nothing

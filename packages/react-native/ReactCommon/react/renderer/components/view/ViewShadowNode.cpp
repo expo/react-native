@@ -289,6 +289,52 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
     formsStackingContext = true;
   }
 
+  if constexpr (std::is_same_v<ViewPropsT, ElementBoxProps>) {
+    /*
+     * A box carrying a material PAINTS, so it has to survive flattening.
+     *
+     * The rules above are a list of the ways a view can be visible, and
+     * `-apple-visual-effect` is one of them — but it lives on the element's own
+     * props rather than on `ViewProps`, so it was not among them and a box whose
+     * only visible property was its material was flattened away. Nothing warns:
+     * the shadow node is correct, the prop reaches it, and there is simply no
+     * view left for the material to be installed on.
+     *
+     * Found on the chat composer's bar. `<div appleVisualEffect="...">` with
+     * layout styles alone drew nothing; adding `overflow: 'hidden'` made it
+     * appear, which is the tell — that is `getClipsContentToBounds()` on the
+     * list above, forcing a view for an unrelated reason. Measured in dark mode,
+     * the bar's surface read (0, 0, 0) against the page and (15, 16, 17) once a
+     * view existed.
+     */
+    const auto& boxProps = static_cast<const ElementBoxProps&>(*this->props_);
+    if (!boxProps.appleVisualEffect.empty()) {
+      formsView = true;
+    }
+    /*
+     * And a box that asks for the platform's PEEK has to survive it too.
+     *
+     * `wantsContextMenu` installs an interaction, and an interaction is
+     * installed on a VIEW — so a box with no other reason to exist was
+     * flattened away and had nowhere to put one. Found on a chat balloon, whose
+     * box paints nothing itself: the surface is a child.
+     */
+    if (boxProps.wantsContextMenu) {
+      formsView = true;
+      /*
+       * BOTH flags, and the second one is not decoration.
+       *
+       * A node that forms a view without forming a stacking context gets a view
+       * of its own and its CHILDREN are mounted into the nearest stacking
+       * context above it — so a box that took the flag and installed the
+       * interaction was CHILDLESS, with the balloon and its text sitting beside
+       * it in the row, and nothing inside it to touch. The radio rule below
+       * sets both for the same reason.
+       */
+      formsStackingContext = true;
+    }
+  }
+
   bool holdsRadio = false;
   if (HostPlatformViewTraitsInitializer::treatsRadioRowsAsListRows()) {
     /*
@@ -1112,11 +1158,19 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT
   }
 }
 
-// Explicitly instantiate the two concrete specializations so their member
+// Explicitly instantiate the concrete specializations so their member
 // definitions above are emitted here (and linkable from other translation
-// units): `<View>` and the intrinsic `<div>`.
+// units): `<View>`, the intrinsic `<div>`, and `<button>`.
+//
+// The template arguments have to match the `using` declarations EXACTLY,
+// event emitter included — an instantiation that differs in one argument is a
+// different class, and the link fails with every member of it undefined rather
+// than with anything that names the mismatch.
 template class AbstractViewShadowNode<ViewComponentName, ViewProps>;
-template class AbstractViewShadowNode<ElementBoxComponentName, ElementBoxProps>;
+template class AbstractViewShadowNode<
+    ElementBoxComponentName,
+    ElementBoxProps,
+    ElementBoxEventEmitter>;
 template class AbstractViewShadowNode<
     ElementButtonComponentName,
     ElementButtonProps,

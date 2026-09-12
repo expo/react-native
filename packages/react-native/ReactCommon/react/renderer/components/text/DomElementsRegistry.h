@@ -21,6 +21,9 @@
 #include <react/renderer/components/view/ElementColorInputShadowNode.h>
 #include <react/renderer/components/view/ElementDateInputShadowNode.h>
 #include <react/renderer/components/view/ElementFileInputShadowNode.h>
+#include <react/renderer/components/view/ExpoScrollViewShadowNode.h>
+#include <react/renderer/components/view/ExpoChatBubbleShadowNode.h>
+#include <react/renderer/components/view/ExpoKeyboardAccessoryShadowNode.h>
 #include <react/renderer/components/view/ElementProgressShadowNode.h>
 #include <react/renderer/components/view/ElementRadioShadowNode.h>
 #include <react/renderer/components/view/ElementSelectShadowNode.h>
@@ -167,6 +170,21 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders() {
   // `<input type="file">`.
   providers.push_back(
       concreteComponentDescriptorProvider<ElementFileInputComponentDescriptor>());
+  // `<native:scroll>`: a scroll view whose view layer is ours, so that it can
+  // sit on the platform's own scrolling and gesture machinery rather than
+  // beside it.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ExpoScrollViewComponentDescriptor>());
+  // `<native:keyboardaccessory>`: a bar that is PART of the keyboard rather than
+  // a view that follows it, so a drag begun on it drags the keyboard.
+  providers.push_back(
+      concreteComponentDescriptorProvider<
+          ExpoKeyboardAccessoryComponentDescriptor>());
+  // `<native:chatbubble>`: a chat balloon. Its own element because the tail is
+  // part of the box's geometry — it makes the box taller and the content stop
+  // short — and that has to be settled where the layout is, not by the app.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ExpoChatBubbleComponentDescriptor>());
   return providers;
 }
 

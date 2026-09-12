@@ -16,6 +16,13 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @interface EXPElementTextAreaComponentView : EXPElementControlComponentView
 
+/**
+ * Whether this field will take the keyboard as it enters the window
+ * (`autoFocus`). A screen being covered asks this of the arriving screen's
+ * field to decide whether to hand the keyboard over rather than dismiss it.
+ */
+@property (nonatomic, readonly) BOOL asksForKeyboardOnArrival;
+
 @end
 
 NS_ASSUME_NONNULL_END

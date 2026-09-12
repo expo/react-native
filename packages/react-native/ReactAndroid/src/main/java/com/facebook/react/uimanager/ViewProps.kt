@@ -75,6 +75,8 @@ public object ViewProps {
   public const val BACKGROUND_IMAGE: String = "backgroundImage"
   // Backwards-compatible alias for the original experimental_ prefixed prop name.
   public const val EXPERIMENTAL_BACKGROUND_IMAGE: String = "experimental_backgroundImage"
+  public const val EXPERIMENTAL_BACKGROUND_ATTACHMENT_FIXED: String =
+      "experimental_backgroundAttachmentFixed"
   public const val BACKGROUND_SIZE: String = "experimental_backgroundSize"
   public const val BACKGROUND_POSITION: String = "experimental_backgroundPosition"
   public const val BACKGROUND_REPEAT: String = "experimental_backgroundRepeat"

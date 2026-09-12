@@ -8,6 +8,7 @@
 #pragma once
 
 #include <optional>
+#include <utility>
 
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
@@ -161,6 +162,41 @@ void fromRawValue(const PropsParserContext &context, const RawValue &rawValue, s
   result.push_back(itemResult);
 }
 
+/*
+ * The name of the prop currently being converted.
+ *
+ * A converter is handed a value and nothing else, which is almost always all it
+ * needs. The exception is a value that means something different depending on
+ * which property it was written on — `env(safe-area-inset-top)` has to be
+ * remembered as "the top padding depends on the safe area", and only this
+ * function, one frame up, knows it was the top padding. Passing the name down
+ * would mean widening `fromRawValue` for every type in the renderer to serve
+ * two of them.
+ *
+ * Set only around the conversion below, and only on the path where the prop was
+ * actually present — which is the rare one; most props are absent and return at
+ * the check above.
+ */
+inline thread_local const char *currentConvertedPropName = nullptr;
+
+/*
+ * Restores the previous name on the way out, including when the conversion
+ * throws — which it does for any malformed value, so this is not a rare path.
+ */
+class ScopedConvertedPropName {
+ public:
+  explicit ScopedConvertedPropName(const char *name) : previous_(std::exchange(currentConvertedPropName, name)) {}
+  ScopedConvertedPropName(const ScopedConvertedPropName &) = delete;
+  ScopedConvertedPropName &operator=(const ScopedConvertedPropName &) = delete;
+  ~ScopedConvertedPropName()
+  {
+    currentConvertedPropName = previous_;
+  }
+
+ private:
+  const char *previous_;
+};
+
 template <typename T, typename U = T>
 T convertRawProp(
     const PropsParserContext &context,
@@ -182,6 +218,7 @@ T convertRawProp(
 
   try {
     T result;
+    ScopedConvertedPropName scopedName{name};
     fromRawValue(context, *rawValue, result);
     return result;
   } catch (const std::exception &e) {
