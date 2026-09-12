@@ -7,40 +7,66 @@
 
 #import "EXPTextInputCaret.h"
 
+#import "EXPKeyboardTrace.h"
+
 /*
- * Write `next` into the field while leaving the insertion point where the user
- * would expect it.
- *
- * "Stable" has several meanings and they disagree, so this states which one it
- * implements:
- *
- *  - ABSOLUTE. Keep the caret at the same index. Right when the change is after
- *    the caret, wrong whenever anything before it changes length.
- *  - TAIL-ANCHORED. Keep its distance from the END — what React Native's own
- *    `RCTTextInputComponentView` does, and what the `beforeinput` path above
- *    computes. Right for a transform that preserves the tail, wrong for a clamp
- *    that truncates one: `slice(0, 10)` with the caret mid-string would drag it.
- *  - EDIT-ANCHORED. Put it where this particular edit would have left it. Needs
- *    the edit's range, which is why only the pre-commit hook can do it.
- *  - CHANGE-ANCHORED, which is this. Replace only the span that actually
- *    differs and let UIKit adjust the selection the way it does for any edit.
- *    A caret outside that span does not move at all — not because it was saved
- *    and restored, but because nothing under it changed.
- *
- * That last property is why this uses `replaceRange:withText:` rather than
- * assigning `.text`. Assigning replaces the whole document: UIKit drops the
- * selection to the end, every `UITextPosition` held across it belongs to a
- * document that no longer exists, and restoring a saved range is a guess that
- * clamps silently when the new text is shorter. `replaceRange:` is the
- * platform's own editing primitive — the same one typing goes through — so
- * selection adjustment, undo registration and scroll-to-caret are UIKit's job
- * rather than ours to reimplement.
+ * Writes `next` into the field while leaving the insertion point where the user
+ * would expect it. The caret is change-anchored: only the span that differs is
+ * replaced, so a caret outside it does not move. A caret kept at the same index
+ * is wrong when text before it changes length, and one kept at a distance from
+ * the end (what `RCTTextInputComponentView` does) is wrong for a clamp that
+ * truncates the tail. `replaceRange:withText:` rather than assigning `.text`,
+ * which replaces the whole document, drops the selection to the end and
+ * invalidates every `UITextPosition`; the range edit is the primitive typing
+ * uses, so selection, undo and scroll-to-caret stay UIKit's.
  */
-void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSString *next)
+/*
+ * Drop the autocorrection UIKit has queued, if any.
+ *
+ * A correction belongs to the document the user was typing in, and a controlled
+ * write replaces that document. UIKit applies it afterwards anyway, against the
+ * range it remembers: type "hi teh", send, and the field a send has just
+ * emptied fills with "Hitch".
+ *
+ * There is no API that says "forget it". Announcing the write does not —
+ * `textWillChange:`/`textDidChange:` say the document changed, which is true
+ * and retracts nothing. Turning the trait off and reloading the input views is
+ * what the platform leaves, and it is what UIKit itself does when a field's
+ * traits change mid-edit.
+ */
+/*
+ * When the last drop happened, so that the clear a send makes a frame or two
+ * later — on the flying balloon's first frame, by design, so the words are
+ * never nowhere — does not pay for a second one. The two `reloadInputViews`
+ * below cost nine to thirteen milliseconds on a simulator and, by the device's
+ * trace, thirty to fifty on a phone; paid on that frame they were the hole at
+ * the start of every send's rise. Paid at the tap instead, nothing is moving.
+ */
+static CFTimeInterval lastDropAt = 0;
+
+void EXPDropPendingCorrection(UIView<UITextInput> *field)
+{
+  if (!field.isFirstResponder) {
+    return;
+  }
+  const UITextAutocorrectionType correction = field.autocorrectionType;
+  if (correction == UITextAutocorrectionTypeNo) {
+    return;
+  }
+  const CFTimeInterval began = CACurrentMediaTime();
+  field.autocorrectionType = UITextAutocorrectionTypeNo;
+  [field reloadInputViews];
+  field.autocorrectionType = correction;
+  [field reloadInputViews];
+  lastDropAt = CACurrentMediaTime();
+  [EXPKeyboardTrace record:@"correction dropped %.0fms", (lastDropAt - began) * 1000.0];
+}
+
+BOOL EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSString *next, BOOL quiet)
 {
   NSString *current = field.text ?: @"";
   if ([current isEqualToString:next]) {
-    return;
+    return NO;
   }
 
   /*
@@ -62,34 +88,50 @@ void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSS
    */
   if (field.markedTextRange != nil) {
     if (next.length > 0) {
-      return;
+      return NO;
     }
     [field unmarkText];
   }
 
-  // Not being edited: there is no insertion point to preserve, so the cheap
-  // path is also the correct one. `isFirstResponder` rather than a class's own
-  // `isEditing`, because both backing classes answer it.
+  /*
+   * EMPTY takes the whole-document write, and not to save work.
+   *
+   * There is no insertion point to preserve in an empty document, and a
+   * property write is a different thing to the input system than an edit: it
+   * replaces the document rather than editing a range of it, and the
+   * correction UIKit had queued against a word in the old one goes with it.
+   * `replaceRange:` leaves that correction standing — measured by typing
+   * "hi teh", sending it, and watching "Hitch" arrive in the field the send had
+   * just emptied.
+   */
+  if (next.length == 0) {
+    field.text = next;
+    // Unless the send's tap dropped it a moment ago — see
+    // `EXPDropPendingCorrection`. The rebuild is the cost, not the write.
+    if (quiet) {
+      return YES;
+    }
+    if (CACurrentMediaTime() - lastDropAt > 1.0) {
+      EXPDropPendingCorrection(field);
+    }
+    return NO;
+  }
+
+  // Not being edited: no insertion point to preserve. `isFirstResponder`, which
+  // both backing classes answer, rather than a class's own `isEditing`
   if (!field.isFirstResponder) {
     field.text = next;
-    return;
+    return NO;
   }
 
   /*
-   * The span that actually differs: common prefix, common suffix, whatever is
-   * left in between. Boundaries are snapped to composed character sequences so
-   * a surrogate pair or a combining mark is never cut in half — comparing UTF-16
-   * units alone would happily split an emoji and hand UIKit half of one.
-   *
-   * A snap may only ever SHRINK a common run, never extend it. The loops below
-   * established that a run is common by comparing it; a snap that grew one
-   * would be asserting equality nobody checked, and the reconstruction
-   * `prefix + replacement + suffix` would stop spelling `next`. U+1D44D and
-   * U+1F44D end in the same low surrogate — one pair of code points in every
-   * 1024 does — so a scan finds a one-unit "common suffix" that is really half
-   * a character the two strings do NOT share. Growing that to the whole
-   * sequence swallows the differing high surrogate, the span collapses to
-   * nothing, and the controlled value is quietly discarded.
+   * The span that differs: common prefix, common suffix, whatever is left
+   * between. Boundaries snap to composed character sequences so a surrogate
+   * pair or combining mark is never split. A snap may only shrink a common run:
+   * two code points can end in the same low surrogate (U+1D44D and U+1F44D), so
+   * a one-unit "common suffix" may be half a character the strings do not
+   * share, and growing it would swallow the differing high surrogate and
+   * discard the controlled value.
    */
   const NSUInteger currentLength = current.length;
   const NSUInteger nextLength = next.length;
@@ -137,9 +179,10 @@ void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSS
   UITextRange *range = (start != nil && end != nil) ? [field textRangeFromPosition:start toPosition:end] : nil;
   if (range == nil) {
     // The offsets did not resolve — fall back rather than leave the field
-    // showing text the state has already rejected.
+    // showing text the state has already rejected. A whole-document assignment
+    // takes the queued correction with it, so nothing is owed.
     field.text = next;
-    return;
+    return NO;
   }
 
   /*
@@ -162,10 +205,41 @@ void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSS
     selEnd = [field offsetFromPosition:field.beginningOfDocument toPosition:selection.end];
   }
 
+  /*
+   * A pending AUTOCORRECTION belongs to the document the user was typing in,
+   * and this write replaces that document.
+   *
+   * UIKit applies the correction it has queued after the write lands, against
+   * the range it remembers — reproduced on a device and on the simulator by
+   * typing "Teh" and sending it: the message goes as "Teh", the field is
+   * cleared by the send, and "The" then appears in the empty field. In a
+   * browser `el.value = ''` drops any correction in flight; the element has to
+   * say the same thing.
+   *
+   * `textWillChange:`/`textDidChange:` is how a programmatic change is
+   * announced to the input system. `replaceRange:` announces the edit itself,
+   * but that is the edit — not the fact that the document the keyboard was
+   * reasoning about is gone.
+   */
+  [field.inputDelegate textWillChange:field];
   [field replaceRange:range withText:[next substringWithRange:NSMakeRange(prefix, insertedLength)]];
+  [field.inputDelegate textDidChange:field];
+
+  // And whatever correction was queued against the words this write replaced —
+  // unless the host is mid-animation, in which case the drop is OWED rather
+  // than skipped: it rebuilds the keyboard, and there is no frame of a send
+  // that can afford it.
+  BOOL owesDrop = NO;
+  if (replacedLength > 0) {
+    if (quiet) {
+      owesDrop = YES;
+    } else {
+      EXPDropPendingCorrection(field);
+    }
+  }
 
   if (selStart < 0) {
-    return;
+    return owesDrop;
   }
   const auto mapOffset = [&](NSInteger offset) -> NSInteger {
     if (offset <= spanStart) {
@@ -208,4 +282,5 @@ void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSS
     field.selectedTextRange = [field textRangeFromPosition:mappedStartPosition toPosition:mappedEndPosition];
     [field.inputDelegate selectionDidChange:field];
   }
+  return owesDrop;
 }
