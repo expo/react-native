@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <array>
+#include <bit>
 #include <optional>
 #include <string_view>
 
@@ -16,13 +18,12 @@
 namespace facebook::react {
 
 /*
- * The values `env()` resolves against, for one surface (css-env-1): the safe
- * area the system's own furniture draws over. An `env()` travels as an
- * unresolved symbol and is resolved during layout against a value that arrives
- * with the surface's layout constraints, so there is no first frame laid out
- * against an unknown inset. Surface-level, as the spec says: a per-element
- * answer would depend on where the element landed, the output of the very
- * layout the answer is an input to.
+ * The document values `env()` resolves against (css-env-1). The surface's
+ * layout constraints provide the default safe area. An embedded document can
+ * declare its own environment in host props before layout, alongside its
+ * viewport. An `env()` remains unresolved until layout uses that environment.
+ * Values are never inferred from an individual element's resulting position:
+ * that would make a layout input depend on the output of the same layout.
  */
 enum class EnvironmentVariable {
   SafeAreaInsetTop,
@@ -45,6 +46,20 @@ struct EnvironmentValues {
   uint32_t generation{0};
 
   bool operator==(const EnvironmentValues &other) const = default;
+
+  // A host declares a document environment before layout; it is not inferred
+  // from each element's resulting position. Nodes retain only this compact
+  // revision, while the declaration itself lives in props.
+  EnvironmentValues withSafeAreaInsets(const EdgeInsets &insets) const
+  {
+    uint32_t revision = generation ^ 2166136261u;
+    for (Float value : {insets.top, insets.right, insets.bottom, insets.left}) {
+      for (uint8_t byte : std::bit_cast<std::array<uint8_t, sizeof(Float)>>(value)) {
+        revision = (revision ^ byte) * 16777619u;
+      }
+    }
+    return {.safeAreaInsets = insets, .generation = revision == 0 ? 1 : revision};
+  }
 
   Float resolve(EnvironmentVariable variable) const
   {

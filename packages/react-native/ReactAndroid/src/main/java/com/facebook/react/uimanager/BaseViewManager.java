@@ -357,6 +357,12 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     SafeAreaInsetsObserver.setEnabled(view, onSafeAreaInsetsChange);
   }
 
+  @ReactProp(name = "experimental_environmentSafeAreaInsets")
+  void setEnvironmentSafeAreaInsets(@NonNull T view, @Nullable ReadableMap insets) {
+    // Fabric resolves this document declaration in the shadow tree. It does
+    // not alter Android's WindowInsets or the platform view's padding.
+  }
+
   @ReactProp(name = ViewProps.TEST_ID)
   public void setTestId(@NonNull T view, @Nullable String testId) {
     view.setTag(R.id.react_test_id, testId);

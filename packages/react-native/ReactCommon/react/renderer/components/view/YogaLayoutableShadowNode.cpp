@@ -271,8 +271,51 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
             .yogaTreeHasBeenConfigured_;
   }
 
+  /*
+   * And WHICH ENVIRONMENT this node's own `env()`s were resolved against, which
+   * a clone must inherit or it can never be skipped again.
+   *
+   * `environmentGeneration_` is what `configureYogaTree`'s skip asks each child
+   * — "were you configured against the environment we are in now?" — and it was
+   * default-initialised to zero on every clone. So: a node is configured and
+   * records generation N; anything clones it (the ownership adoption below is
+   * the common one, and it clones every child of a cloned parent); the clone
+   * says zero; the next pass refuses to skip it, configures it, and clones it
+   * again. A cycle that sustains itself and costs the whole subtree every
+   * commit.
+   *
+   * Measured at thirty thousand messages, appending one: of ~450,000 refusals
+   * to skip, 416,508 were this one and every other cause was ZERO —
+   *
+   *     WHY configured=33492 cascade=0 scale=0 font=0 rtl=0 env=416508 errata=0
+   *
+   * — and 122,793 children were then cloned to take ownership, which is what
+   * destroyed structural sharing for `progressState`, the commit hooks and the
+   * layout walk alike.
+   *
+   * The condition is `!fragment.props` and NOT the pair above it, because this
+   * records something about THIS node's own props rather than about its
+   * subtree: new props have not had their `env()` dependencies resolved, so a
+   * clone that replaces them must go back to zero and be resolved again. New
+   * CHILDREN say nothing about this node's own `env()`s.
+   */
+  if (!fragment.props) {
+    environmentGeneration_ =
+        static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
+            .environmentGeneration_;
+  }
+
   if (fragment.props) {
     updateYogaProps();
+    const auto* before = viewPropsOf(sourceShadowNode);
+    const auto* after = viewPropsOf(*this);
+    if (before != nullptr && after != nullptr &&
+        before->environmentSafeAreaInsets() !=
+            after->environmentSafeAreaInsets()) {
+      // The declaration can change every descendant's env() without changing
+      // this node's own Yoga style. Ensure layout visits the new environment.
+      yogaNode_.markDirtyAndPropagate();
+    }
   }
 
   // Inheritable text props (the `color`/`fontSize` cascade) touch no Yoga
@@ -1504,8 +1547,13 @@ void YogaLayoutableShadowNode::configureYogaTree(
     Float fontSizeMultiplier,
     YGErrata defaultErrata,
     bool swapLeftAndRight,
-    const EnvironmentValues& environmentValues) {
+    const EnvironmentValues& inheritedEnvironment) {
   ensureUnsealed();
+
+  const auto* viewProps = viewPropsOf(*this);
+  const auto environmentValues = viewProps != nullptr
+      ? viewProps->resolveEnvironment(inheritedEnvironment)
+      : inheritedEnvironment;
 
   if (yogaChildrenNeedInlineRebuild_) {
     // The one deferred rebuild for all the inline appends since construction.
@@ -1651,6 +1699,10 @@ void YogaLayoutableShadowNode::configureYogaTree(
         child.receivedTextAttributes_ != cascadeForChild &&
         !(*child.receivedTextAttributes_ == *cascadeForChild);
 
+    const auto* childViewProps = viewPropsOf(child);
+    const auto childEnvironment = childViewProps != nullptr
+        ? childViewProps->resolveEnvironment(environmentValues)
+        : environmentValues;
     if (child.yogaTreeHasBeenConfigured_ && !cascadeChanged &&
         childLayoutMetrics.pointScaleFactor == pointScaleFactor &&
         floatEquality(
@@ -1660,7 +1712,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
         // `env()`s in it, however unchanged it is in every other respect. The
         // comparison is against the child's own record rather than a flag on
         // this node, because the walk reaches a child by more than one route.
-        child.environmentGeneration_ == environmentValues.generation &&
+        child.environmentGeneration_ == childEnvironment.generation &&
         childErrata == child.resolveErrata(errata)) {
       continue;
     }
@@ -1788,7 +1840,11 @@ void YogaLayoutableShadowNode::configureYogaTree(
         auto& clonedChild = cloneChildInPlace(i);
         clonedChild.listDepth_ = listDepth_ + 1;
         clonedChild.configureYogaTree(
-            pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);
+            pointScaleFactor,
+            fontSizeMultiplier,
+            errata,
+            swapLeftAndRight,
+            environmentValues);
         assignListMarker(clonedChild, *marker);
       }
       // Yoga reaches the item only through a dirty list, and nothing else need

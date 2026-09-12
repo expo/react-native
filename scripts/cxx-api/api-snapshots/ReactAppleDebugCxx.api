@@ -3867,6 +3867,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public bool shouldRasterize;
   public const facebook::react::Transitions& transitions() const;
   public const std::optional<facebook::react::CSSAnimation>& animation() const;
+  public const std::optional<facebook::react::EdgeInsets>& environmentSafeAreaInsets() const;
   public facebook::react::BackfaceVisibility backfaceVisibility;
   public facebook::react::BaseViewProps::CascadeReset cascadeReset;
   public facebook::react::BlendMode mixBlendMode;
@@ -3879,6 +3880,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::CascadedCornerShapes cornerShapes;
   public facebook::react::Cursor cursor;
   public facebook::react::EdgeInsets hitSlop;
+  public facebook::react::EnvironmentValues resolveEnvironment(const facebook::react::EnvironmentValues& inherited) const;
   public facebook::react::Float inheritedFontSize;
   public facebook::react::Float inheritedFontSizeEm;
   public facebook::react::Float inheritedFontSizeRem;
@@ -3916,7 +3918,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public std::optional<facebook::react::TextTransform> inheritedTextTransform;
   public std::optional<facebook::react::WhiteSpace> inheritedWhiteSpace;
   public std::optional<int> zIndex;
-  public std::shared_ptr<const facebook::react::BaseViewProps::CssMotion> cssMotion;
+  public std::shared_ptr<const facebook::react::BaseViewProps::CssExtras> cssExtras;
   public std::string inheritedFontFamily;
   public std::vector<facebook::react::BackgroundImage> backgroundImage;
   public std::vector<facebook::react::BackgroundPosition> backgroundPosition;
@@ -3936,11 +3938,12 @@ enum facebook::react::BaseViewProps::CascadeReset : uint8_t {
   Unset,
 }
 
-struct facebook::react::BaseViewProps::CssMotion {
+struct facebook::react::BaseViewProps::CssExtras {
   public bool isEmpty() const;
-  public bool rawsEqual(const facebook::react::BaseViewProps::CssMotion& other) const;
+  public bool rawsEqual(const facebook::react::BaseViewProps::CssExtras& other) const;
   public facebook::react::Transitions transitions;
   public std::optional<facebook::react::CSSAnimation> animation;
+  public std::optional<facebook::react::EdgeInsets> environmentSafeAreaInsets;
   public std::string animationDelayRaw;
   public std::string animationDirectionRaw;
   public std::string animationDurationRaw;
@@ -6826,6 +6829,7 @@ struct facebook::react::EnvironmentValue {
 struct facebook::react::EnvironmentValues {
   public bool operator==(const facebook::react::EnvironmentValues& other) const = default;
   public facebook::react::EdgeInsets safeAreaInsets;
+  public facebook::react::EnvironmentValues withSafeAreaInsets(const facebook::react::EdgeInsets& insets) const;
   public facebook::react::Float resolve(facebook::react::EnvironmentVariable variable) const;
   public uint32_t generation;
 }

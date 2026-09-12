@@ -12,7 +12,11 @@ import type {
   PlatformTestResult,
   PlatformTestResultStatus,
 } from './RNTesterPlatformTestTypes';
-import type {ListRenderItemInfo, TextStyle} from 'react-native';
+import type {
+  ListRenderItemInfo,
+  SafeAreaInsetsChangeEvent,
+  TextStyle,
+} from 'react-native';
 
 import RNTesterPlatformTestMinimizedResultView from './RNTesterPlatformTestMinimizedResultView';
 import RNTesterPlatformTestResultsText from './RNTesterPlatformTestResultsText';
@@ -24,7 +28,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Switch,
   Text,
@@ -34,6 +37,37 @@ import {
 } from 'react-native';
 
 type ViewStyleProp = NonNullable<React.PropOf<View, 'style'>>;
+
+function ModalSafeArea({
+  children,
+  style,
+}: {
+  children: React.Node,
+  style: ViewStyleProp,
+}): React.Node {
+  const [insets, setInsets] =
+    useState<?SafeAreaInsetsChangeEvent['nativeEvent']['insets']>(null);
+  const onInsetsChange = useCallback((event: SafeAreaInsetsChangeEvent) => {
+    setInsets(event.nativeEvent.insets);
+  }, []);
+  return (
+    <View
+      experimental_onSafeAreaInsetsChange={onInsetsChange}
+      style={[
+        style,
+        insets == null
+          ? null
+          : {
+              paddingTop: insets.top,
+              paddingRight: insets.right,
+              paddingBottom: insets.bottom,
+              paddingLeft: insets.left,
+            },
+      ]}>
+      {children}
+    </View>
+  );
+}
 
 const DISPLAY_STATUS_MAPPING: {[PlatformTestResultStatus]: string} = {
   PASS: 'Pass',
@@ -87,7 +121,7 @@ function FilterModalButton(props: FilterModalProps) {
         animationType="fade"
         presentationStyle="overFullScreen"
         transparent={true}>
-        <SafeAreaView style={styles.filterModalRoot}>
+        <ModalSafeArea style={styles.filterModalRoot}>
           <KeyboardAvoidingView
             style={styles.filterModalKeyboardAvoidingRoot}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -123,7 +157,7 @@ function FilterModalButton(props: FilterModalProps) {
               </View>
             </View>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </ModalSafeArea>
       </Modal>
     </>
   );
@@ -266,7 +300,7 @@ export default function RNTesterPlatformTestResultView(
         animationType="slide"
         onRequestClose={handleMaximizedPress}
         visible={resultsExpanded}>
-        <SafeAreaView
+        <ModalSafeArea
           style={{
             width: '100%',
             height: '100%',
@@ -308,7 +342,7 @@ export default function RNTesterPlatformTestResultView(
             <TableHeader />
             <FlatList data={filteredResults} renderItem={renderTableRow} />
           </View>
-        </SafeAreaView>
+        </ModalSafeArea>
       </Modal>
     </>
   );
