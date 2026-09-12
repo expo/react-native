@@ -241,6 +241,17 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   experimental_backgroundRepeat: backgroundRepeatAttribute,
 
   /**
+   * BackgroundAttachment
+   *
+   * `true` is CSS's `fixed`: the background's positioning area is the viewport
+   * rather than the element's own box, so every element sharing the declaration
+   * is a window onto one background. Declared here or the style is dropped
+   * before it reaches the shadow node — a style key this table does not list
+   * does not survive, whatever the native side does with it.
+   */
+  experimental_backgroundAttachmentFixed: true,
+
+  /**
    * View
    */
   backfaceVisibility: true,

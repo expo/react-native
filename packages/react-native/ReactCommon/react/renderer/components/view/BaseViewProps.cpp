@@ -447,6 +447,12 @@ BaseViewProps::BaseViewProps(
           "experimental_backgroundRepeat",
           sourceProps.backgroundRepeat,
           {})),
+      backgroundAttachmentFixed(convertRawProp(
+          context,
+          rawProps,
+          "experimental_backgroundAttachmentFixed",
+          sourceProps.backgroundAttachmentFixed,
+          false)),
       mixBlendMode(convertRawProp(
           context,
           rawProps,
@@ -703,6 +709,8 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE(
         backgroundPosition, "experimental_backgroundPosition");
     RAW_SET_PROP_SWITCH_CASE(backgroundRepeat, "experimental_backgroundRepeat");
+    RAW_SET_PROP_SWITCH_CASE(
+        backgroundAttachmentFixed, "experimental_backgroundAttachmentFixed");
     RAW_SET_PROP_SWITCH_CASE_BASIC(shadowColor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(shadowOffset);
     RAW_SET_PROP_SWITCH_CASE_BASIC(shadowOpacity);

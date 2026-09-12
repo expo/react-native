@@ -78,6 +78,25 @@ internal class BackgroundImageDrawable(
       }
     }
 
+  /**
+   * `background-attachment: fixed`: the box the image is measured and placed
+   * against, in THIS drawable's coordinates, when that box is the viewport
+   * rather than the element's own.
+   *
+   * A drawable cannot ask where it is, so its owner reports it — see
+   * `BackgroundStyleApplicator.setBackgroundAttachmentFixed`, which also
+   * invalidates on every scroll, because the answer changes as the view travels.
+   * The painting area is untouched, so an element still clips the background to
+   * its own shape; only the box it is measured against changes, and that single
+   * substitution is what makes every element sharing a declaration a window onto
+   * one background.
+   */
+  internal var fixedPositioningArea: (() -> RectF)? = null
+    set(value) {
+      field = value
+      invalidateSelf()
+    }
+
   private val backgroundPaint: Paint =
       Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
@@ -294,14 +313,15 @@ internal class BackgroundImageDrawable(
 
     val computedBorderInsets = computeBorderInsets()
 
-    // background-origin: padding-box
+    // background-origin: padding-box — or the viewport, where the image is fixed
     backgroundPositioningArea =
-        RectF(
-            bounds.left + computedBorderInsets.left,
-            bounds.top + computedBorderInsets.top,
-            bounds.right - computedBorderInsets.right,
-            bounds.bottom - computedBorderInsets.bottom,
-        )
+        fixedPositioningArea?.invoke()
+            ?: RectF(
+                bounds.left + computedBorderInsets.left,
+                bounds.top + computedBorderInsets.top,
+                bounds.right - computedBorderInsets.right,
+                bounds.bottom - computedBorderInsets.bottom,
+            )
 
     // background-clip: border-box
     backgroundPaintingArea = RectF(bounds)
