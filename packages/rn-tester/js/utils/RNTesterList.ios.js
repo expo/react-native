@@ -47,6 +47,24 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'UI',
   },
   {
+    key: 'EnvSafeAreaExample',
+    group: 'CSS Layout',
+    module: require('../examples/SafeArea/EnvSafeAreaExample'),
+    category: 'UI',
+  },
+  {
+    key: 'KeyboardShowcaseExample',
+    group: 'CSS Layout',
+    module: require('../examples/Keyboard/KeyboardShowcaseExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'KeyboardAndScrollExample',
+    group: 'CSS Layout',
+    module: require('../examples/Keyboard/KeyboardAndScrollExample').default,
+    category: 'UI',
+  },
+  {
     key: 'ListsExample',
     group: 'HTML Elements',
     module: require('../examples/Lists/ListsExample').default,
