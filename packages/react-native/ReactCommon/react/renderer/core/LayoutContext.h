@@ -11,6 +11,7 @@
 
 #include <vector>
 
+#include <react/renderer/core/EnvironmentValues.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 
 namespace facebook::react {
@@ -66,6 +67,16 @@ struct LayoutContext {
    * Viewport size is size of the React Native's root view.
    */
   Size viewportSize{};
+
+  /*
+   * What `env()` resolves against for this surface — today, its safe area.
+   *
+   * Carried here, with the layout constraints, because that is what lets it be
+   * known BEFORE the first layout rather than measured out of it: the platform
+   * asks its own window what the insets are while it is deciding how big the
+   * surface is, and hands both over together. See `EnvironmentValues`.
+   */
+  EnvironmentValues environmentValues{};
 };
 
 inline bool operator==(const LayoutContext &lhs, const LayoutContext &rhs)
@@ -76,14 +87,16 @@ inline bool operator==(const LayoutContext &lhs, const LayoutContext &rhs)
              lhs.swapLeftAndRightInRTL,
              lhs.fontSizeMultiplier,
              lhs.viewportOffset,
-             lhs.viewportSize) ==
+             lhs.viewportSize,
+             lhs.environmentValues) ==
       std::tie(
              rhs.pointScaleFactor,
              rhs.affectedNodes,
              rhs.swapLeftAndRightInRTL,
              rhs.fontSizeMultiplier,
              rhs.viewportOffset,
-             rhs.viewportSize);
+             rhs.viewportSize,
+             rhs.environmentValues);
 }
 
 } // namespace facebook::react

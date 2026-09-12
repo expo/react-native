@@ -1301,11 +1301,16 @@ void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
       anonymousTextContentChildren_.size());
 }
 
-void YogaLayoutableShadowNode::updateYogaProps() {
+void YogaLayoutableShadowNode::updateYogaProps(
+    const EnvironmentValues& environmentValues) {
   ensureUnsealed();
 
   auto& props = static_cast<const YogaStylableProps&>(*props_);
-  auto styleResult = applyAliasedProps(props.yogaStyle, props);
+  // `env()` first, so everything downstream — the aliases, the block and inline
+  // adjustments below, the RTL swap in `configureYogaTree` — sees a style whose
+  // lengths are all real numbers, exactly as if the author had written them.
+  auto styleResult =
+      applyAliasedProps(props.resolveEnvironment(environmentValues), props);
 
   if (props.displayBlock) {
     if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
@@ -1571,7 +1576,8 @@ void YogaLayoutableShadowNode::configureYogaTree(
     float pointScaleFactor,
     Float fontSizeMultiplier,
     YGErrata defaultErrata,
-    bool swapLeftAndRight) {
+    bool swapLeftAndRight,
+    const EnvironmentValues& environmentValues) {
   ensureUnsealed();
 
   if (yogaChildrenNeedInlineRebuild_) {
@@ -1597,6 +1603,30 @@ void YogaLayoutableShadowNode::configureYogaTree(
       !floatEquality(
           getLayoutMetrics().fontSizeMultiplier, fontSizeMultiplier)) {
     yogaNode_.markDirtyAndPropagate();
+  }
+
+  // An `env()` in this node's style resolves HERE, which is the first moment in
+  // a layout pass that both the unresolved style and the surface's environment
+  // are in hand — and it is before Yoga is asked anything, so the value is an
+  // input to the first layout rather than a correction to it.
+  //
+  // Re-running `updateYogaProps` rather than patching the style in place,
+  // because the style Yoga holds is derived from props by more than one step
+  // (the logical aliases, the block and inline-atomic adjustments) and writing
+  // over the finished article would have to repeat all of them. Guarded on the
+  // environment having actually moved, so the ordinary case — every layout
+  // after the first, with nothing rotated — costs one comparison.
+  //
+  // Recorded on EVERY node and not only on the ones with an `env()` in them,
+  // because the skip test below asks each child what environment it was
+  // configured against: a node that never answered would look stale forever and
+  // its whole subtree would reconfigure on every single layout.
+  if (environmentGeneration_ != environmentValues.generation) {
+    environmentGeneration_ = environmentValues.generation;
+    if (!static_cast<const YogaStylableProps&>(*props_)
+             .environmentDependencies.empty()) {
+      updateYogaProps(environmentValues);
+    }
   }
 
   // TODO: `swapLeftAndRight` modified backing props and cannot be undone
@@ -1700,6 +1730,11 @@ void YogaLayoutableShadowNode::configureYogaTree(
         floatEquality(
             childLayoutMetrics.fontSizeMultiplier, fontSizeMultiplier) &&
         childLayoutMetrics.wasLeftAndRightSwapped == swapLeftAndRight &&
+        // A subtree configured against a different environment has stale
+        // `env()`s in it, however unchanged it is in every other respect. The
+        // comparison is against the child's own record rather than a flag on
+        // this node, because the walk reaches a child by more than one route.
+        child.environmentGeneration_ == environmentValues.generation &&
         childErrata == child.resolveErrata(errata)) {
       continue;
     }
@@ -1748,7 +1783,8 @@ void YogaLayoutableShadowNode::configureYogaTree(
           pointScaleFactor,
           fontSizeMultiplier,
           child.resolveErrata(errata),
-          swapLeftAndRight);
+          swapLeftAndRight,
+          environmentValues);
     } else {
       auto& clonedChild = cloneChildInPlace(i);
       if (childObservesCascade) {
@@ -1756,7 +1792,11 @@ void YogaLayoutableShadowNode::configureYogaTree(
       }
       clonedChild.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
       clonedChild.configureYogaTree(
-          pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);
+          pointScaleFactor,
+          fontSizeMultiplier,
+          errata,
+          swapLeftAndRight,
+          environmentValues);
     }
 
     // An in-place clone can come back dirty without dirtying this node, from
@@ -1779,7 +1819,11 @@ void YogaLayoutableShadowNode::configureYogaTree(
     box.receivedTextAttributes_ = effectiveCascade;
     box.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
     box.configureYogaTree(
-        pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);
+        pointScaleFactor,
+        fontSizeMultiplier,
+        errata,
+        swapLeftAndRight,
+        environmentValues);
   }
 
   // An anonymous IFC box is a Yoga LEAF: the inline content it wraps —
@@ -1827,7 +1871,11 @@ void YogaLayoutableShadowNode::configureYogaTree(
         auto& clonedChild = cloneChildInPlace(i);
         clonedChild.listDepth_ = listDepth_ + 1;
         clonedChild.configureYogaTree(
-            pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);
+            pointScaleFactor,
+            fontSizeMultiplier,
+            errata,
+            swapLeftAndRight,
+            environmentValues);
         assignListMarker(clonedChild, *marker);
       }
       // Yoga reaches the item only through a dirty list, and nothing else need
@@ -1959,7 +2007,8 @@ void YogaLayoutableShadowNode::layoutTree(
         layoutContext.pointScaleFactor,
         layoutContext.fontSizeMultiplier,
         YGErrataAll /*defaultErrata*/,
-        swapLeftAndRight);
+        swapLeftAndRight,
+        layoutContext.environmentValues);
   }
 
   auto minimumSize = layoutConstraints.minimumSize;
