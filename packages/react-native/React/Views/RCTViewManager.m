@@ -695,6 +695,12 @@ RCT_EXPORT_SHADOW_PROPERTY(display, YGDisplay)
 
 RCT_EXPORT_SHADOW_PROPERTY(onLayout, RCTDirectEventBlock)
 
+RCT_CUSTOM_VIEW_PROPERTY(experimental_environmentSafeAreaInsets, NSDictionary, RCTView)
+{
+  // Fabric resolves the declaration in the shadow tree; UIKit's safe area is
+  // deliberately unchanged.
+}
+
 RCT_EXPORT_SHADOW_PROPERTY(direction, YGDirection)
 
 // The events below define the properties that are not used by native directly, but required in the view config for new

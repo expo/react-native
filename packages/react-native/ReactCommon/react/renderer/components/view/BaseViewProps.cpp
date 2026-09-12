@@ -569,8 +569,14 @@ BaseViewProps::BaseViewProps(
   // the pointer null; the same longhands as the source share its allocation;
   // anything else is parsed once here, not while a frame is interpolated
   {
-    const auto* inherited = sourceProps.cssMotion.get();
-    auto motion = CssMotion{};
+    const auto* inherited = sourceProps.cssExtras.get();
+    auto motion = CssExtras{};
+    motion.environmentSafeAreaInsets = convertRawProp(
+        context,
+        rawProps,
+        "experimental_environmentSafeAreaInsets",
+        sourceProps.environmentSafeAreaInsets(),
+        std::optional<EdgeInsets>{});
     const auto raw = [&](const char* name, const std::string& fallback) {
       return convertRawProp(context, rawProps, name, fallback, std::string{});
     };
@@ -622,7 +628,7 @@ BaseViewProps::BaseViewProps(
             inherited ? inherited->animationFillModeRaw : kEmpty);
 
     if (inherited != nullptr && motion.rawsEqual(*inherited)) {
-      cssMotion = sourceProps.cssMotion;
+      cssExtras = sourceProps.cssExtras;
     } else if (!motion.isEmpty()) {
       motion.transitions = buildTransitions(
           motion.transitionPropertyRaw,
@@ -637,7 +643,7 @@ BaseViewProps::BaseViewProps(
           motion.animationIterationCountRaw,
           motion.animationDirectionRaw,
           motion.animationFillModeRaw);
-      cssMotion = std::make_shared<const CssMotion>(std::move(motion));
+      cssExtras = std::make_shared<const CssExtras>(std::move(motion));
     }
   }
 
@@ -787,6 +793,20 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(onLayout);
     RAW_SET_PROP_SWITCH_CASE(
         onSafeAreaInsetsChange, "experimental_onSafeAreaInsetsChange");
+    case CONSTEXPR_RAW_PROPS_KEY_HASH(
+        "experimental_environmentSafeAreaInsets"): {
+      std::optional<EdgeInsets> declared;
+      if (value.hasValue()) {
+        fromRawValue(context, value, declared);
+      }
+      if (declared != environmentSafeAreaInsets()) {
+        auto extras = cssExtras ? std::make_shared<CssExtras>(*cssExtras)
+                                : std::make_shared<CssExtras>();
+        extras->environmentSafeAreaInsets = declared;
+        cssExtras = extras->isEmpty() ? nullptr : std::move(extras);
+      }
+      return;
+    }
     RAW_SET_PROP_SWITCH_CASE_BASIC(collapsable);
     RAW_SET_PROP_SWITCH_CASE_BASIC(collapsableChildren);
     RAW_SET_PROP_SWITCH_CASE_BASIC(removeClippedSubviews);

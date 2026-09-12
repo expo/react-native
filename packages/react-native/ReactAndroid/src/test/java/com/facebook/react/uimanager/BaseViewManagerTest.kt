@@ -72,6 +72,21 @@ class BaseViewManagerTest {
   }
 
   @Test
+  fun testDocumentEnvironmentIsExposedAsNativeLayoutMetadata() {
+    Assertions.assertThat(viewManager.nativeProps)
+        .containsEntry("experimental_environmentSafeAreaInsets", "Map")
+    viewManager.updateProperties(
+        view,
+        ReactStylesDiffMap(
+            JavaOnlyMap.of(
+                "experimental_environmentSafeAreaInsets",
+                JavaOnlyMap.of("top", 0, "right", 0, "bottom", 34, "left", 0),
+            )
+        ),
+    )
+  }
+
+  @Test
   fun testAccessibilityRoleNone() {
     viewManager.setAccessibilityRole(view, "none")
     Assertions.assertThat(view.getTag(R.id.accessibility_role))

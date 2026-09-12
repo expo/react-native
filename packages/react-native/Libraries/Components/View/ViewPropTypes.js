@@ -87,6 +87,20 @@ type DirectEventProps = Readonly<{
   ) => unknown,
 
   /**
+   * Declares the safe-area environment for an embedded document viewport.
+   * Its env() lengths inherit these values instead of the surface's values.
+   * The host supplies viewport-relative values before laying out the document;
+   * this does not change platform safe areas or add padding.
+   * @experimental
+   */
+  experimental_environmentSafeAreaInsets?: ?Readonly<{
+    top: number,
+    right: number,
+    bottom: number,
+    left: number,
+  }>,
+
+  /**
    * When `accessible` is `true`, the system will invoke this function when the
    * user performs the magic tap gesture.
    *
