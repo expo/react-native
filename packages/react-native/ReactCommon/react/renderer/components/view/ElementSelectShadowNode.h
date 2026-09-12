@@ -19,6 +19,7 @@
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/components/view/ViewEventEmitter.h>
+#include <react/renderer/components/view/AriaAttributes.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -133,6 +134,10 @@ class ElementSelectProps final : public ViewProps, public NodeNameProvider {
         hasValue(rawProps.at("value") != nullptr || sourceProps.hasValue),
         disabled(convertRawProp(context, rawProps, "disabled", sourceProps.disabled, false))
   {
+    // ARIA, which is how an author of these elements spells accessibility.
+    // Applied last so it wins over the `accessibility*` props, and applied
+    // here rather than in the base so only elements pay for the reads.
+    applyAriaAttributes(context, rawProps, *this);
   }
 
   std::string domNodeName() const override
