@@ -53,6 +53,29 @@
 
 using namespace facebook::react;
 
+/**
+ * How many views currently have `background-attachment: fixed`.
+ *
+ * The walk below has to pass through every view under a scroll, and it runs on
+ * every scroll frame — so an app that never writes the property should not pay
+ * for it at all. This is the switch: zero means there is nothing to re-place and
+ * the scroll view returns immediately.
+ *
+ * A count rather than a flag, because views come and go and the last one leaving
+ * has to turn it off. Maintained in `updateProps`, where the value changes.
+ *
+ * It can only ever over-count — a view destroyed while fixed never decrements —
+ * and over-counting costs a walk that finds nothing rather than a wrong pixel,
+ * which is the right way round for a number that exists to skip work.
+ */
+static NSInteger EXPFixedBackgroundCount = 0;
+
+BOOL EXPAnyFixedBackgrounds(void)
+{
+  return EXPFixedBackgroundCount > 0;
+}
+
+
 const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
 
 /**
@@ -604,6 +627,15 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   [super didMoveToWindow];
   if (self.window == nil) {
     [_textLinkInteraction dismissMenuIfPresenting];
+  } else if (_props != nullptr && _props->backgroundAttachmentFixed) {
+    /*
+     * Repaint a fixed background on arriving in a window, since it can only be
+     * measured against one. Painted before the view is in a window, it falls
+     * back to the view's own box, squeezing the whole gradient into the view;
+     * only a scroll re-placed it, so the first balloon sent into an empty chat,
+     * where nothing scrolls, kept that squeezed gradient.
+     */
+    [self invalidateLayer];
   }
 }
 
@@ -883,6 +915,18 @@ static CGRect RCTUntransformedFrame(UIView *view)
   const auto &newViewProps = static_cast<const ViewProps &>(*props);
 
   /*
+   * The census of fixed backgrounds, kept here because here is where the value
+   * changes.
+   *
+   * A scroll view walks its whole subtree on every frame to re-place them, so an
+   * app that never writes the property must not pay for the walk. Counted rather
+   * than flagged: the last view to stop being fixed is what turns it off.
+   */
+  if (oldViewProps.backgroundAttachmentFixed != newViewProps.backgroundAttachmentFixed) {
+    EXPFixedBackgroundCount += newViewProps.backgroundAttachmentFixed ? 1 : -1;
+  }
+
+  /*
    * Assert the baseline is still the one the recycle left, because a subclass that replaces
    * `_props` in its own -prepareForRecycle breaks every diff below without failing any of them:
    * a value the next element leaves at its default diffs equal to the default and keeps what the
@@ -982,6 +1026,20 @@ static CGRect RCTUntransformedFrame(UIView *view)
     self.layer.transform = caTransform;
     // Enable edge antialiasing in rotation, skew, or perspective transforms
     self.layer.allowsEdgeAntialiasing = caTransform.m12 != 0.0f || caTransform.m21 != 0.0f || caTransform.m34 != 0.0f;
+    /*
+     * Re-place any fixed background under a view that a transform just moved.
+     *
+     * A fixed background is measured against the window, and a transform moves
+     * the view through the window without anything else noticing — the case a
+     * scroll view drives for itself, reached here by everything else. A chat's
+     * sent balloon flies to its row on a native-driven transform, and without
+     * this its gradient stopped following the screen part of the way up: on the
+     * 300-point flight into an empty chat it then jumped seventeen colour units
+     * at the handover to the landed balloon.
+     */
+    if (EXPFixedBackgroundCount > 0) {
+      [self exp_repositionFixedBackgrounds];
+    }
   }
 
   // `hitSlop`
@@ -1836,6 +1894,58 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   return container;
 }
 
+/**
+ * The walk itself, which must pass THROUGH views that are not component views.
+ *
+ * It used to descend only into `RCTViewComponentView`s, and that stopped it
+ * dead at the first scroll view: a scroll's React children live inside a
+ * `UIScrollView` and its content view, neither of which is one. So the fixed
+ * backgrounds that most need re-placing — the ones actually scrolling — were
+ * the only ones never reached, and a chat's balloons carried their shade down
+ * the screen with them instead of the shade belonging to the screen.
+ *
+ * Measured rather than reasoned about: with the walk stopping short, a balloon
+ * that moved 210 points down the transcript kept `rgb(81, 193, 250)` exactly;
+ * with it passing through, the colour at a given screen position is the same
+ * before and after a scroll, which is what `fixed` means.
+ */
+static void EXPRepositionFixedBackgroundsIn(UIView *view)
+{
+  if ([view isKindOfClass:[RCTViewComponentView class]]) {
+    // Component views continue the walk themselves, so they also get their own
+    // invalidation without this function having to know how to do it.
+    [(RCTViewComponentView *)view exp_repositionFixedBackgrounds];
+    return;
+  }
+  for (UIView *subview in view.subviews) {
+    EXPRepositionFixedBackgroundsIn(subview);
+  }
+}
+
+/**
+ * Re-place any `background-attachment: fixed` background under this view.
+ *
+ * A fixed background is measured against the viewport, and scrolling moves the
+ * element through the viewport without changing anything the mounting layer
+ * reports — no new props, no new layout metrics, nothing that would repaint.
+ * So the scroll view drives this directly, which is the same shape as CSS: a
+ * fixed background inside a scroller is repainted as it scrolls, and is
+ * famously the expensive part of the feature.
+ *
+ * Depth-first and guarded on the flag, so a tree with no fixed backgrounds in
+ * it costs one boolean test per view. Views that ARE fixed repaint only their
+ * background layers.
+ */
+- (void)exp_repositionFixedBackgrounds
+{
+  if (_props != nullptr && _props->backgroundAttachmentFixed) {
+    [self invalidateLayer];
+  }
+  for (UIView *subview in self.subviews) {
+    EXPRepositionFixedBackgroundsIn(subview);
+  }
+}
+
 /** The default: the layer paints it, which is every box without a backdrop. */
 - (nullable UIColor *)exp_backgroundColorForLayer:(nullable UIColor *)resolved
 {
@@ -2108,6 +2218,24 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     CGRect backgroundPositioningArea = RCTCGRectFromRect(_layoutMetrics.getPaddingFrame());
     // background-clip: border-box
     CGRect backgroundPaintingArea = self.layer.bounds;
+
+    /*
+     * `background-attachment: fixed` — the positioning area is the VIEWPORT.
+     *
+     * The painting area is untouched, so the element still clips the background
+     * to its own shape; only the box the gradient is measured and placed against
+     * changes. That single substitution is the whole of what makes every
+     * element sharing a declaration a window onto one background.
+     *
+     * Expressed in this view's own coordinates, which is what makes it move
+     * with the view for free — as the view travels up a scroll, the window's
+     * rect in its space travels down by the same amount, so the gradient stays
+     * where it is on screen. It still has to be RECOMPUTED as that happens; see
+     * `-exp_repositionFixedBackgrounds`, which the scroll view drives.
+     */
+    if (_props->backgroundAttachmentFixed && self.window != nil) {
+      backgroundPositioningArea = [self convertRect:self.window.bounds fromView:self.window];
+    }
 
     size_t imageIndex = _props->backgroundImage.size() - 1;
     // iterate in reverse to match CSS specification
