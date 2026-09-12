@@ -26,7 +26,7 @@
 import {LABEL_COLOR, TERTIARY_COLOR} from './themed';
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {ScrollView, Text, View} from 'react-native';
+import {ScrollView} from 'react-native';
 
 import '@react-native/expo-intrinsics-poc';
 
@@ -5642,11 +5642,19 @@ function Case({caseData, onMeasured}) {
   }, [measure]);
 
   return (
-    <View style={{marginBottom: 24}}>
+    <section style={{marginBottom: 24}}>
       {/* Full-contrast, not the quiet tertiary: a case title is how you find
           the case you came for among 134 and how you name the one that
           disagrees. Matches the corpus page's case-label rule. */}
-      <Text style={{fontSize: 10, color: LABEL_COLOR}}>{caseData.name}</Text>
+      <p
+        style={{
+          fontSize: 10,
+          color: LABEL_COLOR,
+          marginTop: 0,
+          marginBottom: 0,
+        }}>
+        {caseData.name}
+      </p>
       {/* A block container, so the case root is not a flex item — see the
           note beside the render function above.
 
@@ -5667,7 +5675,7 @@ function Case({caseData, onMeasured}) {
         }}>
         {render(caseData.tree, refs, caseData.name)}
       </div>
-    </View>
+    </section>
   );
 }
 
@@ -5704,33 +5712,41 @@ function ConformanceScreen() {
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={{padding: 8}}>
-      <Text style={{fontSize: 11, color: TERTIARY_COLOR, marginBottom: 8}}>
-        {status}
-      </Text>
-      {BY_SECTION.map(group => (
-        <View key={group.title}>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: '600',
-              marginTop: 18,
-              marginBottom: 10,
-              // Stated, because an author colour is what these headings get by
-              // default and React Native's default is black — which on a dark
-              // screen is a heading that is not there at all.
-              color: LABEL_COLOR,
-            }}>
-            {group.title}
-            <Text style={{fontWeight: '400', color: TERTIARY_COLOR}}>
-              {'  ' + String(group.cases.length)}
-            </Text>
-          </Text>
-          {group.cases.map(c => (
-            <Case key={c.name} caseData={c} onMeasured={onMeasured} />
-          ))}
-        </View>
-      ))}
+    <ScrollView>
+      <div style={{padding: 8}}>
+        <p
+          style={{
+            fontSize: 11,
+            color: TERTIARY_COLOR,
+            marginTop: 0,
+            marginBottom: 8,
+          }}>
+          {status}
+        </p>
+        {BY_SECTION.map(group => (
+          <section key={group.title}>
+            <h3
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                marginTop: 18,
+                marginBottom: 10,
+                // Stated, because an author colour is what these headings get by
+                // default and React Native's default is black — which on a dark
+                // screen is a heading that is not there at all.
+                color: LABEL_COLOR,
+              }}>
+              {group.title}
+              <span style={{fontWeight: '400', color: TERTIARY_COLOR}}>
+                {'  ' + String(group.cases.length)}
+              </span>
+            </h3>
+            {group.cases.map(c => (
+              <Case key={c.name} caseData={c} onMeasured={onMeasured} />
+            ))}
+          </section>
+        ))}
+      </div>
     </ScrollView>
   );
 }
