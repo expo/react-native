@@ -51,6 +51,7 @@ import Img from './Img';
 import Input from './Input';
 import Label from './Label';
 import {LIST_TAGS, makeList} from './List';
+import NativeChatBubble from './NativeChatBubble';
 import NativeKeyboardAccessory from './NativeKeyboardAccessory';
 import NativeMenuButton from './NativeMenuButton';
 import NativeSafeArea from './NativeSafeArea';
@@ -984,8 +985,159 @@ registerFrameworkComponent('select', Select);
 // still `resolveUIViewClassName`'s decision. See Input.js.
 registerFrameworkComponent('input', Input);
 
+/*
+ * The host element `<native:scroll>` renders.
+ *
+ * Registered under its own name because `native:scroll` itself is a *component*
+ * (NativeScroll.js): it wraps its children in the one content container a
+ * scrolling container has, which is a JavaScript job.
+ *
+ * The prop surface is small on purpose. Every entry is either something only the
+ * author can know (`contentInset`) or a way to switch off something that is on
+ * by default — there is no prop here whose job is to turn on correct behaviour.
+ */
+registerFrameworkElement('native-scroll', () =>
+  createViewConfig({
+    validAttributes: {
+      scrollEnabled: true,
+      showsScrollIndicator: true,
+      bounces: true,
+      contentInset: true,
+      automaticInsets: true,
+      avoidsKeyboard: true,
+      keyboardDismissMode: true,
+      contentAnchor: true,
+      edgeEffects: true,
+      // Not a prop: the two commands the element answers, declared so the view
+      // config knows the element has them.
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {
+      topScroll: {registrationName: 'onScroll'},
+      topScrollBeginDrag: {registrationName: 'onScrollBeginDrag'},
+      topScrollEndDrag: {registrationName: 'onScrollEndDrag'},
+      topMomentumScrollBegin: {registrationName: 'onMomentumScrollBegin'},
+      topMomentumScrollEnd: {registrationName: 'onMomentumScrollEnd'},
+      // Fires when nothing has scrolled, which is the common case: a keyboard
+      // opening under a short list moves no content but changes the insets.
+      topInsetChange: {registrationName: 'onInsetChange'},
+    },
+    uiViewClassName: 'native-scroll',
+    uaStyle: {
+      // Fills what is left of its container, which is what a scroll view is for.
+      // An author style still wins, so a fixed-height one is a height away.
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 0,
+      // Its whole purpose: content larger than the box, clipped to the box.
+      overflow: 'hidden',
+    },
+  }),
+);
 
+/*
+ * The host element `<native:keyboardaccessory>` renders.
+ *
+ * No attributes of its own. What makes it an accessory is the NAME — it is what
+ * makes each platform mount a view that hands its children to the keyboard
+ * rather than an ordinary one — and everything else is style and children.
+ */
+/*
+ * The host element `<native:chatbubble>` renders.
+ *
+ * `tail` and `bubbleRadius` reach the shadow node only because they are listed
+ * here — an attribute the view config does not name is dropped before it gets
+ * there, silently, and the element renders as if it had been given nothing.
+ *
+ * No peek attributes: `wantsContextMenu` and the `<menu>` belong to the BOX,
+ * which is what receives the touch and what has to come up with the words
+ * inside it. What this element contributes is the SHAPE of the lift — its view
+ * hands its own outline, tail included, up to the box, which gives it to UIKit.
+ * See `ContextMenu.md`.
+ */
+registerFrameworkElement('native-chatbubble', () =>
+  createViewConfig({
+    validAttributes: {
+      tail: true,
+      bubbleRadius: true,
+    },
+    uiViewClassName: 'native-chatbubble',
+  }),
+);
 
+registerFrameworkElement('native-keyboardaccessory', () =>
+  createViewConfig({
+    // `scope`: "screen" (the default) or "app". Declared here or it is dropped
+    // before it reaches the shadow node.
+    // `appleVisualEffect` and its fade: the bar's whole surface, declared here
+    // for the same reason `scope` is — an attribute the view config does not
+    // list never reaches the shadow node.
+    validAttributes: {
+      scope: true,
+      // Also takes `-apple-system-glass-container`, which groups the glass
+      // surfaces inside it into one shape — see `EXPMaterialSurface`.
+      appleVisualEffect: true,
+      appleVisualEffectFade: true,
+      /*
+       * How strongly the material is worn, 0 to 1. It attenuates the blur and
+       * the tint together — see the prop's comment in the shadow node for what
+       * that trade buys and costs.
+       */
+      appleVisualEffectOpacity: true,
+      /*
+       * Whether the bar reserves the home indicator's strip. On by default; off
+       * is how an app draws into it, which is what the platform's own composer does —
+       * see the prop's own comment in `ExpoKeyboardAccessoryShadowNode.h`.
+       */
+      automaticInsets: true,
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {
+      /*
+       * How much of the home indicator's strip the bar is reserving, and the
+       * same answer as a fraction. The only signal that says whether the bar is
+       * resting on the screen or riding the keys — see the event's own comment
+       * in `ExpoKeyboardAccessoryEventEmitter.h` for why nothing else is.
+       */
+      topDockChange: {registrationName: 'onDockChange'},
+    },
+    uiViewClassName: 'native-keyboardaccessory',
+  }),
+);
+
+/*
+ * The host element `<native:keyboardpanel>` renders.
+ *
+ * A panel that takes the KEYBOARD'S place rather than sitting above it — what
+ * the platform's own `+` opens. `visible` is the whole surface: raising it is the same
+ * act as raising a keyboard, so the system runs the transition, sizes it and
+ * dismisses it.
+ */
+registerFrameworkElement('native-keyboardpanel', () =>
+  createViewConfig({
+    validAttributes: {
+      visible: true,
+      // `inputView` (the default) or `overlay`. See the shadow node: which one
+      // is right is a question about whether the panel is an alternative INPUT
+      // or a list of COMMANDS.
+      presentation: true,
+      // The rectangle an overlay grows out of, in window coordinates. Four
+      // numbers rather than an object because a raw prop of a struct type has
+      // to be taught to the parser, and this is measured in JS anyway.
+      anchorX: true,
+      anchorY: true,
+      anchorWidth: true,
+      anchorHeight: true,
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {
+      // The panel dismissed itself — an overlay is closed by tapping outside
+      // it, and `visible` is the app's state to correct.
+      topClose: {registrationName: 'onClose'},
+    },
+    uiViewClassName: 'native-keyboardpanel',
+  }),
+);
 
 /*
  * The host element `<native:menubutton>` renders.
@@ -1051,6 +1203,11 @@ defineReactComponent('native', 'keyboardaccessory', NativeKeyboardAccessory);
  */
 defineReactComponent('native', 'menubutton', NativeMenuButton);
 
+/*
+ * `<native:chatbubble>`, a chat balloon. One word for the same reason
+ * `keyboardaccessory` is one.
+ */
+defineReactComponent('native', 'chatbubble', NativeChatBubble);
 
 // `<textarea>` joins a form the same way `<input>` does, and for the same
 // reason: an uncontrolled one keeps its value in the native view.

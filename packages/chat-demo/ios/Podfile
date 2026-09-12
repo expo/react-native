@@ -1,0 +1,32 @@
+# The demo app's pods.
+#
+# Ordinary `use_react_native!` against the monorepo's own React Native, unlike RN Tester's Podfile
+# which is bespoke and does not autolink at all. This app is meant to be what an app built on this
+# fork looks like, so it is set up the way one would be.
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve("react-native/scripts/react_native_pods.rb", {paths: [process.argv[1]]})',
+  __dir__]).strip
+
+platform :ios, min_ios_version_supported
+prepare_react_native_project!
+
+target 'ChatDemo' do
+  use_react_native!(
+    path: '../../react-native',
+    # The window has to reach its own edges; that is what the app is for.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  # The native navigator half of the demo. Excluded on Android for now (an unresolved vtable in
+  # RNSFullWindowOverlay), so the screen that uses it is guarded in JS.
+  pod 'RNScreens', :path => '../../../node_modules/react-native-screens'
+
+  # Not optional, and its absence does not look like its absence: without it
+  # `REACT_NATIVE_PATH` is never defined for the pod targets, so hermes-engine's
+  # script phase sources `/scripts/xcode/with-environment.sh` — an absolute path
+  # with its prefix missing — and the build fails with an Xcode "internal
+  # inconsistency error" naming an unrelated target.
+  post_install do |installer|
+    react_native_post_install(installer, '../../react-native')
+  end
+end
