@@ -50,6 +50,11 @@ group = "com.facebook.react"
 
 val ndkPath by extra(System.getenv("ANDROID_NDK"))
 val ndkVersion by extra(System.getenv("ANDROID_NDK_VERSION") ?: libs.versions.ndkVersion.get())
+// Autolinked libraries read the host's SDK versions from these conventional properties.
+val compileSdkVersion by extra(libs.versions.compileSdk.get().toInt())
+val targetSdkVersion by extra(libs.versions.targetSdk.get().toInt())
+val minSdkVersion by extra(libs.versions.minSdk.get().toInt())
+val buildToolsVersion by extra(libs.versions.buildTools.get())
 val sonatypeUsername = findProperty("SONATYPE_USERNAME")?.toString()
 val sonatypePassword = findProperty("SONATYPE_PASSWORD")?.toString()
 val sonatypeRepositoryDescription = findProperty("SONATYPE_REPOSITORY_DESCRIPTION")?.toString()
