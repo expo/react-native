@@ -81,7 +81,24 @@ interface Spec extends TurboModule {
     viewportOffsetX?: number,
     viewportOffsetY?: number,
     fontSizeMultiplier?: number,
+    safeAreaLeft?: number,
+    safeAreaTop?: number,
+    safeAreaRight?: number,
+    safeAreaBottom?: number,
   ) => RootTag;
+  updateSurfaceConstraints: (
+    surfaceId: RootTag,
+    viewportWidth: number,
+    viewportHeight: number,
+    devicePixelRatio: number,
+    viewportOffsetX: number,
+    viewportOffsetY: number,
+    fontSizeMultiplier: number,
+    safeAreaLeft: number,
+    safeAreaTop: number,
+    safeAreaRight: number,
+    safeAreaBottom: number,
+  ) => void;
   stopSurface: (surfaceId: RootTag) => void;
   enqueueNativeEvent: (
     shadowNode: unknown /* ShadowNode */,
