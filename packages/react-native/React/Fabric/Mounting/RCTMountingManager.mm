@@ -32,6 +32,7 @@
 #import <React/RCTComponentViewRegistry.h>
 #import <React/RCTConversions.h>
 #import <React/RCTMountingTransactionObserverCoordinator.h>
+#import <React/RCTViewComponentView.h>
 
 using namespace facebook::react;
 
@@ -550,7 +551,10 @@ static void RCTPerformMountInstructions(
       componentView.layer.transform = newTransform;
     }
   }
-  if (updatesOpacity && componentView.layer.opacity != (float)newViewProps.opacity) {
+  if (updatesOpacity && [componentView isKindOfClass:[RCTViewComponentView class]]) {
+    // Under whatever a press multiplies it by
+    [(RCTViewComponentView *)componentView exp_setOwnOpacity:(float)newViewProps.opacity];
+  } else if (updatesOpacity && componentView.layer.opacity != (float)newViewProps.opacity) {
     componentView.layer.opacity = newViewProps.opacity;
   }
 
