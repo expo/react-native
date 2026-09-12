@@ -144,18 +144,25 @@ class RNTesterFeatureFlagsOverrides : public facebook::react::ReactNativeFeature
 
 #endif
 
-  self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-
-  [self.reactNativeFactory startReactNativeWithModuleName:@"RNTesterApp"
-                                                 inWindow:self.window
-                                        initialProperties:[self prepareInitialProps]
-                                            launchOptions:launchOptions];
+  // The window, and React Native in it, are the scene's — see `SceneDelegate`.
+  self.launchOptions = launchOptions;
 
 #if !TARGET_OS_TV
   [[UNUserNotificationCenter currentNotificationCenter] setDelegate:self];
 #endif
 
   return YES;
+}
+
+/** The scene named in the manifest; one configuration, one window. */
+- (UISceneConfiguration *)application:(UIApplication *)application
+    configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
+                                   options:(UISceneConnectionOptions *)options
+{
+  UISceneConfiguration *configuration = [[UISceneConfiguration alloc] initWithName:@"Default"
+                                                                       sessionRole:connectingSceneSession.role];
+  configuration.delegateClass = NSClassFromString(@"SceneDelegate");
+  return configuration;
 }
 
 - (NSDictionary *)prepareInitialProps

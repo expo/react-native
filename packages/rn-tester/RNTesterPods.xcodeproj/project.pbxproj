@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0E4677692EF503800AA34C95 /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3F99F0A0E31D11152E310FD /* SceneDelegate.mm */; };
 		0EA618032BE537D3001875EF /* RNTesterBundle.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 0EA618022BE537D3001875EF /* RNTesterBundle.bundle */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		2DDEF0101F84BF7B00DBDF73 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2DDEF00F1F84BF7B00DBDF73 /* Images.xcassets */; };
@@ -34,6 +35,9 @@
 		AB0DE1F0000000000000E600 /* RCTViewPressObserverTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000E700 /* RCTViewPressObserverTests.mm */; };
 		AB0DE1F0000000000000E800 /* EXPHostChromeZOrderTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000E900 /* EXPHostChromeZOrderTests.mm */; };
 		AB0DE1F0000000000000EA00 /* EXPLineHeightInkTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */; };
+		AB0DE1F0000000000000FA00 /* EXPKeyboardGeometryTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000FB00 /* EXPKeyboardGeometryTests.mm */; };
+		AB0DE1F00000000000010A00 /* EXPScrollIndicatorInsetTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F00000000000010B00 /* EXPScrollIndicatorInsetTests.mm */; };
+		AB0DE1F00000000000010A01 /* EXPChatBubbleTailTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F00000000000010B01 /* EXPChatBubbleTailTests.mm */; };
 		C175B6D9ED9336FB66637943 /* libPods-RNTester.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C706D402EE4AF9BE838CBA9 /* libPods-RNTester.a */; };
 		CD10C7A5290BD4EB0033E1ED /* RCTEventEmitterTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CD10C7A4290BD4EB0033E1ED /* RCTEventEmitterTests.m */; };
 		E62F11832A5C6580000BF1C8 /* FlexibleSizeExampleView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 27F441E81BEBE5030039B79C /* FlexibleSizeExampleView.mm */; };
@@ -112,6 +116,7 @@
 		3FF60722627F93D8F62FA1E3 /* Pods-RNTesterUnitTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RNTesterUnitTests.release.xcconfig"; path = "Target Support Files/Pods-RNTesterUnitTests/Pods-RNTesterUnitTests.release.xcconfig"; sourceTree = "<group>"; };
 		4C706D402EE4AF9BE838CBA9 /* libPods-RNTester.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-RNTester.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51BC9297B6C3163C14532020 /* Pods-RNTester.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RNTester.release.xcconfig"; path = "Target Support Files/Pods-RNTester/Pods-RNTester.release.xcconfig"; sourceTree = "<group>"; };
+		5B149A4F61F242158DE6BE78 /* SceneDelegate.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = SceneDelegate.h; path = RNTester/SceneDelegate.h; sourceTree = "<group>"; };
 		5C60EB1B226440DB0018C04F /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = RNTester/AppDelegate.mm; sourceTree = "<group>"; };
 		8145AE05241172D900A3F8DA /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = RNTester/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		832F45BA2A8A6E1F0097B4E6 /* SwiftTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SwiftTest.swift; path = RNTester/SwiftTest.swift; sourceTree = "<group>"; };
@@ -131,6 +136,9 @@
 		AB0DE1F0000000000000E700 /* RCTViewPressObserverTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTViewPressObserverTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000E900 /* EXPHostChromeZOrderTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPHostChromeZOrderTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPLineHeightInkTests.mm; sourceTree = "<group>"; };
+		AB0DE1F0000000000000FB00 /* EXPKeyboardGeometryTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPKeyboardGeometryTests.mm; sourceTree = "<group>"; };
+		AB0DE1F00000000000010B00 /* EXPScrollIndicatorInsetTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPScrollIndicatorInsetTests.mm; sourceTree = "<group>"; };
+		AB0DE1F00000000000010B01 /* EXPChatBubbleTailTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPChatBubbleTailTests.mm; sourceTree = "<group>"; };
 		AC474BFB29BBD4A1002BDAED /* RNTester.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = RNTester.xctestplan; path = RNTester/RNTester.xctestplan; sourceTree = "<group>"; };
 		B0E70A8A05E03E868F8703FE /* Pods-RNTesterIntegrationTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RNTesterIntegrationTests.release.xcconfig"; path = "Target Support Files/Pods-RNTesterIntegrationTests/Pods-RNTesterIntegrationTests.release.xcconfig"; sourceTree = "<group>"; };
 		BCA18AEDF7FE87DD94B97367 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-RNTester/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
@@ -198,6 +206,7 @@
 		EE1000000000000000040100 /* EXPTextLinkInteractionTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPTextLinkInteractionTests.mm; sourceTree = "<group>"; };
 		F0D621C22BBB9E38005960AC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F1A0B1C23D4E5F6071829301 /* RCTTurboModuleArrayBufferTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTTurboModuleArrayBufferTests.mm; sourceTree = "<group>"; };
+		F3F99F0A0E31D11152E310FD /* SceneDelegate.mm */ = {isa = PBXFileReference; includeInIndex = 1; name = SceneDelegate.mm; path = RNTester/SceneDelegate.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -255,6 +264,8 @@
 				680759612239798500290469 /* Fabric */,
 				272E6B3A1BEA846C001FCF37 /* NativeExampleViews */,
 				1323F18D1C04ABAC0091BED0 /* Supporting Files */,
+				5B149A4F61F242158DE6BE78 /* SceneDelegate.h */,
+				F3F99F0A0E31D11152E310FD /* SceneDelegate.mm */,
 			);
 			name = RNTester;
 			sourceTree = "<group>";
@@ -407,7 +418,10 @@
 				AB0DE1F0000000000000CD00 /* EXPElementRadioHitAreaTests.mm */,
 				AB0DE1F0000000000000E700 /* RCTViewPressObserverTests.mm */,
 				AB0DE1F0000000000000E900 /* EXPHostChromeZOrderTests.mm */,
+				AB0DE1F00000000000010B00 /* EXPScrollIndicatorInsetTests.mm */,
+				AB0DE1F00000000000010B01 /* EXPChatBubbleTailTests.mm */,
 				AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */,
+				AB0DE1F0000000000000FB00 /* EXPKeyboardGeometryTests.mm */,
 				AB0DE1F0000000000000CF00 /* EXPHostChromeMountIndexTests.mm */,
 				AB0DE1F0000000000000D300 /* EXPPlatformTextRoleTests.mm */,
 				EE1000000000000000020100 /* EXPTextRoleMetricsTests.mm */,
@@ -874,6 +888,7 @@
 				5C60EB1C226440DB0018C04F /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				52CCF55B76A1C9F9DF44DA17 /* ExpoModulesProvider.swift in Sources */,
+				0E4677692EF503800AA34C95 /* SceneDelegate.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -907,7 +922,10 @@
 				AB0DE1F0000000000000CC00 /* EXPElementRadioHitAreaTests.mm in Sources */,
 				AB0DE1F0000000000000E600 /* RCTViewPressObserverTests.mm in Sources */,
 				AB0DE1F0000000000000E800 /* EXPHostChromeZOrderTests.mm in Sources */,
+				AB0DE1F00000000000010A00 /* EXPScrollIndicatorInsetTests.mm in Sources */,
+				AB0DE1F00000000000010A01 /* EXPChatBubbleTailTests.mm in Sources */,
 				AB0DE1F0000000000000EA00 /* EXPLineHeightInkTests.mm in Sources */,
+				AB0DE1F0000000000000FA00 /* EXPKeyboardGeometryTests.mm in Sources */,
 				AB0DE1F0000000000000CE00 /* EXPHostChromeMountIndexTests.mm in Sources */,
 				AB0DE1F0000000000000D200 /* EXPPlatformTextRoleTests.mm in Sources */,
 				EE1000000000000000020200 /* EXPTextRoleMetricsTests.mm in Sources */,
