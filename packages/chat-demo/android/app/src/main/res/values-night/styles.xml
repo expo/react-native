@@ -1,0 +1,6 @@
+<resources>
+    <!-- The night half of `values/styles.xml`: a dark page takes light icons. -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
