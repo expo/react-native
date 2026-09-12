@@ -180,6 +180,10 @@ internal constructor(
       heightMeasureSpec: Int,
       offsetX: Int,
       offsetY: Int,
+      safeAreaLeft: Int = 0,
+      safeAreaTop: Int = 0,
+      safeAreaRight: Int = 0,
+      safeAreaBottom: Int = 0,
   ) {
     surfaceHandler.setLayoutConstraints(
         widthMeasureSpec,
@@ -190,6 +194,10 @@ internal constructor(
         isRTL(context),
         context.resources.displayMetrics.density,
         getFontScale(context),
+        safeAreaLeft,
+        safeAreaTop,
+        safeAreaRight,
+        safeAreaBottom,
     )
   }
 

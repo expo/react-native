@@ -500,7 +500,11 @@ void FabricUIManagerBinding::setConstraints(
     jfloat offsetX,
     jfloat offsetY,
     jboolean isRTL,
-    jboolean doLeftAndRightSwapInRTL) {
+    jboolean doLeftAndRightSwapInRTL,
+    jfloat safeAreaLeft,
+    jfloat safeAreaTop,
+    jfloat safeAreaRight,
+    jfloat safeAreaBottom) {
   TraceSection s("FabricUIManagerBinding::setConstraints");
 
   auto scheduler = getScheduler();
@@ -522,6 +526,11 @@ void FabricUIManagerBinding::setConstraints(
       Point{.x = offsetX / pointScaleFactor_, .y = offsetY / pointScaleFactor_};
   context.pointScaleFactor = {pointScaleFactor_};
   context.swapLeftAndRightInRTL = doLeftAndRightSwapInRTL != 0;
+  context.environmentValues.safeAreaInsets = EdgeInsets{
+      .left = safeAreaLeft / pointScaleFactor_,
+      .top = safeAreaTop / pointScaleFactor_,
+      .right = safeAreaRight / pointScaleFactor_,
+      .bottom = safeAreaBottom / pointScaleFactor_};
   LayoutConstraints constraints = {};
   constraints.minimumSize = minimumSize;
   constraints.maximumSize = maximumSize;

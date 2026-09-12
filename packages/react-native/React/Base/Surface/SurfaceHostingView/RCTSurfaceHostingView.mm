@@ -68,7 +68,24 @@ RCT_NOT_IMPLEMENTED(-(nullable instancetype)initWithCoder : (NSCoder *)coder)
       self.bounds.size, _sizeMeasureMode, &minimumSize, &maximumSize);
   CGRect windowFrame = [self.window convertRect:self.frame fromView:self.superview];
 
-  [_surface setMinimumSize:minimumSize maximumSize:maximumSize viewportOffset:windowFrame.origin];
+  // The safe area travels with the constraints so that `env(safe-area-inset-*)` is an input to the
+  // surface's FIRST layout rather than a correction applied to a frame already on screen.
+  if ([_surface respondsToSelector:@selector(setMinimumSize:maximumSize:viewportOffset:safeAreaInsets:)]) {
+    [_surface setMinimumSize:minimumSize
+                 maximumSize:maximumSize
+              viewportOffset:windowFrame.origin
+              safeAreaInsets:self.safeAreaInsets];
+  } else {
+    [_surface setMinimumSize:minimumSize maximumSize:maximumSize viewportOffset:windowFrame.origin];
+  }
+}
+
+- (void)safeAreaInsetsDidChange
+{
+  [super safeAreaInsetsDidChange];
+  // The insets can move without the view being resized — a rotation, the status bar changing
+  // height during a call — and a surface whose layout depends on them has to be told.
+  [self setNeedsLayout];
 }
 
 - (CGSize)intrinsicContentSize

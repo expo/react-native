@@ -205,6 +205,29 @@ using namespace facebook::react;
 
 - (void)setMinimumSize:(CGSize)minimumSize maximumSize:(CGSize)maximumSize viewportOffset:(CGPoint)viewportOffset
 {
+  /*
+   * KEEP whatever safe area was last published, rather than zeroing it.
+   *
+   * This three-argument method is React Native's own entry point, and
+   * `-setMinimumSize:maximumSize:` and `-setSize:` both reach the layout through
+   * it. Passing `UIEdgeInsetsZero` here meant any caller that knows nothing
+   * about safe areas silently discarded the insets `RCTSurfaceHostingView` had
+   * published, and the next layout ran with `env(safe-area-inset-*)` at zero.
+   * The handler's own layout context already holds the last value, so the
+   * honest default is that one and not a constant.
+   */
+  auto insets = _surfaceHandler->getLayoutContext().environmentValues.safeAreaInsets;
+  [self setMinimumSize:minimumSize
+             maximumSize:maximumSize
+          viewportOffset:viewportOffset
+          safeAreaInsets:UIEdgeInsetsMake(insets.top, insets.left, insets.bottom, insets.right)];
+}
+
+- (void)setMinimumSize:(CGSize)minimumSize
+           maximumSize:(CGSize)maximumSize
+        viewportOffset:(CGPoint)viewportOffset
+        safeAreaInsets:(UIEdgeInsets)safeAreaInsets
+{
   auto layoutConstraints = _surfaceHandler->getLayoutConstraints();
   auto layoutContext = _surfaceHandler->getLayoutContext();
 
@@ -215,6 +238,15 @@ using namespace facebook::react;
     layoutContext.viewportOffset = RCTPointFromCGPoint(viewportOffset);
   }
   layoutContext.viewportSize = layoutConstraints.maximumSize;
+  // UIKit has already worked out how much of the hosting view the status bar,
+  // the notch and the home indicator cover, and it does so for the view rather
+  // than for the window — so a surface that is already inset, one inside a
+  // navigation controller say, correctly reports nothing at that edge.
+  layoutContext.environmentValues.safeAreaInsets = EdgeInsets{
+      .left = (Float)safeAreaInsets.left,
+      .top = (Float)safeAreaInsets.top,
+      .right = (Float)safeAreaInsets.right,
+      .bottom = (Float)safeAreaInsets.bottom};
 
   _surfaceHandler->constraintLayout(layoutConstraints, layoutContext);
 }
