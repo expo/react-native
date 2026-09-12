@@ -52,6 +52,7 @@ import Input from './Input';
 import Label from './Label';
 import {LIST_TAGS, makeList} from './List';
 import NativeButton from './NativeButton';
+import NativeSafeArea from './NativeSafeArea';
 import Picture from './Picture';
 import Quote from './Quote';
 import Select from './Select';
@@ -1047,6 +1048,14 @@ registerFrameworkElement('native-button', () =>
     uiViewClassName: 'native-button',
   }),
 );
+
+/*
+ * `<native:safearea>`, which keeps its children clear of the system's furniture.
+ *
+ * Plain JavaScript over `env(safe-area-inset-*)`; there is no element behind it.
+ * See the component.
+ */
+defineReactComponent('native', 'safearea', NativeSafeArea);
 
 /*
  * `<native:button>`, a button whose action is a menu the SYSTEM presents.
