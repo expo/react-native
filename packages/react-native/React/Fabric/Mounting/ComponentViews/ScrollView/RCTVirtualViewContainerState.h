@@ -7,16 +7,15 @@
 
 #import <Foundation/Foundation.h>
 
+#import "RCTVirtualViewContainerProtocol.h"
 #import "RCTVirtualViewProtocol.h"
-
-@class RCTScrollViewComponentView;
 
 NS_ASSUME_NONNULL_BEGIN
 @interface RCTVirtualViewContainerState : NSObject
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)new NS_UNAVAILABLE;
-- (instancetype)initWithScrollView:(RCTScrollViewComponentView *)scrollView NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithScrollView:(UIView<RCTVirtualViewScrollHost> *)scrollView NS_DESIGNATED_INITIALIZER;
 
 - (void)onChange:(id<RCTVirtualViewProtocol>)virtualView;
 - (void)remove:(id<RCTVirtualViewProtocol>)virtualView;
