@@ -43,7 +43,7 @@ import {Case} from './docs/groupingDocs';
 import {CARD_COLOR, SECONDARY_COLOR, SEPARATOR_COLOR} from './themed';
 import * as React from 'react';
 import {useState} from 'react';
-import {ScrollView, Text} from 'react-native';
+import {ScrollView} from 'react-native';
 
 import '@react-native/expo-intrinsics-poc';
 
@@ -54,11 +54,20 @@ const REPORT = {fontFamily: 'Menlo', fontSize: 11, marginTop: 6};
 
 function Section({children}) {
   return (
-    <ScrollView contentContainerStyle={{padding: 16, paddingBottom: 48}}>
-      <Text style={{fontSize: 13, color: SECONDARY_COLOR, lineHeight: 18}}>
-        {INTRO}
-      </Text>
-      {children}
+    <ScrollView>
+      <div style={{padding: 16, paddingBottom: 48}}>
+        <p
+          style={{
+            fontSize: 13,
+            color: SECONDARY_COLOR,
+            lineHeight: 18,
+            marginTop: 0,
+            marginBottom: 0,
+          }}>
+          {INTRO}
+        </p>
+        {children}
+      </div>
     </ScrollView>
   );
 }

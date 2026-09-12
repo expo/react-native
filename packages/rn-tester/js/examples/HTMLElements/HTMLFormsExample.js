@@ -38,7 +38,7 @@ import {
 } from './themed';
 import * as React from 'react';
 import {useCallback, useState} from 'react';
-import {ScrollView, Text, View} from 'react-native';
+import {ScrollView} from 'react-native';
 
 import '@react-native/expo-intrinsics-poc';
 
@@ -57,6 +57,7 @@ const LABEL = {
 };
 const NOTE = {
   fontSize: 11,
+  marginTop: 0,
   color: TERTIARY_COLOR,
   marginBottom: 4,
   lineHeight: 15,
@@ -93,6 +94,7 @@ const READOUT = {
  * `gap` would otherwise have to do for both axes at once.
  */
 const ROW = {
+  display: 'flex',
   flexDirection: 'row',
   alignItems: 'center',
   flexWrap: 'wrap',
@@ -131,6 +133,7 @@ const ROW = {
  * costs nothing visually: the rows already tiled at this pitch.
  */
 const RADIO_ROW = {
+  display: 'flex',
   flexDirection: 'row',
   alignItems: 'center',
   flexWrap: 'wrap',
@@ -150,12 +153,14 @@ const RADIO_ROW = {
  * box that was mostly margin.
  */
 const LIST_ROW = {
+  display: 'flex',
   flexDirection: 'row',
   alignItems: 'center',
   columnGap: 0,
 };
 
 const CONTROL_ROW = {
+  display: 'flex',
   flexDirection: 'row',
   alignItems: 'center',
   flexWrap: 'wrap',
@@ -242,24 +247,33 @@ const RADIO_GROUP_PAGE = {
 
 function Case({title, note, children, readout, grouped}) {
   return (
-    <View style={grouped === true ? GROUPED_PAGE : {marginBottom: 8}}>
-      <Text style={LABEL}>{title}</Text>
-      {note != null ? <Text style={NOTE}>{note}</Text> : null}
+    <section style={grouped === true ? GROUPED_PAGE : {marginBottom: 8}}>
+      <p style={LABEL}>{title}</p>
+      {note != null ? <p style={NOTE}>{note}</p> : null}
       {children}
-      {readout != null ? <Text style={READOUT}>{readout}</Text> : null}
-    </View>
+      {readout != null ? <p style={READOUT}>{readout}</p> : null}
+    </section>
   );
 }
 
 function Screen({intro, children}) {
   return (
-    <ScrollView contentContainerStyle={{padding: 16, paddingBottom: 48}}>
-      {intro != null ? (
-        <Text style={{fontSize: 13, color: SECONDARY_COLOR, lineHeight: 18}}>
-          {intro}
-        </Text>
-      ) : null}
-      {children}
+    <ScrollView>
+      <div style={{padding: 16, paddingBottom: 48}}>
+        {intro != null ? (
+          <p
+            style={{
+              fontSize: 13,
+              color: SECONDARY_COLOR,
+              lineHeight: 18,
+              marginTop: 0,
+              marginBottom: 0,
+            }}>
+            {intro}
+          </p>
+        ) : null}
+        {children}
+      </div>
     </ScrollView>
   );
 }
@@ -348,20 +362,20 @@ function TextAttributes() {
       <Case
         title="spellCheck and autoCorrect are two attributes"
         note="Two attributes, not one: spellcheck marks mistakes, autocorrect rewrites them. Type a misspelling into each. Android has a single flag for both, so the last two behave alike there.">
-        <View style={ROW}>
+        <div style={ROW}>
           <input placeholder="both on (the default)" />
           <input spellCheck={false} placeholder="spellCheck false" />
           <input autoCorrect="off" placeholder="autoCorrect off" />
-        </View>
+        </div>
       </Case>
 
       <Case
         title="autoCorrect is refused outright on url, email and password"
         note="Refused even where it is asked for: a corrected address or password is a value you never typed and cannot check.">
-        <View style={ROW}>
+        <div style={ROW}>
           <input type="email" autoCorrect="on" placeholder="email" />
           <input type="password" autoCorrect="on" placeholder="password" />
-        </View>
+        </div>
       </Case>
 
       <Case
@@ -369,10 +383,10 @@ function TextAttributes() {
         note="spellcheck comes from the nearest ancestor, autocorrect from the form. Both fields inherit from the form; the second overrides spellCheck.">
         {/* $FlowFixMe[prop-missing] intrinsic */}
         <form spellCheck={false} autoCorrect="off">
-          <View style={ROW}>
+          <div style={ROW}>
             <input placeholder="inherits both" />
             <input spellCheck={true} placeholder="overrides spellCheck" />
-          </View>
+          </div>
         </form>
       </Case>
 
@@ -567,34 +581,34 @@ function Checkables() {
         'there is a UISwitch. Both still announce as what they are.'
       }>
       <Case title="Controlled checkbox" readout={`checked: ${String(checked)}`}>
-        <View style={CONTROL_ROW}>
+        <div style={CONTROL_ROW}>
           <input
             type="checkbox"
             checked={checked}
             onChange={e => setChecked(e.nativeEvent.checked)}
           />
-          <Text style={CONTROL_LABEL}>Subscribe</Text>
-        </View>
+          <span style={CONTROL_LABEL}>Subscribe</span>
+        </div>
       </Case>
 
       <Case
         title="Uncontrolled checkbox — defaultChecked"
         note="Tracked in state internally so what is drawn and what would be submitted cannot drift apart.">
-        <View style={CONTROL_ROW}>
+        <div style={CONTROL_ROW}>
           <input type="checkbox" defaultChecked />
-          <Text style={CONTROL_LABEL}>Checked to begin with</Text>
-        </View>
+          <span style={CONTROL_LABEL}>Checked to begin with</span>
+        </div>
       </Case>
 
       <Case title="disabled">
-        <View style={CONTROL_ROW}>
+        <div style={CONTROL_ROW}>
           <input type="checkbox" disabled />
-          <Text style={{color: TERTIARY_COLOR}}>Disabled, off</Text>
-        </View>
-        <View style={CONTROL_ROW}>
+          <span style={{color: TERTIARY_COLOR}}>Disabled, off</span>
+        </div>
+        <div style={CONTROL_ROW}>
           <input type="checkbox" disabled defaultChecked />
-          <Text style={{color: TERTIARY_COLOR}}>Disabled, on</Text>
-        </View>
+          <span style={{color: TERTIARY_COLOR}}>Disabled, on</span>
+        </div>
       </Case>
 
       <Case
@@ -602,9 +616,9 @@ function Checkables() {
         title="A radio group, rendered as the platform's list"
         note="Plain radios in a plain container. iOS has no radio control, so a run of them is drawn as the list the platform does have, with the checkmark on the chosen row. Nothing here asks for a list. The card is the platform's grouped surface, so this case supplies the grouped page it needs — as Settings does."
         readout={`plan: ${plan}`}>
-        <View>
+        <div>
           {['free', 'pro'].map(id => (
-            <View key={id} style={LIST_ROW}>
+            <div key={id} style={LIST_ROW}>
               <input
                 type="radio"
                 name="plan"
@@ -615,17 +629,17 @@ function Checkables() {
               <span style={CONTROL_LABEL}>
                 {id === 'free' ? 'Free' : 'Pro — $9/mo'}
               </span>
-            </View>
+            </div>
           ))}
 
           {/* Ordinary content between the options. It is not a row: it ends one
               run and begins another, which is how a group interrupted by prose
               becomes two sections without anyone writing that rule. */}
-          <Text style={{...NOTE, marginTop: 8}}>
+          <p style={{...NOTE, marginTop: 8}}>
             Team plans are billed annually and include priority support.
-          </Text>
+          </p>
 
-          <View style={LIST_ROW}>
+          <div style={LIST_ROW}>
             <input
               type="radio"
               name="plan"
@@ -634,12 +648,12 @@ function Checkables() {
               onChange={() => setPlan('team')}
             />
             <span style={CONTROL_LABEL}>Team</span>
-          </View>
+          </div>
 
           {/* An arbitrary row. Two stacked lines and a trailing price, laid out
               by the author in their own flexbox — the cell takes it at the
               height Yoga measured rather than a height a list cell assumes. */}
-          <View style={LIST_ROW}>
+          <div style={LIST_ROW}>
             <input
               type="radio"
               name="plan"
@@ -647,15 +661,15 @@ function Checkables() {
               checked={plan === 'enterprise'}
               onChange={() => setPlan('enterprise')}
             />
-            <View style={{flex: 1, paddingVertical: 8}}>
-              <Text style={CONTROL_LABEL}>Enterprise</Text>
-              <Text style={{...NOTE, marginTop: 2}}>
+            <div style={{flex: 1, paddingVertical: 8}}>
+              <span style={CONTROL_LABEL}>Enterprise</span>
+              <p style={{...NOTE, marginTop: 2}}>
                 SSO, audit log, and a named contact.
-              </Text>
-            </View>
-            <Text style={CONTROL_LABEL}>$99</Text>
-          </View>
-        </View>
+              </p>
+            </div>
+            <span style={CONTROL_LABEL}>$99</span>
+          </div>
+        </div>
       </Case>
 
       <Case
@@ -668,7 +682,7 @@ function Checkables() {
           ['m', 'Medium'],
           ['l', 'Large'],
         ].map(([value, text]) => (
-          <View key={value} style={RADIO_ROW}>
+          <div key={value} style={RADIO_ROW}>
             <input
               type="radio"
               name="size"
@@ -677,7 +691,7 @@ function Checkables() {
               onChange={() => setSize(value)}
             />
             <span style={CONTROL_LABEL}>{text}</span>
-          </View>
+          </div>
         ))}
       </Case>
     </Screen>
@@ -906,13 +920,13 @@ function PickerControls() {
         title='type="color"'
         note="iOS mounts a real UIColorWell, which presents the system picker itself — spectrum, sliders and eyedropper. On Android, a swatch grid, because Android has no system colour picker in either the framework or Material."
         readout={`value: ${colour}`}>
-        <View style={ROW}>
+        <div style={ROW}>
           <input
             type="color"
             value={colour}
             onChange={e => setColour(e.nativeEvent.value)}
           />
-          <View
+          <div
             style={{
               width: 44,
               height: 28,
@@ -922,7 +936,7 @@ function PickerControls() {
               borderColor: SEPARATOR_COLOR,
             }}
           />
-        </View>
+        </div>
       </Case>
 
       <Case
@@ -1047,11 +1061,11 @@ function Buttons() {
       <Case
         title='<input type="submit"> and <input type="reset">'
         note='Their label is the value attribute, defaulting to "Submit" and "Reset" — HTML has no children on these.'>
-        <View style={{...ROW, marginTop: 4}}>
+        <div style={{...ROW, marginTop: 4}}>
           <input type="submit" />
           <input type="reset" />
           <input type="button" value="Custom label" />
-        </View>
+        </div>
       </Case>
 
       <Case title="Styled buttons">
@@ -1067,7 +1081,7 @@ function Buttons() {
             marginBottom: 8,
           }}>
           Filled
-        </button>
+        </button>{' '}
         {/* `backgroundColor` is stated because the user-agent fill stays
             otherwise — the same thing a browser does, where an outlined button
             keeps `ButtonFace` until the author clears it. An outlined button
@@ -1125,130 +1139,137 @@ function WholeForm() {
         'all of them — uncontrolled ones included. Reset recreates their native ' +
         'views, since defaultValue is applied only once.'
       }>
-      <View style={{marginTop: 12}}>
+      <div style={{marginTop: 12}}>
         <form action="/api/signup" method={method} onSubmit={onSubmit}>
-          <View style={{gap: 10}}>
-            <Text style={NOTE}>name</Text>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
+            <p style={NOTE}>name</p>
             <input name="name" defaultValue="Ada" placeholder="Name" />
 
-            <Text style={NOTE}>email</Text>
+            <p style={NOTE}>email</p>
             <input name="email" type="email" placeholder="you@example.com" />
 
-            <Text style={NOTE}>
+            <p style={NOTE}>
               plan (select — untouched submits the first option)
-            </Text>
+            </p>
             <select name="plan">
               <option value="free">Free</option>
               <option value="pro">Pro</option>
             </select>
 
-            <Text style={NOTE}>
+            <p style={NOTE}>
               newsletter (an unchecked box contributes nothing at all — not an
               empty string)
-            </Text>
-            <View style={CONTROL_ROW}>
+            </p>
+            <div style={CONTROL_ROW}>
               <input type="checkbox" name="newsletter" defaultChecked />
-              <Text style={CONTROL_LABEL}>Subscribe</Text>
-            </View>
+              <span style={CONTROL_LABEL}>Subscribe</span>
+            </div>
 
-            <Text style={NOTE}>
-              tier (radio — only the checked one is submitted)
-            </Text>
+            <p style={NOTE}>tier (radio — only the checked one is submitted)</p>
             {/* One row per radio. A run of radios draws as the platform's
                 grouped list, and a list row is a row: putting two of them side
                 by side in one flex row gave the list a single row with both
                 labels in it and no control at all — "MonthlyYearly" in a white
                 pill. */}
-            <View style={RADIO_GROUP_PAGE}>
+            <div style={RADIO_GROUP_PAGE}>
               {/* The rows get a level of their own: the platform's list card
                   is chrome drawn behind them and sized to their container, so
                   with the rows directly inside the page the card covered the
                   page's padding and the grey never showed. */}
-              <View>
-                <View style={RADIO_ROW}>
+              <div>
+                <div style={RADIO_ROW}>
                   <input
                     type="radio"
                     name="tier"
                     value="monthly"
                     defaultChecked
                   />
-                  <Text style={CONTROL_LABEL}>Monthly</Text>
-                </View>
-                <View style={RADIO_ROW}>
+                  <span style={CONTROL_LABEL}>Monthly</span>
+                </div>
+                <div style={RADIO_ROW}>
                   <input type="radio" name="tier" value="yearly" />
-                  <Text style={CONTROL_LABEL}>Yearly</Text>
-                </View>
-              </View>
-            </View>
+                  <span style={CONTROL_LABEL}>Yearly</span>
+                </div>
+              </div>
+            </div>
 
-            <Text style={NOTE}>notes</Text>
+            <p style={NOTE}>notes</p>
             <textarea name="notes" rows={2} placeholder="Anything else?" />
 
-            <Text style={NOTE}>
+            <p style={NOTE}>
               method — GET serialises the fields into the URL; POST encodes a
               body. Change it and submit again.
-            </Text>
+            </p>
             {/* Nameless on purpose: a control without a name is never
                 submitted (HTML §4.10.18.6), so the chooser can live inside
                 the form — where the submit row needs to be — without
                 touching the payload. Selection is fully controlled. */}
-            <View style={RADIO_GROUP_PAGE}>
-              <View>
+            <div style={RADIO_GROUP_PAGE}>
+              <div>
                 {['get', 'post'].map(m => (
-                  <View key={m} style={RADIO_ROW}>
+                  <div key={m} style={RADIO_ROW}>
                     <input
                       type="radio"
                       value={m}
                       checked={method === m}
                       onChange={() => setMethod(m)}
                     />
-                    <Text style={CONTROL_LABEL}>{m.toUpperCase()}</Text>
-                  </View>
+                    <span style={CONTROL_LABEL}>{m.toUpperCase()}</span>
+                  </div>
                 ))}
-              </View>
-            </View>
+              </div>
+            </div>
 
-            <View style={{...ROW, marginTop: 4}}>
+            <div style={{...ROW, marginTop: 4}}>
               <button type="submit">Submit</button>
               <button type="reset">Reset</button>
               <button type="button" onClick={() => setSubmitted(null)}>
                 Clear output
               </button>
-            </View>
-          </View>
+            </div>
+          </div>
         </form>
-      </View>
+      </div>
 
       {submitted != null ? (
-        <View
+        <div
           style={{
             marginTop: 12,
             padding: 12,
             backgroundColor: CARD_COLOR,
             borderRadius: 8,
           }}>
-          <Text style={{fontWeight: '600', marginBottom: 6}}>Submission</Text>
-          <Text style={{fontFamily: 'Menlo', fontSize: 11, lineHeight: 17}}>
+          <p style={{fontWeight: '600', marginTop: 0, marginBottom: 6}}>
+            Submission
+          </p>
+          <pre
+            style={{
+              fontFamily: 'Menlo',
+              fontSize: 11,
+              lineHeight: 17,
+              marginTop: 0,
+              marginBottom: 0,
+            }}>
             {`method:  ${submitted.method}\n` +
               `enctype: ${submitted.enctype}\n` +
               `url:     ${submitted.url}\n` +
               `body:    ${submitted.body}\n\n` +
               `entries:\n${submitted.entries}`}
-          </Text>
-        </View>
+          </pre>
+        </div>
       ) : (
-        <Text style={{...NOTE, marginTop: 12}}>
+        <p style={{...NOTE, marginTop: 12}}>
           Submit the form to see the FormData it produces.
-        </Text>
+        </p>
       )}
 
-      <Text style={{...NOTE, marginTop: 16}}>
+      <p style={{...NOTE, marginTop: 16}}>
         With no handler installed, a string action does nothing at all — no
         navigation and deliberately no network request. Firing a fetch and
         dropping the response is not "the default minus the navigation": it
         sends the user's data with no result and nothing to stop it happening
         twice. Handling belongs to whoever owns navigation.
-      </Text>
+      </p>
     </Screen>
   );
 }
@@ -1262,15 +1283,21 @@ function FunctionAction() {
         'React 19’s function action resets the uncontrolled fields on success only. ' +
         'An action that throws leaves what the user typed alone.'
       }>
-      <View style={{marginTop: 12, gap: 10}}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          marginTop: 12,
+          gap: 10,
+        }}>
         <form
           action={formData => {
             setLog(l => [`ok: ${entriesOf(formData)}`, ...l]);
           }}>
-          <View style={{gap: 10}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
             <input name="succeeds" defaultValue="cleared on success" />
             <button type="submit">Submit (succeeds)</button>
-          </View>
+          </div>
         </form>
 
         <form
@@ -1278,16 +1305,16 @@ function FunctionAction() {
             setLog(l => [`threw: ${entriesOf(formData)}`, ...l]);
             throw new Error('server unavailable');
           }}>
-          <View style={{gap: 10}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
             <input name="throws" defaultValue="kept when the action throws" />
             <button type="submit">Submit (throws)</button>
-          </View>
+          </div>
         </form>
-      </View>
+      </div>
 
-      <Text style={{...READOUT, marginTop: 12}}>
+      <p style={{...READOUT, marginTop: 12, whiteSpace: 'pre-line'}}>
         {log.length === 0 ? 'no submissions yet' : log.join('\n')}
-      </Text>
+      </p>
     </Screen>
   );
 }
@@ -1304,33 +1331,33 @@ function GroupingAndLabels() {
           {/* Neither row carries a bottom margin: the fieldset's symmetric UA
               padding is the vertical rhythm above and below, and each radio's
               44pt touch target supplies the space between. */}
-          <View style={RADIO_ROW}>
+          <div style={RADIO_ROW}>
             <input
               type="radio"
               name="delivery"
               value="standard"
               defaultChecked
             />
-            <Text style={CONTROL_LABEL}>Standard</Text>
-          </View>
-          <View style={RADIO_ROW}>
+            <span style={CONTROL_LABEL}>Standard</span>
+          </div>
+          <div style={RADIO_ROW}>
             <input type="radio" name="delivery" value="express" />
-            <Text style={CONTROL_LABEL}>Express</Text>
-          </View>
+            <span style={CONTROL_LABEL}>Express</span>
+          </div>
         </fieldset>
       </Case>
 
       <Case
         title="<label htmlFor> — names the control"
         note='Invisible on screen and the most common real accessibility failure in a form: without it a screen reader announces "switch, off" and never says what it switches. Turn on VoiceOver or TalkBack and compare the two below.'>
-        <View style={CONTROL_ROW}>
+        <div style={CONTROL_ROW}>
           <input id="remember" type="checkbox" />
           <label htmlFor="remember">Remember me</label>
-        </View>
-        <View style={CONTROL_ROW}>
+        </div>
+        <div style={CONTROL_ROW}>
           <input type="checkbox" />
-          <Text style={CONTROL_LABEL}>Unlabelled, for comparison</Text>
-        </View>
+          <span style={CONTROL_LABEL}>Unlabelled, for comparison</span>
+        </div>
       </Case>
 
       <Case
@@ -1349,25 +1376,40 @@ function GroupingAndLabels() {
       <Case
         title="A label names a select and a textarea too"
         note="Same association, any control.">
-        <label htmlFor="plan">Choose a plan</label>
+        <label htmlFor="plan">Choose a plan</label>{' '}
         <select id="plan">
           <option value="free">Free</option>
           <option value="pro">Pro</option>
         </select>
-        <View style={{height: 10}} />
+        <div style={{height: 10}} />
         <label htmlFor="notes">Your notes</label>
         <textarea id="notes" rows={2} placeholder="Anything else?" />
       </Case>
 
       <Case
+        title="Controls in a sentence sit on its baseline"
+        note="Each control's text lines up with the words around it, as in a browser: the control's baseline is its own text's, measured from the real control, not the bottom of its box.">
+        <p style={{marginTop: 0, lineHeight: 44}}>
+          Deliver on <input type="date" value="2026-06-15" /> at{' '}
+          <input type="time" value="09:30" /> to{' '}
+          <input type="text" placeholder="a name" style={{width: 110}} /> by{' '}
+          <select>
+            <option value="post">post</option>
+            <option value="courier">courier</option>
+          </select>
+          .
+        </p>
+      </Case>
+
+      <Case
         title="Deviation: tapping a label does not activate its control"
         note="Intentional — DOM-CSS-DEVIATION(label-activation). The association still names the control for assistive technology; the platforms' own 44pt/48dp controls are already the touch target.">
-        <View style={CONTROL_ROW}>
+        <div style={CONTROL_ROW}>
           <input id="tapme" type="checkbox" />
           <label htmlFor="tapme">
             Tapping this text does not toggle the box
           </label>
-        </View>
+        </div>
       </Case>
 
       <Case
