@@ -7,6 +7,8 @@
 
 package com.facebook.react.views.view
 
+import com.facebook.react.bridge.ReadableArray
+import android.view.inputmethod.InputMethodManager
 import android.content.Context
 import android.view.Gravity
 import android.view.MotionEvent
@@ -16,7 +18,10 @@ import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
+import com.facebook.react.bridge.Dynamic
+import com.facebook.react.uimanager.ViewProps
 import com.facebook.react.uimanager.annotations.ReactProp
+import com.facebook.react.uimanager.annotations.ReactPropGroup
 import com.facebook.react.uimanager.events.Event
 
 /**
@@ -89,6 +94,66 @@ internal class ElementTextAreaViewManager : SimpleViewManager<ElementTextAreaVie
     view.commitProps()
   }
 
+  /**
+   * The Yoga-computed padding, forwarded to the field — the same contract
+   * `ElementTextInputViewManager` implements, and missing here.
+   *
+   * A text input draws its text inside its OWN padding, so padding that stops at
+   * the shadow node lays the box out and leaves the text where the platform's
+   * default put it: a composer asking for sixteen points of inset drew its
+   * placeholder at Android's four.
+   */
+  override fun setPadding(view: ElementTextAreaView, left: Int, top: Int, right: Int, bottom: Int) {
+    view.setPadding(left, top, right, bottom)
+  }
+
+  /** The box props, which a field does not otherwise get — see [ElementFieldBox]. */
+  @ReactPropGroup(
+      names =
+          [
+              ViewProps.BORDER_WIDTH,
+              ViewProps.BORDER_LEFT_WIDTH,
+              ViewProps.BORDER_RIGHT_WIDTH,
+              ViewProps.BORDER_TOP_WIDTH,
+              ViewProps.BORDER_BOTTOM_WIDTH,
+              ViewProps.BORDER_START_WIDTH,
+              ViewProps.BORDER_END_WIDTH,
+          ],
+      defaultFloat = Float.NaN,
+  )
+  public fun setBorderWidth(view: ElementTextAreaView, index: Int, width: Float) {
+    ElementFieldBox.setBorderWidth(view, index, width)
+  }
+
+  @ReactPropGroup(
+      names =
+          [
+              ViewProps.BORDER_RADIUS,
+              ViewProps.BORDER_TOP_LEFT_RADIUS,
+              ViewProps.BORDER_TOP_RIGHT_RADIUS,
+              ViewProps.BORDER_BOTTOM_RIGHT_RADIUS,
+              ViewProps.BORDER_BOTTOM_LEFT_RADIUS,
+          ]
+  )
+  public fun setBorderRadius(view: ElementTextAreaView, index: Int, radius: Dynamic) {
+    ElementFieldBox.setBorderRadius(view, index, radius)
+  }
+
+  @ReactPropGroup(
+      names =
+          [
+              ViewProps.BORDER_COLOR,
+              ViewProps.BORDER_LEFT_COLOR,
+              ViewProps.BORDER_RIGHT_COLOR,
+              ViewProps.BORDER_TOP_COLOR,
+              ViewProps.BORDER_BOTTOM_COLOR,
+          ],
+      customType = "Color",
+  )
+  public fun setBorderColor(view: ElementTextAreaView, index: Int, color: Int?) {
+    ElementFieldBox.setBorderColor(view, index, color)
+  }
+
   @ReactProp(name = "value")
   public fun setValue(view: ElementTextAreaView, value: String?) {
     view.propValue = value
@@ -149,6 +214,37 @@ internal class ElementTextAreaViewManager : SimpleViewManager<ElementTextAreaVie
   public fun setAutoFocus(view: ElementTextAreaView, autoFocus: Boolean) {
     if (autoFocus) {
       view.requestFocus()
+    }
+  }
+
+
+  /**
+   * `focus()` and `blur()`, the pair the DOM has and this element did not.
+   *
+   * `autoFocus` covered only the element that knows at mount that it wants the
+   * keyboard. Nothing covered the ordinary case — a button that focuses a field,
+   * a form moving to the next invalid input — so nothing could focus one of
+   * these at all.
+   *
+   * `showSoftInput` as well as `requestFocus`: focus alone moves the cursor
+   * without necessarily bringing the keyboard, which is not what a caller asking
+   * for focus means.
+   */
+  override fun receiveCommand(view: ElementTextAreaView, commandId: String, args: ReadableArray?) {
+    when (commandId) {
+      "focus" -> {
+        view.requestFocus()
+        val imm =
+            view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.showSoftInput(view, 0)
+      }
+      "blur" -> {
+        view.clearFocus()
+        val imm =
+            view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(view.windowToken, 0)
+      }
+      else -> super.receiveCommand(view, commandId, args)
     }
   }
 

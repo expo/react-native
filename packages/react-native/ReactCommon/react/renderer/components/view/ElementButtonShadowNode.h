@@ -11,6 +11,7 @@
 
 #include <react/renderer/components/view/ViewEventEmitter.h>
 #include <react/renderer/components/view/ViewShadowNode.h>
+#include <react/renderer/components/view/AriaAttributes.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -21,6 +22,106 @@
 namespace facebook::react {
 
 extern const char ElementButtonComponentName[];
+
+/*
+ * One command in a button's `<menu>`.
+ *
+ * HTML says `<menu>` is "a list of commands", and that is exactly what a
+ * platform menu is — so a `<button>` whose content includes a `<menu>` is a
+ * button that opens one. A chat composer's `+` is this, and so is nearly every
+ * overflow button on either platform.
+ *
+ * The commands arrive as a prop for the same reason `<select>`'s options do: a
+ * platform menu is not a container whose children the app lays out. It is
+ * handed a list and draws it itself, in a window the app does not own, so child
+ * shadow nodes would be laying out views that are never on screen.
+ * `<button><menu><button id="x">Reset</button></menu></button>` — the shape
+ * HTML actually uses — works, because the tag resolves to a component that
+ * reads its children and passes them here.
+ *
+ * Deliberately NOT a checkable list. `<select>` is a value with a current
+ * choice and its menu marks that choice; a `<menu>` is a set of actions, and
+ * marking one of them "on" would say something untrue about what the button
+ * does.
+ */
+struct ElementMenuCommand {
+  /** What comes back on `onCommand`, and what identifies the child. */
+  std::string id{};
+  std::string label{};
+  bool disabled{false};
+  /** A destructive command is drawn in the platform's warning colour. */
+  bool destructive{false};
+  /**
+   * The command's glyph, as an image SOURCE rather than a name — the same
+   * `system:<symbol>` scheme `<img>` takes, so a menu and a picture say where a
+   * symbol comes from the same way.
+   */
+  std::string icon{};
+  /**
+   * Which GROUP the command belongs to, or empty for the menu's top level.
+   *
+   * A `<menu>` nested inside a `<menu>` is a group — which is what nesting
+   * already means — and every command in it carries the same key. Consecutive
+   * commands sharing one become an inline `UIMenu`, and a group whose commands
+   * ALL carry an icon is presented at `UIMenuElementSizeSmall`: UIKit's compact
+   * row of glyphs, where the native chat app puts its reactions.
+   *
+   * The row is chosen by the group rather than inferred from the absence of
+   * labels, which was the first rule here and was wrong twice. `preferredElementSize`
+   * is a property of a MENU and says nothing about its children's titles —
+   * Apple's own compact rows give each action both a title and an image. And
+   * inferring it from icon-only commands would have made an author drop the
+   * labels to get the row, which is the accessible name gone: a row of six
+   * reactions that VoiceOver cannot read.
+   */
+  std::string section{};
+
+  bool operator==(const ElementMenuCommand& rhs) const
+  {
+    return std::tie(id, label, disabled, destructive, icon, section) ==
+        std::tie(rhs.id, rhs.label, rhs.disabled, rhs.destructive, rhs.icon, rhs.section);
+  }
+  bool operator!=(const ElementMenuCommand& rhs) const
+  {
+    return !(*this == rhs);
+  }
+};
+
+inline void fromRawValue(const PropsParserContext& context, const RawValue& value, ElementMenuCommand& result)
+{
+  auto map = (std::unordered_map<std::string, RawValue>)value;
+
+  auto id = map.find("id");
+  if (id != map.end() && id->second.hasType<std::string>()) {
+    fromRawValue(context, id->second, result.id);
+  }
+  auto label = map.find("label");
+  if (label != map.end() && label->second.hasType<std::string>()) {
+    fromRawValue(context, label->second, result.label);
+  }
+  auto disabled = map.find("disabled");
+  if (disabled != map.end() && disabled->second.hasType<bool>()) {
+    fromRawValue(context, disabled->second, result.disabled);
+  }
+  auto destructive = map.find("destructive");
+  if (destructive != map.end() && destructive->second.hasType<bool>()) {
+    fromRawValue(context, destructive->second, result.destructive);
+  }
+  auto icon = map.find("icon");
+  if (icon != map.end() && icon->second.hasType<std::string>()) {
+    fromRawValue(context, icon->second, result.icon);
+  }
+  auto section = map.find("section");
+  if (section != map.end() && section->second.hasType<std::string>()) {
+    fromRawValue(context, section->second, result.section);
+  }
+
+  // A command with no `id` is identified by its label, which is the same rule
+  // HTML gives an `<option>` with no `value`.
+  if (result.id.empty()) {
+    result.id = result.label;
+  }
+}
 
 /*
  * The interactive box: what backs `<button>`, and what any element whose
@@ -64,6 +165,15 @@ class ElementButtonEventEmitter : public ViewEventEmitter {
    * evaluated without asking JavaScript, and what a press that slides off or is
    * stolen by a scroll has to report its way back out of.
    */
+  /** A command in this button's menu was chosen. */
+  void onElementCommand(const std::string& id) const {
+    dispatchEvent("elementCommand", [id](jsi::Runtime& runtime) {
+      auto payload = jsi::Object(runtime);
+      payload.setProperty(runtime, "id", jsi::String::createFromUtf8(runtime, id));
+      return payload;
+    });
+  }
+
   void onElementPressChange(bool pressed) const {
     dispatchEvent("elementPressChange", [pressed](jsi::Runtime& runtime) {
       auto payload = jsi::Object(runtime);
@@ -81,7 +191,19 @@ class ElementButtonProps final : public ViewProps, public NodeNameProvider {
       const ElementButtonProps& sourceProps,
       const RawProps& rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        // IN DECLARATION ORDER. A member initialiser list out of order is a
+        // `-Wreorder-ctor` error under the `-Werror` the Android and Fantom
+        // builds use, and merely a warning Xcode does not show — so it compiles
+        // on iOS and fails everywhere else, which is a confusing way to find
+        // out. `menuCommands` was appended here and declared near the top, and
+        // that is exactly what happened.
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
+        menuCommands(
+            convertRawProp(context, rawProps, "menuCommands", sourceProps.menuCommands, std::vector<ElementMenuCommand>{})),
+        appleVisualEffect(
+            convertRawProp(context, rawProps, "appleVisualEffect", sourceProps.appleVisualEffect, std::string{})),
+        appleVisualEffectFade(convertRawProp(
+            context, rawProps, "appleVisualEffectFade", sourceProps.appleVisualEffectFade, Float{0})),
         disabled(convertRawProp(context, rawProps, "disabled", sourceProps.disabled, false)),
         touchAction(convertRawProp(context, rawProps, "touchAction", sourceProps.touchAction, std::string{})),
         buttonStyle(convertRawProp(context, rawProps, "buttonStyle", sourceProps.buttonStyle, std::string{})),
@@ -112,6 +234,11 @@ class ElementButtonProps final : public ViewProps, public NodeNameProvider {
     if (!traitsAuthored) {
       accessibilityTraits = accessibilityTraits | AccessibilityTraits::Button;
     }
+
+    // ARIA, which is how an author of these elements spells accessibility.
+    // Applied last so it wins over the `accessibility*` props, and applied
+    // here rather than in the base so only elements pay for the reads.
+    applyAriaAttributes(context, rawProps, *this);
   }
 
   std::string domNodeName() const override
@@ -120,6 +247,28 @@ class ElementButtonProps final : public ViewProps, public NodeNameProvider {
   }
 
   std::string nodeName{};
+
+  /**
+   * The commands this button opens as a menu, or empty for an ordinary button.
+   *
+   * Non-empty turns a press into "open the menu" rather than "activate", which
+   * is what `showsMenuAsPrimaryAction` means on iOS and what an overflow button
+   * does on Android.
+   */
+  std::vector<ElementMenuCommand> menuCommands{};
+
+  /**
+   * The material behind this button, spelled as `-apple-visual-effect`.
+   *
+   * The same property the generic box has, on the element that most often
+   * wants it: the native composer's `+` is a circle of material with a glyph
+   * on it — a blurred, blended background under a plain glyph — and so is
+   * every glass control iOS 26
+   * puts in a bar. A button that had to be wrapped in a `<div>` to get one
+   * would be an element telling authors it is not really a box.
+   */
+  std::string appleVisualEffect{};
+  Float appleVisualEffectFade{0};
 
   /*
    * A disabled button is not merely unstyled: it must not recognize a press at
