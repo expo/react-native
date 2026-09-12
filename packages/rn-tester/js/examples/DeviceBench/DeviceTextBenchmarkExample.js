@@ -171,6 +171,44 @@ function articleBare(tag: string): Array<React.Node> {
   ];
 }
 
+// One line of the same total length, so the pair differs only in which path
+// draws it and a loss here is not in how the two handle line breaks
+function articleOneLine(tag: string): string {
+  const parts: Array<string> = [];
+  for (let i = 0; i < ROWS; i++) {
+    parts.push(line(i, tag));
+  }
+  return parts.join(' ');
+}
+
+function flatText(tag: string): Array<React.Node> {
+  return [
+    <View key="a" collapsable={false}>
+      <Text>{articleOneLine(tag)}</Text>
+    </View>,
+  ];
+}
+
+function flatBare(tag: string): Array<React.Node> {
+  return [
+    <View key="a" collapsable={false}>
+      {articleOneLine(tag)}
+    </View>,
+  ];
+}
+
+// A diagnostic tier, not a fair one: the same block without `pre-line`. The
+// bare block needs `whiteSpace: 'pre-line'` to render what <Text> renders, so
+// it also pays for white-space processing <Text> never does; this tier renders
+// the wrong thing on purpose so that cost has a price.
+function articleBareCollapsed(tag: string): Array<React.Node> {
+  return [
+    <View key="a" collapsable={false}>
+      {articleBody(tag)}
+    </View>,
+  ];
+}
+
 function siblingNativeTexts(tag: string): Array<React.Node> {
   const rows: Array<React.Node> = [];
   for (let i = 0; i < ROWS; i++) {
@@ -188,6 +226,9 @@ const TIERS: Array<[string, (tag: string) => Array<React.Node>]> = [
   ['messages: bare bodies', messagesWithBareBodies],
   ['article: one Text', articleWithText],
   ['article: bare block', articleBare],
+  ['article: bare, no pre-line (diagnostic)', articleBareCollapsed],
+  ['flat: one Text, no newlines', flatText],
+  ['flat: bare, no newlines', flatBare],
   ['community: sibling NativeText', siblingNativeTexts],
 ];
 

@@ -24,4 +24,11 @@ module.exports = {
       packageName: 'com.facebook.react.uiapp',
     },
   },
+  // The native navigator is linked on iOS only: react-native-screens 4.27 declares minSdkVersion 21
+  // against a prefab built for 24, and react-native-safe-area-context fails to compile its Kotlin, so
+  // autolinked they fail the whole Android build
+  dependencies: {
+    'react-native-screens': {platforms: {android: null}},
+    'react-native-safe-area-context': {platforms: {android: null}},
+  },
 };
