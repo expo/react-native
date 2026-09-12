@@ -403,6 +403,29 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // Background Repeat
   std::vector<BackgroundRepeat> backgroundRepeat{};
 
+  /**
+   * `background-attachment`, as a single value rather than one per layer.
+   *
+   * `true` is CSS's `fixed`: the background POSITIONING AREA becomes the
+   * viewport instead of this element's own box, so every element sharing the
+   * declaration is a window onto one background and pixels at the same screen
+   * position are the same colour. `false` is `scroll`, the default, where the
+   * background belongs to the box.
+   *
+   * This is what a chat's message bubbles are made of. The platform's own chat
+   * draws one gradient across the window and the balloons are windows onto it,
+   * which is why a bubble visibly changes shade as it climbs the screen and why
+   * two bubbles at different heights differ — a gradient layer that tracks each
+   * balloon's position.
+   *
+   * DOM-CSS-LIMITATION(background-attachment-single-layer): CSS takes a
+   * comma-separated list, one entry per background layer, and `local` is a third
+   * value (the positioning area is the element's SCROLLED content). Neither has
+   * come up, and a bool keeps the per-frame work on the paint path down to one
+   * branch.
+   */
+  bool backgroundAttachmentFixed{false};
+
   // MixBlendMode
   BlendMode mixBlendMode{BlendMode::Normal};
 

@@ -174,6 +174,19 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
     setBackgroundImage(view, backgroundImage)
   }
 
+  /**
+   * `background-attachment: fixed` — the background is measured against the
+   * viewport rather than this box, so boxes sharing one declaration are windows
+   * onto one background instead of each drawing the whole of it.
+   */
+  @ReactProp(name = ViewProps.EXPERIMENTAL_BACKGROUND_ATTACHMENT_FIXED)
+  public open fun setExperimentalBackgroundAttachmentFixed(
+      view: ReactViewGroup,
+      fixed: Boolean,
+  ) {
+    BackgroundStyleApplicator.setBackgroundAttachmentFixed(view, fixed)
+  }
+
   @ReactProp(name = ViewProps.BACKGROUND_SIZE, customType = "BackgroundSize")
   public open fun setBackgroundSize(view: ReactViewGroup, backgroundSize: ReadableArray?) {
     if (backgroundSize != null && backgroundSize.size() > 0) {
