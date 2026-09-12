@@ -293,6 +293,31 @@ internal object TextLayoutManager {
     return alignment
   }
 
+  /**
+   * The alignment a painted text RUN should be laid out with.
+   *
+   * A run inside a box is laid out by [ReactViewManager] rather than by a `<Text>`, and it
+   * built its `StaticLayout` without ever asking — so `text-align: right` on a `<p>` did
+   * nothing on Android while working on iOS, where the alignment rides the paragraph
+   * attributes to draw time. Same two helpers the `<Text>` path uses, so the two agree by
+   * construction rather than by two copies of the same rules.
+   */
+  @JvmStatic
+  public fun getRunAlignment(attributedString: MapBuffer, spanned: Spannable): Layout.Alignment =
+      getTextAlignment(attributedString, spanned, getTextAlignmentAttr(attributedString))
+
+  /**
+   * The justification a painted text RUN should be laid out with.
+   *
+   * `text-align: justify` is one value of the same attribute the alignment comes from, so it
+   * reaches a run for the same reason and was dropped for the same reason. The other
+   * paragraph-level settings — break strategy, hyphenation, font padding, ellipsis — are read
+   * from PARAGRAPH ATTRIBUTES, which a run does not carry, so they cannot be answered here.
+   */
+  @JvmStatic
+  public fun getRunJustificationMode(attributedString: MapBuffer): Int =
+      getTextJustificationMode(getTextAlignmentAttr(attributedString))
+
   @JvmStatic
   fun getTextGravity(attributedString: MapBuffer, spanned: Spannable): Int {
     val alignmentAttr = getTextAlignmentAttr(attributedString)

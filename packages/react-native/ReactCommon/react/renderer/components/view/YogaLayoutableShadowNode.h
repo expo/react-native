@@ -61,7 +61,17 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   void updateYogaChildren();
 
-  void updateYogaProps();
+  /*
+   * Rebuilds this node's Yoga style from its props.
+   *
+   * `environmentValues` is what any `env()` in that style resolves against. It
+   * is defaulted because most callers — the constructors, a props update —
+   * happen where no layout is in progress and no environment is in hand; they
+   * get each `env()`'s fallback, and the configure pass that runs before the
+   * next layout resolves it properly. Passing the environment rather than
+   * remembering it keeps four bytes per node instead of sixteen.
+   */
+  void updateYogaProps(const EnvironmentValues &environmentValues = {});
 
   /*
    * Sets layoutable size of node.
@@ -292,7 +302,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * committed.
    */
   void
-  configureYogaTree(float pointScaleFactor, Float fontSizeMultiplier, YGErrata defaultErrata, bool swapLeftAndRight);
+  configureYogaTree(
+      float pointScaleFactor,
+      Float fontSizeMultiplier,
+      YGErrata defaultErrata,
+      bool swapLeftAndRight,
+      const EnvironmentValues &environmentValues);
 
   /**
    * Return an errata based on a `layoutConformance` prop if given, otherwise
@@ -541,6 +556,22 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
 
 
+
+  /*
+   * Which environment the Yoga style currently in this node was resolved
+   * against — see `EnvironmentValues::generation`.
+   *
+   * Held per node, and compared rather than assumed, because the configure walk
+   * deliberately skips a subtree whose configuration has not changed. Without
+   * it a rotation would change the safe area and every `env()` below the first
+   * unchanged node would keep the value from before it.
+   *
+   * Zero on a node that has never been configured, and on a fresh CLONE, which
+   * is what makes a clone re-resolve: its constructor rebuilds the Yoga style
+   * from props, and props only carry each `env()`'s fallback.
+   * (Declared here so it packs into the padding the two flags below leave.)
+   */
+  uint32_t environmentGeneration_{0};
 
   /*
    * Whether the full Yoga subtree of this Node has been configured.

@@ -21,6 +21,7 @@
 #include <react/renderer/mounting/MountingOverrideDelegate.h>
 #include <react/renderer/mounting/ShadowViewMutation.h>
 #include <react/renderer/runtimescheduler/RuntimeScheduler.h>
+#include <react/renderer/runtimescheduler/RuntimeSchedulerCallInvoker.h>
 #include <react/renderer/uimanager/UIManager.h>
 #include <react/renderer/uimanager/UIManagerBinding.h>
 #include <mutex>
@@ -117,6 +118,20 @@ Scheduler::Scheduler(
       "Unexpected state: RuntimeScheduler was not provided.");
 
   runtimeScheduler_ = weakRuntimeScheduler.value().lock().get();
+
+  if (auto animationBackend = uiManager->unstable_getAnimationBackend().lock()) {
+    /*
+     * The backend's async flush needs the JS thread, and needs it whether or
+     * not `Animated` ever initialises — a CSS layout transition's end-values
+     * commit has to be pushed back to React's runtime shadow node references,
+     * or React's revision keeps describing the world before the transition
+     * and every revision merge re-asserts it. Registered here rather than
+     * waiting for Animated's TurboModule to hand one over.
+     */
+    animationBackend->registerJSInvoker(
+        std::make_shared<RuntimeSchedulerCallInvoker>(
+            weakRuntimeScheduler.value()));
+  }
 
   runtimeScheduler_->setShadowTreeRevisionConsistencyManager(
       uiManager->getShadowTreeRevisionConsistencyManager());

@@ -15,6 +15,7 @@
 #include <array>
 #include <bitset>
 #include <cmath>
+#include <limits>
 #include <optional>
 
 namespace facebook::react {
@@ -88,6 +89,56 @@ inline static bool operator==(const ViewEvents &lhs, const ViewEvents &rhs)
 enum class BackfaceVisibility : uint8_t { Auto, Visible, Hidden };
 
 enum class BorderCurve : uint8_t { Circular, Continuous };
+
+/**
+ * `corner-shape`, held as the SPEC'S OWN parameter.
+ *
+ * CSS Borders 4 gives every keyword an equivalent: `round` is
+ * `superellipse(1)`, `squircle` is `superellipse(2)`, `bevel` is
+ * `superellipse(0)`, `scoop` is `superellipse(-1)`, `notch` is
+ * `superellipse(-infinity)` and `square` is `superellipse(infinity)`. So one
+ * number says all of them and there is no enumeration to keep in step with the
+ * spec.
+ *
+ * The classic superellipse exponent is `n = 2^k`: `round` is `n = 2`, the
+ * circle; `squircle` is `n = 4`; `bevel` is `n = 1`, a straight cut; and the
+ * negative side is `n < 1`, which is concave.
+ *
+ * `border-radius` still says how BIG the corner is. This says what curve it is.
+ */
+struct CornerShape {
+  Float k{1};
+
+  bool isRound() const
+  {
+    return k == 1;
+  }
+  bool isSquircle() const
+  {
+    return k == 2;
+  }
+  /** The classic exponent, for anything that has to draw the curve itself. */
+  Float exponent() const
+  {
+    if (k == std::numeric_limits<Float>::infinity()) {
+      return std::numeric_limits<Float>::infinity();
+    }
+    if (k == -std::numeric_limits<Float>::infinity()) {
+      return 0;
+    }
+    return std::pow(Float{2}, k);
+  }
+};
+
+constexpr bool operator==(const CornerShape &lhs, const CornerShape &rhs)
+{
+  return lhs.k == rhs.k;
+}
+
+constexpr bool operator!=(const CornerShape &lhs, const CornerShape &rhs)
+{
+  return !(lhs == rhs);
+}
 
 enum class BorderStyle : uint8_t { Solid, Dotted, Dashed };
 
@@ -259,12 +310,14 @@ struct CascadedRectangleCorners {
 
 using BorderWidths = RectangleEdges<Float>;
 using BorderCurves = RectangleCorners<BorderCurve>;
+using CornerShapes = RectangleCorners<CornerShape>;
 using BorderStyles = RectangleEdges<BorderStyle>;
 using BorderColors = RectangleEdges<SharedColor>;
 using BorderRadii = RectangleCorners<CornerRadii>;
 
 using CascadedBorderWidths = CascadedRectangleEdges<Float>;
 using CascadedBorderCurves = CascadedRectangleCorners<BorderCurve>;
+using CascadedCornerShapes = CascadedRectangleCorners<CornerShape>;
 using CascadedBorderStyles = CascadedRectangleEdges<BorderStyle>;
 using CascadedBorderColors = CascadedRectangleEdges<SharedColor>;
 using CascadedBorderRadii = CascadedRectangleCorners<ValueUnit>;
@@ -274,6 +327,11 @@ struct BorderMetrics {
   BorderWidths borderWidths{};
   BorderRadii borderRadii{};
   BorderCurves borderCurves{};
+  /**
+   * `corner-shape`, resolved per corner. `round` unless an author said
+   * otherwise, which is the CSS initial value.
+   */
+  CornerShapes cornerShapes{};
   BorderStyles borderStyles{};
 
   bool operator==(const BorderMetrics &rhs) const = default;

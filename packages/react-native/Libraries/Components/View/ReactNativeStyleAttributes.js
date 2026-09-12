@@ -241,6 +241,17 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   experimental_backgroundRepeat: backgroundRepeatAttribute,
 
   /**
+   * BackgroundAttachment
+   *
+   * `true` is CSS's `fixed`: the background's positioning area is the viewport
+   * rather than the element's own box, so every element sharing the declaration
+   * is a window onto one background. Declared here or the style is dropped
+   * before it reaches the shadow node — a style key this table does not list
+   * does not survive, whatever the native side does with it.
+   */
+  experimental_backgroundAttachmentFixed: true,
+
+  /**
    * View
    */
   backfaceVisibility: true,
@@ -255,6 +266,26 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   borderBottomStartRadius: true,
   borderColor: colorAttribute,
   borderCurve: true,
+  /*
+   * `corner-shape` and its longhands (CSS Borders 4).
+   *
+   * `border-radius` says how big a corner is; this says what curve it is.
+   * `round` (the initial value) and `squircle` are drawn by the platform's own
+   * corner; the rest are clipped to a path.
+   */
+  cornerShape: true,
+  cornerTopLeftShape: true,
+  cornerTopRightShape: true,
+  cornerBottomLeftShape: true,
+  cornerBottomRightShape: true,
+  cornerTopStartShape: true,
+  cornerTopEndShape: true,
+  cornerBottomStartShape: true,
+  cornerBottomEndShape: true,
+  cornerStartStartShape: true,
+  cornerStartEndShape: true,
+  cornerEndStartShape: true,
+  cornerEndEndShape: true,
   borderEndColor: colorAttribute,
   borderEndEndRadius: true,
   borderEndStartRadius: true,

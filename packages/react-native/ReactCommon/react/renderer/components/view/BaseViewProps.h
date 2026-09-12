@@ -352,6 +352,14 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   CascadedBorderRadii borderRadii{};
   CascadedBorderColors borderColors{};
   CascadedBorderCurves borderCurves{}; // iOS only?
+  /**
+   * `corner-shape` and its longhands.
+   *
+   * `border-radius` says how big a corner is; this says what curve it is. The
+   * two values a layer can draw itself — `round` and `squircle` — are handed to
+   * Core Animation's own corner; everything else is clipped to a path.
+   */
+  CascadedCornerShapes cornerShapes{};
   CascadedBorderStyles borderStyles{};
 
   // Outline
@@ -392,6 +400,35 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
   // Background Repeat
   std::vector<BackgroundRepeat> backgroundRepeat{};
+
+  /**
+   * `background-attachment`, as a single value rather than one per layer.
+   *
+   * `true` is CSS's `fixed`: the background POSITIONING AREA becomes the
+   * viewport instead of this element's own box, so every element sharing the
+   * declaration is a window onto one background and pixels at the same screen
+   * position are the same colour. `false` is `scroll`, the default, where the
+   * background belongs to the box.
+   *
+   * This is what a chat's message bubbles are made of. The platform's own chat
+   * draws one gradient across the window and the balloons are windows onto it,
+   * which is why a bubble visibly changes shade as it climbs the screen and why
+   * two bubbles at different heights differ — a gradient layer that tracks each
+   * balloon's position.
+   *
+   * DOM-CSS-LIMITATION(background-attachment-single-layer): CSS takes a
+   * comma-separated list, one entry per background layer, and `local` is a third
+   * value (the positioning area is the element's SCROLLED content). Neither has
+   * come up, and a bool keeps the per-frame work on the paint path down to one
+   * branch.
+   *
+   * DOM-CSS-LIMITATION(ios-only-fixed-background): honoured on iOS only. The
+   * prop reaches the shadow node on both platforms and Android ignores it, so a
+   * fixed background there scrolls with its box. Closing it is an Android
+   * drawable that resolves its bounds against the window and is invalidated as
+   * the scroll moves — the same two pieces as the iOS path.
+   */
+  bool backgroundAttachmentFixed{false};
 
   // MixBlendMode
   BlendMode mixBlendMode{BlendMode::Normal};

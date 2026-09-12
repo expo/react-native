@@ -6,6 +6,9 @@
  */
 
 #import "RCTViewComponentView.h"
+
+#if TARGET_OS_IOS
+#endif
 #import <React/RCTSurfaceHostingProxyRootView.h>
 
 #import <CoreGraphics/CoreGraphics.h>
@@ -38,19 +41,53 @@
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
 
-// The generic-box component view (EXPElementBoxComponentView) self-registers
-// with the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
-#import <react/renderer/components/view/ElementBoxShadowNode.h>
 
 // Per-run text painting lives in its own file: it is a self-contained concept,
 // and this class is the one every React Native change touches.
+#import "EXPCornerShape.h"
 #import "EXPTextLinkInteraction.h"
 #import "RCTAnonymousTextRunView.h"
 
 using namespace facebook::react;
 
+/**
+ * How many views currently have `background-attachment: fixed`.
+ *
+ * The walk below has to pass through every view under a scroll, and it runs on
+ * every scroll frame — so an app that never writes the property should not pay
+ * for it at all. This is the switch: zero means there is nothing to re-place and
+ * the scroll view returns immediately.
+ *
+ * A count rather than a flag, because views come and go and the last one leaving
+ * has to turn it off. Maintained in `updateProps`, where the value changes.
+ *
+ * It can only ever over-count — a view destroyed while fixed never decrements —
+ * and over-counting costs a walk that finds nothing rather than a wrong pixel,
+ * which is the right way round for a number that exists to skip work.
+ */
+static NSInteger EXPFixedBackgroundCount = 0;
+
+BOOL EXPAnyFixedBackgrounds(void)
+{
+  return EXPFixedBackgroundCount > 0;
+}
+
+
 const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
+
+/**
+ * Who paints `background-color` — the layer, or something in front of it.
+ *
+ * CSS's paint order is backdrop, background, borders, content. A view's LAYER
+ * draws its background under every subview, so a box whose backdrop is a subview
+ * would paint the two the wrong way round. `EXPElementBoxComponentView`
+ * overrides this to hand the colour to its material instead and answer nil, and
+ * that is the only reason it is a method rather than a local.
+ */
+@interface RCTViewComponentView (EXPBackgroundOwner)
+- (nullable UIColor *)exp_backgroundColorForLayer:(nullable UIColor *)resolved;
+@end
 
 
 #if !TARGET_OS_TV
@@ -61,6 +98,12 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
 
 @implementation RCTViewComponentView {
   UIColor *_backgroundColor;
+  /*
+   * The clip for a `corner-shape` a layer cannot draw itself. Nil for `round`
+   * and `squircle`, which Core Animation's own corner covers — most views, and
+   * they pay nothing.
+   */
+  CAShapeLayer *_cornerShapeMask;
   CALayer *_backgroundColorLayer;
   __weak CALayer *_borderLayer;
   CALayer *_outlineLayer;
@@ -77,6 +120,9 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   NSMutableArray<UIView *> *_reactSubviews;
   NSSet<NSString *> *_Nullable _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN;
   UIView *_containerView;
+
+  /* The glass container's content view while one is holding this element's children. */
+  __weak UIView *_glassChildrenView;
   BOOL _useCustomContainerView;
   NSMutableSet<NSString *> *_accessibilityOrderNativeIDs;
   RCTSwiftUIContainerViewWrapper *_swiftUIWrapper;
@@ -223,13 +269,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 {
   [self rememberHostChromeSubview:view];
   // At the back, so no mounted child is ever covered by a backdrop.
-  [self.currentContainerView insertSubview:view atIndex:0];
+  [self.chromeContainerView insertSubview:view atIndex:0];
 }
 
 - (void)addHostChromeSubview:(UIView *)view behindSubview:(UIView *)sibling
 {
   [self rememberHostChromeSubview:view];
-  UIView *container = self.currentContainerView;
+  UIView *container = self.chromeContainerView;
   if (sibling.superview != container) {
     [container insertSubview:view atIndex:0];
     return;
@@ -243,7 +289,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 - (void)removeHostChromeSubview:(UIView *)view
 {
   [_hostChromeSubviews removeObject:view];
-  if (view.superview == self.currentContainerView) {
+  if (view.superview == self.chromeContainerView) {
     [view removeFromSuperview];
   }
 }
@@ -897,6 +943,18 @@ static CGRect RCTUntransformedFrame(UIView *view)
    */
   const auto &oldViewProps = static_cast<const ViewProps &>(*_props);
   const auto &newViewProps = static_cast<const ViewProps &>(*props);
+
+  /*
+   * The census of fixed backgrounds, kept here because here is where the value
+   * changes.
+   *
+   * A scroll view walks its whole subtree on every frame to re-place them, so an
+   * app that never writes the property must not pay for the walk. Counted rather
+   * than flagged: the last view to stop being fixed is what turns it off.
+   */
+  if (oldViewProps.backgroundAttachmentFixed != newViewProps.backgroundAttachmentFixed) {
+    EXPFixedBackgroundCount += newViewProps.backgroundAttachmentFixed ? 1 : -1;
+  }
 
   BOOL needsInvalidateLayer = NO;
   if (_propsAreStaleFromRecycle) {
@@ -1702,10 +1760,8 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   return effectiveContentView;
 }
 
-// This UIView is the UIView that holds all subviews. It is sometimes not self
-// because we want to render "overflow ink" that extends beyond the bounds of
-// the view and is not affected by clipping.
-- (UIView *)currentContainerView
+// See the header: the chrome container, told apart from the glass container.
+- (UIView *)chromeContainerView
 {
   UIView *effectiveContentView = self.effectiveContentView;
 
@@ -1735,6 +1791,135 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     }
   }
   return effectiveContentView;
+}
+
+// This UIView is the UIView that holds all subviews. It is sometimes not self
+// because we want to render "overflow ink" that extends beyond the bounds of
+// the view and is not affected by clipping.
+- (UIView *)currentContainerView
+{
+  UIView *container = self.chromeContainerView;
+
+  /*
+   * A glass CONTAINER holds the children rather than sitting behind them.
+   *
+   * Every other material is a backdrop: it goes in at index 0 so the author's
+   * own background and border paint over it, and the children are its
+   * siblings. A container draws nothing of its own — it exists to merge the
+   * glass of whatever is inside it into one shape — so the children belong
+   * inside it, in the effect view's `contentView`.
+   *
+   * Nothing is re-parented individually and no element changes shape. Measured
+   * with a UIKit control group before this was written: a glass button and a
+   * glass effect view each wrapped one level down still merge, so an element
+   * keeps its own view, its own glass and — the part that matters — its own
+   * touches, which are what drive `UIControl`'s glass press.
+   *
+   * The migration is the same shape as `_useCustomContainerView`'s above,
+   * because it is the same problem: children mounted before the container
+   * existed have to move into it, and back out if it goes away.
+   */
+  UIView *glassChildren = [self exp_glassChildContainerView];
+  if (glassChildren != nil) {
+    if (container != glassChildren) {
+      for (UIView *subview in [container.subviews copy]) {
+        // Chrome stays where it is. Moving it in would put the material inside
+        // its own effect view, which is a cycle in the layer tree and an
+        // immediate abort rather than a wrong pixel.
+        if (![_hostChromeSubviews containsObject:subview]) {
+          [glassChildren addSubview:subview];
+        }
+      }
+    }
+    _glassChildrenView = glassChildren;
+    return glassChildren;
+  }
+  if (_glassChildrenView != nil) {
+    // The keyword went away: hand the children back before the view does.
+    for (UIView *subview in [_glassChildrenView.subviews copy]) {
+      [container addSubview:subview];
+    }
+    _glassChildrenView = nil;
+  }
+
+  return container;
+}
+
+/**
+ * The walk itself, which must pass THROUGH views that are not component views.
+ *
+ * It used to descend only into `RCTViewComponentView`s, and that stopped it
+ * dead at the first scroll view: a scroll's React children live inside a
+ * `UIScrollView` and its content view, neither of which is one. So the fixed
+ * backgrounds that most need re-placing — the ones actually scrolling — were
+ * the only ones never reached, and a chat's balloons carried their shade down
+ * the screen with them instead of the shade belonging to the screen.
+ *
+ * Measured rather than reasoned about: with the walk stopping short, a balloon
+ * that moved 210 points down the transcript kept `rgb(81, 193, 250)` exactly;
+ * with it passing through, the colour at a given screen position is the same
+ * before and after a scroll, which is what `fixed` means.
+ */
+static void EXPRepositionFixedBackgroundsIn(UIView *view)
+{
+  if ([view isKindOfClass:[RCTViewComponentView class]]) {
+    // Component views continue the walk themselves, so they also get their own
+    // invalidation without this function having to know how to do it.
+    [(RCTViewComponentView *)view exp_repositionFixedBackgrounds];
+    return;
+  }
+  for (UIView *subview in view.subviews) {
+    EXPRepositionFixedBackgroundsIn(subview);
+  }
+}
+
+/**
+ * Re-place any `background-attachment: fixed` background under this view.
+ *
+ * A fixed background is measured against the viewport, and scrolling moves the
+ * element through the viewport without changing anything the mounting layer
+ * reports — no new props, no new layout metrics, nothing that would repaint.
+ * So the scroll view drives this directly, which is the same shape as CSS: a
+ * fixed background inside a scroller is repainted as it scrolls, and is
+ * famously the expensive part of the feature.
+ *
+ * Depth-first and guarded on the flag, so a tree with no fixed backgrounds in
+ * it costs one boolean test per view. Views that ARE fixed repaint only their
+ * background layers.
+ */
+- (void)exp_repositionFixedBackgrounds
+{
+  if (_props != nullptr && _props->backgroundAttachmentFixed) {
+    [self invalidateLayer];
+  }
+  for (UIView *subview in self.subviews) {
+    EXPRepositionFixedBackgroundsIn(subview);
+  }
+}
+
+/** The default: the layer paints it, which is every box without a backdrop. */
+- (nullable UIColor *)exp_backgroundColorForLayer:(nullable UIColor *)resolved
+{
+  return resolved;
+}
+
+/*
+ * The default for both: no material, so no container to hold children and no
+ * host to tell apart from them. Overridden by the element box, which is the
+ * only component view that has one.
+ */
+- (nullable UIView *)exp_glassChildContainerView
+{
+  return nil;
+}
+
+- (void)exp_setPeekShapeProvider:(__unused UIBezierPath *_Nullable (^_Nullable)(void))provider
+{
+}
+
+- (nullable UIView *)exp_materialHostView
+{
+  return nil;
 }
 
 - (void)invalidateLayer
@@ -1813,6 +1998,9 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 
   // background color
   UIColor *backgroundColor = [_backgroundColor resolvedColorWithTraitCollection:self.traitCollection];
+  // A box with a backdrop does not paint its own background here — see
+  // `-exp_backgroundColorForLayer:`.
+  backgroundColor = [self exp_backgroundColorForLayer:backgroundColor];
   // The reason we sometimes do not set self.layer's backgroundColor is because
   // we want to support non-uniform border radii, which apple does not natively
   // support. To get this behavior we need to create a CGPath in the shape that
@@ -1982,6 +2170,24 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     // background-clip: border-box
     CGRect backgroundPaintingArea = self.layer.bounds;
 
+    /*
+     * `background-attachment: fixed` — the positioning area is the VIEWPORT.
+     *
+     * The painting area is untouched, so the element still clips the background
+     * to its own shape; only the box the gradient is measured and placed against
+     * changes. That single substitution is the whole of what makes every
+     * element sharing a declaration a window onto one background.
+     *
+     * Expressed in this view's own coordinates, which is what makes it move
+     * with the view for free — as the view travels up a scroll, the window's
+     * rect in its space travels down by the same amount, so the gradient stays
+     * where it is on screen. It still has to be RECOMPUTED as that happens; see
+     * `-exp_repositionFixedBackgrounds`, which the scroll view drives.
+     */
+    if (_props->backgroundAttachmentFixed && self.window != nil) {
+      backgroundPositioningArea = [self convertRect:self.window.bounds fromView:self.window];
+    }
+
     size_t imageIndex = _props->backgroundImage.size() - 1;
     // iterate in reverse to match CSS specification
     for (const auto &backgroundImage : std::ranges::reverse_view(_props->backgroundImage)) {
@@ -2093,6 +2299,72 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
       self.currentContainerView.layer.cornerRadius = borderMetrics.borderRadii.topLeft.horizontal;
     }
   }
+
+  [self _applyCornerShape:borderMetrics toLayer:layer];
+}
+
+/**
+ * `corner-shape`, applied the cheapest way each value allows.
+ *
+ * `round` needs nothing: a layer's corner is already circular. `squircle` is
+ * Core Animation's own continuous corner — the exact curve, drawn by the
+ * platform, and it keeps the border and the shadow because nothing is clipped.
+ * Everything else has to be a mask, because a layer's corner can be those two
+ * and nothing else.
+ *
+ * DOM-CSS-LIMITATION(corner-shape-ios-only): this is the only implementation.
+ * Android's renderer draws its corners from the border radii alone and has no
+ * equivalent of this file, so every value there renders as `round` — silently,
+ * because a shape that is not understood is not a shape that fails. Closing it
+ * means the same two pieces on the other side: the superellipse path, and a
+ * clip for the values a platform corner cannot express. The property parses and
+ * resolves identically on both — the C++ is shared — so it is the drawing and
+ * only the drawing that is missing.
+ *
+ * DOM-CSS-LIMITATION(corner-shape-clips-border-and-shadow): under a mask the
+ * BORDER and the SHADOW still follow the box's rounded rectangle, because React
+ * Native draws both from the border radii rather than from a shape. A `bevel`
+ * or a `scoop` therefore clips the background and the content correctly and
+ * leaves a border tracing the old corner. Closing it means teaching the border
+ * drawing the same path, which is the same work again in three more places.
+ */
+- (void)_applyCornerShape:(const BorderMetrics &)metrics toLayer:(CALayer *)layer
+{
+  const auto &shapes = metrics.cornerShapes;
+  const BOOL allRound = shapes.topLeft.isRound() && shapes.topRight.isRound() && shapes.bottomLeft.isRound() &&
+      shapes.bottomRight.isRound();
+  const BOOL allSquircle = shapes.topLeft.isSquircle() && shapes.topRight.isSquircle() &&
+      shapes.bottomLeft.isSquircle() && shapes.bottomRight.isSquircle();
+
+  if (allRound || allSquircle) {
+    // Written both ways round, not just for the squircle: a recycled view whose
+    // shape went back to `round` would otherwise keep the continuous corner the
+    // last occupant asked for.
+    layer.cornerCurve =
+        allSquircle ? kCACornerCurveContinuous : CornerCurveFromBorderCurve(metrics.borderCurves.topLeft);
+    // Only take back a mask this method installed: a balloon's is not ours.
+    if (_cornerShapeMask != nil && layer.mask == _cornerShapeMask) {
+      layer.mask = nil;
+    }
+    _cornerShapeMask = nil;
+    return;
+  }
+
+  if (_cornerShapeMask == nil) {
+    _cornerShapeMask = [CAShapeLayer layer];
+    _cornerShapeMask.fillColor = UIColor.blackColor.CGColor;
+  }
+  // Actions off: the path is animatable and this runs during layout, so a view
+  // that changed size would morph a beat behind itself.
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+  _cornerShapeMask.frame = layer.bounds;
+  _cornerShapeMask.path = EXPCornerShapePath(layer.bounds, metrics).CGPath;
+  // A mask and the layer's own rounding would intersect, and the intersection is
+  // the rounding — which is how the balloons spent a day looking circular.
+  layer.cornerRadius = 0;
+  layer.mask = _cornerShapeMask;
+  [CATransaction commit];
 }
 
 // Shapes the given layer to match the shape of this View's layer. This is
@@ -2645,107 +2917,6 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 }
 
 #endif
-
-@end
-
-/*
- * The box-backed flavor of a DOM element (`element-box`): a plain view, since
- * everything that distinguishes it lives in layout, not in drawing. The
- * renderer swaps an element onto this component when its display generates a
- * box — see ElementBoxShadowNode.h.
- */
-@interface EXPElementBoxComponentView : RCTViewComponentView
-@end
-
-@implementation EXPElementBoxComponentView {
-  EXPTextLinkInteraction *_boxLinkInteraction;
-}
-
-- (instancetype)initWithFrame:(CGRect)frame
-{
-  if (self = [super initWithFrame:frame]) {
-    _props = ElementBoxShadowNode::defaultSharedProps();
-  }
-  return self;
-}
-
-/*
- * An `<a>` that generates a BOX gets the same platform interaction its inline
- * form gets — press and hold to lift it, with Open / Copy / Share.
- *
- * What differs is the shape of the lift, and it is right that it differs. An
- * inline link lifts its glyphs, because that is what the link is; a block link
- * lifts the WHOLE BOX, which is what iOS does to a tappable row or card. So the
- * resolver names this view as the link's view and its bounds as the link's
- * shape, and the lift then wears the box's own corners and colour.
- */
-- (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps
-{
-  [super updateProps:props oldProps:oldProps];
-
-  const auto &newProps = static_cast<const ElementBoxProps &>(*props);
-  const std::string &href = newProps.href;
-  if (href.empty()) {
-    [_boxLinkInteraction setInstalled:NO];
-    return;
-  }
-
-  if (_boxLinkInteraction == nil) {
-    __weak __typeof(self) weakSelf = self;
-    _boxLinkInteraction = [[EXPTextLinkInteraction alloc]
-        initWithView:self
-            resolver:^id _Nullable(
-                CGPoint point, NSMutableArray<NSValue *> *rects, UIView *_Nullable *_Nullable outLinkView) {
-              __typeof(self) strongSelf = weakSelf;
-              if (strongSelf == nil || !CGRectContainsPoint(strongSelf.bounds, point)) {
-                return nil;
-              }
-              // Re-read from props each time rather than capturing: a recycled
-              // view keeps this block and is handed a different anchor.
-              const auto &current = static_cast<const ElementBoxProps &>(*strongSelf->_props);
-              if (current.href.empty()) {
-                return nil;
-              }
-              // The box IS the link, so it is both the shape that lifts and the
-              // view that lifts. Naming itself is not optional: a resolver that
-              // reports no view resolves no link, and the anchor would offer no
-              // menu at all.
-              [rects addObject:[NSValue valueWithCGRect:strongSelf.bounds]];
-              if (outLinkView != nullptr) {
-                *outLinkView = strongSelf;
-              }
-              NSString *string = [NSString stringWithUTF8String:current.href.c_str()];
-              return [NSURL URLWithString:string] ?: string;
-            }];
-  }
-  [_boxLinkInteraction setInstalled:YES];
-}
-
-- (void)prepareForRecycle
-{
-  [_boxLinkInteraction setInstalled:NO];
-  [super prepareForRecycle];
-}
-
-- (void)didMoveToWindow
-{
-  [super didMoveToWindow];
-  if (self.window == nil) {
-    // Same rule as the text case above: a box that has left the screen must not
-    // still be lifted above it.
-    [_boxLinkInteraction dismissMenuIfPresenting];
-  }
-}
-
-+ (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
-{
-  return facebook::react::concreteComponentDescriptorProvider<facebook::react::ElementBoxComponentDescriptor>();
-}
-
-+ (void)load
-{
-  [[RCTComponentViewFactory currentComponentViewFactory] registerComponentViewClass:self];
-}
 
 @end
 

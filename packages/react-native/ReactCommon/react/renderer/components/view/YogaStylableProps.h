@@ -9,6 +9,7 @@
 
 #include <yoga/style/Style.h>
 
+#include <react/renderer/components/view/EnvironmentDependency.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
@@ -38,7 +39,23 @@ class YogaStylableProps : public Props {
   void
   setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
 
+  /*
+   * The style with every `env()` on it resolved against `environmentValues`.
+   *
+   * Returns `yogaStyle` untouched when there are none, which is almost always,
+   * so a caller can ask unconditionally without paying for a copy.
+   */
+  yoga::Style resolveEnvironment(const EnvironmentValues &environmentValues) const;
+
 #pragma mark - Props
+
+  /*
+   * Declared FIRST because `yogaStyle`'s initialiser fills it: the conversion
+   * that parses the style is also what discovers the `env()`s in it, and
+   * members are initialised in declaration order.
+   */
+  std::vector<EnvironmentDependency> environmentDependencies{};
+
   yoga::Style yogaStyle{};
 
   // Duplicates of existing properties with different names, taking

@@ -316,6 +316,25 @@ BaseViewProps::BaseViewProps(
               .all = "borderCurve"},
           sourceProps.borderCurves,
           {})),
+      cornerShapes(convertRawProp(
+          context,
+          rawProps,
+          CascadedRectangleCornersNames{
+              .topLeft = "cornerTopLeftShape",
+              .topRight = "cornerTopRightShape",
+              .bottomLeft = "cornerBottomLeftShape",
+              .bottomRight = "cornerBottomRightShape",
+              .topStart = "cornerTopStartShape",
+              .topEnd = "cornerTopEndShape",
+              .bottomStart = "cornerBottomStartShape",
+              .bottomEnd = "cornerBottomEndShape",
+              .endEnd = "cornerEndEndShape",
+              .endStart = "cornerEndStartShape",
+              .startEnd = "cornerStartEndShape",
+              .startStart = "cornerStartStartShape",
+              .all = "cornerShape"},
+          sourceProps.cornerShapes,
+          {})),
       borderStyles(convertRawProp(
           context,
           rawProps,
@@ -428,6 +447,12 @@ BaseViewProps::BaseViewProps(
           "experimental_backgroundRepeat",
           sourceProps.backgroundRepeat,
           {})),
+      backgroundAttachmentFixed(convertRawProp(
+          context,
+          rawProps,
+          "experimental_backgroundAttachmentFixed",
+          sourceProps.backgroundAttachmentFixed,
+          false)),
       mixBlendMode(convertRawProp(
           context,
           rawProps,
@@ -684,6 +709,8 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE(
         backgroundPosition, "experimental_backgroundPosition");
     RAW_SET_PROP_SWITCH_CASE(backgroundRepeat, "experimental_backgroundRepeat");
+    RAW_SET_PROP_SWITCH_CASE(
+        backgroundAttachmentFixed, "experimental_backgroundAttachmentFixed");
     RAW_SET_PROP_SWITCH_CASE_BASIC(shadowColor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(shadowOffset);
     RAW_SET_PROP_SWITCH_CASE_BASIC(shadowOpacity);
@@ -749,6 +776,7 @@ void BaseViewProps::setProp(
     SET_CASCADED_RECTANGLE_CORNERS(borderRadii, "border", "Radius", value);
     SET_CASCADED_RECTANGLE_EDGES(borderColors, "border", "Color", value);
     SET_CASCADED_RECTANGLE_CORNERS(borderCurves, "border", "Curve", value);
+    SET_CASCADED_RECTANGLE_CORNERS(cornerShapes, "corner", "Shape", value);
     SET_CASCADED_RECTANGLE_EDGES(borderStyles, "border", "Style", value);
   }
 }
@@ -862,6 +890,7 @@ BorderMetrics BaseViewProps::resolveBorderMetrics(
       .borderWidths = borderWidths.resolve(isRTL, 0),
       .borderRadii = ensureNoOverlap(radii, layoutMetrics.frame.size),
       .borderCurves = borderCurves.resolve(isRTL, BorderCurve::Circular),
+      .cornerShapes = cornerShapes.resolve(isRTL, CornerShape{}),
       .borderStyles = borderStyles.resolve(isRTL, BorderStyle::Solid),
   };
 }
@@ -1002,6 +1031,38 @@ void BaseViewProps::applyInheritedTextAttributes(
 #pragma mark - DebugStringConvertible
 
 #if RN_DEBUG_STRING_CONVERTIBLE
+namespace {
+/*
+ * The four resolved corner shapes, as the spec's `k` clockwise from top-left.
+ *
+ * This exists so `corner-shape` is OBSERVABLE. Fantom can only assert on props
+ * that reach `getDebugProps`, and the shape's whole journey — style attribute,
+ * view config, `fromRawValue`, the cascade — is silent from JS otherwise: a
+ * property dropped anywhere along it renders exactly like the initial value.
+ * The drawing itself still has to be checked on a device; this pins everything
+ * up to it.
+ *
+ * Resolved rather than cascaded, so the longhand-to-shorthand fallback is
+ * covered too. LTR, because none of the four is direction-dependent — the
+ * cascade's `resolve` takes the flag for the logical *edges*, and shapes have
+ * none.
+ */
+std::string cornerShapesString(const CascadedCornerShapes& cascaded) {
+  const auto resolved = cascaded.resolve(false, CornerShape{});
+  const auto one = [](const CornerShape& shape) {
+    if (shape.k == std::numeric_limits<Float>::infinity()) {
+      return std::string{"square"};
+    }
+    if (shape.k == -std::numeric_limits<Float>::infinity()) {
+      return std::string{"notch"};
+    }
+    return toString((float)shape.k);
+  };
+  return one(resolved.topLeft) + " " + one(resolved.topRight) + " " +
+      one(resolved.bottomRight) + " " + one(resolved.bottomLeft);
+}
+} // namespace
+
 SharedDebugStringConvertibleList BaseViewProps::getDebugProps() const {
   const auto& defaultBaseViewProps = BaseViewProps();
 
@@ -1026,6 +1087,10 @@ SharedDebugStringConvertibleList BaseViewProps::getDebugProps() const {
               "backgroundImage",
               backgroundImage,
               defaultBaseViewProps.backgroundImage),
+          debugStringConvertibleItem(
+              "cornerShape",
+              cornerShapesString(cornerShapes),
+              cornerShapesString(defaultBaseViewProps.cornerShapes)),
       };
 }
 #endif
