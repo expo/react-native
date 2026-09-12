@@ -205,13 +205,24 @@ void EXPHoldContextMenuGlassDown(UIWindow *window, id<UIContextMenuInteractionAn
    */
   __weak UIWindow *weakWindow = window;
   __weak EXPDimmedGlass *weakDimmed = dimmed;
-  __block NSUInteger frames = 0;
+  __block CFTimeInterval firstTick = 0;
   __block CADisplayLink *displayLink = nil;
   EXPGlassSweep *sweep = [EXPGlassSweep new];
   sweep.tick = ^{
     UIWindow *stillThere = weakWindow;
     EXPDimmedGlass *stillDimming = weakDimmed;
-    if (over || stillThere == nil || stillDimming == nil || ++frames > 240) {
+    /*
+     * The backstop is four SECONDS, read off the link's own clock, and not a
+     * count of frames. The comment above already says why — a count is a
+     * duration, and a duration is wrong on half the hardware — but the backstop
+     * itself was still written as 240 frames, which is four seconds at 60Hz and
+     * two at 120Hz. Now it is four on both.
+     */
+    if (firstTick == 0) {
+      firstTick = displayLink.timestamp;
+    }
+    const BOOL waitedTooLong = displayLink.timestamp - firstTick > 4.0;
+    if (over || stillThere == nil || stillDimming == nil || waitedTooLong) {
       [displayLink invalidate];
       displayLink = nil;
       [stillDimming restore];
@@ -220,5 +231,16 @@ void EXPHoldContextMenuGlassDown(UIWindow *window, id<UIContextMenuInteractionAn
     [stillDimming dim:EXPMenuGlassIn(stillThere)];
   };
   displayLink = [CADisplayLink displayLinkWithTarget:sweep selector:@selector(fire)];
+  /*
+   * Ask for the display's rate. A bare link runs at 60 on a ProMotion screen,
+   * so the dim would step every OTHER frame of a collapse that UIKit is
+   * animating at 120 — the same two-clocks fault as the scroll rise and the CSS
+   * transition engine. This sweep FOLLOWS an animator, so being half its rate is
+   * visible directly as the artefact lagging the menu it belongs to.
+   */
+  const float rate = (float)UIScreen.mainScreen.maximumFramesPerSecond;
+  if (rate > 0) {
+    displayLink.preferredFrameRateRange = CAFrameRateRangeMake(rate / 2, rate, rate);
+  }
   [displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
 }

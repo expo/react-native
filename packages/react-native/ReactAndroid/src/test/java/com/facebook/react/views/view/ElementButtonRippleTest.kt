@@ -101,10 +101,53 @@ class ElementButtonRippleTest {
     // The background may be wrapped by the applicator once the ripple is installed; the chrome
     // itself is the inset pill either way.
     val background = view.background
-    val chrome =
-        (background as? CompositeBackgroundDrawable)?.originalBackground ?: background
+    val chrome = (background as? CompositeBackgroundDrawable)?.originalBackground ?: background
     assertThat(chrome).isInstanceOf(android.graphics.drawable.InsetDrawable::class.java)
     assertThat(rippleOf(view)).isNotNull()
+  }
+
+  @Test
+  fun `the chrome's pill fits the box the author sized`() {
+    // Material's 4dp inset is the gap between its 48dp touch target and the 40dp container; a
+    // 40dp button insetted would be a lozenge where the platform's icon button is a circle
+    val inset = { view: ElementButtonView ->
+      val background = view.background
+      val chrome = (background as? CompositeBackgroundDrawable)?.originalBackground ?: background
+      (chrome as android.graphics.drawable.InsetDrawable).let { drawable ->
+        val bounds = android.graphics.Rect()
+        drawable.getPadding(bounds)
+        bounds
+      }
+    }
+    val four = com.facebook.react.uimanager.PixelUtil.toPixelFromDIP(4f).toInt()
+    val forty = com.facebook.react.uimanager.PixelUtil.toPixelFromDIP(40f).toInt()
+
+    val target = ElementButtonView(context)
+    target.buttonStyle = "neutral"
+    target.ripplesEnabled = true
+    target.layout(0, 0, forty, forty + 2 * four)
+    target.onPropsApplied()
+    assertThat(inset(target).top).describedAs("a 48dp box gives 4dp away").isEqualTo(four)
+    assertThat(inset(target).left)
+        .describedAs("a wide button is a text button: its container is the box's width")
+        .isEqualTo(0)
+
+    val icon = ElementButtonView(context)
+    icon.buttonStyle = "neutral"
+    icon.ripplesEnabled = true
+    icon.layout(0, 0, forty, forty)
+    icon.onPropsApplied()
+    assertThat(inset(icon).top).describedAs("a 40dp box has nothing to spare").isEqualTo(0)
+
+    // A square button is an icon button, whose container is 40dp on both axes inside the 48dp
+    // target, so the pill it leaves is a circle
+    val square = ElementButtonView(context)
+    square.buttonStyle = "neutral"
+    square.ripplesEnabled = true
+    square.layout(0, 0, forty + 2 * four, forty + 2 * four)
+    square.onPropsApplied()
+    assertThat(inset(square).left).describedAs("a square box insets its width too").isEqualTo(four)
+    assertThat(inset(square).top).isEqualTo(four)
   }
 
   @Test
@@ -135,8 +178,7 @@ class ElementButtonRippleTest {
      * exact shape of the bug this whole contract exists for, so the name is
      * pinned rather than assumed.
      */
-    assertThat(ElementButtonViewManager().nativeProps)
-        .containsKey("authorStatesPressFeedback")
+    assertThat(ElementButtonViewManager().nativeProps).containsKey("authorStatesPressFeedback")
   }
 
   @Test
@@ -186,8 +228,8 @@ class ElementButtonRippleTest {
     view.ripplesEnabled = true
     view.onPropsApplied()
     assertThat(
-            (view.background as? CompositeBackgroundDrawable)?.originalBackground
-                ?: view.background)
+            (view.background as? CompositeBackgroundDrawable)?.originalBackground ?: view.background
+        )
         .describedAs("precondition: the chrome is on")
         .isInstanceOf(android.graphics.drawable.InsetDrawable::class.java)
 
