@@ -131,6 +131,44 @@ export function registerFrameworkComponent(tag: string, Component: unknown) {
 }
 
 /**
+ * Defines a library's element that is backed by a React component.
+ *
+ * The registry had three of the four quadrants: the framework could register a
+ * host element or a component, and a library could register a host element.
+ * A library could not register a component — which is what an element needs when
+ * its job is to give an existing component better defaults rather than to mount
+ * a new native view. `<native:scroll>` is exactly that: a scroll view whose
+ * keyboard behaviour is correct because you typed the element, not because you
+ * found four props.
+ *
+ * Same namespace rules as `defineReactElement`, and the same refusal to pick a
+ * winner when two libraries collide.
+ */
+export function defineReactComponent(
+  namespace: string,
+  name: string,
+  Component: unknown,
+): string {
+  if (!/^[a-z][a-z0-9-]*$/.test(namespace) || namespace === 'rn') {
+    throw new Error(
+      `Invalid element namespace '${namespace}': lowercase, and 'rn' is reserved.`,
+    );
+  }
+  if (!/^[a-z][a-z0-9-]*$/.test(name)) {
+    throw new Error(`Invalid element name '${name}'.`);
+  }
+  const tag = `${namespace}:${name}`;
+  if (entries.has(tag) || components.has(tag)) {
+    throw new Error(
+      `<${tag}> is already registered. Two libraries sharing the ` +
+        `'${namespace}' namespace must coordinate; the registry will not pick.`,
+    );
+  }
+  components.set(tag, Component);
+  return tag;
+}
+
+/**
  * Defines a library's element. The tag is always `namespace:name` — this API
  * joins them, so a library cannot define a bare tag no matter what it passes.
  * First definition in a namespace wins; a collision within one namespace

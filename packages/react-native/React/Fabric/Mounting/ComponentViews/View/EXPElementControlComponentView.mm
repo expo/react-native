@@ -9,6 +9,37 @@
 
 @implementation EXPElementControlComponentView
 
+/**
+ * A control's hit area is its BORDER box, padding included.
+ *
+ * The control is laid out in the CONTENT box — inside the padding, which is
+ * where padding belongs on a form control — so the padding strip belongs to
+ * this container and a touch that lands in it reaches nothing. On a composer
+ * with fifteen points of leading padding that is a fifteen-point dead strip
+ * down the field's leading edge, and a tap there does nothing at all: measured
+ * on the demo's composer, every tap between x=80 (the pill's edge) and x=96
+ * (where the text starts) failed to raise the keyboard, ten times out of ten.
+ * Reported from a device as "sometimes when I tap on the text area it doesn't
+ * bring up the keyboard".
+ *
+ * HTML has no such strip. A control's box IS the control: clicking a text
+ * field's padding puts the caret in it, and clicking a checkbox's padding
+ * toggles it. So a hit anywhere inside this view that would otherwise stop at
+ * the container is handed to the control, which is then free to interpret where
+ * it landed — a `UITextView` given a point outside its text container puts the
+ * caret at the nearest position, which is what tapping just left of the first
+ * glyph should do.
+ */
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
+{
+  UIView *hit = [super hitTest:point withEvent:event];
+  if (hit == self && _elementControl != nil && _elementControl.userInteractionEnabled &&
+      !_elementControl.hidden && _elementControl.alpha > 0.01) {
+    return _elementControl;
+  }
+  return hit;
+}
+
 - (void)setElementControl:(UIView *)elementControl
 {
   _elementControl = elementControl;

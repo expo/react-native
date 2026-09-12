@@ -109,6 +109,56 @@ class ElementButtonRippleTest {
   }
 
   @Test
+  fun `the chrome's pill fits the box the author sized`() {
+    /*
+     * Material's 4dp inset is the gap between its 48dp touch target and the 40dp container inside
+     * it. A composer's `+` is 40dp all over, and insetting that leaves a lozenge 40 wide and 32
+     * tall where the platform's own icon button is a circle.
+     */
+    val inset = { view: ElementButtonView ->
+      val background = view.background
+      val chrome =
+          (background as? CompositeBackgroundDrawable)?.originalBackground ?: background
+      (chrome as android.graphics.drawable.InsetDrawable).let { drawable ->
+        val bounds = android.graphics.Rect()
+        drawable.getPadding(bounds)
+        bounds
+      }
+    }
+    val four = com.facebook.react.uimanager.PixelUtil.toPixelFromDIP(4f).toInt()
+    val forty = com.facebook.react.uimanager.PixelUtil.toPixelFromDIP(40f).toInt()
+
+    val target = ElementButtonView(context)
+    target.buttonStyle = "neutral"
+    target.ripplesEnabled = true
+    target.layout(0, 0, forty, forty + 2 * four)
+    target.onPropsApplied()
+    assertThat(inset(target).top).describedAs("a 48dp box gives 4dp away").isEqualTo(four)
+    assertThat(inset(target).left)
+        .describedAs("a wide button is a text button: its container is the box's width")
+        .isEqualTo(0)
+
+    val icon = ElementButtonView(context)
+    icon.buttonStyle = "neutral"
+    icon.ripplesEnabled = true
+    icon.layout(0, 0, forty, forty)
+    icon.onPropsApplied()
+    assertThat(inset(icon).top).describedAs("a 40dp box has nothing to spare").isEqualTo(0)
+
+    /*
+     * And a SQUARE button is an icon button, whose container is 40dp on both axes inside the
+     * 48dp target — so the pill it leaves is a circle rather than a lozenge 48 wide and 40 tall.
+     */
+    val square = ElementButtonView(context)
+    square.buttonStyle = "neutral"
+    square.ripplesEnabled = true
+    square.layout(0, 0, forty + 2 * four, forty + 2 * four)
+    square.onPropsApplied()
+    assertThat(inset(square).left).describedAs("a square box insets its width too").isEqualTo(four)
+    assertThat(inset(square).top).isEqualTo(four)
+  }
+
+  @Test
   fun `an author surface dismisses the chrome but keeps the ripple`() {
     val view = ElementButtonView(context)
     view.buttonStyle = "neutral"

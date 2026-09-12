@@ -106,7 +106,12 @@ const getPreset = (src, options, babel) => {
   if (!options.useTransformReactJSXExperimental) {
     extraPlugins.push([
       require('@babel/plugin-transform-react-jsx'),
-      {runtime: 'automatic'},
+      // `throwIfNamespace: false` allows `<native:scroll>`. React's own JSX has
+      // no use for namespaces, which is why babel refuses them by default — but
+      // this renderer resolves an element type string through a registry, and a
+      // namespace is how a platform element says it is not an HTML one. Without
+      // this the tag is a syntax error before any of that is reached.
+      {runtime: 'automatic', throwIfNamespace: false},
     ]);
   }
 

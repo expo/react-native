@@ -32,8 +32,8 @@ typedef id _Nullable (^EXPTextLinkResolver)(
  *
  * ## Why this is a `UIContextMenuInteraction` and not something of ours
  *
- * Press-and-hold on a link in Messages or Notes lifts the link's TEXT off the
- * page, blurs what is behind it, and offers Open / Copy / Share. That is not a
+ * Press-and-hold on a link in the system's own apps lifts the link's TEXT off
+ * the page, blurs what is behind it, and offers Open / Copy / Share. That is not a
  * house style — it is `UIContextMenuInteraction`, and every app that hosts a
  * `UITextView` gets it without asking. Imitating the look would mean copying a
  * blur radius, a corner radius, a lift height and a menu layout that Apple
