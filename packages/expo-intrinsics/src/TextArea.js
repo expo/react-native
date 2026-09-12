@@ -11,6 +11,7 @@
 import type {LabelableProps} from './Label';
 import type {AutocorrectValue} from './TextCorrection';
 
+import {useControlHandle} from './controlHandle';
 import {useFormControl} from './FormContext';
 import {useControlLabel} from './Label';
 import {useAutocorrect, useSpellcheck} from './TextCorrection';
@@ -39,6 +40,8 @@ type TextAreaProps = {
   spellCheck?: boolean,
   autoCorrect?: AutocorrectValue,
   ...LabelableProps,
+  // React 19 passes `ref` as an ordinary prop, and this component destructures it
+  ref?: React.RefSetter<$FlowFixMe>,
   children?: React.Node,
   name?: string,
   value?: string,
@@ -49,7 +52,11 @@ type TextAreaProps = {
 
 function TextArea(props: TextAreaProps): React.Node {
   // See Input.js: pulled out so the spread is provably free of a `key`.
-  const {children, name = '', onInput, ...rest} = props;
+  // Pulled out so the spread below cannot overwrite the ref this component
+  // attaches
+  const {children, name = '', onInput, ref, ...rest} = props;
+  const hostRef = React.useRef<$FlowFixMe>(null);
+  useControlHandle(ref, hostRef);
   // See Input.js: a control's accessible name comes from its <label>.
   const accessibilityLabel = useControlLabel(
     props.accessibilityLabel,
@@ -89,12 +96,24 @@ function TextArea(props: TextAreaProps): React.Node {
     },
   });
 
+  // The native side accepts a `value` from props only while
+  // `mostRecentEventCount >= nativeEventCount`, so a value computed before the
+  // keystrokes in flight cannot rewind the field; without the count every
+  // controlled write after the first keystroke is discarded as stale
+  const [mostRecentEventCount, setMostRecentEventCount] = React.useState(0);
+
   const handleInput = React.useCallback(
     (event: $FlowFixMe) => {
       if (event?.nativeEvent?.value !== undefined) {
         latest.current = event.nativeEvent.value;
       }
       onInput?.(event);
+      // After the author's handler, as TextInput does: the handler may set the
+      // state whose value this carries down
+      const count = event?.nativeEvent?.eventCount;
+      if (typeof count === 'number') {
+        setMostRecentEventCount(count);
+      }
     },
     [onInput],
   );
@@ -110,8 +129,15 @@ function TextArea(props: TextAreaProps): React.Node {
        native view without placing a `key` beside a props spread. */
     <React.Fragment key={resetToken}>
       {/* $FlowFixMe[prop-missing] intrinsic */}
+      {/* $FlowFixMe[cannot-spread-inexact] `ref` is destructured out above, so
+          the spread cannot carry one; the props type is inexact by design, so
+          Flow cannot prove it. */}
       <element-textarea
+        // The spread FIRST and our ref after it, as in Input.js. If one ever did
+        // come through, this order is the difference between our ref winning and
+        // being silently replaced — which is how the ref went missing before.
         {...forwarded}
+        ref={hostRef}
         accessibilityLabel={accessibilityLabel}
         nodeName="textarea"
         name={name}
@@ -122,6 +148,7 @@ function TextArea(props: TextAreaProps): React.Node {
         }
         spellCheck={resolvedSpellCheck}
         autoCorrect={resolvedAutoCorrect}
+        mostRecentEventCount={mostRecentEventCount}
         onInput={handleInput}
       />
     </React.Fragment>

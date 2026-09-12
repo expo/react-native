@@ -14,10 +14,14 @@ import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
+import android.text.SpannableString
+import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.widget.PopupMenu
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.PointerEvents
@@ -27,9 +31,9 @@ import com.facebook.react.uimanager.style.BorderRadiusProp
  * A box whose press state is tracked by Android's own touch dispatch, and which draws the
  * platform's press feedback while it is held.
  *
- * Shared by `<button>` and `<a display:block>`: the state machine below is a restatement of
- * AOSP's press rules (tap timeout, scrolling-container delay, slop, minimum flash), and a second
- * copy would drift from the first.
+ * Shared by `<button>` and `<a display:block>`: the state machine below is a restatement of AOSP's
+ * press rules (tap timeout, scrolling-container delay, slop, minimum flash), and a second copy
+ * would drift from the first.
  *
  * ## Inert unless [interactive]
  *
@@ -53,6 +57,72 @@ import com.facebook.react.uimanager.style.BorderRadiusProp
  * path, and emitting it again would fire every handler twice.
  */
 internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup(context) {
+
+  /**
+   * One command of a `<menu>` child, flattened in JavaScript.
+   *
+   * Data rather than content, on both platforms: a platform menu is drawn by the platform, so there
+   * is nothing for child shadow nodes to lay out.
+   */
+  data class MenuCommand(
+      val id: String,
+      val label: String,
+      val disabled: Boolean,
+      val destructive: Boolean,
+  )
+
+  /**
+   * A `<menu>`, as the platform's own — one builder, for every element that opens one.
+   *
+   * HTML's list of commands is the same list whoever presents it: a `<button>` opens it on a TAP
+   * and a box on a HOLD, and what differs between them is only who opens it. Shared for the reason
+   * the iOS side is shared (`EXPElementMenu.h`): two copies of a menu builder disagree, and the
+   * disagreement shows up as the same markup drawing differently on two elements.
+   *
+   * Anchored on the view, so Android places it the way it places every other menu — above or below
+   * by the room available, which is the same judgement UIKit makes and the reason neither platform
+   * needs to be told where the keyboard is.
+   */
+  protected fun presentElementMenu(commands: List<MenuCommand>, onChoose: (String) -> Unit) {
+    if (commands.isEmpty()) {
+      return
+    }
+    val popup = PopupMenu(context, this)
+    commands.forEachIndexed { index, command ->
+      val title =
+          if (command.destructive) {
+            /*
+             * Destructive is a COLOUR here and an attribute on iOS, because that is how each
+             * platform says it. `colorError` is the theme's, so it follows a dark theme and an
+             * author's own without being told.
+             */
+            val error = resolveThemeColor(android.R.attr.colorError)
+            if (error == null) {
+              SpannableString(command.label)
+            } else {
+              SpannableString(command.label).apply {
+                setSpan(ForegroundColorSpan(error), 0, length, 0)
+              }
+            }
+          } else {
+            SpannableString(command.label)
+          }
+      popup.menu.add(0, index, index, title).isEnabled = !command.disabled
+    }
+    popup.setOnMenuItemClickListener { item ->
+      val command = commands.getOrNull(item.itemId)
+      if (command == null) {
+        false
+      } else {
+        // The command's `id`, not its index: a list that reorders between the render that built
+        // the menu and the tap that chose from it would otherwise report the wrong command, and a
+        // menu is open for as long as someone is reading it.
+        onChoose(command.id)
+        true
+      }
+    }
+    popup.show()
+  }
 
   /** Called with `true` on press-in and `false` on press-out, cancel, or release. */
   var onPressChange: ((Boolean) -> Unit)? = null
@@ -80,6 +150,78 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
         updatePressFeedback()
       }
     }
+
+  /**
+   * Whether a HOLD on this box means something — `contextmenu`, the event a browser fires when a
+   * finger rests on an element.
+   *
+   * Separate from [interactive], and it has to be: interactive means PRESSABLE, which on this
+   * platform means clickable and a ripple, and a box that can be held is not a box that can be
+   * tapped. Every `<div>` on the page would grow a ripple it never asked for.
+   *
+   * The timeout, the slop and the release on a scroll are all the platform's below — but the
+   * platform's own `setOnLongClickListener` cannot be used, because [ReactViewGroup.onTouchEvent]
+   * returns `true` without calling up to `View.onTouchEvent`, so the framework's long-press check
+   * never runs. That is the same reason the press state machine here is hand-rolled, and the hold
+   * is scheduled on the same clock: [ViewConfiguration.getLongPressTimeout].
+   */
+  protected var holdable: Boolean = false
+    set(value) {
+      if (field == value) {
+        return
+      }
+      field = value
+      if (!value) {
+        cancelPendingHold()
+      }
+    }
+
+  private var pendingHold: Runnable? = null
+
+  private fun cancelPendingHold() {
+    pendingHold?.let { removeCallbacks(it) }
+    pendingHold = null
+  }
+
+  private fun scheduleHold() {
+    cancelPendingHold()
+    val hold = Runnable {
+      pendingHold = null
+      // The platform's own long-press haptic, which `View.performLongClick` would have played.
+      performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+      onHeld()
+    }
+    pendingHold = hold
+    postDelayed(hold, ViewConfiguration.getLongPressTimeout().toLong())
+  }
+
+  /** The hold completed. Nothing by default; a box that wants one overrides it. */
+  protected open fun onHeld() {}
+
+  /**
+   * The hold is tracked in DISPATCH, not in `onTouchEvent`, and that is the whole of why it works.
+   *
+   * Every React Native view returns `true` from [ReactViewGroup.onTouchEvent] — touches are
+   * dispatched in JavaScript, so the view consumes the stream and answers nothing — which means the
+   * FIRST view under the finger takes it and no ancestor's `onTouchEvent` is ever called. A box
+   * with a child filling it, which a chat balloon is, would never see one.
+   *
+   * `dispatchTouchEvent` runs on the way DOWN, before any child, on every event of the gesture
+   * including the `ACTION_CANCEL` an ancestor scroll delivers when it takes over. So it sees
+   * exactly what the hold needs to know, and it changes nothing: the event is passed straight on.
+   * This is the same place UIKit's own recognisers sit relative to a subview's touches.
+   */
+  override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+    if (holdable) {
+      when (event.actionMasked) {
+        MotionEvent.ACTION_DOWN -> scheduleHold()
+        MotionEvent.ACTION_MOVE -> if (!isInside(event)) cancelPendingHold()
+        MotionEvent.ACTION_UP,
+        MotionEvent.ACTION_CANCEL -> cancelPendingHold()
+      }
+    }
+    return super.dispatchTouchEvent(event)
+  }
 
   /**
    * CSS `touch-action`. `none` means a gesture starting on this element belongs to it, so an
@@ -135,9 +277,9 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
 
   /**
    * Whether an ancestor wants child presses delayed — the same walk `View.isInScrollingContainer`
-   * does. That method is not public API, but the signal it reads is:
-   * `ReactViewGroup` answers no and the scroll views answer yes, so a pressable box in a scroll
-   * view delays and the same box in a plain view does not.
+   * does. That method is not public API, but the signal it reads is: `ReactViewGroup` answers no
+   * and the scroll views answer yes, so a pressable box in a scroll view delays and the same box in
+   * a plain view does not.
    */
   private fun isInScrollingContainer(): Boolean {
     var ancestor = parent
@@ -180,21 +322,21 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
    * What is reproduced is AOSP's rule, using the platform's own signals rather than invented ones —
    * [ViewGroup.shouldDelayChildPressedState] decides whether there is a delay, and the timings are
    * `ViewConfiguration`'s, not constants picked here:
-   *
-   *  - inside a scrolling container the press waits out [ViewConfiguration.getTapTimeout], so a
-   *    finger on its way past never lights it up; outside one it presses immediately;
-   *  - a touch that strays beyond the view's slop drops the press, and — unlike iOS — coming back
-   *    does not restore it, which is what this platform does;
-   *  - a tap quicker than the timeout still flashes the press for
-   *    [ViewConfiguration.getPressedStateDuration], so the control does not look dead.
+   * - inside a scrolling container the press waits out [ViewConfiguration.getTapTimeout], so a
+   *   finger on its way past never lights it up; outside one it presses immediately;
+   * - a touch that strays beyond the view's slop drops the press, and — unlike iOS — coming back
+   *   does not restore it, which is what this platform does;
+   * - a tap quicker than the timeout still flashes the press for
+   *   [ViewConfiguration.getPressedStateDuration], so the control does not look dead.
    *
    * iOS reaches the same behaviour from the other end, and there the platform really does do the
    * work: its scroll view delays *delivery* of the touch, so tracking touches in the view suffices.
    */
   @SuppressLint("ClickableViewAccessibility") // performClick is handled by the pointer-event path.
   override fun onTouchEvent(event: MotionEvent): Boolean {
-    // A box that is not interactive is a plain `ReactViewGroup` and must dispatch like one.
-    if (!interactive) {
+    // A box that is neither pressable nor holdable is a plain `ReactViewGroup` and must dispatch
+    // like one.
+    if (!interactive && !holdable) {
       return super.onTouchEvent(event)
     }
     if (!isEnabled) {
@@ -213,7 +355,9 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
           parent?.requestDisallowInterceptTouchEvent(true)
         }
         cancelPendingUnpress()
-        if (isInScrollingContainer()) {
+        if (!interactive) {
+          // Holdable only: no press state, no ripple, nothing that says "tappable".
+        } else if (isInScrollingContainer()) {
           isPrepressed = true
           val tap = Runnable {
             isPrepressed = false
@@ -228,14 +372,19 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
       }
       MotionEvent.ACTION_MOVE ->
           if (!isInside(event)) {
+            // A finger that has strayed is no longer holding this box either.
+            cancelPendingHold()
             cancelPendingTap()
             setElementPressed(false)
           }
       MotionEvent.ACTION_UP -> {
+        cancelPendingHold()
         if (touchAction == "none") {
           parent?.requestDisallowInterceptTouchEvent(false)
         }
-        if (isPrepressed) {
+        if (!interactive) {
+          // Holdable only: a release is the end of a hold that did not complete, and nothing else.
+        } else if (isPrepressed) {
           // Released before the delay had run: show the press anyway, briefly, so a quick tap does
           // not look like nothing happened. This is what the framework does in the same case.
           cancelPendingTap()
@@ -249,8 +398,14 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
         } else {
           setElementPressed(false)
         }
+        if (interactive && isInside(event)) {
+          onActivated()
+        }
       }
       MotionEvent.ACTION_CANCEL -> {
+        // An ancestor scroll container claimed the gesture: the hold is off, which is the whole
+        // reason the press is tracked natively rather than in JavaScript.
+        cancelPendingHold()
         if (touchAction == "none") {
           parent?.requestDisallowInterceptTouchEvent(false)
         }
@@ -271,6 +426,7 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
     // A posted callback that outlives the view would press an element that is no longer on screen.
     cancelPendingTap()
     cancelPendingUnpress()
+    cancelPendingHold()
   }
 
   /**
@@ -281,13 +437,26 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
    * colorControlHighlight">` wrapped around the button's shape — so a pressable box without one
    * does not read as pressable no matter how it is coloured.
    *
-   * The colour is the theme's, not a constant, so it follows whatever the host app is themed with
-   * — including a dark theme, where a fixed overlay would be invisible or garish.
+   * The colour is the theme's, not a constant, so it follows whatever the host app is themed with —
+   * including a dark theme, where a fixed overlay would be invisible or garish.
    *
    * It goes in as a FEEDBACK UNDERLAY rather than as the background, which is the distinction that
    * makes it work with author styles. The box keeps drawing its own background and border, from the
    * user-agent sheet or from the author, and the ripple is composited above them.
    */
+  /**
+   * A tap that completed on this view.
+   *
+   * Not the same thing as `click`: that is synthesised by the pointer system and dispatched to
+   * JavaScript, and this is for what the PLATFORM has to do with a tap in the view itself — a
+   * subclass opening its own menu, for instance, where waiting for JavaScript to come back would
+   * put a round trip between the finger and the menu.
+   *
+   * Called only when the release was inside; a finger that wandered off the view before lifting has
+   * cancelled the tap, which is the framework's rule and the DOM's.
+   */
+  protected open fun onActivated() {}
+
   protected open fun updatePressFeedback() {
     if (!interactive || !ripplesEnabled) {
       return
@@ -299,9 +468,9 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
    * The ripple, masked to the shape the background is actually drawing.
    *
    * A plain rectangular mask — which is what React Native's own `android_ripple` and the theme's
-   * `selectableItemBackground` both use — SPILLS PAST ROUNDED CORNERS. Measured on a rounded box:
-   * a pixel outside the corner radius went `#FFFFFF` at rest to `#E1E1E1` held, so the feedback
-   * drew square corners over a rounded element. The radius comes from the background's own outline
+   * `selectableItemBackground` both use — SPILLS PAST ROUNDED CORNERS. Measured on a rounded box: a
+   * pixel outside the corner radius went `#FFFFFF` at rest to `#E1E1E1` held, so the feedback drew
+   * square corners over a rounded element. The radius comes from the background's own outline
    * rather than from the props, so it is the shape actually drawn rather than a second opinion
    * about it.
    *
@@ -334,12 +503,12 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
    * The eight corner radii the mask needs, in pixels, or null for a square mask.
    *
    * **`Outline.getRadius()` is not enough, and trusting it is a silent failure.**
-   * [CompositeBackgroundDrawable] — the background React Native gives every view — describes
-   * itself with a *path* rather than a round rect, and an `Outline` built from a path answers
+   * [CompositeBackgroundDrawable] — the background React Native gives every view — describes itself
+   * with a *path* rather than a round rect, and an `Outline` built from a path answers
    * `RADIUS_UNDEFINED`. So the outline route quietly reported "no radius", the mask came out
-   * square, and the ripple painted over the rounded corners of a box that plainly had them.
-   * Caught on the emulator: a pixel outside the anchor's 12dp radius went `#FFFFFF` at rest to
-   * `#EDEDED` held. Nothing in the code looked wrong; only the screen said so.
+   * square, and the ripple painted over the rounded corners of a box that plainly had them. Caught
+   * on the emulator: a pixel outside the anchor's 12dp radius went `#FFFFFF` at rest to `#EDEDED`
+   * held. Nothing in the code looked wrong; only the screen said so.
    *
    * The radii therefore come from the same place the background got them —
    * [BackgroundStyleApplicator.getBorderRadius] — with each physical corner falling back to the
@@ -374,14 +543,16 @@ internal open class ElementInteractiveBoxView(context: Context) : ReactViewGroup
     val bottomRightV = corner(BorderRadiusProp.BORDER_BOTTOM_RIGHT_RADIUS, h)
     val bottomLeftH = corner(BorderRadiusProp.BORDER_BOTTOM_LEFT_RADIUS, w)
     val bottomLeftV = corner(BorderRadiusProp.BORDER_BOTTOM_LEFT_RADIUS, h)
-    if (topLeftH <= 0f &&
-        topLeftV <= 0f &&
-        topRightH <= 0f &&
-        topRightV <= 0f &&
-        bottomRightH <= 0f &&
-        bottomRightV <= 0f &&
-        bottomLeftH <= 0f &&
-        bottomLeftV <= 0f) {
+    if (
+        topLeftH <= 0f &&
+            topLeftV <= 0f &&
+            topRightH <= 0f &&
+            topRightV <= 0f &&
+            bottomRightH <= 0f &&
+            bottomRightV <= 0f &&
+            bottomLeftH <= 0f &&
+            bottomLeftV <= 0f
+    ) {
       return null
     }
     return floatArrayOf(

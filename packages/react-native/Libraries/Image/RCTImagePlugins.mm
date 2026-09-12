@@ -24,6 +24,10 @@ Class RCTImageClassProvider(const char *name)
     return RCTBundleAssetImageLoaderCls();
   }
 
+  if (name == "EXPSystemImageLoader"sv) {
+    return EXPSystemImageLoaderCls();
+  }
+
   if (name == "GIFImageDecoder"sv) {
     return RCTGIFImageDecoderCls();
   }

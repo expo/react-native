@@ -9,6 +9,22 @@
 
 @implementation EXPElementControlComponentView
 
+/**
+ * A control's hit area is its border box, padding included, as in HTML, where
+ * clicking a text field's padding puts the caret in it. The control is laid out
+ * in the content box, so a hit in the padding that would stop at this container
+ * is handed to the control, which interprets where it landed.
+ */
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
+{
+  UIView *hit = [super hitTest:point withEvent:event];
+  if (hit == self && _elementControl != nil && _elementControl.userInteractionEnabled && !_elementControl.hidden &&
+      _elementControl.alpha > 0.01) {
+    return _elementControl;
+  }
+  return hit;
+}
+
 - (void)setElementControl:(UIView *)elementControl
 {
   _elementControl = elementControl;
