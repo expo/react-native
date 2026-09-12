@@ -9,6 +9,7 @@ package com.facebook.react.views.view
 
 import android.graphics.Paint
 import android.graphics.Rect
+import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
@@ -570,8 +571,7 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       // equal this run's byte-for-byte (an async mount racing a newer commit's
       // measure, or a tag collision, fails here and rebuilds) and the density
       // must be unchanged. The layout itself is reusable only where it paints as
-      // a rebuilt one would (`RunLayoutHandoff.Entry.paintsAsRebuiltAt`), and a
-      // rebuilt one is left-aligned.
+      // a rebuilt one would (`RunLayoutHandoff.Entry.paintsAsRebuiltAt`).
       var reusedLayout: Layout? = null
       var handoff: RunLayoutHandoff.Entry? = null
       if (attributedString.contains(TextLayoutManager.AS_KEY_RUN_TAG)) {
@@ -580,33 +580,65 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
             entry.density == PixelUtil.getDisplayMetricDensity() &&
             RunLayoutHandoff.contentEquals(entry.attributedString, attributedString)) {
           handoff = entry
-          if (entry.paintsAsRebuiltAt(
-              ceil(width.toDouble()).toInt(),
-              Layout.Alignment.ALIGN_NORMAL,
-              TextLayoutManager.forbidsWrapping(attributedString))) {
-            reusedLayout = entry.layout
-          }
         }
+      }
+
+      /*
+       * The alignment, which this used to leave at Android's default.
+       *
+       * `StaticLayout.Builder` starts at `ALIGN_NORMAL`, and nothing here ever said
+       * otherwise — so `text-align: right` on a `<p>` did nothing at all on Android while
+       * working on iOS, where the alignment rides the paragraph attributes to draw time. It
+       * showed up as a chat's "Delivered" receipt sitting hard left under a right-hand
+       * balloon.
+       *
+       * The spannable is needed to decide it (Android swaps normal and opposite when the
+       * paragraph's direction and the script's disagree), so it is resolved before the reuse
+       * decision rather than inside it.
+       */
+      val spannable =
+          handoff?.spannable
+              ?: TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
+      val alignment = TextLayoutManager.getRunAlignment(attributedString, spannable)
+      val justification = TextLayoutManager.getRunJustificationMode(attributedString)
+
+      val forbidsWrapping = TextLayoutManager.forbidsWrapping(attributedString)
+      if (handoff != null &&
+          handoff.paintsAsRebuiltAt(ceil(width.toDouble()).toInt(), alignment, forbidsWrapping)) {
+        reusedLayout = handoff.layout
       }
 
       val layout: Layout
       if (reusedLayout != null) {
         layout = reusedLayout
       } else {
-        val spannable =
-            handoff?.spannable
-                ?: TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
         // `white-space: pre` and `nowrap` do not wrap (css-text-3 §3): the only line breaks are
         // the ones in the text, and a long line overflows the container rather than folding onto
         // the next line. Laid out at its own desired width so nothing wraps; the View clips it, as
         // the web does.
         val layoutWidth =
-            if (TextLayoutManager.forbidsWrapping(attributedString))
+            if (forbidsWrapping)
                 ceil(Layout.getDesiredWidth(spannable, paint).toDouble()).toInt()
             else ceil(width.toDouble()).toInt()
-        layout =
-            StaticLayout.Builder.obtain(spannable, 0, spannable.length, paint, layoutWidth).build()
+        /*
+         * Alignment and justification only.
+         *
+         * DOM-CSS-LIMITATION(android-run-paragraph-attributes): everything else the
+         * `<Text>` path sets — break strategy, hyphenation, font padding, ellipsis, max
+         * lines — is read from PARAGRAPH ATTRIBUTES, and a run's entry carries only its
+         * attributed string. So a rebuilt run layout differs from the one the measure pass
+         * handed off, which was built with all of them: that is why the handoff is worth
+         * taking whenever it is still valid, and closing the gap properly means sending the
+         * paragraph attributes along with the run.
+         */
+        val builder =
+            StaticLayout.Builder.obtain(spannable, 0, spannable.length, paint, layoutWidth)
+                .setAlignment(alignment)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          builder.setJustificationMode(justification)
+        }
+        layout = builder.build()
       }
       val accessibilityItems = readInlineAccessibilityItems(runMb)
       runs.add(

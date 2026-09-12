@@ -384,9 +384,33 @@ interface EXPElementSelectComponentView : public EXPElementControlComponentView 
 }
 
 interface EXPElementTextAreaComponentView : public EXPElementControlComponentView {
+  public @property (assign, readonly) BOOL asksForKeyboardOnArrival;
 }
 
 interface EXPElementTextInputComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPKeyboardTrace : public NSObject {
+  public virtual static BOOL isRecording();
+  public virtual static NSString* barOffScreenMarker();
+  public virtual static NSString* callers();
+  public virtual static NSString* dump();
+  public virtual static double nowMs();
+  public virtual static void attributeWork:millis:(const char* name, double millis);
+  public virtual static void beginAttributing();
+  public virtual static void endAttributing:passes:detail:(double* millis, NSUInteger* passes, NSString* _Nullable* _Nullable detail);
+  public virtual static void record:(NSString* format, 1 NS_FORMAT_FUNCTION, 2 NS_FORMAT_FUNCTION);
+  public virtual static void recordChanged:pinned:format:(NSString* key, BOOL pinned, NSString* format, 3 NS_FORMAT_FUNCTION, 4 NS_FORMAT_FUNCTION);
+  public virtual static void recordPinned:(NSString* format, 1 NS_FORMAT_FUNCTION, 2 NS_FORMAT_FUNCTION);
+  public virtual static void start();
+  public virtual static void stop();
+}
+
+struct EXPKeyboardTrace::EXPWorkAttribution {
+  protected EXPWorkAttribution(const char* name);
+  protected const char* name;
+  protected double began;
+  protected ~EXPWorkAttribution();
 }
 
 interface EXPLinkPreviewCard : public UIViewController {
@@ -2216,6 +2240,7 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   public @property (assign) UIEdgeInsets hitTestEdgeInsets;
   public @property (assign, readonly) BOOL hasHostChromeSubviews;
   public @property (assign, readonly) BOOL hasTouchHandlers;
+  public @property (assign, readonly) UIView* _Nonnull chromeContainerView;
   public @property (strong) NSString* nativeId;
   public @property (strong) UIView* contentView;
   public @property (strong, readonly) NSObject* accessibilityElement;
@@ -2223,9 +2248,13 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   public virtual BOOL wantsToCooptLabel();
   public virtual NSString* accessibilityLabelForCoopting();
   public virtual UIView* betterHitTest:withEvent:(CGPoint point, UIEvent* event);
+  public virtual _Nullable UIView* exp_glassChildContainerView();
+  public virtual _Nullable UIView* exp_materialHostView();
   public virtual void addHostChromeSubview:(UIView* _Nonnull view);
   public virtual void addHostChromeSubview:behindSubview:(UIView* _Nonnull view, UIView* _Nonnull sibling);
+  public virtual void exp_setPeekShapeProvider:(UIBezierPath* _Nullable(^)(void) provider);
   public virtual void finalizeUpdates:(RNComponentViewUpdateMask updateMask);
+  public virtual void invalidateLayer();
   public virtual void prepareForRecycle();
   public virtual void rct_applyDynamicRange:headroom:limit:toLayer:drawn:(BOOL bright, CGFloat headroom, facebook::react::DynamicRangeLimit limit, CALayer* layer, BOOL drawn);
   public virtual void rct_applyDynamicRange:headroom:toLayer:drawn:(BOOL bright, CGFloat headroom, CALayer* layer, BOOL drawn);
@@ -3369,7 +3398,9 @@ const char facebook::react::TextComponentName[];
 const char facebook::react::TextInputComponentName[];
 const char facebook::react::TextNodeComponentName[];
 const char facebook::react::ViewComponentName[];
+const char* facebook::react::currentConvertedPropName;
 const facebook::react::EventTag facebook::react::EMPTY_EVENT_TAG;
+constexpr auto facebook::react::kEnvironmentTargets;
 constexpr auto facebook::react::kSimpleThreadSafeCacheSizeCap;
 constexpr char facebook::react::LayoutConformanceShadowNodeComponentName[];
 constexpr char* const facebook::react::TextLayoutManagerKey;
@@ -3440,12 +3471,14 @@ using facebook::react::CascadedBorderCurves = facebook::react::CascadedRectangle
 using facebook::react::CascadedBorderRadii = facebook::react::CascadedRectangleCorners<facebook::react::ValueUnit>;
 using facebook::react::CascadedBorderStyles = facebook::react::CascadedRectangleEdges<facebook::react::BorderStyle>;
 using facebook::react::CascadedBorderWidths = facebook::react::CascadedRectangleEdges<facebook::react::Float>;
+using facebook::react::CascadedCornerShapes = facebook::react::CascadedRectangleCorners<facebook::react::CornerShape>;
 using facebook::react::ComponentDescriptorConstructor = facebook::react::ComponentDescriptor::Unique(const facebook::react::ComponentDescriptorParameters& parameters);
 using facebook::react::ComponentDescriptorProviderRequest = std::function<void(facebook::react::ComponentName componentName)>;
 using facebook::react::ComponentHandle = int64_t;
 using facebook::react::ComponentName = const char*;
 using facebook::react::ComponentRegistryFactory = std::function<facebook::react::SharedComponentDescriptorRegistry(const facebook::react::EventDispatcher::Weak& eventDispatcher, const std::shared_ptr<const facebook::react::ContextContainer>& contextContainer)>;
 using facebook::react::CornerInsets = facebook::react::RectangleCorners<facebook::react::Float>;
+using facebook::react::CornerShapes = facebook::react::RectangleCorners<facebook::react::CornerShape>;
 using facebook::react::CrashManagerProvider = std::function<std::shared_ptr<hermes::vm::CrashManager>()>;
 using facebook::react::DebuggingOverlayComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::DebuggingOverlayShadowNode>;
 using facebook::react::DebuggingOverlayShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::DebuggingOverlayComponentName, facebook::react::DebuggingOverlayProps, facebook::react::DebuggingOverlayEventEmitter, facebook::react::DebuggingOverlayState>;
@@ -3645,6 +3678,7 @@ bool facebook::react::areAttributedStringsEquivalentDisplayWise(const facebook::
 bool facebook::react::areAttributedStringsEquivalentLayoutWise(const facebook::react::AttributedString& lhs, const facebook::react::AttributedString& rhs);
 bool facebook::react::areBorderRadiiCircular(const facebook::react::BorderRadii& borderRadii);
 bool facebook::react::areTextAttributesEquivalentLayoutWise(const facebook::react::TextAttributes& lhs, const facebook::react::TextAttributes& rhs);
+bool facebook::react::collectEnvironmentDependency(const std::string& stringValue, facebook::react::Float& fallbackOut);
 bool facebook::react::elementStatesBlockPadding(const facebook::react::YogaStylableProps& props);
 bool facebook::react::elementStatesInlinePadding(const facebook::react::YogaStylableProps& props);
 bool facebook::react::hasStampableInlineElements(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString);
@@ -3746,8 +3780,13 @@ std::optional<facebook::react::ColorComponents> facebook::react::toClippedSRGB(c
 std::optional<facebook::react::ColorSpace> facebook::react::colorSpaceFromName(std::string_view name);
 std::optional<facebook::react::ColorSpaceValue> facebook::react::colorSpaceValueOf(const facebook::react::SharedColor& color);
 std::optional<facebook::react::ColorSpaceValue> facebook::react::hostPlatformColorSpaceValueOf(const facebook::react::Color&);
+std::optional<facebook::react::EnvironmentTargetForProperty> facebook::react::environmentTargetForProperty(std::string_view name);
+std::optional<facebook::react::EnvironmentValue> facebook::react::parseEnvironmentFunction(std::string_view value);
+std::optional<facebook::react::EnvironmentValue> facebook::react::parseEnvironmentValue(std::string_view value);
+std::optional<facebook::react::EnvironmentVariable> facebook::react::environmentVariableFromName(std::string_view name);
 std::optional<facebook::react::FilterType> facebook::react::filterTypeFromString(std::string_view filterName);
 std::optional<facebook::react::Float> facebook::react::optionalFloatFromYogaValue(const facebook::yoga::Style::Length& length, std::optional<facebook::react::Float> base = {});
+std::optional<facebook::react::Float> facebook::react::parsePixelLength(std::string_view text);
 std::optional<facebook::react::FontVariant> facebook::react::fontVariantFromCSSFontVariant(facebook::react::CSSFontVariant cssVariant);
 std::optional<facebook::react::Isolation> facebook::react::isolationFromString(std::string_view isolationSetting);
 std::optional<facebook::react::TransitionProperty> facebook::react::parseTransitionProperty(const std::string& value);
@@ -3792,6 +3831,7 @@ std::string facebook::react::toString(const facebook::react::WritingDirection& w
 std::string facebook::react::toString(double doubleValue, char suffix);
 std::string facebook::react::toString(facebook::react::AccessibilityLiveRegion accessibilityLiveRegion);
 std::string facebook::react::toString(facebook::react::PointerEventsMode value);
+std::string_view facebook::react::trimAsciiWhitespace(std::string_view text);
 std::unordered_map<std::string, std::function<std::shared_ptr<facebook::react::TurboModule>(std::shared_ptr<facebook::react::CallInvoker> jsInvoker)>>& facebook::react::globalExportedCxxTurboModuleMap();
 std::vector<facebook::react::PendingInlineElementMetrics> facebook::react::stampInlineElementMetrics(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString, const std::vector<facebook::react::Rect>& fragmentRects, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics);
 std::vector<std::string> facebook::react::splitTransitionList(const std::string& value);
@@ -3849,12 +3889,15 @@ uint8_t facebook::react::greenFromColor(facebook::react::SharedColor color) noex
 uint8_t facebook::react::redFromColor(facebook::react::SharedColor color) noexcept;
 uint32_t facebook::react::rendererAbiVersionOfLibrary();
 void facebook::react::FBReactNativeSpec_registerComponentDescriptorsFromCodegen(std::shared_ptr<const facebook::react::ComponentDescriptorProviderRegistry> registry);
+void facebook::react::applyAriaAttributes(const facebook::react::PropsParserContext& context, const facebook::react::RawProps& rawProps, facebook::react::AccessibilityProps& props);
+void facebook::react::applyEnvironmentDependency(facebook::yoga::Style& style, const facebook::react::EnvironmentDependency& dependency, facebook::react::Float variable);
 void facebook::react::assertRendererAbiMatchesHeaders(uint32_t headerVersion = facebook::react::kRendererAbiVersion);
 void facebook::react::bindNativeLogger(facebook::jsi::Runtime& runtime, facebook::react::Logger logger);
 void facebook::react::bindNativePerformanceNow(facebook::jsi::Runtime& runtime);
 void facebook::react::cloneProp(facebook::react::BaseViewProps& viewProps, const facebook::react::AnimatedPropBase& animatedProp);
 void facebook::react::decorateCancelablePayload(facebook::jsi::Runtime& runtime, facebook::jsi::Object& payload, const std::shared_ptr<facebook::react::CancelableEventDecision>& decision);
 void facebook::react::ensureAnonymousTextContentFactoryInstalled(const facebook::react::ComponentDescriptorParameters& parameters);
+void facebook::react::forgetEnvironmentDependencyForCurrentProp();
 void facebook::react::fromRawValue(const facebook::react::ContextContainer& contextContainer, int32_t surfaceId, const facebook::react::RawValue& value, facebook::react::SharedColor& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, YGValue& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::AccessibilityAction& result);
@@ -3869,6 +3912,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext& co
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::BorderCurve& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::BorderStyle& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ContentInsetAdjustmentBehavior& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::CornerShape& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::Cursor& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::DynamicTypeRamp& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ElementSelectOption& result);
@@ -3966,9 +4010,11 @@ bool facebook::react::operator==(const facebook::react::LineMeasureCacheKey& lhs
 bool facebook::react::operator==(const facebook::react::PreparedTextCacheKey& lhs, const facebook::react::PreparedTextCacheKey& rhs);
 bool facebook::react::operator==(const facebook::react::Size& rhs, const facebook::react::Size& lhs) noexcept;
 bool facebook::react::operator==(const facebook::react::TextMeasureCacheKey& lhs, const facebook::react::TextMeasureCacheKey& rhs);
+constexpr bool facebook::react::operator!=(const facebook::react::CornerShape& lhs, const facebook::react::CornerShape& rhs);
 constexpr bool facebook::react::operator&(facebook::react::ModalHostViewSupportedOrientationsMask const lhs, enum facebook::react::ModalHostViewSupportedOrientations const rhs);
 constexpr bool facebook::react::operator==(const facebook::react::AccessibilityState& lhs, const facebook::react::AccessibilityState& rhs);
 constexpr bool facebook::react::operator==(const facebook::react::AccessibilityValue& lhs, const facebook::react::AccessibilityValue& rhs);
+constexpr bool facebook::react::operator==(const facebook::react::CornerShape& lhs, const facebook::react::CornerShape& rhs);
 constexpr enum facebook::react::AccessibilityTraits facebook::react::operator&(const enum facebook::react::AccessibilityTraits lhs, const enum facebook::react::AccessibilityTraits rhs);
 constexpr enum facebook::react::AccessibilityTraits facebook::react::operator|(const enum facebook::react::AccessibilityTraits lhs, const enum facebook::react::AccessibilityTraits rhs);
 constexpr facebook::react::HighResDuration facebook::react::operator-(const facebook::react::HighResTimeStamp& lhs, const facebook::react::HighResTimeStamp& rhs);
@@ -3989,6 +4035,7 @@ JSI_EXPORT const char facebook::react::ActivityIndicatorViewComponentName[];
 JSI_EXPORT const char facebook::react::DebuggingOverlayComponentName[];
 JSI_EXPORT const char facebook::react::PullToRefreshViewComponentName[];
 JSI_EXPORT const char facebook::react::UnimplementedNativeViewComponentName[];
+std::vector<facebook::react::EnvironmentDependency>* facebook::react::currentEnvironmentCollector;
 
 class facebook::react::AccessibilityProps {
   public AccessibilityProps() = default;
@@ -4341,6 +4388,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::CascadedBorderRadii borderRadii;
   public facebook::react::CascadedBorderStyles borderStyles;
   public facebook::react::CascadedBorderWidths getBorderWidths() const;
+  public facebook::react::CascadedCornerShapes cornerShapes;
   public facebook::react::Cursor cursor;
   public facebook::react::EdgeInsets hitSlop;
   public facebook::react::Float inheritedFontSize;
@@ -4826,8 +4874,10 @@ class facebook::react::ElementTextAreaProps : public facebook::react::HostPlatfo
   public bool autoFocus;
   public bool disabled;
   public bool hasValue;
+  public bool quiet;
   public bool readOnly;
   public bool spellCheck;
+  public facebook::react::SharedColor caretColor;
   public int maxLength;
   public int mostRecentEventCount;
   public int rows;
@@ -4850,6 +4900,7 @@ class facebook::react::ElementTextInputEventEmitter : public facebook::react::Ba
   public void onElementBeforeInput(const std::string& proposedValue, const std::shared_ptr<facebook::react::CancelableEventDecision>& decision) const;
   public void onElementBlur() const;
   public void onElementChange(const std::string& value) const;
+  public void onElementContentSizeChange(facebook::react::Float width, facebook::react::Float height) const;
   public void onElementFocus() const;
   public void onElementInput(const std::string& value, int eventCount) const;
   public void onElementSelectionChange(int start, int end) const;
@@ -6456,6 +6507,13 @@ class facebook::react::SchedulerDelegate {
   public virtual ~SchedulerDelegate() noexcept = default;
 }
 
+class facebook::react::ScopedConvertedPropName {
+  public ScopedConvertedPropName(const char* name);
+  public ScopedConvertedPropName(const facebook::react::ScopedConvertedPropName&) = delete;
+  public facebook::react::ScopedConvertedPropName& operator=(const facebook::react::ScopedConvertedPropName&) = delete;
+  public ~ScopedConvertedPropName();
+}
+
 class facebook::react::ScrollViewEventEmitter : public facebook::react::BaseViewEventEmitter {
   public using EndDragMetrics = facebook::react::ScrollEndDragEvent;
   public using Metrics = facebook::react::ScrollEvent;
@@ -7360,7 +7418,7 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public void setPositionType(YGPositionType positionType) const;
   public void setSize(facebook::react::Size size) const;
   public void updateYogaChildren();
-  public void updateYogaProps();
+  public void updateYogaProps(const facebook::react::EnvironmentValues& environmentValues = {});
 }
 
 struct facebook::react::YogaLayoutableShadowNode::ListContext {
@@ -7378,6 +7436,7 @@ class facebook::react::YogaStylableProps : public facebook::react::Props {
   public bool displayInline;
   public bool displayInlineAtomic;
   public facebook::react::AtomicInlineVerticalAlign verticalAlign;
+  public facebook::yoga::Style resolveEnvironment(const facebook::react::EnvironmentValues& environmentValues) const;
   public facebook::yoga::Style yogaStyle;
   public facebook::yoga::Style::Length insetBlockEnd;
   public facebook::yoga::Style::Length insetBlockStart;
@@ -7395,6 +7454,7 @@ class facebook::react::YogaStylableProps : public facebook::react::Props {
   public facebook::yoga::Style::Length paddingInline;
   public facebook::yoga::Style::Length paddingInlineEnd;
   public facebook::yoga::Style::Length paddingInlineStart;
+  public std::vector<facebook::react::EnvironmentDependency> environmentDependencies;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
 
@@ -7993,6 +8053,25 @@ enum facebook::react::EllipsizeMode {
   Head,
   Middle,
   Tail,
+}
+
+enum facebook::react::EnvironmentTarget {
+  Border,
+  Dimension,
+  FlexBasis,
+  Gap,
+  Margin,
+  MaxDimension,
+  MinDimension,
+  Padding,
+  Position,
+}
+
+enum facebook::react::EnvironmentVariable {
+  SafeAreaInsetBottom,
+  SafeAreaInsetLeft,
+  SafeAreaInsetRight,
+  SafeAreaInsetTop,
 }
 
 enum facebook::react::EventPayloadType {
@@ -8815,6 +8894,7 @@ struct facebook::react::BorderMetrics {
   public facebook::react::BorderRadii borderRadii;
   public facebook::react::BorderStyles borderStyles;
   public facebook::react::BorderWidths borderWidths;
+  public facebook::react::CornerShapes cornerShapes;
 }
 
 struct facebook::react::BoxShadow {
@@ -9189,6 +9269,13 @@ struct facebook::react::CornerRadii {
   public float vertical;
 }
 
+struct facebook::react::CornerShape {
+  public bool isRound() const;
+  public bool isSquircle() const;
+  public facebook::react::Float exponent() const;
+  public facebook::react::Float k;
+}
+
 struct facebook::react::DebugStringConvertibleOptions {
 }
 
@@ -9274,6 +9361,34 @@ struct facebook::react::ElementSelectOption {
   public bool operator==(const facebook::react::ElementSelectOption& rhs) const;
   public std::string label;
   public std::string value;
+}
+
+struct facebook::react::EnvironmentDependency {
+  public bool operator==(const facebook::react::EnvironmentDependency& other) const = default;
+  public facebook::react::EnvironmentTarget target;
+  public facebook::react::EnvironmentVariable variable;
+  public facebook::react::Float fallback;
+  public facebook::react::Float offset;
+  public uint8_t slot;
+}
+
+struct facebook::react::EnvironmentTargetForProperty {
+  public facebook::react::EnvironmentTarget target;
+  public std::string_view name;
+  public uint8_t slot;
+}
+
+struct facebook::react::EnvironmentValue {
+  public facebook::react::EnvironmentVariable variable;
+  public facebook::react::Float fallback;
+  public facebook::react::Float offset;
+}
+
+struct facebook::react::EnvironmentValues {
+  public bool operator==(const facebook::react::EnvironmentValues& other) const = default;
+  public facebook::react::EdgeInsets safeAreaInsets;
+  public facebook::react::Float resolve(facebook::react::EnvironmentVariable variable) const;
+  public uint32_t generation;
 }
 
 struct facebook::react::EventAnimationDriverKey {
@@ -9417,6 +9532,7 @@ struct facebook::react::LayoutConstraints {
 
 struct facebook::react::LayoutContext {
   public bool swapLeftAndRightInRTL;
+  public facebook::react::EnvironmentValues environmentValues;
   public facebook::react::Float fontSizeMultiplier;
   public facebook::react::Float pointScaleFactor;
   public facebook::react::Point viewportOffset;

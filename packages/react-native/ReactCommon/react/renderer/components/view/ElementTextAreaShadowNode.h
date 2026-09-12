@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include <react/renderer/components/view/AriaAttributes.h>
 #include <react/renderer/components/view/ConcreteViewShadowNode.h>
 #include <react/renderer/components/view/ElementAuthorStatedPadding.h>
 #include <react/renderer/components/view/ElementControlMetrics.h>
@@ -19,6 +20,7 @@
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/dom/NodeNameProvider.h>
+#include <react/renderer/graphics/Color.h>
 
 namespace facebook::react {
 
@@ -56,11 +58,19 @@ class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
         // cannot know the line height the element ends up with.
         rows(convertRawProp(context, rawProps, "rows", sourceProps.rows, 2)),
         mostRecentEventCount(
-            convertRawProp(context, rawProps, "mostRecentEventCount", sourceProps.mostRecentEventCount, 0))
+            convertRawProp(context, rawProps, "mostRecentEventCount", sourceProps.mostRecentEventCount, 0)),
+        // iOS draws the insertion point in the control's inherited `tintColor`
+        // unless told otherwise
+        caretColor(convertRawProp(context, rawProps, "caretColor", sourceProps.caretColor, SharedColor{})),
+        quiet(convertRawProp(context, rawProps, "quiet", sourceProps.quiet, false))
   {
     // No user-agent accessibility defaults; the control describes itself. See
     // `ElementRangeShadowNode.h` for why that is the rule for control-backed
     // elements.
+
+    // Applied last so ARIA wins over the `accessibility*` props, and here
+    // rather than in the base so only elements pay for the reads
+    applyAriaAttributes(context, rawProps, *this);
   }
 
   std::string domNodeName() const override
@@ -81,6 +91,19 @@ class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
   bool autoCorrect{true};
   int rows{2};
   int mostRecentEventCount{0};
+  // CSS `caret-color`; unset leaves the platform's. Declared last to match the
+  // initialiser list: `-Wreorder-ctor` is an error under Fantom's build.
+  SharedColor caretColor{};
+
+  /*
+   * Whether the host is in the middle of something and would rather this
+   * element did no expensive work yet. A controlled write that empties the
+   * field does not tell the input system, because that costs a keyboard rebuild
+   * (`reloadInputViews` twice plus `textWillChange`, about seven frames); the
+   * news is given on this flag's falling edge, before the keyboard acts on the
+   * stale correction. A host that never sets it gets a deadline instead.
+   */
+  bool quiet{false};
 };
 
 /*
