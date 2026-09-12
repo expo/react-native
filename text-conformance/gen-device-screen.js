@@ -42,15 +42,18 @@ const header = `/**
  *
  * Renders the conformance corpus and reports every measured box's rect,
  * relative to its own case root, to the harness on :8900. The browser side of
- * the same corpus is \`expected.json\`; \`verify.js\` compares them. Rects
- * are relative to the case root so that screen padding, scroll offset and the
- * status bar do not enter the comparison.
+ * the same corpus is \`expected.json\`; \`verify.js\` compares them.
+ *
+ * Rects are reported relative to the case root so that a difference means a
+ * layout difference. An absolute coordinate would also carry the screen's
+ * padding, the scroll offset and the status bar, and a constant offset in all
+ * of those looks exactly like a real bug.
  */
 
 import {LABEL_COLOR, TERTIARY_COLOR} from './themed';
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {ScrollView, Text, View} from 'react-native';
+import {ScrollView} from 'react-native';
 
 import '@react-native/expo-intrinsics-poc';
 
@@ -67,7 +70,8 @@ const CORPUS = ${JSON.stringify(
   2,
 )};
 
-// The section order the corpus was written in
+// The section order, so the screen reads in the order the corpus was written
+// rather than in whatever order the cases happen to appear.
 const SECTION_ORDER = ${JSON.stringify(SECTIONS.map(([title]) => title))};
 
 const BY_SECTION = SECTION_ORDER.map(title => ({
@@ -76,17 +80,28 @@ const BY_SECTION = SECTION_ORDER.map(title => ({
 })).filter(group => group.cases.length > 0);
 
 /*
- * The corpus writes CSS lengths as strings ("40px") for the browser; React
- * Native takes numbers, so they are converted here rather than stored twice
+ * The corpus writes CSS lengths as strings ("40px") because that is what the
+ * browser side needs. React Native takes numbers, so they are converted here
+ * rather than stored twice — one corpus, two consumers.
  */
 ${toStyle.toString()}
 
 /*
- * Each case is laid out inside a block container, as a child of <body> is in
- * the browser. A block box that is a flex item establishes an independent
- * formatting context, so margins do not collapse through its edges (CSS 2.1
- * §8.3.1); React Native's surface root is a flex container, so without this
- * wrapper the two sides would render different trees.
+ * Each case is laid out inside a BLOCK container, matching the browser, where
+ * every case is a child of <body>.
+ *
+ * This is structural, not cosmetic. A block box that is a FLEX ITEM
+ * establishes an independent formatting context, so margins do not collapse
+ * through its edges (CSS 2.1 8.3.1) — and React Native's surface root is a
+ * flex container, so without this wrapper every case root is a flex item while
+ * the browser's is a block child. Safari says the same thing when asked
+ * directly: the identical markup measures 60 under a block parent and 80 under
+ * a flex one.
+ *
+ * Left unwrapped, the corpus compared two different trees and reported the
+ * difference as a renderer bug. It is not one — this renderer produces exactly
+ * Safari's flex-parent answer — and the corpus has to render the same
+ * structure on both sides before any disagreement it reports means anything.
  */
 function render(node, refs, key) {
   if (typeof node === 'string') {
@@ -104,7 +119,11 @@ function render(node, refs, key) {
       }
     };
   }
-  return React.createElement(Tag, props, children.length ? children : undefined);
+  return React.createElement(
+    Tag,
+    props,
+    children.length ? children : undefined,
+  );
 }
 
 function Case({caseData, onMeasured}) {
@@ -133,18 +152,26 @@ function Case({caseData, onMeasured}) {
   }, [caseData.name, onMeasured]);
 
   useEffect(() => {
-    // One frame after mount, since images and controls in some cases resolve a
-    // frame later
+    // One frame after mount: layout has to have run before a rect means
+    // anything, and the images/controls in some cases resolve a frame later.
     const id = setTimeout(measure, 350);
     return () => clearTimeout(id);
   }, [measure]);
 
   return (
-    <View style={{marginBottom: 24}}>
+    <section style={{marginBottom: 24}}>
       {/* Full-contrast, not the quiet tertiary: a case title is how you find
           the case you came for among 134 and how you name the one that
           disagrees. Matches the corpus page's case-label rule. */}
-      <Text style={{fontSize: 10, color: LABEL_COLOR}}>{caseData.name}</Text>
+      <p
+        style={{
+          fontSize: 10,
+          color: LABEL_COLOR,
+          marginTop: 0,
+          marginBottom: 0,
+        }}>
+        {caseData.name}
+      </p>
       {/* A block container, so the case root is not a flex item — see the
           note beside the render function above.
 
@@ -157,14 +184,15 @@ function Case({caseData, onMeasured}) {
           display: 'block',
           outlineWidth: 1,
           outlineStyle: 'solid',
-          // Tertiary rather than the separator colour: Android has no
-          // framework attribute for a divider, so themed.js falls back to a
-          // translucent black there, invisible on a dark screen
+          // TERTIARY rather than the separator colour: Android has no
+          // framework colour attribute for a divider, so themed.js falls back
+          // to a translucent BLACK there — invisible on a dark screen, which
+          // is the exact failure these outlines were added to avoid.
           outlineColor: TERTIARY_COLOR,
         }}>
         {render(caseData.tree, refs, caseData.name)}
       </div>
-    </View>
+    </section>
   );
 }
 
@@ -178,8 +206,14 @@ function ConformanceScreen() {
       return;
     }
     /*
-     * The report is best-effort: not reaching the harness is the normal case
-     * when nobody is running verify.js, so it is not shown as an error
+     * The report is best-effort, and NOT reaching the harness is the normal
+     * case.
+     *
+     * This screen is useful on its own — it is the corpus, rendered — and most
+     * of the time nobody is running verify.js to receive the geometry, so a
+     * failed report is not shown as an error: that would put an error on a
+     * screen that has done nothing wrong and train the eye to ignore the one
+     * line that would matter if a real failure appeared.
      */
     fetch(REPORT_URL, {
       method: 'POST',
@@ -195,32 +229,41 @@ function ConformanceScreen() {
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={{padding: 8}}>
-      <Text style={{fontSize: 11, color: TERTIARY_COLOR, marginBottom: 8}}>
-        {status}
-      </Text>
-      {BY_SECTION.map(group => (
-        <View key={group.title}>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: '600',
-              marginTop: 18,
-              marginBottom: 10,
-              // Stated: React Native's default text colour is black, invisible
-              // on a dark screen
-              color: LABEL_COLOR,
-            }}>
-            {group.title}
-            <Text style={{fontWeight: '400', color: TERTIARY_COLOR}}>
-              {'  ' + String(group.cases.length)}
-            </Text>
-          </Text>
-          {group.cases.map(c => (
-            <Case key={c.name} caseData={c} onMeasured={onMeasured} />
-          ))}
-        </View>
-      ))}
+    <ScrollView>
+      <div style={{padding: 8}}>
+        <p
+          style={{
+            fontSize: 11,
+            color: TERTIARY_COLOR,
+            marginTop: 0,
+            marginBottom: 8,
+          }}>
+          {status}
+        </p>
+        {BY_SECTION.map(group => (
+          <section key={group.title}>
+            <h3
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                marginTop: 18,
+                marginBottom: 10,
+                // Stated, because an author colour is what these headings get by
+                // default and React Native's default is black — which on a dark
+                // screen is a heading that is not there at all.
+                color: LABEL_COLOR,
+              }}>
+              {group.title}
+              <span style={{fontWeight: '400', color: TERTIARY_COLOR}}>
+                {'  ' + String(group.cases.length)}
+              </span>
+            </h3>
+            {group.cases.map(c => (
+              <Case key={c.name} caseData={c} onMeasured={onMeasured} />
+            ))}
+          </section>
+        ))}
+      </div>
     </ScrollView>
   );
 }
