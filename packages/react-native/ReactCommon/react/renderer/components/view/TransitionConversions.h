@@ -91,6 +91,12 @@ inline std::optional<TransitionProperty> parseTransitionProperty(const std::stri
   if (value == "transform") {
     return TransitionProperty::Transform;
   }
+  if (value == "height") {
+    return TransitionProperty::Height;
+  }
+  if (value == "padding-bottom" || value == "paddingBottom") {
+    return TransitionProperty::PaddingBottom;
+  }
   // `none`, and every property this cannot interpolate. Not an error: CSS says
   // an unsupported property simply does not transition, and the value still
   // applies immediately.
