@@ -8,6 +8,7 @@
 package com.facebook.react.views.view
 
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.module.annotations.ReactModule
@@ -36,6 +37,9 @@ internal class ElementButtonViewManager : ReactViewManager() {
       view.onPressChange = { pressed -> emitPressChange(context, view, pressed) }
       view.ripplesEnabled = true
     }
+    // Not behind the gesture flag, unlike the press: the menu is opened by the view's own
+    // `onActivated`, which does not go through the pointer system
+    view.onCommand = { id -> emitCommand(context, view, id) }
     return view
   }
 
@@ -53,11 +57,41 @@ internal class ElementButtonViewManager : ReactViewManager() {
   private fun emitPressChange(
       context: ThemedReactContext,
       view: ElementButtonView,
-      pressed: Boolean
+      pressed: Boolean,
   ) {
     val surfaceId = UIManagerHelper.getSurfaceId(view)
     UIManagerHelper.getEventDispatcher(context)
         ?.dispatchEvent(ElementPressChangeEvent(surfaceId, view.id, pressed))
+  }
+
+  private fun emitCommand(context: ThemedReactContext, view: ElementButtonView, id: String) {
+    val surfaceId = UIManagerHelper.getSurfaceId(view)
+    UIManagerHelper.getEventDispatcher(context)
+        ?.dispatchEvent(ElementCommandEvent(surfaceId, view.id, id))
+  }
+
+  // The commands a `<menu>` child was flattened into, in order; only `label` is required
+  @ReactProp(name = "menuCommands")
+  public fun setMenuCommands(view: ReactViewGroup, commands: ReadableArray?) {
+    val button = view as? ElementButtonView ?: return
+    if (commands == null) {
+      button.menuCommands = emptyList()
+      return
+    }
+    val parsed = ArrayList<ElementInteractiveBoxView.MenuCommand>(commands.size())
+    for (index in 0 until commands.size()) {
+      val command = commands.getMap(index) ?: continue
+      val label = command.getString("label") ?: continue
+      parsed.add(
+          ElementInteractiveBoxView.MenuCommand(
+              id = command.getString("id") ?: label,
+              label = label,
+              disabled = command.hasKey("disabled") && command.getBoolean("disabled"),
+              destructive = command.hasKey("destructive") && command.getBoolean("destructive"),
+          )
+      )
+    }
+    button.menuCommands = parsed
   }
 
   @ReactProp(name = "disabled")
@@ -81,22 +115,23 @@ internal class ElementButtonViewManager : ReactViewManager() {
   }
 
   @ReactProp(name = "authorStatesPressFeedback")
-  public fun setAuthorStatesPressFeedback(view: ReactViewGroup, authorStatesPressFeedback: Boolean) {
+  public fun setAuthorStatesPressFeedback(
+      view: ReactViewGroup,
+      authorStatesPressFeedback: Boolean,
+  ) {
     (view as? ElementButtonView)?.authorStatesPressFeedback = authorStatesPressFeedback
   }
 
   override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Any>? {
     val export = super.getExportedCustomDirectEventTypeConstants() ?: mutableMapOf()
     export["topElementPressChange"] = mapOf("registrationName" to "onPressChange")
+    export["topElementCommand"] = mapOf("registrationName" to "onCommand")
     return export
   }
 }
 
-private class ElementPressChangeEvent(
-    surfaceId: Int,
-    viewTag: Int,
-    private val pressed: Boolean
-) : Event<ElementPressChangeEvent>(surfaceId, viewTag) {
+private class ElementPressChangeEvent(surfaceId: Int, viewTag: Int, private val pressed: Boolean) :
+    Event<ElementPressChangeEvent>(surfaceId, viewTag) {
 
   override fun getEventName(): String = "topElementPressChange"
 
@@ -106,4 +141,16 @@ private class ElementPressChangeEvent(
 
   override fun getEventData(): WritableMap =
       Arguments.createMap().apply { putBoolean("pressed", pressed) }
+}
+
+private class ElementCommandEvent(surfaceId: Int, viewTag: Int, private val id: String) :
+    Event<ElementCommandEvent>(surfaceId, viewTag) {
+
+  override fun getEventName(): String = "topElementCommand"
+
+  // Two commands chosen in the same frame are two commands; coalescing is for streams where only
+  // the newest matters
+  override fun canCoalesce(): Boolean = false
+
+  override fun getEventData(): WritableMap = Arguments.createMap().apply { putString("id", id) }
 }
