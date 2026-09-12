@@ -60,6 +60,34 @@ A wrapped inline box paints with `box-decoration-break: slice` (the CSS
 default) — leading edge on the first fragment, trailing on the last. `clone`,
 which repeats both edges on every fragment, is not implemented.
 
+**`layout-transition-events`** — `ReactCommon/.../animationbackend/CSSTransitions.cpp`
+A transition of a layout property dispatches no `transitionrun`,
+`transitionstart`, `transitionend` or `transitioncancel` (css-transitions-1 §6);
+a paint property's (`opacity`, the colours, `transform`) dispatches all four.
+The layout flight is `CSSLayoutTransitions`', which lands per node and does not
+know which declared property moved it, so a page that waits on `transitionend`
+for a `height` transition waits on its own fallback timer.
+
+**`layout-transition-endpoints`** — `ReactCommon/.../animationbackend/CSSLayoutTransitions.h`
+A transition of a layout property (`height`, `padding-bottom`) lays out ONCE at
+the destination and glides the mounted views between the two real layouts —
+the model `UIView animateWithDuration:` and Android's `ChangeBounds` share.
+css-transitions-1 instead re-lays-out every frame. Three observable
+divergences: content whose layout would change at an intermediate value (text
+rewrapping at an in-between height) keeps its endpoint geometry throughout;
+`getBoundingClientRect` mid-flight reads the target, not the interpolated
+value; and knock-on movement — views moved by the transition without declaring
+one — rides the declaring node's clock, with the LONGEST clock governing when
+several start in one commit. In exchange a transition costs no commits at
+all beyond the author's own — attribution comes from a scratch Yoga pass that
+never enters the tree — rather than a tree clone, Yoga pass, diff and
+mounting transaction per frame, and a view that a mixed commit moved only for
+unrelated reasons lands instantly, per node.
+
+DELIBERATE. The per-frame-commit implementation existed and was replaced; the
+approximation is the one both platforms make for their own layout animations,
+and the receipts (an entire transcript following a 250ms row-close) are why.
+
 ## User-agent styles
 
 All in `packages/expo-intrinsics/src/uaStyles.js`.

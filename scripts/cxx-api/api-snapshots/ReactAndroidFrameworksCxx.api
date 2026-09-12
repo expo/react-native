@@ -1710,6 +1710,21 @@ class facebook::react::BufferedRuntimeExecutor : public std::enable_shared_from_
   public void flush();
 }
 
+class facebook::react::CSSLayoutTransitions : public facebook::react::MountingOverrideDelegate {
+  public CSSLayoutTransitions(std::shared_ptr<facebook::react::CSSTransitionsTrace> trace);
+  public bool hasWork() const;
+  public virtual bool shouldOverridePullTransaction() const override;
+  public virtual std::optional<facebook::react::MountingTransaction> pullTransaction(facebook::react::SurfaceId surfaceId, facebook::react::MountingTransaction::Number number, const facebook::react::TransactionTelemetry& telemetry, facebook::react::ShadowViewMutationList mutations) const override;
+  public void beginCapture(facebook::react::SurfaceId surfaceId, std::unordered_map<facebook::react::Tag, facebook::react::CSSLayoutTransitions::Timeline> timelines, std::unordered_map<facebook::react::Tag, facebook::react::LayoutMetrics> scratchMetrics);
+  public void pump(double nowMs, facebook::react::UIManager& uiManager);
+}
+
+struct facebook::react::CSSLayoutTransitions::Timeline {
+  public double delay;
+  public double duration;
+  public facebook::react::TransitionTimingFunction curve;
+}
+
 class facebook::react::CSSSyntaxParser {
   public constexpr CSSSyntaxParser(const facebook::react::CSSSyntaxParser&) = default;
   public constexpr CSSSyntaxParser(facebook::react::CSSSyntaxParser&&) = default;
@@ -1749,6 +1764,7 @@ class facebook::react::CSSTokenizer {
 
 class facebook::react::CSSTransitions : public facebook::react::UIManagerCommitHook {
   public CSSTransitions(facebook::react::UIManager& uiManager);
+  public facebook::react::RootShadowNode::Unshared buildScratch(const facebook::react::ShadowTree& shadowTree, const facebook::react::RootShadowNode::Unshared& newRootShadowNode) noexcept;
   public std::shared_ptr<facebook::react::CSSTransitionsTrace> trace() const;
   public virtual facebook::react::RootShadowNode::Unshared shadowTreeWillCommit(const facebook::react::ShadowTree& shadowTree, const facebook::react::RootShadowNode::Shared& oldRootShadowNode, const facebook::react::RootShadowNode::Unshared& newRootShadowNode, const facebook::react::ShadowTreeCommitOptions& commitOptions) noexcept override;
   public virtual void commitHookWasRegistered(const facebook::react::UIManager& uiManager) noexcept override;
@@ -4721,6 +4737,7 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public static void assignListMarker(facebook::react::YogaLayoutableShadowNode& item, const facebook::react::ListMarker& marker);
   public static void setAnonymousTextContentFactory(facebook::react::YogaLayoutableShadowNode::AnonymousTextContentFactory factory);
   public std::optional<facebook::react::ListMarker> nextListMarkerIfChanged(const facebook::react::YogaLayoutableShadowNode& child);
+  public std::vector<facebook::yoga::Node*> ownedYogaChildren() const;
   public using AnonymousTextContentFactory = std::shared_ptr<facebook::react::YogaLayoutableShadowNode>(*)(std::vector<std::shared_ptr<const facebook::react::ShadowNode>> runChildren, const facebook::react::ShadowNode& containerShadowNode);
   public using ListOfShared = std::vector<facebook::react::YogaLayoutableShadowNode::Shared>;
   public using Shared = std::shared_ptr<const facebook::react::YogaLayoutableShadowNode>;
@@ -4735,6 +4752,7 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>&);
   public void enableMeasurement();
   public void prepareListContext(int depth);
+  public void reclaimYogaChildren(const std::vector<facebook::yoga::Node*>& children) const;
   public void setPadding(facebook::react::RectangleEdges<facebook::react::Float> padding) const;
   public void setPositionType(YGPositionType positionType) const;
   public void setSize(facebook::react::Size size) const;
@@ -5885,7 +5903,9 @@ enum facebook::react::TransitionProperty {
   All,
   BackgroundColor,
   BorderColor,
+  Height,
   Opacity,
+  PaddingBottom,
   Transform,
 }
 
@@ -6624,6 +6644,11 @@ struct facebook::react::FilterFunction {
   public std::variant<facebook::react::Float, facebook::react::DropShadowParams> parameters;
 }
 
+struct facebook::react::FinishedAnimation {
+  public facebook::react::CSSAnimation spec;
+  public std::weak_ptr<const facebook::react::ShadowNodeFamily> family;
+}
+
 struct facebook::react::FloatExclusion {
   public bool operator==(const facebook::react::FloatExclusion& other) const = default;
   public facebook::react::Float blockEnd;
@@ -7073,13 +7098,16 @@ struct facebook::react::RunningAnimation {
 }
 
 struct facebook::react::RunningTransition {
+  public bool announcedStart;
   public bool awaitingFirstFrame;
   public double delay;
   public double duration;
+  public double reversingShorteningFactor;
   public double startTime;
   public facebook::react::TransitionProperty property;
   public facebook::react::TransitionTimingFunction timingFunction;
   public facebook::react::TransitionValue from;
+  public facebook::react::TransitionValue reversingAdjustedStart;
   public facebook::react::TransitionValue to;
 }
 
@@ -7317,6 +7345,8 @@ struct facebook::react::TransitionValue {
   public facebook::react::Float number;
   public facebook::react::SharedColor color;
   public facebook::react::Transform transform;
+  public facebook::yoga::Style::Length paddingLength;
+  public facebook::yoga::Style::SizeLength length;
 }
 
 struct facebook::react::ValueUnit {

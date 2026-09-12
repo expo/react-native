@@ -570,6 +570,23 @@ bool YogaLayoutableShadowNode::doesOwn(
   return YGNodeGetOwner(&child.yogaNode_) == &yogaNode_;
 }
 
+std::vector<yoga::Node*> YogaLayoutableShadowNode::ownedYogaChildren() const {
+  std::vector<yoga::Node*> owned;
+  for (auto* childYogaNode : yogaNode_.getChildren()) {
+    if (YGNodeGetOwner(childYogaNode) == &yogaNode_) {
+      owned.push_back(childYogaNode);
+    }
+  }
+  return owned;
+}
+
+void YogaLayoutableShadowNode::reclaimYogaChildren(
+    const std::vector<yoga::Node*>& children) const {
+  for (auto* childYogaNode : children) {
+    childYogaNode->setOwner(&yogaNode_);
+  }
+}
+
 bool YogaLayoutableShadowNode::shouldNewRevisionDirtyMeasurement(
     const ShadowNode& /*sourceShadowNode*/,
     const ShadowNodeFragment& /*fragment*/) const {

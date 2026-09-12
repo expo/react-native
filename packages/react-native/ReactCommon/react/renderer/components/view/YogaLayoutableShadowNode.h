@@ -93,6 +93,21 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   Rect getContentBounds() const;
 
   /*
+   * The Yoga children this node owns, to pass to `reclaimYogaChildren`.
+   */
+  std::vector<yoga::Node *> ownedYogaChildren() const;
+
+  /*
+   * Takes back the ownership of `children` that cloning this node released.
+   * Cloning an unowned node releases the children it shares with the clone,
+   * so that whichever of the two is laid out next clones them first. A clone
+   * that has been laid out and is then discarded leaves nothing shared, and
+   * this node can lay its children out in place again. `children` must come
+   * from `ownedYogaChildren()` on this node, read before the clone was made.
+   */
+  void reclaimYogaChildren(const std::vector<yoga::Node *> &children) const;
+
+  /*
    * Trait-based downcast: the YogaLayoutableKind trait is set by this class's
    * constructors, so the check-and-static_cast is exact, and it avoids an RTTI
    * dynamic_cast on the per-child hot paths that need it.
