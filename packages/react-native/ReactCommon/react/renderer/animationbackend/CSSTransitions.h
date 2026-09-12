@@ -252,6 +252,12 @@ class CSSTransitions final : public UIManagerCommitHook {
 
   static void collectLayoutMetrics(const ShadowNode &node, std::unordered_map<Tag, LayoutMetrics> &metrics);
 
+  /*
+   * A commit that is not React's, checked against what is in flight — see the
+   * call site. Diagnostic only.
+   */
+  void noteCommitBehindTransitions(const RootShadowNode &newRootShadowNode, ShadowTreeCommitSource source) noexcept;
+
   void diffNode(const ShadowNode &oldNode, const ShadowNode &newNode, std::vector<LayoutStart> &layoutStarts);
   // A subtree with no old counterpart: freshly mounted. Transitions do not
   // start here (no previous value exists — that is what @starting-style is
@@ -347,6 +353,29 @@ class CSSTransitions final : public UIManagerCommitHook {
   bool sawTransitionableContent_{false};
 
   std::shared_ptr<CSSTransitionsTrace> trace_{CSSTransitionsTrace::shared()};
+
+  /*
+   * What FINISHED recently, so that a transition starting again can say so.
+   *
+   * A transition that completes and is then asked for again from the value it
+   * started at is not an author changing their mind: it is the same change
+   * arriving twice, and on a device it reads as a flicker — reported as
+   * "instability in the read status indicators", with a trace showing one
+   * opacity fade restarting six times in six hundred milliseconds and no
+   * reverse between them. The trace could say that a transition started and
+   * that one finished; it could not say they were the SAME one going round.
+   *
+   * Keyed by tag and property, cleared when the entry is older than a second.
+   * A map of a handful of finished transitions, read once per start.
+   */
+  struct DoneMark {
+    double time{0};
+    // What it was: the SAME endpoints coming round again is the restart worth
+    // naming. A fade that finishes and then reverses is an author's cross-fade.
+    std::string journey;
+    int repeats{0};
+  };
+  std::unordered_map<uint64_t, DoneMark> lastDone_;
 
   // Touched by the commit hook (whatever thread commits) and the frame
   // callback (the UI thread); every access is guarded.
