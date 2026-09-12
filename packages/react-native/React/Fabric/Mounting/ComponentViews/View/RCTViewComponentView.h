@@ -94,6 +94,27 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, nullable) NSString *nativeId;
 
 /**
+ * Re-place any `background-attachment: fixed` background in this subtree.
+ *
+ * A fixed background is measured against the viewport rather than the element,
+ * so scrolling changes what it should look like without changing anything the
+ * mounting layer reports. The scroll container calls this as it scrolls, which
+ * is the same arrangement browsers make for the same feature.
+ *
+ * Cheap on a tree that has none: one boolean test per view.
+ */
+- (void)exp_repositionFixedBackgrounds;
+
+/**
+ * Whether anything in the process has `background-attachment: fixed` at all.
+ *
+ * The walk above passes through every view under a scroll and runs on every
+ * scroll frame, so an app that never writes the property must not pay for it.
+ * Ask this first.
+ */
+FOUNDATION_EXPORT BOOL EXPAnyFixedBackgrounds(void);
+
+/**
  * Returns the object - usually (sub)view - which represents this
  * component view in terms of accessibility.
  * All accessibility properties will be applied to this object.

@@ -259,6 +259,7 @@ const validAttributesForNonEventProps = {
   experimental_backgroundPosition: backgroundPositionAttribute,
   backgroundRepeat: backgroundRepeatAttribute,
   experimental_backgroundRepeat: backgroundRepeatAttribute,
+  experimental_backgroundAttachmentFixed: true,
   boxShadow: boxShadowAttribute,
   filter: filterAttribute,
   mixBlendMode: true,

@@ -338,6 +338,12 @@ paragraph on every screen would otherwise become clickable and focusable.
 Unfinished rather than blocked: closing it is the same timer on the Android side
 plus a decision about which boxes get it there.
 
+**`background-attachment-single-layer`** — `ReactCommon/react/renderer/components/view/BaseViewProps.h`
+CSS takes a comma-separated list for `background-attachment`, one entry per
+background layer, and `local` is a third value — the positioning area is the
+element's *scrolled* content. Neither has come up, and a bool keeps the
+per-frame work on the paint path down to one branch.
+
 ## Performance
 
 **`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`

@@ -18,6 +18,7 @@ import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.view.View
+import android.view.ViewTreeObserver
 import android.widget.ImageView
 import androidx.annotation.ColorInt
 import androidx.annotation.ColorLong
@@ -46,6 +47,8 @@ import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.BoxShadow
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.OutlineStyle
+import java.lang.ref.WeakReference
+import java.util.WeakHashMap
 
 /**
  * Utility object responsible for applying backgrounds, borders, and related visual effects to
@@ -93,8 +96,8 @@ public object BackgroundStyleApplicator {
   }
 
   /**
-   * Asks again for the window mode the view's colors need, for a `dynamic-range-limit` that
-   * arrives after them. A window never leaves a mode, so a tighter limit changes nothing.
+   * Asks again for the window mode the view's colors need, for a `dynamic-range-limit` that arrives
+   * after them. A window never leaves a mode, so a tighter limit changes nothing.
    * DOM-CSS-LIMITATION(android-dynamic-range-is-per-window)
    */
   @JvmStatic
@@ -103,7 +106,9 @@ public object BackgroundStyleApplicator {
     composite.background?.backgroundColorLong?.let { WideColorGamut.request(view, it) }
     composite.border?.colorLongs()?.forEach { WideColorGamut.request(view, it) }
     composite.outerShadows.forEach { shadow ->
-      (shadow as? OutsetBoxShadowDrawable)?.shadowColorLong?.let { WideColorGamut.request(view, it) }
+      (shadow as? OutsetBoxShadowDrawable)?.shadowColorLong?.let {
+        WideColorGamut.request(view, it)
+      }
     }
     composite.innerShadows.forEach { shadow ->
       (shadow as? InsetBoxShadowDrawable)?.shadowColorLong?.let { WideColorGamut.request(view, it) }
@@ -127,6 +132,98 @@ public object BackgroundStyleApplicator {
     ensureBackgroundImageDrawable(view).backgroundImageLayers = backgroundImageLayers
     backgroundImageLayers?.forEach { layer ->
       layer.colorLongs().forEach { WideColorGamut.request(view, it) }
+    }
+  }
+
+  /**
+   * `background-attachment: fixed`, which anchors the background to the viewport instead of to the
+   * element.
+   *
+   * Two things make it work: the box the image is measured against becomes the window's, expressed
+   * in the view's own coordinates — so as the view travels up a scroll, the window's rect in its
+   * space travels down by the same amount and the image stays put on screen — and the drawable is
+   * invalidated whenever anything in the window scrolls, because a display list reused at a new
+   * offset would carry the old answer with it.
+   *
+   * A balloon's gradient is the case this exists for: every balloon shares one declaration, and
+   * each shows the slice of it that it happens to be over.
+   */
+  @JvmStatic
+  public fun setBackgroundAttachmentFixed(view: View, fixed: Boolean): Unit {
+    val tracked = fixedBackgrounds.remove(view)
+    tracked?.stop()
+    if (!fixed) {
+      getBackgroundImage(view)?.fixedPositioningArea = null
+      return
+    }
+    val drawable = ensureBackgroundImageDrawable(view)
+    val viewRef = WeakReference(view)
+    drawable.fixedPositioningArea = {
+      val owner = viewRef.get()
+      if (owner == null) {
+        RectF()
+      } else {
+        val origin = IntArray(2)
+        owner.getLocationInWindow(origin)
+        val window = owner.rootView
+        RectF(
+            -origin[0].toFloat(),
+            -origin[1].toFloat(),
+            (window.width - origin[0]).toFloat(),
+            (window.height - origin[1]).toFloat(),
+        )
+      }
+    }
+    fixedBackgrounds[view] = FixedBackgroundTracker(view, drawable).also { it.start() }
+  }
+
+  /**
+   * The views whose background is fixed, so a tracker is stopped when the prop goes away and is
+   * never installed twice. Weak on the view, which owns it through its background.
+   */
+  private val fixedBackgrounds = WeakHashMap<View, FixedBackgroundTracker>()
+
+  /**
+   * Keeps one view's fixed background in step with the window.
+   *
+   * The scroll listener belongs to the view TREE, so it hears every scroll in the window rather
+   * than only the nearest scroll view's — which is what a fixed background needs, since any
+   * ancestor moving changes where the viewport is in this view's coordinates. It can only be
+   * attached to a real tree, so this follows the view on and off the window.
+   */
+  private class FixedBackgroundTracker(
+      view: View,
+      private val drawable: BackgroundImageDrawable,
+  ) : View.OnAttachStateChangeListener, ViewTreeObserver.OnScrollChangedListener {
+    private val viewRef = WeakReference(view)
+
+    fun start() {
+      val view = viewRef.get() ?: return
+      view.addOnAttachStateChangeListener(this)
+      if (view.isAttachedToWindow) {
+        view.viewTreeObserver.addOnScrollChangedListener(this)
+      }
+    }
+
+    fun stop() {
+      val view = viewRef.get() ?: return
+      view.removeOnAttachStateChangeListener(this)
+      if (view.isAttachedToWindow) {
+        view.viewTreeObserver.removeOnScrollChangedListener(this)
+      }
+    }
+
+    override fun onViewAttachedToWindow(v: View) {
+      v.viewTreeObserver.addOnScrollChangedListener(this)
+      drawable.invalidateSelf()
+    }
+
+    override fun onViewDetachedFromWindow(v: View) {
+      v.viewTreeObserver.removeOnScrollChangedListener(this)
+    }
+
+    override fun onScrollChanged() {
+      drawable.invalidateSelf()
     }
   }
 
