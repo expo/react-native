@@ -1,0 +1,22 @@
+{
+  "name": "chat-demo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "An app whose window reaches its own edges: keyboard, safe areas, scrolling and a native navigator, in the one place RN Tester's own chrome makes invisible.",
+  "scripts": {
+    "start": "react-native start",
+    "android": "../../gradlew :packages:chat-demo:android:app:installDebug",
+    "ios": "cd ios && xcodegen generate && bundle exec pod install"
+  },
+  "codegenConfig": {
+    "name": "ChatDemoSpecs",
+    "type": "all",
+    "jsSrcsDir": ".",
+    "android": {
+      "javaPackageName": "dev.expo.frontierdemo.specs"
+    }
+  },
+  "dependencies": {
+    "react-native-screens": "4.27.0"
+  }
+}

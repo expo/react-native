@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Native chrome around the React surface, which is the point of this layout.
+
+  The toolbar collapses when the list inside the React surface is dragged, and it
+  can only do that if that list speaks the platform's nested-scrolling protocol:
+  CoordinatorLayout learns about the drag because the scrolling child announces
+  it, not because anyone forwards it. So this is the test as much as the demo —
+  with `<ScrollView>` inside, the toolbar does not move at all, because
+  android.widget.ScrollView implements none of that protocol.
+
+  `fitsSystemWindows` is deliberately absent everywhere: the window draws edge to
+  edge and each view is responsible for the part of the safe area it overlaps.
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/coordinator"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!--
+      The React surface. Declared FIRST so it sits under the app bar in the
+      z-order, and given the scrolling-view behavior so CoordinatorLayout offsets
+      it by however much of the bar is showing.
+    -->
+    <FrameLayout
+        android:id="@+id/react_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:title="Keyboard demo"
+            app:layout_scrollFlags="scroll|enterAlways|snap" />
+    </com.google.android.material.appbar.AppBarLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

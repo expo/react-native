@@ -1,0 +1,19 @@
+<resources>
+    <!--
+      No opt-out of edge-to-edge, and nothing that insets the window.
+
+      This is the difference from RN Tester, and the reason this app exists:
+      measured there, nothing inside the React Native surface ever overlaps a
+      system bar, so the safe-area reservation correctly computes zero and cannot
+      be judged by looking. Here the surface reaches the window's edges.
+    -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <!--
+          The status bar draws over the app's own page, so its icons take their
+          contrast from the page rather than from a bar of their own: dark here,
+          light in `values-night`. Without this they are the platform's default
+          white, which on this light surface is a clock you cannot read.
+        -->
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

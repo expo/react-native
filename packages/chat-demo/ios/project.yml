@@ -1,0 +1,79 @@
+name: ChatDemo
+options:
+  bundleIdPrefix: dev.expo
+  deploymentTarget:
+    iOS: "15.1"
+targets:
+  ChatDemo:
+    type: application
+    platform: iOS
+    sources:
+      - ChatDemo
+    info:
+      path: ChatDemo/Info.plist
+      properties:
+        CFBundleDisplayName: Chat Demo
+        UILaunchScreen: {}
+        # The scene life cycle. Required by the iOS 27 SDK: an app that still
+        # builds its window in the app delegate is ended at launch.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: SceneDelegate
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
+        # Edge to edge, which is the entire reason this app exists: the content has to be able to
+        # reach the system's own furniture or there is no safe area to reserve.
+        UIViewControllerBasedStatusBarAppearance: true
+        # Let the app render at the screen's rate. Without this key iOS holds an iPhone app to
+        # 60fps even on a 120Hz screen — and the KEYBOARD's window is not held to it, so the keys
+        # rise at 120 while everything drawn to follow them is produced at 60. Measured with the
+        # app's own trace on a device: our samples arrived every 16.7ms through a reveal in which
+        # the obstruction grew by as much as 48 points between two of them.
+        CADisableMinimumFrameDurationOnPhone: true
+    postBuildScripts:
+      # Without this a Release build produces an app with NO `main.jsbundle` in it: the
+      # AppDelegate falls back to a file that was never created, and the app launches to a
+      # bundle-loading error. `xcodegen` gives you no bundling phase, unlike the RN template's
+      # hand-written project, and nothing about the build fails — the archive succeeds and the
+      # IPA is simply broken.
+      - name: Bundle React Native code and images
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          export NODE_BINARY=node
+          # PROJECT_ROOT is where the CLI looks for `react-native.config.js`, so it must be this
+          # PACKAGE and not the repository root: the root has no such file, the CLI then reports
+          # `platforms: []`, and Metro rejects `--platform ios` as invalid — after compiling
+          # everything, so it reads like a bundler bug.
+          #
+          # Metro's own roots are a separate question, and `metro.config.js` answers it: it sets
+          # `projectRoot` to the repository, because the entry point is in this package and the
+          # elements it imports are in another.
+          export PROJECT_ROOT="$PROJECT_DIR/.."
+          REPO_ROOT="$PROJECT_DIR/../../.."
+          export ENTRY_FILE="$PROJECT_ROOT/index.js"
+          export BUNDLE_CONFIG="$PROJECT_ROOT/metro.config.js"
+          WITH_ENVIRONMENT="$REPO_ROOT/packages/react-native/scripts/xcode/with-environment.sh"
+          REACT_NATIVE_XCODE="$REPO_ROOT/packages/react-native/scripts/react-native-xcode.sh"
+          /bin/sh -c "$WITH_ENVIRONMENT $REACT_NATIVE_XCODE"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.expo.frontierdemo
+        # Signed for a real device as well as the simulator: several of the
+        # faults this demo exists to catch — the keyboard's interactive
+        # dismissal, the accessory's own window, a menu's placement against the
+        # keys — only happen on hardware, where a real IME is involved.
+        DEVELOPMENT_TEAM: C8D8QTF339
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: "5.0"
+        OTHER_LDFLAGS: "$(inherited) -ObjC -lc++"
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
