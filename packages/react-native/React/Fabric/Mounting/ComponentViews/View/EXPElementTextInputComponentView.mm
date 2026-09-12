@@ -512,7 +512,9 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
         *flag = NO;
       }
     } guard{&_isApplyingProps};
-    EXPWriteTextPreservingCaret(_textField, RCTNSStringFromString(newInputProps.value));
+    // `<input>` has no host-quiet signal, so it pays its own correction drop as
+    // it always has. See `quiet` on `<textarea>`.
+    EXPWriteTextPreservingCaret(_textField, RCTNSStringFromString(newInputProps.value), NO);
   } else if (!_isInitialValueSet && !newInputProps.hasValue) {
     // Uncontrolled: `defaultValue` seeds the field once and is never written
     // again, exactly as in HTML.

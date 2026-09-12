@@ -64,6 +64,7 @@ static UIFont *EXPElementTextAreaFont(void)
  */
 - (void)layoutSubviews
 {
+  EXP_ATTRIBUTE_LAYOUT();
   [super layoutSubviews];
   if (self.contentSize.height <= CGRectGetHeight(self.bounds) + 0.5 && fabs(self.contentOffset.y) > 0.5) {
     self.contentOffset = CGPointZero;
@@ -86,6 +87,16 @@ static UIFont *EXPElementTextAreaFont(void)
    */
   BOOL _holdsTheKeyboard;
 
+  /*
+   * A write was made while the host was animating and its queued correction has
+   * not been dropped yet. Only the DROP is owed now — the input system is told
+   * inline by the write itself, because that news is the keyboard's keyplane
+   * change and withholding it withheld the autocapitalisation with it.
+   */
+  BOOL _owesCorrectionDrop;
+  /* Which write the pending settle belongs to; a newer one supersedes. */
+  NSUInteger _dropGeneration;
+
   /* The last content size reported, so an unchanged one costs nothing. */
   CGFloat _reportedContentWidth;
   CGFloat _reportedContentHeight;
@@ -99,6 +110,10 @@ static UIFont *EXPElementTextAreaFont(void)
   UILabel *_placeholderLabel;
 
   NSInteger _nativeEventCount;
+  /* Whether the text is being changed by THIS view applying a controlled
+     `value`, rather than by the user — see `-textViewDidChange:`. The same flag
+     `<input>` keeps, by the same name, for the same reason. */
+  BOOL _isApplyingProps;
   NSString *_textAtEditingStart;
   BOOL _isInitialValueSet;
   /*
@@ -242,6 +257,7 @@ static UIFont *EXPElementTextAreaFont(void)
 
 - (void)layoutSubviews
 {
+  EXP_ATTRIBUTE_LAYOUT();
   [super layoutSubviews];
   [self _applyPaddingToTextContainer];
   // Positioned against the text container rather than the view's bounds, so the
@@ -251,22 +267,29 @@ static UIFont *EXPElementTextAreaFont(void)
   const CGFloat x = insets.left + lineFragmentPadding;
   const CGFloat width = CGRectGetWidth(_textView.bounds) - x - insets.right - lineFragmentPadding;
   /*
-   * Given the text container's whole box, and left to centre its own line.
+   * As tall as the placeholder ITSELF, at the container's top.
    *
-   * NOT placed at the container's top inset and sized with `sizeToFit`, which
-   * is two fragile things at once: the fitted height depends on the font being
-   * current at that moment, and the origin is in the text view's CONTENT
-   * coordinates, so any scroll offset carries the placeholder with it. Between
-   * them the placeholder lands half a line low and clipped by the field's
-   * bottom edge.
+   * A label draws its text vertically centred in its frame, so a frame the size
+   * of the whole container puts a one-line placeholder in the middle of the
+   * box. In a field that is one line that is exactly where the first typed
+   * character goes — and in one that has GROWN it is the middle of several
+   * lines, which is where the placeholder appeared for the frames a composer
+   * spends collapsing after a send. Reported from a device as the placeholder
+   * jumping to the middle of the text area.
    *
-   * A label draws one line vertically centred in its frame, so handing it the
-   * container's box puts the placeholder exactly where the first typed line
-   * will be, with nothing to keep in step.
+   * Measured rather than assumed a line: `numberOfLines` is 0, so a long
+   * placeholder wraps, and a frame of one line would clip it. Clamped to the
+   * container for the same reason the container is the width — what does not
+   * fit is the field's business, not this label's.
+   *
+   * The origin stays the container's top inset plus the scroll offset: the
+   * frame is in the text view's CONTENT coordinates, so a scrolled field would
+   * otherwise carry the placeholder away with it.
    */
   const CGFloat containerHeight = CGRectGetHeight(_textView.bounds) - insets.top - insets.bottom;
+  const CGFloat fitted = [_placeholderLabel sizeThatFits:CGSizeMake(MAX(width, 0), CGFLOAT_MAX)].height;
   _placeholderLabel.frame =
-      CGRectMake(x, insets.top + _textView.contentOffset.y, MAX(width, 0), MAX(containerHeight, 0));
+      CGRectMake(x, insets.top + _textView.contentOffset.y, MAX(width, 0), MAX(MIN(fitted, containerHeight), 0));
   [self _reportContentSizeIfChanged];
 }
 
@@ -293,14 +316,43 @@ static UIFont *EXPElementTextAreaFont(void)
 
 - (void)textViewDidChange:(UITextView *)textView
 {
+  EXP_ATTRIBUTE_LAYOUT();
+  /*
+   * A CONTROLLED WRITE IS NOT AN EDIT, and this is where that is said.
+   *
+   * `el.value = 'x'` does not fire `input` in a browser — that event is the
+   * user's — and a field that reports the app's own write back to it hands the
+   * app its own string as if it had been typed. The chat demo's composer is
+   * exactly that shape: it writes the message into the field on a send and
+   * clears it a few frames later, and the echo of the FIRST write arrived after
+   * the clear and put the message back. Reported from a device as "the text
+   * area retains the trimmed text even after sending it", and read off the
+   * app's own log: the last input event carried `"Trim me"` — the trimmed
+   * message, which nobody typed.
+   *
+   * `_nativeEventCount` is not bumped either: it exists to tell a value
+   * computed before the keystrokes still in flight from a fresh one, and this
+   * view's own write is not a keystroke. Bumping it here would make the app's
+   * next value look stale and be discarded — which is the other half of the
+   * same bug, the one that makes the field keep the text for good.
+   *
+   * The placeholder and the content size are still updated below: those are
+   * facts about the text, and the text did change.
+   */
+  const BOOL isEcho = _isApplyingProps;
   const auto &props = static_cast<const ElementTextAreaProps &>(*_props);
-  if (props.maxLength >= 0 && (NSInteger)textView.text.length > props.maxLength) {
+  if (!isEcho && props.maxLength >= 0 && (NSInteger)textView.text.length > props.maxLength) {
     UITextRange *selection = textView.selectedTextRange;
     textView.text = [textView.text substringToIndex:props.maxLength];
     textView.selectedTextRange = selection;
   }
 
   [self updatePlaceholderVisibility];
+
+  if (isEcho) {
+    [self _reportContentSizeIfChanged];
+    return;
+  }
 
   if (!_eventEmitter) {
     return;
@@ -332,6 +384,8 @@ static UIFont *EXPElementTextAreaFont(void)
 - (void)textViewDidEndEditing:(UITextView *)textView
 {
   _holdsTheKeyboard = NO;
+  // No input system left to tell; the next session starts from the document.
+  _owesCorrectionDrop = NO;
   if (!_eventEmitter) {
     return;
   }
@@ -344,6 +398,7 @@ static UIFont *EXPElementTextAreaFont(void)
 
 - (void)textViewDidChangeSelection:(UITextView *)textView
 {
+  EXP_ATTRIBUTE_LAYOUT();
   if (!_eventEmitter) {
     return;
   }
@@ -354,8 +409,54 @@ static UIFont *EXPElementTextAreaFont(void)
 
 - (BOOL)textView:(UITextView *)textView shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text
 {
+  // An edit is coming: the input system hears about the quiet clear first.
+  [self _settleCorrectionDrop];
   const auto &props = static_cast<const ElementTextAreaProps &>(*_props);
   return !props.readOnly;
+}
+
+/*
+ * Note that news is owed, and arm the backstop that gives it if nobody else
+ * does.
+ *
+ * WHEN rest is, and who knows it. A host that says `quiet` is telling this
+ * element it is in the middle of something, and the news waits for it to stop
+ * — see the falling edge in `updateProps`. The timer is only for a host that
+ * says nothing, and it is deliberately long: half a second was chosen as "past
+ * a send's choreography" and measured, on a phone, landing 545, 551 and 553
+ * milliseconds into three sends whose throw runs for 769. The cost is 113
+ * milliseconds of main thread, so a deadline that lands mid-animation is seven
+ * dropped frames.
+ *
+ * Two seconds is not a better guess; it is a BACKSTOP. Anything that cares
+ * gives the element the truth instead, and the next edit settles it earlier in
+ * either case. A newer write supersedes an older backstop, so a second send
+ * inside the first's window is covered by one telling.
+ */
+- (void)_oweCorrectionDrop
+{
+  _owesCorrectionDrop = YES;
+  const NSUInteger generation = ++_dropGeneration;
+  __weak __typeof(self) weakSelf = self;
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    __strong __typeof(weakSelf) strongSelf = weakSelf;
+    if (strongSelf != nil && strongSelf->_dropGeneration == generation) {
+      [strongSelf _settleCorrectionDrop];
+    }
+  });
+}
+
+- (void)_settleCorrectionDrop
+{
+  if (!_owesCorrectionDrop) {
+    return;
+  }
+  _owesCorrectionDrop = NO;
+  if (_textView.isFirstResponder) {
+    // Only the drop. The write already told the input system, so telling it
+    // again here would buy nothing and cost another keyplane relayout.
+    EXPDropPendingCorrection(_textView);
+  }
 }
 
 #pragma mark - RCTComponentViewProtocol
@@ -483,7 +584,69 @@ static UIFont *EXPElementTextAreaFont(void)
     // whole document and restoring a saved range. A saved range clamps
     // silently when the new text is shorter, which for a textarea means a
     // caret that jumps on every clamped edit.
-    EXPWriteTextPreservingCaret(_textView, RCTNSStringFromString(newAreaProps.value));
+    /*
+     * Flagged for the delegate — see `-textViewDidChange:`. A scope guard
+     * rather than a pair of assignments, as `<input>` does: the write can run
+     * arbitrary code on the way out.
+     */
+    struct ApplyingGuard {
+      BOOL *flag;
+      explicit ApplyingGuard(BOOL *f) : flag(f)
+      {
+        *flag = YES;
+      }
+      ~ApplyingGuard()
+      {
+        *flag = NO;
+      }
+    } guard{&_isApplyingProps};
+    // Any news still owed goes first, so the input system hears the changes
+    // in the order they were made — unless the host has said it is busy, in
+    // which case the news is what we are holding and this is not the moment.
+    if (!newAreaProps.quiet) {
+      [self _settleCorrectionDrop];
+    }
+    /*
+     * A whole-document write while the host is animating owes its correction
+     * drop rather than paying it: the drop rebuilds the keyboard, and a send
+     * that trims its draft makes exactly such a write with the balloon in the
+     * air — measured at forty milliseconds inside the flight.
+     *
+     * The CLEAR a send makes is no longer a case of its own. It used to be
+     * made with `inputDelegate` detached, to keep the keyboard's ~19ms off the
+     * balloon's first frame, and the news was handed over when the flight
+     * ended. Sampling showed that cost is a KEYPLANE CHANGE — the keyboard
+     * flipping to shifted because the document is now at a sentence start —
+     * so deferring it deferred the shift, and the uppercase did not come back
+     * until the bubble landed. Same event, one cost. Paid inline now, where
+     * Messages and every other app pays it.
+     */
+    const CFTimeInterval writeBegan = CACurrentMediaTime();
+    [EXPKeyboardTrace beginAttributing];
+    if (EXPWriteTextPreservingCaret(_textView, RCTNSStringFromString(newAreaProps.value), newAreaProps.quiet)) {
+      [self _oweCorrectionDrop];
+    }
+    double ourMs = 0.0;
+    NSUInteger ourPasses = 0;
+    NSString *ourDetail = nil;
+    [EXPKeyboardTrace endAttributing:&ourMs passes:&ourPasses detail:&ourDetail];
+    const double writeMs = (CACurrentMediaTime() - writeBegan) * 1000.0;
+    if (writeMs > 2.0) {
+      /*
+       * Attributed, so a slow write is never read as OUR slowness. Almost all
+       * of it is the keyboard relaying its input window out after a keyplane
+       * change, and `ours` says so in the line rather than leaving the next
+       * reader to assume the worst about this code.
+       */
+      [EXPKeyboardTrace record:
+                            @"textarea write %.0fms len=%lu (ours=%.1fms/%lu passes [%@]; the rest is "
+                            @"UIKit's keyplane relayout)",
+                            writeMs,
+                            (unsigned long)newAreaProps.value.size(),
+                            ourMs,
+                            (unsigned long)ourPasses,
+                            ourDetail];
+    }
   } else if (!_isInitialValueSet && !newAreaProps.hasValue) {
     _textView.text = RCTNSStringFromString(newAreaProps.defaultValue);
   }
@@ -492,6 +655,17 @@ static UIFont *EXPElementTextAreaFont(void)
   _isInitialValueSet = YES;
 
   [super updateProps:props oldProps:oldProps];
+
+  /*
+   * The host has stopped moving, so the news owed from a quiet clear is given
+   * now. This is the whole point of `quiet`: the cost is a keyboard rebuild,
+   * and there is no moment during an animation when 113 milliseconds of main
+   * thread is free. The host knows when its animation ends; a timer only ever
+   * knew when half a second had passed.
+   */
+  if (oldAreaProps.quiet && !newAreaProps.quiet) {
+    [self _settleCorrectionDrop];
+  }
 }
 
 /**
@@ -577,6 +751,7 @@ static UIFont *EXPElementTextAreaFont(void)
   _nativeEventCount = 0;
   _isInitialValueSet = NO;
   _textAtEditingStart = nil;
+  _owesCorrectionDrop = NO;
   _textView.text = @"";
   _textView.editable = YES;
   _placeholderLabel.text = nil;

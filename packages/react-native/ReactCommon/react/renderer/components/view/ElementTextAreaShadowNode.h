@@ -73,7 +73,9 @@ class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
         // which it inherits, so a composer got whatever the window's tint
         // happened to be. Measured against the native composer, whose caret is
         // its own #0088FF: ours came out (66,107,242), a different hue entirely.
-        caretColor(convertRawProp(context, rawProps, "caretColor", sourceProps.caretColor, SharedColor{}))
+        caretColor(convertRawProp(context, rawProps, "caretColor", sourceProps.caretColor, SharedColor{})),
+        // See the member below.
+        quiet(convertRawProp(context, rawProps, "quiet", sourceProps.quiet, false))
   {
     // No user-agent accessibility defaults; the control describes itself. See
     // `ElementRangeShadowNode.h` for why that is the rule for control-backed
@@ -115,6 +117,29 @@ class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
    * Xcode's, so it compiled for iOS and broke the tester.
    */
   SharedColor caretColor{};
+
+  /**
+   * Whether the HOST is in the middle of something, and would rather this
+   * element did no expensive work yet.
+   *
+   * A controlled write that empties the field is made QUIETLY — the input
+   * system is not told — because telling it costs a keyboard rebuild:
+   * `reloadInputViews` twice to drop the correction queued against the text
+   * that has just been sent, and the delegate's own `textWillChange`. Measured
+   * on a phone, the whole turn is 113 milliseconds, which is seven dropped
+   * frames.
+   *
+   * The news has to be given before the keyboard acts on that correction, and
+   * it used to be given half a second after the write. Half a second is not a
+   * quiet moment, it is a GUESS at one: this app's send throw runs for 769
+   * milliseconds, so the deadline landed in the middle of it, every time. A
+   * deadline cannot know what else is moving; the host can, and this is where
+   * it says so. The news is given on the falling edge.
+   *
+   * A host that never sets it gets the old deadline, so an element used
+   * plainly still corrects itself.
+   */
+  bool quiet{false};
 };
 
 /*
