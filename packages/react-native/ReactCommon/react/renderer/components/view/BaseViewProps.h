@@ -354,6 +354,14 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   CascadedBorderRadii borderRadii{};
   CascadedBorderColors borderColors{};
   CascadedBorderCurves borderCurves{}; // iOS only?
+  /**
+   * `corner-shape` and its longhands.
+   *
+   * `border-radius` says how big a corner is; this says what curve it is. The
+   * two values a layer can draw itself — `round` and `squircle` — are handed to
+   * Core Animation's own corner; everything else is clipped to a path.
+   */
+  CascadedCornerShapes cornerShapes{};
   CascadedBorderStyles borderStyles{};
 
   // Outline
