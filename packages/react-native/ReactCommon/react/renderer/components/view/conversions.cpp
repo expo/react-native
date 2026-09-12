@@ -30,6 +30,7 @@ void fromRawValue(
     const PropsParserContext& /*context*/,
     const RawValue& value,
     yoga::Style::SizeLength& result) {
+  forgetEnvironmentDependencyForCurrentProp();
   if (value.hasType<Float>()) {
     result = yoga::StyleSizeLength::points((float)value);
     return;
@@ -37,6 +38,10 @@ void fromRawValue(
     const auto stringValue = (std::string)value;
     if (stringValue == "auto") {
       result = yoga::StyleSizeLength::ofAuto();
+      return;
+    } else if (Float fallback = 0;
+               collectEnvironmentDependency(stringValue, fallback)) {
+      result = yoga::StyleSizeLength::points((float)fallback);
       return;
     } else if (stringValue == "max-content") {
       result = yoga::StyleSizeLength::ofMaxContent();
@@ -67,6 +72,7 @@ void fromRawValue(
     const PropsParserContext& context,
     const RawValue& value,
     yoga::Style::Length& result) {
+  forgetEnvironmentDependencyForCurrentProp();
   if (value.hasType<Float>()) {
     result = yoga::StyleLength::points((float)value);
     return;
@@ -74,6 +80,10 @@ void fromRawValue(
     const auto stringValue = (std::string)value;
     if (stringValue == "auto") {
       result = yoga::StyleLength::ofAuto();
+      return;
+    } else if (Float fallback = 0;
+               collectEnvironmentDependency(stringValue, fallback)) {
+      result = yoga::StyleLength::points((float)fallback);
       return;
     } else {
       auto parsed = parseCSSProperty<CSSNumber, CSSPercentage>(stringValue);
