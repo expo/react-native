@@ -185,6 +185,16 @@ struct TransitionTimingFunction {
  * to know how to interpolate the value, and only these are both animatable and
  * carried by the shared animation backend. `All` is CSS's `transition-property:
  * all`, which covers every member of this set.
+ *
+ * `Height` is the odd one and the division is worth naming, because it decides
+ * how a frame is applied rather than only what it contains. The first four are
+ * PAINT: changing one alters what a view draws and never where anything is, so
+ * a frame can be written straight to the mounted view from the UI thread with
+ * no commit and no layout. Height is LAYOUT: a view's height decides its
+ * siblings' positions and its ancestors' sizes, so a frame of it has to go
+ * through a commit. See `isLayoutAffecting` in `CSSTransitions.cpp` for what
+ * that costs and how the two paths stay apart. `padding-bottom` is layout for
+ * the same reason and travels the same path.
  */
 enum class TransitionProperty {
   All,
@@ -192,6 +202,8 @@ enum class TransitionProperty {
   BackgroundColor,
   BorderColor,
   Transform,
+  Height,
+  PaddingBottom,
 };
 
 /*
