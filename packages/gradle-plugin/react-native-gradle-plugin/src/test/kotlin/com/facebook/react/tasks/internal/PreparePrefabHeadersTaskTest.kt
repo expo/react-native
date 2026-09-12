@@ -216,7 +216,8 @@ class PreparePrefabHeadersTaskTest {
           it.input.set(listOf(PrefabPreprocessingEntry("sample_library", "input/" to "")))
         }
 
-    assertThat(task.inputs.files.files).containsExactly(header)
+    assertThat(task.inputs.files.files.map { it.canonicalFile })
+        .containsExactly(header.canonicalFile)
   }
 
   @Test
