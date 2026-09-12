@@ -15,10 +15,10 @@ import android.text.Spannable
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.view.View
-import com.facebook.common.logging.FLog
 import androidx.annotation.ColorLong
-import com.facebook.react.bridge.ColorPropConverter
+import com.facebook.common.logging.FLog
 import com.facebook.react.R
+import com.facebook.react.bridge.ColorPropConverter
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.DynamicFromObject
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException
@@ -176,6 +176,19 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       backgroundImage: ReadableArray?,
   ) {
     setBackgroundImage(view, backgroundImage)
+  }
+
+  /**
+   * `background-attachment: fixed` — the background is measured against the viewport rather than
+   * this box, so boxes sharing one declaration are windows onto one background instead of each
+   * drawing the whole of it.
+   */
+  @ReactProp(name = ViewProps.EXPERIMENTAL_BACKGROUND_ATTACHMENT_FIXED)
+  public open fun setExperimentalBackgroundAttachmentFixed(
+      view: ReactViewGroup,
+      fixed: Boolean,
+  ) {
+    BackgroundStyleApplicator.setBackgroundAttachmentFixed(view, fixed)
   }
 
   @ReactProp(name = ViewProps.BACKGROUND_SIZE, customType = "BackgroundSize")
@@ -581,9 +594,11 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       var reusedNotSoftWrapped = false
       if (attributedString.contains(TextLayoutManager.AS_KEY_RUN_TAG)) {
         val entry = RunLayoutHandoff.take(attributedString.getInt(TextLayoutManager.AS_KEY_RUN_TAG))
-        if (entry != null &&
-            entry.density == PixelUtil.getDisplayMetricDensity() &&
-            RunLayoutHandoff.contentEquals(entry.attributedString, attributedString)) {
+        if (
+            entry != null &&
+                entry.density == PixelUtil.getDisplayMetricDensity() &&
+                RunLayoutHandoff.contentEquals(entry.attributedString, attributedString)
+        ) {
           reusedSpannable = entry.spannable
           reusedEntryLayout = entry.layout
           reusedNotSoftWrapped = entry.notSoftWrapped
@@ -614,10 +629,12 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
        * default — only at the same width: where the glyphs sit depends on the width the
        * moment the alignment is anything but normal.
        */
-      if (reusedEntryLayout != null &&
-          reusedEntryLayout.alignment == alignment &&
-          ((alignment == Layout.Alignment.ALIGN_NORMAL && reusedNotSoftWrapped) ||
-              reusedEntryLayout.width == ceil(width.toDouble()).toInt())) {
+      if (
+          reusedEntryLayout != null &&
+              reusedEntryLayout.alignment == alignment &&
+              ((alignment == Layout.Alignment.ALIGN_NORMAL && reusedNotSoftWrapped) ||
+                  reusedEntryLayout.width == ceil(width.toDouble()).toInt())
+      ) {
         reusedLayout = reusedEntryLayout
       }
 
@@ -661,8 +678,7 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
               top,
               documentOrder,
               accessibilityItems,
-              accessibilityAttachmentTags =
-                  if (runMb.contains(7)) runMb.getIntBuffer(7) else null,
+              accessibilityAttachmentTags = if (runMb.contains(7)) runMb.getIntBuffer(7) else null,
               // Only a run with leaves needs to place them; the offsets are checked against the
               // text they are about to index, so a builder that ever diverges costs geometry
               // rather than a wrong rectangle
@@ -672,7 +688,8 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
                       TextLayoutManager.getFragmentOffsets(attributedString)?.takeIf {
                         it.last() == layout.text.length
                       },
-          ))
+          )
+      )
     }
     view.setTextRunLayouts(runs)
     return null
@@ -682,8 +699,8 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
    * The run's authored accessibility leaves, or null when the run carries no model.
    *
    * Keys mirror `ViewState::getMapBuffer` in C++: per leaf, 0 kind, 1 tag, 2 label, 3 role, 4 hint,
-   * 5 language, 6 disabled, 7 selected, 8 checked, 9 fragment indices, 10 live region, 11 busy,
-   * 12 expanded (0 unset, 1 collapsed, 2 expanded), 13..15 value min/max/now and 16 value text when
+   * 5 language, 6 disabled, 7 selected, 8 checked, 9 fragment indices, 10 live region, 11 busy, 12
+   * expanded (0 unset, 1 collapsed, 2 expanded), 13..15 value min/max/now and 16 value text when
    * set, 17 actions as (0 name, 1 label), 18 the tags of the attachments the leaf presents. The
    * run's key 7, every attachment it lays out, is read beside this.
    */
@@ -715,7 +732,10 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
           valueMax = if (item.contains(14)) item.getInt(14) else null,
           valueNow = if (item.contains(15)) item.getInt(15) else null,
           valueText = if (item.contains(16)) item.getString(16) else null,
-          actions = item.getMapBufferList(17).map { action -> action.getString(0) to action.getString(1) },
+          actions =
+              item.getMapBufferList(17).map { action ->
+                action.getString(0) to action.getString(1)
+              },
           attachmentTags = if (item.contains(18)) item.getIntBuffer(18) else IntArray(0),
       )
     }
