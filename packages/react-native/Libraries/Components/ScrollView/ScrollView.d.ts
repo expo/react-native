@@ -352,11 +352,6 @@ export interface ScrollViewPropsIOS {
    */
   automaticallyAdjustContentInsets?: boolean | undefined; // true
 
-  /**
-   * Controls whether the ScrollView should automatically adjust its contentInset and
-   * scrollViewInsets when the Keyboard changes its size. The default value is false.
-   */
-  automaticallyAdjustKeyboardInsets?: boolean | undefined;
 
   /**
    * Controls whether iOS should automatically adjust the scroll indicator
@@ -593,6 +588,14 @@ export interface ScrollViewPropsAndroid {
 
 export interface ScrollViewProps
   extends ViewProps, ScrollViewPropsIOS, ScrollViewPropsAndroid, Touchable {
+  /**
+   * Controls whether the ScrollView should automatically adjust its contentInset
+   * and scrollIndicatorInsets when the keyboard changes size.
+   *
+   * The default value is false.
+   */
+  automaticallyAdjustKeyboardInsets?: boolean | undefined;
+
   /**
    * These styles will be applied to the scroll view content container which
    * wraps all of the child views. Example:

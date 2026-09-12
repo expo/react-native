@@ -26,7 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
  * to keep the complexity of this component manageable.
  */
 @interface RCTScrollViewComponentView
-    : RCTViewComponentView <RCTMountingTransactionObserving, RCTVirtualViewContainerProtocol>
+    : RCTViewComponentView <RCTMountingTransactionObserving, RCTVirtualViewContainerProtocol, RCTVirtualViewScrollHost>
 
 /*
  * Finds and returns the closet RCTScrollViewComponentView component to the given view
