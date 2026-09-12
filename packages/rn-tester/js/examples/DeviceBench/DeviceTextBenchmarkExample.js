@@ -171,6 +171,50 @@ function articleBare(tag: string): Array<React.Node> {
   ];
 }
 
+// One line of the same total length, so the pair differs in NOTHING but which
+// path draws it: same characters, same wrapping work, no newlines for either
+// side to treat differently. If bare still loses here, the cost is not in how
+// the two handle line breaks.
+function articleOneLine(tag: string): string {
+  const parts: Array<string> = [];
+  for (let i = 0; i < ROWS; i++) {
+    parts.push(line(i, tag));
+  }
+  return parts.join(' ');
+}
+
+function flatText(tag: string): Array<React.Node> {
+  return [
+    <View key="a" collapsable={false}>
+      <Text>{articleOneLine(tag)}</Text>
+    </View>,
+  ];
+}
+
+function flatBare(tag: string): Array<React.Node> {
+  return [
+    <View key="a" collapsable={false}>
+      {articleOneLine(tag)}
+    </View>,
+  ];
+}
+
+// Diagnostic tier, not a fair one: the same block WITHOUT `pre-line`.
+//
+// `article: bare block` has to carry `whiteSpace: 'pre-line'` because the bare
+// path follows CSS, which collapses newlines, while <Text> preserves them —
+// without it the two tiers would not render the same thing. But that means the
+// bare tier is also paying for white-space processing the Text tier never does,
+// and the pair cannot say whether bare text is slower or whether `pre-line` is.
+// This tier renders the wrong thing on purpose so the difference has a price.
+function articleBareCollapsed(tag: string): Array<React.Node> {
+  return [
+    <View key="a" collapsable={false}>
+      {articleBody(tag)}
+    </View>,
+  ];
+}
+
 function siblingNativeTexts(tag: string): Array<React.Node> {
   const rows: Array<React.Node> = [];
   for (let i = 0; i < ROWS; i++) {
@@ -188,6 +232,9 @@ const TIERS: Array<[string, (tag: string) => Array<React.Node>]> = [
   ['messages: bare bodies', messagesWithBareBodies],
   ['article: one Text', articleWithText],
   ['article: bare block', articleBare],
+  ['article: bare, no pre-line (diagnostic)', articleBareCollapsed],
+  ['flat: one Text, no newlines', flatText],
+  ['flat: bare, no newlines', flatBare],
   ['community: sibling NativeText', siblingNativeTexts],
 ];
 
