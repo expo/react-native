@@ -12,8 +12,9 @@
 
 import env from '../../../../expo-intrinsics/src/env';
 import NativeSafeArea from '../../../../expo-intrinsics/src/NativeSafeArea';
+import {usePublishRects} from '../TextChildren/TextChildrenShared';
 import * as React from 'react';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
 /**
@@ -33,7 +34,6 @@ function useLayoutLog() {
   };
   return [log, onLayout];
 }
-
 
 // The four values drawn as bars, at the size they resolved to
 function Resolved() {
@@ -70,7 +70,6 @@ function Resolved() {
     </View>
   );
 }
-
 
 // A box whose height comes from `env()`, resolved before the first layout
 function ResolvedInLayout() {
@@ -147,7 +146,6 @@ function Comparison() {
   );
 }
 
-
 function AsPadding() {
   return (
     <View style={styles.section}>
@@ -206,24 +204,44 @@ function Edges() {
 }
 
 function InsideCalc() {
+  const envRef = useRef(null);
+  const envPlusRef = useRef(null);
+  const envOtherRef = useRef(null);
+  usePublishRects({
+    envTop: envRef,
+    envTopPlus8: envPlusRef,
+    envTopTimes2: envOtherRef,
+  });
   return (
     <View style={styles.section}>
       <Text style={styles.lead}>
-        `env()` is only recognised as a WHOLE value. Inside `calc()` it is not a
-        length at all, so this box has no padding — visibly missing rather than
-        quietly half-right.
+        Inside `calc()`, `env()` works with a pixel length added or subtracted,
+        on either side. The second bar is 8pt taller than the first.
       </Text>
       <View
+        ref={envRef}
+        style={[styles.sample, {height: env('safe-area-inset-top')}]}
+      />
+      <View
+        ref={envPlusRef}
         style={[
-          styles.padded,
-          {paddingTop: 'calc(env(safe-area-inset-top) + 8px)'},
-        ]}>
-        <View style={styles.inner}>
-          <Text style={styles.innerLabel}>nothing above this</Text>
-        </View>
-      </View>
+          styles.sample,
+          {height: 'calc(env(safe-area-inset-top) + 8px)'},
+        ]}
+      />
       <Text style={styles.code}>
-        paddingTop: 'calc(env(safe-area-inset-top) + 8px)'
+        height: 'calc(env(safe-area-inset-top) + 8px)'
+      </Text>
+      <Text style={styles.lead}>
+        Any other expression computes to nothing, so this bar has no height of
+        its own beyond its 2pt minimum.
+      </Text>
+      <View
+        ref={envOtherRef}
+        style={[styles.sample, {height: 'calc(env(safe-area-inset-top) * 2)'}]}
+      />
+      <Text style={styles.code}>
+        height: 'calc(env(safe-area-inset-top) * 2)'
       </Text>
     </View>
   );
@@ -262,7 +280,7 @@ exports.examples = [
   },
   {
     title: 'Inside calc()',
-    description: 'Not supported, and visibly so.',
+    description: 'A pixel length added to the inset, or taken from it.',
     render: () => <InsideCalc />,
   },
 ];
