@@ -89,4 +89,52 @@ class GenerateEntryPointTaskTest {
                 .trimIndent()
         )
   }
+
+  @Test
+  fun taskAction_prefersTheApplicationNamespaceOverTheAutolinkingConfig() {
+    val outputFolder = tempFolder.newFolder("build")
+    val inputFile =
+        tempFolder.newFile("config.json").apply {
+          // The autolinking config describes ONE app — whichever one `react-native config` was run
+          // for. A build holding two apps generates an entry point for each from this same file.
+          writeText("""{"project":{"android":{"packageName":"com.first.app"}}}""")
+        }
+
+    val task =
+        createTestTask<GenerateEntryPointTask> { task ->
+          task.generatedOutputDirectory.set(outputFolder)
+          task.autolinkInputFile.set(inputFile)
+          task.applicationNamespace.set("com.second.app")
+        }
+    task.taskAction()
+
+    // AGP emits BuildConfig into the app's own namespace, so the second app has to read its own.
+    // Given the first app's package it would fail to compile against a class not on its classpath.
+    val generated =
+        java.io.File(outputFolder, GenerateEntryPointTask.GENERATED_FILENAME).readText()
+    assertThat(generated).contains("com.second.app.BuildConfig.IS_NEW_ARCHITECTURE_ENABLED")
+    assertThat(generated).contains("com.second.app.BuildConfig.IS_EDGE_TO_EDGE_ENABLED")
+    assertThat(generated).doesNotContain("com.first.app")
+  }
+
+  @Test
+  fun taskAction_withoutANamespace_fallsBackToTheAutolinkingConfig() {
+    val outputFolder = tempFolder.newFolder("build")
+    val inputFile =
+        tempFolder.newFile("config.json").apply {
+          writeText("""{"project":{"android":{"packageName":"com.only.app"}}}""")
+        }
+
+    val task =
+        createTestTask<GenerateEntryPointTask> { task ->
+          task.generatedOutputDirectory.set(outputFolder)
+          task.autolinkInputFile.set(inputFile)
+        }
+    task.taskAction()
+
+    // Nothing changes for a build that never sets the namespace.
+    val generated =
+        java.io.File(outputFolder, GenerateEntryPointTask.GENERATED_FILENAME).readText()
+    assertThat(generated).contains("com.only.app.BuildConfig.IS_NEW_ARCHITECTURE_ENABLED")
+  }
 }

@@ -12,7 +12,10 @@ import java.io.File
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
@@ -23,6 +26,18 @@ abstract class GenerateEntryPointTask : DefaultTask() {
   }
 
   @get:InputFile abstract val autolinkInputFile: RegularFileProperty
+
+  /**
+   * The namespace of the application this entry point is generated for, which is the package AGP
+   * emits its `BuildConfig` into and therefore the package the generated file has to read.
+   *
+   * The autolinking config carries a package name too, but only one, describing the single app the
+   * `react-native config` command was run for. A build holding two applications generates an entry
+   * point for each of them from that same config, so the second app gets the first app's package
+   * and fails to compile against a `BuildConfig` that is not on its classpath. Where the two agree
+   * — every single-app build — this changes nothing.
+   */
+  @get:Input @get:Optional abstract val applicationNamespace: Property<String>
 
   @get:OutputDirectory abstract val generatedOutputDirectory: DirectoryProperty
 
@@ -41,7 +56,8 @@ abstract class GenerateEntryPointTask : DefaultTask() {
             )
 
     val packageName =
-        model.project?.android?.packageName
+        applicationNamespace.orNull
+            ?: model.project?.android?.packageName
             ?: error(
                 "RNGP - Autolinking: Could not find project.android.packageName in react-native config output! Could not autolink packages without this field."
             )
