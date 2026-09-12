@@ -83,6 +83,7 @@ const char facebook::react::ElementRangeComponentName[];
 const char facebook::react::ElementSelectComponentName[];
 const char facebook::react::ElementTextAreaComponentName[];
 const char facebook::react::ElementTextInputComponentName[];
+const char facebook::react::ExpoNativeButtonComponentName[];
 const char facebook::react::ImageComponentName[];
 const char facebook::react::ImageManagerKey[];
 const char facebook::react::ImgTagComponentName[];
@@ -173,7 +174,7 @@ using facebook::react::CornerShapes = facebook::react::RectangleCorners<facebook
 using facebook::react::DispatchEvent = std::function<void(const facebook::react::ShadowNode& targetNode, const std::string& type, facebook::react::ReactEventPriority priority, const facebook::react::EventPayload& payload)>;
 using facebook::react::EdgeInsets = facebook::react::RectangleEdges<Float>;
 using facebook::react::ElementBoxComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementBoxShadowNode>;
-using facebook::react::ElementBoxShadowNode = facebook::react::AbstractViewShadowNode<facebook::react::ElementBoxComponentName, facebook::react::ElementBoxProps>;
+using facebook::react::ElementBoxShadowNode = facebook::react::AbstractViewShadowNode<facebook::react::ElementBoxComponentName, facebook::react::ElementBoxProps, facebook::react::ElementBoxEventEmitter>;
 using facebook::react::ElementCheckboxComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementCheckboxShadowNode>;
 using facebook::react::ElementCheckboxShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ElementCheckboxComponentName, facebook::react::ElementCheckboxProps, facebook::react::ElementCheckboxEventEmitter>;
 using facebook::react::ElementColorInputComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementColorInputShadowNode>;
@@ -194,6 +195,8 @@ using facebook::react::EventListener = std::function<bool(const facebook::react:
 using facebook::react::EventPipe = std::function<void(facebook::jsi::Runtime& runtime, facebook::react::EventTarget* eventTarget, const std::string& type, facebook::react::ReactEventPriority priority, const facebook::react::EventPayload& payload, facebook::react::HighResTimeStamp eventTimestamp)>;
 using facebook::react::EventPipeConclusion = std::function<void(facebook::jsi::Runtime& runtime)>;
 using facebook::react::EventTag = unsigned int;
+using facebook::react::ExpoNativeButtonComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoNativeButtonShadowNode>;
+using facebook::react::ExpoNativeButtonShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoNativeButtonComponentName, facebook::react::ExpoNativeButtonProps, facebook::react::ExpoNativeButtonEventEmitter>;
 using facebook::react::GradientDirection = std::variant<Float, facebook::react::GradientKeyword>;
 using facebook::react::HostPlatformTouch = facebook::react::BaseTouch;
 using facebook::react::HostPlatformViewEventEmitter = facebook::react::BaseViewEventEmitter;
@@ -565,6 +568,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext& co
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::CornerShape& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::Cursor& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::DynamicTypeRamp& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ElementMenuCommand& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ElementSelectOption& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::EllipsizeMode& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::FontStyle& result);
@@ -1272,14 +1276,23 @@ class facebook::react::ContextContainer {
 class facebook::react::DebugStringConvertible {
 }
 
+class facebook::react::ElementBoxEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onCommand(const std::string& identifier) const;
+  public void onContextMenu() const;
+}
+
 class facebook::react::ElementBoxProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
   public ElementBoxProps() = default;
   public ElementBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public Float appleVisualEffectFade;
+  public bool wantsContextMenu;
   public int start;
+  public std::string appleVisualEffect;
   public std::string href;
   public std::string listStylePositionValue;
   public std::string listStyleTypeValue;
   public std::string nodeName;
+  public std::vector<facebook::react::ElementMenuCommand> menuCommands;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1289,20 +1302,24 @@ class facebook::react::ElementButtonComponentDescriptor : public facebook::react
 }
 
 class facebook::react::ElementButtonEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementCommand(const std::string& id) const;
   public void onElementPressChange(bool pressed) const;
 }
 
 class facebook::react::ElementButtonProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
   public ElementButtonProps() = default;
   public ElementButtonProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementButtonProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public Float appleVisualEffectFade;
   public bool accessibleAuthored;
   public bool authorStatesPressFeedback;
   public bool disabled;
   public bool hasAuthorChrome;
   public bool traitsAuthored;
+  public std::string appleVisualEffect;
   public std::string buttonStyle;
   public std::string nodeName;
   public std::string touchAction;
+  public std::vector<facebook::react::ElementMenuCommand> menuCommands;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1679,6 +1696,21 @@ class facebook::react::EventTarget {
   public void release(facebook::jsi::Runtime& runtime);
   public void retain(facebook::jsi::Runtime& runtime);
   public void setEnabled(bool enabled);
+}
+
+class facebook::react::ExpoNativeButtonEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onCommand(const std::string& id) const;
+  public void onPress() const;
+}
+
+class facebook::react::ExpoNativeButtonProps : public facebook::react::HostPlatformViewProps {
+  public ExpoNativeButtonProps() = default;
+  public ExpoNativeButtonProps(const facebook::react::PropsParserContext& context, const facebook::react::ExpoNativeButtonProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public Float titleSize;
+  public std::string configuration;
+  public std::string systemImage;
+  public std::string title;
+  public std::vector<facebook::react::ElementMenuCommand> commands;
 }
 
 class facebook::react::HermesInstance {
@@ -5370,6 +5402,17 @@ struct facebook::react::ElementFileDescriptor {
   public std::string name;
   public std::string type;
   public std::string uri;
+}
+
+struct facebook::react::ElementMenuCommand {
+  public bool destructive;
+  public bool disabled;
+  public bool operator!=(const facebook::react::ElementMenuCommand& rhs) const;
+  public bool operator==(const facebook::react::ElementMenuCommand& rhs) const;
+  public std::string icon;
+  public std::string id;
+  public std::string label;
+  public std::string section;
 }
 
 struct facebook::react::ElementSelectOption {

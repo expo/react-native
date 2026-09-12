@@ -343,6 +343,9 @@ interface CommonHostMetadata : public NSObject {
   public @property (strong) NSString* reactNativeVersion;
 }
 
+interface EXPElementBoxComponentView : public RCTViewComponentView {
+}
+
 interface EXPElementButtonComponentView : public RCTViewComponentView {
 }
 
@@ -360,6 +363,11 @@ interface EXPElementDateInputComponentView : public EXPElementControlComponentVi
 }
 
 interface EXPElementFileInputComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementHaptics : public NSObject {
+  public virtual static void prepareSelection();
+  public virtual static void selectionChanged();
 }
 
 interface EXPElementProgressComponentView : public EXPElementControlComponentView {
@@ -408,6 +416,32 @@ interface EXPLinkPreviewCard : public UIViewController {
   public virtual static _Nullable instancetype cardForURL:(_Nullable NSURL* url);
 }
 
+interface EXPMaterialSurface : public NSObject {
+  public @property (assign, readonly) BOOL hasEffect;
+  public @property (assign, readonly) BOOL isInstalled;
+  public virtual NSString* stateDescription();
+  public virtual _Nullable UIView* childContainerView();
+  public virtual _Nullable UIView* hostView();
+  public virtual _Nullable UIVisualEffectView* effectView();
+  public virtual void applyKeyword:fade:inContainer:(_Nullable NSString* keyword, CGFloat fade, UIView* container);
+  public virtual void layOutInContainer:cornerRadius:cornerCurve:(UIView* container, CGFloat radius, CALayerCornerCurve curve);
+  public virtual void layOutInContainer:cornerRadius:cornerCurve:topOverhang:bottomOverhang:(UIView* container, CGFloat radius, CALayerCornerCurve curve, CGFloat topOverhang, CGFloat bottomOverhang);
+  public virtual void setFill:(_Nullable UIColor* fill);
+  public virtual void setStrength:(CGFloat strength);
+}
+
+interface EXPMenuAnchorButton : public UIButton {
+}
+
+interface EXPNativeButtonComponentView : public RCTViewComponentView {
+}
+
+interface EXPPeekInteraction : public NSObject {
+  public @property (assign) BOOL enabled;
+  public virtual instancetype initWithView:visiblePath:onPeek:(UIView* view, UIBezierPath* _Nullable(^)(void) visiblePath, void(^)(void) onPeek);
+  public virtual void setCommands:onChoose:(NSArray<NSDictionary<NSString*, id>*>* commands, void(^)(NSString* identifier) onChoose);
+}
+
 interface EXPRadioRunList : public NSObject {
   public virtual static BOOL containerHasRuns:(UIView* container);
   public virtual static void announceRadio:row:inContainer:(UIView<EXPRadioRunMember>* radio, UIView* row, UIView* container);
@@ -415,6 +449,9 @@ interface EXPRadioRunList : public NSObject {
   public virtual static void radioDidChange:(UIView<EXPRadioRunMember>* radio);
   public virtual static void scheduleRegroupFor:(UIView* container);
   public virtual static void withdrawRow:fromContainer:(UIView* row, UIView* container);
+}
+
+interface EXPSystemImageLoader : public NSObject <RCTImageURLLoader> {
 }
 
 interface EXPTextLinkInteraction : public NSObject <UIContextMenuInteractionDelegate> {
@@ -2171,6 +2208,7 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   protected facebook::react::SharedViewEventEmitter _eventEmitter;
   protected facebook::react::SharedViewProps _props;
   public @property (assign) BOOL passesTouchesToHostChrome;
+  public @property (assign) CGFloat exp_feedbackOpacity;
   public @property (assign) UIEdgeInsets hitTestEdgeInsets;
   public @property (assign, readonly) BOOL hasHostChromeSubviews;
   public @property (assign, readonly) BOOL hasTouchHandlers;
@@ -2181,13 +2219,19 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   public FOUNDATION_EXPORT BOOL EXPAnyFixedBackgrounds(void);
   public virtual BOOL isHostChromeSubview:(UIView* _Nonnull view);
   public virtual BOOL wantsToCooptLabel();
+  public virtual EXPMaterialSurface* _Nonnull exp_ensureMaterial();
   public virtual NSString* accessibilityLabelForCoopting();
   public virtual UIView* betterHitTest:withEvent:(CGPoint point, UIEvent* event);
+  public virtual _Nullable EXPMaterialSurface* exp_material();
   public virtual _Nullable UIView* exp_glassChildContainerView();
+  public virtual _Nullable UIView* exp_glassView();
   public virtual _Nullable UIView* exp_materialHostView();
   public virtual void addHostChromeSubview:(UIView* _Nonnull view);
   public virtual void addHostChromeSubview:behindSubview:(UIView* _Nonnull view, UIView* _Nonnull sibling);
+  public virtual void exp_applyMaterialKeyword:fade:(_Nullable NSString* keyword, CGFloat fade);
+  public virtual void exp_layOutMaterial();
   public virtual void exp_repositionFixedBackgrounds();
+  public virtual void exp_setOwnOpacity:(float opacity);
   public virtual void exp_setPeekShapeProvider:(UIBezierPath* _Nullable(^)(void) provider);
   public virtual void finalizeUpdates:(RNComponentViewUpdateMask updateMask);
   public virtual void invalidateLayer();
@@ -3279,6 +3323,7 @@ const char facebook::react::ElementRangeComponentName[];
 const char facebook::react::ElementSelectComponentName[];
 const char facebook::react::ElementTextAreaComponentName[];
 const char facebook::react::ElementTextInputComponentName[];
+const char facebook::react::ExpoNativeButtonComponentName[];
 const char facebook::react::InlineContentComponentName[];
 const char facebook::react::InlineTextComponentName[];
 const char facebook::react::TextNodeComponentName[];
@@ -3333,7 +3378,7 @@ using facebook::react::DebuggingOverlayShadowNode = facebook::react::ConcreteVie
 using facebook::react::DebuggingOverlayState = facebook::react::StateData;
 using facebook::react::EdgeInsets = facebook::react::RectangleEdges<facebook::react::Float>;
 using facebook::react::ElementBoxComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementBoxShadowNode>;
-using facebook::react::ElementBoxShadowNode = facebook::react::AbstractViewShadowNode<facebook::react::ElementBoxComponentName, facebook::react::ElementBoxProps>;
+using facebook::react::ElementBoxShadowNode = facebook::react::AbstractViewShadowNode<facebook::react::ElementBoxComponentName, facebook::react::ElementBoxProps, facebook::react::ElementBoxEventEmitter>;
 using facebook::react::ElementCheckboxComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementCheckboxShadowNode>;
 using facebook::react::ElementCheckboxShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ElementCheckboxComponentName, facebook::react::ElementCheckboxProps, facebook::react::ElementCheckboxEventEmitter>;
 using facebook::react::ElementColorInputComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementColorInputShadowNode>;
@@ -3352,6 +3397,8 @@ using facebook::react::EventListener = std::function<bool(const facebook::react:
 using facebook::react::EventPipe = std::function<void(facebook::jsi::Runtime& runtime, facebook::react::EventTarget* eventTarget, const std::string& type, facebook::react::ReactEventPriority priority, const facebook::react::EventPayload& payload, facebook::react::HighResTimeStamp eventTimestamp)>;
 using facebook::react::EventPipeConclusion = std::function<void(facebook::jsi::Runtime& runtime)>;
 using facebook::react::EventTag = unsigned int;
+using facebook::react::ExpoNativeButtonComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoNativeButtonShadowNode>;
+using facebook::react::ExpoNativeButtonShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoNativeButtonComponentName, facebook::react::ExpoNativeButtonProps, facebook::react::ExpoNativeButtonEventEmitter>;
 using facebook::react::Float = CGFloat;
 using facebook::react::GradientDirection = std::variant<facebook::react::Float, facebook::react::GradientKeyword>;
 using facebook::react::HostPlatformTouch = facebook::react::BaseTouch;
@@ -3590,6 +3637,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext& co
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::BorderStyle& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::CornerShape& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::Cursor& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ElementMenuCommand& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ElementSelectOption& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ImportantForAccessibility& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::OutlineStyle& result);
@@ -4028,14 +4076,23 @@ class facebook::react::DebuggingOverlayProps : public facebook::react::HostPlatf
   public DebuggingOverlayProps(const facebook::react::PropsParserContext& context, const facebook::react::DebuggingOverlayProps& sourceProps, const facebook::react::RawProps& rawProps);
 }
 
+class facebook::react::ElementBoxEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onCommand(const std::string& identifier) const;
+  public void onContextMenu() const;
+}
+
 class facebook::react::ElementBoxProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
   public ElementBoxProps() = default;
   public ElementBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool wantsContextMenu;
+  public facebook::react::Float appleVisualEffectFade;
   public int start;
+  public std::string appleVisualEffect;
   public std::string href;
   public std::string listStylePositionValue;
   public std::string listStyleTypeValue;
   public std::string nodeName;
+  public std::vector<facebook::react::ElementMenuCommand> menuCommands;
   public virtual std::string domNodeName() const override;
 }
 
@@ -4045,6 +4102,7 @@ class facebook::react::ElementButtonComponentDescriptor : public facebook::react
 }
 
 class facebook::react::ElementButtonEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementCommand(const std::string& id) const;
   public void onElementPressChange(bool pressed) const;
 }
 
@@ -4056,9 +4114,12 @@ class facebook::react::ElementButtonProps : public facebook::react::HostPlatform
   public bool disabled;
   public bool hasAuthorChrome;
   public bool traitsAuthored;
+  public facebook::react::Float appleVisualEffectFade;
+  public std::string appleVisualEffect;
   public std::string buttonStyle;
   public std::string nodeName;
   public std::string touchAction;
+  public std::vector<facebook::react::ElementMenuCommand> menuCommands;
   public virtual std::string domNodeName() const override;
 }
 
@@ -4426,6 +4487,21 @@ class facebook::react::EventTarget {
   public void release(facebook::jsi::Runtime& runtime);
   public void retain(facebook::jsi::Runtime& runtime);
   public void setEnabled(bool enabled);
+}
+
+class facebook::react::ExpoNativeButtonEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onCommand(const std::string& id) const;
+  public void onPress() const;
+}
+
+class facebook::react::ExpoNativeButtonProps : public facebook::react::HostPlatformViewProps {
+  public ExpoNativeButtonProps() = default;
+  public ExpoNativeButtonProps(const facebook::react::PropsParserContext& context, const facebook::react::ExpoNativeButtonProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public facebook::react::Float titleSize;
+  public std::string configuration;
+  public std::string systemImage;
+  public std::string title;
+  public std::vector<facebook::react::ElementMenuCommand> commands;
 }
 
 class facebook::react::HighResDuration {
@@ -6676,6 +6752,17 @@ struct facebook::react::ElementFileDescriptor {
   public std::string name;
   public std::string type;
   public std::string uri;
+}
+
+struct facebook::react::ElementMenuCommand {
+  public bool destructive;
+  public bool disabled;
+  public bool operator!=(const facebook::react::ElementMenuCommand& rhs) const;
+  public bool operator==(const facebook::react::ElementMenuCommand& rhs) const;
+  public std::string icon;
+  public std::string id;
+  public std::string label;
+  public std::string section;
 }
 
 struct facebook::react::ElementSelectOption {
