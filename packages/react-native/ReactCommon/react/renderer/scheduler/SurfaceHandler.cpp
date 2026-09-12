@@ -214,10 +214,38 @@ Size SurfaceHandler::measure(
 
 void SurfaceHandler::constraintLayout(
     const LayoutConstraints& layoutConstraints,
-    const LayoutContext& layoutContext) const {
+    const LayoutContext& incomingLayoutContext) const {
   TraceSection s("SurfaceHandler::constraintLayout");
+  auto layoutContext = incomingLayoutContext;
   {
     std::unique_lock lock(parametersMutex_);
+
+    // Number the environment before anything compares two of them.
+    //
+    // A platform reports the values it measured and knows nothing about what it
+    // reported last time; this is the one place, on every platform, that sees
+    // both. Shadow nodes then remember four bytes rather than the whole thing —
+    // see `EnvironmentValues::generation` for why that is worth arranging.
+    //
+    // Carried over unchanged when the values are unchanged, so that the
+    // comparison below still finds the two contexts equal and a re-layout that
+    // changed nothing does not commit.
+    //
+    // The FIRST constraint always counts as an answer, even when the answer is
+    // all zeros — hence the `generation != 0` rather than a bare comparison. A
+    // device with no notch and no home indicator reports zero, and zero is what
+    // `env(safe-area-inset-bottom, 24)` must then compute to; a browser gives 0
+    // there, not the fallback. Reading "unchanged from the default" as "nothing
+    // published" would hand back 24 on exactly the devices least likely to be
+    // tested on, and it would look like an unexplained gap rather than a bug.
+    const auto& previousEnvironment = parameters_.layoutContext.environmentValues;
+    const bool alreadyAnswered = previousEnvironment.generation != 0;
+    const bool unchanged = alreadyAnswered &&
+        layoutContext.environmentValues.safeAreaInsets ==
+            previousEnvironment.safeAreaInsets;
+    layoutContext.environmentValues.generation = unchanged
+        ? previousEnvironment.generation
+        : previousEnvironment.generation + 1;
 
     if (parameters_.layoutConstraints == layoutConstraints &&
         parameters_.layoutContext == layoutContext) {
