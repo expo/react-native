@@ -35,6 +35,8 @@
     "intl-messageformat": "^11.2.9",
     "invariant": "^2.2.4",
     "nullthrows": "^1.1.1",
+    "react-native-safe-area-context": "^5.6.1",
+    "react-native-screens": "^4.27.0",
     "react-native-test-library-apple": "0.87.0-main",
     "react-native-test-library-common": "0.87.0-main"
   },
