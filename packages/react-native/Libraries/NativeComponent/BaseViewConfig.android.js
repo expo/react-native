@@ -124,6 +124,32 @@ const bubblingEventTypes = {
       bubbled: 'onLostPointerCapture',
     },
   },
+  // A CSS transition's events (css-transitions-1 §6), which the renderer's
+  // transitions engine dispatches
+  topTransitionRun: {
+    phasedRegistrationNames: {
+      captured: 'onTransitionRunCapture',
+      bubbled: 'onTransitionRun',
+    },
+  },
+  topTransitionStart: {
+    phasedRegistrationNames: {
+      captured: 'onTransitionStartCapture',
+      bubbled: 'onTransitionStart',
+    },
+  },
+  topTransitionEnd: {
+    phasedRegistrationNames: {
+      captured: 'onTransitionEndCapture',
+      bubbled: 'onTransitionEnd',
+    },
+  },
+  topTransitionCancel: {
+    phasedRegistrationNames: {
+      captured: 'onTransitionCancelCapture',
+      bubbled: 'onTransitionCancel',
+    },
+  },
   topClick: {
     phasedRegistrationNames: {
       captured: 'onClickCapture',
@@ -478,6 +504,14 @@ const validAttributesForEventProps = {
   onGotPointerCaptureCapture: true,
   onLostPointerCapture: true,
   onLostPointerCaptureCapture: true,
+  onTransitionRun: true,
+  onTransitionRunCapture: true,
+  onTransitionStart: true,
+  onTransitionStartCapture: true,
+  onTransitionEnd: true,
+  onTransitionEndCapture: true,
+  onTransitionCancel: true,
+  onTransitionCancelCapture: true,
 } as const;
 
 /**

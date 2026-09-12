@@ -8,6 +8,8 @@
 #pragma once
 
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <deque>
 #include <mutex>
 #include <string>
@@ -42,6 +44,17 @@ class CSSTransitionsTrace {
 
   void log(std::string line)
   {
+    /*
+     * `EXP_CSS_TRACE_ECHO=1` in the environment mirrors every line to stderr,
+     * for the simulator's `log stream` when no JS side drains the buffer
+     */
+    static const bool echo = [] {
+      const char *value = std::getenv("EXP_CSS_TRACE_ECHO");
+      return value != nullptr && value[0] == '1';
+    }();
+    if (echo) {
+      fprintf(stderr, "css-trace %s\n", line.c_str());
+    }
     std::scoped_lock lock(mutex_);
     const auto nowMs =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
