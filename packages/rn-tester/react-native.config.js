@@ -29,6 +29,23 @@ module.exports = {
       packageName: 'com.facebook.react.uiapp',
     },
   },
+  /*
+   * The native navigator is linked on iOS only, for now.
+   *
+   * react-native-screens 4.27 does not build against this fork's Android: its CMake declares
+   * minSdkVersion 21 while ReactAndroid's prefab is built for 24, and react-native-safe-area-context
+   * fails to compile its Kotlin. Neither is something this repository should paper over — they are
+   * version-compatibility problems between a released library and a React Native built from source.
+   *
+   * Left autolinked on Android, they fail the whole Android build, including every screen that has
+   * nothing to do with them. Excluded, Android builds as before and the native-stack screen simply
+   * is not available there, which is the honest state rather than a hidden one.
+   */
+  dependencies: {
+    'react-native-screens': {platforms: {android: null}},
+    'react-native-safe-area-context': {platforms: {android: null}},
+  },
+
   // SPM-only: local native modules not discoverable via autolinking.json.
   // These are pods added directly in Podfile for rn-tester examples.
   spm: {

@@ -20,7 +20,11 @@
 
 @interface AppDelegate : RCTDefaultReactNativeFactoryDelegate <UIApplicationDelegate>
 
-@property (nonatomic, strong, nonnull) UIWindow *window;
 @property (nonatomic, strong, nonnull) RCTReactNativeFactory *reactNativeFactory;
+/** The launch options, kept for the scene's start. */
+@property (nonatomic, strong, nullable) NSDictionary *launchOptions;
+
+/** The root component's initial properties, from the route in user defaults. */
+- (NSDictionary *)prepareInitialProps;
 
 @end
