@@ -15,7 +15,7 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 import {SECONDARY_COLOR} from './themed';
 import * as React from 'react';
 import {useEffect, useRef, useState} from 'react';
-import {Animated, Easing, Platform, ScrollView, Text} from 'react-native';
+import {Animated, Easing, Platform, ScrollView} from 'react-native';
 
 import '@react-native/expo-intrinsics-poc';
 
@@ -34,9 +34,16 @@ import '@react-native/expo-intrinsics-poc';
 
 function Note({children}: {children: React.Node}): React.Node {
   return (
-    <Text style={{fontSize: 13, color: SECONDARY_COLOR, marginBottom: 12}}>
+    // $FlowExpectedError[not-a-component] intrinsic
+    <p
+      style={{
+        fontSize: 13,
+        color: SECONDARY_COLOR,
+        marginTop: 0,
+        marginBottom: 12,
+      }}>
       {children}
-    </Text>
+    </p>
   );
 }
 

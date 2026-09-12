@@ -25,20 +25,34 @@ import {ATTRIBUTE_GAP, DOC_SECTIONS, INTRO} from './docs/textLevelDocs';
 import {SECONDARY_COLOR, TERTIARY_COLOR} from './themed';
 import * as React from 'react';
 import {useState} from 'react';
-import {ScrollView, Text} from 'react-native';
+import {ScrollView} from 'react-native';
 
 import '@react-native/expo-intrinsics-poc';
 
 function Section({children}) {
   return (
-    <ScrollView contentContainerStyle={{padding: 16, paddingBottom: 48}}>
-      <Text style={{fontSize: 13, color: SECONDARY_COLOR, marginBottom: 4}}>
-        {INTRO}
-      </Text>
-      <Text style={{fontSize: 12, color: TERTIARY_COLOR, marginBottom: 8}}>
-        {ATTRIBUTE_GAP}
-      </Text>
-      {children}
+    <ScrollView>
+      <div style={{padding: 16, paddingBottom: 48}}>
+        <p
+          style={{
+            fontSize: 13,
+            color: SECONDARY_COLOR,
+            marginTop: 0,
+            marginBottom: 4,
+          }}>
+          {INTRO}
+        </p>
+        <p
+          style={{
+            fontSize: 12,
+            color: TERTIARY_COLOR,
+            marginTop: 0,
+            marginBottom: 8,
+          }}>
+          {ATTRIBUTE_GAP}
+        </p>
+        {children}
+      </div>
     </ScrollView>
   );
 }
@@ -58,11 +72,13 @@ function ClickCounter() {
         </a>
         {' to count a click.'}
       </div>
-      <Text
+      <p
         style={{
           fontSize: 13,
           color: SECONDARY_COLOR,
-        }}>{`link clicks: ${clicks}`}</Text>
+          marginTop: 0,
+          marginBottom: 0,
+        }}>{`link clicks: ${clicks}`}</p>
     </>
   );
 }
