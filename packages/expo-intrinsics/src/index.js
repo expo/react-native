@@ -51,8 +51,10 @@ import Img from './Img';
 import Input from './Input';
 import Label from './Label';
 import {LIST_TAGS, makeList} from './List';
+import NativeKeyboardAccessory from './NativeKeyboardAccessory';
 import NativeMenuButton from './NativeMenuButton';
 import NativeSafeArea from './NativeSafeArea';
+import NativeScroll from './NativeScroll';
 import Picture from './Picture';
 import Quote from './Quote';
 import Select from './Select';
@@ -1026,7 +1028,22 @@ registerFrameworkElement('native-menubutton', () =>
  */
 defineReactComponent('native', 'safearea', NativeSafeArea);
 
+/*
+ * `<native:scroll>`, the scroll view an app should reach for.
+ *
+ * Registered as a namespaced element rather than a bare tag because it is not an
+ * HTML element and should not pretend to be one: there is no `<scroll>` in the
+ * DOM, and the namespace says plainly that this is a platform element rather
+ * than a web one.
+ */
+defineReactComponent('native', 'scroll', NativeScroll);
 
+/*
+ * `<native:keyboardaccessory>`, the bar that rides the keyboard. One word rather
+ * than two because element names have no separator to spare — the namespace has
+ * already used the colon.
+ */
+defineReactComponent('native', 'keyboardaccessory', NativeKeyboardAccessory);
 
 /*
  * `<native:menubutton>`, a button whose action is a menu the SYSTEM presents.
