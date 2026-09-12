@@ -12,6 +12,7 @@
 
 const {getDefaultConfig} = require('@react-native/metro-config');
 const {mergeConfig} = require('metro-config');
+const fs = require('node:fs');
 const path = require('node:path');
 
 /**
@@ -92,6 +93,25 @@ const config = {
           type: 'sourceFile',
           filePath: path.resolve(__dirname, 'js/expo-package-shim.js'),
         };
+      }
+      // `@expo/ui/swift-ui` is reachable only through the package's `exports`
+      // map, which points at TypeScript source. This resolver does not consult
+      // exports maps, so the subpath resolves to nothing and the import fails
+      // with "Cannot find module '@expo/ui/swift-ui'" — which is what it did.
+      // The universal entry is unaffected because it is the package's main.
+      if (moduleName.startsWith('@expo/ui/swift-ui')) {
+        const rest = moduleName.slice('@expo/ui/swift-ui'.length);
+        const candidate = path.resolve(
+          __dirname,
+          '../../node_modules/@expo/ui/src/swift-ui' +
+            (rest === '' ? '/index.tsx' : rest + '/index.ts'),
+        );
+        // Fall through rather than throw if the layout ever changes: a resolver
+        // that dies takes every bundle with it, and the caller already copes
+        // with this module being unavailable.
+        if (fs.existsSync(candidate)) {
+          return {type: 'sourceFile', filePath: candidate};
+        }
       }
       // expo-modules-core is *linked* from the expo checkout, so Metro resolves
       // its imports by walking up from there — into a pnpm store with no
