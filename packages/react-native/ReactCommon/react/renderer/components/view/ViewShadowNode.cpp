@@ -129,6 +129,33 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     formsStackingContext = true;
   }
 
+  if (!viewProps.transitions().empty() || viewProps.animation().has_value()) {
+    /*
+     * A node the transitions engine animates keeps its view at both ends of
+     * the flight. Paint frames are written to the mounted view, and a layout
+     * transition finds the commit that started it by the view's own update, so
+     * a node flattened at either end (a fade in to an opacity of 1, a grid with
+     * nothing to paint) leaves nothing on screen to animate, and the change
+     * lands at once. Opacity and transform apply to the whole subtree, so a
+     * node animating either also keeps the stacking context that its values
+     * other than 1 and the identity form.
+     */
+    formsView = true;
+    const auto& transitions = viewProps.transitions();
+    bool animatesSubtree =
+        findTransition(transitions, TransitionProperty::Opacity) != nullptr ||
+        findTransition(transitions, TransitionProperty::Transform) != nullptr;
+    if (viewProps.animation().has_value()) {
+      for (const auto& keyframe : viewProps.animation()->keyframes) {
+        animatesSubtree |=
+            keyframe.opacity.has_value() || keyframe.transform.has_value();
+      }
+    }
+    if (animatesSubtree) {
+      formsStackingContext = true;
+    }
+  }
+
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       viewProps.displayInline) {
     // Atomic `display:'inline'` boxes are positioned by their container's

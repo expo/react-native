@@ -239,6 +239,20 @@ export interface NativePointerEvent extends NativeMouseEvent {
 
 export type PointerEvent = NativeSyntheticEvent<NativePointerEvent>;
 
+/**
+ * A CSS transition's event (css-transitions-1 §6.1): `transitionrun`,
+ * `transitionstart`, `transitionend` or `transitioncancel`.
+ */
+export type NativeTransitionEvent = Readonly<{
+  // The transitioned property's CSS name, such as `opacity`
+  propertyName: string,
+  // How long the transition had been running, in seconds
+  elapsedTime: number,
+  pseudoElement: string,
+}>;
+
+export type TransitionEvent = NativeSyntheticEvent<NativeTransitionEvent>;
+
 export type NativeTouchEvent = Readonly<{
   /**
    * Array of all touch events that have changed since the last event

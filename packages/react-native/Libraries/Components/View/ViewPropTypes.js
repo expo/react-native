@@ -24,6 +24,7 @@ import type {
   MouseEvent,
   PointerEvent,
   SafeAreaInsetsChangeEvent,
+  TransitionEvent,
 } from '../../Types/CoreEventTypes';
 import type {
   AccessibilityActionEvent,
@@ -131,6 +132,18 @@ type PointerEventProps = Readonly<{
   onGotPointerCaptureCapture?: ?(e: PointerEvent) => void,
   onLostPointerCapture?: ?(e: PointerEvent) => void,
   onLostPointerCaptureCapture?: ?(e: PointerEvent) => void,
+}>;
+
+// A CSS transition's events, which the renderer's transitions engine dispatches
+type TransitionEventProps = Readonly<{
+  onTransitionRun?: ?(event: TransitionEvent) => void,
+  onTransitionRunCapture?: ?(event: TransitionEvent) => void,
+  onTransitionStart?: ?(event: TransitionEvent) => void,
+  onTransitionStartCapture?: ?(event: TransitionEvent) => void,
+  onTransitionEnd?: ?(event: TransitionEvent) => void,
+  onTransitionEndCapture?: ?(event: TransitionEvent) => void,
+  onTransitionCancel?: ?(event: TransitionEvent) => void,
+  onTransitionCancelCapture?: ?(event: TransitionEvent) => void,
 }>;
 
 type FocusEventProps = Readonly<{
@@ -580,6 +593,7 @@ export type ViewProps = Readonly<{
   ...GestureResponderHandlers,
   ...MouseEventProps,
   ...PointerEventProps,
+  ...TransitionEventProps,
   ...FocusEventProps,
   ...KeyEventProps,
   ...TouchEventProps,
