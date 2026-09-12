@@ -2178,6 +2178,7 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   public @property (strong) NSString* nativeId;
   public @property (strong) UIView* contentView;
   public @property (strong, readonly) NSObject* accessibilityElement;
+  public FOUNDATION_EXPORT BOOL EXPAnyFixedBackgrounds(void);
   public virtual BOOL isHostChromeSubview:(UIView* _Nonnull view);
   public virtual BOOL wantsToCooptLabel();
   public virtual NSString* accessibilityLabelForCoopting();
@@ -2186,6 +2187,7 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   public virtual _Nullable UIView* exp_materialHostView();
   public virtual void addHostChromeSubview:(UIView* _Nonnull view);
   public virtual void addHostChromeSubview:behindSubview:(UIView* _Nonnull view, UIView* _Nonnull sibling);
+  public virtual void exp_repositionFixedBackgrounds();
   public virtual void exp_setPeekShapeProvider:(UIBezierPath* _Nullable(^)(void) provider);
   public virtual void finalizeUpdates:(RNComponentViewUpdateMask updateMask);
   public virtual void invalidateLayer();
@@ -3799,6 +3801,7 @@ class facebook::react::BaseViewEventEmitter : public facebook::react::TouchEvent
 class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps, public facebook::react::AccessibilityProps {
   public BaseViewProps() = default;
   public BaseViewProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseViewProps& sourceProps, const facebook::react::RawProps& rawProps, const std::function<bool(const std::string&)>& filterObjectKeys = nullptr, bool parseInheritedTextProps = true);
+  public bool backgroundAttachmentFixed;
   public bool collapsable;
   public bool collapsableChildren;
   public bool computeHasInheritedTextProps() const;
