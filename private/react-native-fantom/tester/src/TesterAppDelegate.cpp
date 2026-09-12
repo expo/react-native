@@ -291,7 +291,11 @@ void TesterAppDelegate::startSurface(
     float pointScaleFactor,
     float offsetX,
     float offsetY,
-    float fontSizeMultiplier) {
+    float fontSizeMultiplier,
+    float safeAreaLeft,
+    float safeAreaTop,
+    float safeAreaRight,
+    float safeAreaBottom) {
   Size extentsDp{static_cast<Float>(widthDp), static_cast<Float>(heightDp)};
   LayoutConstraints layoutConstraints{
       .minimumSize = extentsDp,
@@ -303,6 +307,14 @@ void TesterAppDelegate::startSurface(
       .pointScaleFactor = pointScaleFactor,
       .fontSizeMultiplier = fontSizeMultiplier,
       .viewportOffset = {.x = offsetX, .y = offsetY},
+      .environmentValues =
+          EnvironmentValues{
+              .safeAreaInsets =
+                  EdgeInsets{
+                      .left = safeAreaLeft,
+                      .top = safeAreaTop,
+                      .right = safeAreaRight,
+                      .bottom = safeAreaBottom}},
   };
 
   reactHost_->startSurface(
@@ -328,7 +340,14 @@ void TesterAppDelegate::updateSurfaceConstraints(
     SurfaceId surfaceId,
     float widthDp,
     float heightDp,
-    float pointScaleFactor) {
+    float pointScaleFactor,
+    float viewportOffsetX,
+    float viewportOffsetY,
+    float fontSizeMultiplier,
+    float safeAreaLeft,
+    float safeAreaTop,
+    float safeAreaRight,
+    float safeAreaBottom) {
   Size extentsDp{static_cast<Float>(widthDp), static_cast<Float>(heightDp)};
   LayoutConstraints layoutConstraints{
       .minimumSize = extentsDp,
@@ -338,6 +357,16 @@ void TesterAppDelegate::updateSurfaceConstraints(
 
   LayoutContext layoutContext{
       .pointScaleFactor = pointScaleFactor,
+      .fontSizeMultiplier = fontSizeMultiplier,
+      .viewportOffset = {.x = viewportOffsetX, .y = viewportOffsetY},
+      .environmentValues =
+          EnvironmentValues{
+              .safeAreaInsets =
+                  EdgeInsets{
+                      .left = safeAreaLeft,
+                      .top = safeAreaTop,
+                      .right = safeAreaRight,
+                      .bottom = safeAreaBottom}},
   };
 
   reactHost_->setSurfaceConstraints(
