@@ -12,6 +12,7 @@
 
 // Turbo Module
 #import <React/RCTBundleAssetImageLoader.h>
+#import <React/EXPSystemImageLoader.h>
 #import <React/RCTDataRequestHandler.h>
 #import <React/RCTFileRequestHandler.h>
 #import <React/RCTGIFImageDecoder.h>
@@ -69,7 +70,17 @@ id<RCTTurboModule> RCTAppSetupDefaultModuleFromClass(Class moduleClass, id<RCTDe
           NSArray *imageURLLoaderModules =
               extractModuleConformingToProtocol(moduleRegistry, @protocol(RCTImageURLLoader));
 
-          return [@[ [RCTBundleAssetImageLoader new] ] arrayByAddingObjectsFromArray:imageURLLoaderModules];
+          /*
+           * `EXPSystemImageLoader` is built in alongside the bundle loader,
+           * and it has to be listed HERE rather than left to the module
+           * registry: the registry only yields modules something has asked for
+           * by name, and nothing asks for an image loader. Registering it with
+           * `RCT_EXPORT_MODULE` is necessary and not sufficient — the class
+           * linked, `+load` ran, and `<img src="system:plus">` still reported
+           * "no suitable image URL loader found" until this line existed.
+           */
+          return [@[ [RCTBundleAssetImageLoader new], [EXPSystemImageLoader new] ]
+              arrayByAddingObjectsFromArray:imageURLLoaderModules];
         }
         decodersProvider:^NSArray<id<RCTImageDataDecoder>> *(RCTModuleRegistry *moduleRegistry) {
           NSArray *imageDataDecoder = extractModuleConformingToProtocol(moduleRegistry, @protocol(RCTImageDataDecoder));

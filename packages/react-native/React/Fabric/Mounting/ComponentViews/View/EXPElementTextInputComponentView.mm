@@ -7,6 +7,8 @@
 
 #import "EXPElementTextInputComponentView.h"
 
+#import <React/RCTScrollViewComponentView.h>
+
 #import <React/RCTConversions.h>
 #import <React/RCTUtils.h>
 #import <React/EXPTextInputCaret.h>
@@ -487,6 +489,61 @@ static const BOOL kEXPReportControlledEditSynchronously = YES;
   if (newInputProps.readOnly) {
     self.accessibilityTraits |= UIAccessibilityTraitNotEnabled;
   }
+}
+
+/**
+ * `focus()` and `blur()`, which the DOM has and this element did not.
+ *
+ * `autoFocus` covered the case where the element knows at mount that it wants
+ * the keyboard. Nothing covered the ordinary one — a button that focuses a
+ * field, a form that moves to the next invalid input, a test that needs to open
+ * the keyboard at all. Without it `<input>` cannot be focused by any means: a
+ * synthetic tap does not reach UIKit's own field gesture either, so a screen
+ * built from these elements cannot be driven.
+ *
+ * This half works and is not yet reachable from JavaScript. A `ref` placed on an
+ * intrinsic element is never populated — measured: the imperative handle built
+ * on it resolves, and the host node behind it is null — so there is nothing to
+ * dispatch a command to. Closing that is a change to the intrinsics seam rather
+ * than to this file, and until it lands nothing calls this. It is kept because
+ * it is the half that will be needed and it costs nothing to leave correct.
+ */
+- (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args
+{
+  if ([commandName isEqualToString:@"focus"]) {
+    [_textField becomeFirstResponder];
+    return;
+  }
+  if ([commandName isEqualToString:@"blur"]) {
+    [_textField resignFirstResponder];
+    return;
+  }
+  [super handleCommand:commandName args:args];
+}
+
+
+/**
+ * Tell the scroll view where the caret is, so focusing this element brings it
+ * into view rather than leaving it behind the keyboard.
+ *
+ * `RCTTextInputComponentView` has done this for years and the element controls
+ * did not, so a scroll view containing them had no idea where the focus was: it
+ * reserved room for the keyboard correctly and then left the focused control
+ * under it. Reported as the caret's rect rather than the whole control, because
+ * a tall field scrolled to show its top is still a field you cannot see
+ * yourself typing in.
+ */
+- (void)reactUpdateResponderOffsetForScrollView:(RCTScrollViewComponentView *)scrollView
+{
+  if (![self isDescendantOfView:scrollView.scrollView] || !_textField.isFirstResponder) {
+    scrollView.firstResponderViewOutsideScrollView = _textField;
+    return;
+  }
+
+  UITextRange *selectedTextRange = _textField.selectedTextRange;
+  UITextSelectionRect *selection = [_textField selectionRectsForRange:selectedTextRange].firstObject;
+  CGRect focusRect = selection == nil ? self.bounds : selection.rect;
+  scrollView.firstResponderFocus = [self convertRect:focusRect toView:nil];
 }
 
 - (void)didMoveToWindow

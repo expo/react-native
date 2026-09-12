@@ -468,3 +468,40 @@ is not making boxes feel native, it is giving authors the three web-standard
 declarations that decide platform behaviour (`appearance`, `touch-action`, and
 natively-evaluated `:active`), and putting a native gesture arena underneath
 them._
+
+## The accessible name comes from the contents
+
+An element that carries a role you can land on — a link, a button — is an
+accessibility element, and its name is computed from what it contains. That is
+the DOM's rule and it is now the rule here, implemented once in
+`EXPElementBoxComponentView` rather than per element, so anything that gains a
+role gets it.
+
+It was not free, and the way it was broken is worth keeping. React Native
+decides `isAccessibilityElement` from the `accessible` prop alone, and
+`RCTRecursiveAccessibilityLabel` — the walk that collects the text a container
+draws — runs only for a view that is one. So an `<a href>` whose display
+generated a box got `UIAccessibilityTraitLink` from its role and was a target
+that VoiceOver announced as "link" and nothing else. The text was there;
+nothing asked for it. Measured on a navigation row: `Link, {2, 262, 398, 50.7}`
+with no label at all, and the same with the anchor's content written as a bare
+string, as one `<span>`, and as two.
+
+Two things fall out of doing it this way:
+
+- **`<span>`, `<b>`, `<i>` and bare strings all contribute.** They already
+  expose their painted text to that walk; they were never the problem.
+- **Inline elements are untouched.** A link that is a range of glyphs is named
+  by its text run, from that fragment's own string, and always was.
+
+Roles that only *describe* text — a heading — are deliberately left out. They
+are not targets, and making them elements would take their contents out of the
+reading order for nothing.
+
+### Known gap
+
+`accessibilityElementsHidden` is not forwarded through an inline element, so a
+decorative `<span>` inside a named row is still read out — a chevron came back
+as "Chat, with a composer, ›". It works on a `<div>`, which is what the keyboard
+demo does. `aria-hidden` and `aria-label` are not forwarded either;
+`accessibilityLabel` is.

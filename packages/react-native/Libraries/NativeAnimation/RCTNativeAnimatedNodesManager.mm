@@ -441,6 +441,23 @@ static NSString *RCTNormalizeAnimatedEventName(NSString *eventName)
 {
   if ((_displayLink == nullptr) && _activeAnimations.count > 0) {
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(stepAnimations:)];
+    /*
+     * At the DISPLAY's rate, not the default one.
+     *
+     * Left to itself a display link runs at 60 on a ProMotion screen even with
+     * `CADisableMinimumFrameDurationOnPhone` set. This one steps every native
+     * `Animated` value in the app — including a chat's send flight — so unasked
+     * it animates the flying balloon at 60 while the scroll view's rise, the
+     * keyboard and the CSS transition engine all move at 120. Two clocks that
+     * agree only every second frame, during exactly the moment a send is
+     * reported to jump.
+     *
+     * Invisible on a 60Hz simulator, where the clocks agree on every frame.
+     */
+    const float rate = (float)UIScreen.mainScreen.maximumFramesPerSecond;
+    if (rate > 0) {
+      _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(rate / 2, rate, rate);
+    }
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
   }
 }

@@ -109,6 +109,13 @@ class TextLayoutManagerAbsoluteLayoutWithFractionalPixelTest {
                 TextUtils.TruncateAt::class.java,
                 java.lang.Integer.TYPE,
                 TextPaint::class.java,
+                // Kotlin's default value does not make this optional to reflection:
+                // the compiled method carries every parameter, so a lookup that omits
+                // this one finds nothing. Adding the parameter in August left this
+                // test throwing NoSuchMethodException rather than failing an
+                // assertion, which is why it read as a broken suite rather than a
+                // broken expectation.
+                FloatArray::class.java,
             )
             .apply { isAccessible = true }
 
@@ -126,6 +133,7 @@ class TextLayoutManagerAbsoluteLayoutWithFractionalPixelTest {
         /* ellipsizeMode = */ null,
         /* maxNumberOfLines = */ 2,
         paint,
+        /* floatExclusionsDip = */ null,
     ) as Layout
   }
 }
