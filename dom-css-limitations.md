@@ -443,3 +443,158 @@ rather than going quiet.
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
+
+## `anchor-name-from-contents` — FIXED 2026-09-01
+
+An element that carried a ROLE was announced but never named: an `<a href>` whose
+display generated a box reached VoiceOver as "link" and nothing else, whether its
+content was a bare string or `<span>`s.
+
+The cause was not the anchor. React Native decides `isAccessibilityElement` from
+the `accessible` prop alone, and `RCTRecursiveAccessibilityLabel` — the walk that
+collects the text a container draws — only runs for a view that is one. The role
+supplied `UIAccessibilityTraitLink`, so the row was a target; nothing asked what
+it contained.
+
+Fixed in `EXPElementBoxComponentView` as the general rule rather than in the
+anchor: an element carrying a role you can LAND on (link, button) is an
+accessibility element, and the existing walk then names it from its contents —
+`<span>`, `<b>`, `<i>` and bare strings alike. Inline elements were never
+affected; a link that is a range of glyphs is named by its text run.
+
+Roles that merely describe text — a heading — are deliberately excluded: they are
+not targets, and making them elements would take their contents out of the
+reading order for nothing.
+
+## DOM-CSS-LIMITATION(peek-outruns-the-scroll)
+
+A hold that turns into a scroll still opens the peek, on iOS, if the finger
+holds still for roughly three hundred milliseconds first.
+
+`contextmenu` is `UIContextMenuInteraction`, which is the right thing to be —
+the lift, the blur behind, the haptic and the accessibility are all the
+platform's own. The cost is that the platform decides
+when the hold has succeeded and there is no way to take it back. Measured, with
+the interaction and the enclosing scroll view's pan each logging their own
+callbacks: UIKit asks for a configuration at `44.101` and the pan reaches
+`Began` at `44.181`. Cancelling from the pan's first callback — by removing and
+re-adding the interaction, which is the only way to end its recogniser — was
+implemented and is eighty milliseconds too late.
+
+It is close to unreachable with a real finger, because a finger that is
+beginning a scroll is already moving before the half second is up and UIKit's
+own recogniser fails. It is reachable with a synthetic gesture, which is how it
+was found. It is also what the platform's own chat does: once a balloon has lifted, dragging
+moves the preview rather than dismissing it.
+
+The alternative is our own timer, which cancels on the touch the scroll view
+takes — and has no lift, no blur, no haptic and no accessibility. That trade was
+made the other way deliberately.
+
+## DOM-CSS-LIMITATION(accessory-colours-follow-the-keyboard-window)
+
+A dynamic colour on anything inside `<native:keyboardaccessory>` does not
+re-resolve when the appearance changes while the app is running. It is correct on
+every launch and correct the next time the keyboard is presented; it is stale in
+between.
+
+`RCTViewComponentView` handles this properly — `traitCollectionDidChange:` calls
+`invalidateLayer` when the colour appearance differs — and it fires for views in
+the app's own window. The accessory is not in the app's window. It is a real
+`inputAccessoryView`, so it lives in `UIRemoteKeyboardWindow` and takes ITS trait
+collection, which does not change at the same moment the app's does.
+
+Measured on the composer's send button, whose fill is
+`DynamicColorIOS({light: '#0088FF', dark: '#0091FF'})`:
+
+| | send button | navigation bar |
+|---|---|---|
+| launched light | `#0088FF` | white |
+| launched dark | `#0091FF` | black |
+| switched to dark while running | `#0088FF` — stale | black — updated |
+
+So the value and the plumbing are right, and what is missing is a trait change
+this view will never be sent. Recorded rather than worked around: forcing a
+re-resolve would mean watching the app's window from a view in another one and
+overriding UIKit's own answer about what appearance this view is in.
+
+## DOM-CSS-LIMITATION(the-accessory-hit-region-is-not-observable)
+
+The rule the accessory's drag region follows is sound and untested, and I could
+not find a way to test it from outside.
+
+The rule: **the hit region is the bar's laid-out box, and the material may
+overflow it.** The fade rises `max(16, fade)` points ABOVE the box, so a finger
+that lands on the gradient is on the transcript and a finger on the bar's own
+surface drags the keyboard. That is what fixed "the top hitbox should line up
+with the top of the buttons, not the full height of the gradient".
+
+The two halves are independent quantities — one is layout, one is paint — and
+nothing composes them but convention.
+
+**A test was written and withdrawn.** It read the fade's top edge off the screen
+and the buttons' top edge off the accessibility tree, and asserted the first was
+above the second. It passed. It also passed with the rise forced to `0`, which is
+the fault it was written to catch: the column it scanned crosses the transcript's
+own avatars and balloons, so it found a colour change well above the bar every
+time and never looked at the bar at all. Removed rather than left green.
+
+What would be needed is the bar's own frame, which the accessibility tree does
+not publish — the accessory is not an element, only its controls are. Until
+something exposes it, the rule is documented and unenforced.
+
+## `<native:keyboardaccessory>` reserves the whole safe area — RESOLVED 2026-09-04
+
+Was: docked, the element cleared the bottom safe area completely and there was
+no way to say otherwise. The platform's native composer does not clear it: it sits **28**
+points off the bottom of the screen against a safe area of **34**, so its pill
+overlaps the top of the strip the system reserves. Measured on the same
+simulator with the keyboard down, both apps' `+` glyphs:
+
+    native      x 40.33-55.33   centre 48.17 from the screen's bottom
+    ours        x 40.33-55.33   centre 54.17
+
+The horizontal was already exact — that is the 28-point concentric
+padding, applied on both sides once the bar rests on
+the screen's corner. The vertical was six points short, which is the difference
+between 28 and the safe area.
+
+**`automaticInsets={false}`** closes it, in the vocabulary `<native:scroll>`
+already uses. The element still MEASURES the strip — `onDockChange` publishes it,
+and an author who owns it needs the number more than one who does not — it just
+stops adding it to the bar's height. The app then pays the whole distance to the
+screen's edge rather than a top-up, which is the only arrangement that can land
+on a number SMALLER than the safe area: while the element is also reserving, the
+two add.
+
+The default stays on, and that is the part worth keeping: 28 is concentric with
+the DISPLAY's corner radius, which no API reports, and an element that guessed it
+would be wrong on every device whose corner differs. Clearing the indicator is
+the right thing for an element to assume; overlapping it is the thing an app has
+to ask for.
+
+## `transition-property` — five properties, and `height` is the layout one — RESOLVED 2026-09-04
+
+Was: `transition-property` accepted `opacity`, `background-color`,
+`border-color` and `transform`, and nothing else. **`height` now transitions
+too.**
+
+The trap this was filed under is worth keeping, because it applies to every
+property still absent: an unsupported `transition-property` is CORRECT per CSS
+and therefore silent. `parseTransitionProperty` returns `std::nullopt`, the
+declaration applies, the property does not transition, and nothing anywhere says
+so. Measured on the composer's growth before this was implemented: with
+`transition: height 0.1s` in place, the transcript still moved 432 to 423 points
+in a single frame.
+
+`height` is the first LAYOUT property in the set and takes a different path
+through the engine — a commit per frame per surface, where the other four are
+written straight to the mounted view — which is documented in
+`ReactCommon/react/renderer/animationbackend/__docs__/LayoutAffectingAnimation.md`
+and held to by `ViewCSSHeightTransition-itest.js`.
+
+Still absent, and for a reason rather than an oversight: `width`, `margin`,
+`padding`, `border-width`, `flex`, `top`/`left`/`right`/`bottom`. The mechanism
+is not specific to height — `isLayoutAffecting` is one line and
+`AnimatedPropsBuilder` already has the setters — so each is small. What each one
+costs is a case to justify it.
