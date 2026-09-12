@@ -959,6 +959,12 @@ export type StyleXProps = {
   // FIRST commit only. The element drops them after mount and the renderer's
   // native transitions animate to the real values.
   __startingStyle?: {[string]: unknown},
+  // Whether these styles answer a press — i.e. whether any of them is keyed on
+  // a pressed pseudo-class. Decided in `props()`, because `resolveDeclarations`
+  // drops every `:`-prefixed key and by the time a style reaches an element
+  // there is nothing left to look for. The element uses it to decide whether to
+  // suppress the platform's own press feedback.
+  __stylexAnswersPress?: boolean,
   // The id of the marker this element carries, if it carries one. What a
   // `when.*` condition on a descendant is asking about.
   __stylexMarker?: string,

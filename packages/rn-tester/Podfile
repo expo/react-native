@@ -68,6 +68,15 @@ def pods(target_name, options = {})
   pod 'ScreenshotManager', :path => "NativeModuleExample"
   pod 'MyNativeView', :path => "NativeComponentExample"
   pod 'NativeCxxModuleExample', :path => "NativeCxxModuleExample"
+
+  # A real native navigator, for the screens that show one.
+  #
+  # Named explicitly because this Podfile does not call `use_native_modules!` — RN Tester lists
+  # what it builds. Codegen finds these through package.json regardless, which is how the app
+  # ended up crashing on launch with a nil class in RCTThirdPartyComponentsProvider: the generated
+  # provider listed RNSScreenView and friends while nothing had compiled them.
+  pod 'RNScreens', :path => "../../node_modules/react-native-screens"
+  pod 'react-native-safe-area-context', :path => "../../node_modules/react-native-safe-area-context"
 end
 
 target 'RNTester' do
@@ -87,4 +96,14 @@ end
 
 post_install do |installer|
   react_native_post_install(installer, @prefix_path, :mac_catalyst_enabled => false)
+  # Xcode 27 refuses a target whose deployment target is below its floor (15.0)
+  # where earlier versions warned; a podspec's resource bundle can still say 9.0.
+  # Every pod target is held at the app's own minimum.
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.1
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+      end
+    end
+  end
 end
