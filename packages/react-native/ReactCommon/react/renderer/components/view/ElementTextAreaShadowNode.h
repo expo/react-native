@@ -59,20 +59,17 @@ class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
         rows(convertRawProp(context, rawProps, "rows", sourceProps.rows, 2)),
         mostRecentEventCount(
             convertRawProp(context, rawProps, "mostRecentEventCount", sourceProps.mostRecentEventCount, 0)),
-        // CSS's `caret-color`, which is a real property and was not expressible
-        // at all: iOS draws the insertion point in the control's `tintColor`,
-        // which it inherits, so a composer got whatever the window's tint
-        // happened to be. Measured against the native composer, whose caret is
-        // its own #0088FF: ours came out (66,107,242), a different hue entirely.
-        caretColor(convertRawProp(context, rawProps, "caretColor", sourceProps.caretColor, SharedColor{}))
+        // iOS draws the insertion point in the control's inherited `tintColor`
+        // unless told otherwise
+        caretColor(convertRawProp(context, rawProps, "caretColor", sourceProps.caretColor, SharedColor{})),
+        quiet(convertRawProp(context, rawProps, "quiet", sourceProps.quiet, false))
   {
     // No user-agent accessibility defaults; the control describes itself. See
     // `ElementRangeShadowNode.h` for why that is the rule for control-backed
     // elements.
 
-    // ARIA, which is how an author of these elements spells accessibility.
-    // Applied last so it wins over the `accessibility*` props, and applied
-    // here rather than in the base so only elements pay for the reads.
+    // Applied last so ARIA wins over the `accessibility*` props, and here
+    // rather than in the base so only elements pay for the reads
     applyAriaAttributes(context, rawProps, *this);
   }
 
@@ -94,18 +91,19 @@ class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
   bool autoCorrect{true};
   int rows{2};
   int mostRecentEventCount{0};
-  /*
-   * CSS `caret-color`: the insertion point's colour. Unset leaves the
-   * platform's.
-   *
-   * LAST, matching the initialiser list, and that is not tidiness: C++
-   * initialises members in DECLARATION order whatever the list says, so a list
-   * in a different order is a lie about when each value exists. Declared at the
-   * top when it was added, which made this the one member initialised first —
-   * `-Wreorder-ctor` is an error under Fantom's build and invisible under
-   * Xcode's, so it compiled for iOS and broke the tester.
-   */
+  // CSS `caret-color`; unset leaves the platform's. Declared last to match the
+  // initialiser list: `-Wreorder-ctor` is an error under Fantom's build.
   SharedColor caretColor{};
+
+  /*
+   * Whether the host is in the middle of something and would rather this
+   * element did no expensive work yet. A controlled write that empties the
+   * field does not tell the input system, because that costs a keyboard rebuild
+   * (`reloadInputViews` twice plus `textWillChange`, about seven frames); the
+   * news is given on this flag's falling edge, before the keyboard acts on the
+   * stale correction. A host that never sets it gets a deadline instead.
+   */
+  bool quiet{false};
 };
 
 /*

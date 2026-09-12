@@ -78,7 +78,7 @@
 
   // The common case for a controlled input: the author echoes the value back
   // unchanged on every keystroke. Nothing differs, so nothing is written.
-  EXPWriteTextPreservingCaret(field, @"0123456789");
+  EXPWriteTextPreservingCaret(field, @"0123456789", NO);
 
   XCTAssertEqualObjects(field.text, @"0123456789");
   XCTAssertEqual([self caretOffsetIn:field], 4, @"an unchanged write must not move the caret");
@@ -90,12 +90,11 @@
   if (field == nil) {
     XCTSkip(@"the simulator would not give the field focus");
   }
-  // The caret sits in the MIDDLE, and the clamp removes the tail. Anchoring to
-  // the end — which is what React Native's own text input does, and what the
-  // `beforeinput` path computes — would drag the caret backwards here.
+  // The caret sits in the middle and the clamp removes the tail; anchoring to
+  // the end, as React Native's own text input does, would drag it backwards
   [self setCaretIn:field to:3];
 
-  EXPWriteTextPreservingCaret(field, @"0123456789");
+  EXPWriteTextPreservingCaret(field, @"0123456789", NO);
 
   XCTAssertEqualObjects(field.text, @"0123456789");
   XCTAssertEqual([self caretOffsetIn:field], 3, @"a change after the caret must not move it");
@@ -111,7 +110,7 @@
 
   // Text inserted BEFORE the caret has to push it, or the caret ends up
   // pointing at different characters than it did.
-  EXPWriteTextPreservingCaret(field, @"XXabcdef");
+  EXPWriteTextPreservingCaret(field, @"XXabcdef", NO);
 
   XCTAssertEqualObjects(field.text, @"XXabcdef");
   XCTAssertEqual([self caretOffsetIn:field], 8, @"an insertion before the caret must carry it");
@@ -123,7 +122,7 @@
   field.text = @"before";
   // No insertion point exists, so there is nothing to preserve and the rule
   // takes its cheap path — but it still has to write.
-  EXPWriteTextPreservingCaret(field, @"after");
+  EXPWriteTextPreservingCaret(field, @"after", NO);
   XCTAssertEqualObjects(field.text, @"after");
 }
 
@@ -141,7 +140,7 @@
     XCTSkip(@"the simulator would not start a composition");
   }
 
-  EXPWriteTextPreservingCaret(field, @"something else");
+  EXPWriteTextPreservingCaret(field, @"something else", NO);
 
   XCTAssertEqualObjects(field.text, @"ni", @"a write must not disturb marked text");
   XCTAssertNotNil(field.markedTextRange, @"the composition must survive");
@@ -154,10 +153,9 @@
     XCTSkip(@"the simulator would not give the field focus");
   }
 
-  // The differing span is computed in UTF-16 units, and a naive prefix/suffix
-  // scan would split the surrogate pair and hand UIKit half of one. Boundaries
-  // snap to composed character sequences so the write stays well formed.
-  EXPWriteTextPreservingCaret(field, @"a👍c");
+  // Boundaries snap to composed character sequences so a surrogate pair is
+  // never split
+  EXPWriteTextPreservingCaret(field, @"a👍c", NO);
 
   XCTAssertEqualObjects(field.text, @"a👍c");
 }
@@ -169,16 +167,11 @@
     XCTSkip(@"the simulator would not give the field focus");
   }
 
-  // U+1D44D and U+1F44D (👍) are different characters that happen to END in the
-  // same UTF-16 low surrogate — one pair in every 1024 does. The naive scan
-  // therefore reports a one-unit "common suffix" that is really half of a
-  // character neither string shares, and snapping that boundary OUTWARD to the
-  // whole sequence claims the differing high surrogate is common too. The span
-  // then collapses to nothing and the controlled value is silently dropped.
-  //
-  // Boundaries may only ever shrink the common run, never extend it: the loops
-  // verified equality, the snap did not.
-  EXPWriteTextPreservingCaret(field, @"\U0001F44D");
+  // U+1D44D and U+1F44D end in the same low surrogate, so the scan finds a
+  // one-unit "common suffix" that is half a character the strings do not share;
+  // a snap may only shrink the common run, or the span collapses and the value
+  // is dropped
+  EXPWriteTextPreservingCaret(field, @"\U0001F44D", NO);
 
   XCTAssertEqualObjects(field.text, @"\U0001F44D", @"the write must not be dropped");
 }
@@ -191,7 +184,7 @@
   }
   // An emoji plus a modifier is one composed sequence spanning four UTF-16
   // units, so the differing span is found in the middle of a grapheme.
-  EXPWriteTextPreservingCaret(field, @"a\U0001F44D\U0001F3FFb");
+  EXPWriteTextPreservingCaret(field, @"a\U0001F44D\U0001F3FFb", NO);
   XCTAssertEqualObjects(field.text, @"a\U0001F44D\U0001F3FFb");
 }
 
@@ -203,8 +196,64 @@
   }
   // No common prefix or suffix: the "span that differs" is everything, which
   // must still be a correct write rather than an edge case that falls through.
-  EXPWriteTextPreservingCaret(field, @"nothing alike");
+  EXPWriteTextPreservingCaret(field, @"nothing alike", NO);
   XCTAssertEqualObjects(field.text, @"nothing alike");
+}
+
+#pragma mark - Quiet writes
+
+/*
+ * A QUIET write still writes; what it does not do is pay for the keyboard
+ * rebuild that dropping the queued correction costs. The debt has to come back
+ * to the caller instead of being forgotten, and the return value is how.
+ */
+
+- (void)testAQuietWriteSTILLWritesTheText
+{
+  UITextField *field = [self focusedFieldWithText:@"draft "];
+  if (field == nil) {
+    XCTSkip(@"the simulator would not give the field focus");
+  }
+  // The reader has to see the text either way — quiet is about what the write
+  // costs, never about whether it happens.
+  EXPWriteTextPreservingCaret(field, @"draft", YES);
+  XCTAssertEqualObjects(field.text, @"draft");
+}
+
+- (void)testAQuietWriteOWESTheDrop
+{
+  UITextField *field = [self focusedFieldWithText:@"draft "];
+  if (field == nil) {
+    XCTSkip(@"the simulator would not give the field focus");
+  }
+  // Said out loud, because the caller has to pay it when the host stops
+  // moving. A quiet write whose debt is silently dropped is the send stall
+  // coming back one animation later.
+  XCTAssertTrue(
+      EXPWriteTextPreservingCaret(field, @"draft", YES),
+      @"a quiet write that changed the text owes the correction drop");
+}
+
+- (void)testALOUDWriteOwesNothing
+{
+  UITextField *field = [self focusedFieldWithText:@"draft "];
+  if (field == nil) {
+    XCTSkip(@"the simulator would not give the field focus");
+  }
+  // It has already paid, so there is no debt to carry — and a caller that
+  // treated this as owed would drop a correction for no reason.
+  XCTAssertFalse(EXPWriteTextPreservingCaret(field, @"draft", NO), @"a write that paid for its own drop owes nothing");
+}
+
+- (void)testAWriteThatCHANGESNothingOwesNothing
+{
+  UITextField *field = [self focusedFieldWithText:@"draft"];
+  if (field == nil) {
+    XCTSkip(@"the simulator would not give the field focus");
+  }
+  // The common controlled-input case: the author echoes the value back
+  // unchanged. Nothing is written, so there is nothing queued against it.
+  XCTAssertFalse(EXPWriteTextPreservingCaret(field, @"draft", YES), @"a write that did nothing cannot owe anything");
 }
 
 @end

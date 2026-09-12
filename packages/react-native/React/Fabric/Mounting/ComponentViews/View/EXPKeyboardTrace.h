@@ -74,6 +74,28 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (double)nowMs;
 
+/*
+ * A PROBE for attributing a cost to whoever actually pays it.
+ *
+ * `textDidChange:` measures 18.6ms while `textWillChange:` measures 0.1ms, and
+ * the source attributes that to the keyboard recomputing predictions — which
+ * cannot be right, because a SELECTION change, which touches no text at all,
+ * costs 9.5ms on the same field, and because an empty document is the cheapest
+ * thing there is to predict from.
+ *
+ * So the question is whose frames those milliseconds are. Open a window around
+ * the call and have every layout pass that runs inside it report itself; if the
+ * cost is our own accessory being re-laid-out, the window catches it, and if it
+ * is not, the window comes back empty and the cost is genuinely UIKit's.
+ *
+ * Nested windows are not supported — one measurement at a time, main thread.
+ */
++ (void)beginAttributing;
+/** Milliseconds of layout, and how many passes, since `beginAttributing`. */
++ (void)endAttributing:(double *)millis passes:(NSUInteger *)passes detail:(NSString *_Nullable *_Nullable)detail;
+/** Called from a method of OURS that wants to be attributable. */
++ (void)attributeWork:(const char *)name millis:(double)millis;
+
 /** Everything recorded, pinned lines first, oldest first, newline separated. */
 + (NSString *)dump;
 
@@ -83,6 +105,19 @@ NS_ASSUME_NONNULL_BEGIN
  * ask whether the bar was ever hidden.
  */
 + (NSString *)barOffScreenMarker;
+
+/*
+ * One line at the top of a `layoutSubviews` makes that pass attributable, on
+ * every exit path, including the early returns.
+ */
+struct EXPWorkAttribution {
+  const char *name;
+  double began;
+  explicit EXPWorkAttribution(const char *name);
+  ~EXPWorkAttribution();
+};
+#define EXP_ATTRIBUTE_WORK(nm) EXPWorkAttribution _expWorkAttribution(nm)
+#define EXP_ATTRIBUTE_LAYOUT() EXP_ATTRIBUTE_WORK(__PRETTY_FUNCTION__)
 
 @end
 

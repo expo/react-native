@@ -882,6 +882,11 @@ registerFrameworkElement('element-textarea', () =>
       rows: true,
       name: true,
       mostRecentEventCount: true,
+      // Whether the HOST is mid-animation. A controlled write that empties the
+      // field is made without telling the input system while this is on, and
+      // the news — a keyboard rebuild, 113ms of main thread — is given when it
+      // goes off. See `ElementTextAreaShadowNode.h`.
+      quiet: true,
       // CSS's `caret-color`. Declared here or it never reaches the shadow node,
       // and `processColor` because a colour arrives as a string or a dynamic
       // colour object and the shadow node reads neither.
