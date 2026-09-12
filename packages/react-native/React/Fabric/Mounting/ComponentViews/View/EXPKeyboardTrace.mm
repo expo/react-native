@@ -219,6 +219,60 @@ static void EXPKeyboardTraceObserveTurn(CFRunLoopObserverRef, CFRunLoopActivity 
   return who;
 }
 
+static BOOL gAttributing = NO;
+static double gAttributedMs = 0.0;
+static NSUInteger gAttributedPasses = 0;
+static NSMutableDictionary<NSString *, NSNumber *> *gAttributedDetail = nil;
+
++ (void)beginAttributing
+{
+  gAttributing = YES;
+  gAttributedMs = 0.0;
+  gAttributedPasses = 0;
+}
+
++ (void)endAttributing:(double *)millis passes:(NSUInteger *)passes detail:(NSString **)detail
+{
+  gAttributing = NO;
+  if (millis != NULL) {
+    *millis = gAttributedMs;
+  }
+  if (passes != NULL) {
+    *passes = gAttributedPasses;
+  }
+  if (detail != NULL) {
+    NSMutableArray<NSString *> *parts = [NSMutableArray array];
+    // Loudest first: the point is to name the expensive one, not to list all.
+    NSArray<NSString *> *keys = [gAttributedDetail keysSortedByValueUsingComparator:^(NSNumber *a, NSNumber *b) {
+      return [b compare:a];
+    }];
+    for (NSString *k in keys) {
+      [parts addObject:[NSString stringWithFormat:@"%@=%.1f", k, [gAttributedDetail[k] doubleValue]]];
+    }
+    *detail = parts.count > 0 ? [parts componentsJoinedByString:@" "] : @"nothing of ours";
+  }
+  gAttributedDetail = nil;
+}
+
++ (void)attributeWork:(const char *)name millis:(double)millis
+{
+  if (!gAttributing) {
+    return;
+  }
+  gAttributedMs += millis;
+  gAttributedPasses++;
+  if (gAttributedDetail == nil) {
+    gAttributedDetail = [NSMutableDictionary dictionary];
+  }
+  // Trim `-[Class method]` out of __PRETTY_FUNCTION__ so the line stays legible.
+  NSString *key = [NSString stringWithUTF8String:name ?: "?"];
+  const NSRange open = [key rangeOfString:@"["];
+  if (open.location != NSNotFound) {
+    key = [key substringFromIndex:open.location];
+  }
+  gAttributedDetail[key] = @([gAttributedDetail[key] doubleValue] + millis);
+}
+
 + (double)nowMs
 {
   return (CACurrentMediaTime() - startedAt) * 1000.0;
@@ -250,3 +304,10 @@ static void EXPKeyboardTraceObserveTurn(CFRunLoopObserverRef, CFRunLoopActivity 
 }
 
 @end
+
+EXPWorkAttribution::EXPWorkAttribution(const char *name) : name(name), began(CACurrentMediaTime()) {}
+
+EXPWorkAttribution::~EXPWorkAttribution()
+{
+  [EXPKeyboardTrace attributeWork:name millis:(CACurrentMediaTime() - began) * 1000.0];
+}
