@@ -296,3 +296,83 @@ test('a numeric animation-iteration-count runs that many times', () => {
   Fantom.unstable_produceFramesForDuration(60);
   expect(opacityOf(viewRef)).toBe(settled);
 });
+
+/*
+ * An animation runs because a node carries it, and every commit that touches
+ * a node clones it, so a finished animation that was forgotten would run again
+ * on any change to the view, including a change to a child. css-animations-1
+ * §4 restarts an animation only when the element's animation list changes.
+ */
+test('a finished animation does not run again when the view re-renders', () => {
+  const root = Fantom.createRoot();
+  const viewRef = createRef<HostInstance>();
+
+  function App(props: {label: string}): React.Node {
+    return (
+      <View
+        ref={viewRef}
+        style={{
+          width: 100,
+          height: 100,
+          opacity: 0.25,
+          animationKeyframes: fadeKeyframes,
+          animationDuration: '200ms',
+          animationTimingFunction: 'linear',
+        }}>
+        <View key={props.label} style={{width: 10, height: 10}} />
+      </View>
+    );
+  }
+
+  Fantom.runTask(() => {
+    root.render(<App label="a" />);
+  });
+
+  // Run it out; `fill-mode: none`, so it ends on the committed value
+  Fantom.unstable_produceFramesForDuration(400);
+  expect(opacityOf(viewRef)).toBe(0.25);
+
+  // A different child, which clones the animated node and nothing else
+  Fantom.runTask(() => {
+    root.render(<App label="b" />);
+  });
+  Fantom.unstable_produceFramesForDuration(100);
+  // Halfway through a restarted fade this would be about 0.5
+  expect(opacityOf(viewRef)).toBe(0.25);
+});
+
+/* The other half of the same rule: a different animation is a new one */
+test('changing the animation after it has finished runs the new one', () => {
+  const root = Fantom.createRoot();
+  const viewRef = createRef<HostInstance>();
+
+  function App(props: {duration: string}): React.Node {
+    return (
+      <View
+        ref={viewRef}
+        style={{
+          width: 100,
+          height: 100,
+          opacity: 0.25,
+          animationKeyframes: fadeKeyframes,
+          animationDuration: props.duration,
+          animationTimingFunction: 'linear',
+        }}
+      />
+    );
+  }
+
+  Fantom.runTask(() => {
+    root.render(<App duration="200ms" />);
+  });
+  Fantom.unstable_produceFramesForDuration(400);
+  expect(opacityOf(viewRef)).toBe(0.25);
+
+  Fantom.runTask(() => {
+    root.render(<App duration="1000ms" />);
+  });
+  Fantom.unstable_produceFramesForDuration(500);
+  const midway = opacityOf(viewRef);
+  expect(midway).toBeGreaterThan(0.3);
+  expect(midway).toBeLessThan(0.7);
+});
