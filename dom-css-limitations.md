@@ -188,6 +188,21 @@ port. On Android it renders nothing rather than red-boxing, so an app can write
 it unconditionally; the portable spelling is `<button>` with a `<menu>`, which
 is a `UIMenu` on iOS and a `PopupMenu` on Android.
 
+**`ios-only-materials`** — `ReactCommon/.../view/ElementBoxShadowNode.h`
+`-apple-visual-effect` is drawn on iOS only. The keywords are Apple's and so are
+the two classes behind them (`UIBlurEffect`, `UIGlassEffect`); Android ignores
+the prop and the box keeps whatever background it was given. Android's nearest
+equivalent is a `RenderEffect` blur of what is behind, which is a *different
+construction* rather than the same one under another name — which is why the
+property is spelled `-apple-` rather than pretending to be portable. A platform
+wall by construction, not a gap to schedule.
+
+**`ios-only-balloon-tail`** — same file
+`-apple-balloon-tail` is built on iOS only, where the shape is a `CAShapeLayer`
+mask rebuilt each layout. Android ignores it and the balloon is a plain rounded
+rectangle. Unlike the two above, nothing here is iOS-specific: this one is
+unfinished rather than blocked, and closing it is the same path in a `Drawable`.
+
 **`overlay-cannot-cover-the-keys`** — `React/.../KeyboardPanel/EXPKeyboardPanelComponentView.mm`
 A panel presented as an overlay CAN cover the keyboard, and this entry used to
 say it could not. What it can never do is get there with a window of its own.
@@ -215,6 +230,18 @@ so no level exists that would have done" — but the window it made was clamped 
 10000000, so the experiment measured the clamp and was written up as measuring
 the compositing. "No level is high enough" invites trying a higher one; "the
 level is clamped, so use the keyboard's own window" is the fact.
+
+**`balloon-tail-clips-box-shadow`** — `ReactCommon/.../view/ElementBoxShadowNode.h`
+A `box-shadow` on an element with `-apple-balloon-tail` is clipped away. The
+tail's shape is applied as a mask on the view's own layer, and a layer's mask
+clips its shadow along with everything else. It came up lifting a balloon out of
+a transcript for a reaction picker: the platform's lift carries a shadow and this one
+cannot, because a shadow on the box outside the balloon would be a rectangle and
+one on the balloon is clipped by its own mask.
+
+Unfinished rather than blocked: the path is already built where the mask is, so
+casting the shadow from it on a layer that is not the masked one is work in that
+one place.
 
 **`ios-only-contextmenu`** — `packages/expo-intrinsics/src/index.js`
 `contextmenu` — a long press — is fired on iOS only. It is timed from the
@@ -345,15 +372,20 @@ rather than going quiet.
 - `abbr-underline-is-unconditional` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
+- `backdrop-under-background` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `button-padding-unresolved` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `checkable-line-centering` — deviation, `packages/expo-intrinsics/__tests__/CheckableLineCentering-itest.js`
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
 - `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
+- `corner-shape-clips-border-and-shadow` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
+- `corner-shape-ios-only` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `display-on-inline-text-elements` — limitation, `packages/rn-tester/js/astryx/radix/toggles.js`
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
+- `glass-press-reproduced` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
+- `glass-surface-press-is-the-platforms` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPMaterialSurface.mm`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `grid-fit-content-limit` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `grid-min-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
@@ -376,8 +408,10 @@ rather than going quiet.
 - `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
+- `peek-outruns-the-scroll` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPPeekInteraction.h`
 - `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `press-dim-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
+- `press-scale-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
 - `radio-card-needs-a-contrasting-page` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPRadioRunList.h`
 - `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`

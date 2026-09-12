@@ -339,7 +339,7 @@ static UIView *_Nullable EXPPictureOfView(UIView *view)
          * already had, so the menu's morph has nothing to travel: the chip is
          * the image before and after. A link made of WORDS has no such
          * destination of its own and gets `LPLinkView`, the platform's own link
-         * preview — the same one Messages and Notes draw.
+         * preview — the same one the system's own apps draw.
          *
          * Getting this wrong is visible rather than subtle. A 70pt logo lifting
          * and then being replaced by a URL pill twice its width was reported
@@ -746,7 +746,7 @@ static UIColor *_Nullable EXPColorOver(UIColor *src, UIColor *_Nullable dst)
 
 /*
  * The card is a link too: a press ending on the preview rather than on an action
- * means "go there", as it does in Safari, Mail and Messages.
+ * means "go there", as it does in Safari and Mail.
  */
 - (void)contextMenuInteraction:(UIContextMenuInteraction *)interaction
     willPerformPreviewActionForMenuWithConfiguration:(UIContextMenuConfiguration *)configuration

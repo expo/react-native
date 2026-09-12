@@ -41,13 +41,11 @@
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
 
-// The generic-box component view (EXPElementBoxComponentView) self-registers
-// with the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
-#import <react/renderer/components/view/ElementBoxShadowNode.h>
 
 // Per-run text painting lives in its own file: it is a self-contained concept,
 // and this class is the one every React Native change touches.
+#import "EXPCornerShape.h"
 #import "EXPTextLinkInteraction.h"
 #import "RCTAnonymousTextRunView.h"
 
@@ -100,6 +98,12 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
 
 @implementation RCTViewComponentView {
   UIColor *_backgroundColor;
+  /*
+   * The clip for a `corner-shape` a layer cannot draw itself. Nil for `round`
+   * and `squircle`, which Core Animation's own corner covers — most views, and
+   * they pay nothing.
+   */
+  CAShapeLayer *_cornerShapeMask;
   CALayer *_backgroundColorLayer;
   __weak CALayer *_borderLayer;
   CALayer *_outlineLayer;
@@ -2348,6 +2352,72 @@ static void EXPRepositionFixedBackgroundsIn(UIView *view)
       self.currentContainerView.layer.cornerRadius = borderMetrics.borderRadii.topLeft.horizontal;
     }
   }
+
+  [self _applyCornerShape:borderMetrics toLayer:layer];
+}
+
+/**
+ * `corner-shape`, applied the cheapest way each value allows.
+ *
+ * `round` needs nothing: a layer's corner is already circular. `squircle` is
+ * Core Animation's own continuous corner — the exact curve, drawn by the
+ * platform, and it keeps the border and the shadow because nothing is clipped.
+ * Everything else has to be a mask, because a layer's corner can be those two
+ * and nothing else.
+ *
+ * DOM-CSS-LIMITATION(corner-shape-ios-only): this is the only implementation.
+ * Android's renderer draws its corners from the border radii alone and has no
+ * equivalent of this file, so every value there renders as `round` — silently,
+ * because a shape that is not understood is not a shape that fails. Closing it
+ * means the same two pieces on the other side: the superellipse path, and a
+ * clip for the values a platform corner cannot express. The property parses and
+ * resolves identically on both — the C++ is shared — so it is the drawing and
+ * only the drawing that is missing.
+ *
+ * DOM-CSS-LIMITATION(corner-shape-clips-border-and-shadow): under a mask the
+ * BORDER and the SHADOW still follow the box's rounded rectangle, because React
+ * Native draws both from the border radii rather than from a shape. A `bevel`
+ * or a `scoop` therefore clips the background and the content correctly and
+ * leaves a border tracing the old corner. Closing it means teaching the border
+ * drawing the same path, which is the same work again in three more places.
+ */
+- (void)_applyCornerShape:(const BorderMetrics &)metrics toLayer:(CALayer *)layer
+{
+  const auto &shapes = metrics.cornerShapes;
+  const BOOL allRound = shapes.topLeft.isRound() && shapes.topRight.isRound() && shapes.bottomLeft.isRound() &&
+      shapes.bottomRight.isRound();
+  const BOOL allSquircle = shapes.topLeft.isSquircle() && shapes.topRight.isSquircle() &&
+      shapes.bottomLeft.isSquircle() && shapes.bottomRight.isSquircle();
+
+  if (allRound || allSquircle) {
+    // Written both ways round, not just for the squircle: a recycled view whose
+    // shape went back to `round` would otherwise keep the continuous corner the
+    // last occupant asked for.
+    layer.cornerCurve =
+        allSquircle ? kCACornerCurveContinuous : CornerCurveFromBorderCurve(metrics.borderCurves.topLeft);
+    // Only take back a mask this method installed: a balloon's is not ours.
+    if (_cornerShapeMask != nil && layer.mask == _cornerShapeMask) {
+      layer.mask = nil;
+    }
+    _cornerShapeMask = nil;
+    return;
+  }
+
+  if (_cornerShapeMask == nil) {
+    _cornerShapeMask = [CAShapeLayer layer];
+    _cornerShapeMask.fillColor = UIColor.blackColor.CGColor;
+  }
+  // Actions off: the path is animatable and this runs during layout, so a view
+  // that changed size would morph a beat behind itself.
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+  _cornerShapeMask.frame = layer.bounds;
+  _cornerShapeMask.path = EXPCornerShapePath(layer.bounds, metrics).CGPath;
+  // A mask and the layer's own rounding would intersect, and the intersection is
+  // the rounding — which is how the balloons spent a day looking circular.
+  layer.cornerRadius = 0;
+  layer.mask = _cornerShapeMask;
+  [CATransaction commit];
 }
 
 // Shapes the given layer to match the shape of this View's layer. This is
@@ -3013,37 +3083,6 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 }
 
 #endif
-
-@end
-
-/*
- * The box-backed flavor of a DOM element (`element-box`): a plain view, since
- * everything that distinguishes it lives in layout, not in drawing. The
- * renderer swaps an element onto this component when its display generates a
- * box — see ElementBoxShadowNode.h.
- */
-@interface EXPElementBoxComponentView : RCTViewComponentView
-@end
-
-@implementation EXPElementBoxComponentView
-
-- (instancetype)initWithFrame:(CGRect)frame
-{
-  if (self = [super initWithFrame:frame]) {
-    _props = ElementBoxShadowNode::defaultSharedProps();
-  }
-  return self;
-}
-
-+ (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
-{
-  return facebook::react::concreteComponentDescriptorProvider<facebook::react::ElementBoxComponentDescriptor>();
-}
-
-+ (void)load
-{
-  [[RCTComponentViewFactory currentComponentViewFactory] registerComponentViewClass:self];
-}
 
 @end
 

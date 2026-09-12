@@ -18,6 +18,8 @@ import android.graphics.drawable.RippleDrawable
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.drawable.CompositeBackgroundDrawable
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * The view backing `<button>`.
@@ -52,8 +54,19 @@ internal class ElementButtonView(context: Context) : ElementInteractiveBoxView(c
       }
     }
 
+  /**
+   * The button's menu, if it has one. A `<button>` containing a `<menu>` is a MENU BUTTON: one
+   * tap opens the list, which is what the element means and what both platforms draw.
+   */
+  var menuCommands: List<MenuCommand> = emptyList()
+
+  /** Reports the chosen command's `id` — not its index, which a re-render could invalidate. */
+  var onCommand: ((String) -> Unit)? = null
+
   private var installedChrome = false
   private var installedChromeFill = 0
+  private var installedChromeInset = -1
+  private var installedChromeInsetH = -1
 
   init {
     // A button is interactive by definition; a box has to earn it.
@@ -123,6 +136,17 @@ internal class ElementButtonView(context: Context) : ElementInteractiveBoxView(c
    * a Material one, which is where they belong. A host app with no Material theme falls back
    * to the framework's own `colorButtonNormal`, which is that app's actual button colour.
    */
+  /**
+   * The tap opens the menu, drawn by the shared builder — see `presentElementMenu`.
+   *
+   * Opened HERE rather than from JavaScript's `click`. The list is already native — it arrives
+   * as `menuCommands` — so going out to JavaScript and back would only put a round trip between
+   * the finger and the menu.
+   */
+  override fun onActivated() {
+    presentElementMenu(menuCommands) { id -> onCommand?.invoke(id) }
+  }
+
   private fun updateMaterialChrome() {
     val prominent = buttonStyle == "prominent"
     val fill =
@@ -130,10 +154,17 @@ internal class ElementButtonView(context: Context) : ElementInteractiveBoxView(c
         else resolveThemeColorByName("colorSecondaryContainer"))
             ?: resolveThemeColor(android.R.attr.colorButtonNormal)
             ?: return
-    if (installedChrome && installedChromeFill == fill) {
+    val insetV = chromeInset()
+    // A SQUARE button is an icon button, and Material's container for one is 40dp on both axes
+    // inside its 48dp target — so the inset applies to the width as well, and the pill it leaves
+    // is a circle. A wider button is a text button, whose container is as wide as the box.
+    val insetH = if (width == height) insetV else 0
+    if (installedChrome &&
+        installedChromeFill == fill &&
+        installedChromeInset == insetV &&
+        installedChromeInsetH == insetH) {
       return
     }
-    val insetV = PixelUtil.toPixelFromDIP(4f).toInt()
     fun pill(color: Int): Drawable =
         InsetDrawable(
             GradientDrawable().apply {
@@ -141,9 +172,9 @@ internal class ElementButtonView(context: Context) : ElementInteractiveBoxView(c
               // A capsule at any height: the radius is clamped to half the bounds.
               cornerRadius = 1e4f
             },
-            0,
+            insetH,
             insetV,
-            0,
+            insetH,
             insetV,
         )
     setPlatformChrome(pill(fill))
@@ -156,8 +187,22 @@ internal class ElementButtonView(context: Context) : ElementInteractiveBoxView(c
     }
     installedChrome = true
     installedChromeFill = fill
+    installedChromeInset = insetV
+    installedChromeInsetH = insetH
     hasRipple = highlight != null
   }
+
+  /**
+   * How far the pill sits inside this button's box, top and bottom.
+   *
+   * The 4dp is the difference between Material's 48dp touch target and the 40dp container inside
+   * it, so it is only there to be given away by a box that big. A button the author sized smaller
+   * has nothing to spare, and insetting anyway draws a lozenge where the platform's own icon
+   * button is a circle — 40dp wide and 32 tall, at the size a composer's `+` is.
+   */
+  private fun chromeInset(): Int =
+      min(PixelUtil.toPixelFromDIP(4f), max(0f, (height - PixelUtil.toPixelFromDIP(40f)) / 2f))
+          .toInt()
 
   /**
    * Install or remove this button's own platform chrome, UNDER everything React draws.
