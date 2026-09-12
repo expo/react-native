@@ -207,26 +207,29 @@ class CSSTransitions final : public UIManagerCommitHook {
 
   static void collectLayoutMetrics(const ShadowNode &node, std::unordered_map<Tag, LayoutMetrics> &metrics);
 
+  /*
+   * A commit that is not React's, checked against what is in flight.
+   * Diagnostic only.
+   */
+  void noteCommitBehindTransitions(const RootShadowNode &newRootShadowNode, ShadowTreeCommitSource source) noexcept;
+
   void diffNode(const ShadowNode &oldNode, const ShadowNode &newNode, std::vector<LayoutStart> &layoutStarts);
   // A subtree with no old counterpart: freshly mounted. Transitions do not
-  // start here (no previous value exists — that is what @starting-style is
-  // for) but ANIMATIONS do: an animation runs because the node carries it.
+  // start here (no previous value exists) but animations do, since an
+  // animation runs because the node carries it.
   void visitFreshNode(const ShadowNode &node);
-  // Latches sawTransitionableContent_ when props declare a transition.
+  // Latches sawTransitionableContent_ when props declare a transition
   void noteTransitionableContent(const ViewProps *viewProps);
   void syncAnimation(const ShadowNode &node);
   void writeAnimationFrame(RunningAnimation &animation, double nowMs);
-  // The laid-out size of a view, for resolving percent transforms.
+  // The laid-out size of a view, for resolving percent transforms
   Size resolveViewSize(const ShadowNodeFamily &family);
-  // The entry's size, resolved from the tree the first time something asks.
+  // The entry's size, resolved from the tree the first time something asks
   Size sizeFor(ViewTransitions &entry);
 
   /*
-   * One node's worth of a frame that has to go through a commit.
-   *
-   * Only layout-affecting properties produce these; a frame of paint-only
-   * properties is still written straight to the mounted view and never gets
-   * this far. See `applyLayoutFrames`.
+   * One node's worth of a frame that has to go through a commit. Only
+   * layout-affecting properties produce these; see `applyLayoutFrames`.
    */
   struct LayoutFrame {
     Tag tag{};
@@ -290,38 +293,44 @@ class CSSTransitions final : public UIManagerCommitHook {
   bool started_{false};
   // Whether a committed tree has ever carried a `transition-*` declaration.
   // Registering the frame callback resumes the choreographer, and a paused
-  // display link does not deliver until the next vsync — so a callback
-  // registered at the moment the FIRST transition starts arrives one frame
-  // after the commit that started it, and the mounting layer has already put
-  // the committed target on screen. That frame is the difference between a
-  // switch that slides and one that snaps on, snaps back, and then slides.
-  // Registering as soon as transitionable content exists pays the resume
-  // before anything is waiting on it.
+  // display link does not deliver until the next vsync, so a callback
+  // registered when the first transition starts would arrive a frame after
+  // the mounting layer had put the target on screen. Registering as soon as
+  // transitionable content exists pays the resume before anything waits on it.
   bool sawTransitionableContent_{false};
 
   std::shared_ptr<CSSTransitionsTrace> trace_{CSSTransitionsTrace::shared()};
 
+  /*
+   * What finished recently, so that a transition starting again can say so in
+   * the trace: the same endpoints coming round again is the same change
+   * arriving twice, which reads as a flicker. Keyed by tag and property,
+   * cleared when older than a second.
+   */
+  struct DoneMark {
+    double time{0};
+    // The same endpoints coming round again is the restart worth naming; a
+    // fade that finishes and then reverses is an author's cross-fade
+    std::string journey;
+    int repeats{0};
+  };
+  std::unordered_map<uint64_t, DoneMark> lastDone_;
+
   // Touched by the commit hook (whatever thread commits) and the frame
-  // callback (the UI thread); every access is guarded.
+  // callback (the UI thread); every access is guarded
   std::mutex mutex_;
   std::unordered_map<Tag, ViewTransitions> transitions_;
   std::unordered_map<Tag, RunningAnimation> animations_;
-  /** Animations that have run to completion. See `FinishedAnimation`. */
+  /** Animations that have run to completion; see `FinishedAnimation` */
   std::unordered_map<Tag, FinishedAnimation> finished_;
   double lastFrameTime_{0.0};
 
   /*
-   * Set while this class is committing a frame of its own.
-   *
-   * A layout frame IS a commit, and every commit runs the hooks — including
-   * this one. Without the guard the hook would diff a tree it wrote itself,
-   * see the interpolated height where the author's target used to be, and
-   * re-aim the running transition at the value it had just produced: a
-   * transition that never reaches its target and never ends.
-   *
-   * Read BEFORE `mutex_` is taken, and that is not an optimisation. The commit
-   * is synchronous and re-enters on this same thread, and `mutex_` is not
-   * recursive, so a hook that locked first would deadlock rather than return.
+   * Set while this class is committing a frame of its own: a layout frame is
+   * a commit, and without the guard the hook would diff a tree it wrote itself
+   * and re-aim the transition at the value it had just produced. Read before
+   * `mutex_` is taken, because the commit re-enters synchronously on this
+   * thread and `mutex_` is not recursive.
    */
   std::atomic<bool> applyingFrame_{false};
 };
