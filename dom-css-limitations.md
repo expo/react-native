@@ -96,6 +96,19 @@ DEFERRED and small: the fragment loop already knows which fragment is first
 and last, so `clone` is a branch there rather than new machinery. It is a rare
 value and nothing here has asked for it.
 
+**`no-env-inside-calc`** — `ReactCommon/react/renderer/components/view/EnvironmentDependency.h`
+`env(safe-area-inset-*)` is recognised only as a whole style value, so
+`calc(env(safe-area-inset-bottom) + 8px)` computes to nothing rather than to
+something almost right. The common shapes are covered without it — the bare
+`env()`, and `env(<name>, <fallback>)` — and a padding that wants a few points
+more than the inset can say so with a wrapper or with the fallback argument.
+
+DEFERRED. Closing it needs a `calc()` evaluator for style lengths, which does
+not exist here for any value, plus a way to carry the unevaluated expression as
+far as layout, where the `env()` is finally known. The second half already
+exists — that is what an environment dependency is — so this is mostly the
+first half.
+
 ## User-agent styles
 
 All in `Libraries/DomElements/uaStyles.js`.
@@ -153,6 +166,67 @@ lists both among the types a user agent *should* consider checkable.
 A platform wall, like the entry above it: the predicate is `TextView`'s and
 takes no argument. Nothing to schedule.
 
+**`android-run-paragraph-attributes`** — `.../views/view/ReactViewManager.kt`
+A painted text run whose layout has to be REBUILT at mount honours only the two
+things that live on its attributed string — `text-align` and, from the same
+attribute, justification. Break strategy, hyphenation frequency, font padding,
+ellipsis and max lines are read from paragraph attributes, which a run's handoff
+entry does not carry, so the rebuilt layout differs from the one the measure
+pass built. It matters only when the handoff cannot be reused (a different
+width, or a stale entry), and never on iOS, where these ride the paragraph
+attributes to draw time.
+
+Unfinished rather than blocked, and the fix is upstream of this file: send the
+paragraph attributes along with the run.
+
+**`ios-only-native-button`** — `packages/expo-intrinsics/src/NativeButton.js`
+`<native:button>` is iOS only, and deliberately so: it is a
+`UIButtonConfiguration` and a `UIMenu`, and being the platform's own control
+with nothing of ours in it is the whole point of the element — it exists as the
+control group for `<button>` with a `<menu>` child. There is nothing here to
+port. On Android it renders nothing rather than red-boxing, so an app can write
+it unconditionally; the portable spelling is `<button>` with a `<menu>`, which
+is a `UIMenu` on iOS and a `PopupMenu` on Android.
+
+**`overlay-cannot-cover-the-keys`** — `React/.../KeyboardPanel/EXPKeyboardPanelComponentView.mm`
+A panel presented as an overlay CAN cover the keyboard, and this entry used to
+say it could not. What it can never do is get there with a window of its own.
+
+Three places a view can be, all measured with `~/Developer/probes/windowprobe`,
+which puts a coloured band in each and photographs the result:
+
+- a window the app creates is **clamped** to level 10000000, one below the
+  keyboard's `UIRemoteKeyboardWindow` at 10000001. Asked for 10000002 it comes
+  back at 10000000 and draws underneath. No obtainable level does it.
+- `UITextEffectsWindow` (level 1, where a plain `inputAccessoryView` lives)
+  shows *through* the keyboard's translucent backdrop but is drawn under the
+  opaque key caps.
+- `UIRemoteKeyboardWindow` itself, after its `UIInputSetContainerView`, covers
+  the keys completely — which is what the platform's own `+` card does.
+
+So the panel hosts its overlay in the keyboard's own window, and the remaining
+limitation is narrow: an overlay panel cannot be a **material**, because a
+`UIVisualEffectView` samples what is behind it within its own window and there
+is nothing behind it there. A stated colour is the substitute.
+
+What this entry got wrong is worth keeping, because the same mistake is easy to
+repeat. It reported "an overlay window at level 100000000 was still behind them,
+so no level exists that would have done" — but the window it made was clamped to
+10000000, so the experiment measured the clamp and was written up as measuring
+the compositing. "No level is high enough" invites trying a higher one; "the
+level is clamped, so use the keyboard's own window" is the fact.
+
+**`ios-only-contextmenu`** — `packages/expo-intrinsics/src/index.js`
+`contextmenu` — a long press — is fired on iOS only. It is timed from the
+touches the box already receives rather than from a gesture recogniser, which is
+what makes a hold that turns into a scroll not fire: the platform cancels the
+touch first. Android has the same seam in `ElementInteractiveBoxView`, which
+already tracks a press through the platform's own dispatch, but only for boxes
+it makes interactive — and a plain `<div>` deliberately is not one, since every
+paragraph on every screen would otherwise become clickable and focusable.
+
+Unfinished rather than blocked: closing it is the same timer on the Android side
+plus a decision about which boxes get it there.
 
 ## Performance
 

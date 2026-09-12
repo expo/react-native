@@ -255,6 +255,26 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   borderBottomStartRadius: true,
   borderColor: colorAttribute,
   borderCurve: true,
+  /*
+   * `corner-shape` and its longhands (CSS Borders 4).
+   *
+   * `border-radius` says how big a corner is; this says what curve it is.
+   * `round` (the initial value) and `squircle` are drawn by the platform's own
+   * corner; the rest are clipped to a path.
+   */
+  cornerShape: true,
+  cornerTopLeftShape: true,
+  cornerTopRightShape: true,
+  cornerBottomLeftShape: true,
+  cornerBottomRightShape: true,
+  cornerTopStartShape: true,
+  cornerTopEndShape: true,
+  cornerBottomStartShape: true,
+  cornerBottomEndShape: true,
+  cornerStartStartShape: true,
+  cornerStartEndShape: true,
+  cornerEndStartShape: true,
+  cornerEndEndShape: true,
   borderEndColor: colorAttribute,
   borderEndEndRadius: true,
   borderEndStartRadius: true,

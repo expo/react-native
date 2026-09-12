@@ -44,15 +44,27 @@ void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSS
   }
 
   /*
-   * Never touch text that is being composed. Between the first key of a
-   * Japanese or Pinyin word and its commit, the field holds MARKED text owned
-   * by the input method; replacing it cancels the candidate session and the
-   * user loses what they were half way through spelling. A controlled value
-   * cannot be applied mid-composition, so it waits for the commit — which
-   * arrives as an ordinary edit a moment later.
+   * Text being composed is the input method's. Between the first key of a
+   * Japanese or Pinyin word and its commit, the field holds MARKED text;
+   * replacing it cancels the candidate session and the user loses what they
+   * were half way through spelling. So a controlled value that merely differs
+   * waits for the commit, which arrives as an ordinary edit a moment later.
+   *
+   * EMPTY is the exception, because it cannot be an echo of anything being
+   * typed: it is the app saying the field is now empty — a composer clearing
+   * itself after a send. Dropped, that write never happens again, because the
+   * prop does not change; the field keeps the message it just sent, and the
+   * next edit reports that text back and puts it in the app's own state. iOS
+   * marks text for its inline predictions as well as for an IME, so this is
+   * reachable while typing plain English: send while a prediction is showing
+   * and the composer will not clear. `unmarkText` finalises the composition the
+   * way the platform does, and the write proceeds.
    */
   if (field.markedTextRange != nil) {
-    return;
+    if (next.length > 0) {
+      return;
+    }
+    [field unmarkText];
   }
 
   // Not being edited: there is no insertion point to preserve, so the cheap
@@ -186,8 +198,32 @@ void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSS
   UITextPosition *mappedEndPosition =
       [field positionFromPosition:field.beginningOfDocument offset:mappedEnd];
   if (mappedStartPosition != nil && mappedEndPosition != nil) {
+    /*
+     * The input delegate is TOLD, and the keyboard's shift key is why.
+     *
+     * `-replaceRange:withText:` is a `UITextInput` mutation and announces
+     * itself, but assigning `selectedTextRange` is a plain property write and
+     * does not. UIKit decides autocapitalization from the document around the
+     * insertion point, and it only re-reads that document when the delegate
+     * says the selection moved — so a caret placed this way is invisible to it
+     * and the keyboard keeps whatever shift state it had.
+     *
+     * Sending a message is where that shows. The field goes from "hello" to
+     * empty, the caret is mapped to offset 0 of an empty document, and the
+     * keyboard is never told: it still believes it is mid-sentence and the next
+     * letter is typed in lower case. Reported from a device: "after sending a
+     * message and clearing the text field, the text field's autocapitalization
+     * isn't re-triggered."
+     *
+     * React Native's own text input has the same pairing —
+     * `-setSelectedTextRange:notifyDelegate:` exists for exactly this — and
+     * this is that call spelled out, because the protocol this writes through
+     * has no such method.
+     */
+    [field.inputDelegate selectionWillChange:field];
     field.selectedTextRange = [field textRangeFromPosition:mappedStartPosition
                                                 toPosition:mappedEndPosition];
+    [field.inputDelegate selectionDidChange:field];
   }
 }
 
