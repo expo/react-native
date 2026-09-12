@@ -8,6 +8,12 @@ packages/react-native/ReactAndroid/hermes-engine/build/
 # CMake writes its dependency timestamps as `compiler_depend.ts`, which ESLint
 # picks up as TypeScript and fails to parse — 91 errors from build output.
 private/react-native-fantom/build/
+
+# Gradle writes an HTML test report with a bundled report.js into every module's
+# build directory. It is generated, has no Flow annotation, and made `yarn lint`
+# fail for anyone who had run the Gradle plugin's tests — which is to say, after
+# touching the plugin at all.
+packages/gradle-plugin/*/build/
 packages/react-native/Libraries/Renderer/*
 packages/react-native/Libraries/vendor/**/*
 # Vendored Astryx sources, kept byte-identical to upstream on purpose. They
