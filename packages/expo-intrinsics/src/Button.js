@@ -9,7 +9,9 @@
  */
 
 import FormContext from './FormContext';
+import {splitMenu} from './menuChildren';
 import * as React from 'react';
+import {Platform} from 'react-native';
 
 // HTML's default `type` is `submit`: a `<button>` inside a `<form>` submits it
 // with no `onClick`, and code that does not want that writes `type="button"`
@@ -20,6 +22,9 @@ type ButtonProps = {
   onClick?: (event: $FlowFixMe) => unknown,
   onPressChange?: (event: $FlowFixMe) => unknown,
   style?: $FlowFixMe,
+  // Read here, not only passed through: a stated material decides whether the
+  // platform's chrome is kept
+  appleVisualEffect?: string,
   ...
 };
 
@@ -29,9 +34,25 @@ function Button({
   onClick,
   style,
   onPressChange,
+  appleVisualEffect,
   ...rest
 }: ButtonProps): React.Node {
   const form = React.useContext(FormContext);
+  const {content, commands} = React.useMemo(
+    () => splitMenu(children),
+    [children],
+  );
+
+  // A chosen command is dispatched to its own `onClick`, so each `<button>`
+  // inside the `<menu>` carries its handler as it would anywhere else
+  const handleCommand = React.useCallback(
+    (event: $FlowFixMe) => {
+      const id = event?.nativeEvent?.id;
+      const command = commands.find(candidate => candidate.id === id);
+      command?.onClick?.(event);
+    },
+    [commands],
+  );
 
   // The press is reported here for authors and `:active`, and drawn natively
   // (the dim in `EXPElementButtonComponentView`, the ripple in
@@ -65,14 +86,25 @@ function Button({
     // $FlowFixMe[prop-missing] intrinsic
     <element-button-box
       {...rest}
+      /* Destructured above to be read, so it is put back */
+      appleVisualEffect={appleVisualEffect}
       nodeName="button"
       type={type}
       buttonStyle={buttonProminence(type, form != null)}
-      hasAuthorChrome={authorStatesSurface(style)}
+      // `borderRadius` counts as claiming the surface, but a round glass button
+      // shapes the platform's glass rather than replacing it, so a stated
+      // material wins. Only on iOS, where `-apple-visual-effect` means something;
+      // elsewhere the author's own box is all there is to go on.
+      hasAuthorChrome={
+        (Platform.OS !== 'ios' || appleVisualEffect == null) &&
+        authorStatesSurface(style)
+      }
       style={style}
       onPressChange={handlePressChange}
+      onCommand={handleCommand}
+      menuCommands={commands.length > 0 ? commands : undefined}
       onClick={handleClick}>
-      {children}
+      {content}
     </element-button-box>
   );
 }

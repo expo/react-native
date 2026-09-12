@@ -27,6 +27,7 @@
 		AB0DE1F00000000000000100 /* EXPElementTextAreaGeometryTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F00000000000000101 /* EXPElementTextAreaGeometryTests.mm */; };
 		AB0DE1F00000000000000102 /* EXPElementControlProbeTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F00000000000000103 /* EXPElementControlProbeTests.mm */; };
 		AB0DE1F000000000000000C1 /* RCTViewComponentViewRecycleTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */; };
+		AB0DE1F000000000000000E3 /* EXPMaterialRecycleTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000E4 /* EXPMaterialRecycleTests.mm */; };
 		AB0DE1F0000000000000FC01 /* RCTViewAccessibilityLabelRecycleTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000FC02 /* RCTViewAccessibilityLabelRecycleTests.mm */; };
 		AB0DE1F0000000000000FB01 /* RCTViewFixedBackgroundTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000FB02 /* RCTViewFixedBackgroundTests.mm */; };
 		AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */; };
@@ -130,6 +131,7 @@
 		AB0DE1F00000000000000101 /* EXPElementTextAreaGeometryTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPElementTextAreaGeometryTests.mm; sourceTree = "<group>"; };
 		AB0DE1F00000000000000103 /* EXPElementControlProbeTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPElementControlProbeTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTViewComponentViewRecycleTests.mm; sourceTree = "<group>"; };
+		AB0DE1F000000000000000E4 /* EXPMaterialRecycleTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPMaterialRecycleTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000FC02 /* RCTViewAccessibilityLabelRecycleTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTViewAccessibilityLabelRecycleTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000FB02 /* RCTViewFixedBackgroundTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTViewFixedBackgroundTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTGlyphHuggingLayoutManagerTests.mm; sourceTree = "<group>"; };
@@ -417,6 +419,7 @@
 				AB0DE1F00000000000000101 /* EXPElementTextAreaGeometryTests.mm */,
 				AB0DE1F00000000000000103 /* EXPElementControlProbeTests.mm */,
 				AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */,
+				AB0DE1F000000000000000E4 /* EXPMaterialRecycleTests.mm */,
 				AB0DE1F0000000000000FC02 /* RCTViewAccessibilityLabelRecycleTests.mm */,
 				AB0DE1F0000000000000FB02 /* RCTViewFixedBackgroundTests.mm */,
 				AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */,
@@ -922,6 +925,7 @@
 				AB0DE1F00000000000000100 /* EXPElementTextAreaGeometryTests.mm in Sources */,
 				AB0DE1F00000000000000102 /* EXPElementControlProbeTests.mm in Sources */,
 				AB0DE1F000000000000000C1 /* RCTViewComponentViewRecycleTests.mm in Sources */,
+				AB0DE1F000000000000000E3 /* EXPMaterialRecycleTests.mm in Sources */,
 				AB0DE1F0000000000000FC01 /* RCTViewAccessibilityLabelRecycleTests.mm in Sources */,
 				AB0DE1F0000000000000FB01 /* RCTViewFixedBackgroundTests.mm in Sources */,
 				AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */,
