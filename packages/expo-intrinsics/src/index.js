@@ -9,16 +9,29 @@
  */
 
 /**
- * The HTML element catalog, a side-effect import. Lowercase JSX types resolve
- * by name through ReactNativeViewConfigRegistry, so registering a view config
- * under a tag is what makes a literal <span>, <p> or <h1> render.
+ * The HTML element catalog — every element, defined outside react-native.
  *
- * An element is a tag name (the registration key and what `nodeName` reports),
- * a user-agent style (merged beneath the author's so an author declaration
- * wins) and a backing component, one of the two react-native offers:
- * `inline-text` for an element that folds into a line of text and
- * `element-box` for one that generates a box, chosen from the computed
- * `display` rather than from the tag.
+ * A side-effect import. Lowercase JSX types resolve by name through
+ * ReactNativeViewConfigRegistry, so registering a view config under a tag is all
+ * it takes for literal <span>, <p> or <h1> to work, with no reconciler change
+ * and — for everything here except <img> — no native code.
+ *
+ * An element is three things:
+ *
+ *   - a TAG NAME, which is the registration key and what `nodeName` reports;
+ *   - a USER-AGENT STYLE, which is every default a browser would apply, merged
+ *     beneath the author's style so an author declaration still wins;
+ *   - a BACKING COMPONENT, which is one of the two react-native offers —
+ *     `inline-text` for an element that folds into a line of text, and
+ *     `element-box` for one that generates a box — chosen from the computed
+ *     `display` rather than from the tag.
+ *
+ * Block versus inline is therefore not a fourth thing to declare. It is what
+ * the user-agent style says, and the rest follows.
+ *
+ * react-native supplies the machinery these render against — text nodes, the
+ * anonymous inline formatting contexts, Yoga's block display, the lazy
+ * descriptor seam — and names none of these elements.
  */
 
 import type {UAStyle} from './uaStyles';
@@ -27,6 +40,7 @@ import Anchor from './Anchor';
 import {withoutOutrankedBoxEdges} from './boxEdges';
 import Button from './Button';
 import {
+  defineReactComponent,
   registerFrameworkComponent,
   registerFrameworkElement,
 } from './ElementRegistry';
@@ -37,6 +51,7 @@ import Img from './Img';
 import Input from './Input';
 import Label from './Label';
 import {LIST_TAGS, makeList} from './List';
+import NativeButton from './NativeButton';
 import Picture from './Picture';
 import Quote from './Quote';
 import Select from './Select';
@@ -61,10 +76,15 @@ import {setFallbackViewConfigResolver} from 'react-native/Libraries/Renderer/shi
  */
 const TEXTAREA_SURFACE: UAStyle = {...FIELD_SURFACE};
 
-// Declared on both platforms: the inline element's semantics are decided once
-// in the shared `InlineAccessibilityContent`, and a prop the view config does
-// not list never reaches it, while each platform's base config lists only its
-// own half
+/*
+ * The accessibility attributes below are declared on BOTH platforms because the inline element's
+ * semantics are decided once, in the shared C++ model (`InlineAccessibilityContent`), and a prop
+ * the view config does not list never reaches it. Each platform's base config lists only its own
+ * half: `accessibilityLanguage` and `accessibilityElementsHidden` are iOS-only there, and
+ * `accessibilityLiveRegion` and `importantForAccessibility` Android-only. So a live-region
+ * `<span>` was a stop of its own on Android and folded into the text around it on iOS, and a
+ * `<span accessibilityLanguage>` the other way round, from the same tree.
+ */
 const inlineTagViewConfig = {
   validAttributes: {
     isHighlighted: true,
@@ -77,9 +97,15 @@ const inlineTagViewConfig = {
   },
 } as const;
 
-// The sheet sees the author's style to get out of its way: the layers merge by
-// key, and a more specific edge spelling in the sheet would beat the author's
-// shorthand in Yoga. See `boxEdges.js`
+/**
+ * The user-agent style for a tag, as a function of the element's props.
+ *
+ * The sheet has to see the author's style to get out of its way: the two
+ * layers merge by key, and where they spell an edge differently the sheet's
+ * more specific spelling wins in Yoga whatever the cascade said. Without it
+ * `<ol>`'s `paddingInlineStart: 40` survives `padding: 0`, the reset every
+ * ported design system writes. See `boxEdges.js`.
+ */
 function uaStyleForProps(tag: string): (props: {[string]: unknown}) => UAStyle {
   return (props: {[string]: unknown}) =>
     withoutOutrankedBoxEdges(uaStyleFor(tag), props?.style);
@@ -113,12 +139,23 @@ registerInlineTag('i');
 registerInlineTag('u');
 registerInlineTag('span');
 
-// <img> is an inline replaced element: an inline attachment positioned by the
-// owning View's attachment-layout pass. expo-image backs it when the Expo
-// runtime is present, the framework's Image machinery otherwise; the choice is
-// made lazily at first render, when the native runtime is up. The tag is a
-// component (Img.js) that translates `src`, `srcset`, `alt` and `object-fit`,
-// so the box is registered under its own host name
+// The intrinsic <img> tag: an inline *replaced* element (text-children-plan.md
+// §3.C) — it flows inside a bare-text IFC as an inline attachment, positioned
+// by the owning View's attachment-layout pass.
+//
+// Which native component backs it depends on the host. When the Expo runtime is
+// present, <img> is expo-image — the SDK's image component, with its caching,
+// format support and SwiftUI awareness — and this is the catalog's first
+// SDK-backed element. Elsewhere (Fantom, bare hosts) it falls back to the
+// framework's Image machinery. Resolved lazily at first render, by which time
+// the native runtime is up; layout treats both the same way, through the
+// InlineText + InlineReplaced traits their shadow nodes declare.
+// Registered under its own host name because the tag `img` is a *component*
+// (Img.js): `src`, `srcset`, `alt` and `object-fit` are translations rather than
+// renames, so they are done in JavaScript and the box below is what it renders.
+// The native class name stays `img` — the JSX tag and the native component are
+// independent, which is what lets the element keep its C++ `ImgTagComponentName`
+// while the tag itself becomes a component.
 registerFrameworkElement('element-img', () => {
   // $FlowFixMe[unclear-type] the Expo runtime global has no static type here.
   // $FlowFixMe[prop-missing] `expo` is installed by expo-modules-core at runtime.
@@ -154,9 +191,11 @@ registerFrameworkElement('element-img', () => {
       topLoadEnd: {registrationName: 'onLoadEnd'},
     },
     validAttributes: {
-      // `<img src>` is one source; both platforms' image views take a list of
-      // candidates, and Android's `RCTImageView.setSource` draws nothing for a
-      // bare object
+      // The same singular-to-list conversion the `expo-image` branch does, and
+      // for the same reason: `<img src>` is one source, while both platforms'
+      // image views take a list of candidates. Android's `RCTImageView.setSource`
+      // takes a `ReadableArray` outright, so a bare object reaches it as the
+      // wrong shape and draws nothing.
       source: {
         process: (src: unknown) =>
           src == null || Array.isArray(src) ? src : [src],
@@ -177,9 +216,17 @@ registerFrameworkElement('element-img', () => {
   });
 });
 
-// The inline box for an element whose tag is a component. No `recordNodeName`:
-// the JSX type here is the host name (`element-q`), so the component states
-// the DOM name and the UA style is looked up under it
+/**
+ * The inline box for an element whose tag is a *component*.
+ *
+ * Same shape as `registerInlineAlias`, minus `recordNodeName`: that stamps the
+ * JSX type onto `nodeName`, which for a component-backed element is the host
+ * name (`element-q`) rather than the DOM name (`q`). The component states the
+ * DOM name instead, and the UA style is looked up under it, so the host name
+ * stays an implementation detail.
+ *
+ * This is the inline counterpart of `registerBlockElementUnderName`.
+ */
 function registerInlineElementUnderName(hostName: string, domName: string) {
   registerFrameworkElement(hostName, () =>
     createViewConfig({
@@ -196,10 +243,16 @@ function registerInlineElementUnderName(hostName: string, domName: string) {
 }
 
 /**
- * An element rendered by an already-registered intrinsic's native component.
- * A view config is per-component, not per-tag, so `recordNodeName` has the
- * reconciler stamp the JSX type onto `nodeName`; without it an aliased
- * <strong> would identify as <b>.
+ * Elements whose rendering is identical to an already-registered intrinsic.
+ * They point at that intrinsic's native component through `uiViewClassName`,
+ * so they need no shadow node, descriptor or native code of their own — the
+ * same view-config aliasing that maps an intrinsic onto any existing RN
+ * component.
+ *
+ * The authored tag is preserved for DOM APIs: a view config is per-component,
+ * not per-tag, so `recordNodeName` has the reconciler stamp the JSX type onto a
+ * `nodeName` prop that the element reports through `NodeNameProvider`. Without
+ * it an aliased <strong> would identify as <b>.
  */
 function registerInlineAlias(name: string, uiViewClassName: string) {
   registerFrameworkElement(name, () =>
@@ -220,40 +273,70 @@ function registerInlineAlias(name: string, uiViewClassName: string) {
   );
 }
 
-// Bold and italic come from the UA sheet, so these alias the unstyled <span>
-// `BaseTextShadowNode` emits the break as a newline that survives white-space
-// collapsing (css-text-3 §3)
+// Their bold/italic now comes from the UA sheet, so they alias the unstyled
+// <span> — one source of truth for the default, and no dependence on <b>/<i>
+// happening to carry it.
+// A forced line break. Registered as an inline element so it takes part in the
+// inline formatting context; the break itself is emitted by
+// `BaseTextShadowNode`, which gives it a newline that survives whitespace
+// collapsing (css-text-3 §3 collapses ordinary newlines to a space).
 registerInlineAlias('br', 'inline-text');
 registerInlineAlias('strong', 'inline-text');
 registerInlineAlias('em', 'inline-text');
-// Click events already dispatch to inline elements, so <a> needs no gesture
-// handler. Its user-agent style is a function of its props because `a:link`
-// matches only an anchor with an href; `:visited` is not attempted (see the
-// limitations note)
+// Inline and clickable: DOM click events already dispatch to inline elements
+// (W3C pointer events), so <a> needs no gesture handler or Pressable to be
+// interactive — an `onClick` on the element is enough.
+//
+// Its user-agent style is a FUNCTION of its props, which is what a browser's
+// own sheet does here: the colour and underline come from `a:link`, and that
+// selector matches an anchor *with an href*. A bare <a> used as a jump target
+// or a placeholder is unstyled text, and styling it blue would be wrong.
+// `:visited` is deliberately not attempted; see the limitations note.
 const anchorLinkUAStyle: UAStyle = {
   ...uaStyleFor('a'),
   /*
-   * The platform's link colour rather than the browser's fixed `#0000EE`:
-   * `LinkText` resolves to `UIColor.linkColor` and `?android:attr/textColorLink`,
-   * which follow dark mode and contrast settings. Android's `colorPrimary` is
-   * the brand accent, follows the wallpaper under Material You and would
-   * collide with a nearby filled button, so the link attribute is the one asked.
+   * The PLATFORM's link colour, not the browser's `-webkit-link` blue.
+   *
+   * `#0000EE` is a fixed sRGB value: it does not move for dark mode, for
+   * increased contrast, or for a Material You palette, so a document in dark
+   * mode gets 1990s hyperlink blue on near-black — legible, and unmistakably
+   * not a native app. `LinkText` resolves to `UIColor.linkColor` on iOS and
+   * `?android:attr/textColorLink` on Android, both of which re-resolve per
+   * trait collection and per configuration, so the theme arrives without this
+   * file knowing the theme exists.
+   *
+   * Android names the LINK colour specifically rather than `colorPrimary`:
+   * `colorPrimary` is the app's brand accent — it tints buttons and switches,
+   * and under Material You it follows the wallpaper, so links would change
+   * colour with the user's home screen and could collide with a nearby filled
+   * button. `textColorLink` is the platform's own answer for this exact
+   * question and is what a `TextView` with `autoLink` uses.
    */
   color: systemColor('LinkText'),
   /*
-   * Underlined where the platform underlines: `UITextView`'s default
-   * `linkTextAttributes` carry no underline (pinned in
-   * `EXPLinkTextAttributesTests`), while Android's `URLSpan` underlines and
-   * Material asks for it in body text.
+   * UNDERLINED ON ANDROID ONLY, because that is where the platform underlines.
+   *
+   * Asked rather than assumed: `UITextView`'s default `linkTextAttributes`
+   * contains a colour and no underline attribute at all, so an underlined link
+   * in an iOS document reads as a web page — pinned in
+   * `EXPLinkTextAttributesTests`. Android is the opposite: `URLSpan` sets
+   * `setUnderlineText(true)` in `updateDrawState`, and Material's guidance for
+   * links in body text asks for the underline explicitly.
    *
    * DOM-CSS-DEVIATION(ios-links-are-not-underlined): `html.css` underlines
-   * every `a:link` and iOS does not. Colour alone then distinguishes the link
-   * (WCAG 1.4.1); an author can state `textDecorationLine` and win.
+   * every `a:link` and iOS does not.
+   *
+   * The accessibility tradeoff is real and is the platform's to make: without
+   * an underline the link is distinguished from body text by COLOUR ALONE,
+   * which WCAG 1.4.1 warns against. iOS's answer is that its link colour clears
+   * the contrast bar against label colour; an author who disagrees can state
+   * `textDecorationLine` and win, as with any user-agent default.
    */
   textDecorationLine: Platform.OS === 'ios' ? 'none' : 'underline',
 };
-// The tag is a component (Anchor.js): an anchor with an href carries the link
-// role, which is a prop rather than a style
+// The host `<a>` renders. Registered under its own name because the tag is a
+// component — see Anchor.js: an anchor with an href is a link and has to carry
+// that role, which is a prop rather than a style.
 registerFrameworkElement('element-a', () =>
   createViewConfig({
     ...inlineTagViewConfig,
@@ -279,18 +362,49 @@ registerFrameworkElement('element-a', () =>
   }),
 );
 
-// <button>'s box is `element-button`: a box that carries a press event emitter
-// and, with `enableNativeGestureRecognizers` on, a platform gesture recognizer.
-// The recognizer reports press state only; the pointer handler already
-// dispatches `click` and suppresses it when an enclosing scroll view scrolled,
-// so a second dispatch would fire every handler twice
+// <button> is the first element with a native interaction backing. Its UA
+// `display: inline-block` already makes it a box, so what changes here is only
+// *which* box: `element-button`, which carries a press event emitter and, with
+// `enableNativeGestureRecognizers` on, installs a real platform gesture
+// recognizer.
+//
+// That recognizer does not dispatch the click. Activation already works and is
+// already right — the pointer handler dispatches `click` natively and suppresses
+// it when an enclosing scroll view scrolled during the gesture — so emitting one
+// here too would fire every handler twice. What the recognizer adds is the press
+// *state*, which nothing reports today: `:active` cannot be evaluated without
+// it, and a press stolen by a scroll has to un-press without JavaScript
+// deciding when.
 // The box `<button>` renders. Registered under its own name because the tag is
 // a component — see Button.js for why HTML's default `type="submit"` makes that
 // necessary.
-// A disabled control's text colour: CSS's `GrayText`, resolved to each
-// platform's inert label colour in `systemColors.js`. A colour rather than an
-// `opacity` on the box, since opacity would double-dim the controls that grey
-// themselves from `isEnabled` and fade an author's background with the label
+/*
+ * The colour a disabled control's text takes.
+ *
+ * A browser greys a disabled control, and it is not cosmetic: a control that
+ * looks usable and is not reads as a broken app rather than a disabled control.
+ *
+ * A COLOUR rather than an `opacity` on the box, deliberately. Opacity would
+ * double-dim the controls that already grey themselves from `isEnabled` —
+ * `<input type="range">` and `<select>` — and would fade an author's background
+ * along with the label. Colour is inherited, so it reaches whatever the
+ * control's label is made of and nothing else.
+ *
+ * Both platforms name their own "present but inert" label colour rather than
+ * stating values, so a disabled element follows light and dark and sits at the
+ * same weight as the disabled system controls beside it. Theming by default is
+ * the one place worth departing from the web, where a user-agent sheet would
+ * hand back a fixed grey: a native app themes without being asked, and an
+ * element that does not looks imported.
+ *
+ * `PlatformColor` on Android reaches these through
+ * `ColorPropConverter.resolveThemeAttribute`, which has to read a
+ * ColorStateList: `TypedValue.data` holds a colour only when the attribute is a
+ * literal one, and the platform's text colours are ColorStateLists. Trusting it
+ * returns an invisible colour. See `ColorPropConverterTest`.
+ */
+// `GrayText` is CSS's own name for disabled text, resolved per platform in
+// `systemColors.js`.
 const DISABLED_TEXT_COLOR: unknown = systemColor('GrayText');
 
 registerFrameworkElement('element-button-box', () =>
@@ -313,9 +427,19 @@ registerFrameworkElement('element-button-box', () =>
       // Whether the author's styles answer a press themselves, so the platform
       // does not answer it too. See ElementButtonShadowNode.h.
       authorStatesPressFeedback: true,
+      // The commands a `<menu>` child was flattened into. Data, not content:
+      // a platform menu is drawn in a window the app does not own, so there is
+      // nothing for child shadow nodes to lay out. See Button.js.
+      menuCommands: true,
+      // `-apple-visual-effect` on a button, because a glass control is a
+      // button with a material behind it, which is what the platform's own
+      // composer button is. Declared here or it never reaches the shadow node.
+      appleVisualEffect: true,
+      appleVisualEffectFade: true,
     },
     directEventTypes: {
       topElementPressChange: {registrationName: 'onPressChange'},
+      topElementCommand: {registrationName: 'onCommand'},
     },
     // No `recordNodeName`: the host is registered under its own name, and the
     // component states the DOM name.
@@ -329,20 +453,32 @@ registerFrameworkElement('element-button-box', () =>
   }),
 );
 
-// Shared with `<input type=submit|reset|button>`, which HTML gives the same
-// appearance
+/**
+ * `<button>`'s user-agent style for a given set of props.
+ *
+ * Named and shared because `<input type=submit|reset|button>` needs the same
+ * one. They are buttons — the same native view, the same press tracking — and
+ * HTML gives them the same appearance, so they must not be able to disagree
+ * about what a button looks like.
+ */
 function buttonUAStyle(props: {[string]: unknown}): {[string]: unknown} {
   let style: {[string]: unknown} = uaStyleFor('button');
   /*
-   * The platter, its insets, the minimum touch height and the label typography
-   * are one design, so when the author claims the surface (`hasAuthorChrome`,
-   * computed in Button.js/Input.js and read by the platform views to hide the
-   * platter) the metrics that fit the platter withdraw with it.
+   * The chrome is a unit. The platter, the content insets, the minimum touch
+   * height and the label typography are one design — each measured against
+   * the others on a real platform button — so when the author claims the
+   * surface (`hasAuthorChrome`, computed next to the style prop in
+   * Button.js/Input.js and also read by the platform views to hide the
+   * platter), the metrics that exist to fit that platter withdraw with it.
+   * What remains is the neutral inline-block box a preflight-reset web
+   * <button> is: contents centred, typography and colour inherited — which
+   * is the world design systems that restyle every control are written for.
    *
    * DOM-CSS-DEVIATION(button-chrome-withdraws-as-a-unit): on the web an
-   * author background keeps the UA padding and ButtonText colour. Here the
-   * insets are platform chrome metrics, and keeping them under an author's
-   * surface would look like neither platform nor web.
+   * author background keeps the UA padding (~2px) and ButtonText colour.
+   * Here the insets are platform chrome metrics, not web's hairlines, and
+   * keeping them under an author's surface would look like neither platform
+   * nor web. Informational.
    */
   if (props?.hasAuthorChrome === true) {
     return without(style, CHROME_METRIC_KEYS);
@@ -367,10 +503,22 @@ function buttonUAStyle(props: {[string]: unknown}): {[string]: unknown} {
   return style;
 }
 /*
- * The user-agent padding withdraws when the author states any padding: styles
- * flatten by key and Yoga resolves by edge specificity, so a user-agent
- * `paddingInline: 8` would beat an author's `padding: 0` and invert the
- * cascade.
+ * The padding half of `<button>`'s user-agent style, withdrawn when the author
+ * states any padding of their own.
+ *
+ * This is the cascade, done where it can be done. A user-agent declaration is a
+ * lower origin than an author's, so `<button style={{padding: 0}}>` must win —
+ * but React Native has no origins. Styles are flattened by key and Yoga then
+ * resolves by EDGE SPECIFICITY, and `paddingInline`/`paddingBlock` are applied
+ * by `applyAliasedProps` unconditionally (aliases "with precedence"). So a
+ * user-agent `paddingInline: 8` beats an author's `padding: 0`, and the cascade
+ * runs backwards — measured, not assumed: the fixture asserting 2 got 10.
+ *
+ * That is the same inversion that makes `<p>`'s longhand margin workaround
+ * unacceptable, so it is not one to accept here either. `<button>` already
+ * supplies its user-agent style through a FUNCTION of its props, which is the
+ * seam for exactly this: if the author has said anything about padding, ours
+ * does not participate.
  *
  * DOM-CSS-LIMITATION(no-cascade-origins): every element masks the sheet's
  * padding, margin and border width, colour, style and radius where the author
@@ -397,15 +545,30 @@ const PADDING_KEYS = [
 ];
 
 /*
- * The user-agent `minHeight` is the platform's touch target and `min-height`
- * beats `height`, so it withdraws when the author states a height: a radio's
- * 16pt indicator and a switch's 24pt track are built from `<button>` and a
- * 44pt floor would make each a 44pt box.
+ * The block-size half of the same problem.
+ *
+ * `<button>`'s user-agent `minHeight` is the platform's minimum touch target,
+ * and CSS is unambiguous that `min-height` beats `height` — so it is correct,
+ * right up until an author states a height and does not get it. That is not
+ * hypothetical: a radio's 16pt indicator and a switch's 24pt track are both
+ * built out of `<button>`, and a 44pt floor turns each of them into a 44pt box.
+ *
+ * A control that states its own height owns its geometry, exactly as one that
+ * states its own padding does, so the user-agent minimum withdraws on the same
+ * terms. `maxHeight` counts too: an author capping the height below the minimum
+ * has expressed the same intent even more explicitly.
  */
 const HEIGHT_KEYS = ['height', 'minHeight', 'maxHeight'];
 
-// What fits the platform platter; `display`, `textAlign`, `alignContent` and
-// `flexShrink` describe the box itself and stay
+/*
+ * Everything in the user-agent button entry that exists to fit the platform
+ * platter: its insets, its minimum touch height, and the label typography
+ * measured against it. Withdrawn together when the author claims the surface
+ * — see `buttonUAStyle`. The box-model basics stay: `display`, `textAlign`,
+ * `alignContent` and `flexShrink` describe what a button IS (an inline-block
+ * whose label centres and whose width floors at its content), not what the
+ * platform's chrome looks like.
+ */
 const CHROME_METRIC_KEYS = [
   ...PADDING_KEYS,
   ...HEIGHT_KEYS,
@@ -440,16 +603,26 @@ function without(
   return out;
 }
 
-// <label> names the control it is for — see Label.js. The box is the same
-// inline run it always was; what the component adds is the association, which
+// <label> names the control it is for — see Label.js. The box is a plain
+// inline run; what the component adds is the association, which
 // is the difference between a control that announces "switch, off" and one that
 // announces what it switches.
 registerInlineElementUnderName('element-label', 'label');
 registerFrameworkComponent('label', Label);
 
-// <input>'s backing is chosen per instance from `type` through
-// `resolveUIViewClassName`; a type without a backing falls through to the
-// inline unknown element like an unregistered tag
+// <input>: one tag standing for about twenty controls, dispatched on `type`.
+//
+// The backing is chosen per instance from the `type` prop, which the renderer
+// already supports (`resolveUIViewClassName`) — a checkbox and a slider are not
+// variations of one widget, and on the platform they are different controls
+// entirely. Types not yet implemented keep today's behaviour rather than
+// silently rendering an empty box: they fall through to the inline unknown
+// element, exactly as an unregistered tag does.
+//
+// `type="range"` is a real platform slider (`UISlider` / Android's seek bar).
+// It is the first element whose gesture is a *drag it owns*: an enclosing
+// scroll container must not cancel a scrub, which is what `touch-action`
+// expresses and what the native views assert for themselves.
 const INPUT_BACKING: {[string]: string} = {
   range: 'element-range',
   checkbox: 'element-checkbox',
@@ -478,7 +651,11 @@ const INPUT_BACKING: {[string]: string} = {
   button: 'element-button',
 };
 
-// Derived from the backing map so the two cannot drift
+/**
+ * The `<input>` types that ARE buttons, derived from the backing map rather
+ * than listed again — the two cannot drift, and a type that gains a button
+ * backing gains a button's appearance in the same edit.
+ */
 const BUTTON_INPUT_TYPES: Set<string> = new Set(
   Object.keys(INPUT_BACKING).filter(
     type => INPUT_BACKING[type] === 'element-button',
@@ -558,11 +735,25 @@ registerFrameworkElement('element-input', () =>
       return INPUT_BACKING[type] ?? 'inline-text';
     },
     uaStyle: (props: {[string]: unknown}) => ({
-      // The table entry first, so the initial values every element gets,
-      // `color` among them, are kept
+      /*
+       * The table entry first, so this keeps the initial values every other
+       * element gets — `color` among them. A `uaStyle` FUNCTION that builds a
+       * fresh object silently opts out of them, which is how a control's label
+       * becomes the one piece of text that does not theme.
+       */
       ...uaStyleFor('input'),
-      // `<input type=submit|reset|button>` takes `<button>`'s appearance, as
-      // HTML gives it; the tag's own entry is the text field's
+      /*
+       * `<input type=submit|reset|button>` IS a button, and looks like one.
+       *
+       * It resolves to `element-button` — the same native view `<button>`
+       * mounts, with the same press tracking — but appearance is keyed off the
+       * TAG, and `<input>`'s entry is the text field's. Without this the three
+       * have a button's every behaviour and none of its chrome, and draw as
+       * bare text: `<input type="submit">` indistinguishable from the word
+       * "Submit" sitting in the paragraph. HTML and every browser give
+       * them the same appearance as `<button>`, so they get the same style
+       * object, from the same place.
+       */
       ...(BUTTON_INPUT_TYPES.has(
         typeof props?.type === 'string' ? props.type : 'text',
       )
@@ -570,14 +761,24 @@ registerFrameworkElement('element-input', () =>
         : null),
       // Size hints next, so the box type below cannot be displaced by them.
       ...inputSizeUAStyle(props),
-      // A control sits in a line of text, which is how
-      // `<label><input> Subscribe</label>` is written
+      /*
+       * Every form control is `display: inline-block` in a browser, and that is
+       * not decoration: it is what lets a control sit *in a line of text*, which
+       * is exactly how `<label><input> Subscribe</label>` is written. Without it
+       * the control is block-level and takes a line of its own, so the label's
+       * text falls beneath its checkbox — the same failure `<img>` would have,
+       * and the same fix, because the box type belongs in the user-agent sheet.
+       */
       display: 'inline-block',
     }),
   }),
 );
 
-// Each platform's own footprint for the widget behind an input type
+/**
+ * The size a control is born with, per type — each platform's own footprint for
+ * that widget. Split out from the box type above so the two are not tangled:
+ * this answers "how big", `display: inline-block` answers "what kind of box".
+ */
 function inputSizeUAStyle(props: {[string]: unknown}): {[string]: unknown} {
   switch (props?.type) {
     case 'range':
@@ -589,32 +790,68 @@ function inputSizeUAStyle(props: {[string]: unknown}): {[string]: unknown} {
         ],
       };
     case 'file':
-      // The button shrink-to-fits a label that changes with the picked file;
-      // ElementFileInputShadowNode reports its intrinsic size
+      /*
+       * Nothing: the shadow node is sized by the control.
+       *
+       * `<input type=file>` is a button, and a button shrink-to-fits its
+       * label — which here is "Choose File" until a file is picked and then
+       * its name or a count. A fixed box would be wide enough for the longest
+       * title anyone expected and wrong about every other one. The button
+       * reports its own intrinsic size instead; see ElementFileInputShadowNode.
+       */
       return {};
     case 'color':
-      // The platform's colour well is its own size
+      /*
+       * Nothing: the well is its own size.
+       *
+       * This element mounts the platform's colour control, and a
+       * `UIColorWell` is whatever size the platform draws one.
+       */
       return {};
     case 'datetime-local':
     case 'date':
     case 'time':
-      // A compact `UIDatePicker` is as wide as the value it shows, so the
-      // picker reports its own size
+      /*
+       * Nothing: the picker reports what it needs.
+       *
+       * A compact `UIDatePicker` is as wide as the value it is showing in the
+       * mode it is in — a date, a time, and a date-and-time are three
+       * different widths, and the value inside them changes it again. One
+       * number per family would be fitted to the longest case: at 160,
+       * `datetime-local` truncates its own date to "8/2…", which is a control
+       * that cannot show its value.
+       */
       return {};
     case 'radio':
-      // The box is the touch target; the circle is drawn at its design size
-      // inside it, see RADIO_FOOTPRINT_BY_PLATFORM
+      // Square, unlike the checkbox: a radio is a circle on both platforms.
+      // The box is the touch target and the circle is drawn at its own design
+      // size inside it — see RADIO_FOOTPRINT_BY_PLATFORM for why, and for the
+      // margins that keep the LABEL the platform's distance from the ink
+      // rather than from the box.
       return {
         ...RADIO_FOOTPRINT_BY_PLATFORM[
           Platform.OS === 'android' ? 'android' : 'ios'
         ],
       };
     default:
+      // A text field's size comes from the platform's own: iOS lays out a
+      // rounded-rect `UITextField` about 36pt tall, Android's `EditText`
+      // sits on a 48dp touch target. Its width is intrinsic too — about
+      // twenty characters, measured by the control — so a column stretches
+      // it like any other item and an author's width overrides it.
       const inputType = typeof props?.type === 'string' ? props.type : 'text';
       if (TEXTUAL_INPUT_TYPES.has(inputType)) {
-        // The control reports its own size, so a column flex container can
-        // stretch it as a browser does; the field surface belongs to text
-        // entry only, not to checkables, buttons or pickers
+        // The field SURFACE rides with the size: both are "what a text-entry
+        // control looks like here", and neither belongs on checkables,
+        // buttons, or pickers, which own their chrome. See FIELD_SURFACE.
+        // Android: Material's filled text field container is 56dp tall with
+        // 16dp inline padding (the padding rides in FIELD_SURFACE) — the field
+        // spec, not the generic 48dp touch-target floor.
+        //
+        // NO size at all: the control reports its own. A field is as tall as
+        // the platform draws it, and its default width is what it wants
+        // rather than a width it states — which is why a column flex
+        // container can stretch it, as a browser does.
         return {...FIELD_SURFACE};
       }
       // No intrinsic size for this type; the element keeps whatever the
@@ -623,8 +860,12 @@ function inputSizeUAStyle(props: {[string]: unknown}): {[string]: unknown} {
   }
 }
 
-// A separate element from `<input>` because iOS draws the two with unrelated
-// classes. No `onSubmit`: Return inserts a newline in a textarea
+// `<textarea>`: multi-line text. A separate element rather than a flag on
+// `<input>`, because that is what HTML calls it and because iOS draws the two
+// with unrelated classes — a `UITextField` and a `UITextView`.
+//
+// No `onSubmit` here on purpose: Return inserts a newline in a textarea, so
+// there is no submit key to report.
 registerFrameworkElement('element-textarea', () =>
   createViewConfig({
     validAttributes: {
@@ -641,6 +882,13 @@ registerFrameworkElement('element-textarea', () =>
       rows: true,
       name: true,
       mostRecentEventCount: true,
+      // CSS's `caret-color`. Declared here or it never reaches the shadow node,
+      // and `processColor` because a colour arrives as a string or a dynamic
+      // colour object and the shadow node reads neither.
+      caretColor: {
+        process: require('react-native/Libraries/StyleSheet/processColor')
+          .default,
+      },
     },
     directEventTypes: {
       topElementInput: {registrationName: 'onInput'},
@@ -650,12 +898,28 @@ registerFrameworkElement('element-textarea', () =>
       topElementSelectionChange: {registrationName: 'onSelect'},
       // Dispatched synchronously, before the control applies the edit.
       topElementBeforeInput: {registrationName: 'onBeforeInput'},
+      // The WRAPPED height of the text, which nothing in JavaScript can work
+      // out for itself — it depends on the font, the width and the platform's
+      // line breaking. What `field-sizing: content` would consume.
+      topElementContentSizeChange: {registrationName: 'onContentSizeChange'},
     },
     // No `recordNodeName`: the host is `element-textarea` and the DOM name is
     // `textarea`, which the component states.
     uiViewClassName: 'element-textarea',
-    // No height: `rows` is a count of lines and only the control knows a
-    // line's height, so `ElementTextAreaShadowNode::measureContent` asks it
+    /*
+     * NO height: the shadow node MEASURES it.
+     *
+     * `rows` is a height in LINES, and this file cannot turn lines into points
+     * — it does not know the line box the control's font lays out in, nor the
+     * inset the control keeps around its text. Writing numbers down here would
+     * be describing a control that is standing right there: the platform is
+     * asked at startup instead, and
+     * `ElementTextAreaShadowNode::measureContent` multiplies what it said.
+     *
+     * `rows` still reaches the shadow node as a prop, which is where it always
+     * belonged: it is a height in lines and only the control knows what a line
+     * is worth.
+     */
     uaStyle: {
       ...uaStyleFor('textarea'),
       ...TEXTAREA_SURFACE,
@@ -666,9 +930,13 @@ registerFrameworkElement('element-textarea', () =>
   }),
 );
 
-// `select` is a component (Select.js) that reads its `<option>` children, so
-// the host element is registered under its own name and the component states
-// the DOM name
+// The host element `<select>` renders. Registered under its own name because
+// `select` itself is a *component* (Select.js): it reads its `<option>`
+// children and hands them down as a list, which is a JavaScript job.
+//
+// No `recordNodeName` here — that would record `element-select`, and the DOM
+// name is `select`. The component states it instead, which is the only place
+// that knows it.
 registerFrameworkElement('element-select', () =>
   createViewConfig({
     validAttributes: {
@@ -688,14 +956,44 @@ registerFrameworkElement('element-select', () =>
       // Inline-block, for the reason spelled out on `<input>`: a control sits in
       // a line of text, which is how a `<label>` wrapping one is written.
       display: 'inline-block',
-      // No width or height: ElementSelectShadowNode shrink-to-fits the widest
-      // option, floored at the touch-target width, and reports the control's
-      // own height. An inline-level control never fills its container on the
-      // web, so the flex default of stretching is turned off; an author
-      // `alignSelf` or `width` still wins
-      alignSelf: 'flex-start',
-      // Material 3's dropdown is the exposed-dropdown field, the same filled
-      // container the text fields wear; iOS's pull-down button takes no chrome
+      // No width: the shadow node MEASURES it — a `<select>` shrink-to-fits
+      // its widest option, which is the web's rule (real Safari: 41/72/239px
+      // for one-char/short/long option sets) and each platform's own idiom.
+      // The measure floors at the platform touch-target width; an author
+      // width overrides it entirely. See ElementSelectShadowNode.
+      //
+      /*
+       * NO `alignSelf` here, and that is deliberate rather than an omission.
+       *
+       * `alignSelf: 'flex-start'` would stop the control filling the cross axis
+       * of a plain column the way RN's `alignItems: stretch` default does. But
+       * "an inline-level control never fills its container" is true of a BLOCK
+       * container and not of a flex one: a `<select>` in `display: flex;
+       * flex-direction: column` stretches in a real browser, so pinning it here
+       * is a deviation rather than the web's behaviour.
+       *
+       * It also costs more than it buys. `align-self` is not axis-specific: in
+       * a column it controls the width, but in a ROW it controls the vertical
+       * position, so `flex-start` pins every select to the top of its row and
+       * beats the row's own `alignItems: center`. Measured in a 44-point
+       * settings row: 0.3 points above the control and 8.0 below it.
+       *
+       * Leaving it out costs the shrink-to-fit in a flex column — a select in
+       * one fills the width. That is what a browser does, and an author who
+       * wants otherwise writes the `alignSelf: 'flex-start'` they would have
+       * written on the web.
+       */
+      // No height either: the shadow node reports the real pop-up button's,
+      // as the control gave it at startup. See `<textarea>` for why a style
+      // sheet is the wrong place to know a control's size.
+      /*
+       * On Android the bare Spinner is a word and a small caret floating on
+       * the page — nothing says "control". Material 3's dropdown is the
+       * exposed-dropdown FIELD: the same filled container the text fields
+       * wear, which is exactly what the field surface provides. iOS keeps the
+       * platform's own answer, the gray pull-down `UIMenu` button, which
+       * already reads as a control and takes no field chrome.
+       */
       ...(Platform.OS === 'android' ? FIELD_SURFACE : null),
     },
   }),
@@ -708,6 +1006,50 @@ registerFrameworkComponent('select', Select);
 // `<input>` is a component only because of `<form>`: which control it draws is
 // still `resolveUIViewClassName`'s decision. See Input.js.
 registerFrameworkComponent('input', Input);
+
+/*
+ * The host element `<native:button>` renders.
+ *
+ * A real `UIButton` whose action is a `UIMenu`. Its commands are one prop rather
+ * than children, because a `UIMenu` is built from a list and children would only
+ * be that list written the long way — `<button>` has `<menu>` children because
+ * HTML says so, and this element has no HTML to obey.
+ */
+registerFrameworkElement('native-button', () =>
+  createViewConfig({
+    validAttributes: {
+      title: true,
+      systemImage: true,
+      // The title's point size. A prop rather than `font-size`: the title is
+      // the button's CONFIGURATION and never becomes a text node, so the style
+      // cascade has nothing to reach.
+      titleSize: true,
+      // One of UIKit's button configurations, by its own name: plain (the
+      // default), gray, tinted, filled, glass, prominentGlass.
+      configuration: true,
+      // `[{id, label, disabled, destructive}]`. Diffed by value, so a list that
+      // has not changed does not rebuild the menu — a `UIMenu` is immutable, and
+      // rebuilding one while it is open closes it.
+      commands: true,
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {
+      // The chosen command's `id`. Not its index: a list that reorders while the
+      // menu is open would otherwise report the wrong one.
+      topCommand: {registrationName: 'onCommand'},
+      // A tap on a button with no commands: the platform's glass button with
+      // the app's own thing to open.
+      topPress: {registrationName: 'onPress'},
+    },
+    uiViewClassName: 'native-button',
+  }),
+);
+
+/*
+ * `<native:button>`, a button whose action is a menu the SYSTEM presents.
+ * One word for the same reason `keyboardaccessory` is one.
+ */
+defineReactComponent('native', 'button', NativeButton);
 
 // `<textarea>` joins a form the same way `<input>` does, and for the same
 // reason: an uncontrolled one keeps its value in the native view.
@@ -749,8 +1091,12 @@ for (const level of HEADING_LEVELS) {
   registerFrameworkComponent(level, makeHeading(level));
 }
 
-// `<progress>` and `<meter>` share a control and differ by `nodeName`. Neither
-// is interactive, so a drag starting on one scrolls
+// `<progress>` and `<meter>` share a control, because they differ in meaning
+// rather than in anything either platform draws differently. `nodeName` is what
+// keeps them apart for the DOM and for assistive technology.
+//
+// Neither is interactive, which is the whole difference from
+// `<input type="range">`: a drag starting on one just scrolls.
 function registerProgressElement(name: string) {
   registerFrameworkElement(name, () =>
     createViewConfig({
@@ -778,8 +1124,23 @@ function registerProgressElement(name: string) {
 registerProgressElement('progress');
 registerProgressElement('meter');
 
-// A block element whose tag is a component, so the host needs its own name.
-// The UA style is still looked up by the DOM name, which the component states
+// <p> is block-level. Aliasing it to <div> is what makes it lay out as a block
+// at all: an unregistered tag falls through to the *inline* unknown element,
+// so an unaliased <p> flows inline with its siblings.
+//
+// Its default block margins come from the UA stylesheet (uaStyles.js), merged
+// beneath the author's style so `<p style={{marginBlock: 0}}>` still wins.
+/**
+ * A block element whose *tag* is a component, so the host needs a name of its
+ * own.
+ *
+ * `<form>` is the case: it lays out exactly like a plain block box, but what it
+ * adds — gathering its controls and submitting them — is not
+ * layout, so the tag resolves to a component and the box is registered under a
+ * separate name. The UA style is still looked up by the DOM name, so the
+ * element keeps the metrics the sheet gives it, and `recordNodeName` is off
+ * because the component states the DOM name itself.
+ */
 function registerBlockElementUnderName(hostName: string, domName: string) {
   const uaStyle = uaStyleFor(domName);
   if (uaStyle.display == null) {
@@ -789,7 +1150,54 @@ function registerBlockElementUnderName(hostName: string, domName: string) {
     createViewConfig({
       // `listStart` is `<ol start>` under a private native name — the HTML
       // attribute collides with Yoga's inline-start inset; see List.js.
-      validAttributes: {nodeName: true, listStart: true},
+      validAttributes: {
+        nodeName: true,
+        listStart: true,
+        // `-apple-visual-effect`, spelled as CSSOM spells a `-apple-`
+        // property. Declared here or it is dropped before it reaches the
+        // shadow node — an attribute the view config does not list does not
+        // survive, which is the same trap `accessibilityRole` hit on <a>.
+        appleVisualEffect: true,
+        // How far that material fades in from its top edge, in points. A bar
+        // wants one; a field wants the default of none.
+        appleVisualEffectFade: true,
+        // The long-press gate — see `wantsContextMenu` in ElementBoxShadowNode.h.
+        // A box with a `contextmenu` listener sets it to take UIKit's own hold,
+        // lift and haptic instead of the element's own timer. Without it in the
+        // attribute set the flag never reaches the view and the peek silently
+        // never installs.
+        wantsContextMenu: true,
+        // And what that peek PRESENTS, from a `<menu>` child — the same shape
+        // `<button>` takes. Empty is the lift alone, which is what a box that
+        // only listens for `contextmenu` still gets.
+        menuCommands: true,
+      },
+      bubblingEventTypes: {
+        // `contextmenu`, which on a touch platform IS the long press — the
+        // event a browser fires when a finger rests on an element. Bubbling, as
+        // it is on the web, so a handler on a container hears a hold on
+        // anything inside it.
+        //
+        // DOM-CSS-LIMITATION(ios-only-contextmenu): fired on iOS only, timed
+        // from the touches the box already receives. Android has the same seam
+        // — `ElementInteractiveBoxView` already tracks a press through the
+        // platform's own dispatch — but only for boxes it makes interactive,
+        // which a plain `<div>` deliberately is not.
+        topContextMenu: {
+          phasedRegistrationNames: {
+            captured: 'onContextMenuCapture',
+            bubbled: 'onContextMenu',
+          },
+        },
+        // A command chosen from that menu. Bubbling like `contextmenu` itself,
+        // so a handler on the transcript hears a choice made on any balloon.
+        topCommand: {
+          phasedRegistrationNames: {
+            captured: 'onCommandCapture',
+            bubbled: 'onCommand',
+          },
+        },
+      },
       uiViewClassName: 'element-box',
       uaStyle: (props: {[string]: unknown}) =>
         withoutOutrankedBoxEdges(uaStyle, props?.style),
@@ -797,9 +1205,16 @@ function registerBlockElementUnderName(hostName: string, domName: string) {
   );
 }
 
-// A block element is a tag name plus a UA entry: `display: block` is a
-// declaration an author style can still beat, and the generic box honours it
+/**
+ * A block-level element: aliases <div>'s native component and takes its box
+ * metrics from the UA sheet. Adding one is a row in uaStyles.js plus a name
+ * here — no shadow node, descriptor, or native code.
+ */
 function registerBlockElement(name: string) {
+  // Block-ness is a DECLARATION, not a component choice: it goes in the user-agent
+  // style, where an author style can still beat it, and the generic box then
+  // honours it. That is what lets a block element be defined without a C++ class
+  // of its own — the whole definition is a tag name and a UA entry.
   const uaStyle = uaStyleFor(name);
   if (uaStyle.display == null) {
     uaStyle.display = 'block';
@@ -814,8 +1229,52 @@ function registerBlockElement(name: string) {
         listStyleType: true,
         listStylePosition: true,
         start: true,
+        // `-apple-visual-effect`, spelled as CSSOM spells a `-apple-`
+        // property. Declared here or it is dropped before it reaches the
+        // shadow node — an attribute the view config does not list does not
+        // survive, which is the same trap `accessibilityRole` hit on <a>.
+        appleVisualEffect: true,
+        // How far that material fades in from its top edge, in points. A bar
+        // wants one; a field wants the default of none.
+        appleVisualEffectFade: true,
+        // The long-press gate — see `wantsContextMenu` in ElementBoxShadowNode.h.
+        // A box with a `contextmenu` listener sets it to take UIKit's own hold,
+        // lift and haptic instead of the element's own timer. Without it in the
+        // attribute set the flag never reaches the view and the peek silently
+        // never installs.
+        wantsContextMenu: true,
+        // And what that peek PRESENTS, from a `<menu>` child — the same shape
+        // `<button>` takes. Empty is the lift alone, which is what a box that
+        // only listens for `contextmenu` still gets.
+        menuCommands: true,
       },
       recordNodeName: true,
+      bubblingEventTypes: {
+        // `contextmenu`, which on a touch platform IS the long press — the
+        // event a browser fires when a finger rests on an element. Bubbling, as
+        // it is on the web, so a handler on a container hears a hold on
+        // anything inside it.
+        //
+        // DOM-CSS-LIMITATION(ios-only-contextmenu): fired on iOS only, timed
+        // from the touches the box already receives. Android has the same seam
+        // — `ElementInteractiveBoxView` already tracks a press through the
+        // platform's own dispatch — but only for boxes it makes interactive,
+        // which a plain `<div>` deliberately is not.
+        topContextMenu: {
+          phasedRegistrationNames: {
+            captured: 'onContextMenuCapture',
+            bubbled: 'onContextMenu',
+          },
+        },
+        // A command chosen from that menu. Bubbling like `contextmenu` itself,
+        // so a handler on the transcript hears a choice made on any balloon.
+        topCommand: {
+          phasedRegistrationNames: {
+            captured: 'onCommandCapture',
+            bubbled: 'onCommand',
+          },
+        },
+      },
       uiViewClassName: 'element-box',
       uaStyle: (props: {[string]: unknown}) =>
         withoutOutrankedBoxEdges(uaStyle, props?.style),
@@ -823,8 +1282,12 @@ function registerBlockElement(name: string) {
   );
 }
 
-// Block containers, headings and lists, differing only in the metrics the UA
-// sheet gives them
+// Block containers, headings, lists. All block-level, differing only in the
+// metrics the UA sheet gives them.
+// <div> is not special: a block element is a tag whose user-agent style says
+// `display: block`, backed by the generic box. react-native ships no `div`
+// component, no DivShadowNode and no DivProps — which is exactly what makes a
+// block element definable from outside it.
 for (const name of [
   'div',
   'p',
@@ -853,13 +1316,17 @@ for (const name of [
   registerBlockElement(name);
 }
 
-// <fieldset> is a component so its <legend> can hoist above the bordered box,
-// the platforms' group-label convention; see Fieldset.js
+// <fieldset> is a component so its <legend> can hoist above the bordered box
+// — the platforms' group-label convention; see Fieldset.js for the deviation
+// note. The box itself is the ordinary block registered under
+// `element-fieldset`.
 registerBlockElementUnderName('element-fieldset', 'fieldset');
 registerFrameworkComponent('fieldset', Fieldset);
 
 // The list containers are components so a nested list can zero its block
-// margins as `ul ul { margin-block: 0 }` does; a per-tag row cannot see nesting
+// margins the way every browser's sheet does with `ul ul { margin-block: 0 }`
+// — nesting is context, and a per-tag stylesheet row cannot see it. The box
+// itself is the ordinary block registered under `element-ul`…; see List.js.
 for (const tag of LIST_TAGS) {
   registerBlockElementUnderName(`element-${tag}`, tag);
   registerFrameworkComponent(tag, makeList(tag));
@@ -888,8 +1355,12 @@ for (const name of [
   registerInlineAlias(name, 'inline-text');
 }
 
-// Displays whose box establishes a formatting context; `inline` folds into the
-// surrounding flow and is absent
+/**
+ * Displays whose box establishes a formatting context, so the element cannot
+ * fold into the surrounding inline flow and needs a real box of its own.
+ *
+ * `inline` is absent on purpose: it is precisely the display that folds.
+ */
 const BOX_DISPLAYS = new Set([
   'flex',
   'inline-flex',
@@ -900,20 +1371,31 @@ const BOX_DISPLAYS = new Set([
 ]);
 
 /**
+ * Picks the native component backing an inline element, from its resolved
+ * `display`.
+ *
  * Box generation follows computed display, not the tag: a `<span>` is the
- * text-backed component while it folds into an inline formatting context and
- * the box-backed one when its display establishes one, as Blink's
- * `LayoutObject::CreateObject` picks a class per computed display.
+ * cheap text-backed component while it folds into an inline formatting
+ * context, and the box-backed one when its display establishes one. Browsers
+ * make the same choice at the same point — `LayoutObject::CreateObject`
+ * constructs a different class per computed display.
+ *
+ * Cheap by construction: a set lookup on an already-flattened style, and only
+ * for elements that can be either flavor.
  */
 function resolveInlineElementComponent(
   uiViewClassName: string,
   uaStyle?: UAStyle,
-  // Interactive elements name their own box: `<button>` resolves to
-  // `element-button`, which adds a press event emitter and gesture recognizer
+  // Which box component this element becomes when its display generates one.
+  // Interactive elements name a different one: `<button>` resolves to
+  // `element-button`, whose only difference from the generic box is that it
+  // carries a press event emitter and installs a native gesture recognizer.
   boxComponentName: string = 'element-box',
 ): (props: {[string]: unknown}) => string {
   return (props: {[string]: unknown}): string => {
-    // The UA display counts too: `<button>`'s inline-block comes from the sheet
+    // The UA display counts too: `<button>`'s inline-block comes from the
+    // stylesheet, and box selection has to see it or the element would resolve
+    // as text-backed and its padding would have nowhere to apply.
     const style = props?.style;
     if (style == null) {
       const uaDisplay = uaStyle?.display;
@@ -944,19 +1426,19 @@ function resolveInlineElementComponent(
      * `isInlineLevelBox` excludes absolutely-positioned boxes from inline flow
      * and cites §9.7 for it.
      *
-     * The case that found this is the canonical visually-hidden block:
-     * `position: absolute` on a 1x1 clipped `<span>`, which is how a component
-     * says "assistive technology only". Its screen-reader text was laying out
-     * in the line as visible words, and squeezing the real label until it
-     * wrapped mid-word.
+     * The canonical case is the visually-hidden block: `position: absolute` on
+     * a 1x1 clipped `<span>`, which is how a component says "assistive
+     * technology only". Left text-backed, its screen-reader text lays out in
+     * the line as visible words and squeezes the real label until it wraps
+     * mid-word.
      */
     const position = flat?.position;
     if (position === 'absolute' || position === 'fixed') {
       return boxComponentName;
     }
-    // The float row of the same table. A floated `<span>` that stayed
-    // text-backed sat in the run instead: it took no width, so it intruded on
-    // nothing and the next float packed straight over it.
+    // The float row of the same table. A floated `<span>` that stays
+    // text-backed sits in the run instead: it takes no width, so it intrudes on
+    // nothing and the next float packs straight over it.
     const float = flat?.float;
     if (typeof float === 'string' && float !== 'none') {
       return boxComponentName;
@@ -970,10 +1452,25 @@ function resolveInlineElementComponent(
 }
 
 /**
- * Adjusts a tag's user-agent default, the way a design system's CSS reset does.
- * The mutation is app-wide and outlives the module that made it, so it is an
- * app-level decision; a screen-level reset belongs on the elements themselves.
- * Call before rendering: a view config captures the style object by reference.
+ * Adjusts the user-agent default for a tag — a CSS reset, in other words.
+ *
+ * Design systems ship one: they zero the UA margins they do not want and then
+ * style from scratch. On the web that is a stylesheet at the *author* origin
+ * overriding the UA origin. Here the UA sheet is the only global layer, so a
+ * reset edits it in place.
+ *
+ * Mutates the entry rather than replacing it, because a view config captures
+ * the style object by reference when it is first built. Call before rendering.
+ *
+ * **The blast radius is the whole app, forever — treat this as an app-level
+ * decision, never a screen-level one.** The mutation outlives the module that
+ * made it: a DEMO calling `overrideUAStyle('p', {marginBlock: 0})` at module
+ * scope strips every paragraph's margins on every OTHER screen for the rest of
+ * the session, and reads exactly like a renderer bug in whichever screen is
+ * looked at next. A scoped reset belongs at the point of use — a style on the
+ * elements themselves, or a wrapper the design system's own runtime applies, as
+ * Astryx's `ASTRYX_RESET` does. No caller of this function remains in the repo;
+ * it stays for the genuine design-system case its first paragraph describes.
  */
 export function overrideUAStyle(tag: string, style: UAStyle) {
   const existing = uaStyles[tag];
@@ -988,9 +1485,13 @@ export function overrideUAStyle(tag: string, style: UAStyle) {
   }
 }
 
-// HTMLUnknownElement: an unregistered lowercase tag renders inline and
-// unstyled, as on the web. Every unknown tag shares this view config, so
-// `recordNodeName` keeps the authored tag for the DOM APIs
+// HTMLUnknownElement: any unregistered lowercase JSX tag (e.g. <foo>) resolves
+// here — inline, unstyled, content renders — mirroring the web. This is the DOM
+// *policy*; the resolution *mechanism* is a generic fallback hook, so
+// react-native stays agnostic. The element is backed by the native singleton "unknown"
+// inline component; because every unknown tag shares one view config, the
+// authored tag is otherwise lost, so `recordNodeName` has the reconciler stamp
+// the JSX type onto a `nodeName` prop the native side reports through DOM APIs.
 const unknownElementViewConfig: ViewConfig = {
   // Points at the generic inline text backing, like any other inline element.
   uiViewClassName: 'inline-text',

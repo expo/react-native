@@ -11,12 +11,14 @@
 
 #include <glog/logging.h>
 #include <react/debug/react_native_expect.h>
+#include <react/renderer/components/view/EnvironmentDependency.h>
 #include <react/renderer/components/view/GridTrackListParser.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/graphicsConversions.h>
+#include <react/renderer/core/propsConversions.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/debug/flags.h>
 #include <react/renderer/graphics/BackgroundPosition.h>
@@ -716,6 +718,69 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
   LOG(ERROR) << "Could not parse grid line";
 }
 
+/*
+ * Forgets whatever the property being converted used to depend on.
+ *
+ * Called for EVERY length, not only for `env()` ones, because the dependency
+ * list is inherited from the previous props and this conversion is the moment
+ * the property is being re-stated. Without it, `paddingTop` changed from an
+ * `env()` to a plain number would keep being rewritten by the safe area at every
+ * layout — and worse, a list that only ever grew would accumulate one entry per
+ * update.
+ */
+inline void forgetEnvironmentDependencyForCurrentProp()
+{
+  // `empty()` first, and deliberately: this runs for EVERY length property on
+  // every props build, and the scan below compares the property's name against
+  // forty-odd others. An element with no `env()` in it — which is almost all of
+  // them — pays a load and a branch.
+  if (currentEnvironmentCollector == nullptr || currentEnvironmentCollector->empty() ||
+      currentConvertedPropName == nullptr) {
+    return;
+  }
+  const auto target = environmentTargetForProperty(currentConvertedPropName);
+  if (!target.has_value()) {
+    return;
+  }
+  std::erase_if(*currentEnvironmentCollector, [&](const EnvironmentDependency &dependency) {
+    return dependency.target == target->target && dependency.slot == target->slot;
+  });
+}
+
+/*
+ * Records an `env()` written on the property currently being converted, and
+ * answers with the value to use until layout resolves it.
+ *
+ * Returns false, and records nothing, for every value that is not an `env()` —
+ * which is every ordinary string length.
+ */
+inline bool collectEnvironmentDependency(const std::string &stringValue, Float &fallbackOut)
+{
+  const auto parsed = parseEnvironmentValue(stringValue);
+  if (!parsed.has_value()) {
+    return false;
+  }
+  // The value in use until layout resolves the variable
+  fallbackOut = parsed->fallback + parsed->offset;
+
+  if (currentEnvironmentCollector == nullptr || currentConvertedPropName == nullptr) {
+    return true;
+  }
+  const auto target = environmentTargetForProperty(currentConvertedPropName);
+  if (!target.has_value()) {
+    LOG(ERROR) << "env() is not supported on '" << currentConvertedPropName << "'.";
+    return true;
+  }
+  currentEnvironmentCollector->push_back(
+      EnvironmentDependency{
+          .variable = parsed->variable,
+          .target = target->target,
+          .slot = target->slot,
+          .fallback = parsed->fallback,
+          .offset = parsed->offset});
+  return true;
+}
+
 void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::Style::SizeLength &result);
 
 void fromRawValue(const PropsParserContext &context, const RawValue &value, yoga::Style::Length &result);
@@ -828,6 +893,52 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   }
   LOG(ERROR) << "Could not parse BorderCurve:" << stringValue;
   react_native_expect(false);
+}
+
+/**
+ * `corner-shape`: a keyword, or `superellipse(<number>)`, or a bare number.
+ *
+ * The keywords are the spec's own equivalences rather than a second table —
+ * `round` IS `superellipse(1)` — so everything reduces to one parameter and
+ * there is nothing to keep in step when the spec grows another name.
+ */
+inline void fromRawValue(const PropsParserContext &context, const RawValue &value, CornerShape &result)
+{
+  result = CornerShape{};
+  if (value.hasType<Float>()) {
+    result.k = (Float)value;
+    return;
+  }
+  react_native_expect(value.hasType<std::string>());
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  auto string = (std::string)value;
+  if (string == "round") {
+    result.k = 1;
+  } else if (string == "squircle") {
+    result.k = 2;
+  } else if (string == "bevel") {
+    result.k = 0;
+  } else if (string == "scoop") {
+    result.k = -1;
+  } else if (string == "notch") {
+    result.k = -std::numeric_limits<Float>::infinity();
+  } else if (string == "square") {
+    result.k = std::numeric_limits<Float>::infinity();
+  } else if (string.rfind("superellipse(", 0) == 0 && string.back() == ')') {
+    // `superellipse(<number>)`. A value that will not parse leaves the initial
+    // `round` rather than a shape nobody asked for.
+    try {
+      result.k = std::stof(string.substr(13, string.size() - 14));
+    } catch (const std::exception &) {
+      LOG(ERROR) << "Unsupported corner-shape value: " << string;
+      react_native_expect(false);
+    }
+  } else {
+    LOG(ERROR) << "Unsupported corner-shape value: " << string;
+    react_native_expect(false);
+  }
 }
 
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, BorderStyle &result)

@@ -40,6 +40,11 @@ Three kinds appear here and it is worth telling them apart:
 
 ## Layout and box generation
 
+**`env-calc-is-an-offset`** — `ReactCommon/react/renderer/components/view/EnvironmentDependency.h`
+Inside `calc()`, `env()` works only with a pixel length added or subtracted:
+`calc(env(safe-area-inset-bottom) + 8px)`. Any other expression, and `min()`,
+`max()` or `clamp()` around an `env()`, computes to nothing.
+
 **`clearance-on-an-empty-box`** — `yoga/algorithm/CalculateLayout.cpp`
 An empty box with `clear` still lets its margins collapse past it, so the
 content after it sits higher than in a browser. Boxes with content clear
@@ -271,6 +276,67 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   one layer switch, `wantsExtendedDynamicRangeContent`; iOS 26's
   `preferredDynamicRange` names all three limits. Platform wall.
 
+**`android-run-paragraph-attributes`** — `.../views/view/ReactViewManager.kt`
+A painted text run whose layout has to be REBUILT at mount honours only the two
+things that live on its attributed string — `text-align` and, from the same
+attribute, justification. Break strategy, hyphenation frequency, font padding,
+ellipsis and max lines are read from paragraph attributes, which a run's handoff
+entry does not carry, so the rebuilt layout differs from the one the measure
+pass built. It matters only when the handoff cannot be reused (a different
+width, or a stale entry), and never on iOS, where these ride the paragraph
+attributes to draw time.
+
+Unfinished rather than blocked, and the fix is upstream of this file: send the
+paragraph attributes along with the run.
+
+**`ios-only-native-button`** — `packages/expo-intrinsics/src/NativeButton.js`
+`<native:button>` is iOS only, and deliberately so: it is a
+`UIButtonConfiguration` and a `UIMenu`, and being the platform's own control
+with nothing of ours in it is the whole point of the element — it exists as the
+control group for `<button>` with a `<menu>` child. There is nothing here to
+port. On Android it renders nothing rather than red-boxing, so an app can write
+it unconditionally; the portable spelling is `<button>` with a `<menu>`, which
+is a `UIMenu` on iOS and a `PopupMenu` on Android.
+
+**`overlay-cannot-cover-the-keys`** — `React/.../KeyboardPanel/EXPKeyboardPanelComponentView.mm`
+A panel presented as an overlay CAN cover the keyboard, and this entry used to
+say it could not. What it can never do is get there with a window of its own.
+
+Three places a view can be, all measured with `~/Developer/probes/windowprobe`,
+which puts a coloured band in each and photographs the result:
+
+- a window the app creates is **clamped** to level 10000000, one below the
+  keyboard's `UIRemoteKeyboardWindow` at 10000001. Asked for 10000002 it comes
+  back at 10000000 and draws underneath. No obtainable level does it.
+- `UITextEffectsWindow` (level 1, where a plain `inputAccessoryView` lives)
+  shows *through* the keyboard's translucent backdrop but is drawn under the
+  opaque key caps.
+- `UIRemoteKeyboardWindow` itself, after its `UIInputSetContainerView`, covers
+  the keys completely — which is what the platform's own `+` card does.
+
+So the panel hosts its overlay in the keyboard's own window, and the remaining
+limitation is narrow: an overlay panel cannot be a **material**, because a
+`UIVisualEffectView` samples what is behind it within its own window and there
+is nothing behind it there. A stated colour is the substitute.
+
+What this entry got wrong is worth keeping, because the same mistake is easy to
+repeat. It reported "an overlay window at level 100000000 was still behind them,
+so no level exists that would have done" — but the window it made was clamped to
+10000000, so the experiment measured the clamp and was written up as measuring
+the compositing. "No level is high enough" invites trying a higher one; "the
+level is clamped, so use the keyboard's own window" is the fact.
+
+**`ios-only-contextmenu`** — `packages/expo-intrinsics/src/index.js`
+`contextmenu` — a long press — is fired on iOS only. It is timed from the
+touches the box already receives rather than from a gesture recogniser, which is
+what makes a hold that turns into a scroll not fire: the platform cancels the
+touch first. Android has the same seam in `ElementInteractiveBoxView`, which
+already tracks a press through the platform's own dispatch, but only for boxes
+it makes interactive — and a plain `<div>` deliberately is not one, since every
+paragraph on every screen would otherwise become clickable and focusable.
+
+Unfinished rather than blocked: closing it is the same timer on the Android side
+plus a decision about which boxes get it there.
 
 ## Performance
 

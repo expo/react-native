@@ -45,6 +45,36 @@ NS_ASSUME_NONNULL_BEGIN
                         drawn:(BOOL)drawn;
 
 /**
+ * The material hooks the base class calls and the element box answers.
+ *
+ * Declared here because `-currentContainerView` is the base's and the material
+ * is the subclass's: the base has to ask a question only the box can answer.
+ * Both return nil for every view without a material, which is nearly all of
+ * them.
+ */
+- (nullable UIView *)exp_glassChildContainerView;
+- (nullable UIView *)exp_materialHostView;
+
+/**
+ * Given by a CHILD the shape this view should be LIFTED in.
+ *
+ * A peek's preview is a rounded rectangle unless it is handed a path, so a
+ * balloon lifted without one grows a tail-less square out of a shape that has a
+ * tail. The interaction belongs to the box — that is what receives the touch and
+ * what has to come up with the words inside it — but the box is a rectangle and
+ * knows nothing about balloons. So the shape travels the other way: the surface
+ * that draws it hands its outline up, in the box's coordinates, and the box
+ * gives it to UIKit.
+ *
+ * The block is called when UIKit asks, at the moment of the lift, rather than
+ * stored as a path: a send animation resizes the balloon every frame and a
+ * reveal drag slides the whole column.
+ *
+ * A no-op here; the element box is the only view with a peek to shape.
+ */
+- (void)exp_setPeekShapeProvider:(UIBezierPath *_Nullable (^_Nullable)(void))provider;
+
+/**
  * Represents the `UIView` instance that is being automatically attached to
  * the component view and laid out using on `layoutMetrics` (especially `size`
  * and `padding`) of the component.
@@ -91,80 +121,55 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)isHostChromeSubview:(UIView *_Nonnull)view;
 
 /**
- * Installs host chrome BEHIND this view's mounted children, and remembers it as
- * chrome so the mount-index bookkeeping skips it.
+ * Where this view's own chrome goes: backgrounds, borders, materials — every
+ * view a component owns rather than one React mounted.
  *
- * The subclass hooks above answer for chrome a component view installs in
- * ITSELF, which is the common case. This is for chrome installed from outside,
- * into a view whose class knows nothing about it — a run of `<input
- * type="radio">` rows drawing the platform's grouped list behind them, where
- * the view holding the rows is whatever ancestor survived flattening and is
- * nobody's subclass.
- *
- * Behind, always: chrome is a backdrop, and a mounted child that ends up under
- * it disappears. Use this rather than `addSubview:` — an unregistered extra
- * subview shifts every mount index after it, which lands children at the wrong
- * z-position and aborts on valid removals.
- *
- * NEVER re-parent a mounted child to put it inside chrome. Mounting addresses
- * children by index into this view's subviews, so a child that has moved
- * elsewhere is not merely misplaced, it is unaddressable: the index maps to the
- * wrong view or past the end, and unmounting aborts.
+ * It is `-currentContainerView` without the glass container below, and the two
+ * are the same view for every box that has no glass container. They have to be
+ * told apart because a glass container's children live INSIDE the material,
+ * and the material cannot be put inside itself. A subclass that installs a
+ * material of its own puts it here.
+ */
+@property (nonatomic, readonly) UIView *_Nonnull chromeContainerView;
+
+/**
+ * Installs host chrome behind this view's mounted children and registers it so
+ * the mount-index bookkeeping skips it. For chrome installed from outside into
+ * a view whose class knows nothing about it (a radio run's list behind rows
+ * held by a flattened ancestor); the subclass hooks above cover chrome a view
+ * installs in itself. Use this rather than `addSubview:`: an unregistered
+ * subview shifts every mount index after it. Never re-parent a mounted child
+ * into chrome; mounting addresses children by subview index and a moved child
+ * is unaddressable.
  */
 - (void)addHostChromeSubview:(UIView *_Nonnull)view;
 
 /**
- * The same, but behind ONE child rather than behind all of them.
- *
- * "At the back" is right for chrome that backs the whole view, and wrong for
- * chrome that backs a RUN of children, because a flattened ancestor is not
- * absent from the tree: Fabric hoists its children into this view and leaves the
- * ancestor itself here as a CHILDLESS SIBLING carrying its background, ordered
- * before the children it used to hold. Chrome at index 0 therefore sits behind
- * that backdrop, and any ancestor with a background hides it — which is what a
- * radio group inside a plain coloured `<View>` did: rows, no card.
- *
- * Behind its own first child, chrome lands between that backdrop and the run,
- * which is where a backdrop for those children belongs whatever else the
- * container holds. `sibling` must be a subview of this view; chrome goes to the
- * back if it is not.
+ * The same, behind one child rather than all of them. A flattened ancestor that
+ * paints stays in this view as a childless sibling carrying its background,
+ * ordered before the children it held, so chrome at the back would be hidden
+ * by it; behind its own first child, chrome lands between that backdrop and
+ * the run. `sibling` must be a subview of this view; chrome goes to the back if
+ * it is not.
  */
 - (void)addHostChromeSubview:(UIView *_Nonnull)view behindSubview:(UIView *_Nonnull)sibling;
 - (void)removeHostChromeSubview:(UIView *_Nonnull)view;
 
 /**
- * Makes this view transparent to touches in its OWN area, while leaving its
- * children reachable — `pointerEvents: box-none`, asked for by host chrome
- * rather than by a prop.
- *
- * Host chrome is added BEHIND the children it stands for
- * (`addHostChromeSubview:behindSubview:`), so a touch meant for the chrome has
- * to pass through the child drawn in front of it. UIKit's hook for that is
- * `hitTest:` returning nil for self, which is exactly what `BoxNone` already
- * does here; this says so for a view whose author never wrote a prop.
- *
- * It is deliberately NOT `userInteractionEnabled = NO`, which would take the
- * whole subtree with it — a link inside the row would stop working. Only this
- * view's own area is given up.
- *
- * It covers the view's DESCENDANTS too, but only the ones that would do
- * nothing with the touch. A child that draws and no more — a `<Text>` label in
- * a radio row — must not swallow a tap meant for the row, and a child the
- * author gave a handler still gets it. See `-hasTouchHandlers`.
- *
- * Set and cleared in pairs by whoever installed the chrome, so a recycled view
- * never carries it into its next life. See `EXPRadioRunList`.
+ * Makes this view transparent to touches in its own area while leaving its
+ * children reachable: `pointerEvents: box-none` asked for by host chrome behind
+ * the view rather than by a prop. Not `userInteractionEnabled = NO`, which
+ * would take the subtree with it and break a link inside the row. Descendants
+ * that would do nothing with the touch (a `<Text>` label) pass it on too; a
+ * child with a handler still gets it, see `-hasTouchHandlers`. Set and cleared
+ * in pairs by whoever installed the chrome (`EXPRadioRunList`).
  */
 @property (nonatomic, assign) BOOL passesTouchesToHostChrome;
 
 /**
- * Whether this view would DO anything with a touch — i.e. whether its author
- * gave it any handler at all (`events`).
- *
- * Only consulted under `passesTouchesToHostChrome`, and only to decide whether
- * a view is worth interrupting the chrome behind it for. It is the same policy
- * UIKit applies by defaulting `UILabel.userInteractionEnabled` to NO: a thing
- * that only draws is not a thing you can press.
+ * Whether the author gave this view any handler (`events`); consulted under
+ * `passesTouchesToHostChrome` to decide whether the view is worth interrupting
+ * the chrome behind it for, as `UILabel` defaults `userInteractionEnabled` off.
  */
 @property (nonatomic, readonly) BOOL hasTouchHandlers;
 
@@ -185,6 +190,20 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)focus;
 - (void)blur;
 #endif
+
+/**
+ * Rebuild everything about the layer that props decide: its background, its
+ * borders, its corners, its shadow — and its MASK, which this sets to `nil` and
+ * then puts back from the border metrics.
+ *
+ * Declared for subclasses because that last part makes it a hook whether it
+ * meant to be one or not. A component view whose layer wears a mask of its own —
+ * a chat balloon's outline, say — has to re-apply it here, or the mask survives
+ * until the first time UIKit asks the layer to rebuild and then silently goes.
+ * Coming back from the background is one of those times, which is a long way
+ * from any code that looks related.
+ */
+- (void)invalidateLayer NS_REQUIRES_SUPER;
 
 /*
  * This is the label that would be coopted by another element

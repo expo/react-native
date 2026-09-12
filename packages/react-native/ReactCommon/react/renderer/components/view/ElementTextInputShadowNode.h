@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include <react/renderer/components/view/AriaAttributes.h>
 #include <react/renderer/components/view/ConcreteViewShadowNode.h>
 #include <react/renderer/components/view/ElementControlMetrics.h>
 #include <react/renderer/components/view/ElementControlSizeState.h>
@@ -108,6 +109,24 @@ class ElementTextInputEventEmitter : public ViewEventEmitter {
    * its own event rather than folded into `input` because a caret move is not
    * an edit, and conflating them would fire `input` for arrow keys.
    */
+  /**
+   * How tall the control's text is at its current width: what `field-sizing:
+   * content` needs and only the platform's line breaking can know. Reported so
+   * an author can act on it; the element does not resize itself, since HTML
+   * sizes a `<textarea>` from `rows`.
+   */
+  void onElementContentSizeChange(Float width, Float height) const
+  {
+    dispatchEvent("elementContentSizeChange", [width, height](jsi::Runtime &runtime) {
+      auto payload = jsi::Object(runtime);
+      auto size = jsi::Object(runtime);
+      size.setProperty(runtime, "width", width);
+      size.setProperty(runtime, "height", height);
+      payload.setProperty(runtime, "contentSize", std::move(size));
+      return payload;
+    });
+  }
+
   void onElementSelectionChange(int start, int end) const
   {
     dispatchEvent("elementSelectionChange", [start, end](jsi::Runtime &runtime) {
@@ -166,6 +185,10 @@ class ElementTextInputProps final : public ViewProps, public NodeNameProvider {
     // `ElementRangeShadowNode.h`: the backing is a platform control, the
     // component view forwards the element's accessibility to it, and a text
     // field already describes itself as one.
+
+    // Applied last so ARIA wins over the `accessibility*` props, and here
+    // rather than in the base so only elements pay for the reads
+    applyAriaAttributes(context, rawProps, *this);
   }
 
   std::string domNodeName() const override

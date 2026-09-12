@@ -62,6 +62,19 @@ using namespace facebook::react;
 
 const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
 
+/**
+ * Who paints `background-color` — the layer, or something in front of it.
+ *
+ * CSS's paint order is backdrop, background, borders, content. A view's LAYER
+ * draws its background under every subview, so a box whose backdrop is a subview
+ * would paint the two the wrong way round. `EXPElementBoxComponentView`
+ * overrides this to hand the colour to its material instead and answer nil, and
+ * that is the only reason it is a method rather than a local.
+ */
+@interface RCTViewComponentView (EXPBackgroundOwner)
+- (nullable UIColor *)exp_backgroundColorForLayer:(nullable UIColor *)resolved;
+@end
+
 #if !TARGET_OS_TV
 // iOS Full Keyboard Access only focuses a view when it is an accessibility
 // element that also exposes an interactive trait. Views that surface their
@@ -159,6 +172,9 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   NSMutableArray<UIView *> *_reactSubviews;
   NSSet<NSString *> *_Nullable _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN;
   UIView *_containerView;
+
+  /* The glass container's content view while one is holding this element's children. */
+  __weak UIView *_glassChildrenView;
   BOOL _useCustomContainerView;
   NSMutableSet<NSString *> *_accessibilityOrderNativeIDs;
   RCTSwiftUIContainerViewWrapper *_swiftUIWrapper;
@@ -304,13 +320,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 {
   [self rememberHostChromeSubview:view];
   // At the back, so no mounted child is ever covered by a backdrop.
-  [self.currentContainerView insertSubview:view atIndex:0];
+  [self.chromeContainerView insertSubview:view atIndex:0];
 }
 
 - (void)addHostChromeSubview:(UIView *)view behindSubview:(UIView *)sibling
 {
   [self rememberHostChromeSubview:view];
-  UIView *container = self.currentContainerView;
+  UIView *container = self.chromeContainerView;
   if (sibling.superview != container) {
     [container insertSubview:view atIndex:0];
     return;
@@ -324,7 +340,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 - (void)removeHostChromeSubview:(UIView *)view
 {
   [_hostChromeSubviews removeObject:view];
-  if (view.superview == self.currentContainerView) {
+  if (view.superview == self.chromeContainerView) {
     [view removeFromSuperview];
   }
 }
@@ -1761,10 +1777,8 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   return effectiveContentView;
 }
 
-// This UIView is the UIView that holds all subviews. It is sometimes not self
-// because we want to render "overflow ink" that extends beyond the bounds of
-// the view and is not affected by clipping.
-- (UIView *)currentContainerView
+// See the header: the chrome container, told apart from the glass container.
+- (UIView *)chromeContainerView
 {
   UIView *effectiveContentView = self.effectiveContentView;
 
@@ -1903,6 +1917,83 @@ static BOOL RCTGradientHasHighDynamicRangeStop(const BackgroundImage &background
   return NO;
 }
 
+// This UIView is the UIView that holds all subviews. It is sometimes not self
+// because we want to render "overflow ink" that extends beyond the bounds of
+// the view and is not affected by clipping.
+- (UIView *)currentContainerView
+{
+  UIView *container = self.chromeContainerView;
+
+  /*
+   * A glass CONTAINER holds the children rather than sitting behind them.
+   *
+   * Every other material is a backdrop: it goes in at index 0 so the author's
+   * own background and border paint over it, and the children are its
+   * siblings. A container draws nothing of its own — it exists to merge the
+   * glass of whatever is inside it into one shape — so the children belong
+   * inside it, in the effect view's `contentView`.
+   *
+   * Nothing is re-parented individually and no element changes shape. Measured
+   * with a UIKit control group before this was written: a glass button and a
+   * glass effect view each wrapped one level down still merge, so an element
+   * keeps its own view, its own glass and — the part that matters — its own
+   * touches, which are what drive `UIControl`'s glass press.
+   *
+   * The migration is the same shape as `_useCustomContainerView`'s above,
+   * because it is the same problem: children mounted before the container
+   * existed have to move into it, and back out if it goes away.
+   */
+  UIView *glassChildren = [self exp_glassChildContainerView];
+  if (glassChildren != nil) {
+    if (container != glassChildren) {
+      for (UIView *subview in [container.subviews copy]) {
+        // Chrome stays where it is. Moving it in would put the material inside
+        // its own effect view, which is a cycle in the layer tree and an
+        // immediate abort rather than a wrong pixel.
+        if (![_hostChromeSubviews containsObject:subview]) {
+          [glassChildren addSubview:subview];
+        }
+      }
+    }
+    _glassChildrenView = glassChildren;
+    return glassChildren;
+  }
+  if (_glassChildrenView != nil) {
+    // The keyword went away: hand the children back before the view does.
+    for (UIView *subview in [_glassChildrenView.subviews copy]) {
+      [container addSubview:subview];
+    }
+    _glassChildrenView = nil;
+  }
+
+  return container;
+}
+
+/** The default: the layer paints it, which is every box without a backdrop. */
+- (nullable UIColor *)exp_backgroundColorForLayer:(nullable UIColor *)resolved
+{
+  return resolved;
+}
+
+/*
+ * The default for both: no material, so no container to hold children and no
+ * host to tell apart from them. Overridden by the element box, which is the
+ * only component view that has one.
+ */
+- (nullable UIView *)exp_glassChildContainerView
+{
+  return nil;
+}
+
+- (void)exp_setPeekShapeProvider:(__unused UIBezierPath *_Nullable (^_Nullable)(void))provider
+{
+}
+
+- (nullable UIView *)exp_materialHostView
+{
+  return nil;
+}
+
 - (void)invalidateLayer
 {
   CALayer *layer = self.effectiveContentView.layer;
@@ -1979,6 +2070,9 @@ static BOOL RCTGradientHasHighDynamicRangeStop(const BackgroundImage &background
 
   // background color
   UIColor *backgroundColor = [_backgroundColor resolvedColorWithTraitCollection:self.traitCollection];
+  // A box with a backdrop does not paint its own background here — see
+  // `-exp_backgroundColorForLayer:`.
+  backgroundColor = [self exp_backgroundColorForLayer:backgroundColor];
   // The reason we sometimes do not set self.layer's backgroundColor is because
   // we want to support non-uniform border radii, which apple does not natively
   // support. To get this behavior we need to create a CGPath in the shape that
