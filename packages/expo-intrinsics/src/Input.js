@@ -13,6 +13,7 @@ import type {LabelableProps} from './Label';
 import type {AutocorrectValue} from './TextCorrection';
 
 import {authorStatesSurface, buttonProminence} from './Button';
+import {useControlHandle} from './controlHandle';
 import FormContext, {useFormControl} from './FormContext';
 import {useControlLabel, useLabelActivation} from './Label';
 import {useAutocorrect, useSpellcheck} from './TextCorrection';
@@ -135,10 +136,30 @@ type InputProps = {
   onChange?: (event: $FlowFixMe) => unknown,
   onClick?: (event: $FlowFixMe) => unknown,
   children?: React.Node,
+  /**
+   * A handle with `focus()` and `blur()`, as `HTMLInputElement` has.
+   *
+   * An ordinary prop rather than `forwardRef`: the intrinsics seam resolves a
+   * tag to a component and the renderer tags that fiber as a *function*
+   * component, so a `forwardRef` object would be called as a function and the
+   * render dies with "Object is not a function". React 19 makes `ref` a plain
+   * prop, which is what fits.
+   */
+  ref?: React.RefSetter<InputInstance>,
+  ...
+};
+
+/**
+ * What a ref to an `<input>` gives you: the two methods the DOM has.
+ */
+export type InputInstance = {
+  focus: () => void,
+  blur: () => void,
   ...
 };
 
 function Input(props: InputProps): React.Node {
+  const hostRef = React.useRef<$FlowFixMe>(null);
   // `key` is pulled out only so Flow knows the spread below cannot carry one;
   // React never puts it in props, so this is a no-op at runtime.
   const {
@@ -153,6 +174,11 @@ function Input(props: InputProps): React.Node {
     // against the tree first, by its own algorithm. See TextCorrection.js.
     spellCheck,
     autoCorrect,
+    // Pulled out so the spread below cannot carry it. React 19 makes `ref` an
+    // ordinary prop, so leaving it in `rest` means `{...rest}` overwrites the
+    // ref this component attaches — silently, with the caller's own (usually
+    // undefined). That is exactly what happened the first time.
+    ref,
     ...rest
   } = props;
   /*
@@ -401,6 +427,8 @@ function Input(props: InputProps): React.Node {
       : BUTTON_TYPES[type]
     : null;
 
+  useControlHandle(ref, hostRef);
+
   return (
     /* The key rides on a fragment rather than on the element itself.
        Remounting the fragment remounts what it contains, so the native view is
@@ -410,6 +438,7 @@ function Input(props: InputProps): React.Node {
       {/* $FlowFixMe[prop-missing] intrinsic */}
       <element-input
         {...rest}
+        ref={hostRef}
         accessibilityLabel={accessibilityLabel}
         nodeName="input"
         type={type}

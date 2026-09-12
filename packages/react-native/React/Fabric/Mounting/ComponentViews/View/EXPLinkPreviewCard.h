@@ -11,7 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  * The card a link's context menu morphs into: `LPLinkView`, the platform's own
- * link preview, and the same one Messages and Notes draw.
+ * link preview, and the same one the system's own apps draw.
  *
  * A context menu morphs its lift into whatever it is presenting rather than
  * appearing beside it, so the lift needs a destination. Without one, a chip the

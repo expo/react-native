@@ -12,6 +12,7 @@
 #include <react/renderer/components/view/ConcreteViewShadowNode.h>
 #include <react/renderer/core/CancelableEventDecision.h>
 #include <react/renderer/components/view/ViewEventEmitter.h>
+#include <react/renderer/components/view/AriaAttributes.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -126,6 +127,28 @@ class ElementTextInputEventEmitter : public ViewEventEmitter {
    * its own event rather than folded into `input` because a caret move is not
    * an edit, and conflating them would fire `input` for arrow keys.
    */
+  /**
+   * How tall the control's text actually is, at its current width.
+   *
+   * The one thing a controlled component cannot work out for itself. A
+   * `<textarea>`'s height comes from `rows`, which is HTML's rule and right for
+   * a plain one — but a composer grows with what is typed, which CSS spells
+   * `field-sizing: content` and which needs the WRAPPED height. That depends on
+   * the font, the available width and the platform's own line breaking, so it
+   * is knowable only where the text is laid out. Reported so an author can act
+   * on it; the element does not resize itself, because HTML says it should not.
+   */
+  void onElementContentSizeChange(Float width, Float height) const {
+    dispatchEvent("elementContentSizeChange", [width, height](jsi::Runtime& runtime) {
+      auto payload = jsi::Object(runtime);
+      auto size = jsi::Object(runtime);
+      size.setProperty(runtime, "width", width);
+      size.setProperty(runtime, "height", height);
+      payload.setProperty(runtime, "contentSize", std::move(size));
+      return payload;
+    });
+  }
+
   void onElementSelectionChange(int start, int end) const {
     dispatchEvent("elementSelectionChange", [start, end](jsi::Runtime& runtime) {
       auto payload = jsi::Object(runtime);
@@ -184,6 +207,11 @@ class ElementTextInputProps final : public ViewProps, public NodeNameProvider {
     // `ElementRangeShadowNode.h`: the backing is a platform control, the
     // component view forwards the element's accessibility to it, and a text
     // field already describes itself as one.
+
+    // ARIA, which is how an author of these elements spells accessibility.
+    // Applied last so it wins over the `accessibility*` props, and applied
+    // here rather than in the base so only elements pay for the reads.
+    applyAriaAttributes(context, rawProps, *this);
   }
 
   std::string domNodeName() const override

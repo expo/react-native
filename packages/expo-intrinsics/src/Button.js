@@ -9,7 +9,9 @@
  */
 
 import FormContext from './FormContext';
+import {splitMenu} from './menuChildren';
 import * as React from 'react';
+import {Platform} from 'react-native';
 
 /**
  * `<button>` — the box, plus the thing everyone forgets: inside a form, a
@@ -32,6 +34,13 @@ type ButtonProps = {
   onClick?: (event: $FlowFixMe) => unknown,
   onPressChange?: (event: $FlowFixMe) => unknown,
   style?: $FlowFixMe,
+  /*
+   * `-apple-visual-effect`, read here rather than only passed through: a stated
+   * material decides whether the platform's chrome is kept, so this component
+   * has to see it. Declared because an inexact object's rest cannot be read for
+   * a property the type does not mention.
+   */
+  appleVisualEffect?: string,
   ...
 };
 
@@ -41,9 +50,30 @@ function Button({
   onClick,
   style,
   onPressChange,
+  appleVisualEffect,
   ...rest
 }: ButtonProps): React.Node {
   const form = React.useContext(FormContext);
+  const {content, commands} = React.useMemo(
+    () => splitMenu(children),
+    [children],
+  );
+
+  /*
+   * A chosen command is dispatched to the command's OWN `onClick`.
+   *
+   * Which keeps the markup saying what it means: each `<button>` inside the
+   * `<menu>` carries its own handler, the way it would anywhere else, rather
+   * than the parent switching on an identifier.
+   */
+  const handleCommand = React.useCallback(
+    (event: $FlowFixMe) => {
+      const id = event?.nativeEvent?.id;
+      const command = commands.find(candidate => candidate.id === id);
+      command?.onClick?.(event);
+    },
+    [commands],
+  );
 
   /*
    * The press is REPORTED here and DRAWN natively, and those are deliberately
@@ -102,14 +132,37 @@ function Button({
     // $FlowFixMe[prop-missing] intrinsic
     <element-button-box
       {...rest}
+      /* Destructured above so it can be READ, so it has to be put back. */
+      appleVisualEffect={appleVisualEffect}
       nodeName="button"
       type={type}
       buttonStyle={buttonProminence(type, form != null)}
-      hasAuthorChrome={authorStatesSurface(style)}
+      /*
+       * Asking for a MATERIAL is asking for the platform's surface, not for
+       * permission to draw your own.
+       *
+       * `borderRadius` counts as claiming the surface — reasonably, since an
+       * author who rounds a button usually means to paint it. But a round GLASS
+       * button states both: the radius shapes the platform's glass rather than
+       * replacing it, and reading the radius as a claim would withdraw the very
+       * chrome the material asked for. So a stated material wins.
+       *
+       * Only where there IS one. `-apple-visual-effect` selects a UIKit
+       * material and means nothing anywhere else, so off iOS the author's own
+       * box is all there is to go on — otherwise a button styled for glass
+       * wears Material's chrome instead of the surface its style describes,
+       * drawn to Material's size rather than the author's.
+       */
+      hasAuthorChrome={
+        (Platform.OS !== 'ios' || appleVisualEffect == null) &&
+        authorStatesSurface(style)
+      }
       style={style}
       onPressChange={handlePressChange}
+      onCommand={handleCommand}
+      menuCommands={commands.length > 0 ? commands : undefined}
       onClick={handleClick}>
-      {children}
+      {content}
     </element-button-box>
   );
 }

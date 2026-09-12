@@ -165,8 +165,8 @@
    * `UITargetedPreview` hides the view it is handed, for as long as the
    * interaction lasts. Handed the link itself it took the words out of the
    * sentence — unnoticed while the chip sat over them, and a hole in the page
-   * the moment the preview card was dragged aside. Press a link in Messages or
-   * Safari, drag the card away, and the link is still there.
+   * the moment the preview card was dragged aside. Press a link in Safari or
+   * Mail, drag the card away, and the link is still there.
    *
    * So UIKit is handed a picture instead, standing exactly over the link. What
    * it hides is the picture, which changes nothing on screen, and the link keeps

@@ -11,11 +11,13 @@
 
 #include <react/renderer/components/view/ConcreteViewShadowNode.h>
 #include <react/renderer/components/view/ElementTextInputShadowNode.h>
+#include <react/renderer/components/view/AriaAttributes.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/graphics/Color.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -63,11 +65,22 @@ class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
         // cannot know the line height the element ends up with.
         rows(convertRawProp(context, rawProps, "rows", sourceProps.rows, 2)),
         mostRecentEventCount(
-            convertRawProp(context, rawProps, "mostRecentEventCount", sourceProps.mostRecentEventCount, 0))
+            convertRawProp(context, rawProps, "mostRecentEventCount", sourceProps.mostRecentEventCount, 0)),
+        // CSS's `caret-color`, which is a real property and was not expressible
+        // at all: iOS draws the insertion point in the control's `tintColor`,
+        // which it inherits, so a composer got whatever the window's tint
+        // happened to be. Measured against the native composer, whose caret is
+        // its own #0088FF: ours came out (66,107,242), a different hue entirely.
+        caretColor(convertRawProp(context, rawProps, "caretColor", sourceProps.caretColor, SharedColor{}))
   {
     // No user-agent accessibility defaults; the control describes itself. See
     // `ElementRangeShadowNode.h` for why that is the rule for control-backed
     // elements.
+
+    // ARIA, which is how an author of these elements spells accessibility.
+    // Applied last so it wins over the `accessibility*` props, and applied
+    // here rather than in the base so only elements pay for the reads.
+    applyAriaAttributes(context, rawProps, *this);
   }
 
   std::string domNodeName() const override
@@ -88,6 +101,18 @@ class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
   bool autoCorrect{true};
   int rows{2};
   int mostRecentEventCount{0};
+  /*
+   * CSS `caret-color`: the insertion point's colour. Unset leaves the
+   * platform's.
+   *
+   * LAST, matching the initialiser list, and that is not tidiness: C++
+   * initialises members in DECLARATION order whatever the list says, so a list
+   * in a different order is a lie about when each value exists. Declared at the
+   * top when it was added, which made this the one member initialised first —
+   * `-Wreorder-ctor` is an error under Fantom's build and invisible under
+   * Xcode's, so it compiled for iOS and broke the tester.
+   */
+  SharedColor caretColor{};
 };
 
 using ElementTextAreaShadowNode = ConcreteViewShadowNode<
