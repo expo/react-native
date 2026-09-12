@@ -543,6 +543,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public Float uaFontSizeEm;
   public Float uaMarginBlockEm;
   public Float uaMarginBlockRem;
+  public bool backgroundAttachmentFixed;
   public bool collapsable;
   public bool collapsableChildren;
   public bool computeHasInheritedTextProps() const;
