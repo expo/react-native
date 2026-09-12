@@ -174,6 +174,26 @@ class RCTAnimationChoreographer : public AnimationChoreographer {
     if (_animationDisplayLink == nil) {
       _animationDisplayLink = [CADisplayLink displayLinkWithTarget:_displayLinkTarget
                                                           selector:@selector(displayLinkTick:)];
+      /*
+       * At the DISPLAY's rate, not the default one.
+       *
+       * Left to itself a display link runs at 60 on a ProMotion screen even with
+       * `CADisableMinimumFrameDurationOnPhone` set — measured in this app, where
+       * the scroll view's own rise link had to ask explicitly for the same
+       * reason: its offset stepped every OTHER frame of a keyboard rise sampled
+       * at 120 and the transcript juddered at half the rate of the keys it was
+       * following.
+       *
+       * This link drives the CSS transition engine. Unasked, transitions step at
+       * 60 while a rise, a keyboard and a finger all move at 120 — so a send
+       * animates its rows on one clock and scrolls the column on another, and
+       * the two only agree every second frame. That is invisible on a 60Hz
+       * simulator, which is where it hid.
+       */
+      const float rate = (float)UIScreen.mainScreen.maximumFramesPerSecond;
+      if (rate > 0) {
+        _animationDisplayLink.preferredFrameRateRange = CAFrameRateRangeMake(rate / 2, rate, rate);
+      }
       [_animationDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
     }
     [_animationDisplayLink setPaused:NO];
