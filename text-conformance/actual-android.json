@@ -61,212 +61,6 @@
       "height": 40
     }
   },
-  "text-align-inherits-into-a-nested-block": {
-    "inlineBox": {
-      "x": 260.57,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "nested": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "rtl-inline-run-starts-at-the-right-edge": {
-    "first": {
-      "x": 200.38,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "second": {
-      "x": 240.38,
-      "y": 0,
-      "width": 60.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "vertical-align-does-not-move-a-block-child": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "b": {
-      "x": 0,
-      "y": 20.19,
-      "width": 100.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    }
-  },
-  "margins-collapse-through-a-contents-wrapper": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "inner": {
-      "x": 0,
-      "y": 49.9,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 70.1
-    }
-  },
-  "an-rtl-float-is-inset-by-the-containers-padding": {
-    "floated": {
-      "x": 174.86,
-      "y": 0,
-      "width": 100.19,
-      "height": 30.1
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 30.1
-    }
-  },
-  "PROBE-text-align-center-centres-the-line": {
-    "a": {
-      "x": 100.19,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "b": {
-      "x": 140.19,
-      "y": 0,
-      "width": 60.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "margins-collapse-through-several-empty-siblings": {
-    "first": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 19.81
-    },
-    "last": {
-      "x": 0,
-      "y": 44.95,
-      "width": 100.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 64.76
-    }
-  },
-  "an-absolute-box-does-not-collapse-margins-with-its-siblings": {
-    "first": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "abs": {
-      "x": 0,
-      "y": 150.1,
-      "width": 40,
-      "height": 19.81
-    },
-    "after": {
-      "x": 0,
-      "y": 49.9,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "holder": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 70.1
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 70.1
-    }
-  },
-  "PROBE-text-align-right-packs-to-the-end": {
-    "a": {
-      "x": 200.38,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "b": {
-      "x": 240.38,
-      "y": 0,
-      "width": 60.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "float-margins-never-collapse": {
-    "f1": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "f2": {
-      "x": 0,
-      "y": 70.1,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 89.9
-    }
-  },
   "padding-stops-the-parent-child-collapse": {
     "child": {
       "x": 0,
@@ -301,46 +95,6 @@
       "height": 29.71
     }
   },
-  "a-border-reduces-the-content-box-under-border-box": {
-    "inner": {
-      "x": 14.86,
-      "y": 0,
-      "width": 170.29,
-      "height": 19.81
-    },
-    "outer": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    }
-  },
-  "a-block-container-ignores-gap": {
-    "first": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "second": {
-      "x": 0,
-      "y": 20.19,
-      "width": 100.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    }
-  },
   "clear-left-ignores-a-right-float": {
     "right": {
       "x": 220.19,
@@ -359,34 +113,6 @@
       "y": 0,
       "width": 300.19,
       "height": 50.29
-    }
-  },
-  "content-box-percentage-padding-resolves-against-the-width": {
-    "padded": {
-      "x": 0,
-      "y": 0,
-      "width": 129.9,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "percentage-margin-resolves-against-the-width": {
-    "shifted": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
     }
   },
   "a-negative-top-margin-pulls-the-box-up": {
@@ -435,46 +161,6 @@
       "height": 20.19
     }
   },
-  "a-percentage-height-against-an-auto-height-parent-is-auto": {
-    "child": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 0
-    },
-    "parent": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 0
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 0
-    }
-  },
-  "a-percentage-height-against-a-definite-parent-applies": {
-    "child": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    },
-    "parent": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 80
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 80
-    }
-  },
   "a-float-with-auto-width-shrinks-to-the-available-space": {
     "c1": {
       "x": 0,
@@ -507,38 +193,24 @@
       "height": 40.38
     }
   },
-  "a-percentage-height-resolves-against-the-content-box": {
-    "child": {
-      "x": 0,
-      "y": 9.9,
-      "width": 300.19,
-      "height": 40
+  "text-align-inherits-into-a-nested-block": {
+    "inlineBox": {
+      "x": 260.57,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
     },
-    "parent": {
+    "nested": {
       "x": 0,
       "y": 0,
       "width": 300.19,
-      "height": 100.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 100.19
-    }
-  },
-  "a-negative-inline-margin-pulls-a-block-out": {
-    "pulled": {
-      "x": -19.81,
-      "y": 0,
-      "width": 99.81,
-      "height": 19.81
+      "height": 20.19
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 300.19,
-      "height": 19.81
+      "height": 20.19
     }
   },
   "adjacent-siblings-collapse-to-the-larger": {
@@ -593,58 +265,6 @@
       "height": 40
     }
   },
-  "a-max-width-clamps-against-a-percentage-margin": {
-    "clamped": {
-      "x": 20.19,
-      "y": 0,
-      "width": 149.71,
-      "height": 20.19
-    },
-    "container": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 20.19
-    },
-    "looseParent": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "a-max-height-clamps-against-a-percentage-margin": {
-    "clamped": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 100.19
-    },
-    "container": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 200
-    },
-    "looseParent": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 200
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 200
-    }
-  },
   "clear-drops-below-the-float": {
     "floated": {
       "x": 0,
@@ -663,124 +283,6 @@
       "y": 0,
       "width": 300.19,
       "height": 59.81
-    }
-  },
-  "min-width-beats-max-width-when-they-conflict": {
-    "conflicted": {
-      "x": 0,
-      "y": 0,
-      "width": 180.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "min-width-under-border-box-includes-the-padding": {
-    "inner": {
-      "x": 20.19,
-      "y": 0,
-      "width": 80,
-      "height": 9.9
-    },
-    "clamped": {
-      "x": 0,
-      "y": 0,
-      "width": 120,
-      "height": 29.71
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 29.71
-    }
-  },
-  "atomic-inlines-wrap": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "b": {
-      "x": 100.19,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "c": {
-      "x": 200.38,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "d": {
-      "x": 0,
-      "y": 20.19,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40.38
-    }
-  },
-  "atomic-inlines-in-a-row": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "b": {
-      "x": 40,
-      "y": 0,
-      "width": 60.19,
-      "height": 20.19
-    },
-    "c": {
-      "x": 100.19,
-      "y": 0,
-      "width": 30.1,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "overflow-hidden-stops-a-margin-collapsing-through": {
-    "child": {
-      "x": 0,
-      "y": 30.1,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "context": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 49.9
-    },
-    "after": {
-      "x": 0,
-      "y": 49.91,
-      "width": 100.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 69.71
     }
   },
   "a-border-stops-the-parent-child-collapse": {
@@ -853,336 +355,6 @@
       "height": 40.38
     }
   },
-  "PROBE-percentage-width-resolves-against-the-container": {
-    "half": {
-      "x": 0,
-      "y": 0,
-      "width": 150.1,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    }
-  },
-  "overflow-hidden-inline-block-aligns-by-its-bottom-margin-edge": {
-    "plain": {
-      "x": 0,
-      "y": 24.38,
-      "width": 40,
-      "height": 40
-    },
-    "clipped": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 40
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 64.38
-    }
-  },
-  "em-and-rem-differ-on-the-same-element": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 19.81
-    },
-    "viaRem": {
-      "x": 0,
-      "y": 36.19,
-      "width": 40,
-      "height": 20.19
-    },
-    "gap": {
-      "x": 0,
-      "y": 72,
-      "width": 40,
-      "height": 19.81
-    },
-    "viaEm": {
-      "x": 0,
-      "y": 156.19,
-      "width": 40,
-      "height": 20.19
-    },
-    "after": {
-      "x": 0,
-      "y": 240,
-      "width": 40,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 259.81
-    }
-  },
-  "rem-margin-is-one-size-for-the-whole-tree": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "small": {
-      "x": 0,
-      "y": 36.19,
-      "width": 40,
-      "height": 19.81
-    },
-    "gap": {
-      "x": 0,
-      "y": 72,
-      "width": 40,
-      "height": 20.19
-    },
-    "large": {
-      "x": 0,
-      "y": 108.19,
-      "width": 40,
-      "height": 19.81
-    },
-    "after": {
-      "x": 0,
-      "y": 144,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 164.19
-    }
-  },
-  "em-margin-scales-with-the-inherited-size": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 19.81
-    },
-    "measured": {
-      "x": 0,
-      "y": 60.19,
-      "width": 40,
-      "height": 20.19
-    },
-    "after": {
-      "x": 0,
-      "y": 120,
-      "width": 40,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 139.81
-    }
-  },
-  "em-margin-follows-a-size-stated-in-em": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 19.81
-    },
-    "measured": {
-      "x": 0,
-      "y": 49.9,
-      "width": 40,
-      "height": 19.81
-    },
-    "after": {
-      "x": 0,
-      "y": 100.19,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 120
-    }
-  },
-  "em-margin-ignores-the-inherited-size": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "measured": {
-      "x": 0,
-      "y": 40,
-      "width": 40,
-      "height": 20.19
-    },
-    "after": {
-      "x": 0,
-      "y": 80,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 100.19
-    }
-  },
-  "min-width-under-content-box-excludes-the-padding": {
-    "inner": {
-      "x": 20.19,
-      "y": 0,
-      "width": 120,
-      "height": 10.29
-    },
-    "clamped": {
-      "x": 0,
-      "y": 0,
-      "width": 160,
-      "height": 30.1
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 30.1
-    }
-  },
-  "border-box-includes-the-border-in-the-width": {
-    "inner": {
-      "x": 20.19,
-      "y": 0,
-      "width": 160,
-      "height": 19.81
-    },
-    "outer": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    }
-  },
-  "percentage-padding-resolves-against-the-width": {
-    "padded": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 30.1
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 30.1
-    }
-  },
-  "aspect-ratio-sizes-the-width-from-a-definite-height": {
-    "ratio": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "wrapper": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "aspect-ratio-sizes-the-axis-that-is-auto": {
-    "ratio": {
-      "x": 0,
-      "y": 0,
-      "width": 120,
-      "height": 40
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    }
-  },
-  "max-height-caps-a-taller-box": {
-    "capped": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 40
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    }
-  },
-  "min-height-clamps-a-shorter-box": {
-    "clamped": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 49.9
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 49.9
-    }
-  },
-  "a-max-height-does-not-move-the-children": {
-    "first": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "second": {
-      "x": 0,
-      "y": 20.19,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "capped": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 30.1
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 30.1
-    }
-  },
   "a-plain-block-does-not-contain-its-floats": {
     "floated": {
       "x": 0,
@@ -1209,38 +381,44 @@
       "height": 40
     }
   },
-  "an-auto-width-beats-auto-margins": {
-    "filled": {
-      "x": 0,
+  "rtl-inline-run-starts-at-the-right-edge": {
+    "first": {
+      "x": 200.38,
       "y": 0,
-      "width": 300.19,
-      "height": 19.81
+      "width": 40,
+      "height": 20.19
+    },
+    "second": {
+      "x": 240.38,
+      "y": 0,
+      "width": 60.19,
+      "height": 20.19
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 300.19,
-      "height": 19.81
+      "height": 20.19
     }
   },
-  "a-percentage-width-resolves-against-the-content-box": {
-    "half": {
-      "x": 20.19,
-      "y": 0,
-      "width": 80,
-      "height": 20.19
-    },
-    "padded": {
+  "vertical-align-does-not-move-a-block-child": {
+    "a": {
       "x": 0,
       "y": 0,
-      "width": 200,
+      "width": 100.19,
       "height": 20.19
+    },
+    "b": {
+      "x": 0,
+      "y": 20.19,
+      "width": 100.19,
+      "height": 19.81
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 300.19,
-      "height": 20.19
+      "height": 40
     }
   },
   "an-empty-block-collapses-through": {
@@ -1293,46 +471,6 @@
       "y": 0,
       "width": 300.19,
       "height": 60.19
-    }
-  },
-  "a-min-height-stops-a-block-collapsing-through": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "empty": {
-      "x": 0,
-      "y": 40,
-      "width": 300.19,
-      "height": 9.9
-    },
-    "after": {
-      "x": 0,
-      "y": 70.1,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 89.9
-    }
-  },
-  "min-width-clamps-a-narrower-box": {
-    "clamped": {
-      "x": 0,
-      "y": 0,
-      "width": 120,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
     }
   },
   "floating-an-inline-blockifies-it": {
@@ -1427,6 +565,26 @@
       "height": 59.81
     }
   },
+  "margins-collapse-through-a-contents-wrapper": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "inner": {
+      "x": 0,
+      "y": 49.9,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 70.1
+    }
+  },
   "margin-collapses-out-of-a-block-containers-bottom-edge": {
     "before": {
       "x": 0,
@@ -1473,32 +631,6 @@
       "height": 60.19
     }
   },
-  "em-margin-resolves-against-the-elements-own-size": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 19.81
-    },
-    "measured": {
-      "x": 0,
-      "y": 40,
-      "width": 40,
-      "height": 19.81
-    },
-    "after": {
-      "x": 0,
-      "y": 80,
-      "width": 40,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 99.81
-    }
-  },
   "relative-percentage-offset-resolves-against-the-container": {
     "shifted": {
       "x": 30.1,
@@ -1533,99 +665,31 @@
       "height": 40
     }
   },
-  "a-relative-box-given-both-left-and-right-uses-left": {
-    "shifted": {
-      "x": 30.1,
-      "y": 0,
-      "width": 99.81,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    }
-  },
-  "a-percentage-min-width-resolves-against-the-container": {
-    "clamped": {
-      "x": 0,
-      "y": 0,
-      "width": 120,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "nested-percentage-widths-compound": {
-    "inner": {
-      "x": 0,
-      "y": 0,
-      "width": 75.05,
-      "height": 19.81
-    },
-    "outer": {
-      "x": 0,
-      "y": 0,
-      "width": 150.1,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    }
-  },
-  "a-percentage-top-offset-resolves-against-the-container-height": {
-    "shifted": {
-      "x": 0,
-      "y": 25.14,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "holder": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 100.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 100.19
-    }
-  },
-  "a-percentage-min-height-against-an-auto-parent-does-not-apply": {
-    "child": {
-      "x": 0,
+  "an-rtl-float-is-inset-by-the-containers-padding": {
+    "floated": {
+      "x": 174.86,
       "y": 0,
       "width": 100.19,
-      "height": 19.81
-    },
-    "parent": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
+      "height": 30.1
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 300.19,
-      "height": 19.81
+      "height": 30.1
     }
   },
-  "one-auto-inline-margin-takes-all-the-leftover": {
-    "pushed": {
+  "PROBE-text-align-center-centres-the-line": {
+    "a": {
       "x": 100.19,
       "y": 0,
-      "width": 200,
+      "width": 40,
+      "height": 20.19
+    },
+    "b": {
+      "x": 140.19,
+      "y": 0,
+      "width": 60.19,
       "height": 20.19
     },
     "root": {
@@ -1635,38 +699,24 @@
       "height": 20.19
     }
   },
-  "auto-inline-margins-centre-a-block": {
-    "centred": {
-      "x": 49.9,
-      "y": 0,
-      "width": 200,
-      "height": 19.81
-    },
-    "root": {
+  "margins-collapse-through-several-empty-siblings": {
+    "first": {
       "x": 0,
       "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    }
-  },
-  "a-relative-box-given-both-top-and-bottom-uses-top": {
-    "shifted": {
-      "x": 0,
-      "y": 14.86,
       "width": 100.19,
       "height": 19.81
     },
-    "after": {
+    "last": {
       "x": 0,
-      "y": 20.19,
-      "width": 300.19,
+      "y": 44.95,
+      "width": 100.19,
       "height": 19.81
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 300.19,
-      "height": 40
+      "height": 64.76
     }
   },
   "clear-both-drops-below-floats-on-both-sides": {
@@ -1695,198 +745,6 @@
       "height": 70.1
     }
   },
-  "PROBE-display-contents-child-joins-the-parent-flow": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "inner": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "after": {
-      "x": 80,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "absolute-child-among-inline-content": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "b": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "relative-offset-does-not-move-the-next-box": {
-    "shifted": {
-      "x": 30.1,
-      "y": 9.9,
-      "width": 99.81,
-      "height": 19.81
-    },
-    "after": {
-      "x": 0,
-      "y": 20.19,
-      "width": 100.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    }
-  },
-  "an-absolute-child-positions-from-the-padding-box": {
-    "abs": {
-      "x": 4.95,
-      "y": 4.95,
-      "width": 40,
-      "height": 19.81
-    },
-    "holder": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 60.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 60.19
-    }
-  },
-  "opposite-offsets-size-an-auto-width-absolute-box": {
-    "abs": {
-      "x": 20.19,
-      "y": 0,
-      "width": 229.71,
-      "height": 19.81
-    },
-    "holder": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 59.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 59.81
-    }
-  },
-  "an-absolute-child-offsets-from-the-bottom-and-right": {
-    "abs": {
-      "x": 254.86,
-      "y": 75.05,
-      "width": 40,
-      "height": 20.19
-    },
-    "holder": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 100.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 100.19
-    }
-  },
-  "PROBE-max-width-caps-a-block": {
-    "capped": {
-      "x": 0,
-      "y": 0,
-      "width": 120,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "a-definite-height-stops-the-bottom-margin-collapsing-out": {
-    "child": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "parent": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 59.81
-    },
-    "after": {
-      "x": 0,
-      "y": 60.19,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 80
-    }
-  },
-  "an-absolute-child-with-no-offsets-sits-at-its-static-position": {
-    "first": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 30.1
-    },
-    "abs": {
-      "x": 0,
-      "y": 30.1,
-      "width": 40,
-      "height": 19.81
-    },
-    "holder": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 99.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 99.81
-    }
-  },
   "a-float-with-padding-and-border-takes-its-whole-box": {
     "floated": {
       "x": 0,
@@ -1907,6 +765,38 @@
       "height": 19.81
     }
   },
+  "an-absolute-box-does-not-collapse-margins-with-its-siblings": {
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "abs": {
+      "x": 0,
+      "y": 150.1,
+      "width": 40,
+      "height": 19.81
+    },
+    "after": {
+      "x": 0,
+      "y": 49.9,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 70.1
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 70.1
+    }
+  },
   "a-percentage-width-float-resolves-against-the-container": {
     "floated": {
       "x": 0,
@@ -1919,38 +809,6 @@
       "y": 0,
       "width": 300.19,
       "height": 20.19
-    }
-  },
-  "an-absolute-child-does-not-take-space-in-the-flow": {
-    "first": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "abs": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 90.29
-    },
-    "after": {
-      "x": 0,
-      "y": 20.19,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "holder": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
     }
   },
   "opposite-floats-share-one-line": {
@@ -1973,57 +831,51 @@
       "height": 19.81
     }
   },
+  "PROBE-text-align-right-packs-to-the-end": {
+    "a": {
+      "x": 200.38,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "b": {
+      "x": 240.38,
+      "y": 0,
+      "width": 60.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "float-margins-never-collapse": {
+    "f1": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "f2": {
+      "x": 0,
+      "y": 70.1,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 89.9
+    }
+  },
   "auto-margins-do-not-centre-a-float": {
     "floated": {
       "x": 0,
       "y": 0,
       "width": 100.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "contents-with-block-children-stacks-them-in-the-outer-flow": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "first": {
-      "x": 0,
-      "y": 20.19,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "second": {
-      "x": 0,
-      "y": 40.38,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 60.19
-    }
-  },
-  "PROBE-border-box-keeps-padding-inside-the-width": {
-    "inner": {
-      "x": 30.1,
-      "y": 0,
-      "width": 139.81,
-      "height": 20.19
-    },
-    "outer": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
       "height": 20.19
     },
     "root": {
@@ -2101,6 +953,902 @@
       "height": 30.1
     }
   },
+  "a-relative-box-given-both-left-and-right-uses-left": {
+    "shifted": {
+      "x": 30.1,
+      "y": 0,
+      "width": 99.81,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "a-relative-box-given-both-top-and-bottom-uses-top": {
+    "shifted": {
+      "x": 0,
+      "y": 14.86,
+      "width": 100.19,
+      "height": 19.81
+    },
+    "after": {
+      "x": 0,
+      "y": 20.19,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    }
+  },
+  "an-absolute-child-positions-from-the-padding-box": {
+    "abs": {
+      "x": 4.95,
+      "y": 4.95,
+      "width": 40,
+      "height": 19.81
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 60.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 60.19
+    }
+  },
+  "an-absolute-child-with-no-offsets-sits-at-its-static-position": {
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 30.1
+    },
+    "abs": {
+      "x": 0,
+      "y": 30.1,
+      "width": 40,
+      "height": 19.81
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 99.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 99.81
+    }
+  },
+  "an-absolute-child-offsets-from-the-bottom-and-right": {
+    "abs": {
+      "x": 254.86,
+      "y": 75.05,
+      "width": 40,
+      "height": 20.19
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 100.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 100.19
+    }
+  },
+  "opposite-offsets-size-an-auto-width-absolute-box": {
+    "abs": {
+      "x": 20.19,
+      "y": 0,
+      "width": 229.71,
+      "height": 19.81
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 59.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 59.81
+    }
+  },
+  "an-absolute-child-does-not-take-space-in-the-flow": {
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "abs": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 90.29
+    },
+    "after": {
+      "x": 0,
+      "y": 20.19,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    }
+  },
+  "relative-offset-does-not-move-the-next-box": {
+    "shifted": {
+      "x": 30.1,
+      "y": 9.9,
+      "width": 99.81,
+      "height": 19.81
+    },
+    "after": {
+      "x": 0,
+      "y": 20.19,
+      "width": 100.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    }
+  },
+  "absolute-child-among-inline-content": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "b": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "PROBE-display-contents-child-joins-the-parent-flow": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "after": {
+      "x": 80,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "contents-with-block-children-stacks-them-in-the-outer-flow": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "first": {
+      "x": 0,
+      "y": 20.19,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "second": {
+      "x": 0,
+      "y": 40.38,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 60.19
+    }
+  },
+  "a-border-reduces-the-content-box-under-border-box": {
+    "inner": {
+      "x": 14.86,
+      "y": 0,
+      "width": 170.29,
+      "height": 19.81
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "a-percentage-width-resolves-against-the-content-box": {
+    "half": {
+      "x": 20.19,
+      "y": 0,
+      "width": 80,
+      "height": 20.19
+    },
+    "padded": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "a-block-container-ignores-gap": {
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "second": {
+      "x": 0,
+      "y": 20.19,
+      "width": 100.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    }
+  },
+  "content-box-percentage-padding-resolves-against-the-width": {
+    "padded": {
+      "x": 0,
+      "y": 0,
+      "width": 129.9,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "percentage-margin-resolves-against-the-width": {
+    "shifted": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "min-width-under-border-box-includes-the-padding": {
+    "inner": {
+      "x": 20.19,
+      "y": 0,
+      "width": 80,
+      "height": 9.9
+    },
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 29.71
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 29.71
+    }
+  },
+  "a-percentage-height-against-an-auto-height-parent-is-auto": {
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 0
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 0
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 0
+    }
+  },
+  "a-percentage-height-against-a-definite-parent-applies": {
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 80
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 80
+    }
+  },
+  "a-percentage-height-resolves-against-the-content-box": {
+    "child": {
+      "x": 0,
+      "y": 9.9,
+      "width": 300.19,
+      "height": 40
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 100.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 100.19
+    }
+  },
+  "a-negative-inline-margin-pulls-a-block-out": {
+    "pulled": {
+      "x": -19.81,
+      "y": 0,
+      "width": 99.81,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "a-max-width-clamps-against-a-percentage-margin": {
+    "clamped": {
+      "x": 20.19,
+      "y": 0,
+      "width": 149.71,
+      "height": 20.19
+    },
+    "container": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20.19
+    },
+    "looseParent": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "a-max-height-clamps-against-a-percentage-margin": {
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 100.19
+    },
+    "container": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 200
+    },
+    "looseParent": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 200
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 200
+    }
+  },
+  "min-width-beats-max-width-when-they-conflict": {
+    "conflicted": {
+      "x": 0,
+      "y": 0,
+      "width": 180.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "min-width-under-content-box-excludes-the-padding": {
+    "inner": {
+      "x": 20.19,
+      "y": 0,
+      "width": 120,
+      "height": 10.29
+    },
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 160,
+      "height": 30.1
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 30.1
+    }
+  },
+  "a-max-height-does-not-move-the-children": {
+    "first": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "second": {
+      "x": 0,
+      "y": 20.19,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "capped": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 30.1
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 30.1
+    }
+  },
+  "an-auto-width-beats-auto-margins": {
+    "filled": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "a-min-height-stops-a-block-collapsing-through": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "empty": {
+      "x": 0,
+      "y": 40,
+      "width": 300.19,
+      "height": 9.9
+    },
+    "after": {
+      "x": 0,
+      "y": 70.1,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 89.9
+    }
+  },
+  "a-percentage-min-width-resolves-against-the-container": {
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "min-width-clamps-a-narrower-box": {
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "min-height-clamps-a-shorter-box": {
+    "clamped": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 49.9
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 49.9
+    }
+  },
+  "max-height-caps-a-taller-box": {
+    "capped": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 40
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    }
+  },
+  "aspect-ratio-sizes-the-axis-that-is-auto": {
+    "ratio": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 40
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    }
+  },
+  "aspect-ratio-sizes-the-width-from-a-definite-height": {
+    "ratio": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "wrapper": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "PROBE-border-box-keeps-padding-inside-the-width": {
+    "inner": {
+      "x": 30.1,
+      "y": 0,
+      "width": 139.81,
+      "height": 20.19
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "auto-inline-margins-centre-a-block": {
+    "centred": {
+      "x": 49.9,
+      "y": 0,
+      "width": 200,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "one-auto-inline-margin-takes-all-the-leftover": {
+    "pushed": {
+      "x": 100.19,
+      "y": 0,
+      "width": 200,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "a-percentage-min-height-against-an-auto-parent-does-not-apply": {
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 19.81
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "a-percentage-top-offset-resolves-against-the-container-height": {
+    "shifted": {
+      "x": 0,
+      "y": 25.14,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "holder": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 100.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 100.19
+    }
+  },
+  "nested-percentage-widths-compound": {
+    "inner": {
+      "x": 0,
+      "y": 0,
+      "width": 75.05,
+      "height": 19.81
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 150.1,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "rem-margin-is-one-size-for-the-whole-tree": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "small": {
+      "x": 0,
+      "y": 36.19,
+      "width": 40,
+      "height": 19.81
+    },
+    "gap": {
+      "x": 0,
+      "y": 72,
+      "width": 40,
+      "height": 20.19
+    },
+    "large": {
+      "x": 0,
+      "y": 108.19,
+      "width": 40,
+      "height": 19.81
+    },
+    "after": {
+      "x": 0,
+      "y": 144,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 164.19
+    }
+  },
+  "short-box-alone-honours-line-height": {
+    "only": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 9.9
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "text-only-honours-line-height": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "line-height-is-a-floor-not-a-ceiling": {
+    "shortA": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 9.91
+    },
+    "shortB": {
+      "x": 0,
+      "y": 20.19,
+      "width": 200,
+      "height": 9.9
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40.38
+    }
+  },
+  "nested-three-deep": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "nested-then-sibling": {
+    "inner": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "after": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
   "inline-grid-atomic": {
     "before": {
       "x": 0,
@@ -2133,6 +1881,388 @@
       "height": 20.19
     }
   },
+  "inline-flex-lays-out-its-children": {
+    "i1": {
+      "x": 0,
+      "y": 0,
+      "width": 30.1,
+      "height": 30.1
+    },
+    "i2": {
+      "x": 30.1,
+      "y": 0,
+      "width": 30.1,
+      "height": 30.1
+    },
+    "flex": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 30.1
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 30.09
+    }
+  },
+  "vertical-padding-on-an-inline-does-not-grow-the-line": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "nextLine": {
+      "x": 0,
+      "y": 20.19,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    }
+  },
+  "PROBE-percentage-width-resolves-against-the-container": {
+    "half": {
+      "x": 0,
+      "y": 0,
+      "width": 150.1,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "overflow-hidden-stops-a-margin-collapsing-through": {
+    "child": {
+      "x": 0,
+      "y": 30.1,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "context": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 49.9
+    },
+    "after": {
+      "x": 0,
+      "y": 49.91,
+      "width": 100.19,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 69.71
+    }
+  },
+  "em-margin-follows-a-size-stated-in-em": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 19.81
+    },
+    "measured": {
+      "x": 0,
+      "y": 49.9,
+      "width": 40,
+      "height": 19.81
+    },
+    "after": {
+      "x": 0,
+      "y": 100.19,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 120
+    }
+  },
+  "PROBE-max-width-caps-a-block": {
+    "capped": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "empty-inline-between-boxes": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "b": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "overflow-hidden-inline-block-aligns-by-its-bottom-margin-edge": {
+    "plain": {
+      "x": 0,
+      "y": 24.38,
+      "width": 40,
+      "height": 40
+    },
+    "clipped": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 40
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 64.38
+    }
+  },
+  "a-tall-line-pushes-the-next-line-down": {
+    "tall": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 49.9
+    },
+    "second": {
+      "x": 0,
+      "y": 49.91,
+      "width": 200,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 70.09
+    }
+  },
+  "inline-flex-atomic": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "flexchild": {
+      "x": 40,
+      "y": 0,
+      "width": 20.19,
+      "height": 20.19
+    },
+    "flex": {
+      "x": 40,
+      "y": 0,
+      "width": 80,
+      "height": 20.19
+    },
+    "after": {
+      "x": 120,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "nested-in-one-inline": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "atomic-inline-taller-than-line-height": {
+    "tall": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 49.9
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 49.9
+    }
+  },
+  "em-margin-scales-with-the-inherited-size": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 19.81
+    },
+    "measured": {
+      "x": 0,
+      "y": 60.19,
+      "width": 40,
+      "height": 20.19
+    },
+    "after": {
+      "x": 0,
+      "y": 120,
+      "width": 40,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 139.81
+    }
+  },
+  "percentage-padding-resolves-against-the-width": {
+    "padded": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 30.1
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 30.1
+    }
+  },
+  "atomic-inlines-in-a-row": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "b": {
+      "x": 40,
+      "y": 0,
+      "width": 60.19,
+      "height": 20.19
+    },
+    "c": {
+      "x": 100.19,
+      "y": 0,
+      "width": 30.1,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "vertical-align-top-vs-default": {
+    "short": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "tall": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 40
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40
+    }
+  },
+  "em-and-rem-differ-on-the-same-element": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 19.81
+    },
+    "viaRem": {
+      "x": 0,
+      "y": 36.19,
+      "width": 40,
+      "height": 20.19
+    },
+    "gap": {
+      "x": 0,
+      "y": 72,
+      "width": 40,
+      "height": 19.81
+    },
+    "viaEm": {
+      "x": 0,
+      "y": 156.19,
+      "width": 40,
+      "height": 20.19
+    },
+    "after": {
+      "x": 0,
+      "y": 240,
+      "width": 40,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 259.81
+    }
+  },
   "inline-with-padding-around-box": {
     "before": {
       "x": 0,
@@ -2159,16 +2289,100 @@
       "height": 20.19
     }
   },
-  "vertical-align-bottom": {
-    "tall": {
+  "border-box-includes-the-border-in-the-width": {
+    "inner": {
+      "x": 20.19,
+      "y": 0,
+      "width": 160,
+      "height": 19.81
+    },
+    "outer": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    }
+  },
+  "em-margin-resolves-against-the-elements-own-size": {
+    "before": {
       "x": 0,
       "y": 0,
       "width": 40,
-      "height": 40
+      "height": 19.81
     },
-    "short": {
-      "x": 40,
-      "y": 19.81,
+    "measured": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 19.81
+    },
+    "after": {
+      "x": 0,
+      "y": 80,
+      "width": 40,
+      "height": 19.81
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 99.81
+    }
+  },
+  "atomic-inlines-wrap": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "b": {
+      "x": 100.19,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "c": {
+      "x": 200.38,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "d": {
+      "x": 0,
+      "y": 20.19,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40.38
+    }
+  },
+  "em-margin-ignores-the-inherited-size": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "measured": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20.19
+    },
+    "after": {
+      "x": 0,
+      "y": 80,
       "width": 40,
       "height": 20.19
     },
@@ -2176,7 +2390,189 @@
       "x": 0,
       "y": 0,
       "width": 300.19,
-      "height": 40
+      "height": 100.19
+    }
+  },
+  "vertical-margins-on-an-inline-have-no-effect": {
+    "before": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "inner": {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "nextLine": {
+      "x": 0,
+      "y": 20.19,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40.38
+    }
+  },
+  "nowrap-keeps-atomic-inlines-on-one-line": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "b": {
+      "x": 100.19,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "c": {
+      "x": 200.38,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "d": {
+      "x": 300.57,
+      "y": 0,
+      "width": 100.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 20.19
+    }
+  },
+  "a-definite-height-stops-the-bottom-margin-collapsing-out": {
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 59.81
+    },
+    "after": {
+      "x": 0,
+      "y": 60.19,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 80
+    }
+  },
+  "nowrap-does-not-stop-a-block-child-breaking-the-run": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "blockChild": {
+      "x": 0,
+      "y": 20.19,
+      "width": 300.19,
+      "height": 20.19
+    },
+    "b": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 60.57
+    }
+  },
+  "wrap-boundary-exact": {
+    "a": {
+      "x": 0,
+      "y": 0,
+      "width": 150.1,
+      "height": 20.19
+    },
+    "b": {
+      "x": 150.1,
+      "y": 0,
+      "width": 150.1,
+      "height": 20.19
+    },
+    "c": {
+      "x": 0,
+      "y": 20.19,
+      "width": 9.9,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40.38
+    }
+  },
+  "container-padding-offsets-the-run": {
+    "a": {
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 20.19
+    },
+    "b": {
+      "x": 50,
+      "y": 10,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 40.38
+    }
+  },
+  "inline-then-block-then-inline": {
+    "first": {
+      "x": 49.76,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
+    },
+    "blocked": {
+      "x": 0,
+      "y": 20.19,
+      "width": 300.19,
+      "height": 19.81
+    },
+    "second": {
+      "x": 0,
+      "y": 40,
+      "width": 40,
+      "height": 20.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 60.19
     }
   },
   "nested-block-containers-each-all-inline": {
@@ -2205,35 +2601,15 @@
       "height": 40.38
     }
   },
-  "a-block-child-breaks-the-run": {
-    "inline": {
-      "x": 49.76,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "blocked": {
-      "x": 0,
-      "y": 20.19,
-      "width": 40,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 60.19
-    }
-  },
-  "box-between-text": {
+  "box-in-inline-with-text": {
     "mid": {
-      "x": 49.76,
+      "x": 57.14,
       "y": 0,
       "width": 40,
       "height": 20.19
     },
     "after": {
-      "x": 157.95,
+      "x": 166.1,
       "y": 0,
       "width": 40,
       "height": 20.19
@@ -2243,72 +2619,6 @@
       "y": 0,
       "width": 300.19,
       "height": 20.19
-    }
-  },
-  "line-height-is-a-floor-not-a-ceiling": {
-    "shortA": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 9.91
-    },
-    "shortB": {
-      "x": 0,
-      "y": 20.19,
-      "width": 200,
-      "height": 9.9
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40.38
-    }
-  },
-  "a-tall-line-pushes-the-next-line-down": {
-    "tall": {
-      "x": 0,
-      "y": 0,
-      "width": 200,
-      "height": 49.9
-    },
-    "second": {
-      "x": 0,
-      "y": 49.91,
-      "width": 200,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 70.09
-    }
-  },
-  "vertical-margins-on-an-inline-have-no-effect": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "inner": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "nextLine": {
-      "x": 0,
-      "y": 20.19,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40.38
     }
   },
   "vertical-align-middle": {
@@ -2351,8 +2661,22 @@
       "height": 40.38
     }
   },
-  "inline-then-block-then-inline": {
-    "first": {
+  "atomic-inline-alone-on-line": {
+    "only": {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 60.19
+    },
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300.19,
+      "height": 60.19
+    }
+  },
+  "a-block-child-breaks-the-run": {
+    "inline": {
       "x": 49.76,
       "y": 0,
       "width": 40,
@@ -2361,14 +2685,8 @@
     "blocked": {
       "x": 0,
       "y": 20.19,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "second": {
-      "x": 0,
-      "y": 40,
       "width": 40,
-      "height": 20.19
+      "height": 19.81
     },
     "root": {
       "x": 0,
@@ -2389,270 +2707,6 @@
       "y": 0,
       "width": 300.19,
       "height": 43.81
-    }
-  },
-  "vertical-padding-on-an-inline-does-not-grow-the-line": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "inner": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "nextLine": {
-      "x": 0,
-      "y": 20.19,
-      "width": 300.19,
-      "height": 19.81
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    }
-  },
-  "nested-three-deep": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "inner": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "atomic-inline-taller-than-line-height": {
-    "tall": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 49.9
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 49.9
-    }
-  },
-  "display-none-child-keeps-the-run-contiguous": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "b": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "text-only-honours-line-height": {
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "inline-flex-atomic": {
-    "before": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "flexchild": {
-      "x": 40,
-      "y": 0,
-      "width": 20.19,
-      "height": 20.19
-    },
-    "flex": {
-      "x": 40,
-      "y": 0,
-      "width": 80,
-      "height": 20.19
-    },
-    "after": {
-      "x": 120,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "vertical-align-top-vs-default": {
-    "short": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "tall": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 40
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40
-    }
-  },
-  "nowrap-keeps-atomic-inlines-on-one-line": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "b": {
-      "x": 100.19,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "c": {
-      "x": 200.38,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "d": {
-      "x": 300.57,
-      "y": 0,
-      "width": 100.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "nowrap-does-not-stop-a-block-child-breaking-the-run": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "blockChild": {
-      "x": 0,
-      "y": 20.19,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "b": {
-      "x": 0,
-      "y": 40,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 60.57
-    }
-  },
-  "empty-inline-between-boxes": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "b": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    }
-  },
-  "atomic-inline-alone-on-line": {
-    "only": {
-      "x": 0,
-      "y": 0,
-      "width": 40,
-      "height": 60.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 60.19
-    }
-  },
-  "encoding-does-not-move-a-box": {
-    "plain": {
-      "x": 33.52,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "row-plain": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "combining": {
-      "x": 33.52,
-      "y": 20.19,
-      "width": 40,
-      "height": 20.19
-    },
-    "row-combining": {
-      "x": 0,
-      "y": 20.19,
-      "width": 300.19,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40.38
     }
   },
   "a-run-of-spaces-is-one-space": {
@@ -2687,16 +2741,16 @@
       "height": 40.38
     }
   },
-  "box-in-inline-with-text": {
-    "mid": {
-      "x": 57.14,
+  "vertical-align-bottom": {
+    "tall": {
+      "x": 0,
       "y": 0,
       "width": 40,
-      "height": 20.19
+      "height": 40
     },
-    "after": {
-      "x": 166.1,
-      "y": 0,
+    "short": {
+      "x": 40,
+      "y": 19.81,
       "width": 40,
       "height": 20.19
     },
@@ -2704,17 +2758,17 @@
       "x": 0,
       "y": 0,
       "width": 300.19,
-      "height": 20.19
+      "height": 40
     }
   },
-  "nested-then-sibling": {
-    "inner": {
+  "display-none-child-keeps-the-run-contiguous": {
+    "a": {
       "x": 0,
       "y": 0,
       "width": 40,
       "height": 20.19
     },
-    "after": {
+    "b": {
       "x": 40,
       "y": 0,
       "width": 40,
@@ -2727,44 +2781,24 @@
       "height": 20.19
     }
   },
-  "short-box-alone-honours-line-height": {
-    "only": {
-      "x": 0,
+  "box-between-text": {
+    "mid": {
+      "x": 49.76,
       "y": 0,
       "width": 40,
-      "height": 9.9
+      "height": 20.19
+    },
+    "after": {
+      "x": 157.95,
+      "y": 0,
+      "width": 40,
+      "height": 20.19
     },
     "root": {
       "x": 0,
       "y": 0,
       "width": 300.19,
       "height": 20.19
-    }
-  },
-  "inline-flex-lays-out-its-children": {
-    "i1": {
-      "x": 0,
-      "y": 0,
-      "width": 30.1,
-      "height": 30.1
-    },
-    "i2": {
-      "x": 30.1,
-      "y": 0,
-      "width": 30.1,
-      "height": 30.1
-    },
-    "flex": {
-      "x": 0,
-      "y": 0,
-      "width": 120,
-      "height": 30.1
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 30.09
     }
   },
   "a-shifted-run-does-not-grow-the-line": {
@@ -2787,63 +2821,29 @@
       "height": 33.91
     }
   },
-  "container-padding-offsets-the-run": {
-    "a": {
-      "x": 10,
-      "y": 10,
-      "width": 40,
-      "height": 20.19
-    },
-    "b": {
-      "x": 50,
-      "y": 10,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
-      "x": 0,
-      "y": 0,
-      "width": 300.19,
-      "height": 40.38
-    }
-  },
-  "nested-in-one-inline": {
-    "before": {
-      "x": 0,
+  "encoding-does-not-move-a-box": {
+    "plain": {
+      "x": 33.52,
       "y": 0,
       "width": 40,
       "height": 20.19
     },
-    "inner": {
-      "x": 40,
-      "y": 0,
-      "width": 40,
-      "height": 20.19
-    },
-    "root": {
+    "row-plain": {
       "x": 0,
       "y": 0,
       "width": 300.19,
       "height": 20.19
-    }
-  },
-  "wrap-boundary-exact": {
-    "a": {
-      "x": 0,
-      "y": 0,
-      "width": 150.1,
+    },
+    "combining": {
+      "x": 33.52,
+      "y": 20.19,
+      "width": 40,
       "height": 20.19
     },
-    "b": {
-      "x": 150.1,
-      "y": 0,
-      "width": 150.1,
-      "height": 20.19
-    },
-    "c": {
+    "row-combining": {
       "x": 0,
       "y": 20.19,
-      "width": 9.9,
+      "width": 300.19,
       "height": 20.19
     },
     "root": {
