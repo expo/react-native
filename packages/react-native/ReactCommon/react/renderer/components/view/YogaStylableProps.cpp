@@ -18,13 +18,66 @@
 
 namespace facebook::react {
 
+namespace {
+
+/*
+ * Points the `env()` collector at `dependencies` for the duration of a
+ * conversion, and puts back whatever was there before — props can be built
+ * while another build is on the stack (a nested conversion, a measurement), and
+ * a collector left dangling would attribute one element's `env()` to another.
+ */
+class ScopedEnvironmentCollector {
+ public:
+  explicit ScopedEnvironmentCollector(std::vector<EnvironmentDependency>& dependencies)
+      : previous_(std::exchange(currentEnvironmentCollector, &dependencies)) {}
+  ScopedEnvironmentCollector(const ScopedEnvironmentCollector&) = delete;
+  ScopedEnvironmentCollector& operator=(const ScopedEnvironmentCollector&) = delete;
+  ~ScopedEnvironmentCollector() {
+    currentEnvironmentCollector = previous_;
+  }
+
+ private:
+  std::vector<EnvironmentDependency>* previous_;
+};
+
+/*
+ * Parses the Yoga style while collecting the `env()`s written in it.
+ *
+ * A free function rather than two statements in the constructor body because
+ * `yogaStyle` is a member initialiser: by the time the body runs the style has
+ * already been parsed, and the collector has to be in place before that.
+ */
+yoga::Style convertYogaStyleCollectingEnvironment(
+    const PropsParserContext& context,
+    const RawProps& rawProps,
+    const yoga::Style& sourceValue,
+    std::vector<EnvironmentDependency>& dependencies) {
+  ScopedEnvironmentCollector scopedCollector{dependencies};
+  return convertRawProp(context, rawProps, sourceValue);
+}
+
+} // namespace
+
 YogaStylableProps::YogaStylableProps(
     const PropsParserContext& context,
     const YogaStylableProps& sourceProps,
     const RawProps& rawProps,
     const std::function<bool(const std::string&)>& filterObjectKeys)
     : Props(context, sourceProps, rawProps, filterObjectKeys),
-      yogaStyle(convertRawProp(context, rawProps, sourceProps.yogaStyle)) {
+      // INHERITED, not rebuilt. An incremental props update carries only the
+      // properties that changed, and `yogaStyle` above inherits the rest from
+      // `sourceProps` — so a dependency list built from this update alone would
+      // drop every `env()` whose property was not re-stated, and the style would
+      // silently fall back to the unresolved value. Measured: a `<View>` whose
+      // only change was its background colour lost a 59pt height. The conversion
+      // forgets a dependency as it re-states its property, so an inherited entry
+      // that is now stale is removed rather than kept.
+      environmentDependencies{sourceProps.environmentDependencies},
+      yogaStyle(convertYogaStyleCollectingEnvironment(
+          context,
+          rawProps,
+          sourceProps.yogaStyle,
+          environmentDependencies)) {
   convertRawPropAliases(context, sourceProps, rawProps);
 
   displayBlock = sourceProps.displayBlock;
@@ -200,6 +253,15 @@ void YogaStylableProps::setProp(
         displayValue == "inline-grid" || displayValue == "inline-grid-lanes";
     displayInlineAtomic = displayInline && displayValue != "inline";
   }
+
+  // This path REPLACES one property, so whatever that property said before is
+  // gone — including an `env()`. The length conversions drop the old dependency
+  // as they re-state their property, so the collector only has to be in place.
+  ScopedEnvironmentCollector scopedCollector{environmentDependencies};
+  // The conversions below are handed a `RawValue` and not the name it came
+  // under — unlike the full build, which goes through the name-taking
+  // `convertRawProp`. Publish it so an `env()` still knows what it is on.
+  ScopedConvertedPropName scopedName{propName};
 
   // NOTE: this switch is the *per-prop update* path. It is NOT where `style`
   // is parsed when props are built from scratch — that is the
@@ -496,6 +558,20 @@ SharedDebugStringConvertibleList YogaStylableProps::getDebugProps() const {
       };
 }
 #endif
+
+yoga::Style YogaStylableProps::resolveEnvironment(
+    const EnvironmentValues& environmentValues) const {
+  if (environmentDependencies.empty()) [[likely]] {
+    return yogaStyle;
+  }
+
+  auto style = yogaStyle;
+  for (const auto& dependency : environmentDependencies) {
+    applyEnvironmentDependency(
+        style, dependency, environmentValues.resolve(dependency.variable));
+  }
+  return style;
+}
 
 void YogaStylableProps::convertRawPropAliases(
     const PropsParserContext& context,

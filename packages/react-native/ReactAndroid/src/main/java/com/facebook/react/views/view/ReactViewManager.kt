@@ -9,6 +9,7 @@ package com.facebook.react.views.view
 
 import android.graphics.Paint
 import android.graphics.Rect
+import android.os.Build
 import android.text.Layout
 import android.text.Spannable
 import android.text.StaticLayout
@@ -166,6 +167,19 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       backgroundImage: ReadableArray?,
   ) {
     setBackgroundImage(view, backgroundImage)
+  }
+
+  /**
+   * `background-attachment: fixed` — the background is measured against the
+   * viewport rather than this box, so boxes sharing one declaration are windows
+   * onto one background instead of each drawing the whole of it.
+   */
+  @ReactProp(name = ViewProps.EXPERIMENTAL_BACKGROUND_ATTACHMENT_FIXED)
+  public open fun setExperimentalBackgroundAttachmentFixed(
+      view: ReactViewGroup,
+      fixed: Boolean,
+  ) {
+    BackgroundStyleApplicator.setBackgroundAttachmentFixed(view, fixed)
   }
 
   @ReactProp(name = ViewProps.BACKGROUND_SIZE, customType = "BackgroundSize")
@@ -504,26 +518,54 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       // width-independent) or it was built at exactly the mount width.
       var reusedLayout: Layout? = null
       var reusedSpannable: Spannable? = null
+      var reusedEntryLayout: Layout? = null
+      var reusedNotSoftWrapped = false
       if (attributedString.contains(TextLayoutManager.AS_KEY_RUN_TAG)) {
         val entry = RunLayoutHandoff.take(attributedString.getInt(TextLayoutManager.AS_KEY_RUN_TAG))
         if (entry != null &&
             entry.density == PixelUtil.getDisplayMetricDensity() &&
             RunLayoutHandoff.contentEquals(entry.attributedString, attributedString)) {
           reusedSpannable = entry.spannable
-          if (entry.layout.alignment == Layout.Alignment.ALIGN_NORMAL &&
-              (entry.notSoftWrapped || entry.layout.width == ceil(width.toDouble()).toInt())) {
-            reusedLayout = entry.layout
-          }
+          reusedEntryLayout = entry.layout
+          reusedNotSoftWrapped = entry.notSoftWrapped
         }
+      }
+
+      /*
+       * The alignment, which this used to leave at Android's default.
+       *
+       * `StaticLayout.Builder` starts at `ALIGN_NORMAL`, and nothing here ever said
+       * otherwise — so `text-align: right` on a `<p>` did nothing at all on Android while
+       * working on iOS, where the alignment rides the paragraph attributes to draw time. It
+       * showed up as a chat's "Delivered" receipt sitting hard left under a right-hand
+       * balloon.
+       *
+       * The spannable is needed to decide it (Android swaps normal and opposite when the
+       * paragraph's direction and the script's disagree), so it is resolved before the reuse
+       * decision rather than inside it.
+       */
+      val spannable =
+          reusedSpannable
+              ?: TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
+      val alignment = TextLayoutManager.getRunAlignment(attributedString, spannable)
+      val justification = TextLayoutManager.getRunJustificationMode(attributedString)
+
+      /*
+       * A handoff layout is only reusable at the same alignment, and — unless it is the
+       * default — only at the same width: where the glyphs sit depends on the width the
+       * moment the alignment is anything but normal.
+       */
+      if (reusedEntryLayout != null &&
+          reusedEntryLayout.alignment == alignment &&
+          ((alignment == Layout.Alignment.ALIGN_NORMAL && reusedNotSoftWrapped) ||
+              reusedEntryLayout.width == ceil(width.toDouble()).toInt())) {
+        reusedLayout = reusedEntryLayout
       }
 
       val layout: Layout
       if (reusedLayout != null) {
         layout = reusedLayout
       } else {
-        val spannable =
-            reusedSpannable
-                ?: TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
         // `white-space: pre` and `nowrap` do not wrap (css-text-3 §3): the only line breaks are
         // the ones in the text, and a long line overflows the container rather than folding onto
@@ -533,8 +575,24 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
             if (TextLayoutManager.forbidsWrapping(attributedString))
                 ceil(Layout.getDesiredWidth(spannable, paint).toDouble()).toInt()
             else ceil(width.toDouble()).toInt()
-        layout =
-            StaticLayout.Builder.obtain(spannable, 0, spannable.length, paint, layoutWidth).build()
+        /*
+         * Alignment and justification only.
+         *
+         * DOM-CSS-LIMITATION(android-run-paragraph-attributes): everything else the
+         * `<Text>` path sets — break strategy, hyphenation, font padding, ellipsis, max
+         * lines — is read from PARAGRAPH ATTRIBUTES, and a run's entry carries only its
+         * attributed string. So a rebuilt run layout differs from the one the measure pass
+         * handed off, which was built with all of them: that is why the handoff is worth
+         * taking whenever it is still valid, and closing the gap properly means sending the
+         * paragraph attributes along with the run.
+         */
+        val builder =
+            StaticLayout.Builder.obtain(spannable, 0, spannable.length, paint, layoutWidth)
+                .setAlignment(alignment)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          builder.setJustificationMode(justification)
+        }
+        layout = builder.build()
       }
       runs.add(ReactViewGroup.TextRunLayout(layout, left, top, documentOrder))
     }

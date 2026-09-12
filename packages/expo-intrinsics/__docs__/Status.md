@@ -9,7 +9,9 @@ they stopped being true — a `244/244` in `text-conformance/README.md` and a se
 of screenshots that had been showing the wrong screen for hours. Re-run before
 quoting. The commands are in the table for that reason.
 
-Last full sweep: **2026-08-23**, branch `frontier`.
+Last full sweep: **2026-09-02**, branch `frontier`. Only the visual-comparison
+row is older than that, and says so — an unrun suite is an unknown, and dating
+it is how that stays visible.
 
 ---
 
@@ -18,24 +20,25 @@ Last full sweep: **2026-08-23**, branch `frontier`.
 Everything that can be run against this work, whether or not it currently is.
 "Not run" is listed deliberately: an unrun suite is an unknown, not a pass.
 
-| Suite                        | Command                                                                               | Last result                                             | Date       |
-| ---------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------- |
-| Unit (jest)                  | `yarn jest`                                                                           | **238 suites, 5537 passed, 1 skipped, 0 failed**        | 2026-08-23 |
-| Integration (Fantom)         | `yarn fantom`                                                                         | **243 suites, 3355 passed, 0 failed** (cmake-fresh tester) | 2026-08-23 |
-| Device conformance, iOS      | `node text-conformance/verify.js ios`                                                 | **245 checks / 26 cases — matches real Safari exactly** | 2026-08-23 |
-| Device conformance, Android  | `node text-conformance/verify.js android`                                             | **245 checks / 26 cases — matches real Safari exactly** | 2026-08-23 |
-| Browser oracle (real Safari) | `node text-conformance/oracle.js`                                                     | 24 cases written                                        | 2026-08-22 |
-| Visual comparison            | `node text-conformance/build-report.js`                                               | 63 screens x Safari/iOS/Android; 34 web pages, 16 from shared documents | 2026-08-23 |
-| Lint                         | `yarn lint` (`--max-warnings 0`, whole repo)                                          | **clean**                                               | 2026-08-23 |
-| Format                       | `npx prettier --check <files>`                                                        | clean                                                   | 2026-08-22 |
-| iOS build                    | `xcodebuild … -scheme RNTester`                                                       | ARCHIVE SUCCEEDED (Release, device, ad-hoc export)      | 2026-08-23 |
-| Android build                | `./gradlew …:app:installDebug`                                                        | BUILD SUCCESSFUL                                        | 2026-08-23 |
-| Flow                         | `yarn flow-check`                                                                     | **0 errors** (was 20, never previously run)             | 2026-08-23 |
-| Android JVM unit             | `yarn test-android -Preact.internal.useHermesStable=true`                             | **568 tests, 0 failures** (from result XML)             | 2026-08-23 |
-| iOS ObjC tests               | see note below (NOT `yarn test-ios` on this machine)                                  | **169 tests, 16 skipped, 0 failures**                   | 2026-08-23 |
-| TypeScript types             | `yarn test-typescript-legacy`, `yarn test-generated-typescript`                       | both clean                                              | 2026-08-23 |
-| Astryx geometry (CDP)        | `ASTRYX_VERIFY_PLATFORM=android node packages/rn-tester/scripts/astryx-cdp-verify.js` | **16/16 PASS**                                          | 2026-08-23 |
-| **AddressSanitizer sweep**   | build with `-enableAddressSanitizer YES`, walk every route (see below)                | **69/69 routes, 0 reports**                             | 2026-08-22 |
+| Suite                        | Command                                                                               | Last result                                                                                                                                                                               | Date       |
+| ---------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Unit (jest)                  | `yarn jest`                                                                           | **251 suites, 5657 passed, 1 skipped, 0 failed** — the limitation register's two-way check was red until every marker was indexed                                                        | 2026-09-05 |
+| Integration (Fantom)         | `yarn fantom`                                                                         | **275 suites, 3941 passed, 294 skipped, 0 failed** (cmake-fresh tester)                                                                                                                   | 2026-09-02 |
+| Device conformance, iOS      | `node text-conformance/verify.js ios`                                                 | **1464 checks / 134 cases — matches real Safari exactly** (1 known gap)                                                                                                                   | 2026-09-02 |
+| Device conformance, Android  | `node text-conformance/verify.js android`                                             | **1464 checks / 134 cases — matches real Safari exactly** (1 known gap)                                                                                                                   | 2026-09-02 |
+| Browser oracle (real Safari) | `node text-conformance/oracle.js`                                                     | 24 cases written                                                                                                                                                                          | 2026-08-22 |
+| Visual comparison            | `node text-conformance/build-report.js`                                               | 63 screens x Safari/iOS/Android; 34 web pages, 16 from shared documents                                                                                                                   | 2026-08-23 |
+| Lint                         | `yarn lint` (`--max-warnings 0`, whole repo)                                          | **clean**                                                                                                                                                                                 | 2026-09-02 |
+| Format                       | `npx prettier --check <files>`                                                        | clean for `packages/chat-demo`; 17 files under `packages/expo-intrinsics/src` drift and predate this work                                                                             | 2026-09-02 |
+| iOS build                    | `xcodebuild … -scheme RNTester`                                                       | ARCHIVE SUCCEEDED (Release, device, ad-hoc export)                                                                                                                                        | 2026-08-23 |
+| chat-demo UI tests, iOS  | `cd packages/chat-demo/ios/uitests && xcodebuild test …`                          | **42 tests, 0 failures**                                                                                                                                                                  | 2026-09-05 |
+| Android build                | `./gradlew …:app:assembleDebug -Preact.internal.useHermesStable=true`                 | **BUILD SUCCESSFUL** — rn-tester 7m28s over all four ABIs, chat-demo 27s; clear `ReactAndroid/build/prefab-headers` first after any C++ struct change                                 | 2026-09-02 |
+| Flow                         | `rn-flow`                                                                             | **0 errors**                                                                                                                                                                              | 2026-09-05 |
+| Android JVM unit             | `yarn test-android -Preact.internal.useHermesStable=true`                             | **647 tests, 0 failures** — needs `ANDROID_HOME` in the environment, and it was RED (2 in `ExpoScrollViewManagerTest`) until the anchor helper stopped starting on a detached view       | 2026-09-05 |
+| iOS ObjC tests               | see note below (NOT `yarn test-ios` on this machine)                                  | **300 tests, 17 skipped, 0 failures**                                                                                                                                                     | 2026-09-02 |
+| TypeScript types             | `yarn test-typescript-legacy`, `yarn test-generated-typescript`                       | both clean                                                                                                                                                                                | 2026-09-02 |
+| Astryx geometry (CDP)        | `ASTRYX_VERIFY_PLATFORM=android node packages/rn-tester/scripts/astryx-cdp-verify.js` | **16/16 PASS**                                                                                                                                                                            | 2026-08-23 |
+| **AddressSanitizer sweep**   | build with `-enableAddressSanitizer YES`, walk every route (see below)                | RN Tester: **69/69 routes, 0 reports** (2026-08-22). chat-demo: **0 reports** over hold / choose / panel / send / dismiss / back, twice — and it found a real abort on the first walk | 2026-09-02 |
 
 `yarn test-android` fails configuration without the Hermes flag — _"Trying to
 use Hermes Nightly but hermes-compiler version is not specified"_ — the same
@@ -60,8 +63,14 @@ xcodebuild test-without-building -workspace RNTesterPods.xcworkspace -scheme RNT
   -destination "platform=iOS Simulator,id=<UDID>" -resultBundlePath /tmp/RNTesterTestResults
 ```
 
-Three environment faults have to be cleared first, and each one presents as the
+Four environment faults have to be cleared first, and each one presents as the
 suite failing:
+
+- **A NEW header in `React-Fabric` needs `pod install` in THIS project**, not
+  just in whichever app you were building. `Pods/Headers/Public` is a copy, and
+  a header that is not in it fails the build with `file not found` on a file
+  that plainly exists — the iOS twin of Android's stale prefab headers. Adding
+  `AriaAttributes.h` broke this suite exactly that way.
 
 - **Stale listeners on port 5555** stop the harness's own WebSocket server
   binding, and it retries 60 times before giving up.
@@ -157,6 +166,14 @@ instrument is worse than no run at all — it is a false negative wearing a badg
 - **None of them** saw §4.2, because the defect was a demo module mutating
   global state at import time. It took a bisect on the device — the same corpus
   machinery, pointed at a question it was not built for.
+- **Nothing here sees where GLYPHS sit inside a run.** Every instrument measures
+  element boxes, and a painted text run is not one — it has no mounted size, so
+  the corpus's `text-align` cases align coloured inline BOXES rather than text.
+  Android ignored `text-align` for painted runs entirely (its `StaticLayout` was
+  built without ever asking for an alignment) and every suite stayed green; it
+  was caught by looking at a chat's "Delivered" receipt sitting hard left under
+  a right-hand balloon. Closing this needs an instrument that can read a run's
+  own line offsets, which none of the four currently does.
 
 ---
 
@@ -174,12 +191,12 @@ demo, three instrumented builds of evidence:
 
 - the sealed child's `ownerIsParent=1` at the abort (so ownership was taken
   without a clone, past both `adoptYogaChild` branches);
-- an ownership-based clone guard in `updateYogaChildren` fires — and a
-  SECOND instance of the same parent tag still carries the sealed child, so
-  the laundering is generational, not a single call site.
+- an ownership-based clone guard in `updateYogaChildren` fires — and a SECOND
+  instance of the same parent tag still carries the sealed child, so the
+  laundering is generational, not a single call site.
 
 Two defences are in place: `updateYogaChildren` records which children's yoga
-nodes were foreign-owned *before* its detach erases the evidence and clones
+nodes were foreign-owned _before_ its detach erases the evidence and clones
 them, and `layout()` clones a sealed child in place rather than aborting — the
 same contract Yoga's clone callback implements one layer down, applied at the
 last line. The abort is gone and trees stay per-generation correct. **The
@@ -213,34 +230,33 @@ twice.
 
 ### 2.1a (CLOSED 2026-08-23) Replaced elements ignore padding when painting
 
-Closed by the composite in `Img.js`: an `<img>` whose style carries box
-chrome (background/padding/border/radius) splits into CSS's own model — an
-element box wearing the chrome, the image blockified (`display:'block'`, a
-new css-display-3 §2 opt-out in the C++ run collection) and flex-filling the
-CONTENT box, so the yellow padding ring paints and the radius clips. Zero
-native image-view changes, both backings covered; chrome-less images keep the
-single-view fast path. `ImgBoxChrome-itest` (3) pins border-box invariance,
-the composite structure, and the fast path.
+Closed by the composite in `Img.js`: an `<img>` whose style carries box chrome
+(background/padding/border/radius) splits into CSS's own model — an element box
+wearing the chrome, the image blockified (`display:'block'`, a new css-display-3
+§2 opt-out in the C++ run collection) and flex-filling the CONTENT box, so the
+yellow padding ring paints and the radius clips. Zero native image-view changes,
+both backings covered; chrome-less images keep the single-view fast path.
+`ImgBoxChrome-itest` (3) pins border-box invariance, the composite structure,
+and the fast path.
 
 ### 2.2 (CLOSED 2026-08-23) Checkables centre on their label line
 
 Closed by `DOM-CSS-DEVIATION(checkable-line-centering)`: the sheet gives
 checkbox and radio `vertical-align: middle`, which all three engines already
 implemented for atomic inlines (the cxx TextLayoutManager, the Android
-placeholder span and the iOS attributed-string path each carry the CSS2
-§10.8.1 middle maths). One UA declaration, no engine change.
+placeholder span and the iOS attributed-string path each carry the CSS2 §10.8.1
+middle maths). One UA declaration, no engine change.
 `CheckableLineCentering-itest` pins the centred geometry AND that an author's
 own `vertical-align: baseline` still beats the sheet; verified on both
 simulators — the wrapped-label demo now reads as one line with the control
 centred against the text, matching Material rows and iOS Settings rows. See
 SpecDeviations.md for the full entry.
 
-While looking at this section: the Android text-field chrome questions from
-the same review are ANSWERED, not open — the underline-with-transparent-
-background IS the platform's plain `EditText` (Material's filled box is
-`TextInputLayout`, a library component, not the platform widget), and the
-"value shows its end" behaviour was real and is fixed
-(`ElementTextInputSelectionTest`).
+While looking at this section: the Android text-field chrome questions from the
+same review are ANSWERED, not open — the underline-with-transparent- background
+IS the platform's plain `EditText` (Material's filled box is `TextInputLayout`,
+a library component, not the platform widget), and the "value shows its end"
+behaviour was real and is fixed (`ElementTextInputSelectionTest`).
 
 ---
 
@@ -248,19 +264,18 @@ background IS the platform's plain `EditText` (Material's filled box is
 
 ### 3.0 (CLOSED 2026-08-23) iOS: half-leading around attachment lines
 
-Closed as measurement artifact + instrument-proven pipeline. The earlier
-"1-2px on iOS" figure came from a gap scan that stopped at a single
-antialiased descender pixel; measured properly (ink BANDS, ≥4 dark samples
-per row), the air between the text line and the 56pt box is iOS 12px,
-Safari 13px, Android 12px at 3x — the three engines agree. The pipeline is
-additionally pinned by `RCTAttachmentLineLeadingTests` (3): a pure-text
-`line-height: 26` line measures exactly 26 with the box's line starting at
-its end; a mixed text+image line keeps `descent + half-leading` below its
-baseline; and the attachment-PLACEMENT path (`measureAttributedString`, the
-API that positions the real view) puts the box's frame a full first line
-down. The strut's half-leading share below the baseline was already built
-into attachment bounds (`strutDescent` in RCTAttributedTextUtils).
-
+Closed as measurement artifact + instrument-proven pipeline. The earlier "1-2px
+on iOS" figure came from a gap scan that stopped at a single antialiased
+descender pixel; measured properly (ink BANDS, ≥4 dark samples per row), the air
+between the text line and the 56pt box is iOS 12px, Safari 13px, Android 12px at
+3x — the three engines agree. The pipeline is additionally pinned by
+`RCTAttachmentLineLeadingTests` (3): a pure-text `line-height: 26` line measures
+exactly 26 with the box's line starting at its end; a mixed text+image line
+keeps `descent + half-leading` below its baseline; and the attachment-PLACEMENT
+path (`measureAttributedString`, the API that positions the real view) puts the
+box's frame a full first line down. The strut's half-leading share below the
+baseline was already built into attachment bounds (`strutDescent` in
+RCTAttributedTextUtils).
 
 Claims that are currently unverified, or verified in a way that would not catch
 being wrong.
@@ -435,21 +450,20 @@ Superseding the Safari-derived inset above: `<button>` wears the platform's
 chrome, so its numbers now come from the platforms — read off a real
 `UIButtonConfiguration` with a probe binary under `simctl spawn`, and from the
 SDK's own `Widget.Material.Button` resources. Insets 7/12 and a capsule on iOS
-(title `systemBlue`; it had been `link`, a *different blue*), 4/8 and radius 4
+(title `systemBlue`; it had been `link`, a _different blue_), 4/8 and radius 4
 on Android; minimum height 44/48 — the touch target, since a `<button>`'s box is
 its touch target — withdrawn when an author states a height, on the same grounds
 as the padding withdrawal. Press feedback moved out of JavaScript entirely: it
-was `opacity: 0.6` from React state, and is now each platform's own — a
-measured ×0.75 alpha dim on iOS, a `colorControlHighlight` ripple installed as
-the background's feedback underlay on Android. `<input
-type=submit|reset|button>` had a button's behaviour and *none* of its chrome
-(appearance keys off the tag, and `<input>`'s entry is the text field's); it now
-shares `buttonUAStyle`. Pinned by `buttonMetrics-test.js` (both platform
-tables), `ButtonContentCentring-itest.js` (plumbing, sheet-derived
-expectations), `ElementButtonRippleTest.kt` (ripple exists, as an underlay,
-gated with the floor — mutation-checked), and
-`EXPElementButtonPressAppearanceTests.m` (the 0.75, driven through the real
-`setPressed:` seam).
+was `opacity: 0.6` from React state, and is now each platform's own — a measured
+×0.75 alpha dim on iOS, a `colorControlHighlight` ripple installed as the
+background's feedback underlay on Android. `<input type=submit|reset|button>`
+had a button's behaviour and _none_ of its chrome (appearance keys off the tag,
+and `<input>`'s entry is the text field's); it now shares `buttonUAStyle`.
+Pinned by `buttonMetrics-test.js` (both platform tables),
+`ButtonContentCentring-itest.js` (plumbing, sheet-derived expectations),
+`ElementButtonRippleTest.kt` (ripple exists, as an underlay, gated with the
+floor — mutation-checked), and `EXPElementButtonPressAppearanceTests.m` (the
+0.75, driven through the real `setPressed:` seam).
 
 ### 4.4 Two corpus cases asserted nothing, and one compared a font metric
 
@@ -491,6 +505,6 @@ reasoning. To enumerate them:
 grep -rho "DOM-CSS-\(LIMITATION\|DEVIATION\)([a-z0-9-]*)" packages/ text-conformance/ | sort -u
 ```
 
-As of 2026-08-22 that is 29 limitations and 1 deviation. They are not defects;
+As of 2026-09-02 that is 47 limitations and 17 deviations. They are not defects;
 each is a place the platform cannot do what the web does, or where native
 behaviour is the better answer and the difference is written down.

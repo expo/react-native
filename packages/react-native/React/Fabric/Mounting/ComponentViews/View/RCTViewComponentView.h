@@ -53,6 +53,36 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 /**
+ * The material hooks the base class calls and the element box answers.
+ *
+ * Declared here because `-currentContainerView` is the base's and the material
+ * is the subclass's: the base has to ask a question only the box can answer.
+ * Both return nil for every view without a material, which is nearly all of
+ * them.
+ */
+- (nullable UIView *)exp_glassChildContainerView;
+- (nullable UIView *)exp_materialHostView;
+
+/**
+ * Given by a CHILD the shape this view should be LIFTED in.
+ *
+ * A peek's preview is a rounded rectangle unless it is handed a path, so a
+ * balloon lifted without one grows a tail-less square out of a shape that has a
+ * tail. The interaction belongs to the box — that is what receives the touch and
+ * what has to come up with the words inside it — but the box is a rectangle and
+ * knows nothing about balloons. So the shape travels the other way: the surface
+ * that draws it hands its outline up, in the box's coordinates, and the box
+ * gives it to UIKit.
+ *
+ * The block is called when UIKit asks, at the moment of the lift, rather than
+ * stored as a path: a send animation resizes the balloon every frame and a
+ * reveal drag slides the whole column.
+ *
+ * A no-op here; the element box is the only view with a peek to shape.
+ */
+- (void)exp_setPeekShapeProvider:(UIBezierPath *_Nullable (^_Nullable)(void))provider;
+
+/**
  * Represents the `UIView` instance that is being automatically attached to
  * the component view and laid out using on `layoutMetrics` (especially `size`
  * and `padding`) of the component.
@@ -70,6 +100,27 @@ NS_ASSUME_NONNULL_BEGIN
  * Defaults to `nil`.
  */
 @property (nonatomic, strong, nullable) NSString *nativeId;
+
+/**
+ * Re-place any `background-attachment: fixed` background in this subtree.
+ *
+ * A fixed background is measured against the viewport rather than the element,
+ * so scrolling changes what it should look like without changing anything the
+ * mounting layer reports. The scroll container calls this as it scrolls, which
+ * is the same arrangement browsers make for the same feature.
+ *
+ * Cheap on a tree that has none: one boolean test per view.
+ */
+- (void)exp_repositionFixedBackgrounds;
+
+/**
+ * Whether anything in the process has `background-attachment: fixed` at all.
+ *
+ * The walk above passes through every view under a scroll and runs on every
+ * scroll frame, so an app that never writes the property must not pay for it.
+ * Ask this first.
+ */
+FOUNDATION_EXPORT BOOL EXPAnyFixedBackgrounds(void);
 
 /**
  * Returns the object - usually (sub)view - which represents this
@@ -97,6 +148,18 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, readonly) BOOL hasHostChromeSubviews;
 - (BOOL)isHostChromeSubview:(UIView *_Nonnull)view;
+
+/**
+ * Where this view's own chrome goes: backgrounds, borders, materials — every
+ * view a component owns rather than one React mounted.
+ *
+ * It is `-currentContainerView` without the glass container below, and the two
+ * are the same view for every box that has no glass container. They have to be
+ * told apart because a glass container's children live INSIDE the material,
+ * and the material cannot be put inside itself. A subclass that installs a
+ * material of its own puts it here.
+ */
+@property (nonatomic, readonly) UIView *_Nonnull chromeContainerView;
 
 /**
  * Installs host chrome BEHIND this view's mounted children, and remembers it as
@@ -159,6 +222,20 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask NS_REQUIRES_SUPER;
 - (void)prepareForRecycle NS_REQUIRES_SUPER;
 - (UIView *)betterHitTest:(CGPoint)point withEvent:(UIEvent *)event;
+
+/**
+ * Rebuild everything about the layer that props decide: its background, its
+ * borders, its corners, its shadow — and its MASK, which this sets to `nil` and
+ * then puts back from the border metrics.
+ *
+ * Declared for subclasses because that last part makes it a hook whether it
+ * meant to be one or not. A component view whose layer wears a mask of its own —
+ * a chat balloon's outline, say — has to re-apply it here, or the mask survives
+ * until the first time UIKit asks the layer to rebuild and then silently goes.
+ * Coming back from the background is one of those times, which is a long way
+ * from any code that looks related.
+ */
+- (void)invalidateLayer NS_REQUIRES_SUPER;
 
 /*
  * This is the label that would be coopted by another element
