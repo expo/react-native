@@ -202,6 +202,14 @@ class GenerateAutolinkingNewArchitecturesFileTaskTest {
             # or link against a old prefab target (this is needed for React Native 0.76 on).
             set(REACTNATIVE_MERGED_SO true)
 
+            # `RN_SERIALIZABLE_STATE` decides whether a generated `Props` class declares the
+            # diff-props virtuals, so it changes the class's layout and where its vtable is emitted.
+            # A library that compiles its own generated props without it, in an app compiled with it,
+            # links to nothing: `undefined symbol: vtable for ...Props`. Libraries choose it from a
+            # version check of their own, which a nightly fails — `ReactAndroid_VERSION_MINOR` is 0
+            # for 1000.0.0 — so the app states it once, for every subdirectory it adds below.
+            add_compile_definitions(RN_SERIALIZABLE_STATE)
+
             set(AUTOLINKED_LIBRARIES)
 
 
@@ -226,6 +234,14 @@ class GenerateAutolinkingNewArchitecturesFileTaskTest {
             # We set REACTNATIVE_MERGED_SO so libraries/apps can selectively decide to depend on either libreactnative.so
             # or link against a old prefab target (this is needed for React Native 0.76 on).
             set(REACTNATIVE_MERGED_SO true)
+
+            # `RN_SERIALIZABLE_STATE` decides whether a generated `Props` class declares the
+            # diff-props virtuals, so it changes the class's layout and where its vtable is emitted.
+            # A library that compiles its own generated props without it, in an app compiled with it,
+            # links to nothing: `undefined symbol: vtable for ...Props`. Libraries choose it from a
+            # version check of their own, which a nightly fails — `ReactAndroid_VERSION_MINOR` is 0
+            # for 1000.0.0 — so the app states it once, for every subdirectory it adds below.
+            add_compile_definitions(RN_SERIALIZABLE_STATE)
 
             set(AUTOLINKED_LIBRARIES)
 
