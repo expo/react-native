@@ -34,6 +34,13 @@ internal open class SurfaceHandlerBinding(moduleName: String) : HybridClassBase(
 
   private external fun _isRunning(): Boolean
 
+  /**
+   * @param safeAreaLeft/Top/Right/Bottom the part of the surface, in pixels, that the system's own
+   *   furniture is drawing over. Travels with the layout constraints rather than arriving later
+   *   through state, because that is what lets `env(safe-area-inset-*)` resolve during the FIRST
+   *   layout instead of correcting a frame that has already been shown.
+   */
+  @JvmOverloads
   fun setLayoutConstraints(
       widthMeasureSpec: Int,
       heightMeasureSpec: Int,
@@ -43,6 +50,10 @@ internal open class SurfaceHandlerBinding(moduleName: String) : HybridClassBase(
       isRTL: Boolean,
       pixelDensity: Float,
       fontScale: Float,
+      safeAreaLeft: Int = 0,
+      safeAreaTop: Int = 0,
+      safeAreaRight: Int = 0,
+      safeAreaBottom: Int = 0,
   ) {
     setLayoutConstraintsNative(
         LayoutMetricsConversions.getMinSize(widthMeasureSpec) / pixelDensity,
@@ -55,6 +66,10 @@ internal open class SurfaceHandlerBinding(moduleName: String) : HybridClassBase(
         isRTL,
         pixelDensity,
         fontScale,
+        safeAreaLeft / pixelDensity,
+        safeAreaTop / pixelDensity,
+        safeAreaRight / pixelDensity,
+        safeAreaBottom / pixelDensity,
     )
   }
 
@@ -69,6 +84,10 @@ internal open class SurfaceHandlerBinding(moduleName: String) : HybridClassBase(
       isRTL: Boolean,
       pixelDensity: Float,
       fontScale: Float,
+      safeAreaLeft: Float,
+      safeAreaTop: Float,
+      safeAreaRight: Float,
+      safeAreaBottom: Float,
   )
 
   external fun setProps(props: NativeMap?)
