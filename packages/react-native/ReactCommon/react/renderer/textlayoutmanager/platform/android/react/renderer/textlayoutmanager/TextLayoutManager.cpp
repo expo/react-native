@@ -142,7 +142,8 @@ Size measureText(
     float minHeight,
     float maxHeight,
     jfloatArray attachmentPositions,
-    jfloatArray floatExclusionsDip) {
+    jfloatArray floatExclusionsDip,
+    bool hugsWrappedLines) {
   const jni::global_ref<jobject>& fabricUIManager =
       contextContainer->at<jni::global_ref<jobject>>("FabricUIManager");
 
@@ -156,7 +157,8 @@ Size measureText(
               jfloat,
               jfloat,
               jfloatArray,
-              jfloatArray)>("measureText");
+              jfloatArray,
+              jboolean)>("measureText");
 
   auto attributedStringBuffer =
       JReadableMapBuffer::createWithContents(std::move(attributedString));
@@ -172,7 +174,8 @@ Size measureText(
       minHeight,
       maxHeight,
       attachmentPositions,
-      floatExclusionsDip));
+      floatExclusionsDip,
+      static_cast<jboolean>(hugsWrappedLines)));
 }
 
 TextMeasurement doMeasure(
@@ -229,7 +232,8 @@ TextMeasurement doMeasure(
       minimumSize.height,
       maximumSize.height,
       attachmentPositions,
-      toExclusionArrayDip(env, layoutConstraints.floatExclusions));
+      toExclusionArrayDip(env, layoutConstraints.floatExclusions),
+      layoutContext.hugsWrappedLines);
 
   jfloat* attachmentDataElements =
       env->GetFloatArrayElements(attachmentPositions, nullptr /*isCopy*/);
@@ -325,7 +329,8 @@ TextMeasurement TextLayoutManager::measure(
              .paragraphAttributes = paragraphAttributes,
              .layoutConstraints = layoutConstraints,
              .pointScaleFactor = layoutContext.pointScaleFactor,
-             .needsFragmentRects = layoutContext.needsFragmentRects},
+             .needsFragmentRects = layoutContext.needsFragmentRects,
+             .hugsWrappedLines = layoutContext.hugsWrappedLines},
             std::move(measureText));
 
   measurement.size = layoutConstraints.clamp(measurement.size);
@@ -356,7 +361,8 @@ TextMeasurement TextLayoutManager::measureCachedSpannableById(
       minimumSize.height,
       maximumSize.height,
       attachmentPositions,
-      toExclusionArrayDip(env, layoutConstraints.floatExclusions));
+      toExclusionArrayDip(env, layoutConstraints.floatExclusions),
+      layoutContext.hugsWrappedLines);
 
   // Clean up allocated ref - it still takes up space in the JNI ref table even
   // though it's 0 length

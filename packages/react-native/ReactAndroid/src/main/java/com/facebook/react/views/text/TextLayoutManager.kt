@@ -1907,6 +1907,7 @@ internal object TextLayoutManager {
       attachmentsPositions: FloatArray?,
       floatExclusionsDip: FloatArray? = null,
       textEffectRegistry: TextEffectRegistry? = null,
+      hugsWrappedLines: Boolean = false,
   ): Long = measureText(
       assets,
       0,
@@ -1920,6 +1921,7 @@ internal object TextLayoutManager {
       attachmentsPositions,
       floatExclusionsDip,
       textEffectRegistry,
+      hugsWrappedLines,
   )
 
   /**
@@ -2115,6 +2117,7 @@ internal object TextLayoutManager {
       attachmentsPositions: FloatArray?,
       floatExclusionsDip: FloatArray? = null,
       textEffectRegistry: TextEffectRegistry? = null,
+      hugsWrappedLines: Boolean = false,
   ): Long {
     // TODO(5578671): Handle text direction (see View#getTextDirectionHeuristic)
     val layout = createLayoutForMeasurement(
@@ -2152,7 +2155,8 @@ internal object TextLayoutManager {
 
     val calculatedLineCount = calculateLineCount(layout, maximumNumberOfLines)
     val calculatedWidth =
-        calculateWidth(layout, text, width, widthYogaMeasureMode, calculatedLineCount)
+        calculateWidth(
+            layout, text, width, widthYogaMeasureMode, calculatedLineCount, hugsWrappedLines)
     val calculatedHeight =
         calculateHeight(layout, height, heightYogaMeasureMode, calculatedLineCount)
 
@@ -2201,8 +2205,11 @@ internal object TextLayoutManager {
     val maximumNumberOfLines = preparedLayout.maximumNumberOfLines
 
     val calculatedLineCount = calculateLineCount(layout, maximumNumberOfLines)
+    // `false`: a prepared layout is measured through `measurePreparedLayout`, which is handed no
+    // TextLayoutContext at all (see its C++ side) — so `experimental_hugsWrappedLines` cannot
+    // reach here, and a run that asks for it is measured through `measureText` above.
     val calculatedWidth =
-        calculateWidth(layout, text, width, widthYogaMeasureMode, calculatedLineCount)
+        calculateWidth(layout, text, width, widthYogaMeasureMode, calculatedLineCount, false)
     val calculatedHeight =
         calculateHeight(layout, height, heightYogaMeasureMode, calculatedLineCount)
 
@@ -2289,11 +2296,25 @@ internal object TextLayoutManager {
       width: Float,
       widthYogaMeasureMode: YogaMeasureMode,
       calculatedLineCount: Int,
+      hugsWrappedLines: Boolean,
   ): Float {
     // Our layout must be created at a physical pixel boundary, so may be sized smaller by a
     // subpixel compared to the assigned layout width.
     if (widthYogaMeasureMode == YogaMeasureMode.EXACTLY) {
       return width
+    }
+
+    // `layout.width` is the width the run was GIVEN, and a run that wraps fills it: a box that
+    // shrinks to fit around it is the available width (css-sizing-3 5.2.2). A run that hugs
+    // reports the longest line it actually used instead — see `experimental_hugsWrappedLines`
+    // in BaseViewProps.h. Clamped, because a single line wider than the container (an
+    // unbreakable word) must still report the container.
+    if (hugsWrappedLines) {
+      var longest = 0f
+      for (line in 0 until calculatedLineCount) {
+        longest = max(longest, layout.getLineWidth(line))
+      }
+      return min(longest, layout.width.toFloat())
     }
 
     return layout.width.toFloat()

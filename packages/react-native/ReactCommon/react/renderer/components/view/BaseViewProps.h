@@ -131,6 +131,31 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // `white-space`, inherited like the rest of these: a `<pre>` sets it and
   // every run inside keeps it.
   std::optional<WhiteSpace> inheritedWhiteSpace{};
+  /*
+   * Whether a run that WRAPS reports the width of its longest line instead of
+   * the width it was given.
+   *
+   * A box that shrinks to fit takes `min(max-content, available)`, and
+   * max-content is the whole run on one line — so a run that wraps fills its
+   * container and a shrink-to-fit box around it stands at the limit with the
+   * slack left after the last word. That is what CSS says (css-sizing-3 §5.2.2:
+   * the shrink-to-fit width IS the available width once max-content exceeds
+   * it), and it is not what a chat balloon does: measured against the platform's
+   * own chat with the same three messages, its balloons are 269.26, 256.26 and
+   * 252.62 points wide, where a box following the rule is 280.67 — the limit —
+   * for all three, the last of them with 28 points of empty fill after the last
+   * word.
+   *
+   * So this is an opt-in, inherited like `white-space` because it is the same
+   * kind of property — how a run's lines relate to the box around them, set on
+   * an element and true for the text inside it.
+   *
+   * DOM-CSS-DEVIATION(hugs-wrapped-lines): CSS has no value for it. `fit-content`
+   * is the same clamp, and `min-content` is the longest WORD rather than the
+   * longest line. The reported width is never wider than the one CSS would give,
+   * and only an element that asks gets it.
+   */
+  std::optional<bool> inheritedHugsWrappedLines{};
 
   /*
    * # The user-agent origin

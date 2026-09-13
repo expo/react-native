@@ -336,6 +336,11 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   // inheritable text properties reach native as top-level props, and a key
   // missing from this table is dropped before it ever gets there.
   whiteSpace: true,
+  // Whether a wrapped box shrinks to its longest line; see StyleSheetTypes.
+  // Registered here for the same reason `whiteSpace` is — an inheritable text
+  // property reaches native as a top-level prop, and a key missing from this
+  // table is dropped on the way.
+  experimental_hugsWrappedLines: true,
   // The platform's own name for the text's ROLE — see `dynamicTypeRamp` in
   // StyleSheetTypes. A style key rather than a component prop because it is
   // inherited: a heading names the role and the run inside it receives it.

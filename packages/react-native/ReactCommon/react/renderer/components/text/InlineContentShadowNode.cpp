@@ -921,6 +921,9 @@ Size InlineContentShadowNode::measureContent(
       // stamp/attachment measures above lay out variant strings that the
       // mount-side content check would reject anyway.
       .runTag = getTag(),
+      // Inherited from the box's owner, so the element that wants its balloon
+      // to hug says so in its own style.
+      .hugsWrappedLines = textAttributes.hugsWrappedLines.value_or(false),
   };
 
   // Ask for the per-fragment rects here when there is something to stamp. The

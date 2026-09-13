@@ -38,6 +38,7 @@
 		AB0DE1F0000000000000FA00 /* EXPKeyboardGeometryTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000FB00 /* EXPKeyboardGeometryTests.mm */; };
 		AB0DE1F00000000000010A00 /* EXPScrollIndicatorInsetTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F00000000000010B00 /* EXPScrollIndicatorInsetTests.mm */; };
 		AB0DE1F00000000000010A01 /* EXPChatBubbleTailTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F00000000000010B01 /* EXPChatBubbleTailTests.mm */; };
+		AB0DE1F00000000000010A02 /* RCTWrappedRunHugTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F00000000000010B02 /* RCTWrappedRunHugTests.mm */; };
 		C175B6D9ED9336FB66637943 /* libPods-RNTester.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C706D402EE4AF9BE838CBA9 /* libPods-RNTester.a */; };
 		CD10C7A5290BD4EB0033E1ED /* RCTEventEmitterTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CD10C7A4290BD4EB0033E1ED /* RCTEventEmitterTests.m */; };
 		E62F11832A5C6580000BF1C8 /* FlexibleSizeExampleView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 27F441E81BEBE5030039B79C /* FlexibleSizeExampleView.mm */; };
@@ -139,6 +140,7 @@
 		AB0DE1F0000000000000FB00 /* EXPKeyboardGeometryTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPKeyboardGeometryTests.mm; sourceTree = "<group>"; };
 		AB0DE1F00000000000010B00 /* EXPScrollIndicatorInsetTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPScrollIndicatorInsetTests.mm; sourceTree = "<group>"; };
 		AB0DE1F00000000000010B01 /* EXPChatBubbleTailTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPChatBubbleTailTests.mm; sourceTree = "<group>"; };
+		AB0DE1F00000000000010B02 /* RCTWrappedRunHugTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTWrappedRunHugTests.mm; sourceTree = "<group>"; };
 		AC474BFB29BBD4A1002BDAED /* RNTester.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = RNTester.xctestplan; path = RNTester/RNTester.xctestplan; sourceTree = "<group>"; };
 		B0E70A8A05E03E868F8703FE /* Pods-RNTesterIntegrationTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RNTesterIntegrationTests.release.xcconfig"; path = "Target Support Files/Pods-RNTesterIntegrationTests/Pods-RNTesterIntegrationTests.release.xcconfig"; sourceTree = "<group>"; };
 		BCA18AEDF7FE87DD94B97367 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-RNTester/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
@@ -420,6 +422,7 @@
 				AB0DE1F0000000000000E900 /* EXPHostChromeZOrderTests.mm */,
 				AB0DE1F00000000000010B00 /* EXPScrollIndicatorInsetTests.mm */,
 				AB0DE1F00000000000010B01 /* EXPChatBubbleTailTests.mm */,
+				AB0DE1F00000000000010B02 /* RCTWrappedRunHugTests.mm */,
 				AB0DE1F0000000000000EB00 /* EXPLineHeightInkTests.mm */,
 				AB0DE1F0000000000000FB00 /* EXPKeyboardGeometryTests.mm */,
 				AB0DE1F0000000000000CF00 /* EXPHostChromeMountIndexTests.mm */,
@@ -924,6 +927,7 @@
 				AB0DE1F0000000000000E800 /* EXPHostChromeZOrderTests.mm in Sources */,
 				AB0DE1F00000000000010A00 /* EXPScrollIndicatorInsetTests.mm in Sources */,
 				AB0DE1F00000000000010A01 /* EXPChatBubbleTailTests.mm in Sources */,
+				AB0DE1F00000000000010A02 /* RCTWrappedRunHugTests.mm in Sources */,
 				AB0DE1F0000000000000EA00 /* EXPLineHeightInkTests.mm in Sources */,
 				AB0DE1F0000000000000FA00 /* EXPKeyboardGeometryTests.mm in Sources */,
 				AB0DE1F0000000000000CE00 /* EXPHostChromeMountIndexTests.mm in Sources */,

@@ -694,7 +694,8 @@ public class FabricUIManager
       float minHeight,
       float maxHeight,
       @Nullable float[] attachmentsPositions,
-      @Nullable float[] floatExclusionsDip) {
+      @Nullable float[] floatExclusionsDip,
+      boolean hugsWrappedLines) {
 
     ViewManager textViewManager = mViewManagerRegistry.get(ReactTextViewManager.REACT_CLASS);
 
@@ -723,7 +724,8 @@ public class FabricUIManager
             : null,
         attachmentsPositions,
         floatExclusionsDip,
-        mTextEffectRegistry);
+        mTextEffectRegistry,
+        hugsWrappedLines);
   }
 
   /**
