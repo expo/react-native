@@ -487,6 +487,17 @@ RootShadowNode::Unshared CSSTransitions::shadowTreeWillCommit(
    * none of them can carry an author's change.
    */
   if (commitOptions.source != ShadowTreeCommitSource::React) {
+    /*
+     * Not diffed — but WATCHED, while anything is running.
+     *
+     * A transition that finishes and is then asked for again from the value it
+     * started at means the committed tree went back to that value, and a commit
+     * that is not React's is the only thing that can have put it there. Those
+     * commits are invisible in this trace by design, so a flicker reported from
+     * a device read as the same fade starting six times with nothing in
+     * between. This says which commit moved it and to what.
+     */
+    noteCommitBehindTransitions(*newRootShadowNode, commitOptions.source);
     return newRootShadowNode;
   }
 
@@ -652,6 +663,47 @@ void CSSTransitions::collectLayoutMetrics(
   }
   for (const auto& child : node.getChildren()) {
     collectLayoutMetrics(*child, metrics);
+  }
+}
+
+/*
+ * Whether a commit that is not React's disagrees with a transition in flight.
+ *
+ * Reached through each running transition's own FAMILY rather than by walking
+ * the tree: `getAncestors` is the depth of one node, and there is never more
+ * than a handful of transitions. Says so when the committed value for a running
+ * property is not where that transition is going. Diagnostic: it logs and
+ * changes nothing.
+ */
+void CSSTransitions::noteCommitBehindTransitions(
+    const RootShadowNode& newRootShadowNode,
+    ShadowTreeCommitSource source) noexcept {
+  std::scoped_lock lock(mutex_);
+  for (const auto& [tag, entry] : transitions_) {
+    if (entry.family == nullptr || entry.running.empty()) {
+      continue;
+    }
+    const auto ancestors = entry.family->getAncestors(newRootShadowNode);
+    if (ancestors.empty()) {
+      continue;
+    }
+    const auto& [parent, index] = ancestors.back();
+    const auto& node = *parent.get().getChildren().at(index);
+    const auto* viewProps = dynamic_cast<const ViewProps*>(node.getProps().get());
+    if (viewProps == nullptr) {
+      continue;
+    }
+    for (const auto& running : entry.running) {
+      const auto committed = currentValue(*viewProps, running.property);
+      if (!valuesEqual(committed, running.to, running.property)) {
+        trace_->log(
+            "behind-back t=" + std::to_string(tag) + " " +
+            propName(running.property) + " committed " +
+            describeValue(committed, running.property) + " while running to " +
+            describeValue(running.to, running.property) + " (source=" +
+            std::to_string(static_cast<int>(source)) + ")");
+      }
+    }
   }
 }
 
@@ -863,10 +915,30 @@ void CSSTransitions::diffNode(
         continue;
       }
 
+      /*
+       * A RESTART is worth saying out loud. The same change arriving again,
+       * from the value the last one started at and within a second of it
+       * finishing, is not an author changing their mind — it is a commit
+       * repeating, and on a device it is what a reader sees as a flicker.
+       */
+      const auto doneKey = static_cast<uint64_t>(tag) * 16 +
+          static_cast<uint64_t>(property);
+      const auto journey = describeValue(previous, property) + "->" +
+          describeValue(target, property);
+      std::string again;
+      if (auto done = lastDone_.find(doneKey); done != lastDone_.end()) {
+        const auto since = lastFrameTime_ - done->second.time;
+        if (since > 1000.0 || done->second.journey != journey) {
+          lastDone_.erase(done);
+        } else {
+          done->second.repeats += 1;
+          again = " AGAIN #" + std::to_string(done->second.repeats) + " " +
+              std::to_string(static_cast<int>(since)) + "ms after it finished";
+        }
+      }
       trace_->log(
           "start t=" + std::to_string(tag) + " " + propName(property) + " " +
-          describeValue(previous, property) + "->" +
-          describeValue(target, property));
+          journey + again);
 
       auto& entry = transitions_[tag];
       entry.tag = tag;
@@ -1135,6 +1207,20 @@ void CSSTransitions::frame(double nowMs) {
             "done t=" + std::to_string(entry.tag) + " " +
             propName(running->property) + " =" +
             describeValue(running->to, running->property));
+        // Remembered so that the same transition starting again can say how
+        // long ago this was — see `lastDone_`.
+        if (lastDone_.size() > 256) {
+          // Nothing older than a second can say anything about a restart, and
+          // a map of finished transitions must not grow with the session.
+          std::erase_if(lastDone_, [this](const auto& entry) {
+            return lastFrameTime_ - entry.second.time > 1000.0;
+          });
+        }
+        auto& mark = lastDone_[static_cast<uint64_t>(entry.tag) * 16 +
+                               static_cast<uint64_t>(running->property)];
+        mark.time = lastFrameTime_;
+        mark.journey = describeValue(running->from, running->property) + "->" +
+            describeValue(running->to, running->property);
         running = entry.running.erase(running);
       } else {
         ++running;
