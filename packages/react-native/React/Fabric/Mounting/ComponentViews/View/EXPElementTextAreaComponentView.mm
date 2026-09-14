@@ -180,22 +180,33 @@ using namespace facebook::react;
   const CGFloat x = insets.left + lineFragmentPadding;
   const CGFloat width = CGRectGetWidth(_textView.bounds) - x - insets.right - lineFragmentPadding;
   /*
-   * Given the text container's whole box, and left to centre its own line.
+   * As tall as the placeholder ITSELF, at the container's top.
    *
-   * NOT placed at the container's top inset and sized with `sizeToFit`, which
-   * is two fragile things at once: the fitted height depends on the font being
-   * current at that moment, and the origin is in the text view's CONTENT
-   * coordinates, so any scroll offset carries the placeholder with it. Between
-   * them the placeholder lands half a line low and clipped by the field's
-   * bottom edge.
+   * A label draws its text vertically centred in its frame, so a frame the size
+   * of the whole container puts a one-line placeholder in the middle of the
+   * box. In a field that is one line that is exactly where the first typed
+   * character goes — and in one that has GROWN it is the middle of several
+   * lines, which is where the placeholder appeared for the frames a composer
+   * spends collapsing after a send. Reported from a device as the placeholder
+   * jumping to the middle of the text area.
    *
-   * A label draws one line vertically centred in its frame, so handing it the
-   * container's box puts the placeholder exactly where the first typed line
-   * will be, with nothing to keep in step.
+   * Measured rather than assumed a line: `numberOfLines` is 0, so a long
+   * placeholder wraps, and a frame of one line would clip it. Clamped to the
+   * container for the same reason the container is the width — what does not
+   * fit is the field's business, not this label's.
+   *
+   * The origin stays the container's top inset plus the scroll offset: the
+   * frame is in the text view's CONTENT coordinates, so a scrolled field would
+   * otherwise carry the placeholder away with it.
    */
   const CGFloat containerHeight = CGRectGetHeight(_textView.bounds) - insets.top - insets.bottom;
-  _placeholderLabel.frame =
-      CGRectMake(x, insets.top + _textView.contentOffset.y, MAX(width, 0), MAX(containerHeight, 0));
+  const CGFloat fitted =
+      [_placeholderLabel sizeThatFits:CGSizeMake(MAX(width, 0), CGFLOAT_MAX)].height;
+  _placeholderLabel.frame = CGRectMake(
+      x,
+      insets.top + _textView.contentOffset.y,
+      MAX(width, 0),
+      MAX(MIN(fitted, containerHeight), 0));
   [self _reportContentSizeIfChanged];
 }
 
