@@ -36,6 +36,35 @@
  * selection adjustment, undo registration and scroll-to-caret are UIKit's job
  * rather than ours to reimplement.
  */
+/*
+ * Drop the autocorrection UIKit has queued, if any.
+ *
+ * A correction belongs to the document the user was typing in, and a controlled
+ * write replaces that document. UIKit applies it afterwards anyway, against the
+ * range it remembers: type "hi teh", send, and the field a send has just
+ * emptied fills with "Hitch".
+ *
+ * There is no API that says "forget it". Announcing the write does not —
+ * `textWillChange:`/`textDidChange:` say the document changed, which is true
+ * and retracts nothing. Turning the trait off and reloading the input views is
+ * what the platform leaves, and it is what UIKit itself does when a field's
+ * traits change mid-edit.
+ */
+static void EXPAbandonPendingCorrection(UIView<UITextInput> *field)
+{
+  if (!field.isFirstResponder) {
+    return;
+  }
+  const UITextAutocorrectionType correction = field.autocorrectionType;
+  if (correction == UITextAutocorrectionTypeNo) {
+    return;
+  }
+  field.autocorrectionType = UITextAutocorrectionTypeNo;
+  [field reloadInputViews];
+  field.autocorrectionType = correction;
+  [field reloadInputViews];
+}
+
 void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSString *next)
 {
   NSString *current = field.text ?: @"";
@@ -65,6 +94,23 @@ void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSS
       return;
     }
     [field unmarkText];
+  }
+
+  /*
+   * EMPTY takes the whole-document write, and not to save work.
+   *
+   * There is no insertion point to preserve in an empty document, and a
+   * property write is a different thing to the input system than an edit: it
+   * replaces the document rather than editing a range of it, and the
+   * correction UIKit had queued against a word in the old one goes with it.
+   * `replaceRange:` leaves that correction standing — measured by typing
+   * "hi teh", sending it, and watching "Hitch" arrive in the field the send had
+   * just emptied.
+   */
+  if (next.length == 0) {
+    field.text = next;
+    EXPAbandonPendingCorrection(field);
+    return;
   }
 
   // Not being edited: there is no insertion point to preserve, so the cheap
@@ -176,7 +222,30 @@ void EXPWriteTextPreservingCaret(UIView<EXPCaretPreservingTextInput> *field, NSS
     selEnd = [field offsetFromPosition:field.beginningOfDocument toPosition:selection.end];
   }
 
+  /*
+   * A pending AUTOCORRECTION belongs to the document the user was typing in,
+   * and this write replaces that document.
+   *
+   * UIKit applies the correction it has queued after the write lands, against
+   * the range it remembers — reproduced on a device and on the simulator by
+   * typing "Teh" and sending it: the message goes as "Teh", the field is
+   * cleared by the send, and "The" then appears in the empty field. In a
+   * browser `el.value = ''` drops any correction in flight; the element has to
+   * say the same thing.
+   *
+   * `textWillChange:`/`textDidChange:` is how a programmatic change is
+   * announced to the input system. `replaceRange:` announces the edit itself,
+   * but that is the edit — not the fact that the document the keyboard was
+   * reasoning about is gone.
+   */
+  [field.inputDelegate textWillChange:field];
   [field replaceRange:range withText:[next substringWithRange:NSMakeRange(prefix, insertedLength)]];
+  [field.inputDelegate textDidChange:field];
+
+  // And whatever correction was queued against the words this write replaced.
+  if (replacedLength > 0) {
+    EXPAbandonPendingCorrection(field);
+  }
 
   if (selStart < 0) {
     return;
