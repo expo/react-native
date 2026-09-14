@@ -76,6 +76,10 @@ using namespace facebook::react;
   UILabel *_placeholderLabel;
 
   NSInteger _nativeEventCount;
+  /* Whether the text is being changed by THIS view applying a controlled
+     `value`, rather than by the user — see `-textViewDidChange:`. The same flag
+     `<input>` keeps, by the same name, for the same reason. */
+  BOOL _isApplyingProps;
   NSString *_textAtEditingStart;
   BOOL _isInitialValueSet;
 }
@@ -218,14 +222,42 @@ using namespace facebook::react;
 
 - (void)textViewDidChange:(UITextView *)textView
 {
+  /*
+   * A CONTROLLED WRITE IS NOT AN EDIT, and this is where that is said.
+   *
+   * `el.value = 'x'` does not fire `input` in a browser — that event is the
+   * user's — and a field that reports the app's own write back to it hands the
+   * app its own string as if it had been typed. The chat demo's composer is
+   * exactly that shape: it writes the message into the field on a send and
+   * clears it a few frames later, and the echo of the FIRST write arrived after
+   * the clear and put the message back. Reported from a device as "the text
+   * area retains the trimmed text even after sending it", and read off the
+   * app's own log: the last input event carried `"Trim me"` — the trimmed
+   * message, which nobody typed.
+   *
+   * `_nativeEventCount` is not bumped either: it exists to tell a value
+   * computed before the keystrokes still in flight from a fresh one, and this
+   * view's own write is not a keystroke. Bumping it here would make the app's
+   * next value look stale and be discarded — which is the other half of the
+   * same bug, the one that makes the field keep the text for good.
+   *
+   * The placeholder and the content size are still updated below: those are
+   * facts about the text, and the text did change.
+   */
+  const BOOL isEcho = _isApplyingProps;
   const auto &props = static_cast<const ElementTextAreaProps &>(*_props);
-  if (props.maxLength >= 0 && (NSInteger)textView.text.length > props.maxLength) {
+  if (!isEcho && props.maxLength >= 0 && (NSInteger)textView.text.length > props.maxLength) {
     UITextRange *selection = textView.selectedTextRange;
     textView.text = [textView.text substringToIndex:props.maxLength];
     textView.selectedTextRange = selection;
   }
 
   [self updatePlaceholderVisibility];
+
+  if (isEcho) {
+    [self _reportContentSizeIfChanged];
+    return;
+  }
 
   if (!_eventEmitter) {
     return;
@@ -374,6 +406,22 @@ using namespace facebook::react;
     // whole document and restoring a saved range. A saved range clamps
     // silently when the new text is shorter, which for a textarea means a
     // caret that jumps on every clamped edit.
+    /*
+     * Flagged for the delegate — see `-textViewDidChange:`. A scope guard
+     * rather than a pair of assignments, as `<input>` does: the write can run
+     * arbitrary code on the way out.
+     */
+    struct ApplyingGuard {
+      BOOL *flag;
+      explicit ApplyingGuard(BOOL *f) : flag(f)
+      {
+        *flag = YES;
+      }
+      ~ApplyingGuard()
+      {
+        *flag = NO;
+      }
+    } guard{&_isApplyingProps};
     EXPWriteTextPreservingCaret(_textView, RCTNSStringFromString(newAreaProps.value));
   } else if (!_isInitialValueSet && !newAreaProps.hasValue) {
     _textView.text = RCTNSStringFromString(newAreaProps.defaultValue);

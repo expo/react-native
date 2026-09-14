@@ -29,6 +29,7 @@
 		AB0DE1F000000000000000E1 /* RCTAttachmentLineLeadingTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */; };
 		AB0DE1F000000000000000F1 /* EXPSelectMenuDismissTrackingTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F000000000000000F2 /* EXPSelectMenuDismissTrackingTests.mm */; };
 		AB0DE1F0000000000000CA00 /* EXPTextInputCaretTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000CB00 /* EXPTextInputCaretTests.mm */; };
+		AB0DE1F00000000000011C01 /* EXPTextAreaControlledWriteTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F00000000000011C00 /* EXPTextAreaControlledWriteTests.mm */; };
 		AB0DE1F0000000000000CC00 /* EXPElementRadioHitAreaTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000CD00 /* EXPElementRadioHitAreaTests.mm */; };
 		AB0DE1F0000000000000CE00 /* EXPHostChromeMountIndexTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000CF00 /* EXPHostChromeMountIndexTests.mm */; };
 		AB0DE1F0000000000000D200 /* EXPPlatformTextRoleTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = AB0DE1F0000000000000D300 /* EXPPlatformTextRoleTests.mm */; };
@@ -131,6 +132,7 @@
 		AB0DE1F000000000000000E2 /* RCTAttachmentLineLeadingTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RCTAttachmentLineLeadingTests.mm; sourceTree = "<group>"; };
 		AB0DE1F000000000000000F2 /* EXPSelectMenuDismissTrackingTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPSelectMenuDismissTrackingTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000CB00 /* EXPTextInputCaretTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPTextInputCaretTests.mm; sourceTree = "<group>"; };
+		AB0DE1F00000000000011C00 /* EXPTextAreaControlledWriteTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPTextAreaControlledWriteTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000CD00 /* EXPElementRadioHitAreaTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPElementRadioHitAreaTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000CF00 /* EXPHostChromeMountIndexTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPHostChromeMountIndexTests.mm; sourceTree = "<group>"; };
 		AB0DE1F0000000000000D300 /* EXPPlatformTextRoleTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EXPPlatformTextRoleTests.mm; sourceTree = "<group>"; };
@@ -417,6 +419,7 @@
 				AB0DE1F000000000000000C2 /* RCTViewComponentViewRecycleTests.mm */,
 				AB0DE1F000000000000000D2 /* RCTGlyphHuggingLayoutManagerTests.mm */,
 				AB0DE1F0000000000000CB00 /* EXPTextInputCaretTests.mm */,
+				AB0DE1F00000000000011C00 /* EXPTextAreaControlledWriteTests.mm */,
 				AB0DE1F0000000000000CD00 /* EXPElementRadioHitAreaTests.mm */,
 				AB0DE1F0000000000000E700 /* RCTViewPressObserverTests.mm */,
 				AB0DE1F0000000000000E900 /* EXPHostChromeZOrderTests.mm */,
@@ -922,6 +925,7 @@
 				AB0DE1F000000000000000C1 /* RCTViewComponentViewRecycleTests.mm in Sources */,
 				AB0DE1F000000000000000D1 /* RCTGlyphHuggingLayoutManagerTests.mm in Sources */,
 				AB0DE1F0000000000000CA00 /* EXPTextInputCaretTests.mm in Sources */,
+				AB0DE1F00000000000011C01 /* EXPTextAreaControlledWriteTests.mm in Sources */,
 				AB0DE1F0000000000000CC00 /* EXPElementRadioHitAreaTests.mm in Sources */,
 				AB0DE1F0000000000000E600 /* RCTViewPressObserverTests.mm in Sources */,
 				AB0DE1F0000000000000E800 /* EXPHostChromeZOrderTests.mm in Sources */,
