@@ -60,6 +60,7 @@
 import '@react-native/expo-intrinsics-poc';
 
 import {CHAT_BUBBLE_TAIL_DROP} from '../../expo-intrinsics/src/chatBubbleMetrics';
+import env from '../../expo-intrinsics/src/env';
 import NativeChatBubble, {
   CHAT_BUBBLE_DRAWS_TAIL,
 } from '../../expo-intrinsics/src/NativeChatBubble';
@@ -245,6 +246,13 @@ const TRANSCRIPT_MARGIN = 16;
  * one.
  */
 const BALLOON_PLUS_RESERVE = 89.333;
+/*
+ * And the cap that binds instead once the column is wide — see `balloonWrap`,
+ * which is the box it is stated on. The platform's `balloonMaxWidthPercent`,
+ * which looks like the whole answer and is half of one: the rule takes the
+ * smaller of this and the reserve above.
+ */
+const BALLOON_MAX_WIDTH = '85%';
 /*
  * And the reason that reserve is the number to state rather than a width: it
  * makes the balloon's text column and the FIELD's the same width at every
@@ -4123,6 +4131,23 @@ const styles = StyleSheet.create({
    * 15.667 above and 16 below.
    */
   transcriptContent: {
+    /*
+     * The sensor housing, on the CONTENT rather than on the scroll view.
+     *
+     * A row's own sixteen points are its margin from the column's edge, and the
+     * column's edge is inside the safe area — measured on the platform in
+     * landscape, a sent balloon's trailing edge lands at 795.67 on an 874-point
+     * screen, which is the 62-point inset and the margin. So the two compose on
+     * different boxes, which is also the only way to add them: `env()` resolves
+     * during the layout pass and cannot go inside a `calc()`.
+     *
+     * Here rather than as a content INSET so that it is layout: the column the
+     * balloons are laid out in has to be the narrower one, not merely drawn
+     * shifted. Nothing is measured and no render is involved — a rotation
+     * re-lays this out without React hearing about it.
+     */
+    paddingLeft: env('safe-area-inset-left'),
+    paddingRight: env('safe-area-inset-right'),
     paddingTop: 15.667,
     /* The number a send's end state is computed from — see
        `TRANSCRIPT_BOTTOM_PAD`, which is this. */
@@ -4841,7 +4866,33 @@ const styles = StyleSheet.create({
    * edge. Nothing here reflows during the send — the flight springs the
    * surface's width WITHIN the balloon, not this box.
    */
-  balloonWrap: {position: 'relative'},
+  /*
+   * The wrapper the balloon hugs inside, and the OTHER cap on how wide it gets.
+   *
+   * The platform's rule is a MINIMUM of two branches, probed out of it at
+   * widths from 320 to 932:
+   *
+   *     min(column - BALLOON_PLUS_RESERVE, 0.85 x column)
+   *
+   * and they cross at a 595.56-point column. Below that the reserve binds,
+   * which is the portrait case and the one `balloonMetrics` states; above it
+   * the percentage does, which is the case a phone on its side is in — an
+   * 874-point screen leaves a 718-point column, where the reserve would allow
+   * 628.67 and the platform allows 610.30. Measured on the platform's own
+   * balloon in landscape: 608.33, which is inside one narrow glyph of it, and
+   * as close as a WRAPPED balloon gets to its cap.
+   *
+   * A percentage rather than a number, and on this box rather than on the
+   * balloon, for the same reason the margins above are split across two boxes:
+   * the column is the one the safe area has already narrowed, and only the
+   * renderer knows how wide that is. Two nested `maxWidth`s compose as the
+   * minimum, which is exactly the rule.
+   *
+   * It does not bind in portrait — 85% of 370 is 314.5 against the reserve's
+   * 280.667 — so the balloons there are the same width they were, which is
+   * what `BalloonShapeCheck` and `WrapCheck` hold.
+   */
+  balloonWrap: {position: 'relative', maxWidth: BALLOON_MAX_WIDTH},
   /*
    * The balloon's line spans the column, so the time's `right` is the column's
    * and the line's height is the balloon's.
