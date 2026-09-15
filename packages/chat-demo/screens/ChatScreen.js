@@ -206,6 +206,16 @@ const STAMP_FADE = 270;
  */
 const RECEIPT_SPACE = RECEIPT_LAYOUT_MS;
 /*
+ * How long a send may hold the field's own events before the composer takes
+ * them back, whatever the flight is doing — see `sending`.
+ *
+ * Longer than any send: the balloon reports its takeoff within a frame or two
+ * of the tap and the row gives up after `BALLOON_SETTLE_FRAMES` in the worst
+ * case, so this is never what ends the window. It exists so that nothing can
+ * end it never.
+ */
+const SENDING_FLOOR_MS = 2000;
+/*
  * The transcript's own margin, and how far the receipt sits inside a balloon's
  * trailing edge. Both measured off the native chat — see `styles.row` and
  * `styles.receipt`.
@@ -2004,6 +2014,18 @@ function BubbleImpl({
   };
   const [shownReceipt, setShownReceipt] = useState(said);
   const [swappingReceipt, setSwappingReceipt] = useState(false);
+  /*
+   * Whether the words ON SCREEN got there by a SWAP rather than by arriving.
+   *
+   * It picks the transition the new words fade in on — 185ms of opacity, with
+   * none of the arrival's delay or grow, because a line replacing another has
+   * already had the reader's attention. So it describes the words, and it has
+   * to stop describing them when they go: left latched, a row that had swapped
+   * once kept `receiptInkSwapped` as its resting style for good, and a later
+   * receipt arriving on that same row would have come in on the swap's clock
+   * instead of the arrival's. Invisible today — both states rest at opacity 1 —
+   * and wrong in the way that waits for someone to add a state.
+   */
   const [swappedReceipt, setSwappedReceipt] = useState(false);
   /*
    * When the words on screen started arriving, so that they cannot be replaced
@@ -2078,6 +2100,15 @@ function BubbleImpl({
     // has not started: the cleanup above is the whole mechanism.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wanted, drawn, showsReceipt]);
+  /*
+   * The words are gone, so what brought them is no longer true. See
+   * `swappedReceipt`.
+   */
+  useEffect(() => {
+    if (showsReceipt !== 'shown') {
+      setSwappedReceipt(false);
+    }
+  }, [showsReceipt]);
   /*
    * The receipt's height, SYNCHRONOUSLY, for the same reason as the band below
    * — and here it is not a refinement but the whole bug.
@@ -3366,6 +3397,21 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
      */
     sending.current = true;
     fieldText.current = '';
+    /*
+     * And a floor under it. The flag is lifted by the sent row telling us its
+     * balloon is on screen (`rememberTakeoff`) or has landed
+     * (`rememberArrival`) — both of which need that row to be MOUNTED. It is,
+     * because a send scrolls the list to its end, and the row's own effect has
+     * a frame budget after which it reports anyway. But a flag that silently
+     * drops every keystroke is the wrong thing to leave resting on an
+     * invariant a row has to keep: this bounds it, and on every ordinary send
+     * the takeoff has already cleared it long before this fires.
+     */
+    pendingTimers.current.push(
+      setTimeout(() => {
+        sending.current = false;
+      }, SENDING_FLOOR_MS),
+    );
     const sent = makeMessage('me', text, true);
     beginWork('send');
     setMessages(previous => [...previous, sent]);
