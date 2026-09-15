@@ -98,14 +98,24 @@ final class MaterialCheck: DemoCase {
      * give or take the four points it reaches above by design — the native
      * bar's does the same, measured. Eighteen is what shipped once and was
      * reported as "it extends above the text area too much".
+     *
+     * And read across EVERY column that has something behind it, not the first
+     * one that does, because one column cannot tell the two edges apart. The
+     * surface's edge is at the same row in all of them; a balloon's own top
+     * edge sitting a few points above the bar is a step in one or two. Taking
+     * the first column made the reading depend on which of those the scroll
+     * happened to leave there, and the case failed about half the time on a
+     * one-point threshold — 785, 787 and 788 across three runs of an unchanged
+     * app. The MEDIAN is the row the columns agree on.
      */
     let inside = barTop + 5
     var edge: CGFloat?
     var step = (from: 0, to: 0)
     var px = try pixels()
     for attempt in 0..<10 {
+      var steps: [(edge: CGFloat, from: Int, to: Int)] = []
       var x = window.width * 0.2
-      while x < window.width - 24 && edge == nil {
+      while x < window.width - 24 {
         let covered = px.rowAverage(y: inside, from: x, to: x + 6)
         let coveredValue = (covered.r + covered.g + covered.b) / 3
         // Something has to BE there. A column showing the bar over bare page is
@@ -116,14 +126,19 @@ final class MaterialCheck: DemoCase {
             let sample = px.rowAverage(y: y, from: x, to: x + 6)
             let value = (sample.r + sample.g + sample.b) / 3
             if abs(value - coveredValue) > 12 {
-              edge = y
-              step = (from: coveredValue, to: value)
+              steps.append((y, coveredValue, value))
               break
             }
             y -= 2
           }
         }
         x += 6
+      }
+      if steps.count >= 3 {
+        let ordered = steps.sorted { $0.edge < $1.edge }
+        let middle = ordered[ordered.count / 2]
+        edge = middle.edge
+        step = (from: middle.from, to: middle.to)
       }
       if edge != nil { break }
       if attempt == 0 {
