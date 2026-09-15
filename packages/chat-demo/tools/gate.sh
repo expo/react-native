@@ -35,7 +35,7 @@ SIM2=${SIM2:-$(echo "$BOOTED" | sed -n 2p)}
 # Ask for them when you want the footage.
 RECORDERS=${GATE_RECORDERS:-0}
 DD=${DD:-/tmp/chatdemo-rel}
-if [ "$RECORDERS" = "1" ]; then EXPECTED_CASES=${EXPECTED_CASES:-77}; else EXPECTED_CASES=${EXPECTED_CASES:-66}; fi
+if [ "$RECORDERS" = "1" ]; then EXPECTED_CASES=${EXPECTED_CASES:-78}; else EXPECTED_CASES=${EXPECTED_CASES:-67}; fi
 APP=$DD/Build/Products/Release-iphonesimulator/ChatDemo.app
 LOG=${LOG:-/tmp/chatdemo-gate.log}
 LOG_B=${LOG%.log}-b.log

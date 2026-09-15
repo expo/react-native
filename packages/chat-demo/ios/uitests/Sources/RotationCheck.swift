@@ -140,6 +140,59 @@ final class RotationCheck: DemoCase {
   }
 
   /**
+   The transcript does not scroll sideways, on its side or upright.
+
+   The safe area is reserved ONCE. `<native:scroll>` reserves it on every edge
+   by default as a content INSET, which is right for a page — the content keeps
+   its width and is held clear of the hardware — and this screen needs the other
+   mechanism, because a balloon's cap and its trailing edge are measured from
+   the column and so the points have to come off the LAYOUT. Reserved both ways
+   they add, and the second reservation is not a margin at all: an inset on an
+   edge the content already clears is scrolling room. Measured with both on,
+   `composed L62.0 R62.0` against a content and a viewport both 874 — a hundred
+   and twenty-four points of horizontal travel that a drag to the right found,
+   and came to rest 62 points inside. Reported from a device.
+
+   Read off the scroll view's own indicator, which is the one thing that states
+   the answer rather than implying it: `Horizontal scroll bar, 1 page` is a
+   transcript with nowhere to go sideways, and `2 pages` is the bug.
+   */
+  func testTheTranscriptDoesNotScrollSideways() throws {
+    XCTAssertTrue(
+      text("Did the keyboard cover the last message?").waitForExistence(timeout: 15),
+      "no transcript")
+
+    func horizontalPages() -> [String] {
+      let composer = app.windows.element(boundBy: 0).frame.height - COMPOSER_BAR_HEIGHT
+      return app.descendants(matching: .any)
+        .matching(NSPredicate(format: "label BEGINSWITH 'Horizontal scroll bar'"))
+        .allElementsBoundByIndex
+        // The composer's own field carries one too, and it is allowed to
+        // scroll: a long draft moves sideways inside the pill.
+        .filter { $0.frame.maxY < composer }
+        .map { $0.label }
+    }
+
+    for upright in horizontalPages() {
+      XCTAssertEqual(upright, "Horizontal scroll bar, 1 page", "upright: \(upright)")
+    }
+
+    XCUIDevice.shared.orientation = .landscapeLeft
+    Thread.sleep(forTimeInterval: 3)
+
+    let sideways = horizontalPages()
+    XCTAssertFalse(
+      sideways.isEmpty,
+      "no horizontal indicator to read on its side, so nothing was checked")
+    for bar in sideways {
+      XCTAssertEqual(
+        bar, "Horizontal scroll bar, 1 page",
+        "on its side the transcript reads '\(bar)' — it has somewhere to go "
+          + "sideways, which means the sensor housing is being reserved twice")
+    }
+  }
+
+  /**
    A reader at the newest message is still there after the phone turns.
 
    The case that needs a message SENT first: the seeded conversation fits an

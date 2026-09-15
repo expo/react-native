@@ -3758,6 +3758,29 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
       <NativeScroll
         /* The header's fade is the scroll view's top edge effect; iOS 27 defaults it to a hard cut. */
         edgeEffects={{top: 'soft'}}
+        /*
+         * The sensor housing is reserved ONCE, and in LAYOUT — see
+         * `transcriptContent`.
+         *
+         * This view reserves every edge's safe area by default, as a content
+         * INSET, which is the right mechanism for a page: the content keeps its
+         * full width and is merely held clear of the hardware. A transcript
+         * needs the other one. Its column has to be narrower, because a
+         * balloon's cap and its trailing edge are measured from the column and
+         * not from the screen — so the points come off the layout.
+         *
+         * Reserved BOTH ways they add, and the second one is not a margin at
+         * all: an inset on an edge the content already clears is scrolling
+         * room. Measured on a phone on its side, `composed L62.0 R62.0` with
+         * the content and the viewport both 874 — a hundred and twenty-four
+         * points of horizontal travel, which a drag to the right found and came
+         * to rest 62 points inside. Reported from a device as the transcript
+         * ending up with horizontal scrolling.
+         *
+         * Top and bottom are left alone: the header and the keyboard are things
+         * to be held clear of, which is what an inset is for.
+         */
+        automaticInsets={{left: false, right: false}}
         ref={element => {
           transcript.current = element;
           transcriptBox.current = element;
@@ -4145,6 +4168,10 @@ const styles = StyleSheet.create({
      * balloons are laid out in has to be the narrower one, not merely drawn
      * shifted. Nothing is measured and no render is involved — a rotation
      * re-lays this out without React hearing about it.
+     *
+     * And the scroll view's own automatic reservation is turned OFF for these
+     * two edges, or the housing is paid for twice — see `automaticInsets` in
+     * the render for what the second payment turns out to be.
      */
     paddingLeft: env('safe-area-inset-left'),
     paddingRight: env('safe-area-inset-right'),
