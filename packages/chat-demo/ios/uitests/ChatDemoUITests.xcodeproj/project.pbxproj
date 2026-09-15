@@ -43,6 +43,7 @@
 		F8FC4AC570A65FDA1CF841E1 /* ComposerCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A5E11BB495E541E1E6F27E2 /* ComposerCheck.swift */; };
 		FAB44A2755A39DD460A471B6 /* TreeDump.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1972308290B3F408C00B8806 /* TreeDump.swift */; };
 		FE0727A8C01CFF2E15A03C72 /* GrowthCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A63D8F3E6A4AD7BBF46441 /* GrowthCheck.swift */; };
+		FEE91715ECC413280552BD41 /* RevealShot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9561960845284C0AD9CC31A1 /* RevealShot.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,6 +75,7 @@
 		7900EB43D133895E17ACA4CA /* StealCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StealCheck.swift; sourceTree = "<group>"; };
 		7D3338FAE9BE2F0F06702146 /* ReserveCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReserveCheck.swift; sourceTree = "<group>"; };
 		8F5BCB42D4C525E1A74C95C6 /* MeasureCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasureCheck.swift; sourceTree = "<group>"; };
+		9561960845284C0AD9CC31A1 /* RevealShot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealShot.swift; sourceTree = "<group>"; };
 		989F49C777AA4D1B5B388F83 /* TraceDumpCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceDumpCheck.swift; sourceTree = "<group>"; };
 		A45ADE29290B53CF0B2D38F8 /* BalloonShapeCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalloonShapeCheck.swift; sourceTree = "<group>"; };
 		A95E6AC1428A2C126711F5C0 /* RecycleCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecycleCheck.swift; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 				A95E6AC1428A2C126711F5C0 /* RecycleCheck.swift */,
 				7D3338FAE9BE2F0F06702146 /* ReserveCheck.swift */,
 				38BD8B05465457822A7F3830 /* ReturnCheck.swift */,
+				9561960845284C0AD9CC31A1 /* RevealShot.swift */,
 				5431778429B4B0B062F08665 /* SafeAreaCheck.swift */,
 				63A387D29A9C5CFEBE9CC907 /* SendDrive.swift */,
 				B29A3C22485B45C6A26969B3 /* SendMorphCheck.swift */,
@@ -227,6 +230,7 @@
 				4DD18264BE9F28CC37CB6BFE /* RecycleCheck.swift in Sources */,
 				4A4FAF57EC315133FB20A973 /* ReserveCheck.swift in Sources */,
 				AA7351A83C63ECA64DEA368C /* ReturnCheck.swift in Sources */,
+				FEE91715ECC413280552BD41 /* RevealShot.swift in Sources */,
 				9501416C860B6375C301B0CF /* SafeAreaCheck.swift in Sources */,
 				16E320FE9ABF7BE28D1194E9 /* SendDrive.swift in Sources */,
 				ED2F3A0D99824EECEB3B981E /* SendMorphCheck.swift in Sources */,

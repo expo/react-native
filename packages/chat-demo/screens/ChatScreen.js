@@ -94,6 +94,7 @@ import {
   REVEAL_COLUMN_LANDING,
   REVEAL_SETTLED,
   resistedReveal,
+  revealInkRamp,
 } from '../reveal';
 import {runFlags} from '../runGrouping';
 import {uiColor} from '../uiColors';
@@ -1932,6 +1933,8 @@ function BubbleImpl({
   onFlightFrame,
   showsReceipt,
   reveal,
+  /** The ink's strength, shared by every row — see the screen. */
+  revealInk,
   pan,
   /** The reaction ids stuck to this balloon (array; empty/undefined for none). */
   reactions,
@@ -2520,7 +2523,13 @@ function BubbleImpl({
               style={[
                 styles.revealColumn,
                 endsRun ? styles.revealColumnTailed : null,
-                {transform: [{translateX: timeShift}]},
+                /*
+                 * Inked by the drag as well as moved by it: the times come up
+                 * from nothing as the column arrives, and both numbers come off
+                 * the same native value, so they are one write per frame rather
+                 * than two.
+                 */
+                {opacity: revealInk, transform: [{translateX: timeShift}]},
               ]}>
               <span style={styles.revealTime}>{timeOf(message.at)}</span>
             </AnimatedDiv>
@@ -2905,6 +2914,24 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
       useNativeDriver: true,
     }).start();
   }, [reveal]);
+  /*
+   * And how strongly the times are inked, which is the same drag on a curve.
+   *
+   * ONE interpolation for the whole transcript, made here and handed to every
+   * row, rather than one per row: the ink is the same everywhere, so a second
+   * row asking for it should add a reader of this node and not another node.
+   *
+   * It costs no frame of its own. Each row's time is already written every
+   * frame of the drag — it is being translated — and the opacity rides along in
+   * that same write as one more number. Nothing walks the rows to find the ones
+   * that are off screen, because nothing walks the rows at all: the value is
+   * native, the readers are attached once when a row mounts, and JavaScript
+   * sees a drag the same way whether the conversation holds ten messages or ten
+   * thousand.
+   *
+   * See `revealInkRamp` for the curve and the capture it was measured from.
+   */
+  const revealInk = useLazily(() => reveal.interpolate(revealInkRamp()));
   const pan = useLazily(() =>
     PanResponder.create({
       onMoveShouldSetPanResponder: (event, gesture) =>
@@ -3902,6 +3929,7 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
                         : 'none'
                 }
                 reveal={reveal}
+                revealInk={revealInk}
                 pan={pan}
                 reactions={reactions[message.id]}
               />

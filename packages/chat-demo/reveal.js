@@ -134,3 +134,72 @@ export function revealGap(transcriptMargin, window = 402) {
   const columnLeft = window - REVEAL_COLUMN_LANDING - REVEAL_COLUMN;
   return columnLeft - balloonRight;
 }
+
+/**
+ * How the times FADE IN as the column arrives.
+ *
+ * They do not simply ride in at full strength: the ink comes up from nothing
+ * over the drag, and the drag is what drives it. Measured off a 60 fps capture
+ * of the native chat, a sent balloon's trailing edge tracked frame by frame
+ * against the ink in the column beside it:
+ *
+ *     travelled   26.00   35.33   42.33   48.67   53.33   58.00
+ *     alpha        0.20    0.34    0.50    0.67    0.81    0.99
+ *
+ * Two properties of that reading decide the shape here, and both are why this
+ * is not a transition:
+ *
+ *  - it is driven by POSITION, not by a clock. The capture has two stretches
+ *    where the finger stopped — frames 48-60 and 106-110 — and the ink is
+ *    frozen in both, to the hundredth. A timed fade would have carried on.
+ *  - it reaches full strength exactly at the settled state, so the ink lands
+ *    with the column rather than before or after it.
+ *
+ * Fitted against the fraction of the settled travel: `p^2.2` to 0.018 rms, and
+ * the alternatives are all worse — `p^2` 0.029, `cubic-bezier(.5,0,1,1)` 0.048,
+ * `ease-in` 0.077, `linear` 0.208, `ease` 0.425. So: a power curve of the drag,
+ * and the exponent is measured rather than chosen.
+ */
+export const REVEAL_INK_CURVE = 2.2;
+
+/**
+ * The ink's strength for a transcript that has moved `shown` points.
+ *
+ * A fraction of `REVEAL_SETTLED` rather than of the number measured above, so
+ * the ink stays tied to where the column actually lands here. Past the settled
+ * state the drag keeps giving (see `resistedReveal`) and the ink does not — it
+ * is already all the way up.
+ */
+export function revealInk(shown) {
+  if (!(shown > 0)) {
+    return 0;
+  }
+  if (shown >= REVEAL_SETTLED) {
+    return 1;
+  }
+  return Math.pow(shown / REVEAL_SETTLED, REVEAL_INK_CURVE);
+}
+
+/**
+ * The same curve as an interpolation the NATIVE driver can run.
+ *
+ * A native `interpolate` is piecewise linear — it takes stops, not an easing —
+ * so the curve is sampled here rather than evaluated per frame. Eight segments
+ * hold it to about 0.005 at the worst point, which is a quarter of the rms of
+ * the fit the curve came from, so the sampling is not what anyone would see.
+ *
+ * Built ONCE and shared by every row: one interpolation feeding many views, not
+ * one per view. See the screen.
+ */
+export const REVEAL_INK_STOPS = 8;
+
+export function revealInkRamp() {
+  const inputRange = [];
+  const outputRange = [];
+  for (let stop = 0; stop <= REVEAL_INK_STOPS; stop++) {
+    const shown = (REVEAL_SETTLED * stop) / REVEAL_INK_STOPS;
+    inputRange.push(shown);
+    outputRange.push(revealInk(shown));
+  }
+  return {inputRange, outputRange, extrapolate: 'clamp'};
+}

@@ -45,6 +45,8 @@ import {
   REVEAL_SETTLED,
   resistedReveal,
   revealGap,
+  revealInk,
+  revealInkRamp,
 } from '../reveal';
 
 test('a finger that has not moved reveals nothing', () => {
@@ -155,5 +157,84 @@ describe('a sent balloon keeps its margin from its own time', () => {
     const balloonRight = window - TRANSCRIPT_MARGIN - 40;
     const columnLeft = window - TRANSCRIPT_MARGIN - REVEAL_COLUMN;
     expect(balloonRight - columnLeft).toBeGreaterThanOrEqual(12);
+  });
+});
+
+/**
+ * And how the times are inked as the column comes in.
+ *
+ * Points off a capture this time, not properties, because there is a capture:
+ * the native chat's own drag at 60 fps with the ink counted frame by frame
+ * against the balloon's trailing edge. The tolerance is the fit's own rms
+ * (0.018), doubled — tighter than that would be asserting the fit's error
+ * rather than the curve.
+ */
+describe('the revealed times are inked by the drag', () => {
+  /* Fractions of the settled travel, so the capture's own 58 points and this
+     transcript's 56 are the same reading. */
+  const CAPTURE = [
+    [26.0 / 58, 0.2],
+    [35.33 / 58, 0.34],
+    [42.33 / 58, 0.5],
+    [48.67 / 58, 0.67],
+    [53.33 / 58, 0.81],
+    [58.0 / 58, 0.99],
+  ];
+
+  test.each(CAPTURE)('at %f of the travel the ink is %f', (p, alpha) => {
+    expect(revealInk(p * REVEAL_SETTLED)).toBeCloseTo(alpha, 1);
+    expect(Math.abs(revealInk(p * REVEAL_SETTLED) - alpha)).toBeLessThan(0.036);
+  });
+
+  /*
+   * The two ends are the rule rather than a reading: nothing is on screen
+   * before the drag, and the ink is all the way up exactly when the column has
+   * landed — not before it, which would leave the times sitting there while
+   * they were still moving, and not after, which would land them grey.
+   */
+  test('nothing at rest', () => {
+    expect(revealInk(0)).toBe(0);
+    expect(revealInk(-10)).toBe(0);
+  });
+
+  test('and full strength at the settled state, not past it', () => {
+    expect(revealInk(REVEAL_SETTLED)).toBe(1);
+    expect(revealInk(REVEAL_LIMIT)).toBe(1);
+  });
+
+  test('never darker for a shorter drag', () => {
+    let last = -1;
+    for (let shown = 0; shown <= REVEAL_SETTLED; shown += 0.5) {
+      const ink = revealInk(shown);
+      expect(ink).toBeGreaterThanOrEqual(last);
+      last = ink;
+    }
+  });
+
+  /*
+   * The native driver interpolates in straight lines between stops, so what it
+   * actually runs is the sampled ramp and not the curve. This is the one
+   * assertion that the two are the same thing: the worst point between stops is
+   * well inside the fit's own error, so the sampling is not something anyone
+   * could see.
+   */
+  test('the native ramp is the curve, to a quarter of the fit', () => {
+    const {inputRange, outputRange, extrapolate} = revealInkRamp();
+    expect(extrapolate).toBe('clamp');
+    expect(inputRange[0]).toBe(0);
+    expect(inputRange[inputRange.length - 1]).toBe(REVEAL_SETTLED);
+    let worst = 0;
+    for (let shown = 0; shown <= REVEAL_SETTLED; shown += 0.1) {
+      let stop = 0;
+      while (stop < inputRange.length - 2 && inputRange[stop + 1] < shown) {
+        stop++;
+      }
+      const span = inputRange[stop + 1] - inputRange[stop];
+      const along = (shown - inputRange[stop]) / span;
+      const ramped =
+        outputRange[stop] + along * (outputRange[stop + 1] - outputRange[stop]);
+      worst = Math.max(worst, Math.abs(ramped - revealInk(shown)));
+    }
+    expect(worst).toBeLessThan(0.006);
   });
 });
