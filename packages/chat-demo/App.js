@@ -44,6 +44,7 @@ import env from '../expo-intrinsics/src/env';
 import NativeScroll from '../expo-intrinsics/src/NativeScroll';
 import {systemColor} from '../expo-intrinsics/src/systemColors';
 import Composer, {ComposerBar} from './Composer';
+import useHeaderEdgeEffects from './headerEdge';
 import ChatScreen from './screens/ChatScreen';
 import VirtualizedScreen from './screens/VirtualizedScreen';
 import {uiColor} from './uiColors';
@@ -516,9 +517,10 @@ const READER_TITLE_CHARS = 34;
  * than as a scrollable balloon.
  */
 function ReaderScreen({text}) {
+  const headerEdgeEffects = useHeaderEdgeEffects();
   return (
     <NativeScroll
-      edgeEffects={{top: 'soft'}}
+      edgeEffects={headerEdgeEffects}
       style={styles.readerScroll}
       contentInsetAdjustmentBehavior="automatic">
       <div style={styles.readerBody}>
@@ -535,6 +537,7 @@ function InsetsScreen({
   showsPerformance,
   onShowPerformance,
 }) {
+  const headerEdgeEffects = useHeaderEdgeEffects();
   const [reserve, setReserve] = useState(true);
   const [chat, setChat] = useState(false);
   // Grows on demand, which is the only way to see whether the view follows it.
@@ -590,7 +593,7 @@ function InsetsScreen({
           by the toolchain that turns namespaced JSX into that component. Same
           component either way: the defaults are what is being judged. */}
       <NativeScroll
-        edgeEffects={{top: 'soft'}}
+        edgeEffects={headerEdgeEffects}
         style={[styles.fill, styles.scrollTint]}
         contentAnchor={chat ? 'bottom' : 'top'}
         onScroll={readMetrics}

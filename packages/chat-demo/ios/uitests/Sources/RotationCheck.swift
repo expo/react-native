@@ -41,13 +41,18 @@ final class RotationCheck: DemoCase {
     var trailing: CGFloat = 0
     var leading = window.maxX
     /*
-     * BELOW the navigation bar, whose back button is the leftmost ink on the
-     * screen and is not the transcript's. Anchored to the bar rather than to a
-     * fraction of the window, because the two orientations put it in different
-     * places: a sixth of 874 clears a bar ending at 116, a sixth of 402 lands
-     * inside one ending at 78.
+     * Below the navigation BAR, not below its back button.
+     *
+     * Everything the bar draws is ink that is not the transcript's: the button,
+     * and — once the edge effect is the platform's rather than a fade — a
+     * hairline at the bar's own bottom edge, running the full width of the
+     * screen at an x the transcript never reaches. Anchored to the bar rather
+     * than to a fraction of the window, because the two orientations put it in
+     * different places: a sixth of 874 clears a bar ending at 116, a sixth of
+     * 402 lands inside one ending at 78.
      */
-    let below = app.buttons["Back"].frame.maxY + 6
+    let bar = app.navigationBars.element(boundBy: 0)
+    let below = (bar.exists ? bar.frame.maxY : app.buttons["Back"].frame.maxY) + 4
     var y = max(window.height * 0.16, below)
     while y < composerTop - 4 {
       var x = window.maxX - 1

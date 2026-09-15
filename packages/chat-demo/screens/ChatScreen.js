@@ -76,6 +76,7 @@ import VirtualView, {
   createHiddenVirtualView,
 } from '../../react-native/src/private/components/virtualview/VirtualView';
 import Composer, {BAR_TOP_PADDING, ComposerBar} from '../Composer';
+import useHeaderEdgeEffects from '../headerEdge';
 import {REACTIONS, cycleReaction} from '../reactions';
 import {
   RECEIPT_FADE_MS,
@@ -2755,6 +2756,7 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
    * and a thousand memoized rows that re-render only when it actually changes.
    */
   const {fontScale, width: windowWidth} = useWindowDimensions();
+  const headerEdgeEffects = useHeaderEdgeEffects();
   const metrics = useMemo(
     () => balloonMetrics(fontScale, windowWidth),
     [fontScale, windowWidth],
@@ -3736,8 +3738,9 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
         <div accessible={true} aria-label={flightTrace} style={styles.trace} />
       )}
       <NativeScroll
-        /* The header's fade is the scroll view's top edge effect; iOS 27 defaults it to a hard cut. */
-        edgeEffects={{top: 'soft'}}
+        /* The header's fade is the scroll view's top edge effect, and it is not
+           the same on a phone lying down — see `useHeaderEdgeEffects`. */
+        edgeEffects={headerEdgeEffects}
         /*
          * The sensor housing is reserved ONCE, and in LAYOUT — see
          * `transcriptContent`.

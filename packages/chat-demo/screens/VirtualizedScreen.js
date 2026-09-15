@@ -24,6 +24,7 @@ import NativeScroll from '../../expo-intrinsics/src/NativeScroll';
  * point: a stand-in would test the stand-in.
  */
 import {createHiddenVirtualView} from '../../react-native/src/private/components/virtualview/VirtualView';
+import useHeaderEdgeEffects from '../headerEdge';
 import {accentColor, uiColor} from '../uiColors';
 import * as React from 'react';
 import {useRef} from 'react';
@@ -133,10 +134,11 @@ const HiddenRow = createHiddenVirtualView({minHeight: ROW_HEIGHT});
 
 export default function VirtualizedScreen({onExit}: {onExit?: () => void}) {
   const list = useRef(null);
+  const headerEdgeEffects = useHeaderEdgeEffects();
   return (
     <div style={styles.screen}>
       <NativeScroll
-        edgeEffects={{top: 'soft'}}
+        edgeEffects={headerEdgeEffects}
         ref={list}
         /*
          * No `contentAnchor`, deliberately. This screen is a virtualization
