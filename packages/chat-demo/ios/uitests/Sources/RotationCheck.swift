@@ -10,17 +10,22 @@ import XCTest
 /**
  The chat on its side.
 
- Two things change when the phone turns, and neither of them is the drawing:
- the column narrows by the sensor housing, and the transcript's viewport loses
- most of its height to a keyboard that is now most of the screen. Both were
- wrong, in ways that only a rotation could show.
+ Two things change when the phone turns, and neither is the drawing: the column
+ narrows by the sensor housing, and the transcript's viewport loses most of its
+ height to a keyboard that is now most of the screen.
 
- Every case here puts the device back upright afterwards, because XCUITest's
- orientation is the SIMULATOR's and outlives the process that set it — a case
- that leaves it on its side hands the next one a window it was not written for.
+ Every case here puts the device back upright afterwards. XCUITest's orientation
+ is the SIMULATOR's and outlives the process that set it, so a case that leaves
+ it on its side hands the next one a window it was not written for.
  */
 final class RotationCheck: DemoCase {
   override class var initialScreen: String? { "chat" }
+
+  /** The composer's top edge, which is where the transcript stops. The bar is
+      the same 69 tall on its side as upright — measured. */
+  private var composerTop: CGFloat {
+    app.windows.element(boundBy: 0).frame.height - 69
+  }
 
   override func tearDown() {
     XCUIDevice.shared.orientation = .portrait
@@ -28,50 +33,23 @@ final class RotationCheck: DemoCase {
     super.tearDown()
   }
 
-  /**
-   The colour at a point of the WINDOW, whichever way the window is.
-
-   A screenshot comes back in the DISPLAY's orientation, always: the image of a
-   window that is on its side is an upright one with the window lying in it. So
-   the scale `Pixels` computes from the window's height is wrong by the aspect
-   ratio, and the axes are swapped on top of that — this case first reported the
-   transcript as 13 points from one edge and 774 from the other, which is every
-   sample squashed into a corner. Neither `XCUIScreen`'s screenshot nor the
-   window element's own is any different; the mapping is the fix.
-
-   `landscapeLeft` only, which is the one this file turns to: the window's
-   leading edge is the image's BOTTOM, so a point across the window is a point
-   down the image and a point down the window is a point back across it.
-   */
-  private func windowPixels() throws -> (Pixels, (CGFloat, CGFloat) -> (r: Int, g: Int, b: Int)) {
-    let window = app.windows.element(boundBy: 0).frame
-    let sideways = window.width > window.height
-    let read = try XCTUnwrap(
-      Pixels(XCUIScreen.main.screenshot(), pointHeight: sideways ? window.width : window.height),
-      "could not read the screen")
-    if sideways {
-      return (read, { x, y in read.at(x: window.height - y, y: x) })
-    }
-    return (read, { x, y in read.at(x: x, y: y) })
-  }
-
   /// The trailing edge of the widest sent balloon, and the leading edge of the
   /// leftmost ink beside it, both in points across the transcript's own band.
   private func columnEdges() throws -> (leading: CGFloat, trailing: CGFloat) {
     let window = app.windows.element(boundBy: 0).frame
-    let (_, at) = try windowPixels()
+    let at = try windowSampler()
     var trailing: CGFloat = 0
     var leading = window.maxX
     /*
-     * BELOW the navigation bar, whose own back button is the leftmost ink on
-     * the screen and is not the transcript's. A fraction of the window is not
-     * enough: upright the bar ends at 116 and a sixth of 874 clears it, on its
-     * side it ends at 78 and a sixth of 402 lands inside it — which is what
-     * this case first read as a 47-point leading margin.
+     * BELOW the navigation bar, whose back button is the leftmost ink on the
+     * screen and is not the transcript's. Anchored to the bar rather than to a
+     * fraction of the window, because the two orientations put it in different
+     * places: a sixth of 874 clears a bar ending at 116, a sixth of 402 lands
+     * inside one ending at 78.
      */
     let below = app.buttons["Back"].frame.maxY + 6
     var y = max(window.height * 0.16, below)
-    while y < window.height - COMPOSER_BAR_HEIGHT - 4 {
+    while y < composerTop - 4 {
       var x = window.maxX - 1
       while x > 0 {
         let c = at(x, y)
@@ -142,20 +120,16 @@ final class RotationCheck: DemoCase {
   /**
    The transcript does not scroll sideways, on its side or upright.
 
-   The safe area is reserved ONCE. `<native:scroll>` reserves it on every edge
-   by default as a content INSET, which is right for a page — the content keeps
-   its width and is held clear of the hardware — and this screen needs the other
-   mechanism, because a balloon's cap and its trailing edge are measured from
-   the column and so the points have to come off the LAYOUT. Reserved both ways
-   they add, and the second reservation is not a margin at all: an inset on an
-   edge the content already clears is scrolling room. Measured with both on,
-   `composed L62.0 R62.0` against a content and a viewport both 874 — a hundred
-   and twenty-four points of horizontal travel that a drag to the right found,
-   and came to rest 62 points inside. Reported from a device.
+   The sensor housing is reserved ONCE. `<native:scroll>` reserves every edge by
+   default as a content INSET, and this screen takes it off the LAYOUT instead,
+   because a balloon's cap and its trailing edge are measured from the column.
+   Reserved both ways they ADD, and the second reservation is not a margin: an
+   inset on an edge the content already clears is scrolling room, 124 points of
+   it sideways.
 
-   Read off the scroll view's own indicator, which is the one thing that states
-   the answer rather than implying it: `Horizontal scroll bar, 1 page` is a
-   transcript with nowhere to go sideways, and `2 pages` is the bug.
+   Read off the scroll view's own indicator, which states the answer rather than
+   implying it: `1 page` is a transcript with nowhere to go, `2 pages` is the
+   housing being paid for twice.
    */
   func testTheTranscriptDoesNotScrollSideways() throws {
     XCTAssertTrue(
@@ -163,7 +137,7 @@ final class RotationCheck: DemoCase {
       "no transcript")
 
     func horizontalPages() -> [String] {
-      let composer = app.windows.element(boundBy: 0).frame.height - COMPOSER_BAR_HEIGHT
+      let composer = composerTop
       return app.descendants(matching: .any)
         .matching(NSPredicate(format: "label BEGINSWITH 'Horizontal scroll bar'"))
         .allElementsBoundByIndex
@@ -195,13 +169,11 @@ final class RotationCheck: DemoCase {
   /**
    A reader at the newest message is still there after the phone turns.
 
-   The case that needs a message SENT first: the seeded conversation fits an
-   upright window, and a transcript that has never had to scroll has never
-   recorded that anyone was at its end. Turning the phone is then the first
-   moment the content does not fit — 357 points of it in a 304-point viewport —
-   and the anchor has to know what the reader was looking at before the box
-   changed. It did not, and the transcript rested 27 points short with the last
-   balloon behind the composer.
+   A message is SENT first because the seeded conversation fits an upright
+   window, and a transcript that has never had to scroll has never recorded that
+   anyone was at its end. Turning the phone is then the first moment the content
+   does not fit — 357 points of it in a 304-point viewport — so the anchor has to
+   have taken its reading before the box changed.
    */
   func testTheNewestMessageSurvivesARotation() throws {
     let field = app.textViews.firstMatch
@@ -220,7 +192,7 @@ final class RotationCheck: DemoCase {
     Thread.sleep(forTimeInterval: 3.5)
 
     XCTAssertTrue(newest.exists, "the newest message left the tree on rotation")
-    let bar = app.windows.element(boundBy: 0).frame.height - COMPOSER_BAR_HEIGHT
+    let bar = composerTop
     XCTAssertLessThan(
       newest.frame.maxY, bar,
       "after turning the phone the newest message ends at \(newest.frame.maxY), below the "
@@ -229,6 +201,3 @@ final class RotationCheck: DemoCase {
       newest.frame.minY, 0, "the newest message is off the top after the rotation")
   }
 }
-
-/** The bar's own height, which is the same on its side as upright — measured. */
-private let COMPOSER_BAR_HEIGHT: CGFloat = 69

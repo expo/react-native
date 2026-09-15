@@ -208,13 +208,10 @@ const STAMP_FADE = 270;
  */
 const RECEIPT_SPACE = RECEIPT_LAYOUT_MS;
 /*
- * How long a send may hold the field's own events before the composer takes
- * them back, whatever the flight is doing — see `sending`.
+ * The longest a send may hold the field's own events — see `sending`.
  *
- * Longer than any send: the balloon reports its takeoff within a frame or two
- * of the tap and the row gives up after `BALLOON_SETTLE_FRAMES` in the worst
- * case, so this is never what ends the window. It exists so that nothing can
- * end it never.
+ * Longer than any send: the takeoff clears the flag within a frame or two of
+ * the tap, so this is never what ends the window. It is the floor under it.
  */
 const SENDING_FLOOR_MS = 2000;
 /*
@@ -247,10 +244,10 @@ const TRANSCRIPT_MARGIN = 16;
  */
 const BALLOON_PLUS_RESERVE = 89.333;
 /*
- * And the cap that binds instead once the column is wide — see `balloonWrap`,
- * which is the box it is stated on. The platform's `balloonMaxWidthPercent`,
- * which looks like the whole answer and is half of one: the rule takes the
- * smaller of this and the reserve above.
+ * And the cap that binds instead once the column is wide — the platform's
+ * `balloonMaxWidthPercent`, which is half of its rule: the smaller of this and
+ * the reserve above wins. Stated on `balloonWrap`, which is the box that can
+ * resolve a percentage against the column.
  */
 const BALLOON_MAX_WIDTH = '85%';
 /*
@@ -2028,14 +2025,11 @@ function BubbleImpl({
   /*
    * Whether the words ON SCREEN got there by a SWAP rather than by arriving.
    *
-   * It picks the transition the new words fade in on — 185ms of opacity, with
-   * none of the arrival's delay or grow, because a line replacing another has
-   * already had the reader's attention. So it describes the words, and it has
-   * to stop describing them when they go: left latched, a row that had swapped
-   * once kept `receiptInkSwapped` as its resting style for good, and a later
-   * receipt arriving on that same row would have come in on the swap's clock
-   * instead of the arrival's. Invisible today — both states rest at opacity 1 —
-   * and wrong in the way that waits for someone to add a state.
+   * It picks the transition they fade in on — 185ms of opacity, with none of the
+   * arrival's delay or grow, because a line replacing another already has the
+   * reader's attention. It describes the words, so it stops describing them
+   * when they go; otherwise the next receipt to arrive on this row would come
+   * in on the swap's clock.
    */
   const [swappedReceipt, setSwappedReceipt] = useState(false);
   /*
@@ -2111,10 +2105,7 @@ function BubbleImpl({
     // has not started: the cleanup above is the whole mechanism.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wanted, drawn, showsReceipt]);
-  /*
-   * The words are gone, so what brought them is no longer true. See
-   * `swappedReceipt`.
-   */
+  /* The words are gone, so what brought them is no longer true. */
   useEffect(() => {
     if (showsReceipt !== 'shown') {
       setSwappedReceipt(false);
@@ -2531,12 +2522,8 @@ function BubbleImpl({
               style={[
                 styles.revealColumn,
                 endsRun ? styles.revealColumnTailed : null,
-                /*
-                 * Inked by the drag as well as moved by it: the times come up
-                 * from nothing as the column arrives, and both numbers come off
-                 * the same native value, so they are one write per frame rather
-                 * than two.
-                 */
+                /* Inked by the drag as well as moved by it, off the same
+                   native value — one write per frame rather than two. */
                 {opacity: revealInk, transform: [{translateX: timeShift}]},
               ]}>
               <span style={styles.revealTime}>{timeOf(message.at)}</span>
@@ -2923,21 +2910,18 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
     }).start();
   }, [reveal]);
   /*
-   * And how strongly the times are inked, which is the same drag on a curve.
+   * And how strongly the times are inked, which is the same drag on a curve —
+   * see `revealInkRamp`.
    *
-   * ONE interpolation for the whole transcript, made here and handed to every
-   * row, rather than one per row: the ink is the same everywhere, so a second
-   * row asking for it should add a reader of this node and not another node.
+   * ONE interpolation for the whole transcript, handed to every row: the ink is
+   * the same everywhere, so a second row asking for it adds a reader of this
+   * node rather than another node.
    *
-   * It costs no frame of its own. Each row's time is already written every
-   * frame of the drag — it is being translated — and the opacity rides along in
-   * that same write as one more number. Nothing walks the rows to find the ones
-   * that are off screen, because nothing walks the rows at all: the value is
-   * native, the readers are attached once when a row mounts, and JavaScript
-   * sees a drag the same way whether the conversation holds ten messages or ten
-   * thousand.
-   *
-   * See `revealInkRamp` for the curve and the capture it was measured from.
+   * It costs no frame of its own either. Each row's time is already written
+   * every frame of the drag because it is being translated, and the opacity
+   * rides in that same write as one more number. Nothing walks the rows: the
+   * value is native, the readers attach once when a row mounts, and a drag
+   * looks the same to JavaScript at ten messages or ten thousand.
    */
   const revealInk = useLazily(() => reveal.interpolate(revealInkRamp()));
   const pan = useLazily(() =>
@@ -3433,14 +3417,10 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
     sending.current = true;
     fieldText.current = '';
     /*
-     * And a floor under it. The flag is lifted by the sent row telling us its
-     * balloon is on screen (`rememberTakeoff`) or has landed
-     * (`rememberArrival`) — both of which need that row to be MOUNTED. It is,
-     * because a send scrolls the list to its end, and the row's own effect has
-     * a frame budget after which it reports anyway. But a flag that silently
-     * drops every keystroke is the wrong thing to leave resting on an
-     * invariant a row has to keep: this bounds it, and on every ordinary send
-     * the takeoff has already cleared it long before this fires.
+     * And a floor under it. What lifts the flag is the sent row reporting its
+     * takeoff or arrival, which needs that row mounted — true on every ordinary
+     * send, and not a thing a flag that silently drops keystrokes should rest
+     * on. The takeoff clears it long before this fires.
      */
     pendingTimers.current.push(
       setTimeout(() => {
@@ -3762,23 +3742,18 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
          * The sensor housing is reserved ONCE, and in LAYOUT — see
          * `transcriptContent`.
          *
-         * This view reserves every edge's safe area by default, as a content
-         * INSET, which is the right mechanism for a page: the content keeps its
-         * full width and is merely held clear of the hardware. A transcript
-         * needs the other one. Its column has to be narrower, because a
-         * balloon's cap and its trailing edge are measured from the column and
-         * not from the screen — so the points come off the layout.
+         * This view reserves every edge by default as a content INSET, which is
+         * the right mechanism for a page: the content keeps its full width and
+         * is held clear of the hardware. A transcript needs the other one — its
+         * column has to be narrower, because a balloon's cap and its trailing
+         * edge are measured from the column and not from the screen.
          *
-         * Reserved BOTH ways they add, and the second one is not a margin at
-         * all: an inset on an edge the content already clears is scrolling
-         * room. Measured on a phone on its side, `composed L62.0 R62.0` with
-         * the content and the viewport both 874 — a hundred and twenty-four
-         * points of horizontal travel, which a drag to the right found and came
-         * to rest 62 points inside. Reported from a device as the transcript
-         * ending up with horizontal scrolling.
+         * Reserved both ways they ADD, and the second reservation is not a
+         * margin: an inset on an edge the content already clears is scrolling
+         * room, and on a phone on its side that is 124 points of it sideways.
          *
-         * Top and bottom are left alone: the header and the keyboard are things
-         * to be held clear of, which is what an inset is for.
+         * Top and bottom stay automatic: a header and a keyboard are things to
+         * be held clear of, which is what an inset is for.
          */
         automaticInsets={{left: false, right: false}}
         ref={element => {
@@ -4158,20 +4133,17 @@ const styles = StyleSheet.create({
      * The sensor housing, on the CONTENT rather than on the scroll view.
      *
      * A row's own sixteen points are its margin from the column's edge, and the
-     * column's edge is inside the safe area — measured on the platform in
-     * landscape, a sent balloon's trailing edge lands at 795.67 on an 874-point
-     * screen, which is the 62-point inset and the margin. So the two compose on
-     * different boxes, which is also the only way to add them: `env()` resolves
-     * during the layout pass and cannot go inside a `calc()`.
+     * column's edge is inside the safe area: on the platform in landscape a
+     * sent balloon's trailing edge lands at 795.67 of an 874-point screen,
+     * which is the 62-point inset and the margin. They compose on two boxes
+     * because that is the only way to add them — `env()` resolves during the
+     * layout pass and cannot go inside a `calc()`.
      *
-     * Here rather than as a content INSET so that it is layout: the column the
-     * balloons are laid out in has to be the narrower one, not merely drawn
-     * shifted. Nothing is measured and no render is involved — a rotation
-     * re-lays this out without React hearing about it.
-     *
-     * And the scroll view's own automatic reservation is turned OFF for these
-     * two edges, or the housing is paid for twice — see `automaticInsets` in
-     * the render for what the second payment turns out to be.
+     * LAYOUT rather than a content inset, so the column the balloons are laid
+     * out in is the narrower one rather than the same one drawn shifted.
+     * Nothing is measured: a rotation re-lays this out without React hearing
+     * about it. The scroll view's own reservation is turned off for these two
+     * edges to match — see `automaticInsets` in the render.
      */
     paddingLeft: env('safe-area-inset-left'),
     paddingRight: env('safe-area-inset-right'),
@@ -4896,28 +4868,24 @@ const styles = StyleSheet.create({
   /*
    * The wrapper the balloon hugs inside, and the OTHER cap on how wide it gets.
    *
-   * The platform's rule is a MINIMUM of two branches, probed out of it at
-   * widths from 320 to 932:
+   * The platform's rule is a MINIMUM of two branches, probed out of it at widths
+   * from 320 to 932:
    *
    *     min(column - BALLOON_PLUS_RESERVE, 0.85 x column)
    *
-   * and they cross at a 595.56-point column. Below that the reserve binds,
-   * which is the portrait case and the one `balloonMetrics` states; above it
-   * the percentage does, which is the case a phone on its side is in — an
-   * 874-point screen leaves a 718-point column, where the reserve would allow
-   * 628.67 and the platform allows 610.30. Measured on the platform's own
-   * balloon in landscape: 608.33, which is inside one narrow glyph of it, and
-   * as close as a WRAPPED balloon gets to its cap.
+   * crossing at a 595.56-point column. Below it the reserve binds, which is
+   * portrait's 370 and what `balloonMetrics` states; above it the percentage
+   * does, which is the 718 a phone on its side leaves — 610.30 where the
+   * reserve would have allowed 628.67, against the platform's own balloon at
+   * 608.33, one narrow glyph short as a wrapped balloon always is.
    *
-   * A percentage rather than a number, and on this box rather than on the
-   * balloon, for the same reason the margins above are split across two boxes:
-   * the column is the one the safe area has already narrowed, and only the
-   * renderer knows how wide that is. Two nested `maxWidth`s compose as the
-   * minimum, which is exactly the rule.
+   * A percentage, and on this box rather than the balloon, for the same reason
+   * the margins above are split: the column is the one the safe area has
+   * narrowed, and only the renderer knows how wide that is. Two nested
+   * `maxWidth`s compose as the minimum, which is the rule.
    *
-   * It does not bind in portrait — 85% of 370 is 314.5 against the reserve's
-   * 280.667 — so the balloons there are the same width they were, which is
-   * what `BalloonShapeCheck` and `WrapCheck` hold.
+   * Portrait is untouched — 85% of 370 is 314.5 against the reserve's 280.667 —
+   * which is what `BalloonShapeCheck` and `WrapCheck` hold.
    */
   balloonWrap: {position: 'relative', maxWidth: BALLOON_MAX_WIDTH},
   /*

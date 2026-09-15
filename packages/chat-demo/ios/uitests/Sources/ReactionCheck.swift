@@ -209,36 +209,22 @@ final class RevealCheck: DemoCase {
 
   func testTheTimesCostNothingUntilDragged() throws {
     /*
-     * What a UI test can say about the reveal, and what it cannot.
-     *
-     * CAN: at rest the times cost a balloon nothing at all — no width, no
-     * touch, and no place in the accessibility tree.
-     *
-     * That last one used to be an aspiration this case did not hold anyone to:
-     * the times were parked outside the window at full strength, so they WERE
-     * in the tree, at frames past the window's trailing edge, and the case
-     * asserted exactly that. Now they are inked by the drag and are drawn at
-     * nothing until it starts, and UIKit leaves a fully transparent view out of
-     * the tree — so the stronger property is the true one, and it is the one
-     * asserted.
+     * At rest the times cost a balloon nothing at all — no width, no touch, and
+     * no place in the accessibility tree, since UIKit leaves a fully
+     * transparent view out of it.
      *
      * The property has to survive the column's WIDTH. A column wide enough for
-     * "10:38 PM" is fifty-two points, and a drag moves the transcript forty —
-     * so a column that starts off screen and travels at the transcript's rate
+     * "10:38 PM" is fifty-two points and a drag moves the transcript forty, so
+     * a column that starts off screen and travels at the transcript's rate
      * cannot reach the margin. Placing it where it lands and fading it in
      * reaches the margin and gives this property up: it then overlaps the
      * trailing strip of every sent balloon, invisibly. What keeps both is
      * letting the column travel FASTER than the transcript — see
-     * `REVEAL_COLUMN_RATE` — which is also nearer what the native chat does,
-     * where the times do not move at all and the balloons slide off them.
+     * `REVEAL_COLUMN_RATE` — which is also what the native chat does, where the
+     * times do not move at all and the balloons slide off them.
      *
-     * CANNOT: the drag itself. `press(…thenHoldForDuration:)` blocks until the
-     * finger lifts, so nothing can be read while the finger is down. Sampling
-     * from another queue is not a way out either: XCUITest refuses to
-     * synthesise from anywhere but the main thread. The curve itself is tested
-     * as arithmetic in `__tests__/resistedReveal-test.js`, the drawing is
-     * filmed by `RevealShot`, and the case below reads what the spring leaves
-     * on screen.
+     * The curve itself is tested as arithmetic in `resistedReveal-test`, and
+     * the drawing is filmed by `RevealShot`.
      */
     XCTAssertTrue(
       text("Did the keyboard cover the last message?").waitForExistence(timeout: 10),
@@ -291,35 +277,17 @@ final class RevealCheck: DemoCase {
     return pow(shown / settled, inkCurve)
   }
 
-  /**
-   Screenshots taken WHILE a drag is still being held.
+  /** The rows worth reading: between the header and the composer. A balloon
+      whose middle is outside it has no time on screen to compare against. */
+  private func transcriptBand() -> (top: CGFloat, bottom: CGFloat) {
+    let height = app.windows.element(boundBy: 0).frame.height
+    return (top: height * 0.14, bottom: height * 0.80)
+  }
 
-   `press(…thenHoldForDuration:)` blocks the test until the finger lifts, which
-   is why two earlier attempts at the reveal measured the resting state and
-   reported no movement. It blocks by SPINNING THE MAIN RUN LOOP, though, and a
-   UI test runs on that thread — so a block scheduled before the press runs
-   during the hold, on the same thread, and `XCUIScreen.main.screenshot()` from
-   inside it returns the screen with the finger still down.
-
-   That is the whole trick, and it is the only way found to read a tracked
-   gesture in process. It does not extend to queries: this schedules screenshots
-   and nothing else, because synthesising or querying from anywhere but the main
-   thread is what XCUITest refuses.
-   */
-  private func shotsDuringDrag(by dx: CGFloat, at moments: [Double]) -> [XCUIScreenshot] {
-    let from = app.windows.element(boundBy: 0)
+  /** Where a reveal has to start: on a ROW, which is what carries its responder. */
+  private func revealFrom() -> XCUICoordinate {
+    app.windows.element(boundBy: 0)
       .coordinate(withNormalizedOffset: CGVector(dx: 0.90, dy: 0.34))
-    var shots: [XCUIScreenshot] = []
-    for moment in moments {
-      DispatchQueue.main.asyncAfter(deadline: .now() + moment) {
-        shots.append(XCUIScreen.main.screenshot())
-      }
-    }
-    let hold = (moments.max() ?? 0) + 0.5
-    from.press(
-      forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: dx, dy: 0)),
-      withVelocity: XCUIGestureVelocity(600), thenHoldForDuration: hold)
-    return shots
   }
 
   /**
@@ -336,19 +304,23 @@ final class RevealCheck: DemoCase {
     var rows: [(y: CGFloat, ink: CGFloat)] = []
     var y = scan.top
     while y < scan.bottom {
-      var ink: CGFloat = 0
-      var x = window.maxX - 58
-      while x < window.maxX - 12 {
-        let c = shot.at(x: x, y: y)
-        let high = CGFloat(max(c.r, max(c.g, c.b)))
-        let low = CGFloat(min(c.r, min(c.g, c.b)))
-        if high - low < 24 { ink += 255 - high }
-        x += 1
-      }
-      rows.append((y, ink))
+      rows.append((y, strip(window).reduce(0) { $0 + greyInk(shot, $1, y) }))
       y += 0.5
     }
     return rows
+  }
+
+  /** The strip's columns, a point apart. */
+  private func strip(_ window: CGRect) -> StrideThrough<CGFloat> {
+    stride(from: window.maxX - 58, through: window.maxX - 12, by: 1)
+  }
+
+  /** How dark a point is, counting GREY ink only — a colour cast is a balloon. */
+  private func greyInk(_ shot: Pixels, _ x: CGFloat, _ y: CGFloat) -> CGFloat {
+    let c = shot.at(x: x, y: y)
+    let high = CGFloat(max(c.r, max(c.g, c.b)))
+    let low = CGFloat(min(c.r, min(c.g, c.b)))
+    return high - low < 24 ? 255 - high : 0
   }
 
   /**
@@ -368,13 +340,8 @@ final class RevealCheck: DemoCase {
     var darkest: [CGFloat] = []
     var y = mid - 8
     while y < mid + 8 {
-      var x = window.maxX - 58
-      while x < window.maxX - 12 {
-        let c = shot.at(x: x, y: y)
-        let high = CGFloat(max(c.r, max(c.g, c.b)))
-        let low = CGFloat(min(c.r, min(c.g, c.b)))
-        if high - low < 24 { darkest.append(255 - high) }
-        x += 1
+      for x in strip(window) {
+        darkest.append(greyInk(shot, x, y))
       }
       y += 0.5
     }
@@ -432,27 +399,23 @@ final class RevealCheck: DemoCase {
    receipt under the balloon: none of them may move the time, and each of them
    would, by its own height, if the band were the row's.
 
-   Read in PIXELS while the drag is HELD, which is now the only reading there
-   is: the times are drawn at nothing until a drag inks them, so at rest there
-   is no element to ask and nothing on screen to measure. An earlier version of
-   this case grabbed screenshots as fast as it could after the lift and caught
-   only the settled state — the spring is over before the first one arrives.
+   Read in PIXELS while the drag is HELD, which is the only reading there is:
+   the times are drawn at nothing until a drag inks them, so at rest there is no
+   element to ask and nothing on screen to measure, and the spring is over
+   before a screenshot taken after the lift arrives.
 
    It compares DIFFERENCES rather than absolute positions. Ink and a layout box
    need not share a centre, and whatever they are apart by is the same for every
-   row, so subtracting one row from another leaves exactly what the invariant is
-   about: whether anything IN a row moved its time relative to another row's.
-   (Measured, the two agree to about a seventh of a point, so the correction is
-   small — but the failure this guards is four points and up.)
+   row — so subtracting one row from another leaves exactly what the invariant
+   is about: whether anything IN a row moved its time relative to another row's.
+   (They agree to about a seventh of a point; the failure this guards is four
+   and up.)
    */
   func testEveryTimeSitsLevelWithItsBalloonsText() throws {
     let sent = sendTwo()
 
     let window = app.windows.element(boundBy: 0).frame
-    /* Between the header and the composer, which is all the transcript there is
-       to read — and a balloon whose middle is outside it has no time on screen
-       to compare against, so it is not a subject. */
-    let scan = (top: window.height * 0.14, bottom: window.height * 0.80)
+    let scan = transcriptBand()
 
     // Their middles are read BEFORE the drag: the reveal moves rows sideways,
     // so these stay true through it.
@@ -468,7 +431,7 @@ final class RevealCheck: DemoCase {
     }
     XCTAssertGreaterThanOrEqual(subjects.count, 3, "not enough balloons on screen to compare")
 
-    let shots = shotsDuringDrag(by: -340, at: [0.9, 1.2])
+    let shots = shotsDuringDrag(from: revealFrom(), by: -340, at: [0.9, 1.2])
     XCTAssertFalse(shots.isEmpty, "no screenshot was taken during the hold")
     let read = try XCTUnwrap(Pixels(shots[0], pointHeight: window.height))
     let rows = timeInk(read, window, scan)
@@ -517,7 +480,7 @@ final class RevealCheck: DemoCase {
   func testTheTimesAreInkedByTheDrag() throws {
     _ = sendTwo()
     let window = app.windows.element(boundBy: 0).frame
-    let scan = (top: window.height * 0.14, bottom: window.height * 0.80)
+    let scan = transcriptBand()
 
     /* A RECEIVED balloon, whose row the reveal does not move at all — so the
        band its time is read in is the same band in every screenshot. */
@@ -555,8 +518,8 @@ final class RevealCheck: DemoCase {
       rest.ink, 8,
       "the times are inked \(rest.ink) with nobody dragging — they should be at nothing")
 
-    let shallow = try reading(try XCTUnwrap(shotsDuringDrag(by: -110, at: [0.9]).first))
-    let deep = try reading(try XCTUnwrap(shotsDuringDrag(by: -360, at: [0.9]).first))
+    let shallow = try reading(try XCTUnwrap(shotsDuringDrag(from: revealFrom(), by: -110, at: [0.9]).first))
+    let deep = try reading(try XCTUnwrap(shotsDuringDrag(from: revealFrom(), by: -360, at: [0.9]).first))
 
     /* A sent balloon travels the reveal plus its own extra gap — the ratio in
        the screen — so the reveal is the travel back through it. The rubber band

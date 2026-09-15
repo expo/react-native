@@ -10,21 +10,16 @@ import XCTest
 /**
  Drives the timestamp reveal slowly enough to be filmed.
 
- A recorder, not an assertion, and it has to be: the thing under test is how
- strongly the times are INKED partway through a drag, and XCUITest cannot see
- it. `press(forDuration:thenDragTo:withVelocity:thenHoldForDuration:)` blocks
- the test thread until the finger lifts, so nothing can be read while the finger
- is down; and an element's opacity is not in the accessibility tree even
- afterwards. What can see it is a host recording — `simctl io recordVideo`
- alongside this case — read frame by frame, which is the same instrument the
- platform's own capture was measured with, so the two curves are comparable.
+ A recorder rather than an assertion, because a CURVE is what is under test and
+ a host recording is the instrument for one — `simctl io recordVideo` alongside
+ this case, read frame by frame, which is how the platform's own capture was
+ measured, so the two are comparable. `RevealCheck` holds the two points a case
+ can decide; this is for the shape between them.
 
- The curve itself is held by `resistedReveal-test`. This is how the drawing was
- checked against it, and what the check said: over the 161 frames of the pull the
- drawn ink sits 0.015 rms from `p^2.2` (worst point 0.029, against 0.16 for a
- linear fade, so the reading does tell them apart); over the 125 frames of the
- hold the balloon does not move and the ink does not change, by 0.009; and the
- release comes back down the same curve.
+ What it read: over the 161 frames of the pull the drawn ink sits 0.015 rms from
+ `p^2.2`, worst point 0.029, against 0.16 for a linear fade. Over the 125 frames
+ of the hold the balloon does not move and the ink varies by 0.009. The release
+ comes back down the same curve.
  */
 final class RevealShot: DemoCase {
   override class var initialScreen: String? { "chat" }
@@ -45,12 +40,8 @@ final class RevealShot: DemoCase {
   func testOneSlowPullHeldAtTheEnd() throws {
     let window = app.windows.element(boundBy: 0)
     XCTAssertTrue(window.waitForExistence(timeout: 20), "no window")
-    /*
-     * Started on a ROW rather than anywhere on the screen: the reveal's
-     * responder is on the rows, and a drag beginning in the transcript's empty
-     * space belongs to the scroll view — aimed below the last balloon, the
-     * first run of this moved nothing at all and said so silently.
-     */
+    /* Started on a ROW: the reveal's responder is on the rows, and a drag that
+       begins in the transcript's empty space belongs to the scroll view. */
     let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.34))
     let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.34))
     // A beat of still frames first, so the reading has a rest state to

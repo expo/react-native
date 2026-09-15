@@ -1707,18 +1707,16 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: BAR_TOP_PADDING,
     /*
-     * The sensor housing, which is beside the bar rather than above it once the
-     * phone is turned on its side.
+     * The sensor housing, which is beside the bar once the phone is on its side.
      *
-     * MARGIN, and the dock's own insets stay the padding, because the two have
-     * to ADD and `env()` cannot go inside a `calc()`. Two properties on one box
-     * is the composition there is.
+     * MARGIN, leaving the dock's own insets as the padding, because the two
+     * have to ADD and `env()` cannot go inside a `calc()` — two properties on
+     * one box is the composition there is.
      *
-     * On this box rather than on the bar, so the bar's SURFACE still spans the
-     * screen — and so the flight layer, which is the bar's other child and is
-     * positioned against it, keeps the origin a send measures against. Measured
-     * on the platform's own bar in landscape: its `+` sits at 78, which is the
-     * 62-point inset and the bar's own 16, and its send ends 6.33 inside 812.
+     * On this box rather than the bar, so the bar's SURFACE still spans the
+     * screen and the flight layer keeps the origin a send measures against. The
+     * platform's bar in landscape puts its `+` at 78, which is the 62-point
+     * inset and the bar's own 16, and ends its send 6.33 inside 812.
      */
     marginLeft: env('safe-area-inset-left'),
     marginRight: env('safe-area-inset-right'),

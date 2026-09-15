@@ -173,6 +173,62 @@ class DemoCase: XCTestCase {
     return try XCTUnwrap(pixels, "could not read the screenshot")
   }
 
+  /**
+   The colour at a point of the WINDOW, whichever way the window is.
+
+   A screenshot comes back in the DISPLAY's orientation, always: the image of a
+   window on its side is an upright one with the window lying in it. So the
+   scale `Pixels` takes from the window's height is wrong by the aspect ratio,
+   and the axes are swapped on top of that. This maps the point instead — for
+   `landscapeLeft`, which is the way the suite turns, the window's leading edge
+   is the image's bottom, so a point across the window is a point down the image.
+
+   The screenshot is taken ONCE and closed over, so a scan of thousands of
+   points costs one.
+   */
+  func windowSampler() throws -> (CGFloat, CGFloat) -> (r: Int, g: Int, b: Int) {
+    let window = app.windows.element(boundBy: 0).frame
+    let sideways = window.width > window.height
+    let read = try XCTUnwrap(
+      Pixels(XCUIScreen.main.screenshot(), pointHeight: sideways ? window.width : window.height),
+      "could not read the screen")
+    if sideways {
+      return { x, y in read.at(x: window.height - y, y: x) }
+    }
+    return { x, y in read.at(x: x, y: y) }
+  }
+
+  /**
+   Screenshots taken WHILE a drag is still being held.
+
+   `press(…thenHoldForDuration:)` blocks the test until the finger lifts, which
+   is why the state a tracked gesture is IN cannot be queried. It blocks by
+   spinning the main run loop, though, and a UI test runs on that thread — so a
+   block scheduled before the press runs during the hold, on the same thread,
+   and `XCUIScreen.main.screenshot()` from inside it returns the screen with the
+   finger still down.
+
+   Screenshots and nothing else: synthesising or querying from anywhere but the
+   main thread is what XCUITest refuses.
+   */
+  func shotsDuringDrag(
+    from start: XCUICoordinate,
+    by dx: CGFloat,
+    at moments: [Double],
+    velocity: XCUIGestureVelocity = 600
+  ) -> [XCUIScreenshot] {
+    var shots: [XCUIScreenshot] = []
+    for moment in moments {
+      DispatchQueue.main.asyncAfter(deadline: .now() + moment) {
+        shots.append(XCUIScreen.main.screenshot())
+      }
+    }
+    start.press(
+      forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: dx, dy: 0)),
+      withVelocity: velocity, thenHoldForDuration: (moments.max() ?? 0) + 0.5)
+    return shots
+  }
+
   /// How far apart two colours are, as the largest per-channel difference.
   func distance(_ a: (r: Int, g: Int, b: Int), _ b: (r: Int, g: Int, b: Int)) -> Int {
     max(abs(a.r - b.r), max(abs(a.g - b.g), abs(a.b - b.b)))

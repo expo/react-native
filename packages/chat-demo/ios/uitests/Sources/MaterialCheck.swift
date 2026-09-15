@@ -99,14 +99,11 @@ final class MaterialCheck: DemoCase {
      * bar's does the same, measured. Eighteen is what shipped once and was
      * reported as "it extends above the text area too much".
      *
-     * And read across EVERY column that has something behind it, not the first
-     * one that does, because one column cannot tell the two edges apart. The
-     * surface's edge is at the same row in all of them; a balloon's own top
-     * edge sitting a few points above the bar is a step in one or two. Taking
-     * the first column made the reading depend on which of those the scroll
-     * happened to leave there, and the case failed about half the time on a
-     * one-point threshold — 785, 787 and 788 across three runs of an unchanged
-     * app. The MEDIAN is the row the columns agree on.
+     * Across EVERY column with something behind it, and the MEDIAN of what they
+     * say, because one column cannot tell two edges apart: the surface's edge is
+     * at the same row in all of them, while a balloon's own top edge sitting a
+     * few points above the bar is a step in one or two. The median is the row
+     * the columns agree on; the first column is whatever the scroll left there.
      */
     let inside = barTop + 5
     var edge: CGFloat?

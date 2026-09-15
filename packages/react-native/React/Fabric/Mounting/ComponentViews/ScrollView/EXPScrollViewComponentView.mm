@@ -522,14 +522,13 @@ static void EXPApplyEdgeEffect(UIScrollEdgeEffect *effect, ExpoScrollEdgeEffect 
   /*
    * A box that changed size answers this before any row does.
    *
-   * The pin below holds ONE row still through a commit, which is what keeps a
-   * reader's place while something above them resizes. A rotation moves every
-   * row and re-wraps most of them, so there is no row whose place is the
-   * reader's place — and a bottom-anchored reader who was at the end wants the
-   * end, which is a thing that still means what it did.
+   * The pin below holds ONE row still through a commit, which keeps a reader's
+   * place while something above them resizes. A rotation moves every row and
+   * re-wraps most of them, so no row's place is the reader's place — and a
+   * bottom-anchored reader who was at the end wants the end, which still means
+   * what it did.
    *
-   * Instant, not animated: a rotation is a cut already, and a transcript
-   * gliding to the end after one reads as the list having been left behind.
+   * Instant, not animated: a rotation is a cut already.
    */
   const BOOL resized = _boundsResized;
   _boundsResized = NO;
@@ -1682,19 +1681,16 @@ static facebook::react::TransitionTimingFunction ExpoScrollRiseCurve()
            oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics
 {
   /*
-   * Asked BEFORE the new box is adopted, because afterwards there is nothing
-   * left to ask it of: the same offset in a different viewport is a different
-   * answer, and the one that matters is the one from the layout the reader was
-   * actually looking at.
+   * Asked BEFORE the new box is adopted: the same offset in a different
+   * viewport is a different answer, and the one that matters is from the layout
+   * the reader was looking at.
    *
-   * `_wasAtBottom` on its own is not enough, and that is the whole of this
-   * defect. The intent is written by `-scrollViewDidScroll:`, so a transcript
-   * that has never had to scroll has never written one — three messages in a
-   * tall window sit at the end trivially and silently. Turn the phone and the
-   * content no longer fits, the anchor asks whether the reader was at the end,
-   * and the flag says no because nothing ever said yes. Measured on exactly
-   * that: portrait 437.3 of content resting at -116 with max -116, which is the
-   * end, and `wasAtBottom=0`.
+   * `_wasAtBottom` on its own will not do, because the intent is written by
+   * `-scrollViewDidScroll:` and a transcript that has never had to scroll has
+   * never written one — three messages in a tall window sit at the end
+   * trivially and silently, offset and max both -116 with the flag clear. The
+   * first resize that makes the content overflow would then find nothing to
+   * act on.
    */
   const BOOL wasAtEnd = _wasAtBottom || [self _isAtBottom];
   [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
@@ -1703,12 +1699,12 @@ static facebook::react::TransitionTimingFunction ExpoScrollRiseCurve()
    * Noted BEFORE the insets are applied, because applying them writes the
    * offset and the write is what the note protects.
    *
-   * A box that changed size is the one case where the offset that comes out
-   * the other side is nobody's decision: the reader did not scroll, and every
-   * row is somewhere new. Both of the anchors below have to be told, or they
-   * read the resize as something the reader did — see `-scrollViewDidScroll:`,
-   * which would otherwise forget the intent, and `-mountingTransactionDidMount:`,
-   * which would otherwise pin a row to hold a layout that no longer exists.
+   * A box that changed size is the one case where the offset that comes out the
+   * other side is nobody's decision: the reader did not scroll, and every row is
+   * somewhere new. Both anchors below have to be told — `-scrollViewDidScroll:`
+   * so it does not read the repair as the reader's, and
+   * `-mountingTransactionDidMount:` so it does not pin a row to a layout that no
+   * longer exists.
    */
   if (!CGSizeEqualToSize(self.bounds.size, _lastBoundsSize)) {
     _lastBoundsSize = self.bounds.size;
@@ -1953,17 +1949,9 @@ static facebook::react::TransitionTimingFunction ExpoScrollRiseCurve()
   // in flight.
   /*
    * ...and NOT re-sampled while this view's own box is changing size, for the
-   * same reason a rise is counted as being at the end: the offset during those
-   * frames is not where anyone put it.
-   *
-   * Measured on a rotation with the newest message on screen: the portrait
-   * content fitted its viewport, so the end WAS the top and the offset rested
-   * there legitimately; turning the phone left 357 points of content in a 304
-   * point viewport and the mount's own repair wrote the offset before anything
-   * had re-asserted the end. That write is what this line read, and it read
-   * "not at the bottom" — erasing the very intent that would have brought the
-   * transcript back to the newest message. It rested 27 points short, with the
-   * last balloon behind the composer.
+   * same reason a rise counts as being at the end: the offset during those
+   * frames is not where anyone put it. The mount's own repair writes it, and
+   * reading that back would erase the intent the repair is about to need.
    */
   if (!_boundsResized) {
     _wasAtBottom = [self _isAtBottom] || [self _isRising];
