@@ -1497,19 +1497,20 @@ function ReactionPile({reactions, mine, scheme}) {
 }
 
 /**
- * A value built once, when it is first wanted, and `null` until then.
+ * A value built once, on the first render, and kept for the component's life.
  *
  * `useRef(make())` calls `make` on EVERY render and keeps only the first
- * result — an allocation per render for the life of the component. This calls
- * it once. Pass `null` for `make` while the value is not wanted yet, which is
- * how a row that may never animate avoids building anything to animate with.
+ * result — an allocation per render for nothing. A lazy `useState` initialiser
+ * is called exactly once and says so in a way React can SEE: a ref written and
+ * read during render is invisible to it, and is the one shape React Compiler
+ * refuses to reason about — which costs the whole component, not just the line.
+ *
+ * The value never changes, so the setter is dropped rather than named and
+ * ignored.
  */
 function useLazily(make) {
-  const built = useRef(null);
-  if (built.current == null && make != null) {
-    built.current = make();
-  }
-  return built.current;
+  const [built] = useState(make);
+  return built;
 }
 
 /**
@@ -1623,6 +1624,28 @@ function FlyingBalloon({
   const journey = useLazily(() =>
     Animated.multiply(progress, Animated.subtract(trackY, fieldTop)),
   );
+  /*
+   * Everything the flight below reads from OUTSIDE itself, as it was when this
+   * balloon mounted.
+   *
+   * The effect has to run exactly once — it starts a spring and puts listeners
+   * on animated values, and running it again would restart a flight mid-air.
+   * An empty dependency array says that by leaving the values out, which is
+   * only true because none of them changes, and nothing in the code says so.
+   * A snapshot says it: the effect reads constants, so the array can name every
+   * one of them and still never fire twice.
+   *
+   * It is also what the comment there already claimed — the destination is
+   * measured before this mounts.
+   */
+  const from = useLazily(() => ({
+    fieldWidth,
+    toWidth: to.width,
+    id: message.id,
+    onArrived,
+    onFlight,
+    onTakeoff,
+  }));
 
   useEffect(() => {
     /*
@@ -1639,7 +1662,7 @@ function FlyingBalloon({
      * the box from the field's width to the balloon's and the squeeze is what
      * dips below it, so neither value on its own is the number a reader sees.
      */
-    let box = toPixel(fieldWidth);
+    let box = toPixel(from.fieldWidth);
     let squeezed = 1;
     const sample = () => {
       const drawn = box * squeezed;
@@ -1684,8 +1707,8 @@ function FlyingBalloon({
       progress.removeListener(watchRise);
       width.removeListener(watch);
       squeeze.removeListener(watchSqueeze);
-      onFlight?.({low, high, resting: to.width});
-      onArrived?.(message.id);
+      from.onFlight?.({low, high, resting: from.toWidth});
+      from.onArrived?.(from.id);
     };
     const watchRise = progress.addListener(({value}) => {
       if (value >= 1) {
@@ -1735,7 +1758,7 @@ function FlyingBalloon({
        * JavaScript thread ran 40% busy on a Mac for one balloon changing width.
        */
       Animated.timing(width, {
-        toValue: to.width,
+        toValue: from.toWidth,
         duration: SQUASH_DURATION,
         easing: SQUASH,
         useNativeDriver: true,
@@ -1776,7 +1799,7 @@ function FlyingBalloon({
      * is a frame with the message nowhere; a frame of the two overlapping
      * cannot be seen, because this is drawn over the field.
      */
-    onTakeoff?.(message.id);
+    from.onTakeoff?.(from.id);
     // The backstop, for a spring tuned never to pass its destination: a flight
     // that ends without having been declared arrived is arrived.
     throwIn.start(({finished}) => {
@@ -1791,8 +1814,7 @@ function FlyingBalloon({
       throwIn.stop();
     };
     // Once, for this flight: the destination is measured before this mounts.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [from, progress, squeeze, width]);
 
   /*
    * And once that hidden frame has been PAINTED, the copy asks to be taken
@@ -2032,11 +2054,20 @@ function BubbleImpl({
    * change is three states rather than a new string: fading, the pause, and the
    * new words. This holds the middle one.
    */
-  const said = {
-    edited: message.edited,
-    status: message.status,
-    readAt: message.readAt,
-  };
+  /*
+   * Memoised on the three fields it is made of, so the object changes when the
+   * WORDS do and not once per render. `wanted` below says the same thing as a
+   * string, and the two now agree — which is what lets the effect name this in
+   * its dependencies instead of leaving it out and explaining why.
+   */
+  const said = useMemo(
+    () => ({
+      edited: message.edited,
+      status: message.status,
+      readAt: message.readAt,
+    }),
+    [message.edited, message.status, message.readAt],
+  );
   const [shownReceipt, setShownReceipt] = useState(said);
   const [swappingReceipt, setSwappingReceipt] = useState(false);
   /*
@@ -2117,11 +2148,22 @@ function BubbleImpl({
         clearTimeout(swap);
       }
     };
-    // The words are the subject; `said` is rebuilt every render and is not.
+    // The WORDS are the subject, and `wanted` and `drawn` are the words: two
+    // strings that change when the receipt says something new and not when a
+    // render happens to rebuild an object. The three that follow them are the
+    // same facts by another name, named because the rule asks and free because
+    // they move together.
+    //
     // `showsReceipt` is here so that a row losing the receipt CANCELS a swap it
     // has not started: the cleanup above is the whole mechanism.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wanted, drawn, showsReceipt]);
+  }, [
+    wanted,
+    drawn,
+    showsReceipt,
+    said,
+    shownReceipt.edited,
+    shownReceipt.status,
+  ]);
   /* The words are gone, so what brought them is no longer true. */
   useEffect(() => {
     if (showsReceipt !== 'shown') {
@@ -3858,28 +3900,6 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
     fieldText.current = draft;
   }, [draft]);
 
-  const send = useCallback(() => {
-    /*
-     * A TURN LATER, because the keyboard is a turn ahead.
-     *
-     * A pending autocorrection is applied when a touch lands outside the word,
-     * and for a send that touch IS the send button: the field says "Teh" where
-     * the user typed "Tfh" before this app hears about either. The correction
-     * arrives as an ordinary edit, but it crosses to JavaScript on the same
-     * queue as the tap and lands AFTER it — traced on a device and here, 16ms
-     * apart with the tap first — so a send that reads anything at the moment of
-     * the tap reads the word the reader can no longer see, and sends that.
-     *
-     * Yielding once is what puts them back in order: the edit is already queued,
-     * so a task scheduled now runs behind it. The cost is one turn — the flight
-     * starts a frame later — and the gain is that what is sent is what the field
-     * was showing when the button was pressed, which is the platform's own
-     * behaviour.
-     */
-    setTimeout(sendNow, 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const sendNow = useCallback(() => {
     const text = (fieldText.current ?? '').trim();
     if (text === '') {
@@ -3909,9 +3929,30 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
       return;
     }
     deliver(text);
-    // Everything this reads is a ref, so the callback never has to change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Everything else this reads is a ref, so this follows `deliver` alone
+    // — and `deliver` never changes either.
+  }, [deliver]);
+
+  const send = useCallback(() => {
+    /*
+     * A TURN LATER, because the keyboard is a turn ahead.
+     *
+     * A pending autocorrection is applied when a touch lands outside the word,
+     * and for a send that touch IS the send button: the field says "Teh" where
+     * the user typed "Tfh" before this app hears about either. The correction
+     * arrives as an ordinary edit, but it crosses to JavaScript on the same
+     * queue as the tap and lands AFTER it — traced on a device and here, 16ms
+     * apart with the tap first — so a send that reads anything at the moment of
+     * the tap reads the word the reader can no longer see, and sends that.
+     *
+     * Yielding once is what puts them back in order: the edit is already queued,
+     * so a task scheduled now runs behind it. The cost is one turn — the flight
+     * starts a frame later — and the gain is that what is sent is what the field
+     * was showing when the button was pressed, which is the platform's own
+     * behaviour.
+     */
+    setTimeout(sendNow, 0);
+  }, [sendNow]);
 
 
   /*
@@ -4446,6 +4487,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     /* The report is two lines when it has the virtualized counters in it. */
     whiteSpace: 'pre-line',
+    /*
+     * This is a panel of NUMBERS, read by comparing one run against the next.
+     * Proportional figures change width as the values do, so the columns walk
+     * about between readings and the eye has to find them again each time.
+     */
+    fontVariant: ['tabular-nums'],
     color: uiColor('secondaryLabel'),
     backgroundColor: uiColor('secondarySystemBackground'),
   },
