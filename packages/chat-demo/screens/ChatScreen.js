@@ -79,6 +79,7 @@ import VirtualView, {
 } from '../../react-native/src/private/components/virtualview/VirtualView';
 import Composer, {BAR_TOP_PADDING, ComposerBar} from '../Composer';
 import useHeaderEdgeEffects from '../headerEdge';
+import RenderStats from '../NativeRenderStats';
 import {REACTIONS, cycleReaction} from '../reactions';
 import {
   RECEIPT_FADE_MS,
@@ -2350,7 +2351,6 @@ function BubbleImpl({
     onTakeoff,
   ]);
 
-
   /*
    * The reveal moves MY messages, and leaves everyone else's where they are.
    *
@@ -2510,8 +2510,7 @@ function BubbleImpl({
                       {backgroundImage: balloonGradient(scheme)},
                     ]
                   : styles.theirsBalloon
-              }
-              >
+              }>
               {/*
               The peek's MENU, as a `<menu>` — HTML's list of commands, handed to
               the platform exactly as `<button>` hands its own over.
@@ -2818,6 +2817,9 @@ const work = {
   /* Time spent INSIDE the rows' own render bodies, which is the part of a
      stall that is JavaScript's rather than React's or the main thread's. */
   renderMs: 0,
+  /* The renderer's own counters as they stood when the event began — see
+     `rendererSince`. */
+  renderer: null,
 };
 /*
  * Whether any of this runs at all. The home screen's switch sets it, and it is
@@ -2825,11 +2827,27 @@ const work = {
  * demo of how a chat performs should not be measuring itself by default.
  */
 let profiling = false;
+/*
+ * ...and the renderer's counters with it.
+ *
+ * They are the app's to switch on: the environment variables `RCTRenderStats.h`
+ * reads at launch do not exist for an app started from a home screen, and the
+ * phone is where the question gets asked. Their cost is the timing around every
+ * mutation, so they follow the banner rather than staying on.
+ */
+function setProfiling(on) {
+  if (profiling === on) {
+    return;
+  }
+  profiling = on;
+  RenderStats?.setEnabled(on);
+}
 function beginWork(event) {
   if (!profiling) {
     return;
   }
   work.event = event;
+  work.renderer = RenderStats?.read() ?? null;
   work.since = performance.now();
   work.chat = 0;
   work.rows = 0;
@@ -2881,15 +2899,70 @@ function detailReport() {
       `${work.rows === 0 ? 0 : (work.renderMs / work.rows).toFixed(2)} ms each`,
   );
   /*
-   * What is NOT JavaScript's. The rows' own render bodies are the only part of
-   * a stall this app can time from the inside; the rest of the gap is React's
-   * reconciliation and commit, and the main thread's mounting and layout.
+   * Where the gap went, now that the renderer says.
+   *
+   * `commit` is the shadow tree's, and `layout` is inside it rather than beside
+   * it — Yoga runs as part of a commit — so they are written nested and not
+   * added up. `mount` is the main thread performing the mutations, and `sweep`
+   * is the container asking every row where it is. What is left over is not a
+   * measurement: it is the thread doing everything else, which for a scroll is
+   * mostly UIKit drawing.
    */
   const elapsed = performance.now() - work.since;
-  lines.push(
-    `of ${Math.round(elapsed)} ms elapsed, ${Math.round(work.renderMs)} ms was ` +
-      `rendering rows; the rest is React and the main thread`,
-  );
+  const renderer = rendererSince(work.renderer);
+  if (renderer == null) {
+    lines.push(
+      `of ${Math.round(elapsed)} ms elapsed, ${Math.round(work.renderMs)} ms was ` +
+        `rendering rows; the rest is React and the main thread`,
+    );
+  } else {
+    const spent =
+      work.renderMs +
+      renderer.commitMs +
+      renderer.diffMs +
+      renderer.mountMs +
+      renderer.sweepMs;
+    lines.push(
+      `${Math.round(spent)} ms of the ${Math.round(elapsed)} ms window was the renderer's: ` +
+        `${Math.round(work.renderMs)} ms rendering rows, ${Math.round(renderer.commitMs)} ms ` +
+        `committing (${Math.round(renderer.layoutMs)} ms of it laying out ×${renderer.layoutNodes} ` +
+        `nodes), ${Math.round(renderer.diffMs)} ms diffing, ${Math.round(renderer.mountMs)} ms ` +
+        `mounting, ${Math.round(renderer.sweepMs)} ms sweeping`,
+    );
+    /*
+     * Per TRANSACTION, because the total is the gesture's length and the ratio
+     * is the shape of the problem. A row that changes height moves every row
+     * below it, and each of those moves is an `Update` — so this number is how
+     * many rows a single change costs, and whether it grows with how far the
+     * list has been scrolled is the whole question.
+     */
+    const per = n =>
+      renderer.transactions === 0 ? 0 : (n / renderer.transactions).toFixed(1);
+    lines.push(
+      `mounted ×${renderer.transactions} transactions: ×${renderer.creates} create, ` +
+        `×${renderer.inserts} insert, ×${renderer.updates} update, ×${renderer.removes} remove, ` +
+        `×${renderer.deletes} delete — ×${per(renderer.updates)} updates each, ` +
+        `biggest ×${renderer.biggestMutations} mutations`,
+    );
+    /*
+     * Both kinds of sweep, over their own count. A SINGLE is one view whose
+     * frame changed asking where it now is, so the two rise together: every row
+     * an update moves asks again.
+     */
+    const passes = renderer.sweeps + renderer.sweepSingles;
+    lines.push(
+      `swept ×${renderer.sweeps} times (×${renderer.sweepSingles} single) over ` +
+        `×${renderer.sweptRows} rows — ` +
+        `${passes === 0 ? 0 : Math.round((renderer.sweepMs * 1000) / passes)} µs ` +
+        `each, worst ${Math.round(renderer.worstSweepUs)} µs`,
+    );
+    if (renderer.textMeasurements > 0) {
+      lines.push(
+        `measured ×${renderer.textMeasurements} texts in ` +
+          `${Math.round(renderer.textMeasureMs)} ms`,
+      );
+    }
+  }
   if (virtual.blanks > 0) {
     lines.push(
       `caught blank ×${virtual.blanks}: stayed blank ` +
@@ -2897,7 +2970,9 @@ function detailReport() {
         `${Math.round(virtual.blankWorst)} ms worst`,
     );
   } else {
-    lines.push('caught blank ×0 — every row was prerendered before it was needed');
+    lines.push(
+      'caught blank ×0 — every row was prerendered before it was needed',
+    );
   }
   lines.push(virtualReport());
   return lines.join('\n');
@@ -3056,6 +3131,138 @@ function virtualReport() {
 }
 
 /**
+ * What the RENDERER spent, which is the half of a stall this screen cannot see.
+ *
+ * `work.renderMs` is the rows' own render bodies and nothing else. Everything
+ * after them — React's commit, Yoga's layout, the main thread's mounting, and
+ * the virtualized container's own geometry sweep — happens where JavaScript
+ * cannot time it, and for a long while the caption could only say "the rest is
+ * React and the main thread". React Native counts all of it already; see
+ * `RCTRenderStats.h`, and `NativeRenderStats` for the window onto it.
+ *
+ * Every counter is a running total, so an interval is two readings subtracted.
+ * Two of them are high-water marks and do not subtract, and are passed through
+ * as they stand.
+ */
+function rendererSince(before) {
+  const now = RenderStats?.read();
+  if (before == null || now == null) {
+    return null;
+  }
+  const since = {};
+  for (const key of Object.keys(now)) {
+    since[key] = now[key] - before[key];
+  }
+  since.biggestMutations = now.biggestMutations;
+  since.worstSweepUs = now.worstSweepUs;
+  return since;
+}
+
+/*
+ * How many rows go in a group, and why there are groups at all.
+ *
+ * A row revealed for the first time grows from its placeholder height to its
+ * real one, and in a flat column every row BELOW it moves. Fabric emits a
+ * mutation per moved view and each moved view then asks the container where it
+ * now is, so a reveal costs the number of rows under it — which is every row
+ * already scrolled past. The same eight flings at three thousand messages:
+ * 8,014 update mutations near the newest message, 41,050 once the transcript
+ * had been carried further up. Nothing about the gesture changed; the distance
+ * already travelled did.
+ *
+ * Layout metrics are PARENT-RELATIVE, which is the whole lever. Inside a group,
+ * a row that grows moves its own siblings; outside it, the group's box grows
+ * and the groups after it move — and the rows inside those are untouched,
+ * because their position within their own group has not changed. So the cost of
+ * a reveal stops being the length of the conversation and becomes the size of a
+ * group plus the number of groups.
+ *
+ * How BIG a group should be is arithmetic and not a round number. A reveal
+ * moves, on average, half the rows after it in its own group, then half the
+ * groups after that one, and so on up — so the cost is the group size plus the
+ * number of groups, and because the grouping NESTS, that second term is itself
+ * a group size one level up. Views moved by one reveal, by group size:
+ *
+ *        messages     16     32     56     64    100    flat
+ *             300     16     20     30     34     50     150
+ *            3000     20     32     54     54     64    1500
+ *          100000     30     48     70     75    104   50000
+ *
+ * Smaller is better the whole way down, and what stops it is what the table
+ * does not count: every group is a real view, a Yoga node and a step in the
+ * chain the container walks to place a row. Thirty-two at three thousand rows
+ * is ninety-eight extra boxes against three thousand — three per cent more tree
+ * for a reveal that moves a third as much.
+ */
+const CHUNK_ROWS = 32;
+
+/**
+ * Rows in a tree of boxes instead of one long column.
+ *
+ * Where the groups are CUT is the part that has to be got right, and cutting
+ * every thirty-second row is the version that looks right and is not: a
+ * conversation does not only grow at its newest end. Load a page of older
+ * history and every row's position moves by fifty, so every boundary lands
+ * somewhere new, every group's contents change, and a change at one end of the
+ * transcript has re-rendered all of it — which is the cost this exists to
+ * avoid, paid at a different moment.
+ *
+ * So a boundary belongs to the MESSAGE and not to its place in the list: one
+ * begins wherever the id divides by the group size. Ids are handed out in order and never reused,
+ * so the rule reads the same from either end and through any number of
+ * insertions — prepend a page, delete a message in the middle, append a
+ * thousand, and the only group that changes is the one the change is in.
+ * The same rule at every level, against a bigger divisor: a group of groups
+ * starts where the id divides by the group size squared.
+ *
+ * Deletion merges rather than shifts — a vanished boundary joins two groups and
+ * leaves the rest alone — which is the behaviour to want from a rule about
+ * identity.
+ *
+ * And a group is KEYED by the range it covers rather than by the message that
+ * happens to start it, which is not the same thing at the front of the list.
+ * The first group is a partial one — it begins at the oldest message there is
+ * rather than at a boundary — so keying it by that message makes it a different
+ * element the moment an older one arrives, and React throws away the box and
+ * every row in it. By range it keeps its identity and simply gains a row.
+ */
+function inGroups(rows, messages) {
+  let level = 1;
+  let ids = messages.map(message => message.id);
+  let nodes = rows;
+  while (nodes.length > CHUNK_ROWS) {
+    const every = CHUNK_ROWS ** level;
+    const nextIds = [];
+    const nextNodes = [];
+    let children = null;
+    for (let at = 0; at < nodes.length; at++) {
+      if (children === null || ids[at] % every === 0) {
+        children = [];
+        nextIds.push(ids[at]);
+        nextNodes.push(children);
+      }
+      children.push(nodes[at]);
+    }
+    nodes = nextNodes.map((group, at) => (
+      /*
+       * `collapsable={false}` is load-bearing and not a hint. A box with
+       * nothing but children is LAYOUT-ONLY, and Fabric removes those from the
+       * tree it mounts — the children are reparented onto the nearest box that
+       * survived and their frames are rewritten against it. Flattened, a group
+       * is exactly the flat column it was written to replace, and the only
+       * symptom would be that none of this worked.
+       */
+      <div collapsable={false} key={`group-${Math.floor(nextIds[at] / every)}`}>
+        {group}
+      </div>
+    ));
+    ids = nextIds;
+    level++;
+  }
+  return nodes;
+}
+
+/**
  * The transcript's rows, behind a memo boundary.
  *
  * `React.memo` on a ROW saves that row's body and not its element: the element
@@ -3097,7 +3304,11 @@ const Transcript = React.memo(function Transcript({
   watching,
   wearsReceipt,
 }) {
-  return messages.map((message, index) => {
+  /*
+   * Grouped rather than returned flat — see `inGroups`, which is the only
+   * reason the map's result is named.
+   */
+  const rows = messages.map((message, index) => {
     const Row =
       index < openedWith.current - OPEN_ROWS ? HiddenRow : VirtualView;
     const previous = messages[index - 1];
@@ -3200,11 +3411,12 @@ const Transcript = React.memo(function Transcript({
       </Row>
     );
   });
+  return inGroups(rows, messages);
 });
 
 function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
   // Set before anything counts, including this render's own `work.chat`.
-  profiling = showsPerformance === true;
+  setProfiling(showsPerformance === true);
   const watching = profiling ? noteMode : undefined;
   /*
    * The balloon's metrics, at the reader's text size and LIVE: `fontScale`
@@ -3603,7 +3815,13 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
    */
   const transcriptContent = useRef(null);
   /** Where the transcript is and what it has reserved — see `onInsetChange`. */
-  const geometry = useRef({x: 0, y: 0, containerH: 0, insetTop: 0, insetBottom: 0});
+  const geometry = useRef({
+    x: 0,
+    y: 0,
+    containerH: 0,
+    insetTop: 0,
+    insetBottom: 0,
+  });
 
   /*
    * The pill's height with nothing in it, which is what it will shrink BACK to
@@ -3689,70 +3907,73 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
     return {x: view.x + frame.x, y: view.y + top - offset};
   }, []);
 
-  const rememberFlightFrame = useCallback((id, frame) => {
-    if (flown.current.has(id)) {
-      return;
-    }
-    const end = endOfFlight(frame);
-    if (end == null) {
-      return;
-    }
-    const drawnY = end.y;
-    /*
-     * Where the field is inside the flight layer, both measured against the
-     * BAR — an ancestor of each.
-     *
-     * `measureLayout` rather than `measureInWindow`, and the reason is what a
-     * window answer is worth in here: anything inside the accessory reports the
-     * position the bar was LAID OUT at rather than where it is drawn —
-     * measured, 817 for a bar being drawn at 442. Two such answers subtracted
-     * cancel the lie, and did for a long time; a measurement that is
-     * tree-relative has no window in it to be wrong about in the first place,
-     * and goes on working wherever in the bar the layer is moved to.
-     */
-    const start = anchor => {
-      const trackY = new Animated.Value(drawnY);
-      flown.current.add(id);
-      setFlying(previous =>
-        previous.some(entry => entry.id === id)
-          ? previous
-          : [
-              ...previous,
-              {
-                id,
-                frame: {...frame, x: end.x, y: drawnY},
-                anchor,
-                trackY,
-              },
-            ],
-      );
-    };
-    const box = composerBox.current;
-    const missed = () => start({x: 0, y: 0});
-    if (
-      box == null ||
-      field.current?.measureLayout == null ||
-      flightLayer.current?.measureLayout == null
-    ) {
-      missed();
-      return;
-    }
-    field.current.measureLayout(
-      box,
-      (fieldX, fieldY, fieldWidth) => {
-        if (!(fieldWidth > 0) || flightLayer.current?.measureLayout == null) {
-          missed();
-          return;
-        }
-        flightLayer.current.measureLayout(
-          box,
-          (layerX, layerY) => start({x: fieldX - layerX, y: fieldY - layerY}),
-          missed,
+  const rememberFlightFrame = useCallback(
+    (id, frame) => {
+      if (flown.current.has(id)) {
+        return;
+      }
+      const end = endOfFlight(frame);
+      if (end == null) {
+        return;
+      }
+      const drawnY = end.y;
+      /*
+       * Where the field is inside the flight layer, both measured against the
+       * BAR — an ancestor of each.
+       *
+       * `measureLayout` rather than `measureInWindow`, and the reason is what a
+       * window answer is worth in here: anything inside the accessory reports the
+       * position the bar was LAID OUT at rather than where it is drawn —
+       * measured, 817 for a bar being drawn at 442. Two such answers subtracted
+       * cancel the lie, and did for a long time; a measurement that is
+       * tree-relative has no window in it to be wrong about in the first place,
+       * and goes on working wherever in the bar the layer is moved to.
+       */
+      const start = anchor => {
+        const trackY = new Animated.Value(drawnY);
+        flown.current.add(id);
+        setFlying(previous =>
+          previous.some(entry => entry.id === id)
+            ? previous
+            : [
+                ...previous,
+                {
+                  id,
+                  frame: {...frame, x: end.x, y: drawnY},
+                  anchor,
+                  trackY,
+                },
+              ],
         );
-      },
-      missed,
-    );
-  }, [endOfFlight]);
+      };
+      const box = composerBox.current;
+      const missed = () => start({x: 0, y: 0});
+      if (
+        box == null ||
+        field.current?.measureLayout == null ||
+        flightLayer.current?.measureLayout == null
+      ) {
+        missed();
+        return;
+      }
+      field.current.measureLayout(
+        box,
+        (fieldX, fieldY, fieldWidth) => {
+          if (!(fieldWidth > 0) || flightLayer.current?.measureLayout == null) {
+            missed();
+            return;
+          }
+          flightLayer.current.measureLayout(
+            box,
+            (layerX, layerY) => start({x: fieldX - layerX, y: fieldY - layerY}),
+            missed,
+          );
+        },
+        missed,
+      );
+    },
+    [endOfFlight],
+  );
 
   const rememberArrival = useCallback(id => {
     /*
@@ -4020,7 +4241,6 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
     setTimeout(sendNow, 0);
   }, [sendNow]);
 
-
   /*
    * The states worth looking at, behind the `+` the way the platform puts its own
    * options there. A row of buttons under the field is not something the native
@@ -4137,20 +4357,32 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
        * for `contentAnchor="bottom"` — see `-mountingTransactionWillMount:` —
        * and `AnchorCheck` is what says so.
        *
-       * Ids count DOWN, because these are older than everything already there
-       * and an id has to say which.
+       * Ids count DOWN from the oldest message there is, because these are older
+       * than all of it and an id is what says so. `makeMessage` hands out the
+       * next id UP, which is right for a message being sent and exactly wrong
+       * for a page of history — and it went unnoticed for as long as nothing
+       * read an id for anything but a key. The transcript is grouped by id now
+       * (see `inGroups`), so an older message with a newer id cuts a group
+       * boundary in the middle of the page being loaded and re-keys the groups
+       * after it: measured, the reader was carried 1,459 points down a
+       * transcript the anchor is supposed to hold still.
        */
       onPress: () =>
-        setMessages(previous => [
-          ...Array.from({length: 20}, (_, index) => ({
-            ...makeMessage(
-              CAST[index % CAST.length],
-              `Earlier message ${index + 1}.`,
-            ),
-            at: (previous[0]?.at ?? Date.now()) - (20 - index) * 60_000,
-          })),
-          ...previous,
-        ]),
+        setMessages(previous => {
+          const oldest = previous[0]?.id ?? 0;
+          const before = previous[0]?.at ?? Date.now();
+          return [
+            ...Array.from({length: 20}, (_, index) => ({
+              ...makeMessage(
+                CAST[index % CAST.length],
+                `Earlier message ${index + 1}.`,
+              ),
+              id: oldest - (20 - index),
+              at: before - (20 - index) * 60_000,
+            })),
+            ...previous,
+          ];
+        }),
     },
     {
       id: 'latest',

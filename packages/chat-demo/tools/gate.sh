@@ -30,12 +30,14 @@ SIM=${SIM:-$(echo "$BOOTED" | sed -n 1p)}
 # Not `xcodebuild -parallel-testing-enabled`: that clones simulators, and four
 # clones on a sixteen-gigabyte machine thrash. These two are already booted.
 SIM2=${SIM2:-$(echo "$BOOTED" | sed -n 2p)}
-# SendDrive, ReactionShot, RevealShot and TreeDump drive the app for recordings
-# and dumps rather than asserting anything, and cost three and a half minutes.
-# Ask for them when you want the footage.
+# ScrollProfile, ScrollProfileLong, SendDrive, ReactionShot, RevealShot and
+# TreeDump drive the app for recordings, dumps and measurements rather than
+# asserting anything. Ask for them when you want the footage or the numbers —
+# the two profiles alone are ten minutes, most of it seeding thirty thousand
+# messages twice.
 RECORDERS=${GATE_RECORDERS:-0}
 DD=${DD:-/tmp/chatdemo-rel}
-if [ "$RECORDERS" = "1" ]; then EXPECTED_CASES=${EXPECTED_CASES:-78}; else EXPECTED_CASES=${EXPECTED_CASES:-67}; fi
+if [ "$RECORDERS" = "1" ]; then EXPECTED_CASES=${EXPECTED_CASES:-83}; else EXPECTED_CASES=${EXPECTED_CASES:-68}; fi
 APP=$DD/Build/Products/Release-iphonesimulator/ChatDemo.app
 LOG=${LOG:-/tmp/chatdemo-gate.log}
 LOG_B=${LOG%.log}-b.log
@@ -98,7 +100,7 @@ done
 # case count is what would have to notice.
 CLASSES=$(grep -h "^final class" "$DEMO"/ios/uitests/Sources/*.swift | sed 's/final class //; s/:.*//' | sort)
 if [ "$RECORDERS" != "1" ]; then
-  CLASSES=$(echo "$CLASSES" | grep -vE "^(SendDrive|ReactionShot|RevealShot|TreeDump)$")
+  CLASSES=$(echo "$CLASSES" | grep -vE "^(ScrollProfile|ScrollProfileLong|SendDrive|ReactionShot|RevealShot|TreeDump)$")
 fi
 # Dealt alternately, by name. A weight table would balance the two lanes better
 # and would be wrong the first time a case got slower; this is within a minute
