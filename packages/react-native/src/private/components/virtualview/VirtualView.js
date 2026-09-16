@@ -48,6 +48,18 @@ export type ModeChangeEvent = Readonly<{
   renderState: VirtualViewRenderState,
   mode: VirtualViewMode,
   target: HostInstance,
+  /**
+   * When the native event reached JavaScript, which is not when this callback
+   * runs.
+   *
+   * A `Prerender` or a `Hidden` is applied inside `startTransition`, so both
+   * the state update and this callback are deferred work: React runs them when
+   * it has room. The difference between `told` and the time a listener actually
+   * sees is therefore how long the transition waited — the one number that says
+   * whether a list that has gone blank is waiting on React rather than on
+   * layout or on the main thread.
+   */
+  told: number,
 }>;
 
 // If `VirtualView` exists and `VirtualViewExperimental` does not, that means
@@ -100,9 +112,13 @@ function createVirtualView(initialState: State): VirtualViewComponent {
     const handleModeChange = (
       event: NativeSyntheticEvent<NativeModeChangeEvent>,
     ) => {
+      // Read here, at the top of the handler, because everything below this
+      // line may be deferred — see `told`.
+      const told = performance.now();
       const mode = nullthrows(VirtualViewMode.cast(event.nativeEvent.mode));
       const modeChangeEvent: ModeChangeEvent = {
         mode,
+        told,
         renderState: isHidden
           ? VirtualViewRenderState.None
           : VirtualViewRenderState.Rendered,

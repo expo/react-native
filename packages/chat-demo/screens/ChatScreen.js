@@ -73,6 +73,7 @@ import {systemColor} from '../../expo-intrinsics/src/systemColors';
  * virtualization has to hold up against everything else a message does.
  */
 import VirtualView, {
+  VirtualViewMode,
   createHiddenVirtualView,
 } from '../../react-native/src/private/components/virtualview/VirtualView';
 import Composer, {BAR_TOP_PADDING, ComposerBar} from '../Composer';
@@ -2670,6 +2671,13 @@ const persistedChat = {messages: null, draft: '', reactions: null, seed: null};
  * near the viewport. Rows added later are newest by definition.
  */
 const OPEN_ROWS = 40;
+/*
+ * How long after a fling the meter keeps running — see `onMomentumScrollEnd`.
+ * Long enough for the rows the fling left blank to have come back, which is
+ * the interval the complaint is about.
+ */
+const SCROLL_SETTLE_MS = 1500;
+let settleTimer = null;
 const ESTIMATED_ROW_HEIGHT = 60;
 const HiddenRow = createHiddenVirtualView({height: ESTIMATED_ROW_HEIGHT});
 
@@ -2687,6 +2695,7 @@ const work = {
   rows: 0,
   mounts: 0,
   longFrames: 0,
+  worstFrame: 0,
 };
 /*
  * Whether any of this runs at all. The home screen's switch sets it, and it is
@@ -2704,13 +2713,19 @@ function beginWork(event) {
   work.rows = 0;
   work.mounts = 0;
   work.longFrames = 0;
+  work.worstFrame = 0;
+  resetVirtual();
 }
 function endWork(lead) {
+  const scrolling = work.event === 'scroll' || work.event === 'reveal';
   const report =
-    `${lead} — ${Math.round(performance.now() - work.since)} ms; ` +
+    `${lead} — ${Math.round(performance.now() - work.since)} ms` +
+    (scrolling ? ` (with ${SCROLL_SETTLE_MS} ms of settle)` : '') +
+    '; ' +
     `Chat ×${work.chat}, rows ×${work.rows} (${work.mounts} mounted)` +
-    (work.event === 'scroll' || work.event === 'reveal'
-      ? `, long JS frames ×${work.longFrames}`
+    (scrolling
+      ? `, long JS frames ×${work.longFrames} (worst ${Math.round(work.worstFrame)} ms)` +
+        `\n${virtualReport()}`
       : '');
   work.event = null;
   return report;
@@ -2718,6 +2733,10 @@ function endWork(lead) {
 /*
  * A JavaScript frame that arrives late is one the thread was busy through.
  * Two frames at sixty is the line; the loop runs only while a fling does.
+ *
+ * The WORST one is kept as well as the count, because they say different
+ * things: a hundred frames a little late is a thread that is busy, and one
+ * frame of four hundred milliseconds is a thread that stopped.
  */
 let frameMeter = null;
 function meterFrames(on) {
@@ -2734,8 +2753,12 @@ function meterFrames(on) {
   let last = performance.now();
   const tick = () => {
     const now = performance.now();
-    if (now - last > 34) {
+    const frame = now - last;
+    if (frame > 34) {
       work.longFrames++;
+      if (frame > work.worstFrame) {
+        work.worstFrame = frame;
+      }
     }
     last = now;
     frameMeter = requestAnimationFrame(tick);
@@ -2743,9 +2766,76 @@ function meterFrames(on) {
   frameMeter = requestAnimationFrame(tick);
 }
 
+/*
+ * What the virtualized rows are doing, and how long React makes them wait.
+ *
+ * A row is told its mode by the container, natively, on the scroll. Becoming
+ * VISIBLE is applied at once; becoming PRERENDER or HIDDEN is applied inside a
+ * transition, which React runs when it has room — so `told` on the event is
+ * when the news arrived and `performance.now()` here is when React got to it.
+ * The gap between them is the only direct measure of a list that has gone
+ * blank because the thread is busy, as against one that is slow to draw.
+ *
+ * Module-level and shared by every row: one handler for three thousand rows,
+ * with no closure per row and nothing kept per row. The counters are the
+ * distribution, which is what a fling produces thousands of.
+ */
+const virtual = {
+  visible: 0,
+  prerender: 0,
+  hidden: 0,
+  /* The transition's own wait, over the changes that go through one. */
+  waits: 0,
+  waitTotal: 0,
+  waitWorst: 0,
+};
+function resetVirtual() {
+  virtual.visible = 0;
+  virtual.prerender = 0;
+  virtual.hidden = 0;
+  virtual.waits = 0;
+  virtual.waitTotal = 0;
+  virtual.waitWorst = 0;
+}
+function noteMode(event) {
+  if (!profiling) {
+    return;
+  }
+  const mode = event.mode;
+  if (mode === VirtualViewMode.Visible) {
+    virtual.visible++;
+    // Applied synchronously, so there is no wait to measure.
+    return;
+  }
+  if (mode === VirtualViewMode.Prerender) {
+    virtual.prerender++;
+  } else {
+    virtual.hidden++;
+  }
+  const waited = performance.now() - event.told;
+  virtual.waits++;
+  virtual.waitTotal += waited;
+  if (waited > virtual.waitWorst) {
+    virtual.waitWorst = waited;
+  }
+}
+/** What the counters say, for the caption. */
+function virtualReport() {
+  if (virtual.waits === 0) {
+    return `rows told ×${virtual.visible} visible, ×${virtual.prerender} prerender, ×${virtual.hidden} hidden`;
+  }
+  return (
+    `rows told ×${virtual.visible} visible, ×${virtual.prerender} prerender, ` +
+    `×${virtual.hidden} hidden; transition waited ` +
+    `${Math.round(virtual.waitTotal / virtual.waits)} ms mean, ` +
+    `${Math.round(virtual.waitWorst)} ms worst`
+  );
+}
+
 function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
   // Set before anything counts, including this render's own `work.chat`.
   profiling = showsPerformance === true;
+  const watching = profiling ? noteMode : undefined;
   /*
    * The balloon's metrics, at the reader's text size and LIVE: `fontScale`
    * changes while the app is running (the platform posts a content-size change
@@ -3833,14 +3923,32 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
           dragging.current = false;
         }}
         onMomentumScrollBegin={() => {
+          if (settleTimer != null) {
+            clearTimeout(settleTimer);
+            settleTimer = null;
+          }
           beginWork('scroll');
           meterFrames(true);
         }}
+        /*
+         * Kept running for a beat AFTER the momentum stops.
+         *
+         * The rows a fling left blank are filled in once it is over, and a
+         * report that ends with the movement measures everything except the
+         * part anyone complains about. The settle is in the elapsed time and
+         * the label says so.
+         */
         onMomentumScrollEnd={() => {
-          meterFrames(false);
-          if (work.event === 'scroll') {
-            setReport(endWork('scroll'));
+          if (settleTimer != null) {
+            clearTimeout(settleTimer);
           }
+          settleTimer = setTimeout(() => {
+            settleTimer = null;
+            meterFrames(false);
+            if (work.event === 'scroll') {
+              setReport(endWork('scroll'));
+            }
+          }, SCROLL_SETTLE_MS);
         }}
         contentAnchor="bottom">
         {/*
@@ -3892,7 +4000,17 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
               never hidden while it is flying. By the time one could be, it has
               landed and been re-measured at its resting size.
             */
-            <Row key={message.id} nativeID={`msg-${message.id}`}>
+            <Row
+              key={message.id}
+              nativeID={`msg-${message.id}`}
+              /*
+               * Module-level, so three thousand rows share one function and
+               * none of them closes over anything — see `noteMode`. Absent
+               * when nobody is watching: a listener makes `VirtualView` bind a
+               * callback per mode change, and an instrument should cost
+               * nothing when it is off.
+               */
+              onModeChange={watching}>
               {stamp != null && (
                 <Stamp
                   day={stamp.day}
@@ -4102,6 +4220,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 11,
     textAlign: 'center',
+    /* The report is two lines when it has the virtualized counters in it. */
+    whiteSpace: 'pre-line',
     color: uiColor('secondaryLabel'),
     backgroundColor: uiColor('secondarySystemBackground'),
   },
