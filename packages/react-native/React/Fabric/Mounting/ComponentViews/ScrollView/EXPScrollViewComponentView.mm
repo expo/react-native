@@ -428,26 +428,80 @@ static void EXPApplyEdgeEffect(UIScrollEdgeEffect *effect, ExpoScrollEdgeEffect 
   }
 
   /*
-   * WHICH visible row to hold depends on which END is anchored, and getting this
-   * wrong is invisible until something resizes BETWEEN the pinned row and the
-   * one the reader is actually watching.
+   * DOWN to a view that fits on the screen, not just the first child.
    *
-   * A TOP-anchored list holds the first visible row: the reader's eye is at the
-   * top, changes happen below it, and pinning the top keeps the page still.
+   * The content's direct children are not always the rows. A long transcript
+   * groups its rows into boxes so that one row changing height moves its
+   * thirty-one siblings rather than three thousand, and then the only direct
+   * children are those boxes. Pinning one is right for everything that happens
+   * ABOVE it and blind to everything inside it — a row filled in lower down the
+   * same box moves its bottom edge, and the correction moves the reader by a
+   * row they were not looking at.
    *
-   * A BOTTOM-anchored transcript is the mirror image and must hold the LAST
-   * visible row. The reader's eye is on the newest message at the bottom; the
-   * churn — a receipt arriving or leaving under an OLDER message — happens above
-   * it. Pinning the first visible row there anchors the wrong end: that row's
-   * TOP does not move when a receipt collapses lower down, so the delta reads
-   * zero and the correction never runs, while every row below it — the newest
-   * message included — rises by the receipt's height: the newest balloon jumps
-   * by a receipt line as an older message's `Delivered` leaves, because nothing
-   * holds it.
+   * The rule needs nothing from whoever built the tree, because it is a
+   * property of anchoring itself: a view TALLER THAN THE VIEWPORT cannot be a
+   * faithful proxy for where the reader is looking, since most of it is
+   * somewhere the reader is not. So the same choice is made again inside it,
+   * and again, until the chosen view fits on the screen or has no children of
+   * its own. A flat list stops on the first step, where it always did.
    */
   const auto &anchorProps = static_cast<const ExpoScrollViewProps &>(*_props);
   const BOOL bottomAnchored = anchorProps.contentAnchor == ExpoScrollContentAnchor::Bottom;
+  const CGFloat viewport = _scrollView.bounds.size.height;
+  UIView *anchor = nil;
+  UIView *scope = content;
+  while (scope != nil) {
+    UIView *chosen = [self _anchorChildOf:scope bottomAnchored:bottomAnchored];
+    if (chosen == nil) {
+      break;
+    }
+    anchor = chosen;
+    if (chosen.subviews.count == 0 || chosen.bounds.size.height <= viewport) {
+      break;
+    }
+    scope = chosen;
+  }
+  if (anchor == nil) {
+    return;
+  }
+  _firstVisibleView = anchor;
+  _firstVisibleFrameBefore = [self _rowFrame:anchor];
+  _firstVisibleTag = anchor.tag;
+}
 
+/**
+ * A row's frame in the SCROLL VIEW's coordinates, whatever it hangs from.
+ *
+ * `frame` is in the superview's space, and with the rows in a tree of boxes that
+ * superview is not the same one from row to row. Converted, every comparison
+ * here is against one origin — content coordinates, which is what the offset is
+ * measured in.
+ */
+- (CGRect)_rowFrame:(UIView *)row
+{
+  return [row.superview convertRect:row.frame toView:_scrollView];
+}
+
+/**
+ * The child of `container` the reader's eye is on, by whichever end is anchored.
+ *
+ * WHICH visible row to hold depends on which END is anchored, and getting this
+ * wrong is invisible until something resizes BETWEEN the pinned row and the one
+ * the reader is actually watching.
+ *
+ * A TOP-anchored list holds the first visible row: the reader's eye is at the
+ * top, changes happen below it, and pinning the top keeps the page still.
+ *
+ * A BOTTOM-anchored transcript is the mirror image and must hold the LAST
+ * visible row. The reader's eye is on the newest message at the bottom; the
+ * churn — a receipt arriving or leaving under an OLDER message — happens above
+ * it. Pinning the first visible row there anchors the wrong end: that row's TOP
+ * does not move when a receipt collapses lower down, so the delta reads zero and
+ * the correction never runs, while every row below it — the newest message
+ * included — rises by the receipt's height.
+ */
+- (UIView *)_anchorChildOf:(UIView *)container bottomAnchored:(BOOL)bottomAnchored
+{
   if (bottomAnchored) {
     // The last row whose TOP is above the visible bottom — the bottom-most row
     // any of which can be seen. The visible bottom excludes the bottom inset,
@@ -455,23 +509,14 @@ static void EXPApplyEdgeEffect(UIScrollEdgeEffect *effect, ExpoScrollEdgeEffect 
     // the reader is watching.
     const CGFloat visibleBottom = _scrollView.contentOffset.y + _scrollView.bounds.size.height -
         _scrollView.adjustedContentInset.bottom;
-    for (UIView *row in content.subviews.reverseObjectEnumerator) {
+    for (UIView *row in container.subviews.reverseObjectEnumerator) {
       if (CGRectGetMinY([self _rowFrame:row]) < visibleBottom) {
-        _firstVisibleView = row;
-        _firstVisibleFrameBefore = [self _rowFrame:row];
-        _firstVisibleTag = row.tag;
-        return;
+        return row;
       }
     }
     // Everything is below the viewport (content just grew past a short rest).
     // The first row is then the nearest thing to an anchor there is.
-    UIView *first = content.subviews.firstObject;
-    if (first != nil) {
-      _firstVisibleView = first;
-      _firstVisibleFrameBefore = [self _rowFrame:first];
-      _firstVisibleTag = first.tag;
-    }
-    return;
+    return container.subviews.firstObject;
   }
 
   /*
@@ -481,35 +526,14 @@ static void EXPApplyEdgeEffect(UIScrollEdgeEffect *effect, ExpoScrollEdgeEffect 
    * one down would let that half-row resize unnoticed.
    */
   const CGFloat top = _scrollView.contentOffset.y;
-  for (UIView *row in content.subviews) {
+  for (UIView *row in container.subviews) {
     if (CGRectGetMaxY([self _rowFrame:row]) > top) {
-      _firstVisibleView = row;
-      _firstVisibleFrameBefore = [self _rowFrame:row];
-      _firstVisibleTag = row.tag;
-      return;
+      return row;
     }
   }
   // Everything is above the viewport, which happens when the content has just
   // shrunk. The last row is then the nearest thing to an anchor there is.
-  UIView *last = content.subviews.lastObject;
-  if (last != nil) {
-    _firstVisibleView = last;
-    _firstVisibleFrameBefore = [self _rowFrame:last];
-    _firstVisibleTag = last.tag;
-  }
-}
-
-/**
- * A row's frame in the SCROLL VIEW's own space, which is the space the offset is
- * in.
- *
- * Not `row.frame`, which is relative to the content container — and the content
- * container can move too, so a delta taken in its space would miss exactly the
- * case where everything shifted together.
- */
-- (CGRect)_rowFrame:(UIView *)row
-{
-  return [row.superview convertRect:row.frame toView:_scrollView];
+  return container.subviews.lastObject;
 }
 
 - (void)mountingTransactionDidMount:(const facebook::react::MountingTransaction &)transaction
