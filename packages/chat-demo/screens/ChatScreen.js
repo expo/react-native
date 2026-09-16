@@ -74,6 +74,7 @@ import {systemColor} from '../../expo-intrinsics/src/systemColors';
  */
 import VirtualView, {
   VirtualViewMode,
+  VirtualViewRenderState,
   createHiddenVirtualView,
 } from '../../react-native/src/private/components/virtualview/VirtualView';
 import Composer, {BAR_TOP_PADDING, ComposerBar} from '../Composer';
@@ -1946,8 +1947,22 @@ function BubbleImpl({
   /** The reaction ids stuck to this balloon (array; empty/undefined for none). */
   reactions,
 }) {
+  const renderedAt = profiling ? performance.now() : 0;
   if (profiling) {
     work.rows++;
+    /*
+     * The row that renders next after a row was caught blank IS that row:
+     * `Visible` is applied synchronously, so nothing can come between them.
+     */
+    if (virtual.pendingTold !== 0) {
+      const blank = performance.now() - virtual.pendingTold;
+      virtual.pendingTold = 0;
+      virtual.blanks++;
+      virtual.blankTotal += blank;
+      if (blank > virtual.blankWorst) {
+        virtual.blankWorst = blank;
+      }
+    }
   }
   const counted = useRef(false);
   if (profiling && !counted.current) {
@@ -2337,7 +2352,13 @@ function BubbleImpl({
    * height), and the tail drop plus any open receipt on the bottom. A named
    * variable rather than an inline object so the style stays lint-clean.
    */
-  return (
+  /*
+   * Built into a value rather than returned outright, so the body can time
+   * itself: everything above this line is the row's own JavaScript, and the
+   * JSX below is the last of it. What that separates is a stall React caused
+   * from one this app caused — see `detailReport`.
+   */
+  const tree = (
     <AnimatedDiv
       {...(pan != null ? pan.panHandlers : null)}
       style={[
@@ -2633,6 +2654,10 @@ function BubbleImpl({
       </div>
     </AnimatedDiv>
   );
+  if (profiling) {
+    work.renderMs += performance.now() - renderedAt;
+  }
+  return tree;
 }
 
 /*
@@ -2696,6 +2721,14 @@ const work = {
   mounts: 0,
   longFrames: 0,
   worstFrame: 0,
+  frames: 0,
+  over34: 0,
+  over50: 0,
+  over100: 0,
+  over200: 0,
+  /* Time spent INSIDE the rows' own render bodies, which is the part of a
+     stall that is JavaScript's rather than React's or the main thread's. */
+  renderMs: 0,
 };
 /*
  * Whether any of this runs at all. The home screen's switch sets it, and it is
@@ -2714,6 +2747,12 @@ function beginWork(event) {
   work.mounts = 0;
   work.longFrames = 0;
   work.worstFrame = 0;
+  work.frames = 0;
+  work.over34 = 0;
+  work.over50 = 0;
+  work.over100 = 0;
+  work.over200 = 0;
+  work.renderMs = 0;
   resetVirtual();
 }
 function endWork(lead) {
@@ -2729,6 +2768,50 @@ function endWork(lead) {
       : '');
   work.event = null;
   return report;
+}
+
+/**
+ * The same gesture, at length — what a second tap on the caption asks for.
+ *
+ * The summary says what happened; this says where it went. Every line answers
+ * a question the summary raises and cannot settle on its own: whether the late
+ * frames were many small ones or one enormous one, how much of a stall was
+ * JavaScript's own rendering as against React's commit and the main thread's
+ * mounting, and how long a row that the viewport caught blank actually stayed
+ * blank.
+ */
+function detailReport() {
+  const lines = [];
+  lines.push(
+    `frames ×${work.frames}: ×${work.over34} >34ms, ×${work.over50} >50ms, ` +
+      `×${work.over100} >100ms, ×${work.over200} >200ms; worst ${Math.round(work.worstFrame)} ms`,
+  );
+  lines.push(
+    `rows ×${work.rows} rendered (${work.mounts} first mounts) in ` +
+      `${Math.round(work.renderMs)} ms of JavaScript — ` +
+      `${work.rows === 0 ? 0 : (work.renderMs / work.rows).toFixed(2)} ms each`,
+  );
+  /*
+   * What is NOT JavaScript's. The rows' own render bodies are the only part of
+   * a stall this app can time from the inside; the rest of the gap is React's
+   * reconciliation and commit, and the main thread's mounting and layout.
+   */
+  const elapsed = performance.now() - work.since;
+  lines.push(
+    `of ${Math.round(elapsed)} ms elapsed, ${Math.round(work.renderMs)} ms was ` +
+      `rendering rows; the rest is React and the main thread`,
+  );
+  if (virtual.blanks > 0) {
+    lines.push(
+      `caught blank ×${virtual.blanks}: stayed blank ` +
+        `${Math.round(virtual.blankTotal / virtual.blanks)} ms mean, ` +
+        `${Math.round(virtual.blankWorst)} ms worst`,
+    );
+  } else {
+    lines.push('caught blank ×0 — every row was prerendered before it was needed');
+  }
+  lines.push(virtualReport());
+  return lines.join('\n');
 }
 /*
  * A JavaScript frame that arrives late is one the thread was busy through.
@@ -2754,6 +2837,23 @@ function meterFrames(on) {
   const tick = () => {
     const now = performance.now();
     const frame = now - last;
+    work.frames++;
+    /*
+     * BUCKETED, not just counted past a line. "Twenty-five frames were late"
+     * is the same sentence for twenty-five frames of 40ms and for twenty-four
+     * of 40 and one of 400, and those are not the same problem: the first is a
+     * thread with too much to do every frame, the second is a thread that
+     * stopped once. The buckets say which.
+     */
+    if (frame > 200) {
+      work.over200++;
+    } else if (frame > 100) {
+      work.over100++;
+    } else if (frame > 50) {
+      work.over50++;
+    } else if (frame > 34) {
+      work.over34++;
+    }
     if (frame > 34) {
       work.longFrames++;
       if (frame > work.worstFrame) {
@@ -2782,15 +2882,43 @@ function meterFrames(on) {
  */
 const virtual = {
   visible: 0,
+  /*
+   * ...of which the ones that were still BLANK when they were told.
+   *
+   * A row already prerendered is told it is visible too, and for it the news
+   * changes nothing — it is already in the state it is being moved to. The row
+   * that matters is the one the viewport reached before the prerender did: it
+   * is empty on screen and has to render, commit and mount from there. That is
+   * the blank cell, and `renderState` is what tells the two apart.
+   */
+  caught: 0,
   prerender: 0,
   hidden: 0,
   /* The transition's own wait, over the changes that go through one. */
   waits: 0,
   waitTotal: 0,
   waitWorst: 0,
+  /*
+   * How long a row caught blank stayed blank.
+   *
+   * `Visible` is applied synchronously, so the very next row to render is the
+   * row that was just told — one slot is enough to pair them, and the pairing
+   * is exact rather than a guess. What it measures is the complaint itself: the
+   * interval between the container saying "you are on screen" and anything
+   * being drawn there.
+   */
+  pendingTold: 0,
+  blanks: 0,
+  blankTotal: 0,
+  blankWorst: 0,
 };
 function resetVirtual() {
   virtual.visible = 0;
+  virtual.caught = 0;
+  virtual.pendingTold = 0;
+  virtual.blanks = 0;
+  virtual.blankTotal = 0;
+  virtual.blankWorst = 0;
   virtual.prerender = 0;
   virtual.hidden = 0;
   virtual.waits = 0;
@@ -2804,6 +2932,10 @@ function noteMode(event) {
   const mode = event.mode;
   if (mode === VirtualViewMode.Visible) {
     virtual.visible++;
+    if (event.renderState === VirtualViewRenderState.None) {
+      virtual.caught++;
+      virtual.pendingTold = event.told;
+    }
     // Applied synchronously, so there is no wait to measure.
     return;
   }
@@ -2821,16 +2953,165 @@ function noteMode(event) {
 }
 /** What the counters say, for the caption. */
 function virtualReport() {
+  const told =
+    `rows told ×${virtual.visible} visible (×${virtual.caught} still blank), ` +
+    `×${virtual.prerender} prerender, ×${virtual.hidden} hidden`;
   if (virtual.waits === 0) {
-    return `rows told ×${virtual.visible} visible, ×${virtual.prerender} prerender, ×${virtual.hidden} hidden`;
+    return told;
   }
   return (
-    `rows told ×${virtual.visible} visible, ×${virtual.prerender} prerender, ` +
-    `×${virtual.hidden} hidden; transition waited ` +
+    `${told}; transition waited ` +
     `${Math.round(virtual.waitTotal / virtual.waits)} ms mean, ` +
     `${Math.round(virtual.waitWorst)} ms worst`
   );
 }
+
+/**
+ * The transcript's rows, behind a memo boundary.
+ *
+ * `React.memo` on a ROW saves that row's body and not its element: the element
+ * is built by whoever renders it, before memo is consulted. So a keystroke,
+ * which is state on the screen and nothing to do with any message, re-ran this
+ * map over every message in the conversation and built the whole JSX inside
+ * each one — the stamp, the balloon, its twenty-odd props, the boxes around
+ * them. Measured at three thousand messages: a character cost 26 ms with no row
+ * body running at all, and a send 60.
+ *
+ * A boundary here is what makes that skippable, and the props below are the
+ * whole of what a row depends on. Every one of them is a ref, a memoised value,
+ * a `useCallback` or a primitive, so a render that changed none of them stops at
+ * this line.
+ *
+ * A `useMemo` around the map would have done the same arithmetic with the
+ * dependency list written by hand, which is the version that goes wrong: a
+ * missing dependency there is a row showing something that is no longer true,
+ * not a slow one.
+ */
+const Transcript = React.memo(function Transcript({
+  applyCommand,
+  composerFrame,
+  lastSent,
+  lastSentReady,
+  messages,
+  metrics,
+  onOpenReader,
+  openedWith,
+  pan,
+  previousSent,
+  reactions,
+  rememberArrival,
+  rememberFlightFrame,
+  rememberTakeoff,
+  reveal,
+  revealInk,
+  transcriptContent,
+  watching,
+  wearsReceipt,
+}) {
+  return messages.map((message, index) => {
+    const Row =
+      index < openedWith.current - OPEN_ROWS ? HiddenRow : VirtualView;
+    const previous = messages[index - 1];
+    const next = messages[index + 1];
+    /*
+     * The native chat GROUPS a run from one sender, and the grouping is three
+     * things at once: the tail is on the last of the run, the sender's
+     * name is on the first, and the gap within a run is tighter than the
+     * gap between them. Any one of the three alone reads as a bug — and
+     * the one non-obvious rule, that a message wearing the receipt keeps
+     * its tail (`index === wearsReceipt`), keeps the
+     * receipt line still through a second send. The rules and why are in
+     * `runFlags`; `runGrouping-test.js` guards them.
+     */
+    const {startsRun, endsRun, separatesRun} = runFlags(
+      message,
+      previous,
+      next,
+      index,
+      wearsReceipt,
+      reactions,
+    );
+    const stamp = stampBetween(previous, message);
+    return (
+      /*
+        Each message is a `VirtualView`, so a long history costs the tree
+        only what is near the viewport.
+
+        The whole ROW, stamp included, because the stamp belongs to the
+        message under it and a stamp left behind by a hidden balloon is a
+        date with nothing after it. Hidden, the row renders nothing and
+        keeps its measured height, so the scroll range and the bottom
+        anchor see the same list either way.
+
+        A message on its way in is wrapped like any other, and safely: a
+        sent message is at the BOTTOM, where the viewport is, so it is
+        never hidden while it is flying. By the time one could be, it has
+        landed and been re-measured at its resting size.
+      */
+      <Row
+        key={message.id}
+        nativeID={`msg-${message.id}`}
+        /*
+         * Module-level, so three thousand rows share one function and
+         * none of them closes over anything — see `noteMode`. Absent
+         * when nobody is watching: a listener makes `VirtualView` bind a
+         * callback per mode change, and an instrument should cost
+         * nothing when it is off.
+         */
+        onModeChange={watching}>
+        {stamp != null && (
+          <Stamp
+            day={stamp.day}
+            time={stamp.time}
+            /* Arriving only if this row was not here when the screen
+               opened: the stamps above an existing conversation were
+               always there and have nothing to arrive from. */
+            arriving={index >= openedWith.current}
+          />
+        )}
+        <Bubble
+          message={message}
+          metrics={metrics}
+          composerFrame={composerFrame}
+          contentBox={transcriptContent}
+          tail={endsRun ? mineSide(message) : ''}
+          startsRun={startsRun}
+          endsRun={endsRun}
+          separatesRun={separatesRun}
+          onCommand={applyCommand}
+          onOpenReader={onOpenReader}
+          onArrived={rememberArrival}
+          onTakeoff={rememberTakeoff}
+          onFlightFrame={rememberFlightFrame}
+          /*
+           * THREE states, not two: shown, holding its space, and absent.
+           * A message on its way owns the space its receipt will take, so
+           * that nothing moves when the words arrive. See the render.
+           *
+           * The outgoing receipt is NOT animated away. Keeping it mounted
+           * at `'waiting'` so it closes on the springs that opened it puts
+           * two receipts on screen together and shuts the old one late:
+           * the collapse does not run when the send does, so the earlier
+           * receipt drops instead of scaling out.
+           */
+          showsReceipt={
+            index === wearsReceipt
+              ? 'shown'
+              : index === lastSent
+                ? 'waiting'
+                : index === previousSent && lastSentReady
+                  ? 'leaving'
+                  : 'none'
+          }
+          reveal={reveal}
+          revealInk={revealInk}
+          pan={pan}
+          reactions={reactions[message.id]}
+        />
+      </Row>
+    );
+  });
+});
 
 function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
   // Set before anything counts, including this render's own `work.chat`.
@@ -2907,6 +3188,8 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
    * transcript, whose resting geometry is the platform's and not to be moved.
    */
   const [report, setReport] = useState(null);
+  /* The long form of the same gesture, built only when it is asked for. */
+  const [detail, setDetail] = useState(null);
   const [captionTop, setCaptionTop] = useState(0);
   const committedAt = useRef(null);
   useLayoutEffect(() => {
@@ -3812,10 +4095,30 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
   return (
     <div style={styles.screen}>
       {report != null && (
+        /*
+         * One tap asks for more, the next one takes it away with a copy.
+         *
+         * A summary is what you want ninety-nine times and the last time you
+         * want everything, so the caption has both and the tap walks between
+         * them. Copying on the way out because these numbers exist to be sent
+         * to somebody, and a phone with no cable has no other way off the
+         * screen than transcribing them by hand. Selecting text would be the
+         * standard gesture and is the wrong one: the report is several lines
+         * and all of them are wanted.
+         */
         <p
           style={[styles.loadReport, {top: captionTop}]}
-          onClick={() => setReport(null)}>
-          {report}
+          onClick={() => {
+            if (detail == null) {
+              setDetail(detailReport());
+              return;
+            }
+            Clipboard.setString(`${report}\n${detail}`);
+            setDetail(null);
+            setReport(null);
+          }}>
+          {detail == null ? report : `${report}\n${detail}`}
+          {detail == null ? '\n(tap for detail)' : '\n(tap to copy)'}
         </p>
       )}
       {/* The send's own numbers, for `SendMorphCheck` — see `flightTrace`. */}
@@ -3946,6 +4249,9 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
             settleTimer = null;
             meterFrames(false);
             if (work.event === 'scroll') {
+              /* The detail belongs to the gesture it was expanded from, and
+                 this is a different one. */
+              setDetail(null);
               setReport(endWork('scroll'));
             }
           }, SCROLL_SETTLE_MS);
@@ -3960,109 +4266,27 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
           asks on every move and the recogniser never has to answer.
         */}
         {/* The transcript's own box, for the arithmetic above. */}
-        {messages.map((message, index) => {
-          const Row =
-            index < openedWith.current - OPEN_ROWS ? HiddenRow : VirtualView;
-          const previous = messages[index - 1];
-          const next = messages[index + 1];
-          /*
-           * The native chat GROUPS a run from one sender, and the grouping is three
-           * things at once: the tail is on the last of the run, the sender's
-           * name is on the first, and the gap within a run is tighter than the
-           * gap between them. Any one of the three alone reads as a bug — and
-           * the one non-obvious rule, that a message wearing the receipt keeps
-           * its tail (`index === wearsReceipt`), keeps the
-           * receipt line still through a second send. The rules and why are in
-           * `runFlags`; `runGrouping-test.js` guards them.
-           */
-          const {startsRun, endsRun, separatesRun} = runFlags(
-            message,
-            previous,
-            next,
-            index,
-            wearsReceipt,
-            reactions,
-          );
-          const stamp = stampBetween(previous, message);
-          return (
-            /*
-              Each message is a `VirtualView`, so a long history costs the tree
-              only what is near the viewport.
-
-              The whole ROW, stamp included, because the stamp belongs to the
-              message under it and a stamp left behind by a hidden balloon is a
-              date with nothing after it. Hidden, the row renders nothing and
-              keeps its measured height, so the scroll range and the bottom
-              anchor see the same list either way.
-
-              A message on its way in is wrapped like any other, and safely: a
-              sent message is at the BOTTOM, where the viewport is, so it is
-              never hidden while it is flying. By the time one could be, it has
-              landed and been re-measured at its resting size.
-            */
-            <Row
-              key={message.id}
-              nativeID={`msg-${message.id}`}
-              /*
-               * Module-level, so three thousand rows share one function and
-               * none of them closes over anything — see `noteMode`. Absent
-               * when nobody is watching: a listener makes `VirtualView` bind a
-               * callback per mode change, and an instrument should cost
-               * nothing when it is off.
-               */
-              onModeChange={watching}>
-              {stamp != null && (
-                <Stamp
-                  day={stamp.day}
-                  time={stamp.time}
-                  /* Arriving only if this row was not here when the screen
-                     opened: the stamps above an existing conversation were
-                     always there and have nothing to arrive from. */
-                  arriving={index >= openedWith.current}
-                />
-              )}
-              <Bubble
-                message={message}
-                metrics={metrics}
-                composerFrame={composerFrame}
-                contentBox={transcriptContent}
-                tail={endsRun ? mineSide(message) : ''}
-                startsRun={startsRun}
-                endsRun={endsRun}
-                separatesRun={separatesRun}
-                onCommand={applyCommand}
-                onOpenReader={onOpenReader}
-                onArrived={rememberArrival}
-                onTakeoff={rememberTakeoff}
-                onFlightFrame={rememberFlightFrame}
-                /*
-                 * THREE states, not two: shown, holding its space, and absent.
-                 * A message on its way owns the space its receipt will take, so
-                 * that nothing moves when the words arrive. See the render.
-                 *
-                 * The outgoing receipt is NOT animated away. Keeping it mounted
-                 * at `'waiting'` so it closes on the springs that opened it puts
-                 * two receipts on screen together and shuts the old one late:
-                 * the collapse does not run when the send does, so the earlier
-                 * receipt drops instead of scaling out.
-                 */
-                showsReceipt={
-                  index === wearsReceipt
-                    ? 'shown'
-                    : index === lastSent
-                      ? 'waiting'
-                      : index === previousSent && lastSentReady
-                        ? 'leaving'
-                        : 'none'
-                }
-                reveal={reveal}
-                revealInk={revealInk}
-                pan={pan}
-                reactions={reactions[message.id]}
-              />
-            </Row>
-          );
-        })}
+        <Transcript
+          applyCommand={applyCommand}
+          composerFrame={composerFrame}
+          lastSent={lastSent}
+          lastSentReady={lastSentReady}
+          messages={messages}
+          metrics={metrics}
+          onOpenReader={onOpenReader}
+          openedWith={openedWith}
+          pan={pan}
+          previousSent={previousSent}
+          reactions={reactions}
+          rememberArrival={rememberArrival}
+          rememberFlightFrame={rememberFlightFrame}
+          rememberTakeoff={rememberTakeoff}
+          reveal={reveal}
+          revealInk={revealInk}
+          transcriptContent={transcriptContent}
+          watching={watching}
+          wearsReceipt={wearsReceipt}
+        />
         {typing != null && <TypingIndicator from={typing} />}
         {/*
           Laid out with the rows, after the first mount — the moment the

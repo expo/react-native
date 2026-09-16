@@ -660,6 +660,12 @@ function InsetsScreen({
                 <option value="300">300</option>
                 <option value="1000">1000</option>
                 <option value="3000">3000</option>
+                {/* Past here the OPEN is what hurts first, and deliberately so:
+                    it is the one cost that scales with the whole conversation
+                    rather than with the window. */}
+                <option value="10000">10000</option>
+                <option value="30000">30000</option>
+                <option value="100000">100000</option>
               </select>
             </SettingRow>
             {/* What the chat measures about itself, and whether it says so. */}
