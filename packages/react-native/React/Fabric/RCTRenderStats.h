@@ -47,11 +47,26 @@ typedef struct {
    *
    * A HIGH-WATER MARK and not a total, so unlike everything else here it does
    * not survive being subtracted: two readings give the largest so far, not the
-   * largest between them. It is kept because the one number that says whether a
-   * list is expensive to open is the size of the transaction that opens it.
+   * largest between them. Kept only because the size of the transaction that
+   * opens a list is worth knowing — and for ANY question about an interval, use
+   * `bigTransactions` below instead.
    */
   uint64_t biggestMutations;
   uint64_t biggestNanos;
+  /*
+   * The BIG ones, counted rather than maximised, because a maximum is the one
+   * shape of statistic this file cannot hand out usefully: it does not survive
+   * being subtracted, so a reader asking "what happened during that gesture"
+   * gets the largest transaction of the whole run instead — the app's OPEN,
+   * every time, which is exactly the mistake the caveat above failed to
+   * prevent.
+   *
+   * A count and a total do subtract. "Two transactions over a thousand
+   * mutations, 780ms in them" is an answer about an interval; "the biggest was
+   * 20,722" is not.
+   */
+  uint64_t bigTransactions;
+  uint64_t bigNanos;
   /** The renderer's own phases, from each transaction's telemetry. */
   uint64_t commitNanos;
   uint64_t diffNanos;

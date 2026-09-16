@@ -232,6 +232,16 @@ static void EXPRecordMountingTransaction(const ShadowViewMutationList &mutations
   gMountingStats.mountNanos += nanos;
   gMountingStats.biggestNanos = std::max(gMountingStats.biggestNanos, nanos);
   gMountingStats.biggestMutations = std::max(gMountingStats.biggestMutations, (uint64_t)mutations.size());
+  /*
+   * A thousand, which is well past anything a scroll or a send produces — a
+   * fling's transactions are in the hundreds — and well under what opening a
+   * long list costs. What lands above this line is a batch: a teleport's
+   * deferred hides being caught up, or the open itself.
+   */
+  if (mutations.size() > 1000) {
+    gMountingStats.bigTransactions++;
+    gMountingStats.bigNanos += nanos;
+  }
   for (const auto &mutation : mutations) {
     switch (mutation.type) {
       case ShadowViewMutation::Create:

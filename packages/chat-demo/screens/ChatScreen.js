@@ -2943,9 +2943,22 @@ function detailReport() {
     lines.push(
       `mounted ×${renderer.transactions} transactions: ×${renderer.creates} create, ` +
         `×${renderer.inserts} insert, ×${renderer.updates} update, ×${renderer.removes} remove, ` +
-        `×${renderer.deletes} delete — ×${per(renderer.updates)} updates each, ` +
-        `biggest ×${renderer.biggestMutations} mutations`,
+        `×${renderer.deletes} delete — ×${per(renderer.updates)} updates each`,
     );
+    /*
+     * The BATCHES, which is a different question from the average and the one
+     * a frozen frame is about. `biggestMutations` cannot answer it — it is a
+     * high-water mark over the whole run, so it reports the app's open forever
+     * after. A count and a total do subtract, so these are about the gesture.
+     */
+    if (renderer.bigTransactions > 0) {
+      lines.push(
+        `×${renderer.bigTransactions} transactions over 1000 mutations, ` +
+          `${Math.round(renderer.bigMs)} ms in them`,
+      );
+    } else {
+      lines.push('no transaction over 1000 mutations');
+    }
     /* Both kinds of sweep over their own count: a SINGLE is one view whose
        frame changed asking where it now is, so the two rise together. */
     const passes = renderer.sweeps + renderer.sweepSingles;

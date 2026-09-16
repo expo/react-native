@@ -64,6 +64,10 @@ RCT_EXPORT_MODULE(RenderStats)
     @"removes" : @(mount.removes),
     @"updates" : @(mount.updates),
     @"biggestMutations" : @(mount.biggestMutations),
+    // Transactions over a thousand mutations, and the time in them. Counted
+    // rather than maximised so that an interval can be asked about.
+    @"bigTransactions" : @(mount.bigTransactions),
+    @"bigMs" : @((double)mount.bigNanos / 1e6),
     // What the main thread spent performing them, by kind.
     @"mountMs" : @((double)mount.mountNanos / 1e6),
     @"createMs" : @((double)mount.createNanos / 1e6),
