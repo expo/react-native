@@ -6,12 +6,10 @@
  */
 
 #import <React/RCTLog.h>
-#import <React/RCTRenderStats.h>
 #import <React/RCTScrollViewComponentView.h>
 #import <React/RCTVirtualViewMode.h>
 #import <UIKit/UIKit.h>
 #import <os/log.h>
-#import <unordered_map>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 
 #import "RCTVirtualViewContainerState.h"
@@ -126,26 +124,24 @@ static BOOL RCTOriginInContent(UIView *view, UIView *scrollView, CGPoint *origin
 /*
  * What a sweep costs, when asked for it.
  *
- * The container measures itself: how many sweeps a second, how many rows each
- * visits, how they divide between visible, prerender and hidden, the
- * microseconds spent inside `-_updateModes:`, and the SKIP BUDGET — the
- * shortest scroll that could change any row's mode, which is what says whether
- * a sweep could have been skipped at all.
+ * `EXP_VIRTUALVIEW_STATS=1` makes the container measure itself: how many sweeps
+ * a second, how many rows each visits, how they divide between visible,
+ * prerender and hidden, the microseconds spent inside `-_updateModes:`, and the
+ * SKIP BUDGET — the shortest scroll that could change any row's mode, which is
+ * what says whether a sweep could have been skipped at all. One line a second,
+ * to `dev.expo.virtualview`.
  *
- * Two readers: one line a second to `dev.expo.virtualview`, and
- * `RCTRenderSweepStatsRead` for an app that wants the same numbers on its own
- * screen. So the tally is monotonic and summed across containers — the question
- * is what the app spent, and a screen has one scrolling list. The skip budget
- * stays with the log, being a minimum rather than a total: it does not survive
- * subtraction. See `RCTRenderStats.h` for the switch.
+ * Off, which is the default, it costs one `dispatch_once`-guarded read.
  */
-
-/* Everything counted, ever. Main thread only — this is where a sweep runs. */
-static RCTRenderSweepStats gSweepStats{};
-
-RCTRenderSweepStats RCTRenderSweepStatsRead(void)
+static BOOL EXPVirtualViewStatsEnabled(void)
 {
-  return gSweepStats;
+  static BOOL enabled = NO;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    const char *value = getenv("EXP_VIRTUALVIEW_STATS");
+    enabled = value != NULL && value[0] == '1';
+  });
+  return enabled;
 }
 
 static os_log_t EXPVirtualViewStatsLog(void)
@@ -192,17 +188,14 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
   CFTimeInterval _deferHidesUntil;
   CFTimeInterval _lastFullSweepTime;
   CFTimeInterval _deferHidesOpenedAt;
-  /*
-   * Each parent's origin in content coordinates, for the length of one sweep.
-   *
-   * Rebuilt every sweep rather than kept, because a layout moves the boxes the
-   * rows are in and nothing tells this object when. Within a sweep it is a
-   * pointer keyed cache of the chain walk above each row.
-   */
-  std::unordered_map<const void *, CGPoint> _originByParent;
-  /* The log's own last reading, so its line stays a report on one second —
-     see `RCTRenderSweepStatsEnabled` for the switch over all of this. */
-  RCTRenderSweepStats _statLogged;
+  /* Instrumentation — see `EXPVirtualViewStatsEnabled`; all zero unless asked. */
+  uint64_t _statSweeps;
+  uint64_t _statSingles;
+  uint64_t _statRows;
+  uint64_t _statVisible;
+  uint64_t _statPrerender;
+  uint64_t _statNanos;
+  uint64_t _statMaxNanos;
   CGFloat _statMinSkip;
   CFTimeInterval _statSince;
 }
@@ -293,7 +286,7 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
 
 - (void)_updateModes:(id<RCTVirtualViewProtocol>)virtualView
 {
-  const BOOL stats = RCTRenderSweepStatsEnabled();
+  const BOOL stats = EXPVirtualViewStatsEnabled();
   const uint64_t statsStart = stats ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
   auto scrollView = _scrollViewComponentView.scrollView;
   CGRect visibleRect = CGRectMake(
@@ -356,25 +349,14 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
       (virtualView != nullptr) ? @[ virtualView ] : _virtualViewsSnapshot;
 
   /*
-   * The last parent, and then every parent.
-   *
-   * A flat list's rows all share one box, so comparing against the previous row's
-   * parent answers it for all of them and the chain above is walked once. Rows
-   * in GROUPS have as many parents as there are groups, and they do not arrive
-   * grouped: the snapshot comes from a set, so the order is arbitrary and a
-   * single remembered parent misses almost every time. Measured on a
-   * three-thousand-row list whose rows were put in boxes of fifty-six, a sweep
-   * went from 98µs to 675µs on exactly that.
-   *
-   * So the remembered parent stays — it is still right for every row of a flat
-   * list and costs a pointer compare — and behind it is the map it falls
-   * through to, which is a pointer hash against a walk of three superviews
-   * under a lock apiece.
+   * One entry, because a list's rows are contiguous and share a parent: the
+   * chain above them is walked for the first row and compared by pointer for
+   * the rest. A map would hash ten thousand times a frame to answer the same
+   * question.
    */
   __unsafe_unretained UIView *memoParent = nil;
   CGPoint memoOrigin = CGPointZero;
   BOOL memoValid = NO;
-  _originByParent.clear();
 
   for (id<RCTVirtualViewProtocol> vv = nullptr in virtualViewsIt) {
     CGRect rect;
@@ -382,21 +364,7 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
     __unsafe_unretained UIView *parent = geometry.superview;
     if (parent != memoParent) {
       memoParent = parent;
-      if (parent == nil) {
-        memoValid = NO;
-      } else {
-        const void *key = (__bridge const void *)parent;
-        const auto known = _originByParent.find(key);
-        if (known != _originByParent.end()) {
-          memoOrigin = known->second;
-          memoValid = YES;
-        } else {
-          memoValid = RCTOriginInContent(parent, scrollView, &memoOrigin);
-          if (memoValid) {
-            _originByParent.emplace(key, memoOrigin);
-          }
-        }
-      }
+      memoValid = parent != nil && RCTOriginInContent(parent, scrollView, &memoOrigin);
     }
     if (memoValid) {
       // The view's own frame is already in its parent's space, so the rect is
@@ -409,7 +377,7 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
     }
 
     if (stats) {
-      gSweepStats.rows++;
+      _statRows++;
       /*
        * How far this row's mode is from changing: the visible and prerender
        * edges each cross one of the row's edges, and the nearest of those four
@@ -437,7 +405,7 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
       thresholdRect = visibleRect;
       mode = RCTVirtualViewModeVisible;
       if (stats) {
-        gSweepStats.visible++;
+        _statVisible++;
       }
     } else if (CGRectOverlaps(rect, _prerenderRect)) {
       if (deferHides) {
@@ -453,7 +421,7 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
       mode = RCTVirtualViewModePrerender;
       thresholdRect = _prerenderRect;
       if (stats) {
-        gSweepStats.prerender++;
+        _statPrerender++;
       }
     } else if (deferHides) {
       // Inside a teleport's quiet window — the catch-up sweep will say it.
@@ -478,17 +446,16 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
 - (void)_recordSweep:(uint64_t)startedAt single:(BOOL)single
 {
   const uint64_t nanos = clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - startedAt;
-  gSweepStats.nanos += nanos;
-  gSweepStats.maxNanos = MAX(gSweepStats.maxNanos, nanos);
+  _statNanos += nanos;
+  _statMaxNanos = MAX(_statMaxNanos, nanos);
   if (single) {
-    gSweepStats.singles++;
+    _statSingles++;
   } else {
-    gSweepStats.sweeps++;
+    _statSweeps++;
   }
   const CFTimeInterval now = CACurrentMediaTime();
   if (_statSince == 0) {
     _statSince = now;
-    _statLogged = gSweepStats;
     _statMinSkip = CGFLOAT_MAX;
     return;
   }
@@ -496,30 +463,23 @@ static const CFTimeInterval kExpoDeferHidesCap = 3.0;
   if (elapsed < 1.0) {
     return;
   }
-  /*
-   * Since the last line, which is what a line is about — except `max_us`, a
-   * high-water mark that reads for the whole run.
-   */
-  const RCTRenderSweepStats &was = _statLogged;
-  const uint64_t sweeps = gSweepStats.sweeps - was.sweeps;
-  const uint64_t singles = gSweepStats.singles - was.singles;
-  const uint64_t rows = gSweepStats.rows - was.rows;
   os_log_info(
       EXPVirtualViewStatsLog(),
       "sweeps=%llu singles=%llu rows=%llu rows/sweep=%.0f visible=%.1f prerender=%.1f "
       "us/sweep=%.1f max_us=%.1f total_ms=%.1f skip=%.1fpt in %.2fs",
-      sweeps,
-      singles,
-      rows,
-      sweeps > 0 ? (double)rows / (double)sweeps : 0.0,
-      sweeps > 0 ? (double)(gSweepStats.visible - was.visible) / (double)sweeps : 0.0,
-      sweeps > 0 ? (double)(gSweepStats.prerender - was.prerender) / (double)sweeps : 0.0,
-      (sweeps + singles) > 0 ? (double)(gSweepStats.nanos - was.nanos) / 1000.0 / (double)(sweeps + singles) : 0.0,
-      (double)gSweepStats.maxNanos / 1000.0,
-      (double)(gSweepStats.nanos - was.nanos) / 1e6,
+      _statSweeps,
+      _statSingles,
+      _statRows,
+      _statSweeps > 0 ? (double)_statRows / (double)_statSweeps : 0.0,
+      _statSweeps > 0 ? (double)_statVisible / (double)_statSweeps : 0.0,
+      _statSweeps > 0 ? (double)_statPrerender / (double)_statSweeps : 0.0,
+      (_statSweeps + _statSingles) > 0 ? (double)_statNanos / 1000.0 / (double)(_statSweeps + _statSingles) : 0.0,
+      (double)_statMaxNanos / 1000.0,
+      (double)_statNanos / 1e6,
       (double)(_statMinSkip == CGFLOAT_MAX ? -1 : _statMinSkip),
       elapsed);
-  _statLogged = gSweepStats;
+  _statSweeps = _statSingles = _statRows = _statVisible = _statPrerender = 0;
+  _statNanos = _statMaxNanos = 0;
   _statMinSkip = CGFLOAT_MAX;
   _statSince = now;
 }

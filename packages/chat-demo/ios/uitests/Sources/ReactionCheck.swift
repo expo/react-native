@@ -350,34 +350,21 @@ final class RevealCheck: DemoCase {
     return top.isEmpty ? 0 : top.reduce(0, +) / CGFloat(top.count)
   }
 
-  /**
-   Where the ink beside ONE balloon is centred, weighted by how much of it there
-   is.
-
-   Asked per balloon rather than by finding every band of ink in the strip and
-   counting them, which is what this used to do and which made the reading
-   depend on things that have nothing to do with the question. A band needed ink
-   above a quarter of the DARKEST row anywhere in the strip — so the performance
-   banner, or a receipt, or anything else grey that happened to be darker than a
-   revealed time decided how many times existed. Under load the held screenshot
-   lands earlier in the drag, the times are fainter, and four of them became
-   two. Measured in isolation the same case passed eight times out of eight with
-   seven bands every time; it is the suite that makes it fail, which is the
-   signature of a threshold set by something else on screen.
-
-   A window instead. Half the gap between two rows is wide enough to hold a
-   time's line box and narrow enough that it cannot reach the next row's — or
-   the receipt, which hangs below the last sent balloon by more than this.
-   Within it, white weighs nothing, so the centre is the glyphs' and a fainter
-   reveal moves it not at all.
-   */
-  private func inkCentre(
-    _ rows: [(y: CGFloat, ink: CGFloat)], near mid: CGFloat
-  ) -> CGFloat? {
-    let within: CGFloat = 14
-    let band = rows.filter { abs($0.y - mid) <= within && $0.ink > 0 }
-    let weight = band.reduce(0) { $0 + $1.ink }
-    return weight > 0 ? band.reduce(0) { $0 + $1.y * $1.ink } / weight : nil
+  /** The middles of the bands of ink, weighted by the ink in them. */
+  private func inkBands(_ rows: [(y: CGFloat, ink: CGFloat)]) -> [CGFloat] {
+    let floor = (rows.map { $0.ink }.max() ?? 0) * 0.25
+    var bands: [CGFloat] = []
+    var run: [(y: CGFloat, ink: CGFloat)] = []
+    for row in rows + [(y: 0, ink: 0)] {
+      if row.ink > floor {
+        run.append(row)
+      } else if !run.isEmpty {
+        let weight = run.reduce(0) { $0 + $1.ink }
+        bands.append(run.reduce(0) { $0 + $1.y * $1.ink } / weight)
+        run = []
+      }
+    }
+    return bands
   }
 
   /** Two sent messages, so both shapes are on screen: one mid-run and tailless,
@@ -450,23 +437,24 @@ final class RevealCheck: DemoCase {
     let rows = timeInk(read, window, scan)
 
     /* Non-vacuous or nothing: a screenshot with no ink in the strip would leave
-       every window below empty and every comparison trivially true. */
+       every band below empty and every comparison trivially true. */
     XCTAssertGreaterThan(
       rows.reduce(0) { $0 + $1.ink }, 2000,
       "no revealed times on screen while the drag was held — the reveal did not happen")
 
-    let paired = try subjects.map { subject -> (String, CGFloat, CGFloat) in
-      let centre = try XCTUnwrap(
-        inkCentre(rows, near: subject.1),
-        "no revealed time beside \"\(subject.0)\", whose text is centred at "
-          + "\(subject.1) — the strip there is blank")
-      return (subject.0, subject.1, centre)
+    let bands = inkBands(rows)
+    XCTAssertGreaterThanOrEqual(
+      bands.count, subjects.count,
+      "found \(bands.count) bands of ink for \(subjects.count) balloons")
+
+    let paired = subjects.map { subject -> (String, CGFloat, CGFloat) in
+      (subject.0, subject.1, bands.min(by: { abs($0 - subject.1) < abs($1 - subject.1) }) ?? 0)
     }
-    let (firstName, firstMid, firstCentre) = paired[0]
-    for (name, mid, centre) in paired.dropFirst() {
+    let (firstName, firstMid, firstBand) = paired[0]
+    for (name, mid, band) in paired.dropFirst() {
       XCTAssertEqual(
-        centre - firstCentre, mid - firstMid, accuracy: 1.0,
-        "the time beside \(name) sits \((centre - firstCentre) - (mid - firstMid)) points "
+        band - firstBand, mid - firstMid, accuracy: 1.0,
+        "the time beside \(name) sits \((band - firstBand) - (mid - firstMid)) points "
           + "off where the one beside \(firstName) does — the tail's drop, the sender "
           + "name or the receipt moved it")
     }
