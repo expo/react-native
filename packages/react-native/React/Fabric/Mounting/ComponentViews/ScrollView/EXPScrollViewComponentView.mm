@@ -10,6 +10,7 @@
 #import "../View/EXPKeyboardTrace.h"
 
 #import <React/RCTConversions.h>
+#import <React/RCTRenderStats.h>
 #import <react/renderer/components/view/ExpoScrollViewShadowNode.h>
 #import <react/renderer/components/view/TransitionPrimitives.h>
 
@@ -617,7 +618,15 @@ static void EXPApplyEdgeEffect(UIScrollEdgeEffect *effect, ExpoScrollEdgeEffect 
    * is the jump seen when a message is sent from an over-scrolled transcript.
    * UIKit brings a bounce home on its own; the mount has nothing to correct.
    */
-  if (![self _mayHoldAnchor]) {
+  const BOOL mayHold = [self _mayHoldAnchor];
+  /*
+   * Counted whether or not it is allowed, because the gap between the two is
+   * the fault this used to have: a correction computed and then discarded is
+   * invisible in every other measurement and is exactly what the reader sees
+   * jump. See `RCTRenderAnchorStats`.
+   */
+  RCTRenderAnchorStatsRecord(mayHold, delta);
+  if (!mayHold) {
     [self _followEndIfAsked:followEnd];
     return;
   }

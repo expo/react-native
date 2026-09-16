@@ -79,6 +79,7 @@ import VirtualView, {
 } from '../../react-native/src/private/components/virtualview/VirtualView';
 import Composer, {BAR_TOP_PADDING, ComposerBar} from '../Composer';
 import useHeaderEdgeEffects from '../headerEdge';
+import RenderStats from '../NativeRenderStats';
 import {REACTIONS, cycleReaction} from '../reactions';
 import {
   RECEIPT_FADE_MS,
@@ -2818,6 +2819,9 @@ const work = {
   /* Time spent INSIDE the rows' own render bodies, which is the part of a
      stall that is JavaScript's rather than React's or the main thread's. */
   renderMs: 0,
+  /* The renderer's own counters as they stood when the event began — see
+     `rendererSince`. */
+  renderer: null,
 };
 /*
  * Whether any of this runs at all. The home screen's switch sets it, and it is
@@ -2825,11 +2829,27 @@ const work = {
  * demo of how a chat performs should not be measuring itself by default.
  */
 let profiling = false;
+/*
+ * ...and the renderer's counters with it.
+ *
+ * They are the app's to switch on: the environment variables `RCTRenderStats.h`
+ * reads at launch do not exist for an app started from a home screen, and the
+ * phone is where the question gets asked. Their cost is a timestamp around
+ * every mutation, so they follow the banner rather than staying on.
+ */
+function setProfiling(on) {
+  if (profiling === on) {
+    return;
+  }
+  profiling = on;
+  RenderStats?.setEnabled(on);
+}
 function beginWork(event) {
   if (!profiling) {
     return;
   }
   work.event = event;
+  work.renderer = RenderStats?.read() ?? null;
   work.since = performance.now();
   work.chat = 0;
   work.rows = 0;
@@ -2886,10 +2906,78 @@ function detailReport() {
    * reconciliation and commit, and the main thread's mounting and layout.
    */
   const elapsed = performance.now() - work.since;
-  lines.push(
-    `of ${Math.round(elapsed)} ms elapsed, ${Math.round(work.renderMs)} ms was ` +
-      `rendering rows; the rest is React and the main thread`,
-  );
+  const renderer = rendererSince(work.renderer);
+  if (renderer == null) {
+    lines.push(
+      `of ${Math.round(elapsed)} ms elapsed, ${Math.round(work.renderMs)} ms was ` +
+        `rendering rows; the rest is React and the main thread`,
+    );
+  } else {
+    /*
+     * `commit` is the shadow tree's and `layout` is INSIDE it rather than
+     * beside it — Yoga runs as part of a commit — so they are written nested
+     * and not added up. `mount` is the main thread performing the mutations,
+     * and `sweep` is the container asking every row where it is.
+     */
+    const spent =
+      work.renderMs +
+      renderer.commitMs +
+      renderer.diffMs +
+      renderer.mountMs +
+      renderer.sweepMs;
+    lines.push(
+      `${Math.round(spent)} ms of the ${Math.round(elapsed)} ms window was the renderer's: ` +
+        `${Math.round(work.renderMs)} ms rendering rows, ${Math.round(renderer.commitMs)} ms ` +
+        `committing (${Math.round(renderer.layoutMs)} ms of it laying out ×${renderer.layoutNodes} ` +
+        `nodes), ${Math.round(renderer.diffMs)} ms diffing, ${Math.round(renderer.mountMs)} ms ` +
+        `mounting, ${Math.round(renderer.sweepMs)} ms sweeping`,
+    );
+    /*
+     * Per TRANSACTION, because the total is the gesture's length and the ratio
+     * is the shape of the problem: a row that changes height moves every row
+     * below it, and each of those moves is an `Update`. So this is how many
+     * rows one change costs.
+     */
+    const per = n =>
+      renderer.transactions === 0 ? 0 : (n / renderer.transactions).toFixed(1);
+    lines.push(
+      `mounted ×${renderer.transactions} transactions: ×${renderer.creates} create, ` +
+        `×${renderer.inserts} insert, ×${renderer.updates} update, ×${renderer.removes} remove, ` +
+        `×${renderer.deletes} delete — ×${per(renderer.updates)} updates each, ` +
+        `biggest ×${renderer.biggestMutations} mutations`,
+    );
+    /* Both kinds of sweep over their own count: a SINGLE is one view whose
+       frame changed asking where it now is, so the two rise together. */
+    const passes = renderer.sweeps + renderer.sweepSingles;
+    lines.push(
+      `swept ×${renderer.sweeps} times (×${renderer.sweepSingles} single) over ` +
+        `×${renderer.sweptRows} rows — ` +
+        `${passes === 0 ? 0 : Math.round((renderer.sweepMs * 1000) / passes)} µs ` +
+        `each, worst ${Math.round(renderer.worstSweepUs)} µs`,
+    );
+    /*
+     * The ANCHOR, which is the one line here that is about correctness rather
+     * than cost. It cancels a movement of the content; a correction it wanted
+     * and did not get is content that moved under the reader with nothing
+     * holding it, and the points are what they saw jump.
+     */
+    if (renderer.anchorWanted > 0) {
+      const dropped = renderer.anchorWanted - renderer.anchorApplied;
+      const points = renderer.anchorWantedPoints - renderer.anchorAppliedPoints;
+      lines.push(
+        `anchor held ×${renderer.anchorApplied} of ×${renderer.anchorWanted}` +
+          (dropped === 0
+            ? ' — nothing moved under you'
+            : `; ×${dropped} dropped, ${Math.round(points)} points`),
+      );
+    }
+    if (renderer.textMeasurements > 0) {
+      lines.push(
+        `measured ×${renderer.textMeasurements} texts in ` +
+          `${Math.round(renderer.textMeasureMs)} ms`,
+      );
+    }
+  }
   if (virtual.blanks > 0) {
     lines.push(
       `caught blank ×${virtual.blanks}: stayed blank ` +
@@ -3056,6 +3144,34 @@ function virtualReport() {
 }
 
 /**
+ * What the RENDERER spent, which is the half of a stall this screen cannot see.
+ *
+ * `work.renderMs` is the rows' own render bodies and nothing else. Everything
+ * after them — React's commit, Yoga's layout, the main thread's mounting, and
+ * the virtualized container's own geometry sweep — happens where JavaScript
+ * cannot time it, and the caption could only ever say "the rest is React and
+ * the main thread". React Native counts all of it already; see
+ * `RCTRenderStats.h`, and `NativeRenderStats` for the window onto it.
+ *
+ * Every counter is a running total, so an interval is two readings subtracted.
+ * Two of them are high-water marks and do not subtract; they are passed through
+ * as they stand.
+ */
+function rendererSince(before) {
+  const now = RenderStats?.read();
+  if (before == null || now == null) {
+    return null;
+  }
+  const since = {};
+  for (const key of Object.keys(now)) {
+    since[key] = now[key] - before[key];
+  }
+  since.biggestMutations = now.biggestMutations;
+  since.worstSweepUs = now.worstSweepUs;
+  return since;
+}
+
+/**
  * The transcript's rows, behind a memo boundary.
  *
  * `React.memo` on a ROW saves that row's body and not its element: the element
@@ -3204,7 +3320,7 @@ const Transcript = React.memo(function Transcript({
 
 function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
   // Set before anything counts, including this render's own `work.chat`.
-  profiling = showsPerformance === true;
+  setProfiling(showsPerformance === true);
   const watching = profiling ? noteMode : undefined;
   /*
    * The balloon's metrics, at the reader's text size and LIVE: `fontScale`
