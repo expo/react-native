@@ -483,6 +483,18 @@ const BADGE_ANCHOR_H = 7;
 const TRANSCRIPT_BOTTOM_PAD = 16;
 
 const BALLOON_SETTLE = 500;
+/*
+ * How long a sent message has nothing to say, before it is delivered.
+ *
+ * The server's answer on the platform, and so not ours to know — but its
+ * LENGTH is the thing being copied, because it is what the previous message's
+ * receipt survives on. Counted off a 60fps capture of the platform: the older
+ * "Read 8:53 PM" is still fully drawn 68 frames after the send, and the new
+ * "Delivered" arrives over the four frames after that.
+ *
+ * A demo has no server, so the wait is a number. It is this one.
+ */
+const DELIVERED_AFTER = 1130;
 
 /**
  * How many frames to wait for the transcript to stop before giving up and
@@ -977,11 +989,18 @@ function makeMessage(from, text, entering) {
      * The receipt, in the platform's own vocabulary.
      *
      * `null` for anything received — a message someone else sent has no status
-     * to show you — and one of the native status words for anything sent.
+     * to show you — and for a message still on its WAY: the platform does not
+     * say "Delivered" until it has been, which is the server's answer and about
+     * a second later. A message arrives in the transcript with nothing to show.
+     *
+     * That silence is the whole mechanism behind the previous message keeping
+     * its receipt, so it is written here rather than arranged elsewhere. A
+     * seeded message is history and has already been delivered.
+     *
      * `edited` is separate because it is not a receipt: a message can be both
      * read and edited, and the native chat shows both.
      */
-    status: from === 'me' ? 'Delivered' : null,
+    status: from === 'me' && entering !== true ? 'Delivered' : null,
     edited: false,
   };
 }
@@ -3818,8 +3837,18 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
       }
     }
   }
+  /*
+   * A newer message takes the receipt only once it HAS one.
+   *
+   * Landing is not enough: a balloon on screen with nothing to say would take
+   * the line away from the message above it and leave it blank until the
+   * server answered. Measured on the platform, the older "Read 8:53 PM" stays
+   * fully drawn for 1.13s after a send — through the new balloon arriving —
+   * and goes when the new message's own "Delivered" is there to replace it.
+   */
   const lastSentReady =
     lastSent >= 0 &&
+    messages[lastSent].status != null &&
     (messages[lastSent].entering !== true || landed.has(messages[lastSent].id));
   const wearsReceipt = lastSentReady ? lastSent : previousSent;
 
@@ -3864,17 +3893,26 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
      * does. A receipt that grew the row would push the transcript, which is
      * exactly what the native chat is careful not to do.
      */
-    pendingTimers.current.push(
-      setTimeout(() => {
-        setMessages(previous =>
-          previous.map(message =>
-            message.id === sent.id
-              ? {...message, status: 'Read', readAt: Date.now()}
-              : message,
-          ),
-        );
-      }, BALLOON_SETTLE + 900),
-    );
+    /*
+     * `change` is a FUNCTION, called when the timer fires rather than when it
+     * is set: `readAt` is the moment the message was read, and evaluating it
+     * here would stamp it with the moment it was sent.
+     */
+    const mark = (after, change) =>
+      pendingTimers.current.push(
+        setTimeout(() => {
+          setMessages(previous =>
+            previous.map(message =>
+              message.id === sent.id ? {...message, ...change()} : message,
+            ),
+          );
+        }, after),
+      );
+    mark(DELIVERED_AFTER, () => ({status: 'Delivered'}));
+    mark(DELIVERED_AFTER + BALLOON_SETTLE + 900, () => ({
+      status: 'Read',
+      readAt: Date.now(),
+    }));
     // Behaviour 4: the user's OWN message means "take me to the present",
     // wherever they were reading. The anchor deliberately does not do this.
     transcript.current?.scrollToLatest();
