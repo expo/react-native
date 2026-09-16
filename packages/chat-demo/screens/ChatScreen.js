@@ -182,7 +182,15 @@ const AnimatedP = Animated.createAnimatedComponent('p');
  */
 const RECEIPT_FADE = RECEIPT_FADE_MS;
 const RECEIPT_GROW = RECEIPT_GROW_MS;
-const RECEIPT_GROW_FROM = 0.62;
+/*
+ * The size a receipt starts at, as a fraction of the size it ends at.
+ *
+ * Measured on the platform by the ink's own edges: 59 points of width at the
+ * first frame it can be seen, 149 when it settles. It is a little smaller than
+ * that at the frame before, which nothing can see, so the number is the
+ * measured ratio rounded down rather than fitted.
+ */
+const RECEIPT_GROW_FROM = 0.38;
 /**
  * How long a date separator takes to arrive, and it is NOT the receipt's.
  *
@@ -2695,7 +2703,27 @@ function BubbleImpl({
             ]}>
             <Receipt
               message={message}
-              shown={shownReceipt}
+              /*
+               * The FIRST words come straight from the message, not from state.
+               *
+               * The ink's style flips to `shown` in the render where this row
+               * starts wearing the receipt, and the state that holds the words
+               * is written by an effect — which runs after it. So the arrival's
+               * grow began on an empty box and the words appeared afterwards,
+               * already at full size: measured, 104 points of width to 148 in a
+               * single frame, and anchored at the trailing edge because that is
+               * right-aligned text being laid out rather than anything being
+               * scaled. Reported from a device as sliding in from the right.
+               *
+               * Taking the first words from the message puts them in the same
+               * commit as the style, so the grow has something to grow. The
+               * state takes over once there is a line to swap.
+               */
+              shown={
+                shownReceipt.status == null && shownReceipt.edited !== true
+                  ? said
+                  : shownReceipt
+              }
               /* Measured in a layout effect above, not by `onLayout`. */
               elementRef={receiptInk}
               style={

@@ -98,27 +98,42 @@ export const RECEIPT_INK_DELAY_MS: number =
 
 /**
  * The ink's own two durations, which move nothing and so need not agree with
- * anything. Measured off the native chat: it grows from 0.61 over 435ms and keeps
- * fading for a while after it has stopped growing.
+ * anything — and they are not the same length, deliberately.
+ *
+ * Counted off a 60fps capture of the platform, tracking the ink's edges and its
+ * peak brightness per frame as a receipt arrives. The OPACITY lands in about
+ * eight frames; the SCALE goes on for thirty-two, from 59 points of width to
+ * 149. So the words are legible almost at once and then visibly grow, which is
+ * what makes it read as arriving rather than appearing.
+ *
+ * An earlier reading had these the other way round — a 435ms grow under a 600ms
+ * fade — which is a receipt still darkening after it has finished moving.
  */
-export const RECEIPT_GROW_MS: number = 435;
-export const RECEIPT_FADE_MS: number = 600;
+export const RECEIPT_GROW_MS: number = 533;
+export const RECEIPT_FADE_MS: number = 133;
 
 /*
  * And the words CHANGING under a message that is already wearing them —
  * `Delivered` becoming `Read 5:29 PM`.
  *
  * The same three-part shape as a handover and a shorter clock, measured off a
- * 60 fps capture of the native chat with the ink counted per frame: the old
- * word fades over seven frames, nothing is on screen for ten, and the new one
- * fades in over eleven. Nothing else happens — the new words are at their full
+ * 60fps capture of the platform by the ink's PEAK BRIGHTNESS per frame: the old
+ * word fades over ten frames, nothing is on screen for six, and the new one
+ * fades in over thirteen.
+ *
+ * Counted as pixels-over-a-threshold instead — which is the obvious way and the
+ * wrong one — the same recording reads 5, 14 and 10: as ink fades its pixels
+ * drop below the threshold one by one, so both tails are cut off and the gap
+ * between them is inflated by what was lost at each end. The numbers that came
+ * out of that were quicker transitions around a longer pause, which is what
+ * "harsher than Messages" turned out to mean. Nothing else happens — the new words are at their full
  * width from the first frame they can be seen, the trailing edge does not move,
  * and the line does not change height. So this is opacity and only opacity,
  * which is what separates it from an arrival: that one grows.
  */
-export const RECEIPT_SWAP_OUT_MS: number = 120;
-export const RECEIPT_SWAP_GAP_MS: number = 165;
-export const RECEIPT_SWAP_IN_MS: number = 185;
+export const RECEIPT_SWAP_OUT_MS: number = 175;
+export const RECEIPT_SWAP_GAP_MS: number = 100;
+export const RECEIPT_SWAP_IN_MS: number = 217;
 
 /**
  * When the words themselves change, which is once the old ones are gone and
