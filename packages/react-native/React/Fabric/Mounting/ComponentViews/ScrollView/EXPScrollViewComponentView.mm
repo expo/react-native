@@ -617,7 +617,7 @@ static void EXPApplyEdgeEffect(UIScrollEdgeEffect *effect, ExpoScrollEdgeEffect 
    * is the jump seen when a message is sent from an over-scrolled transcript.
    * UIKit brings a bounce home on its own; the mount has nothing to correct.
    */
-  if (![self _mayMoveOffset]) {
+  if (![self _mayHoldAnchor]) {
     [self _followEndIfAsked:followEnd];
     return;
   }
@@ -1452,6 +1452,64 @@ static void EXPApplyEdgeEffect(UIScrollEdgeEffect *effect, ExpoScrollEdgeEffect 
  * the next frame of the animation anyway; a FOLLOW that fires mid-rise is the
  * same writer, aiming the movement it already owns at a new place.
  */
+/**
+ * Whether the ANCHOR may write the offset, which is not the same question as
+ * whether a one-off correction may.
+ *
+ * A clamp or an inset delta is a SECOND WRITER with an opinion about where the
+ * list should be, and `-_mayMoveOffset` above is the rule about those. The
+ * anchor has no such opinion: it is cancelling a movement of the CONTENT, and
+ * the content moves whether or not anyone is scrolling — a row measuring itself
+ * for the first time is not waiting for the reader to lift their finger.
+ * Refusing the cancellation does not defer it, it DROPS it, and the reader is
+ * carried by however much the content grew.
+ *
+ * Measured across four flicks of a hundred-message transcript: the anchor asked
+ * to move the offset twenty times and was allowed to once. **259 points
+ * discarded.** From a device, three times in two seconds —
+ *
+ *     state cs 652479.0 -> 652512.0
+ *     pin delta=33.0 offset 295680.3
+ *     offset 295676.7 d=-3.7 ... track=0 decel=1 rise=0
+ *
+ * — the content grew by 33 points, the anchor worked out it had to move the
+ * offset by 33 to hold the reader still, and the next line is a plain
+ * deceleration step with the correction gone. Thirty-three points is what the
+ * recording of the fault shows jumping, in one frame, with nothing touching the
+ * screen: `decel=1` outlives the finger by seconds, and a list drifting at a
+ * third of a point per frame is stopped as far as a reader is concerned.
+ *
+ * React Native's own `maintainVisibleContentPosition` writes the offset with no
+ * state check at all, which is the same conclusion from the other end: an
+ * anchor that holds only when the list is at rest is not an anchor.
+ *
+ * So this states one RULE rather than a list of states, and the two refusals
+ * are the two cases where writing the offset means something else.
+ *
+ * An ANIMATION — ours, or UIKit's scroll-to-top — is a genuine second writer
+ * aimed at a place this does not know about; adding a delta per mount either
+ * accumulates or loses to the next frame, and where the target has really moved
+ * `-_followEndIfAsked:` re-aims it instead.
+ *
+ * Past the END is the case the old rule was written for: out there the offset
+ * is where a rubber band is taking it, and holding an anchor against a bounce
+ * writes a position it is already leaving — the jump seen when a message is
+ * sent from an over-scrolled transcript. Inside the list's own range there is
+ * no bounce to fight. A deceleration is a velocity being integrated into the
+ * offset each frame and a finger is a translation being added to it; in both
+ * cases a delta shifts the whole trajectory, which is the intent. Measured: a
+ * correction applied under a finger STAYS applied, and the drag carries on from
+ * the corrected position rather than snapping back.
+ */
+- (BOOL)_mayHoldAnchor
+{
+  if (_scrollingToTop || [self _isRising] || _scrollView.layer.animationKeys.count > 0) {
+    return NO;
+  }
+  const CGFloat y = _scrollView.contentOffset.y;
+  return y >= -_appliedInset.top - 0.5 && y <= [self _maxOffsetY] + 0.5;
+}
+
 - (BOOL)_mayMoveOffset
 {
   return ![self _offsetOwnedElsewhere] && ![self _isRising];
