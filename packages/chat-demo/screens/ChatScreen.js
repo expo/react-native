@@ -2811,6 +2811,9 @@ const work = {
   mounts: 0,
   longFrames: 0,
   worstFrame: 0,
+  /* Where the worst frame fell, and what the renderer did inside it. */
+  worstFrameAt: 0,
+  worstFrameWas: null,
   frames: 0,
   over34: 0,
   over50: 0,
@@ -2856,6 +2859,8 @@ function beginWork(event) {
   work.mounts = 0;
   work.longFrames = 0;
   work.worstFrame = 0;
+  work.worstFrameAt = 0;
+  work.worstFrameWas = null;
   work.frames = 0;
   work.over34 = 0;
   work.over50 = 0;
@@ -2893,8 +2898,28 @@ function detailReport() {
   const lines = [];
   lines.push(
     `frames ×${work.frames}: ×${work.over34} >34ms, ×${work.over50} >50ms, ` +
-      `×${work.over100} >100ms, ×${work.over200} >200ms; worst ${Math.round(work.worstFrame)} ms`,
+      `×${work.over100} >100ms, ×${work.over200} >200ms; worst ${Math.round(work.worstFrame)} ms` +
+      (work.worstFrame > 0 ? ` at +${Math.round(work.worstFrameAt)} ms` : ''),
   );
+  /*
+   * What the RENDERER did inside the worst frame, which is a different question
+   * from what it did across the gesture and the only one that explains a
+   * stopped thread. A frame of 981ms holding 12ms of renderer work is not a
+   * slow renderer; it is a thread blocked by something else entirely, and the
+   * totals cannot tell those apart.
+   */
+  const inside = work.worstFrameWas;
+  if (inside != null) {
+    const accounted =
+      inside.commitMs + inside.diffMs + inside.mountMs + inside.sweepMs;
+    lines.push(
+      `inside it: ${Math.round(inside.commitMs)} ms committing, ` +
+        `${Math.round(inside.diffMs)} ms diffing, ${Math.round(inside.mountMs)} ms mounting, ` +
+        `${Math.round(inside.sweepMs)} ms sweeping over ×${inside.transactions} transactions ` +
+        `(×${inside.updates} updates) — ` +
+        `${Math.round(work.worstFrame - accounted)} ms was none of the renderer`,
+    );
+  }
   lines.push(
     `rows ×${work.rows} rendered (${work.mounts} first mounts) in ` +
       `${Math.round(work.renderMs)} ms of JavaScript — ` +
@@ -3024,9 +3049,24 @@ function meterFrames(on) {
     return;
   }
   let last = performance.now();
+  /*
+   * The renderer's counters at the START of each frame, so a frame that runs
+   * long can be asked what was inside it.
+   *
+   * A frame meter can say the thread stopped for 981ms and nothing about why,
+   * and a whole day went into proposing answers to that question from totals
+   * measured over five seconds. The difference across ONE frame is the only
+   * reading that settles it.
+   *
+   * A struct copy across the bridge per frame, and only while the banner is
+   * on — see `an instrument costs what it measures`. Measured at 30 numbers a
+   * frame it is tens of microseconds against a sixteen-millisecond budget.
+   */
+  let before = RenderStats?.read() ?? null;
   const tick = () => {
     const now = performance.now();
     const frame = now - last;
+    const after = RenderStats?.read() ?? null;
     work.frames++;
     /*
      * BUCKETED, not just counted past a line. "Twenty-five frames were late"
@@ -3048,8 +3088,27 @@ function meterFrames(on) {
       work.longFrames++;
       if (frame > work.worstFrame) {
         work.worstFrame = frame;
+        /*
+         * WHERE in the gesture, as well as how long. A worst frame at +20ms is
+         * the meter's own first tick and means nothing; one in the middle of a
+         * fling is the fault being looked for. They read identically without
+         * this.
+         */
+        work.worstFrameAt = now - work.since;
+        work.worstFrameWas =
+          before == null || after == null
+            ? null
+            : {
+                commitMs: after.commitMs - before.commitMs,
+                diffMs: after.diffMs - before.diffMs,
+                mountMs: after.mountMs - before.mountMs,
+                sweepMs: after.sweepMs - before.sweepMs,
+                transactions: after.transactions - before.transactions,
+                updates: after.updates - before.updates,
+              };
       }
     }
+    before = after;
     last = now;
     frameMeter = requestAnimationFrame(tick);
   };
