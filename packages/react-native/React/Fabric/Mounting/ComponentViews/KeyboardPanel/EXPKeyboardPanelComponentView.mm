@@ -220,7 +220,7 @@ static CASpringAnimation *EXPKeyboardPanelSpring(
 #define EXP_PANEL_SPRING_X 2, 300, 36
 #define EXP_PANEL_SPRING_Y 2, 320, 35
 
-@interface EXPKeyboardPanelComponentView ()
+@interface EXPKeyboardPanelComponentView () <UIGestureRecognizerDelegate>
 @end
 
 /*
@@ -249,6 +249,18 @@ static __weak EXPKeyboardPanelComponentView *EXPOpenPanel = nil;
   /** The overlay presentation's pieces; all nil while it is not on screen. */
   __weak UIView *_overlayHostView;
   UIView *_dimmingView;
+  /*
+   * The APP's window, watched for a touch, while the panel is over the keys.
+   *
+   * `_dimmingView` covers the host, and when the host is the keyboard's window
+   * that is not the whole screen as far as touches are concerned:
+   * `UIRemoteKeyboardWindow` passes anything outside the keys down to the app,
+   * or the keyboard could never be typed around. So a tap on the transcript, a
+   * nav-bar button or the field reached the app and the panel stayed open,
+   * where the platform's own menu goes the moment anything else takes a
+   * gesture. Reported from a device in those words.
+   */
+  UILongPressGestureRecognizer *_elsewhere;
   BOOL _overlay;
   CGSize _contentSize;
   CGRect _anchor;
@@ -549,6 +561,39 @@ static __weak EXPKeyboardPanelComponentView *EXPOpenPanel = nil;
                                                                           action:@selector(_backdropTapped)];
     [_dimmingView addGestureRecognizer:tap];
   }
+  /*
+   * And a watcher on the app's own window, for the half of the screen the
+   * backdrop cannot cover — see `_elsewhere`.
+   *
+   * A LONG PRESS with no minimum rather than a tap, because the report is about
+   * gestures and not only taps: a tap recogniser fires when a finger LIFTS, so
+   * a scroll of the transcript would keep the panel up for the whole drag and
+   * then not dismiss it at all. At zero duration this fires on touch-DOWN,
+   * which is the moment the platform's menu goes.
+   *
+   * `cancelsTouchesInView = NO` so the touch still reaches whatever it landed
+   * on: the panel closing is not a reason for the button under the finger not
+   * to work, and the same flag is what lets the diagnostics gesture coexist with
+   * the app. The delegate lets it run beside the scroll view's own pan for the
+   * same reason.
+   *
+   * Only when the panel is NOT in the app's window: when it is, `_dimmingView`
+   * already covers everything and a second watcher would fire on the backdrop's
+   * own tap.
+   */
+  if (host != self.window && self.window != nil) {
+    if (_elsewhere == nil) {
+      _elsewhere = [[UILongPressGestureRecognizer alloc] initWithTarget:self
+                                                                 action:@selector(_touchedElsewhere:)];
+      _elsewhere.minimumPressDuration = 0;
+      _elsewhere.cancelsTouchesInView = NO;
+      _elsewhere.delaysTouchesBegan = NO;
+      _elsewhere.delaysTouchesEnded = NO;
+      _elsewhere.delegate = self;
+    }
+    [self.window addGestureRecognizer:_elsewhere];
+    _elsewhere.enabled = YES;
+  }
   // Re-added every time: the host can differ between presentations, because
   // whether there is a keyboard can differ between presentations.
   [host addSubview:_dimmingView];
@@ -805,6 +850,7 @@ static __weak EXPKeyboardPanelComponentView *EXPOpenPanel = nil;
     if (strongSelf != nil && !strongSelf->_visible) {
       [strongSelf->_contentView removeFromSuperview];
       [strongSelf->_dimmingView removeFromSuperview];
+      [strongSelf->_elsewhere.view removeGestureRecognizer:strongSelf->_elsewhere];
       strongSelf->_overlayHostView = nil;
     }
     layer.masksToBounds = NO;
@@ -838,6 +884,34 @@ static __weak EXPKeyboardPanelComponentView *EXPOpenPanel = nil;
                      self->_dimmingView.backgroundColor = UIColor.clearColor;
                    }
                    completion:nil];
+}
+
+/**
+ * Anything at all happening in the app's window closes the panel.
+ *
+ * `UIGestureRecognizerStateBegan` is touch-down at zero duration, so this is
+ * "a finger landed somewhere that is not the panel" rather than "a tap
+ * completed". Disabled immediately: the dismissal is animated and a second
+ * finger during it would ask for another one.
+ */
+- (void)_touchedElsewhere:(UILongPressGestureRecognizer *)recognizer
+{
+  if (recognizer.state != UIGestureRecognizerStateBegan) {
+    return;
+  }
+  recognizer.enabled = NO;
+  [self _backdropTapped];
+}
+
+/*
+ * Beside everything, never instead of it. This recogniser exists to OBSERVE,
+ * and a scroll view whose pan is made to wait for it is a scroll view that
+ * stutters at the start of every drag.
+ */
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)recognizer
+    shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)other
+{
+  return YES;
 }
 
 - (void)_backdropTapped
@@ -984,6 +1058,7 @@ static __weak EXPKeyboardPanelComponentView *EXPOpenPanel = nil;
 {
   [_contentView removeFromSuperview];
   [_dimmingView removeFromSuperview];
+  [_elsewhere.view removeGestureRecognizer:_elsewhere];
 }
 
 - (void)prepareForRecycle
@@ -1001,6 +1076,7 @@ static __weak EXPKeyboardPanelComponentView *EXPOpenPanel = nil;
   // floating over the app with nothing left to dismiss it.
   [_contentView removeFromSuperview];
   [_dimmingView removeFromSuperview];
+  [_elsewhere.view removeGestureRecognizer:_elsewhere];
   _overlayHostView = nil;
   _overlay = NO;
   _anchor = CGRectZero;

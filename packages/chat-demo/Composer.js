@@ -1411,7 +1411,7 @@ export default function Composer({
            * transcript, so there is something behind it for the effect to work
            * on.
            */
-          appleVisualEffect="-apple-system-glass-material">
+          appleVisualEffect="-apple-system-blur-material">
           {/*
             On the LIST rather than on the card, and that is the whole point: the
             card's surface has to be visible while it grows, or there is no morph
