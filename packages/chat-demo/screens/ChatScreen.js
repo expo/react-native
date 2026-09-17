@@ -474,6 +474,17 @@ const BADGE_ANCHOR_H = 7;
 /** The transcript's own bottom padding — `styles.transcriptContent`. */
 const TRANSCRIPT_BOTTOM_PAD = 16;
 
+/*
+ * The air a row carries above and below itself.
+ *
+ * HALF the gap between two messages in a run: two neighbours each contribute
+ * one, which makes the four points the platform draws. The transcript's last
+ * row pays it below with nothing under it to meet, so a send's end state has to
+ * count it — see `endOfFlight`, where leaving it out aimed every flight two
+ * points low.
+ */
+const ROW_AIR = 2;
+
 const BALLOON_SETTLE = 500;
 /*
  * How long a sent message has nothing to say, before it is delivered.
@@ -3919,7 +3930,33 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
      * afterwards.
      */
     const top = frame.y;
-    const contentBottom = top + frame.height + TRANSCRIPT_BOTTOM_PAD;
+    /*
+     * `ROW_AIR` is in this and the row's own box is NOT, which is the
+     * distinction that cost two points.
+     *
+     * What the row hands over is the BALLOON's box, because that is what the
+     * copy has to fly to. The row around it is taller: `ROW_AIR` above the
+     * balloon and `ROW_AIR` below. The one above is already inside `top`; the
+     * one below is between this box's bottom edge and the content's, and
+     * nothing here was counting it.
+     *
+     * Measured in one run with both instruments — the scroll view's own content
+     * size against this sum, and the copy's settled position against the row's:
+     *
+     *     content size    predicted 395.3   actual 397.3
+     *     resting offset  predicted -94.0   actual -92.0
+     *
+     * So the flight aimed two points low, the throw's overshoot grazed the
+     * right answer on its way past, and the row appeared two points higher than
+     * the copy had settled. Reported as the bubble wobbling at the end of the
+     * animation, and as jumping by a pixel or two.
+     *
+     * TWO and not eight, and it is the last row that makes that true:
+     * `separatesRun` is `closesOnItsOwn && next != null`, so the row a send adds
+     * never separates and never pays the eight. A row that gains the separation
+     * later is not this one.
+     */
+    const contentBottom = top + frame.height + ROW_AIR + TRANSCRIPT_BOTTOM_PAD;
     const offset = Math.max(
       -view.insetTop,
       contentBottom - view.containerH + insetBottom,
@@ -4870,8 +4907,8 @@ const styles = StyleSheet.create({
      * `COMPOSER_MARGIN_TRAILING`.
      */
     paddingHorizontal: TRANSCRIPT_MARGIN,
-    paddingTop: 2,
-    paddingBottom: 2,
+    paddingTop: ROW_AIR,
+    paddingBottom: ROW_AIR,
     flexDirection: 'row',
   },
   /*
@@ -5173,7 +5210,7 @@ const styles = StyleSheet.create({
    * because a cascade override cannot decline to answer.
    */
   rowEndsRunLeaving: {
-    paddingBottom: 2,
+    paddingBottom: ROW_AIR,
     transitionProperty: 'padding-bottom',
     transitionDuration: `${RECEIPT_LAYOUT_MS}ms`,
     transitionTimingFunction: RECEIPT_LAYOUT_CURVE,
