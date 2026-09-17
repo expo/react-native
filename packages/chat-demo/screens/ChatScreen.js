@@ -794,6 +794,17 @@ const THROW_SPRING = {mass: 1, stiffness: 141.75909, damping: 17.35028};
 const ARRIVAL_TOLERANCE = 0.005;
 
 /*
+ * The same half point, in the SQUEEZE's units.
+ *
+ * A fraction cannot be shared between the two: the rise's 0.005 is half a point
+ * because its journey is a fixed distance, and the squeeze's journey is the
+ * balloon's own size — 0.005 of a wide one is nearly a point and a half. So the
+ * squeeze states the half point itself and divides by the width it is scaling,
+ * which is the same quantity the rise's constant was derived from.
+ */
+const ARRIVAL_POINTS = 0.5;
+
+/*
  * The 55 milliseconds the balloon sits on the composer before it leaves.
  *
  * `setBeginTime:beginTime + 0.055`, above. It is the beat that makes the send
@@ -1711,6 +1722,12 @@ function FlyingBalloon({
      */
     let box = toPixel(from.fieldWidth);
     let squeezed = 1;
+    /* Which of the two animations carrying this copy has come home — see
+       `home` below, which is what they are for. */
+    let risePassed = false;
+    let riseHome = false;
+    let swellPassed = false;
+    let swellHome = false;
     const sample = () => {
       const drawn = box * squeezed;
       low = Math.min(low, drawn);
@@ -1723,6 +1740,17 @@ function FlyingBalloon({
     const watchSqueeze = squeeze.addListener(({value}) => {
       squeezed = value;
       sample();
+      /*
+       * And the squeeze reports itself home on the same terms as the rise:
+       * past its destination, then back within half a point of it.
+       */
+      if (value >= 1) {
+        swellPassed = true;
+      }
+      if (swellPassed && Math.abs(1 - value) * box <= ARRIVAL_POINTS) {
+        swellHome = true;
+        home();
+      }
     });
     /*
      * ARRIVED, which is not the same moment as the spring being over.
@@ -1744,7 +1772,6 @@ function FlyingBalloon({
      * throw overshoots by a couple of points and stopping at the first crossing
      * would cut that off, which is the part of the motion a reader can see.
      */
-    let overshot = false;
     let arrived = false;
     const arrive = () => {
       if (arrived) {
@@ -1757,12 +1784,33 @@ function FlyingBalloon({
       from.onFlight?.({low, high, resting: from.toWidth});
       from.onArrived?.(from.id);
     };
+    /*
+     * BOTH of them, because two animations carry this copy and the row can only
+     * take it back when neither has anywhere left to go.
+     *
+     * The rise and the squeeze are separate springs on separate clocks: the
+     * rise peaks at 385ms and the squeeze, which starts 177ms in, peaks around
+     * 553. Handing over on the rise alone gave the message back while the
+     * squeeze was still swelling — measured frame by frame through a send, the
+     * copy's last frame is 62.67 x 43.67 where the row's balloon is 66.67 x
+     * 46.67, the same shape at 0.94, and the missing 4 points are taken in the
+     * single frame the row appears in. That is the jump.
+     *
+     * Not a longer wait for the same test, which is the fix that suggests
+     * itself and does nothing: the rise really was home: it was home alone.
+     */
+    const home = () => {
+      if (riseHome && swellHome) {
+        arrive();
+      }
+    };
     const watchRise = progress.addListener(({value}) => {
       if (value >= 1) {
-        overshot = true;
+        risePassed = true;
       }
-      if (overshot && Math.abs(1 - value) <= ARRIVAL_TOLERANCE) {
-        arrive();
+      if (risePassed && Math.abs(1 - value) <= ARRIVAL_TOLERANCE) {
+        riseHome = true;
+        home();
       }
     });
     const throwIn = Animated.parallel([
