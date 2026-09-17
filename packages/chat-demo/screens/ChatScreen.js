@@ -614,6 +614,8 @@ const TAIL_SIDE = {'': undefined, left: 'leading', right: 'trailing'};
  * inside ours.
  */
 const BUBBLE_PADDING = 14;
+/* The narrowest a balloon is ever drawn — see `bubble`. Measured off Messages. */
+const BUBBLE_MIN_WIDTH = 48;
 const BUBBLE_PADDING_V = 10;
 /** The message's own type size, which the reader's setting scales. */
 const MESSAGE_FONT_SIZE = 17;
@@ -5159,6 +5161,28 @@ const styles = StyleSheet.create({
     /* The balloon's shape inset from its text box — see `BUBBLE_PADDING`. */
     paddingHorizontal: BUBBLE_PADDING,
     paddingVertical: BUBBLE_PADDING_V,
+    /*
+     * A FLOOR, because the platform has one and a balloon without it is a
+     * sliver.
+     *
+     * Measured off Messages on the simulator, which sends to itself: a
+     * one-character message and a "." both come out at exactly 48.00 x 46.67
+     * points — identical, so it is a minimum rather than those glyphs' width.
+     * Ours was the text plus its padding and nothing else, which for one
+     * character is 32.33: an egg where the platform draws a circle.
+     *
+     * It also removes a defect in the outline rather than patching it. The
+     * tail's span is `min(22, w - r)`, and under about forty points that clamp
+     * bites while the control points steering the curve to it do not move —
+     * so the curve overshoots its own endpoint and doubles back, a notch in the
+     * bottom edge. Reported from a device on a one-character balloon. At 48 the
+     * radius is 18 and the span is `min(22, 30)`, never clamped, so the state
+     * that produces the notch is unreachable.
+     *
+     * The window there is 402 points, so a 3x screenshot resolves a third of a
+     * point and every figure above is exact rather than rounded.
+     */
+    minWidth: BUBBLE_MIN_WIDTH,
     position: 'relative',
   },
   /*

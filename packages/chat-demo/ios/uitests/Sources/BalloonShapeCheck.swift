@@ -80,4 +80,65 @@ final class BalloonShapeCheck: DemoCase {
       "two 20-point line boxes: the font's own 20.2871 would make this 40.57, and the balloon "
         + "around it 60.57 where the platform's is exactly 60.00")
   }
+
+  /**
+   A balloon is never narrower than the platform's floor.
+
+   Messages does not let a balloon shrink to its text. Measured against it on
+   the simulator, which sends to itself: a one-character message and a "."
+   both come out at exactly 48.00 points wide — identical, so it is a minimum
+   and not those glyphs' width. Ours had no floor at all and drew 32.33, an egg
+   where the platform draws a circle.
+
+   It is also what keeps the tail's outline whole. The tail's span is
+   `min(22, w - r)`, and below about forty points that clamp bites while the
+   control points steering the curve to it do not move — so the curve overshoots
+   its own endpoint and doubles back, a notch in the bottom edge, reported from
+   a device. At the floor the span is never clamped and the state cannot arise.
+   Asserted on the WIDTH rather than on the outline because the width is the
+   cause and an outline test that cannot fail on the bug is worse than none.
+   */
+  func testAOneCharacterBalloonKeepsThePlatformsMinimumWidth() throws {
+    let field = app.textViews.firstMatch
+    XCTAssertTrue(field.waitForExistence(timeout: 20), "no composer field")
+    field.tap()
+    app.typeText("I")
+    let send = app.buttons["Send"]
+    XCTAssertTrue(send.waitForExistence(timeout: 8), "no send button with a draft")
+    send.tap()
+    XCTAssertTrue(text("I").waitForExistence(timeout: 10), "the message never arrived")
+    // The flight and the settle, so the balloon is at its resting size.
+    Thread.sleep(forTimeInterval: 3.0)
+
+    /*
+     * Read in PIXELS, because the accessibility frame for a message is its text
+     * run and the floor is a property of the balloon around it. The balloon is
+     * the only blue thing in its row.
+     */
+    let pixels = try self.pixels()
+    let window = app.windows.element(boundBy: 0).frame
+    var widest: CGFloat = 0
+    var y = window.height * 0.25
+    while y < window.height * 0.80 {
+      var left: CGFloat = -1
+      var right: CGFloat = -1
+      var x: CGFloat = 0
+      while x < window.width {
+        let c = pixels.at(x: x, y: y)
+        if c.b > 150 && c.b - c.r > 60 && c.b - c.g > 30 {
+          if left < 0 { left = x }
+          right = x
+        }
+        x += 1
+      }
+      if right > left, right - left < 90 { widest = max(widest, right - left + 1) }
+      y += 1
+    }
+    XCTAssertGreaterThan(widest, 0, "no narrow balloon found to measure")
+    XCTAssertEqual(
+      widest, 48.0, accuracy: 1.5,
+      "the balloon for a one-character message is \(widest) points wide. The "
+        + "platform's floor is 48.00, measured off Messages; below about forty the "
+        + "tail's curve overshoots where it rejoins and notches the bottom edge.")
+  }
 }
