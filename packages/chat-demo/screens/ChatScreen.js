@@ -5183,6 +5183,27 @@ const styles = StyleSheet.create({
      * point and every figure above is exact rather than rounded.
      */
     minWidth: BUBBLE_MIN_WIDTH,
+    /*
+     * The words are centred when the floor leaves room, and are not otherwise.
+     *
+     * A balloon with a minimum width can be wider than its text, and something
+     * has to say where the text goes. Aligning the TEXT would need a rule about
+     * when — centred at the floor, leading once the balloon has grown — and it
+     * would centre a wrapped balloon's shorter lines too, which reads as a poem.
+     *
+     * This says it without a rule. CSS wraps a flex container's anonymous text
+     * in an anonymous flex ITEM, so the run becomes a box; `center` then places
+     * that box in whatever room is left over. At the floor there is room and it
+     * lands in the middle. Above the floor the balloon hugs its longest line,
+     * so the box already is the content width and centring moves nothing — and
+     * the lines inside stay leading either way, because nothing here aligns
+     * text.
+     *
+     * `justifyContent` and not `alignItems`: this file follows CSS, where
+     * `flex-direction` is ROW, so the horizontal axis is the main one.
+     */
+    display: 'flex',
+    justifyContent: 'center',
     position: 'relative',
   },
   /*
