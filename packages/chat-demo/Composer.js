@@ -1410,8 +1410,16 @@ export default function Composer({
            * was asked for. The card floats over the keys rather than over the
            * transcript, so there is something behind it for the effect to work
            * on.
+           *
+           * Swapped for a plain blur material once, to kill the specular rim
+           * this draws at its own edge — measured, one pixel dark and one
+           * bright all the way round, where the platform's card has a single
+           * dark hairline. That removed the rim and the EFFECT with it:
+           * reported back as "we lost the Liquid Glass effect", which is fair,
+           * because the rim is not a bug in the glass, it IS the glass. So the
+           * material stands and the corner artefact is its own problem.
            */
-          appleVisualEffect="-apple-system-blur-material">
+          appleVisualEffect="-apple-system-glass-material">
           {/*
             On the LIST rather than on the card, and that is the whole point: the
             card's surface has to be visible while it grows, or there is no morph
