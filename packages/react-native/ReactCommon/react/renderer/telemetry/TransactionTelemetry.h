@@ -31,6 +31,14 @@ class TransactionTelemetry final {
 
   void setAsThreadLocal();
   void unsetAsThreadLocal();
+  /*
+   * Clear the slot without needing an instance to clear it FROM.
+   *
+   * `unsetAsThreadLocal` is an instance method, which is fine while the slot
+   * holds you and wrong when a nested scope has to put back "nobody" — see the
+   * guard in `ShadowTree::commit`.
+   */
+  static void unsetThreadLocal();
 
   /*
    * Signaling
@@ -73,6 +81,7 @@ class TransactionTelemetry final {
    * agree too, and this is the measurement that says whether it is worth
    * asking.
    */
+  void didLayoutNode();
   void didLayoutUnchangedNode();
   /*
    * State reconciliation's own two outcomes, per child it looks at.
@@ -116,6 +125,7 @@ class TransactionTelemetry final {
   int getRevisionNumber() const;
 
   int getAffectedLayoutNodesCount() const;
+  int getLayoutNodesCount() const;
   int getUnchangedLayoutNodesCount() const;
   int getSharedStateSubtreesCount() const;
   int getWalkedStateSubtreesCount() const;
@@ -142,6 +152,7 @@ class TransactionTelemetry final {
   std::function<TelemetryTimePoint()> now_;
 
   int affectedLayoutNodesCount_{0};
+  int layoutNodesCount_{0};
   int unchangedLayoutNodesCount_{0};
   int sharedStateSubtreesCount_{0};
   int walkedStateSubtreesCount_{0};

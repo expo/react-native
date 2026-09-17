@@ -82,6 +82,7 @@ RCT_EXPORT_MODULE(RenderStats)
     @"textMeasureMs" : @((double)mount.textMeasureNanos / 1e6),
     @"textMeasurements" : @(mount.textMeasurements),
     @"layoutNodes" : @(mount.layoutNodes),
+    @"layoutNodesWalked" : @(mount.layoutNodesWalked),
     @"layoutNodesUnchanged" : @(mount.layoutNodesUnchanged),
     @"stateShared" : @(mount.stateShared),
     @"stateWalked" : @(mount.stateWalked),

@@ -3071,7 +3071,7 @@ function detailReport() {
         `${Math.round(renderer.progressStateMs)} ms state, ` +
         `${Math.round(renderer.commitHookMs)} ms hooks, ` +
         `${Math.round(renderer.layoutMs)} ms layout — ` +
-        `×${renderer.layoutNodesUnchanged} of the ×${renderer.layoutNodes} nodes came out unmoved`,
+        `×${renderer.layoutNodesUnchanged} of the ×${renderer.layoutNodesWalked} it walked came out unmoved`,
     );
     /*
      * And whether state reconciliation could skip anything, which is the same

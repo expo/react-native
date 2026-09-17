@@ -220,6 +220,7 @@ static void EXPRecordTransactionTelemetry(const TransactionTelemetry &telemetry)
           .count();
   gMountingStats.textMeasurements += (uint64_t)telemetry.getNumberOfTextMeasurements();
   gMountingStats.layoutNodes += (uint64_t)telemetry.getAffectedLayoutNodesCount();
+  gMountingStats.layoutNodesWalked += (uint64_t)telemetry.getLayoutNodesCount();
   gMountingStats.layoutNodesUnchanged += (uint64_t)telemetry.getUnchangedLayoutNodesCount();
   gMountingStats.stateShared += (uint64_t)telemetry.getSharedStateSubtreesCount();
   gMountingStats.stateWalked += (uint64_t)telemetry.getWalkedStateSubtreesCount();

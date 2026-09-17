@@ -375,13 +375,31 @@ CommitStatus ShadowTree::tryCommit(
    * between here and the end of this function, and a thread-local left pointing
    * at a destroyed stack object is a use-after-free the next commit would find.
    */
+  /*
+   * SAVED and RESTORED, not set and cleared — commits NEST.
+   *
+   * A layout transition commits synchronously inside a frame, so an inner
+   * commit adopts the thread-local while an outer one is still running. Clearing
+   * it on the way out left the outer commit's remaining counts writing into
+   * nothing, and worse, the inner commit's tally received the outer's — which
+   * showed up as a reading with MORE unmoved layout nodes than there were nodes:
+   *
+   *     ×6141 of the ×5855 nodes came out unmoved
+   *
+   * Impossible, and the only reason the misattribution was ever noticed.
+   */
+  auto* const previousTelemetry = TransactionTelemetry::threadLocalTelemetry();
   telemetry.setAsThreadLocal();
   struct TelemetryScope {
-    TransactionTelemetry& telemetry;
+    TransactionTelemetry* previous;
     ~TelemetryScope() {
-      telemetry.unsetAsThreadLocal();
+      if (previous != nullptr) {
+        previous->setAsThreadLocal();
+      } else {
+        TransactionTelemetry::unsetThreadLocal();
+      }
     }
-  } telemetryScope{telemetry};
+  } telemetryScope{previousTelemetry};
 
   CommitMode commitMode;
   auto oldRevision = ShadowTreeRevision{};

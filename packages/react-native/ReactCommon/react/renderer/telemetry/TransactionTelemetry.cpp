@@ -30,6 +30,10 @@ void TransactionTelemetry::setAsThreadLocal() {
   threadLocalTransactionTelemetry = this;
 }
 
+void TransactionTelemetry::unsetThreadLocal() {
+  threadLocalTransactionTelemetry = nullptr;
+}
+
 void TransactionTelemetry::unsetAsThreadLocal() {
   threadLocalTransactionTelemetry = nullptr;
 }
@@ -138,6 +142,10 @@ void TransactionTelemetry::didCommitHooks() {
   lastCommitHooksStartTime_ = kTelemetryUndefinedTimePoint;
 }
 
+void TransactionTelemetry::didLayoutNode() {
+  layoutNodesCount_++;
+}
+
 void TransactionTelemetry::didLayoutUnchangedNode() {
   unchangedLayoutNodesCount_++;
 }
@@ -232,6 +240,10 @@ int TransactionTelemetry::getRevisionNumber() const {
 
 int TransactionTelemetry::getAffectedLayoutNodesCount() const {
   return affectedLayoutNodesCount_;
+}
+
+int TransactionTelemetry::getLayoutNodesCount() const {
+  return layoutNodesCount_;
 }
 
 int TransactionTelemetry::getUnchangedLayoutNodesCount() const {

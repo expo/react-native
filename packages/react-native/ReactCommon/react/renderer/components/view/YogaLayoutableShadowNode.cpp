@@ -2025,6 +2025,17 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
          * — ×239745 of ×210395, which is impossible and is what gave it away.
          */
         if (auto* telemetry = TransactionTelemetry::threadLocalTelemetry()) {
+          /*
+           * BOTH halves counted here, in the same place, on the same pass.
+           *
+           * The unmoved count was reported against Yoga's own affected-node
+           * total and the two disagreed twice — ×6141 of ×5855, then ×7818 of
+           * ×7570, both impossible. Chasing the difference cost two builds; the
+           * two numbers simply come from different counters in different files
+           * and do not have to describe the same set. A ratio is only worth
+           * quoting when its halves are counted together.
+           */
+          telemetry->didLayoutNode();
           if (newLayoutMetrics == childNode.getLayoutMetrics()) {
             telemetry->didLayoutUnchangedNode();
           }

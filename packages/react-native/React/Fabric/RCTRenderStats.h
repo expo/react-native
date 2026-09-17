@@ -91,6 +91,7 @@ typedef struct {
    * skip-the-unchanged-subtree optimisation could win, stated before anyone
    * writes one.
    */
+  uint64_t layoutNodesWalked;
   uint64_t layoutNodesUnchanged;
   /*
    * State reconciliation's two outcomes, per child.
