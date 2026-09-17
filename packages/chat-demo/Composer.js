@@ -260,11 +260,28 @@ const SEND_W = 38;
 const SEND_INSET = 6;
 const SEND_INSET_TRAILING = 6.5;
 /*
- * And where it sits, measured on a device running iOS 27 with an empty field:
- * the glyph's ink ends 12.33 from the pill's own right edge. This is the ink
- * itself rather than a symbol's padded image, so what is left for this margin
- * is small — the pill's own trailing padding pays 10.67 of the 12.33, measured
- * on our composer with the bars drawn.
+ * And where it sits: the glyph's ink ends 11.90 from the pill's own right edge.
+ *
+ * Read off a screenshot of the platform's own composer, and read the way a
+ * waveform has to be read — a column profile rather than a bounding box. Five
+ * bars stand out of the field's gradient unmistakably, and the last one ends at
+ * a column the threshold does not move:
+ *
+ *     bar        1      2      3      4      5     gap to the pill's edge
+ *     x from   29.42  25.45  21.49  17.52  13.55        11.90 pt
+ *     tall      5.29   8.60  17.19   8.93   4.30
+ *
+ * Ours, the same screenshot method on the same simulator in the same
+ * appearance, measured 5 / 9 / 17 / 8 / 4 at a 4.00 pitch against their 3.97 —
+ * so the GLYPH is right and only its position was not. Ours sat at 8.00.
+ *
+ * This is the pill's `paddingRight` plus this margin, so the margin is the
+ * difference: 11.90 - 6.5. The number that was here before, 1.66, came with an
+ * arithmetic that does not hold — it took the pill's trailing padding to be
+ * 10.67 where `SEND_INSET_TRAILING` makes it 6.5, so the intended 12.33 came
+ * out as 8.16 and measured 8.00. Reported from a device as the audio graphic
+ * having more right spacing in the platform's composer than in ours, which is
+ * exactly the 3.90 between the two.
  *
  * Vertically it is centred exactly — ink centre and pill centre both 43.50 in
  * that screenshot. Stated as a bottom margin off `flex-end` rather than as
@@ -272,7 +289,7 @@ const SEND_INSET_TRAILING = 6.5;
  * grows: both stay on the last line rather than drifting to the middle of a
  * three-line pill.
  */
-const AUDIO_INSET_TRAILING = 1.66;
+const AUDIO_INSET_TRAILING = 11.9 - SEND_INSET_TRAILING;
 /*
  * 28, and the number that says so is the inset.
  *
