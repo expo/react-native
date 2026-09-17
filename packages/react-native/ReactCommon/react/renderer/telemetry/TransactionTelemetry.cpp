@@ -86,7 +86,72 @@ void TransactionTelemetry::didLayout() {
 
 void TransactionTelemetry::didLayout(int affectedLayoutNodesCount) {
   didLayout();
-  affectedLayoutNodesCount_ = affectedLayoutNodesCount;
+  /*
+   * ACCUMULATED, not assigned.
+   *
+   * A commit can lay out more than once, and this was the last one's count
+   * while `unchangedLayoutNodesCount_` was the sum of all of them — so the two
+   * were not comparable and the unchanged count could exceed the total, which
+   * is what gave it away: ×269637 unmoved out of ×240322.
+   */
+  affectedLayoutNodesCount_ += affectedLayoutNodesCount;
+}
+
+/*
+ * The three pre-layout spans. No asserts about being entered once: a commit may
+ * run its hooks more than once (a hook that returns a new tree is asked again),
+ * and what is wanted is the sum, not a bracket.
+ */
+void TransactionTelemetry::willTransaction() {
+  lastTransactionStartTime_ = now_();
+}
+
+void TransactionTelemetry::didTransaction() {
+  if (lastTransactionStartTime_ == kTelemetryUndefinedTimePoint) {
+    return;
+  }
+  transactionTime_ += now_() - lastTransactionStartTime_;
+  lastTransactionStartTime_ = kTelemetryUndefinedTimePoint;
+}
+
+void TransactionTelemetry::willProgressState() {
+  lastProgressStateStartTime_ = now_();
+}
+
+void TransactionTelemetry::didProgressState() {
+  if (lastProgressStateStartTime_ == kTelemetryUndefinedTimePoint) {
+    return;
+  }
+  progressStateTime_ += now_() - lastProgressStateStartTime_;
+  lastProgressStateStartTime_ = kTelemetryUndefinedTimePoint;
+}
+
+void TransactionTelemetry::willCommitHooks() {
+  lastCommitHooksStartTime_ = now_();
+}
+
+void TransactionTelemetry::didCommitHooks() {
+  if (lastCommitHooksStartTime_ == kTelemetryUndefinedTimePoint) {
+    return;
+  }
+  commitHooksTime_ += now_() - lastCommitHooksStartTime_;
+  lastCommitHooksStartTime_ = kTelemetryUndefinedTimePoint;
+}
+
+void TransactionTelemetry::didLayoutUnchangedNode() {
+  unchangedLayoutNodesCount_++;
+}
+
+void TransactionTelemetry::didShareStateSubtree() {
+  sharedStateSubtreesCount_++;
+}
+
+void TransactionTelemetry::didWalkStateSubtree() {
+  walkedStateSubtreesCount_++;
+}
+
+void TransactionTelemetry::didFindObsoleteState() {
+  obsoleteStateCount_++;
 }
 
 void TransactionTelemetry::willMount() {
@@ -167,6 +232,34 @@ int TransactionTelemetry::getRevisionNumber() const {
 
 int TransactionTelemetry::getAffectedLayoutNodesCount() const {
   return affectedLayoutNodesCount_;
+}
+
+int TransactionTelemetry::getUnchangedLayoutNodesCount() const {
+  return unchangedLayoutNodesCount_;
+}
+
+int TransactionTelemetry::getSharedStateSubtreesCount() const {
+  return sharedStateSubtreesCount_;
+}
+
+int TransactionTelemetry::getWalkedStateSubtreesCount() const {
+  return walkedStateSubtreesCount_;
+}
+
+int TransactionTelemetry::getObsoleteStateCount() const {
+  return obsoleteStateCount_;
+}
+
+TelemetryDuration TransactionTelemetry::getTransactionTime() const {
+  return transactionTime_;
+}
+
+TelemetryDuration TransactionTelemetry::getProgressStateTime() const {
+  return progressStateTime_;
+}
+
+TelemetryDuration TransactionTelemetry::getCommitHooksTime() const {
+  return commitHooksTime_;
 }
 
 } // namespace facebook::react

@@ -82,6 +82,15 @@ RCT_EXPORT_MODULE(RenderStats)
     @"textMeasureMs" : @((double)mount.textMeasureNanos / 1e6),
     @"textMeasurements" : @(mount.textMeasurements),
     @"layoutNodes" : @(mount.layoutNodes),
+    @"layoutNodesUnchanged" : @(mount.layoutNodesUnchanged),
+    @"stateShared" : @(mount.stateShared),
+    @"stateWalked" : @(mount.stateWalked),
+    @"stateObsolete" : @(mount.stateObsolete),
+    // And the commit's own three phases, which `commitMs` contains and cannot
+    // distinguish — see `RCTRenderMountStats`.
+    @"transactionMs" : @((double)mount.transactionNanos / 1e6),
+    @"progressStateMs" : @((double)mount.progressStateNanos / 1e6),
+    @"commitHookMs" : @((double)mount.commitHookNanos / 1e6),
     // The virtualized container's geometry pass.
     @"sweeps" : @(sweep.sweeps),
     @"sweepSingles" : @(sweep.singles),

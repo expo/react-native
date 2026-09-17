@@ -126,6 +126,9 @@ static std::shared_ptr<ShadowNode> progressState(
     newState = newState->getMostRecentStateIfObsolete();
     if (newState) {
       isStateChanged = true;
+      if (auto* telemetry = TransactionTelemetry::threadLocalTelemetry()) {
+        telemetry->didFindObsoleteState();
+      }
     }
   }
 
@@ -144,9 +147,14 @@ static std::shared_ptr<ShadowNode> progressState(
 
     if (&childNode == &baseChildNode) {
       // Nodes are identical, skipping.
+      if (auto* telemetry = TransactionTelemetry::threadLocalTelemetry()) {
+        telemetry->didShareStateSubtree();
+      }
       continue;
     }
-
+    if (auto* telemetry = TransactionTelemetry::threadLocalTelemetry()) {
+      telemetry->didWalkStateSubtree();
+    }
     if (!ShadowNode::sameFamily(childNode, baseChildNode)) {
       // Totally different nodes, updating is impossible.
       break;
@@ -355,6 +363,25 @@ CommitStatus ShadowTree::tryCommit(
 
   auto telemetry = TransactionTelemetry{};
   telemetry.willCommit();
+  /*
+   * Thread-local for the WHOLE commit, not only the layout.
+   *
+   * `progressState` counts how many subtrees it could skip, and it runs long
+   * before the layout does — with the old bracket its counters went to a null
+   * telemetry and read zero, which is indistinguishable from "it skipped
+   * nothing".
+   *
+   * A GUARD rather than a matching call, because there are three early returns
+   * between here and the end of this function, and a thread-local left pointing
+   * at a destroyed stack object is a use-after-free the next commit would find.
+   */
+  telemetry.setAsThreadLocal();
+  struct TelemetryScope {
+    TransactionTelemetry& telemetry;
+    ~TelemetryScope() {
+      telemetry.unsetAsThreadLocal();
+    }
+  } telemetryScope{telemetry};
 
   CommitMode commitMode;
   auto oldRevision = ShadowTreeRevision{};
@@ -376,15 +403,19 @@ CommitStatus ShadowTree::tryCommit(
   }
 
   const auto& oldRootShadowNode = oldRevision.rootShadowNode;
+  telemetry.willTransaction();
   auto newRootShadowNode = transaction(*oldRevision.rootShadowNode);
+  telemetry.didTransaction();
 
   if (!newRootShadowNode) {
     return CommitStatus::Cancelled;
   }
 
   if (commitOptions.enableStateReconciliation) {
+    telemetry.willProgressState();
     auto updatedNewRootShadowNode = progressState(
         *newRootShadowNode, *oldRevisionForStateProgression.rootShadowNode);
+    telemetry.didProgressState();
     if (updatedNewRootShadowNode) {
       newRootShadowNode =
           std::static_pointer_cast<RootShadowNode>(updatedNewRootShadowNode);
@@ -399,8 +430,10 @@ CommitStatus ShadowTree::tryCommit(
   }
 
   // Run commit hooks.
+  telemetry.willCommitHooks();
   newRootShadowNode = delegate_.shadowTreeWillCommit(
       *this, oldRootShadowNode, newRootShadowNode, commitOptions);
+  telemetry.didCommitHooks();
 
   if (!newRootShadowNode) {
     return CommitStatus::Cancelled;
@@ -411,13 +444,11 @@ CommitStatus ShadowTree::tryCommit(
   affectedLayoutableNodes.reserve(1024);
 
   telemetry.willLayout();
-  telemetry.setAsThreadLocal();
   {
     jsinspector_modern::tracing::PerformanceTracerSection s2(
         "layout", "Renderer", "\u269b Native");
     newRootShadowNode->layoutIfNeeded(&affectedLayoutableNodes);
   }
-  telemetry.unsetAsThreadLocal();
   telemetry.didLayout(static_cast<int>(affectedLayoutableNodes.size()));
 
   {

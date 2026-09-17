@@ -220,6 +220,16 @@ static void EXPRecordTransactionTelemetry(const TransactionTelemetry &telemetry)
           .count();
   gMountingStats.textMeasurements += (uint64_t)telemetry.getNumberOfTextMeasurements();
   gMountingStats.layoutNodes += (uint64_t)telemetry.getAffectedLayoutNodesCount();
+  gMountingStats.layoutNodesUnchanged += (uint64_t)telemetry.getUnchangedLayoutNodesCount();
+  gMountingStats.stateShared += (uint64_t)telemetry.getSharedStateSubtreesCount();
+  gMountingStats.stateWalked += (uint64_t)telemetry.getWalkedStateSubtreesCount();
+  gMountingStats.stateObsolete += (uint64_t)telemetry.getObsoleteStateCount();
+  const auto duration = [](TelemetryDuration d) -> uint64_t {
+    return (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(d).count();
+  };
+  gMountingStats.transactionNanos += duration(telemetry.getTransactionTime());
+  gMountingStats.progressStateNanos += duration(telemetry.getProgressStateTime());
+  gMountingStats.commitHookNanos += duration(telemetry.getCommitHooksTime());
 }
 
 static void EXPRecordMountingTransaction(const ShadowViewMutationList &mutations, uint64_t nanos)

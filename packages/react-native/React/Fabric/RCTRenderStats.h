@@ -74,6 +74,35 @@ typedef struct {
   uint64_t textMeasureNanos;
   uint64_t textMeasurements;
   uint64_t layoutNodes;
+  /*
+   * What a commit did BEFORE it laid anything out. `commitNanos` covers all of
+   * this and the layout too, and at thirty thousand rows the total cannot say
+   * which of them grew.
+   */
+  uint64_t transactionNanos;
+  uint64_t progressStateNanos;
+  uint64_t commitHookNanos;
+  /*
+   * Of `layoutNodes`, how many came out with the frame they already had.
+   *
+   * Yoga sets its `hasNewLayout` flag on every node a layout pass visits,
+   * including the ones it answered from its own cache — so `layoutNodes` means
+   * "looked at" and not "moved". The difference between the two is what a
+   * skip-the-unchanged-subtree optimisation could win, stated before anyone
+   * writes one.
+   */
+  uint64_t layoutNodesUnchanged;
+  /*
+   * State reconciliation's two outcomes, per child.
+   *
+   * `shared` is a subtree the two trees hold the same object for and skip;
+   * `walked` is one they do not. The ratio says whether a commit is O(1) in the
+   * conversation's length or O(rows), which is the difference between a send
+   * that costs nothing and one that costs a second and a half.
+   */
+  uint64_t stateShared;
+  uint64_t stateWalked;
+  uint64_t stateObsolete;
 } RCTRenderMountStats;
 
 /**

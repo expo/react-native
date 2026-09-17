@@ -3053,6 +3053,39 @@ function detailReport() {
         `mounting, ${Math.round(renderer.sweepMs)} ms sweeping`,
     );
     /*
+     * And what the COMMIT was, which the line above can only total.
+     *
+     * At thirty thousand rows a send commits for a second, and `commitMs`
+     * covers four different things: React handing the tree over, state
+     * reconciliation, the commit hooks, and the layout. Three of them skip
+     * pointer-identical subtrees and one of them does not, and a total cannot
+     * say which grew.
+     *
+     * `unmoved` is the one that decides whether that is worth fixing: Yoga
+     * flags every node a layout pass LOOKS at, including the ones it answered
+     * from its own cache, so the gap between the two numbers is the work a
+     * skip would save.
+     */
+    lines.push(
+      `that commit: ${Math.round(renderer.transactionMs)} ms transaction, ` +
+        `${Math.round(renderer.progressStateMs)} ms state, ` +
+        `${Math.round(renderer.commitHookMs)} ms hooks, ` +
+        `${Math.round(renderer.layoutMs)} ms layout — ` +
+        `×${renderer.layoutNodesUnchanged} of the ×${renderer.layoutNodes} nodes came out unmoved`,
+    );
+    /*
+     * And whether state reconciliation could skip anything, which is the same
+     * question one phase earlier: it walks a child only when the two trees hold
+     * DIFFERENT objects for it. All shared is O(1) in the conversation's
+     * length; all walked is O(rows), and a send at thirty thousand is the case
+     * where the difference is a second.
+     */
+    lines.push(
+      `state skipped ×${renderer.stateShared} subtrees and walked ` +
+        `×${renderer.stateWalked}` +
+        ` (×${renderer.stateObsolete} with obsolete state)`,
+    );
+    /*
      * Per TRANSACTION, because the total is the gesture's length and the ratio
      * is the shape of the problem: a row that changes height moves every row
      * below it, and each of those moves is an `Update`. So this is how many
@@ -3339,6 +3372,131 @@ function rendererSince(before) {
 }
 
 /**
+ * ONE ROW, behind its own memo boundary — and the boundary has to be HERE,
+ * over the `VirtualView`, not under it.
+ *
+ * A send changes `messages`, so `Transcript` re-renders and its map rebuilds
+ * every row's element. Rebuilding a COMPONENT element is cheap — memo compares
+ * the props and React reuses the previous output. Rebuilding a HOST element is
+ * not: React re-renders that fiber and Fabric clones its shadow node, and it
+ * does that however equal the props are, because nothing tells it otherwise.
+ *
+ * With the boundary under the row, `Bubble` bailed out and everything inside a
+ * row kept its identity, while the row itself was cloned thirty thousand times
+ * per commit. Measured at 30,000 messages by naming what lost its sharing:
+ *
+ *     WALKED VirtualView=269681
+ *            native-chatbubble=1  element-box=152  View=28  …
+ *
+ * Every lost subtree was a row wrapper and nothing else. That is what made a
+ * send cost the conversation's length: `progressState`, the commit hooks and
+ * the layout all skip subtrees the two trees hold the same object for, and
+ * there were none.
+ *
+ * Every prop here is a primitive, a ref, a `useCallback` or a value that
+ * outlives the render, which is what makes the compare able to say "no".
+ * `stampBetween` returns a fresh object per call, so the stamp arrives as two
+ * strings rather than as itself — an object would fail the compare for every
+ * row on every render and cost exactly what this exists to save.
+ */
+const TranscriptRow = React.memo(function TranscriptRow({
+  applyCommand,
+  composerFrame,
+  contentBox,
+  endsRun,
+  hidden,
+  message,
+  metrics,
+  onArrived,
+  onFlightFrame,
+  onModeChange,
+  onOpenReader,
+  onTakeoff,
+  pan,
+  reaction,
+  reveal,
+  revealInk,
+  separatesRun,
+  showsReceipt,
+  stampArriving,
+  stampDay,
+  stampTime,
+  startsRun,
+  tail,
+}) {
+  const Row = hidden ? HiddenRow : VirtualView;
+  return (
+      /*
+        Each message is a `VirtualView`, so a long history costs the tree
+        only what is near the viewport.
+
+        The whole ROW, stamp included, because the stamp belongs to the
+        message under it and a stamp left behind by a hidden balloon is a
+        date with nothing after it. Hidden, the row renders nothing and
+        keeps its measured height, so the scroll range and the bottom
+        anchor see the same list either way.
+
+        A message on its way in is wrapped like any other, and safely: a
+        sent message is at the BOTTOM, where the viewport is, so it is
+        never hidden while it is flying. By the time one could be, it has
+        landed and been re-measured at its resting size.
+      */
+      <Row
+        nativeID={`msg-${message.id}`}
+        /*
+         * Module-level, so three thousand rows share one function and
+         * none of them closes over anything — see `noteMode`. Absent
+         * when nobody is watching: a listener makes `VirtualView` bind a
+         * callback per mode change, and an instrument should cost
+         * nothing when it is off.
+         */
+        onModeChange={onModeChange}>
+        {stampDay != null && (
+          <Stamp
+            day={stampDay}
+            time={stampTime}
+            /* Arriving only if this row was not here when the screen
+               opened: the stamps above an existing conversation were
+               always there and have nothing to arrive from. */
+            arriving={stampArriving}
+          />
+        )}
+        <Bubble
+          message={message}
+          metrics={metrics}
+          composerFrame={composerFrame}
+          contentBox={contentBox}
+          tail={tail}
+          startsRun={startsRun}
+          endsRun={endsRun}
+          separatesRun={separatesRun}
+          onCommand={applyCommand}
+          onOpenReader={onOpenReader}
+          onArrived={onArrived}
+          onTakeoff={onTakeoff}
+          onFlightFrame={onFlightFrame}
+          /*
+           * THREE states, not two: shown, holding its space, and absent.
+           * A message on its way owns the space its receipt will take, so
+           * that nothing moves when the words arrive. See the render.
+           *
+           * The outgoing receipt is NOT animated away. Keeping it mounted
+           * at `'waiting'` so it closes on the springs that opened it puts
+           * two receipts on screen together and shuts the old one late:
+           * the collapse does not run when the send does, so the earlier
+           * receipt drops instead of scaling out.
+           */
+          showsReceipt={showsReceipt}
+          reveal={reveal}
+          revealInk={revealInk}
+          pan={pan}
+          reactions={reaction}
+        />
+      </Row>
+  );
+});
+
+/**
  * The transcript's rows, behind a memo boundary.
  *
  * `React.memo` on a ROW saves that row's body and not its element: the element
@@ -3381,8 +3539,6 @@ const Transcript = React.memo(function Transcript({
   wearsReceipt,
 }) {
   return messages.map((message, index) => {
-    const Row =
-      index < openedWith.current - OPEN_ROWS ? HiddenRow : VirtualView;
     const previous = messages[index - 1];
     const next = messages[index + 1];
     /*
@@ -3405,82 +3561,40 @@ const Transcript = React.memo(function Transcript({
     );
     const stamp = stampBetween(previous, message);
     return (
-      /*
-        Each message is a `VirtualView`, so a long history costs the tree
-        only what is near the viewport.
-
-        The whole ROW, stamp included, because the stamp belongs to the
-        message under it and a stamp left behind by a hidden balloon is a
-        date with nothing after it. Hidden, the row renders nothing and
-        keeps its measured height, so the scroll range and the bottom
-        anchor see the same list either way.
-
-        A message on its way in is wrapped like any other, and safely: a
-        sent message is at the BOTTOM, where the viewport is, so it is
-        never hidden while it is flying. By the time one could be, it has
-        landed and been re-measured at its resting size.
-      */
-      <Row
+      <TranscriptRow
         key={message.id}
-        nativeID={`msg-${message.id}`}
-        /*
-         * Module-level, so three thousand rows share one function and
-         * none of them closes over anything — see `noteMode`. Absent
-         * when nobody is watching: a listener makes `VirtualView` bind a
-         * callback per mode change, and an instrument should cost
-         * nothing when it is off.
-         */
-        onModeChange={watching}>
-        {stamp != null && (
-          <Stamp
-            day={stamp.day}
-            time={stamp.time}
-            /* Arriving only if this row was not here when the screen
-               opened: the stamps above an existing conversation were
-               always there and have nothing to arrive from. */
-            arriving={index >= openedWith.current}
-          />
-        )}
-        <Bubble
-          message={message}
-          metrics={metrics}
-          composerFrame={composerFrame}
-          contentBox={transcriptContent}
-          tail={endsRun ? mineSide(message) : ''}
-          startsRun={startsRun}
-          endsRun={endsRun}
-          separatesRun={separatesRun}
-          onCommand={applyCommand}
-          onOpenReader={onOpenReader}
-          onArrived={rememberArrival}
-          onTakeoff={rememberTakeoff}
-          onFlightFrame={rememberFlightFrame}
-          /*
-           * THREE states, not two: shown, holding its space, and absent.
-           * A message on its way owns the space its receipt will take, so
-           * that nothing moves when the words arrive. See the render.
-           *
-           * The outgoing receipt is NOT animated away. Keeping it mounted
-           * at `'waiting'` so it closes on the springs that opened it puts
-           * two receipts on screen together and shuts the old one late:
-           * the collapse does not run when the send does, so the earlier
-           * receipt drops instead of scaling out.
-           */
-          showsReceipt={
-            index === wearsReceipt
-              ? 'shown'
-              : index === lastSent
-                ? 'waiting'
-                : index === previousSent && lastSentReady
-                  ? 'leaving'
-                  : 'none'
-          }
-          reveal={reveal}
-          revealInk={revealInk}
-          pan={pan}
-          reactions={reactions[message.id]}
-        />
-      </Row>
+        applyCommand={applyCommand}
+        composerFrame={composerFrame}
+        contentBox={transcriptContent}
+        endsRun={endsRun}
+        hidden={index < openedWith.current - OPEN_ROWS}
+        message={message}
+        metrics={metrics}
+        onArrived={rememberArrival}
+        onFlightFrame={rememberFlightFrame}
+        onModeChange={watching}
+        onOpenReader={onOpenReader}
+        onTakeoff={rememberTakeoff}
+        pan={pan}
+        reaction={reactions[message.id]}
+        reveal={reveal}
+        revealInk={revealInk}
+        separatesRun={separatesRun}
+        showsReceipt={
+          index === wearsReceipt
+            ? 'shown'
+            : index === lastSent
+              ? 'waiting'
+              : index === previousSent && lastSentReady
+                ? 'leaving'
+                : 'none'
+        }
+        stampArriving={index >= openedWith.current}
+        stampDay={stamp?.day}
+        stampTime={stamp?.time}
+        startsRun={startsRun}
+        tail={endsRun ? mineSide(message) : ''}
+      />
     );
   });
 });

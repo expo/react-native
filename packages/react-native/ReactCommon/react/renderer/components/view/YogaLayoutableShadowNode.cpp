@@ -26,6 +26,7 @@
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/debug/DebugStringConvertibleItem.h>
+#include <react/renderer/telemetry/TransactionTelemetry.h>
 #include <react/utils/FloatComparison.h>
 #include <glog/logging.h>
 #include <unordered_set>
@@ -257,6 +258,40 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     yogaTreeHasBeenConfigured_ =
         static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
             .yogaTreeHasBeenConfigured_;
+  }
+
+  /*
+   * And WHICH ENVIRONMENT this node's own `env()`s were resolved against, which
+   * a clone must inherit or it can never be skipped again.
+   *
+   * `environmentGeneration_` is what `configureYogaTree`'s skip asks each child
+   * — "were you configured against the environment we are in now?" — and it was
+   * default-initialised to zero on every clone. So: a node is configured and
+   * records generation N; anything clones it (the ownership adoption below is
+   * the common one, and it clones every child of a cloned parent); the clone
+   * says zero; the next pass refuses to skip it, configures it, and clones it
+   * again. A cycle that sustains itself and costs the whole subtree every
+   * commit.
+   *
+   * Measured at thirty thousand messages, appending one: of ~450,000 refusals
+   * to skip, 416,508 were this one and every other cause was ZERO —
+   *
+   *     WHY configured=33492 cascade=0 scale=0 font=0 rtl=0 env=416508 errata=0
+   *
+   * — and 122,793 children were then cloned to take ownership, which is what
+   * destroyed structural sharing for `progressState`, the commit hooks and the
+   * layout walk alike.
+   *
+   * The condition is `!fragment.props` and NOT the pair above it, because this
+   * records something about THIS node's own props rather than about its
+   * subtree: new props have not had their `env()` dependencies resolved, so a
+   * clone that replaces them must go back to zero and be resolved again. New
+   * CHILDREN say nothing about this node's own `env()`s.
+   */
+  if (!fragment.props) {
+    environmentGeneration_ =
+        static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
+            .environmentGeneration_;
   }
 
   if (fragment.props) {
@@ -1551,7 +1586,6 @@ void YogaLayoutableShadowNode::configureYogaTree(
         childErrata == child.resolveErrata(errata)) {
       continue;
     }
-
     if (doesOwn(child)) {
       auto& mutableChild = const_cast<YogaLayoutableShadowNode&>(child);
       if (childObservesCascade) {
@@ -1984,6 +2018,17 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
       // D22999891 for details.
       if (layoutContext.affectedNodes != nullptr) {
         layoutContext.affectedNodes->push_back(&childNode);
+        /*
+         * COUNTED HERE, beside the push, and that placement is the point: a
+         * layout pass with no `affectedNodes` is not the one being reported,
+         * and counting those made the unmoved total exceed the affected total
+         * — ×239745 of ×210395, which is impossible and is what gave it away.
+         */
+        if (auto* telemetry = TransactionTelemetry::threadLocalTelemetry()) {
+          if (newLayoutMetrics == childNode.getLayoutMetrics()) {
+            telemetry->didLayoutUnchangedNode();
+          }
+        }
       }
 
       childNode.setLayoutMetrics(newLayoutMetrics);
