@@ -1118,9 +1118,26 @@ function Receipt({message, shown, style, elementRef}) {
   if (said.status != null) {
     parts.push(said.status);
   }
-  if (parts.length === 0) {
-    return null;
-  }
+  /*
+   * EMPTY is one of this element's STATES, not a reason for it to be absent.
+   *
+   * A receipt that returns nothing while it has nothing to say cannot arrive:
+   * the words and the style that shows them land in the same commit as the
+   * element itself, and a CSS transition with no previous value cuts. Measured
+   * on a real send, the ink was at full strength and full width in the first
+   * frame any of it could be seen — reported as `Delivered` revealing from the
+   * bottom rather than growing from its centre. What was moving was the box
+   * opening over a line that was already finished, which is a wipe.
+   *
+   * The engine's own trace says the same thing in one line: the space's height
+   * transition starts on tag 592 and the ink's opacity never starts at all,
+   * turning up 36 tags later as 628 — a node created in a later commit.
+   *
+   * The row already has a state for this and calls it `waiting`: a message on
+   * its way owns the space its receipt will take. Owning the space means being
+   * there to hold it. So the element exists whenever its box does, and what
+   * changes is what is written in it.
+   */
   /*
    * TWO faces on one line, which is what the platform does.
    *
