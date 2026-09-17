@@ -1560,18 +1560,38 @@ static void EXPApplyEdgeEffect(UIScrollEdgeEffect *effect, ExpoScrollEdgeEffect 
  * a quarter of a second — and SYMMETRIC, which rules out the spring a transcript
  * animation is usually assumed to be.
  *
- * The same quarter second and the same curve as the layout transitions this
- * follows, deliberately: a transcript whose content animates on one clock and
- * whose offset chases it on another moves twice.
+ * The same duration and the same curve as the layout transitions this follows,
+ * deliberately: a transcript whose content animates on one clock and whose
+ * offset chases it on another moves twice. Both numbers live in
+ * `chatBubbleMetrics.js` as `CHAT_BUBBLE_TAIL_MORPH` and
+ * `CHAT_BUBBLE_TAIL_MORPH_CURVE`, and these two must be changed with them.
+ *
+ * ## 335ms, refitted from a device (2026-09-16)
+ *
+ * The quarter second above came from cross-correlating row averages across a
+ * 24-pixel movement, whose per-frame deltas were `+1` and `+2` — its own
+ * quantisation floor. Refitted against a 60fps clip of the platform's chat
+ * from a real phone, tracking one balloon's edge over 58 pixels and 22 frames,
+ * it is 335ms on the curve below.
  */
-static const CFTimeInterval kExpoScrollRiseDuration = 0.25;
+static const CFTimeInterval kExpoScrollRiseDuration = 0.335;
 
 static facebook::react::TransitionTimingFunction ExpoScrollRiseCurve()
 {
-  // `ease-in-out`, spelled the way `TransitionConversions` spells it — and
-  // evaluated by the renderer's own solver, so the offset and the boxes it is
-  // following cannot drift apart on rounding.
-  return facebook::react::TransitionTimingFunction{0.42f, 0.0f, 0.58f, 1.0f};
+  /*
+   * A critically damped SPRING, written as the bezier the renderer takes.
+   *
+   * Fitted over those 22 frames: omega 19.5 rad/s, zeta 0.98 — mass 1,
+   * stiffness 380.2, damping 38.22 — residual 0.12pt. The free bezier fit is
+   * as good (0.14pt), so nothing is lost by spelling it this way, and this way
+   * the offset and the boxes it follows are evaluated by the SAME solver and
+   * cannot drift apart on rounding.
+   *
+   * It was `ease-in-out`, which cannot fit that movement at any duration:
+   * 1.38pt, eleven times the residual. The column set off too gently and
+   * arrived too abruptly.
+   */
+  return facebook::react::TransitionTimingFunction{0.2f, 0.05f, 0.15f, 1.0f};
 }
 
 /**

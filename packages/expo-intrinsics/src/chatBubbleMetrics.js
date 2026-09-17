@@ -53,20 +53,56 @@ export const CHAT_BUBBLE_TAIL_DROP: number = 6.65;
  * shape that has lost most of its depth stops being legible well before it
  * stops moving, so counting "until I cannot see it" measures legibility, not
  * duration. Correlating the pixels does not have that problem.
+ *
+ * ## 335, refitted from a device (2026-09-16)
+ *
+ * The reading above is superseded, and by a better measurement of the same
+ * event rather than by an opinion. A clip of the platform's chat from a real
+ * phone, 60fps, tracking ONE balloon's top edge through a receipt handover —
+ * twenty-two frames over 58 pixels of travel, where the reading above had
+ * fourteen frames over 24 and was quoting per-frame deltas of `+1` and `+2` at
+ * its own quantisation floor.
+ *
+ * Fitted over duration and the whole cubic-bezier family:
+ *
+ *     free cubic-bezier(0.2, 0.05, 0.15, 1) at 335ms   rms 0.14pt
+ *     CSS `ease` at 295ms                              rms 0.34pt
+ *     CSS `ease-in-out` at its own best duration       rms 1.38pt
+ *
+ * `ease-in-out` cannot be made to fit at ANY duration — eleven times the
+ * residual, and far outside what a one-pixel quantisation can explain.
  */
-export const CHAT_BUBBLE_TAIL_MORPH: number = 250;
+export const CHAT_BUBBLE_TAIL_MORPH: number = 335;
 
 /**
- * And the curve it moves on.
+ * And the curve it moves on, which is a SPRING wearing a bezier.
  *
- * SYMMETRIC, from the deltas above: the ramp in and the ramp out are the same
- * shape. That rules out a spring, which is what a transcript animation is
- * usually assumed to be — a spring's deltas are front-loaded and then taper for
- * twice as long as they built. Reported from a device as the movement being
- * "jarring", which it was: ease-out starts at full speed, so the column snapped
- * away from rest and then eased into it, and only half the movement was soft.
+ * The same twenty-two frames fitted against a damped-spring solution instead:
+ *
+ *     omega 19.5 rad/s, zeta 0.98   rms 0.12pt   (mass 1, k 380.2, c 38.22)
+ *
+ * Critically damped, to two decimal places, and 99% settled at 241ms. That is
+ * what produces the shape: it accelerates hard from rest, and then creeps in
+ * asymptotically for as long again. Half its travel is done at 87ms where
+ * `ease-in-out` is only half done at 125.
+ *
+ * So the note above this one had it backwards — the deltas ARE front-loaded and
+ * they DO taper for twice as long as they built, which is exactly the spring it
+ * said was ruled out. What ruled it out was a journey too short to tell the two
+ * apart: at 24 pixels the difference between symmetric and front-loaded is one
+ * pixel a frame.
+ *
+ * Stated as a bezier because that is what the renderer's transitions take, and
+ * the free bezier fit is as good as the spring itself (0.14pt against 0.12), so
+ * nothing is lost in the translation.
+ *
+ * The earlier report of the movement being "jarring" still stands and is not an
+ * argument against this: `ease-out` starts at FULL SPEED from rest, which is a
+ * discontinuity. This starts at rest — `p1y` is 0.05, not 0 — and only then
+ * accelerates.
  */
-export const CHAT_BUBBLE_TAIL_MORPH_CURVE: string = 'ease-in-out';
+export const CHAT_BUBBLE_TAIL_MORPH_CURVE: string =
+  'cubic-bezier(0.2, 0.05, 0.15, 1)';
 
 /**
  * How long the tail — reserve and drawn shape together — takes to collapse,
