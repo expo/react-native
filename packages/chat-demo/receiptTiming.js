@@ -100,17 +100,50 @@ export const RECEIPT_INK_DELAY_MS: number =
  * The ink's own two durations, which move nothing and so need not agree with
  * anything — and they are not the same length, deliberately.
  *
- * Counted off a 60fps capture of the platform, tracking the ink's edges and its
- * peak brightness per frame as a receipt arrives. The OPACITY lands in about
- * eight frames; the SCALE goes on for thirty-two, from 59 points of width to
- * 149. So the words are legible almost at once and then visibly grow, which is
- * what makes it read as arriving rather than appearing.
+ * FITTED, not read off two frames, and that is the difference that matters.
  *
- * An earlier reading had these the other way round — a 435ms grow under a 600ms
- * fade — which is a receipt still darkening after it has finished moving.
+ * The platform sending to itself over SMS on this simulator, 60fps, the ink's
+ * bounding box thresholded identically in every frame — `Delivered` settling at
+ * 50.00 x 8.67pt. Twenty-three frames of it, least squares over duration,
+ * starting scale and the cubic-bezier family:
+ *
+ *     duration 610ms   start 0.21   cubic-bezier(0.25, 1, 0.5, 1)
+ *     worst residual 0.125pt, which is a third of a device pixel
+ *
+ * And it is a UNIFORM SCALE ABOUT THE CENTRE, which the same frames settle
+ * outright: the ink's horizontal centre is 219.5 in every one of them, and its
+ * top rises eleven pixels while its bottom falls eleven. Both the earlier
+ * readings of this — a trailing-edge anchor, and a width-only grow — came from
+ * comparing a first frame with a last one.
+ *
+ * The OPACITY is the shorter of the two: peak brightness 162 to 130 over eight
+ * frames and flat after. So the words are legible almost at once and then
+ * visibly grow, which is what makes it read as arriving rather than appearing.
+ *
+ * Two earlier readings, both taken from the first and last frames alone, said
+ * 435ms from 0.61 and 533ms from 0.40. A ratio between two frames cannot see a
+ * curve, and the curve is what was wrong: reported as "Messages animates the
+ * Delivered text faster. Maybe with a different curve."
  */
-export const RECEIPT_GROW_MS: number = 533;
+export const RECEIPT_GROW_MS: number = 610;
 export const RECEIPT_FADE_MS: number = 133;
+
+/**
+ * And the curve it grows on, which is NOT the one it fades on.
+ *
+ * Quartic ease-out, from the fit above. Nine curves were tried and this one is
+ * four times better than CSS `ease-out` — which is what was here, and is far
+ * gentler at the start: a quarter of a second in, the platform's receipt is at
+ * 0.91 of its size and ours was at 0.79. That is the whole of the reported
+ * difference, and it is why LENGTHENING the animation from 533 to 610 makes it
+ * feel quicker rather than slower. Almost all of the travel is in the first
+ * third; what follows is a settle nobody waits for.
+ *
+ * The fade keeps its own `ease-out` — a curve was fitted for the scale and not
+ * for the opacity, and saying one number for both would be stating a
+ * measurement that was never made.
+ */
+export const RECEIPT_GROW_CURVE: string = 'cubic-bezier(0.25, 1, 0.5, 1)';
 
 /*
  * And the words CHANGING under a message that is already wearing them —

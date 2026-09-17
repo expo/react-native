@@ -83,6 +83,7 @@ import RenderStats from '../NativeRenderStats';
 import {REACTIONS, cycleReaction} from '../reactions';
 import {
   RECEIPT_FADE_MS,
+  RECEIPT_GROW_CURVE,
   RECEIPT_GROW_MS,
   RECEIPT_HOLD_MS,
   RECEIPT_INK_DELAY_MS,
@@ -157,41 +158,23 @@ const AnimatedP = Animated.createAnimatedComponent('p');
  * has finished.
  */
 /*
- * The receipt's arrival, measured off the native chat on this simulator.
+ * The receipt's arrival: how long, how small it starts, and on what curve.
  *
- * It will send to itself over SMS here, so there is a real balloon with a real
- * `Delivered` under it — see the README. One frame every 16.7ms, the ink's
- * bounding box thresholded the same way in every frame, `Delivered` at 61.7pt
- * wide and 9.33pt of cap when it settles:
+ * The platform will send to itself over SMS on this simulator, so there is a
+ * real balloon with a real `Delivered` under it — see the README, and
+ * `receiptTiming.js`, which holds the fit and the frames it came from. Every
+ * number here is one of three that were fitted TOGETHER over twenty-three
+ * frames, because they trade against each other and cannot be read one at a
+ * time.
  *
- *     t=3220   37.67 x 6.67    scale 0.61
- *     t=3287   42.67 x 7.33    scale 0.69
- *     t=3355   49.00 x 8.33    scale 0.79
- *     t=3420   54.00 x 9.00    scale 0.88
- *     t=3486   58.33 x 9.67    scale 0.95
- *     t=3655   61.67 x 10.00   scale 1.00
- *
- * So it GROWS, from about six tenths, over 435ms, on an ease-out — and it keeps
- * fading for a while after it has stopped growing, which is why the two have
- * their own durations here. css-transitions-1 §2 matches the lists up by index,
- * and the renderer implements that, so one declaration says both.
- *
- * It grows from its TRAILING edge and not its centre. Measured: the right edge
- * sits at 376.1 on the first frame and 377.1 on the last while the left edge
- * travels thirty points out from under it. That is the edge the receipt is aligned to,
- * so `transform-origin` follows the alignment rather than naming a side.
+ * It grows about its CENTRE, which the same frames settle rather than infer:
+ * the ink's horizontal centre does not move by a pixel across the whole
+ * animation, and its top and bottom travel eleven pixels each, in opposite
+ * directions.
  */
 const RECEIPT_FADE = RECEIPT_FADE_MS;
 const RECEIPT_GROW = RECEIPT_GROW_MS;
-/*
- * The size a receipt starts at, as a fraction of the size it ends at.
- *
- * Measured on the platform by the ink's own edges: 59 points of width at the
- * first frame it can be seen, 149 when it settles. It is a little smaller than
- * that at the frame before, which nothing can see, so the number is the
- * measured ratio rounded down rather than fitted.
- */
-const RECEIPT_GROW_FROM = 0.38;
+const RECEIPT_GROW_FROM = 0.21;
 /**
  * How long a date separator takes to arrive, and it is NOT the receipt's.
  *
@@ -2284,7 +2267,7 @@ function BubbleImpl({
    * transition between two numbers.
    *
    * `offsetHeight` and NOT `getBoundingClientRect`: the ink rests at
-   * `scale(0.62)` while it waits (see `receiptInkWaiting`), and a client rect
+   * `RECEIPT_GROW_FROM` while it waits (see `receiptInkWaiting`), and a client rect
    * includes transforms, so the rect would report two thirds of a line and the
    * space would open that short. `offsetHeight` is the layout height with the
    * transform left out, which is the quantity the box needs.
@@ -5087,7 +5070,9 @@ const styles = StyleSheet.create({
     transformOrigin: '50% 50%',
     transitionProperty: 'opacity, transform',
     transitionDuration: `${RECEIPT_FADE}ms, ${RECEIPT_GROW}ms`,
-    transitionTimingFunction: 'ease-out',
+    /* Two curves, matched to the two properties by index. Only the scale's was
+       fitted — see `RECEIPT_GROW_CURVE`. */
+    transitionTimingFunction: `ease-out, ${RECEIPT_GROW_CURVE}`,
   },
   /*
    * The ink waits for the space, and `transition-delay` is how that is said.
@@ -5111,7 +5096,7 @@ const styles = StyleSheet.create({
     transitionProperty: 'opacity, transform',
     transitionDuration: `${RECEIPT_FADE}ms, ${RECEIPT_GROW}ms`,
     transitionDelay: `${RECEIPT_INK_DELAY_MS}ms`,
-    transitionTimingFunction: 'ease-out',
+    transitionTimingFunction: `ease-out, ${RECEIPT_GROW_CURVE}`,
   },
   /*
    * The words CHANGING, which is not the receipt arriving and is not it
