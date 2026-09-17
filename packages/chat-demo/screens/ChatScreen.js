@@ -1716,11 +1716,12 @@ function FlyingBalloon({
      */
     let box = toPixel(from.fieldWidth);
     let squeezed = 1;
-    /* Which of the two animations carrying this copy has come home — see
-       `home` below, which is what they are for. */
-    let risePassed = false;
+    /* Which of the two animations carrying this copy has come home, and what
+       each of them last reported — so `home` below can ask how far a value
+       moved as well as where it is. */
+    let lastRise = null;
+    let lastSwell = null;
     let riseHome = false;
-    let swellPassed = false;
     let swellHome = false;
     const sample = () => {
       const drawn = box * squeezed;
@@ -1732,16 +1733,18 @@ function FlyingBalloon({
       sample();
     });
     const watchSqueeze = squeeze.addListener(({value}) => {
+      /*
+       * The same two questions the rise asks, in this value's own units: a
+       * scale times the width it scales is a width, and half a point of one is
+       * `ARRIVAL_POINTS`.
+       */
+      const moved =
+        lastSwell == null ? Infinity : Math.abs(value - lastSwell) * box;
+      lastSwell = value;
       squeezed = value;
       sample();
-      /*
-       * And the squeeze reports itself home on the same terms as the rise:
-       * past its destination, then back within half a point of it.
-       */
-      if (value >= 1) {
-        swellPassed = true;
-      }
-      if (swellPassed && Math.abs(1 - value) * box <= ARRIVAL_POINTS) {
+      const near = Math.abs(1 - value) * box <= ARRIVAL_POINTS;
+      if (near && moved <= ARRIVAL_POINTS) {
         swellHome = true;
         home();
       }
@@ -1799,10 +1802,41 @@ function FlyingBalloon({
       }
     };
     const watchRise = progress.addListener(({value}) => {
-      if (value >= 1) {
-        risePassed = true;
-      }
-      if (risePassed && Math.abs(1 - value) <= ARRIVAL_TOLERANCE) {
+      /*
+       * WHERE it is and WHETHER IT IS STILL MOVING, which are two questions and
+       * were written as one.
+       *
+       * What the handover needs is that the copy is on the row and is not about
+       * to leave it. Position alone cannot say that, because a damped spring is
+       * at its FASTEST as it crosses its own destination: `value >= 1` and
+       * `|1 - value| <= tolerance` are both true of any sample the driver
+       * happens to report in [1, 1.005] on the way UP. When one landed there
+       * the copy was handed over at the top of its overshoot, two points above
+       * the row, and the row appeared two points below it in a single frame.
+       * When none did, the arrival waited for the way back and the handover was
+       * invisible. Same code, same build, two outcomes — the "sometimes" in the
+       * report, and the spring's own numbers give its rate: at the up-crossing
+       * it moves 0.0156 per frame, so the band is open for a third of one.
+       *
+       * Both tests are the same half point, one of position and one of travel:
+       *
+       *     up-crossing      0.0156 per frame   3x over, rejected
+       *     return crossing  0.00055 per frame  9x under, accepted
+       *
+       * Said this way it needs no overshoot to be true. Waiting for the value
+       * to go CLEAR of the band instead — which is the other way to kill the
+       * race — quietly does need one: tune `THROW_SPRING` to critically damped
+       * and that version never fires, falling through to the `finished`
+       * backstop below, which is the 1330ms path this listener exists to avoid.
+       *
+       * `moved` is per SAMPLE and not per second, so a driver that reports less
+       * often makes this stricter rather than looser: it can delay a handover,
+       * never rush one, and the backstop is what catches the far end.
+       */
+      const moved = lastRise == null ? Infinity : Math.abs(value - lastRise);
+      lastRise = value;
+      const near = Math.abs(1 - value) <= ARRIVAL_TOLERANCE;
+      if (near && moved <= ARRIVAL_TOLERANCE) {
         riseHome = true;
         home();
       }
