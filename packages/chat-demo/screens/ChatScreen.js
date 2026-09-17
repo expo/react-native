@@ -3870,6 +3870,16 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
   const fieldText = useRef('');
   const sending = useRef(false);
   /*
+   * And whether a sent message is still ARRIVING, which is a different window
+   * from `sending` and answers a different question.
+   *
+   * `sending` is about the KEYBOARD: it spans the couple of frames between the
+   * tap and the takeoff, and exists so the autocorrection batched with the tap
+   * cannot reach the draft. This one is about the SEND, and it lasts until the
+   * balloon has landed — see `sendNow`, which refuses while it is set.
+   */
+  const inFlight = useRef(false);
+  /*
    * The layer the flight is drawn in, and it is asked where it is at the moment
    * a flight begins rather than when it was laid out: UIKit moves the bar as
    * the keyboard rises, with no layout of its own to hang a measurement on.
@@ -4083,6 +4093,8 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
     // A landing with no takeoff is not possible, but a stuck handoff would hold
     // the field's text for ever — so the landing clears it too.
     sending.current = false;
+    // And this is the moment the send's own window closes — see `sendNow`.
+    inFlight.current = false;
     setHandoff(previous => (previous?.id === id ? null : previous));
     setMessages(previous =>
       previous.map(message =>
@@ -4210,6 +4222,21 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
         sending.current = false;
       }, SENDING_FLOOR_MS),
     );
+    /*
+     * And the send's own window opens here and closes at the LANDING, which is
+     * a different moment from the takeoff above.
+     *
+     * The floor is the same one and for the same reason: what lifts this is a
+     * row reporting its arrival, and a composer that can be wedged for ever by
+     * a flight that never reports is worse than one that lets a second message
+     * through early.
+     */
+    inFlight.current = true;
+    pendingTimers.current.push(
+      setTimeout(() => {
+        inFlight.current = false;
+      }, SENDING_FLOOR_MS),
+    );
     const sent = makeMessage('me', text, true);
     beginWork('send');
     setMessages(previous => [...previous, sent]);
@@ -4301,6 +4328,28 @@ function Chat({onExit, seedMessages, onOpenReader, showsPerformance}) {
      * exactly those terms.
      */
     if (dragging.current) {
+      return;
+    }
+    /*
+     * And NOTHING while the previous message is still arriving, which is the
+     * platform's answer too.
+     *
+     * Reported from a device: "I find in Messages I cannot send a message after
+     * another as quickly as in our app... it's like they just disable the send
+     * button until the prior sent message finishes its initial animation. It's
+     * not visibly disabled, it just doesn't send."
+     *
+     * Ours had no such rule at all. `sending` looks like one and is not: it
+     * guards the DRAFT, and it clears at the takeoff — a frame or two after the
+     * tap — so a second send was accepted while the first balloon was barely
+     * off the composer.
+     *
+     * Dropped rather than queued, and nothing is disabled, which is what the
+     * report describes and also what the drag refusal above already does. A
+     * queued send would arrive with no gesture behind it; a disabled button
+     * needs the flag in state, and a commit per send re-renders the transcript.
+     */
+    if (inFlight.current) {
       return;
     }
     deliver(text);
