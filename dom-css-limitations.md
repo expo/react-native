@@ -470,6 +470,7 @@ rather than going quiet.
 - `grid-unknown-area-name` — limitation, `ReactCommon/yoga/yoga/algorithm/grid/AutoPlacement.h`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `hugs-wrapped-lines` — deviation, `ReactCommon/react/renderer/components/view/BaseViewProps.h`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`

@@ -134,6 +134,9 @@ void TextAttributes::apply(TextAttributes textAttributes) {
       : textTransform;
   whiteSpace = textAttributes.whiteSpace.has_value() ? textAttributes.whiteSpace
                                                      : whiteSpace;
+  hugsWrappedLines = textAttributes.hugsWrappedLines.has_value()
+      ? textAttributes.hugsWrappedLines
+      : hugsWrappedLines;
 
   // Paragraph Styles
   lineHeight = !std::isnan(textAttributes.lineHeight)
@@ -231,6 +234,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              role,
              textTransform,
              whiteSpace,
+             hugsWrappedLines,
              textEffects) ==
       std::tie(
              rhs.foregroundColor,
@@ -258,6 +262,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              rhs.role,
              rhs.textTransform,
              rhs.whiteSpace,
+             rhs.hugsWrappedLines,
              rhs.textEffects) &&
       floatEquality(maxFontSizeMultiplier, rhs.maxFontSizeMultiplier) &&
       floatEquality(opacity, rhs.opacity) &&

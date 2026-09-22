@@ -186,6 +186,12 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<TextTransform> textTransform{};
   // `white-space`. Inherited, so a `<pre>` passes it to every run inside it.
   std::optional<WhiteSpace> whiteSpace{};
+  /*
+   * Whether a run that wraps reports its longest line rather than the width it
+   * was given — see `inheritedHugsWrappedLines` in `BaseViewProps.h`. Inherited
+   * with the rest of them, and read at measure time.
+   */
+  std::optional<bool> hugsWrappedLines{};
   std::optional<TextAlignment> alignment{};
   std::optional<WritingDirection> baseWritingDirection{};
   std::optional<LineBreakStrategy> lineBreakStrategy{};
@@ -286,6 +292,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.allowFontScaling,
         textAttributes.textTransform,
         textAttributes.whiteSpace,
+        textAttributes.hugsWrappedLines,
         textAttributes.alignment,
         textAttributes.baseWritingDirection,
         textAttributes.lineBreakStrategy,

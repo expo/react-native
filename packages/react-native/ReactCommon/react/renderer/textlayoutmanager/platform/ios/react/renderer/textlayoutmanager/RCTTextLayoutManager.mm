@@ -1426,6 +1426,12 @@ static void RCTAppendLineRectsForGlyphRange(
   __block BOOL textDidWrap = NO;
   __block NSUInteger linesEnumerated = 0;
   __block CGFloat enumeratedLinesHeight = 0;
+  // The longest line, for a caller that asked to hug it. Taken per line rather
+  // than from `usedRectForTextContainer:` — that is the union of the lines, and
+  // under a centred or trailing alignment a line's used rect starts partway
+  // across, so the union is wider than any line in it.
+  __block CGFloat longestLine = 0;
+  const BOOL hugsWrappedLines = layoutContext.hugsWrappedLines;
   [layoutManager
       enumerateLineFragmentsForGlyphRange:glyphRange
                                usingBlock:^(
@@ -1442,12 +1448,27 @@ static void RCTAppendLineRectsForGlyphRange(
                                  if (!endsWithNewLine && textStorage.string.length > lastCharacterIndex + 1) {
                                    textDidWrap = YES;
                                  }
+                                 if (paragraphAttributes.maximumNumberOfLines == 0 ||
+                                     linesEnumerated < paragraphAttributes.maximumNumberOfLines) {
+                                   // Only the lines that are DRAWN count towards the longest: a run
+                                   // clamped to two lines is two lines wide, whatever the third
+                                   // would have been.
+                                   longestLine = MAX(longestLine, usedRect.size.width);
+                                 }
                                  if (linesEnumerated++ < paragraphAttributes.maximumNumberOfLines) {
                                    enumeratedLinesHeight = usedRect.origin.y + usedRect.size.height;
                                  }
-                                 if (textDidWrap &&
-                                     (paragraphAttributes.maximumNumberOfLines == 0 ||
-                                      linesEnumerated >= paragraphAttributes.maximumNumberOfLines)) {
+                                 // Where the walk can stop. For an ordinary run everything it
+                                 // asks is settled by the second line: the wrap is known, and the
+                                 // width will be the container's whatever the lines below do. A
+                                 // run that HUGS needs the width of every line it draws, so only
+                                 // the line limit ends it.
+                                 const BOOL atLineLimit = paragraphAttributes.maximumNumberOfLines != 0 &&
+                                     linesEnumerated >= paragraphAttributes.maximumNumberOfLines;
+                                 if (hugsWrappedLines
+                                         ? atLineLimit
+                                         : (textDidWrap &&
+                                            (paragraphAttributes.maximumNumberOfLines == 0 || atLineLimit))) {
                                    *stop = YES;
                                  }
                                }];
@@ -1455,8 +1476,18 @@ static void RCTAppendLineRectsForGlyphRange(
   CGRect usedBounds = [layoutManager usedRectForTextContainer:textContainer];
   CGSize size = usedBounds.size;
 
-  if (textDidWrap && paragraphAttributes.textWidthMode == TextWidthMode::Auto) {
-    size.width = textContainer.size.width;
+  // A wrapped run fills the width it was given: a box that shrinks to fit
+  // around it IS the available width, not the longest line (css-sizing-3
+  // §5.2.2).
+  //
+  // Unless the caller asked to hug it — a chat balloon does, because the
+  // platform's own balloon does (`experimental_hugsWrappedLines`).
+  if (textDidWrap) {
+    if (hugsWrappedLines) {
+      size.width = longestLine;
+    } else if (paragraphAttributes.textWidthMode == TextWidthMode::Auto) {
+      size.width = textContainer.size.width;
+    }
   }
 
   if (paragraphAttributes.maximumNumberOfLines != 0) {

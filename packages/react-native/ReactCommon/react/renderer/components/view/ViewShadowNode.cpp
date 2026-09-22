@@ -237,7 +237,7 @@ static_assert(
     sizeof(TextAttributes) <= 376,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
-    sizeof(ViewProps) <= 2192,
+    sizeof(ViewProps) <= 2200,
     "ViewProps grew; every mounted View holds one, plus one per pending "
     "generation during commits");
 #endif
