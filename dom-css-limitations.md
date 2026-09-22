@@ -599,6 +599,7 @@ rather than going quiet.
 - `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
 - `no-font-on-a-control` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPElementTextAreaComponentView.mm`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
+- `no-nested-vertical-scroll` — limitation, `packages/react-native/ReactCommon/react/renderer/components/view/ExpoScrollViewShadowNode.cpp`
 - `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`

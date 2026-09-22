@@ -48,6 +48,13 @@ export type ModeChangeEvent = Readonly<{
   renderState: VirtualViewRenderState,
   mode: VirtualViewMode,
   target: HostInstance,
+  /**
+   * When the native event reached JavaScript. A `Prerender` or `Hidden` is
+   * applied inside `startTransition`, so this callback is deferred work, and
+   * the difference from the time a listener sees is how long the transition
+   * waited on React.
+   */
+  told: number,
 }>;
 
 // If `VirtualView` exists and `VirtualViewExperimental` does not, that means
@@ -78,6 +85,15 @@ function defaultHiddenStyle(targetRect: Rect): ViewStyleProp {
   return {minHeight: targetRect.height, minWidth: targetRect.width};
 }
 
+// The swept rect, with the height the row has now if that is more, from
+// `getBoundingClientRect` rather than the whole-point `offsetHeight`. A
+// rendered row's unrounded height lives in `VirtualViewShadowNode`; this rect
+// matters for a row never laid out.
+function heldRect(swept: Rect, target: HostInstance): Rect {
+  const now = target.getBoundingClientRect().height;
+  return now > swept.height ? {...swept, height: now} : swept;
+}
+
 function createVirtualView(initialState: State): VirtualViewComponent {
   const initialHidden = initialState !== NotHidden;
 
@@ -100,9 +116,12 @@ function createVirtualView(initialState: State): VirtualViewComponent {
     const handleModeChange = (
       event: NativeSyntheticEvent<NativeModeChangeEvent>,
     ) => {
+      // Read at the top of the handler, since everything below may be deferred, see `told`
+      const told = performance.now();
       const mode = nullthrows(VirtualViewMode.cast(event.nativeEvent.mode));
       const modeChangeEvent: ModeChangeEvent = {
         mode,
+        told,
         renderState: isHidden
           ? VirtualViewRenderState.None
           : VirtualViewRenderState.Rendered,
@@ -128,8 +147,20 @@ function createVirtualView(initialState: State): VirtualViewComponent {
           });
         }
         VirtualViewMode.Hidden => {
+          // Hold the height the row has now, not the one the sweep measured:
+          // this handler runs after a Prerender in flight at sweep time may
+          // have landed, and a placeholder's height would shrink the rendered
+          // row. Never smaller than the sweep said, since a row measures zero
+          // before its first layout.
+          const swept = event.nativeEvent.targetRect;
+          const target = event.currentTarget;
+          // A numeric target is the legacy renderer's tag, which has no layer to ask
+          const held =
+            isHidden || typeof target === 'number'
+              ? swept
+              : heldRect(swept, target);
           startTransition(() => {
-            setState(hiddenStyle(event.nativeEvent.targetRect) ?? {});
+            setState(hiddenStyle(held) ?? {});
             emitModeChange?.();
           });
         }
@@ -138,6 +169,10 @@ function createVirtualView(initialState: State): VirtualViewComponent {
 
     return (
       <VirtualViewNativeComponent
+        // A hidden cell is an empty box holding the scroll's place and has
+        // nothing to announce; a correctness change, not a performance one,
+        // since the placeholder views exist either way
+        aria-hidden={isHidden ? true : undefined}
         initialHidden={initialHidden}
         nativeID={nativeID}
         ref={ref}

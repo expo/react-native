@@ -24,7 +24,6 @@ import com.facebook.react.module.model.ReactModuleInfo.Companion.classIsTurboMod
 import com.facebook.react.module.model.ReactModuleInfoProvider
 import com.facebook.react.modules.accessibilityinfo.AccessibilityInfoModule
 import com.facebook.react.modules.appearance.AppearanceModule
-import com.facebook.react.modules.display.DisplayCapabilitiesModule
 import com.facebook.react.modules.appstate.AppStateModule
 import com.facebook.react.modules.blob.BlobModule
 import com.facebook.react.modules.blob.FileReaderModule
@@ -33,6 +32,7 @@ import com.facebook.react.modules.clipboard.ClipboardModule
 import com.facebook.react.modules.devloading.DevLoadingModule
 import com.facebook.react.modules.devtoolsruntimesettings.ReactDevToolsRuntimeSettingsModule
 import com.facebook.react.modules.dialog.DialogModule
+import com.facebook.react.modules.display.DisplayCapabilitiesModule
 import com.facebook.react.modules.fresco.FrescoModule
 import com.facebook.react.modules.i18nmanager.I18nManagerModule
 import com.facebook.react.modules.image.ImageLoaderModule
@@ -49,9 +49,11 @@ import com.facebook.react.modules.websocket.WebSocketModule
 import com.facebook.react.uimanager.ViewManager
 import com.facebook.react.views.drawer.ReactDrawerLayoutManager
 import com.facebook.react.views.image.ReactImageManager
+import com.facebook.react.views.keyboard.ExpoKeyboardAccessoryViewManager
 import com.facebook.react.views.modal.ReactModalHostManager
 import com.facebook.react.views.progressbar.ReactProgressBarViewManager
 import com.facebook.react.views.safeareaview.ReactSafeAreaViewManager
+import com.facebook.react.views.scroll.ExpoScrollViewManager
 import com.facebook.react.views.scroll.ReactHorizontalScrollContainerViewManager
 import com.facebook.react.views.scroll.ReactHorizontalScrollViewManager
 import com.facebook.react.views.scroll.ReactNestedScrollViewManager
@@ -65,16 +67,15 @@ import com.facebook.react.views.textinput.ReactTextInputManager
 import com.facebook.react.views.toplayer.ExpoTopLayerViewManager
 import com.facebook.react.views.unimplementedview.ReactUnimplementedViewManager
 import com.facebook.react.views.view.ElementBoxViewManager
-import com.facebook.react.views.keyboard.ExpoKeyboardAccessoryViewManager
 import com.facebook.react.views.view.ElementButtonViewManager
-import com.facebook.react.views.view.ElementControlMetricsProbe
 import com.facebook.react.views.view.ElementCheckboxViewManager
-import com.facebook.react.views.view.ElementRangeViewManager
 import com.facebook.react.views.view.ElementColorInputViewManager
+import com.facebook.react.views.view.ElementControlMetricsProbe
 import com.facebook.react.views.view.ElementDateInputViewManager
 import com.facebook.react.views.view.ElementFileInputViewManager
 import com.facebook.react.views.view.ElementProgressViewManager
 import com.facebook.react.views.view.ElementRadioViewManager
+import com.facebook.react.views.view.ElementRangeViewManager
 import com.facebook.react.views.view.ElementSelectViewManager
 import com.facebook.react.views.view.ElementTextAreaViewManager
 import com.facebook.react.views.view.ElementTextInputViewManager
@@ -178,6 +179,7 @@ constructor(private val config: MainPackageConfig? = null) :
           else ReactTextViewManager(),
           SelectableTextViewManager(),
           ReactViewManager(),
+          ExpoScrollViewManager(),
           ExpoKeyboardAccessoryViewManager(),
           // The box a block-level element generates; a plain view unless it is a link.
           ElementBoxViewManager(),
@@ -253,6 +255,8 @@ constructor(private val config: MainPackageConfig? = null) :
               },
           SelectableTextViewManager.REACT_CLASS to
               ModuleSpec.viewManagerSpec { SelectableTextViewManager() },
+          ExpoScrollViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ExpoScrollViewManager() },
           ExpoKeyboardAccessoryViewManager.REACT_CLASS to
               ModuleSpec.viewManagerSpec { ExpoKeyboardAccessoryViewManager() },
           ElementBoxViewManager.REACT_CLASS to
