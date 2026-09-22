@@ -236,6 +236,15 @@ BaseViewProps::BaseViewProps(
                     sourceProps.inheritedWhiteSpace,
                     {})
               : sourceProps.inheritedWhiteSpace),
+      inheritedHugsWrappedLines(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "experimental_hugsWrappedLines",
+                    sourceProps.inheritedHugsWrappedLines,
+                    {})
+              : sourceProps.inheritedHugsWrappedLines),
       uaMarginBlockEm(convertRawProp(
           context,
           rawProps,
@@ -654,7 +663,8 @@ bool BaseViewProps::computeHasInheritedTextProps() const {
       inheritedFontStyle.has_value() || inheritedFontVariant.has_value() ||
       !std::isnan(inheritedLetterSpacing) || !std::isnan(inheritedLineHeight) ||
       inheritedTextAlign.has_value() || inheritedTextTransform.has_value() ||
-      inheritedWhiteSpace.has_value() || inheritedDynamicTypeRamp.has_value();
+      inheritedWhiteSpace.has_value() || inheritedDynamicTypeRamp.has_value() ||
+      inheritedHugsWrappedLines.has_value();
 }
 
 #define VIEW_EVENT_CASE(eventType)                      \
@@ -698,6 +708,8 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE(inheritedTextAlign, "textAlign");
     RAW_SET_PROP_SWITCH_CASE(inheritedTextTransform, "textTransform");
     RAW_SET_PROP_SWITCH_CASE(inheritedWhiteSpace, "whiteSpace");
+    RAW_SET_PROP_SWITCH_CASE(
+        inheritedHugsWrappedLines, "experimental_hugsWrappedLines");
     RAW_SET_PROP_SWITCH_CASE(inheritedDynamicTypeRamp, "dynamicTypeRamp");
     RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockEm);
     RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockRem);
@@ -1025,6 +1037,9 @@ void BaseViewProps::applyInheritedTextAttributes(
   }
   if (inheritedWhiteSpace) {
     textAttributes.whiteSpace = inheritedWhiteSpace;
+  }
+  if (inheritedHugsWrappedLines) {
+    textAttributes.hugsWrappedLines = inheritedHugsWrappedLines;
   }
 }
 

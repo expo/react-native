@@ -1172,6 +1172,30 @@ export type ____ViewStyle_InternalBase = Readonly<{
     'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',
 
   /**
+   * Whether a box whose text WRAPS shrinks to its longest line instead of
+   * standing at the width it was given.
+   *
+   * Shrink-to-fit takes `min(max-content, available)`, and max-content is the
+   * whole run on one line — so once the text wraps the box IS the available
+   * width, with whatever the last line did not use left empty inside it
+   * (css-sizing-3 §5.2.2). That is what every browser does and it is right for
+   * a paragraph in a column. It is wrong for anything shaped AROUND its text:
+   * a chat balloon at a 280.67-point limit stands 280.67 points wide with 28
+   * points of empty fill after the last word, where the platform's own balloon
+   * is 252.62 — its longest line.
+   *
+   * So: an opt-in, and inherited like `white-space` and `line-height`, because
+   * it is the same kind of property — it says how the run's lines relate to
+   * the box around them. The box is never WIDER than it would otherwise be,
+   * and the lines are the same lines: the run is measured at the full limit
+   * and reports what it used.
+   *
+   * The name says `experimental_` because CSS has no property for it —
+   * `fit-content` is the same clamp and `min-content` is the longest word.
+   */
+  experimental_hugsWrappedLines?: boolean,
+
+  /**
    * The platform's own name for this text's ROLE, from which the platform
    * supplies the font.
    *

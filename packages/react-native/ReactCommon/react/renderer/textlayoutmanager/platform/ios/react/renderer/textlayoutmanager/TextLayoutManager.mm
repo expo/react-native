@@ -108,7 +108,8 @@ TextMeasurement TextLayoutManager::measure(
            .paragraphAttributes = paragraphAttributes,
            .layoutConstraints = layoutConstraints,
            .pointScaleFactor = layoutContext.pointScaleFactor,
-           .needsFragmentRects = layoutContext.needsFragmentRects},
+           .needsFragmentRects = layoutContext.needsFragmentRects,
+           .hugsWrappedLines = layoutContext.hugsWrappedLines},
           std::move(doMeasure));
       break;
     }
