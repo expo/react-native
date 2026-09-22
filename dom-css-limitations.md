@@ -199,6 +199,27 @@ attributes to draw time.
 Unfinished rather than blocked, and the fix is upstream of this file: send the
 paragraph attributes along with the run.
 
+**`ios-only-keyboard-panel`** — `ReactCommon/.../view/ExpoKeyboardPanelShadowNode.h`
+`<native:keyboardpanel>` is iOS only. `UIResponder.inputView` has no Android
+equivalent: an IME belongs to another process there, so nothing an app owns can
+stand in the keyboard's place. The element would keep its name and its meaning
+on Android and only the construction would differ — a view positioned where the
+keyboard was, animated by the machinery `<native:keyboardaccessory>` already
+uses for its bar.
+
+A panel inside an accessory has a second wall, on iOS this time: the card cannot
+be a material. A `UIVisualEffectView` samples what is behind it *within its own
+window*, and a panel mounted in an accessory is in the keyboard's window, where
+there is nothing behind it — so the material blurs nothing and draws nothing.
+
+An earlier version of this paragraph called that window "the only window that is
+above the keys". It is not above the keys, and nothing is: `windowLevel` is
+clamped to 10000000 against the keyboard's 10000001, so a window asked for
+anything higher comes back at 10000000 and draws underneath. The measurement it
+cited — "an overlay window at level 100000000 still being behind them" — was
+measuring the clamp rather than the compositing. See
+`overlay-cannot-cover-the-keys`.
+
 **`ios-only-menu-button`** — `packages/expo-intrinsics/src/NativeMenuButton.js`
 `<native:menubutton>` is iOS only, and deliberately so: it is a
 `UIButtonConfiguration` and a `UIMenu`, and being the platform's own control
@@ -222,6 +243,34 @@ wall by construction, not a gap to schedule.
 mask rebuilt each layout. Android ignores it and the balloon is a plain rounded
 rectangle. Unlike the two above, nothing here is iOS-specific: this one is
 unfinished rather than blocked, and closing it is the same path in a `Drawable`.
+
+**`accessory-drifts-while-the-keyboard-rises`** — `React/.../KeyboardAccessory/EXPKeyboardAccessoryComponentView.mm`
+A docked bar's content slides against the keys while the keyboard comes up — 18
+points of it — and the cause is that the bar clears the home indicator by being
+TALLER, not by being placed higher.
+
+The reserve itself is modelled correctly: it is the part of the indicator's strip
+the keys have not covered yet, so it shrinks to zero over the first 34 points of
+their travel, which parks the bar's content until the keys reach it and then lets
+it ride. What defeats that is where the change lands. Each one is a constraint
+change made during UIKit's own keyboard transition, and UIKit animates the input
+view's layout as part of that transition — so the height does not track the keys
+frame by frame, it slides across the whole rise, and the content, which sits at
+the bar's top, slides with it.
+
+Measured three ways, which is what makes this a limitation rather than a guess:
+
+- height free — **18.0 points** of drift between the bar's content and a key glyph;
+- height pinned so it cannot change at all — **0.7 points**;
+- a stock UIKit accessory, docked before the keyboard and riding it up — **0.3**.
+
+`performWithoutAnimation` around the assignment, with a `layoutIfNeeded` inside
+it, gives 17.0. The animation is UIKit's and is applied above where a block of
+ours reaches.
+
+Closing it means the strip not being part of the bar's height — a different
+architecture for how a docked bar clears the indicator, since today it clears it
+by being taller and it is the tallness that cannot change quietly.
 
 **`overlay-cannot-cover-the-keys`** — `React/.../KeyboardPanel/EXPKeyboardPanelComponentView.mm`
 A panel presented as an overlay CAN cover the keyboard, and this entry used to

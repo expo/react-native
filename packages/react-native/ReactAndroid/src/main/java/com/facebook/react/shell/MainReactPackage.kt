@@ -63,6 +63,7 @@ import com.facebook.react.views.text.SelectableTextViewManager
 import com.facebook.react.views.textinput.ReactTextInputManager
 import com.facebook.react.views.unimplementedview.ReactUnimplementedViewManager
 import com.facebook.react.views.view.ElementBoxViewManager
+import com.facebook.react.views.keyboard.ExpoKeyboardAccessoryViewManager
 import com.facebook.react.views.view.ElementButtonViewManager
 import com.facebook.react.views.view.ElementControlMetricsProbe
 import com.facebook.react.views.view.ElementCheckboxViewManager
@@ -176,6 +177,7 @@ constructor(private val config: MainPackageConfig? = null) :
       // The box a block-level element generates; a plain view unless it is a link.
       ElementBoxViewManager(),
       ElementButtonViewManager(),
+      ExpoKeyboardAccessoryViewManager(),
       // `<input type="range">`: a real SeekBar, which claims its own drag inside a scroll
       // container the way the platform intends.
       ElementRangeViewManager(),
@@ -241,6 +243,8 @@ constructor(private val config: MainPackageConfig? = null) :
       ElementBoxViewManager.REACT_CLASS to ModuleSpec.viewManagerSpec { ElementBoxViewManager() },
       ElementButtonViewManager.REACT_CLASS to
           ModuleSpec.viewManagerSpec { ElementButtonViewManager() },
+      ExpoKeyboardAccessoryViewManager.REACT_CLASS to
+          ModuleSpec.viewManagerSpec { ExpoKeyboardAccessoryViewManager() },
       ElementRangeViewManager.REACT_CLASS to
           ModuleSpec.viewManagerSpec { ElementRangeViewManager() },
       ElementCheckboxViewManager.REACT_CLASS to
