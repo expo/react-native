@@ -151,6 +151,17 @@ using namespace facebook::react;
   // Default implementation does nothing.
 }
 
+- (BOOL)blocksNativeResponder
+{
+  // Default implementation always returns `NO`.
+  return NO;
+}
+
+- (void)setBlocksNativeResponder:(BOOL)blocksNativeResponder
+{
+  // Default implementation does nothing.
+}
+
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(nullable NSSet<NSString *> *)propKeys
 {
   // Default implementation does nothing.

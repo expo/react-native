@@ -126,6 +126,19 @@ typedef NS_OPTIONS(NSInteger, RNComponentViewUpdateMask) {
 - (void)setIsJSResponder:(BOOL)isJSResponder;
 
 /*
+ * Whether the JavaScript responder asked to BLOCK the native responder — the
+ * `blockNativeResponder` argument of `setJSResponder`, which is a separate
+ * question from who the responder is.
+ *
+ * A component that takes the responder is saying "route the touch to me"; only
+ * one that passes `blockNativeResponder: true` is also saying "and stop the
+ * native scroller". They were conflated, and an enclosing scroll view read the
+ * first as if it were the second — see `_shouldDisableScrollInteraction`.
+ */
+- (BOOL)blocksNativeResponder;
+- (void)setBlocksNativeResponder:(BOOL)blocksNativeResponder;
+
+/*
  * This is broken. Do not use.
  */
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(nullable NSSet<NSString *> *)props;
