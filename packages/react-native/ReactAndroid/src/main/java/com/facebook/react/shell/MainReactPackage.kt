@@ -64,6 +64,7 @@ import com.facebook.react.views.textinput.ReactTextInputManager
 import com.facebook.react.views.unimplementedview.ReactUnimplementedViewManager
 import com.facebook.react.views.view.ElementBoxViewManager
 import com.facebook.react.views.keyboard.ExpoKeyboardAccessoryViewManager
+import com.facebook.react.views.scroll.ExpoScrollViewManager
 import com.facebook.react.views.view.ElementButtonViewManager
 import com.facebook.react.views.view.ElementControlMetricsProbe
 import com.facebook.react.views.view.ElementCheckboxViewManager
@@ -172,6 +173,7 @@ constructor(private val config: MainPackageConfig? = null) :
           else ReactTextViewManager(),
           SelectableTextViewManager(),
           ReactViewManager(),
+          ExpoScrollViewManager(),
           ExpoKeyboardAccessoryViewManager(),
           // The box a block-level element generates; a plain view unless it is a link.
           ElementBoxViewManager(),
@@ -245,6 +247,8 @@ constructor(private val config: MainPackageConfig? = null) :
               },
           SelectableTextViewManager.REACT_CLASS to
               ModuleSpec.viewManagerSpec { SelectableTextViewManager() },
+          ExpoScrollViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ExpoScrollViewManager() },
           ExpoKeyboardAccessoryViewManager.REACT_CLASS to
               ModuleSpec.viewManagerSpec { ExpoKeyboardAccessoryViewManager() },
           ElementBoxViewManager.REACT_CLASS to

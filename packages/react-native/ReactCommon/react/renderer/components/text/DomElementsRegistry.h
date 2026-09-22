@@ -27,6 +27,7 @@
 #include <react/renderer/components/view/ElementTextAreaShadowNode.h>
 #include <react/renderer/components/view/ElementTextInputShadowNode.h>
 #include <react/renderer/components/view/ExpoKeyboardAccessoryShadowNode.h>
+#include <react/renderer/components/view/ExpoScrollViewShadowNode.h>
 
 #include <react/renderer/attributedstring/AttributedString.h>
 #include <react/renderer/attributedstring/AttributedStringBox.h>
@@ -158,6 +159,10 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders()
   providers.push_back(concreteComponentDescriptorProvider<ElementColorInputComponentDescriptor>());
   // `<input type="file">`.
   providers.push_back(concreteComponentDescriptorProvider<ElementFileInputComponentDescriptor>());
+  // `<native:scroll>`: a scroll view whose view layer is ours, so that it can
+  // sit on the platform's own scrolling and gesture machinery rather than
+  // beside it.
+  providers.push_back(concreteComponentDescriptorProvider<ExpoScrollViewComponentDescriptor>());
   // `<native:keyboardaccessory>`: a bar that is PART of the keyboard rather than
   // a view that follows it, so a drag begun on it drags the keyboard.
   providers.push_back(concreteComponentDescriptorProvider<ExpoKeyboardAccessoryComponentDescriptor>());
