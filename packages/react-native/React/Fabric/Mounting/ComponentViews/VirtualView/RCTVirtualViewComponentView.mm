@@ -36,6 +36,12 @@ using namespace facebook::react;
 @end
 
 @implementation RCTVirtualViewComponentView {
+  // The frame, remembered where it is set, see `-virtualViewGeometry`
+  CGRect _lastSetFrame;
+  // The parent, written in `-didMoveToSuperview`. `__unsafe_unretained`
+  // because a weak read takes a lock; it cannot dangle, since UIKit removes a
+  // view's subviews before deallocating it and the removal is written here.
+  __unsafe_unretained UIView *_lastKnownSuperview;
   id<RCTVirtualViewContainerProtocol> _parentVirtualViewContainer;
   std::optional<RCTVirtualViewMode> _mode;
   RCTVirtualViewRenderState _renderState;
@@ -50,6 +56,8 @@ using namespace facebook::react;
 {
   if ((self = [super initWithFrame:frame]) != nil) {
     _props = VirtualViewShadowNode::defaultSharedProps();
+    // `-initWithFrame:` does not go through `-setFrame:`
+    _lastSetFrame = frame;
     _renderState = RCTVirtualViewRenderStateUnknown;
     _virtualViewID = [[NSUUID UUID] UUIDString];
     _didLayout = NO;
@@ -101,6 +109,13 @@ static BOOL sIsAccessibilityUsed = NO;
   return [super accessibilityElementCount];
 }
 
+// A placeholder row has nothing for accessibility and says so; the view keeps
+// its place and size, only the tree skips it
+- (BOOL)accessibilityElementsHidden
+{
+  return _renderState == RCTVirtualViewRenderStateNone || [super accessibilityElementsHidden];
+}
+
 - (NSArray<id<UIFocusItem>> *)focusItemsInRect:(CGRect)rect
 {
   // From empirical testing, method `focusItemsInRect:` is called lazily only
@@ -144,6 +159,18 @@ static BOOL sIsAccessibilityUsed = NO;
   [[_parentVirtualViewContainer virtualViewContainerState] onChange:self];
 }
 
+// `-didMoveToWindow` is not called for a view that changes parents inside the
+// same window, and both the container and the measured parent can change then
+- (void)didMoveToSuperview
+{
+  [super didMoveToSuperview];
+  _lastKnownSuperview = self.superview;
+  _parentVirtualViewContainer = [self _getParentVirtualViewContainer];
+  if (_parentVirtualViewContainer != nil && self.window != nil && _didLayout) {
+    [self updateState];
+  }
+}
+
 - (void)didMoveToWindow
 {
   [super didMoveToWindow];
@@ -156,10 +183,60 @@ static BOOL sIsAccessibilityUsed = NO;
   }
 }
 
+// Every way a frame is set, so the remembered one cannot drift: `-setFrame:`
+// is what layout uses, and `-setBounds:` and `-setCenter:` are rare enough that
+// reading the frame back is free
+- (void)setFrame:(CGRect)frame
+{
+  [super setFrame:frame];
+  _lastSetFrame = frame;
+}
+
+- (void)setBounds:(CGRect)bounds
+{
+  [super setBounds:bounds];
+  _lastSetFrame = self.frame;
+}
+
+- (void)setCenter:(CGPoint)center
+{
+  [super setCenter:center];
+  _lastSetFrame = self.frame;
+}
+
+- (RCTVirtualViewGeometry)virtualViewGeometry
+{
+  return (RCTVirtualViewGeometry){.frame = _lastSetFrame, .superview = _lastKnownSuperview};
+}
+
+/**
+ * This view's rect in the scroll view's content coordinates, by arithmetic up
+ * the superview chain: `-convertRect:toView:` goes through `CALayer` with a
+ * lock and a matrix per view, for every registered view on every scroll event.
+ * Each step adds `frame.origin - bounds.origin`, and stopping at the scroll
+ * view leaves the rect in its bounds space. UIKit's own conversion is the
+ * fallback for a transform in the chain or a chain that does not reach the
+ * scroll view.
+ */
 - (CGRect)containerRelativeRect:(UIView *)scrollView
 {
-  // Return the view's position relative to its container (the scroll view)
-  return [self convertRect:self.bounds toView:scrollView];
+  CGRect rect = self.bounds;
+  UIView *view = self;
+  while (view != nil && view != scrollView) {
+    if (!CATransform3DIsIdentity(view.layer.transform)) {
+      return [self convertRect:self.bounds toView:scrollView];
+    }
+    const CGRect frame = view.frame;
+    const CGRect bounds = view.bounds;
+    rect.origin.x += frame.origin.x - bounds.origin.x;
+    rect.origin.y += frame.origin.y - bounds.origin.y;
+    view = view.superview;
+  }
+  if (view == nil) {
+    // Not a descendant of the scroll view, as while a view moves between parents
+    return [self convertRect:self.bounds toView:scrollView];
+  }
+  return rect;
 }
 
 - (void)onModeChange:(RCTVirtualViewMode)newMode targetRect:(CGRect)targetRect thresholdRect:(CGRect)thresholdRect
