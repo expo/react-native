@@ -385,6 +385,8 @@ const char facebook::react::ElementRangeComponentName[];
 const char facebook::react::ElementSelectComponentName[];
 const char facebook::react::ElementTextAreaComponentName[];
 const char facebook::react::ElementTextInputComponentName[];
+const char facebook::react::ExpoKeyboardAccessoryComponentName[];
+const char facebook::react::ExpoKeyboardPanelComponentName[];
 const char facebook::react::ExpoNativeButtonComponentName[];
 const char facebook::react::ExpoTopLayerComponentName[];
 const char facebook::react::InlineContentComponentName[];
@@ -461,6 +463,10 @@ using facebook::react::EventListener = std::function<bool(const facebook::react:
 using facebook::react::EventPipe = std::function<void(facebook::jsi::Runtime& runtime, facebook::react::EventTarget* eventTarget, const std::string& type, facebook::react::ReactEventPriority priority, const facebook::react::EventPayload& payload, facebook::react::HighResTimeStamp eventTimestamp)>;
 using facebook::react::EventPipeConclusion = std::function<void(facebook::jsi::Runtime& runtime)>;
 using facebook::react::EventTag = unsigned int;
+using facebook::react::ExpoKeyboardAccessoryComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoKeyboardAccessoryShadowNode>;
+using facebook::react::ExpoKeyboardAccessoryShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoKeyboardAccessoryComponentName, facebook::react::ExpoKeyboardAccessoryProps, facebook::react::ExpoKeyboardAccessoryEventEmitter>;
+using facebook::react::ExpoKeyboardPanelComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoKeyboardPanelShadowNode>;
+using facebook::react::ExpoKeyboardPanelShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoKeyboardPanelComponentName, facebook::react::ExpoKeyboardPanelProps, facebook::react::ViewEventEmitter>;
 using facebook::react::ExpoNativeButtonComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoNativeButtonShadowNode>;
 using facebook::react::ExpoNativeButtonShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoNativeButtonComponentName, facebook::react::ExpoNativeButtonProps, facebook::react::ExpoNativeButtonEventEmitter>;
 using facebook::react::ExpoTopLayerComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoTopLayerShadowNode>;
@@ -1805,6 +1811,26 @@ class facebook::react::EventTarget {
   public void release(facebook::jsi::Runtime& runtime);
   public void retain(facebook::jsi::Runtime& runtime);
   public void setEnabled(bool enabled);
+}
+
+class facebook::react::ExpoKeyboardAccessoryEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onDockChange(const facebook::react::ExpoKeyboardDockEvent& event) const;
+}
+
+class facebook::react::ExpoKeyboardAccessoryProps : public facebook::react::HostPlatformViewProps {
+  public ExpoKeyboardAccessoryProps() = default;
+  public ExpoKeyboardAccessoryProps(const facebook::react::PropsParserContext& context, const facebook::react::ExpoKeyboardAccessoryProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool automaticInsets;
+  public facebook::react::Float appleVisualEffectFade;
+  public facebook::react::Float appleVisualEffectOpacity;
+  public std::string appleVisualEffect;
+  public std::string scope;
+}
+
+class facebook::react::ExpoKeyboardPanelProps : public facebook::react::HostPlatformViewProps {
+  public ExpoKeyboardPanelProps() = default;
+  public ExpoKeyboardPanelProps(const facebook::react::PropsParserContext& context, const facebook::react::ExpoKeyboardPanelProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool visible;
 }
 
 class facebook::react::ExpoNativeButtonEventEmitter : public facebook::react::BaseViewEventEmitter {
@@ -4545,6 +4571,18 @@ struct facebook::react::EventPayload {
   public virtual facebook::react::EventPayloadType getType() const = 0;
   public virtual std::optional<double> extractValue(const std::vector<std::string>&) const;
   public virtual ~EventPayload() = default;
+}
+
+struct facebook::react::ExpoKeyboardDockEvent : public facebook::react::EventPayload {
+  public ExpoKeyboardDockEvent() = default;
+  public facebook::react::Float docked;
+  public facebook::react::Float height;
+  public facebook::react::Float reserve;
+  public facebook::react::Float top;
+  public folly::dynamic asDynamic() const;
+  public virtual facebook::jsi::Value asJSIValue(facebook::jsi::Runtime& runtime) const override;
+  public virtual facebook::react::EventPayloadType getType() const override;
+  public virtual std::optional<double> extractValue(const std::vector<std::string>&) const override;
 }
 
 struct facebook::react::FabricUIManagerMeasureArgs {
