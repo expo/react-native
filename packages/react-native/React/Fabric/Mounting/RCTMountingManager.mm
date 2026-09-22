@@ -33,6 +33,7 @@
 #import <React/RCTComponentViewRegistry.h>
 #import <React/RCTConversions.h>
 #import <React/RCTMountingTransactionObserverCoordinator.h>
+#import <React/RCTScrollViewComponentView.h>
 #import <React/RCTViewComponentView.h>
 
 using namespace facebook::react;
@@ -556,7 +557,28 @@ static void RCTPerformMountInstructions(
   ReactTag reactTag = shadowView.tag;
   RCTExecuteOnMainQueue(^{
     UIView<RCTComponentViewProtocol> *componentView = [self->_componentViewRegistry findComponentViewWithTag:reactTag];
+    const BOOL wasBlocking = componentView.blocksNativeResponder;
     [componentView setIsJSResponder:isJSResponder];
+    // "Is the responder" and "has blocked the scroller" are different
+    // questions and JavaScript answers both: `Pressability` passes `false`
+    // unless a component asks otherwise, and Android honours it
+    // (`JSResponderHandler` calls `requestDisallowInterceptTouchEvent` only
+    // when a blocking parent is given)
+    [componentView setBlocksNativeResponder:isJSResponder && blockNativeResponder];
+    // A responder that blocks the native one keeps the scroll views around it
+    // from scrolling too, as Android's `JSResponderHandler` does by disallowing
+    // its parents' interception: a gesture JavaScript claims on content inside a
+    // scroll view (a bottom sheet's pull at the top of its body) otherwise moved
+    // the content and the sheet at once. Only the view that blocked lifts it, so
+    // a press released elsewhere meanwhile does not.
+    const BOOL blocks = componentView.blocksNativeResponder;
+    if (blocks != wasBlocking) {
+      for (UIView *ancestor = componentView.superview; ancestor != nil; ancestor = ancestor.superview) {
+        if ([ancestor isKindOfClass:[RCTScrollViewComponentView class]]) {
+          ((RCTScrollViewComponentView *)ancestor).scrollingBlockedByDescendant = blocks;
+        }
+      }
+    }
   });
 }
 

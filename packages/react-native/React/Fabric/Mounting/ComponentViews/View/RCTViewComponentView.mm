@@ -192,6 +192,7 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   NSMutableArray<CALayer *> *_backgroundImageLayers;
   BOOL _needsInvalidateLayer;
   BOOL _isJSResponder;
+  BOOL _blocksNativeResponder;
   BOOL _removeClippedSubviews;
   // Set by the recycle pixel clear, consumed by the next -updateProps:'s
   // unconditional pixel restore, asserted spent in -finalizeUpdates. See the
@@ -1597,6 +1598,16 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   _isJSResponder = isJSResponder;
 }
 
+- (BOOL)blocksNativeResponder
+{
+  return _blocksNativeResponder;
+}
+
+- (void)setBlocksNativeResponder:(BOOL)blocksNativeResponder
+{
+  _blocksNativeResponder = blocksNativeResponder;
+}
+
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask
 {
   [super finalizeUpdates:updateMask];
@@ -1686,8 +1697,8 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN = nil;
   _eventEmitter.reset();
   _isJSResponder = NO;
-  // Chrome that asked for this is gone by now, and the view is about to become
-  // something with no list behind it.
+  _blocksNativeResponder = NO;
+  // The chrome that asked for this is gone by now
   _passesTouchesToHostChrome = NO;
   _reactSubviews = [NSMutableArray new];
   _layoutMetrics = EmptyLayoutMetrics;
@@ -1732,7 +1743,7 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   _backgroundColorLayer = nil;
   // The layer survives recycling, so its range goes back with the memo
   if (_layerWantsExtendedDynamicRange) {
-    [self _updateDynamicRangeOfLayer:self.layer withBackgroundColor:SharedColor{} borderColor:SharedColor{}];
+    [self _updateDynamicRangeOfLayer:self.layer withBackgroundColor:SharedColor {} borderColor:SharedColor{}];
   }
   _layerWantsExtendedDynamicRange = NO;
   _stateDynamicRangeLimit = std::nullopt;
@@ -2430,8 +2441,8 @@ static void EXPRepositionFixedBackgroundsIn(UIView *view)
   // a border drawn per edge goes through an 8-bit image and stays SDR
   // DOM-CSS-LIMITATION(hdr-drawn-borders-draw-at-sdr-white-on-ios)
   [self _updateDynamicRangeOfLayer:layer
-             withBackgroundColor:_props->backgroundColor
-                     borderColor:useCoreAnimationBorderRendering ? borderMetrics.borderColors.left : SharedColor{}];
+               withBackgroundColor:_props->backgroundColor
+                       borderColor:useCoreAnimationBorderRendering ? borderMetrics.borderColors.left : SharedColor{}];
 
   // borders
   if (useCoreAnimationBorderRendering) {
