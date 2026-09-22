@@ -6,6 +6,7 @@
  */
 
 #import "RCTViewComponentView.h"
+#import <React/EXPKeyboardTrace.h>
 #import "EXPMaterialSurface.h"
 
 #if TARGET_OS_IOS
@@ -1423,6 +1424,15 @@ static CGRect RCTUntransformedFrame(UIView *view)
 
 - (void)setIsJSResponder:(BOOL)isJSResponder
 {
+  /*
+   * Traced on every grant and release: this flag stops any scroll view below
+   * this view from scrolling (`_shouldDisableScrollInteraction`), and an
+   * unreleased grant leaves the list dead with nothing on screen to say why.
+   */
+  if (EXPKeyboardTrace.touchTracing && _isJSResponder != isJSResponder) {
+    [EXPKeyboardTrace
+        record:@"JS responder %@ %@", isJSResponder ? @"granted to" : @"released by", NSStringFromClass(self.class)];
+  }
   _isJSResponder = isJSResponder;
 }
 

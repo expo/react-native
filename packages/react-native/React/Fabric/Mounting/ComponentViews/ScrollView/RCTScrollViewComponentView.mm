@@ -6,6 +6,7 @@
  */
 
 #import "RCTScrollViewComponentView.h"
+#import <React/EXPKeyboardTrace.h>
 
 #import <React/EXPElementDragOwnership.h>
 #import <React/RCTAssert.h>
@@ -821,6 +822,18 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
 {
+  /*
+   * A finger that fails to scroll is a pan that never reached this method; the
+   * touch lines in `RCTSurfaceTouchHandler` say what the finger did, this says
+   * whether UIKit handed the gesture over. See `EXPKeyboardTrace.touchTracing`.
+   */
+  if (EXPKeyboardTrace.touchTracing) {
+    [EXPKeyboardTrace record:@"scroll drag began at=%.0f delays=%d panEnabled=%d scrollEnabled=%d",
+                             scrollView.contentOffset.y,
+                             scrollView.delaysContentTouches,
+                             scrollView.panGestureRecognizer.isEnabled,
+                             scrollView.isScrollEnabled];
+  }
   [self _forceDispatchNextScrollEvent];
 
   if (!_eventEmitter) {
