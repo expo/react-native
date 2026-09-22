@@ -6,6 +6,7 @@
  */
 
 #import "RCTScrollViewComponentView.h"
+#import <React/EXPKeyboardTrace.h>
 
 #import <React/EXPElementDragOwnership.h>
 #import <React/RCTAssert.h>
@@ -597,6 +598,22 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
     if ([ancestorView respondsToSelector:@selector(isJSResponder)]) {
       BOOL isJSResponder = ((UIView<RCTComponentViewProtocol> *)ancestorView).isJSResponder;
       if (isJSResponder) {
+        /*
+         * An ANCESTOR of this scroll view holds the JavaScript responder, so
+         * this scroll view will not scroll — for as long as that stays true.
+         *
+         * Named, because the walk is upward and the view that refused is never
+         * the one under the finger. And worth suspecting when scrolling is dead
+         * with no other explanation: the flag is set by
+         * `RCTMountingManager setIsJSResponder:blockNativeResponder:` which
+         * IGNORES its `blockNativeResponder` argument, so a component that asked
+         * only to be the responder — without asking to block anything native —
+         * stops this scroll view anyway.
+         */
+        if (EXPKeyboardTrace.touchTracing) {
+          [EXPKeyboardTrace
+              record:@"scroll disabled: %@ holds the JS responder", NSStringFromClass(ancestorView.class)];
+        }
         return YES;
       }
     }
@@ -772,12 +789,27 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
     for (UIView *candidate = view; candidate != nil && candidate != self; candidate = candidate.superview) {
       if ([candidate conformsToProtocol:@protocol(EXPElementDragOwnership)] &&
           [(id<EXPElementDragOwnership>)candidate elementOwnsDragGesture]) {
+        /*
+         * `NO` here means the scroll view may not cancel the content view's touches,
+         * so it does not scroll for the whole gesture; the owner is named because the
+         * view under the finger is usually not the one that refused.
+         */
+        if (EXPKeyboardTrace.touchTracing) {
+          [EXPKeyboardTrace record:@"scroll will not cancel: %@ owns the drag (touched %@)",
+                                   NSStringFromClass(candidate.class),
+                                   NSStringFromClass(view.class)];
+        }
         return NO;
       }
     }
   }
 
-  return ![self _shouldDisableScrollInteraction];
+  const BOOL cancels = ![self _shouldDisableScrollInteraction];
+  if (EXPKeyboardTrace.touchTracing && !cancels) {
+    [EXPKeyboardTrace
+        record:@"scroll will not cancel: interaction disabled (touched %@)", NSStringFromClass(view.class)];
+  }
+  return cancels;
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
@@ -823,6 +855,18 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
 {
+  /*
+   * A finger that fails to scroll is a pan that never reached this method; the
+   * touch lines in `RCTSurfaceTouchHandler` say what the finger did, this says
+   * whether UIKit handed the gesture over. See `EXPKeyboardTrace.touchTracing`.
+   */
+  if (EXPKeyboardTrace.touchTracing) {
+    [EXPKeyboardTrace record:@"scroll drag began at=%.0f delays=%d panEnabled=%d scrollEnabled=%d",
+                             scrollView.contentOffset.y,
+                             scrollView.delaysContentTouches,
+                             scrollView.panGestureRecognizer.isEnabled,
+                             scrollView.isScrollEnabled];
+  }
   [self _forceDispatchNextScrollEvent];
 
   if (!_eventEmitter) {
