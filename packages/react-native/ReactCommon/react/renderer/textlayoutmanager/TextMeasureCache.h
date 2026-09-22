@@ -97,6 +97,9 @@ class TextMeasureCacheKey final {
   // both ways ever occupies two entries, which is a paragraph with an inline
   // element in it.
   bool needsFragmentRects{false};
+  // Whether the entry's width is the run's longest line or the width it was
+  // given (`experimental_hugsWrappedLines`): the same layout, a different size
+  bool hugsWrappedLines{false};
 };
 
 // The Key type that is used for Line Measure Cache.
@@ -319,7 +322,8 @@ inline bool operator==(const TextMeasureCacheKey &lhs, const TextMeasureCacheKey
 {
   return areAttributedStringsEquivalentLayoutWise(lhs.attributedString, rhs.attributedString) &&
       lhs.paragraphAttributes == rhs.paragraphAttributes && lhs.layoutConstraints == rhs.layoutConstraints &&
-      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor) && lhs.needsFragmentRects == rhs.needsFragmentRects;
+      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor) && lhs.needsFragmentRects == rhs.needsFragmentRects &&
+      lhs.hugsWrappedLines == rhs.hugsWrappedLines;
 }
 
 inline bool operator==(const LineMeasureCacheKey &lhs, const LineMeasureCacheKey &rhs)
@@ -348,7 +352,8 @@ struct hash<facebook::react::TextMeasureCacheKey> {
         key.paragraphAttributes,
         key.layoutConstraints,
         key.pointScaleFactor,
-        key.needsFragmentRects);
+        key.needsFragmentRects,
+        key.hugsWrappedLines);
   }
 };
 
