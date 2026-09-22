@@ -115,7 +115,7 @@ all text at once is the user's own text-size setting, which arrives as
 `fontSizeMultiplier` and scales resolved sizes after the fact rather than
 through this base.
 
-
+**`no-box-decoration-break-clone`** — `.../ios/.../RCTTextLayoutManager.mm`
 A wrapped inline box paints with `box-decoration-break: slice` (the CSS
 default) — leading edge on the first fragment, trailing on the last. `clone`,
 which repeats both edges on every fragment, is not implemented.
@@ -569,6 +569,7 @@ rather than going quiet.
 - `grid-min-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `hugs-wrapped-lines` — deviation, `ReactCommon/react/renderer/components/view/BaseViewProps.h`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
@@ -591,6 +592,7 @@ rather than going quiet.
 - `radio-card-needs-a-contrasting-page` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPRadioRunList.h`
 - `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`
+- `rtl-inline-run-not-reordered` — limitation, `ReactCommon/react/renderer/components/text/InlineContentShadowNode.cpp`
 - `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
 - `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`

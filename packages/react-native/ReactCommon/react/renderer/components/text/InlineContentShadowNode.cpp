@@ -1038,13 +1038,13 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
   // the text layout placed shifts down by that reserve.
   const auto placementShiftInk = attributedString.baselineShiftInkOverflow();
   /*
-   * Limitation: the frames come from the platform text layout manager, which
-   * places the attachment characters in logical order. Under
-   * `direction: 'rtl'` the run is right-aligned but its boxes are not
-   * reversed, where css-writing-modes-4 §2 puts the first box against the
-   * right edge and the next one to its left. In a 300pt container with 40 and
-   * 60pt boxes, Safari places them at 260 and 200 and both platforms at 200
-   * and 240.
+   * DOM-CSS-LIMITATION(rtl-inline-run-not-reordered): the frames come from the
+   * platform text layout manager, which places the attachment characters in
+   * logical order. Under `direction: 'rtl'` the run is right-aligned but its
+   * boxes are not reversed, where css-writing-modes-4 §2 puts the first box
+   * against the right edge and the next one to its left. In a 300pt container
+   * with 40 and 60pt boxes, Safari places them at 260 and 200 and both
+   * platforms at 200 and 240.
    *
    * The reorder belongs to the platform engine and would follow from setting
    * the paragraph's base writing direction on the attributed string. That is
@@ -1249,6 +1249,9 @@ Size InlineContentShadowNode::measureContent(
       // lay out variant strings that the mount-side content check would reject
       // anyway.
       .runTag = getTag(),
+      // Inherited from the box's owner, so the element that wants its balloon
+      // to hug says so in its own style.
+      .hugsWrappedLines = textAttributes.hugsWrappedLines.value_or(false),
   };
 
   // Ask for the per-fragment rects here when there is something to stamp. The

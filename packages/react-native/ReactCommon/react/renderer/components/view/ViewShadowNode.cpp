@@ -279,7 +279,7 @@ static_assert(
     sizeof(TextAttributes) <= 376,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
-    sizeof(ViewProps) <= 2192,
+    sizeof(ViewProps) <= 2200,
     "ViewProps grew; every mounted View holds one, plus one per pending "
     "generation during commits");
 #endif
@@ -696,7 +696,8 @@ void AbstractViewShadowNode<
     concreteComponentName,
     ViewPropsT,
     ViewEventEmitterT>::
-    setInheritedCascade(const std::shared_ptr<const TextAttributes>& /*cascade*/) {
+    setInheritedCascade(
+        const std::shared_ptr<const TextAttributes>& /*cascade*/) {
   // `layout` is skipped for a node whose own layout didn't change, so a
   // container's new limit has to reach the color here. `isPublished()`, not
   // the seal: a release build has no seal.
@@ -709,10 +710,9 @@ template <
     const char* concreteComponentName,
     typename ViewPropsT,
     typename ViewEventEmitterT>
-std::optional<DynamicRangeLimit> AbstractViewShadowNode<
-    concreteComponentName,
-    ViewPropsT,
-    ViewEventEmitterT>::effectiveDynamicRangeLimit() const {
+std::optional<DynamicRangeLimit>
+AbstractViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT>::
+    effectiveDynamicRangeLimit() const {
   if (!this->getTraits().check(ShadowNodeTraits::Trait::TextCascadeConsumer)) {
     return std::nullopt;
   }
@@ -753,8 +753,7 @@ void AbstractViewShadowNode<
     return;
   }
   this->ensureUnsealed();
-  this->setStateData(
-      ViewState(current.textRuns, current.layoutManager, limit));
+  this->setStateData(ViewState(current.textRuns, current.layoutManager, limit));
 }
 
 namespace {
@@ -1052,12 +1051,12 @@ void AbstractViewShadowNode<
     //
     // Two kinds of inline box flow their contents into this run, and both are
     // descended into: an inline *text* element (`<a>`, `<span>`, `<b>`,
-    // `<label>`, a nested `<Text>`), and a span-like `display: inline` Yoga box.
-    // `InlineElementMetrics` decides what is stampable with the same union.
-    // Anything that is itself an atomic inline (a replaced element, or a box
-    // that establishes its own formatting context) is a leaf. `<img>` carries
-    // `InlineText` as well, so it is the `InlineReplaced` check rather than the
-    // trait that keeps it a leaf.
+    // `<label>`, a nested `<Text>`), and a span-like `display: inline` Yoga
+    // box. `InlineElementMetrics` decides what is stampable with the same
+    // union. Anything that is itself an atomic inline (a replaced element, or a
+    // box that establishes its own formatting context) is a leaf. `<img>`
+    // carries `InlineText` as well, so it is the `InlineReplaced` check rather
+    // than the trait that keeps it a leaf.
     //
     // An inline box mounts as a view at the frame stamped on it, so a
     // candidate inside one is placed relative to that frame: `parentOrigin` is
@@ -1076,7 +1075,8 @@ void AbstractViewShadowNode<
         YogaLayoutableShadowNode::asYogaLayoutable(*box);
     const auto* storedCascade =
         layoutableBox != nullptr ? layoutableBox->getStoredCascade() : nullptr;
-    const auto boxCascade = storedCascade != nullptr && *storedCascade != nullptr
+    const auto boxCascade =
+        storedCascade != nullptr && *storedCascade != nullptr
         ? *storedCascade
         : YogaLayoutableShadowNode::defaultCascadeTextAttributes();
     const auto flowsIntoThisRun = [](const ShadowNode& node) {
