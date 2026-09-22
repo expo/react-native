@@ -385,6 +385,7 @@ const char facebook::react::ElementRangeComponentName[];
 const char facebook::react::ElementSelectComponentName[];
 const char facebook::react::ElementTextAreaComponentName[];
 const char facebook::react::ElementTextInputComponentName[];
+const char facebook::react::ExpoChatBubbleComponentName[];
 const char facebook::react::ExpoKeyboardAccessoryComponentName[];
 const char facebook::react::ExpoKeyboardPanelComponentName[];
 const char facebook::react::ExpoNativeButtonComponentName[];
@@ -398,6 +399,8 @@ const char facebook::react::ViewComponentName[];
 const char* facebook::react::currentConvertedPropName;
 const facebook::react::EventTag facebook::react::EMPTY_EVENT_TAG;
 constexpr auto facebook::react::kEnvironmentTargets;
+constexpr facebook::react::Float facebook::react::kExpoChatBubbleRadius;
+constexpr facebook::react::Float facebook::react::kExpoChatBubbleTailDrop;
 constexpr facebook::react::ReactNativeVersionType facebook::react::ReactNativeVersion;
 constexpr facebook::react::Tag facebook::react::kNoTag;
 constexpr facebook::react::colorspace::Matrix3 facebook::react::kXYZD65ToLinearRec2020;
@@ -465,6 +468,8 @@ using facebook::react::EventListener = std::function<bool(const facebook::react:
 using facebook::react::EventPipe = std::function<void(facebook::jsi::Runtime& runtime, facebook::react::EventTarget* eventTarget, const std::string& type, facebook::react::ReactEventPriority priority, const facebook::react::EventPayload& payload, facebook::react::HighResTimeStamp eventTimestamp)>;
 using facebook::react::EventPipeConclusion = std::function<void(facebook::jsi::Runtime& runtime)>;
 using facebook::react::EventTag = unsigned int;
+using facebook::react::ExpoChatBubbleComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoChatBubbleShadowNode>;
+using facebook::react::ExpoChatBubbleShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoChatBubbleComponentName, facebook::react::ExpoChatBubbleProps, facebook::react::ViewEventEmitter>;
 using facebook::react::ExpoKeyboardAccessoryComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoKeyboardAccessoryShadowNode>;
 using facebook::react::ExpoKeyboardAccessoryShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoKeyboardAccessoryComponentName, facebook::react::ExpoKeyboardAccessoryProps, facebook::react::ExpoKeyboardAccessoryEventEmitter>;
 using facebook::react::ExpoKeyboardPanelComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoKeyboardPanelShadowNode>;
@@ -1823,6 +1828,14 @@ class facebook::react::EventTarget {
   public void release(facebook::jsi::Runtime& runtime);
   public void retain(facebook::jsi::Runtime& runtime);
   public void setEnabled(bool enabled);
+}
+
+class facebook::react::ExpoChatBubbleProps : public facebook::react::HostPlatformViewProps {
+  public ExpoChatBubbleProps() = default;
+  public ExpoChatBubbleProps(const facebook::react::PropsParserContext& context, const facebook::react::ExpoChatBubbleProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public facebook::react::Float bubbleRadius;
+  public facebook::react::Float tailBasePadding;
+  public std::string tail;
 }
 
 class facebook::react::ExpoKeyboardAccessoryEventEmitter : public facebook::react::BaseViewEventEmitter {
