@@ -1,0 +1,35 @@
+# UI tests with no host app. They launch the installed app by bundle id
+# (`DemoCase.bundleID`), so they test whatever build is on the simulator.
+#
+# Generate and run:
+#
+#     cd packages/chat-demo/ios/uitests && xcodegen generate
+#     xcodebuild test -project ChatDemoUITests.xcodeproj \
+#       -scheme ChatDemoUITests -destination "id=<simulator udid>" \
+#       -derivedDataPath /tmp/kbdemo-uitests CODE_SIGNING_ALLOWED=NO
+#
+# The app must already be installed and Metro running, or every test fails.
+name: ChatDemoUITests
+options:
+  bundleIdPrefix: dev.expo
+  deploymentTarget:
+    iOS: '15.1'
+targets:
+  ChatDemoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.expo.frontierdemo.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: '5.0'
+        CODE_SIGNING_ALLOWED: NO
+        TARGETED_DEVICE_FAMILY: '1,2'
+schemes:
+  ChatDemoUITests:
+    build:
+      targets:
+        ChatDemoUITests: [test]
+    test:
+      targets: [ChatDemoUITests]
