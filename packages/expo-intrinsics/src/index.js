@@ -54,6 +54,7 @@ import {LIST_TAGS, makeList} from './List';
 import NativeKeyboardAccessory from './NativeKeyboardAccessory';
 import NativeMenuButton from './NativeMenuButton';
 import NativeSafeArea from './NativeSafeArea';
+import NativeScroll from './NativeScroll';
 import Picture from './Picture';
 import Quote from './Quote';
 import Select from './Select';
@@ -1012,6 +1013,56 @@ registerFrameworkComponent('select', Select);
 // still `resolveUIViewClassName`'s decision. See Input.js.
 registerFrameworkComponent('input', Input);
 
+/*
+ * The host element `<native:scroll>` renders.
+ *
+ * Registered under its own name because `native:scroll` itself is a *component*
+ * (NativeScroll.js): it wraps its children in the one content container a
+ * scrolling container has, which is a JavaScript job.
+ *
+ * The prop surface is small on purpose. Every entry is either something only the
+ * author can know (`contentInset`) or a way to switch off something that is on
+ * by default — there is no prop here whose job is to turn on correct behaviour.
+ */
+registerFrameworkElement('native-scroll', () =>
+  createViewConfig({
+    validAttributes: {
+      scrollEnabled: true,
+      showsScrollIndicator: true,
+      bounces: true,
+      contentInset: true,
+      automaticInsets: true,
+      avoidsKeyboard: true,
+      keyboardDismissMode: true,
+      contentAnchor: true,
+      edgeEffects: true,
+      // Not a prop: the two commands the element answers, declared so the view
+      // config knows the element has them.
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {
+      topScroll: {registrationName: 'onScroll'},
+      topScrollBeginDrag: {registrationName: 'onScrollBeginDrag'},
+      topScrollEndDrag: {registrationName: 'onScrollEndDrag'},
+      topMomentumScrollBegin: {registrationName: 'onMomentumScrollBegin'},
+      topMomentumScrollEnd: {registrationName: 'onMomentumScrollEnd'},
+      // Fires when nothing has scrolled, which is the common case: a keyboard
+      // opening under a short list moves no content but changes the insets.
+      topInsetChange: {registrationName: 'onInsetChange'},
+    },
+    uiViewClassName: 'native-scroll',
+    uaStyle: {
+      // Fills what is left of its container, which is what a scroll view is for.
+      // An author style still wins, so a fixed-height one is a height away.
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 0,
+      // Its whole purpose: content larger than the box, clipped to the box.
+      overflow: 'hidden',
+    },
+  }),
+);
+
 registerFrameworkElement('native-keyboardaccessory', () =>
   createViewConfig({
     // `scope`: "screen" (the default) or "app". Declared here or it is dropped
@@ -1125,6 +1176,16 @@ registerFrameworkElement('native-menubutton', () =>
  * See the component.
  */
 defineReactComponent('native', 'safearea', NativeSafeArea);
+
+/*
+ * `<native:scroll>`, the scroll view an app should reach for.
+ *
+ * Registered as a namespaced element rather than a bare tag because it is not an
+ * HTML element and should not pretend to be one: there is no `<scroll>` in the
+ * DOM, and the namespace says plainly that this is a platform element rather
+ * than a web one.
+ */
+defineReactComponent('native', 'scroll', NativeScroll);
 
 /*
  * `<native:keyboardaccessory>`, the bar that rides the keyboard. One word rather

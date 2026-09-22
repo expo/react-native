@@ -21,6 +21,7 @@
 #include <react/renderer/components/view/ElementColorInputShadowNode.h>
 #include <react/renderer/components/view/ElementDateInputShadowNode.h>
 #include <react/renderer/components/view/ElementFileInputShadowNode.h>
+#include <react/renderer/components/view/ExpoScrollViewShadowNode.h>
 #include <react/renderer/components/view/ExpoKeyboardAccessoryShadowNode.h>
 #include <react/renderer/components/view/ElementProgressShadowNode.h>
 #include <react/renderer/components/view/ElementRadioShadowNode.h>
@@ -170,6 +171,11 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders() {
   // `<input type="file">`.
   providers.push_back(
       concreteComponentDescriptorProvider<ElementFileInputComponentDescriptor>());
+  // `<native:scroll>`: a scroll view whose view layer is ours, so that it can
+  // sit on the platform's own scrolling and gesture machinery rather than
+  // beside it.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ExpoScrollViewComponentDescriptor>());
   // `<native:keyboardaccessory>`: a bar that is PART of the keyboard rather than
   // a view that follows it, so a drag begun on it drags the keyboard.
   providers.push_back(
