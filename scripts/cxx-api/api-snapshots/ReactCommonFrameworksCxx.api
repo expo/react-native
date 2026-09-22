@@ -1058,6 +1058,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::UserSelect userSelect;
   public facebook::react::ViewEvents events;
   public static facebook::react::Transform resolveTransform(const facebook::react::Size& frameSize, const facebook::react::Transform& transform, const facebook::react::TransformOrigin& transformOrigin);
+  public std::optional<bool> inheritedHugsWrappedLines;
   public std::optional<facebook::react::DynamicRangeLimit> inheritedDynamicRangeLimit;
   public std::optional<facebook::react::DynamicTypeRamp> inheritedDynamicTypeRamp;
   public std::optional<facebook::react::FontStyle> inheritedFontStyle;
@@ -3238,6 +3239,7 @@ class facebook::react::TextAttributes : public facebook::react::DebugStringConve
   public static facebook::react::TextAttributes defaultTextAttributes();
   public static std::optional<Float> resolveFontSize(Float declaredFontSize, Float declaredFontSizeEm, Float declaredFontSizeRem, Float userAgentFontSizeEm, bool platformSuppliesSize, Float inheritedFontSize);
   public std::optional<bool> allowFontScaling;
+  public std::optional<bool> hugsWrappedLines;
   public std::optional<bool> isHighlighted;
   public std::optional<bool> isPressable;
   public std::optional<facebook::react::AccessibilityRole> accessibilityRole;
@@ -3307,6 +3309,7 @@ class facebook::react::TextInputState {
 
 class facebook::react::TextMeasureCacheKey {
   public Float pointScaleFactor;
+  public bool hugsWrappedLines;
   public bool needsFragmentRects;
   public facebook::react::AttributedString attributedString;
   public facebook::react::LayoutConstraints layoutConstraints;
@@ -6171,6 +6174,7 @@ struct facebook::react::TextEffectInfo {
 
 struct facebook::react::TextLayoutContext {
   public Float pointScaleFactor;
+  public bool hugsWrappedLines;
   public bool needsFragmentRects;
   public bool operator==(const facebook::react::TextLayoutContext& rhs) const = default;
   public facebook::react::SurfaceId surfaceId;

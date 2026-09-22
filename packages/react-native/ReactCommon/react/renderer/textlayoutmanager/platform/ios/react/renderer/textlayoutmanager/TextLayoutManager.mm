@@ -111,7 +111,8 @@ TextMeasurement TextLayoutManager::measure(
            .paragraphAttributes = paragraphAttributes,
            .layoutConstraints = layoutConstraints,
            .pointScaleFactor = layoutContext.pointScaleFactor,
-           .needsFragmentRects = layoutContext.needsFragmentRects},
+           .needsFragmentRects = layoutContext.needsFragmentRects,
+           .hugsWrappedLines = layoutContext.hugsWrappedLines},
           std::move(doMeasure));
 
       // TODO(D63303709): We compensate for the placeholder character
