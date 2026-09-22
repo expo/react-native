@@ -126,6 +126,8 @@ RCTSendScrollEventForNativeAnimations_DEPRECATED(UIScrollView *scrollView, NSInt
   BOOL _avoidAdjustmentForMaintainVisibleContentPosition;
 
   RCTVirtualViewContainerState *_virtualViewContainerState;
+
+  BOOL _scrollingBlockedByDescendant;
 }
 
 + (RCTScrollViewComponentView *_Nullable)findScrollViewComponentViewForView:(UIView *)view
@@ -595,24 +597,25 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
   UIView *ancestorView = self.superview;
 
   while (ancestorView) {
-    if ([ancestorView respondsToSelector:@selector(isJSResponder)]) {
-      BOOL isJSResponder = ((UIView<RCTComponentViewProtocol> *)ancestorView).isJSResponder;
-      if (isJSResponder) {
+    if ([ancestorView respondsToSelector:@selector(blocksNativeResponder)]) {
+      /*
+       * The question is whether an ancestor asked to block the native responder,
+       * not whether it is the JavaScript responder: every `Pressable` takes the
+       * responder with `blockNativeResponder: false`, and a scroll view that cannot
+       * cancel its content view's touches does not scroll. Android's
+       * `JSResponderHandler` makes the same distinction.
+       */
+      BOOL blocksNativeResponder = ((UIView<RCTComponentViewProtocol> *)ancestorView).blocksNativeResponder;
+      if (blocksNativeResponder) {
         /*
-         * An ANCESTOR of this scroll view holds the JavaScript responder, so
-         * this scroll view will not scroll — for as long as that stays true.
-         *
-         * Named, because the walk is upward and the view that refused is never
-         * the one under the finger. And worth suspecting when scrolling is dead
-         * with no other explanation: the flag is set by
-         * `RCTMountingManager setIsJSResponder:blockNativeResponder:` which
-         * IGNORES its `blockNativeResponder` argument, so a component that asked
-         * only to be the responder — without asking to block anything native —
-         * stops this scroll view anyway.
+         * An ancestor of this scroll view holds the JavaScript responder and blocks
+         * the native one, so this scroll view will not scroll while that holds. Named
+         * because the walk is upward: the view that refused is never the one under the
+         * finger.
          */
         if (EXPKeyboardTrace.touchTracing) {
           [EXPKeyboardTrace
-              record:@"scroll disabled: %@ holds the JS responder", NSStringFromClass(ancestorView.class)];
+              record:@"scroll disabled: %@ asked to block the native responder", NSStringFromClass(ancestorView.class)];
         }
         return YES;
       }
@@ -749,6 +752,40 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
   _firstVisibleView = nil;
   _firstVisibleViewTag = 0;
   _virtualViewContainerState = nil;
+  _scrollingBlockedByDescendant = NO;
+}
+
+- (BOOL)scrollingBlockedByDescendant
+{
+  return _scrollingBlockedByDescendant;
+}
+
+/*
+ * JavaScript claims a gesture asynchronously: a bottom sheet decides that a
+ * pull on its content at the top is the sheet's when the first `touchmove`
+ * reaches it, by which time the pan has begun and the content is following
+ * the finger. A drag under way stops at an offset inside the content, so a
+ * pull that had started to rubber-band settles back without a bounce, and the
+ * pan is cancelled, which keeps it from beginning again for the same touches.
+ */
+- (void)setScrollingBlockedByDescendant:(BOOL)blocked
+{
+  _scrollingBlockedByDescendant = blocked;
+  if (!blocked || !_scrollView.isTracking) {
+    return;
+  }
+  const UIEdgeInsets insets = _scrollView.adjustedContentInset;
+  const CGSize content = _scrollView.contentSize;
+  const CGSize bounds = _scrollView.bounds.size;
+  const CGPoint offset = _scrollView.contentOffset;
+  const CGPoint within = CGPointMake(
+      MAX(-insets.left, MIN(offset.x, content.width + insets.right - bounds.width)),
+      MAX(-insets.top, MIN(offset.y, content.height + insets.bottom - bounds.height)));
+  if (!CGPointEqualToPoint(within, offset)) {
+    [_scrollView setContentOffset:within animated:NO];
+  }
+  _scrollView.panGestureRecognizer.enabled = NO;
+  _scrollView.panGestureRecognizer.enabled = YES;
 }
 
 #pragma mark - UIScrollViewDelegate
@@ -804,7 +841,7 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
     }
   }
 
-  const BOOL cancels = ![self _shouldDisableScrollInteraction];
+  const BOOL cancels = !_scrollingBlockedByDescendant && ![self _shouldDisableScrollInteraction];
   if (EXPKeyboardTrace.touchTracing && !cancels) {
     [EXPKeyboardTrace
         record:@"scroll will not cancel: interaction disabled (touched %@)", NSStringFromClass(view.class)];

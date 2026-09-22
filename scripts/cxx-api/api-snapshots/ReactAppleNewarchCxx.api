@@ -1833,6 +1833,7 @@ interface RCTScrollEvent : public NSObject <RCTEvent> {
 interface RCTScrollViewComponentView {
   protected  RCTVirtualViewContainerProtocol;
   protected  __pad0__;
+  public @property (assign) BOOL scrollingBlockedByDescendant;
   public @property (assign) CGRect firstResponderFocus;
   public @property (strong) UIScrollView* scrollView;
   public @property (strong, readonly) RCTGenericDelegateSplitter<id<UIScrollViewDelegate>>* scrollViewDelegateSplitter;
@@ -2809,6 +2810,7 @@ protocol RCTComponentViewFactoryComponentProvider : public NSObject {
 }
 
 protocol RCTComponentViewProtocol : public NSObject {
+  public virtual BOOL blocksNativeResponder();
   public virtual BOOL isJSResponder();
   public virtual facebook::react::Props::Shared props();
   public virtual static facebook::react::ComponentDescriptorProvider componentDescriptorProvider();
@@ -2818,6 +2820,7 @@ protocol RCTComponentViewProtocol : public NSObject {
   public virtual void invalidate();
   public virtual void mountChildComponentView:index:(UIView<RCTComponentViewProtocol>* childComponentView, NSInteger index);
   public virtual void prepareForRecycle();
+  public virtual void setBlocksNativeResponder:(BOOL blocksNativeResponder);
   public virtual void setIsJSResponder:(BOOL isJSResponder);
   public virtual void unmountChildComponentView:index:(UIView<RCTComponentViewProtocol>* childComponentView, NSInteger index);
   public virtual void updateEventEmitter:(const facebook::react::EventEmitter::Shared& eventEmitter);

@@ -57,6 +57,13 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, readonly)
     RCTGenericDelegateSplitter<id<UIScrollViewDelegate>> *scrollViewDelegateSplitter;
 
+/*
+ * Whether a JavaScript responder inside the scroll view blocks the native one.
+ * While it does, the scroll view stays where it is, within its content, and a
+ * drag already under way stops.
+ */
+@property (nonatomic, assign) BOOL scrollingBlockedByDescendant;
+
 @end
 
 /*
