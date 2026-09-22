@@ -478,6 +478,14 @@ interface EXPRadioRunList : public NSObject {
   public virtual static void withdrawRow:fromContainer:(UIView* row, UIView* container);
 }
 
+interface EXPScrollViewComponentView {
+  protected  RCTVirtualViewContainerProtocol;
+  protected  __pad0__;
+  public @property (strong, readonly) RCTVirtualViewScrollHost UIScrollView* scrollView;
+  public virtual void addScrollListener:(NSObject<UIScrollViewDelegate>* scrollListener);
+  public virtual void removeScrollListener:(NSObject<UIScrollViewDelegate>* scrollListener);
+}
+
 interface EXPSystemImageLoader : public NSObject <RCTImageURLLoader> {
 }
 
@@ -1820,6 +1828,7 @@ interface RCTScrollEvent : public NSObject <RCTEvent> {
 }
 
 interface RCTScrollViewComponentView {
+  protected  RCTVirtualViewContainerProtocol;
   protected  __pad0__;
   public @property (assign) CGRect firstResponderFocus;
   public @property (strong) UIScrollView* scrollView;
@@ -2293,7 +2302,7 @@ interface RCTVirtualViewComponentView : public RCTViewComponentView <RCTVirtualV
 }
 
 interface RCTVirtualViewContainerState : public NSObject {
-  public virtual instancetype initWithScrollView:(RCTScrollViewComponentView* scrollView);
+  public virtual instancetype initWithScrollView:(UIView<RCTVirtualViewScrollHost>* scrollView);
   public virtual void onChange:(id<RCTVirtualViewProtocol> virtualView);
   public virtual void remove:(id<RCTVirtualViewProtocol> virtualView);
 }
@@ -3203,7 +3212,14 @@ protocol RCTVirtualViewContainerProtocol {
 protocol RCTVirtualViewProtocol : public NSObject {
   public virtual CGRect containerRelativeRect:(UIView* view);
   public virtual NSString* virtualViewID();
+  public virtual RCTVirtualViewGeometry virtualViewGeometry();
   public virtual void onModeChange:targetRect:thresholdRect:(RCTVirtualViewMode newMode, CGRect targetRect, CGRect thresholdRect);
+}
+
+protocol RCTVirtualViewScrollHost : public NSObject {
+  public @property (strong, readonly) UIScrollView* scrollView;
+  public virtual void addScrollListener:(NSObject<UIScrollViewDelegate>* scrollListener);
+  public virtual void removeScrollListener:(NSObject<UIScrollViewDelegate>* scrollListener);
 }
 
 protocol RCTVirtualViewViewProtocol : public NSObject {
@@ -3263,10 +3279,57 @@ struct RCTMethodInfo {
   public const char* const objcName;
 }
 
+struct RCTRenderAnchorStats {
+  public double appliedPoints;
+  public double wantedPoints;
+  public uint64_t applied;
+  public uint64_t wanted;
+}
+
+struct RCTRenderMountStats {
+  public uint64_t bigNanos;
+  public uint64_t bigTransactions;
+  public uint64_t biggestMutations;
+  public uint64_t biggestNanos;
+  public uint64_t commitNanos;
+  public uint64_t createNanos;
+  public uint64_t creates;
+  public uint64_t deleteNanos;
+  public uint64_t deletes;
+  public uint64_t diffNanos;
+  public uint64_t insertNanos;
+  public uint64_t inserts;
+  public uint64_t layoutNanos;
+  public uint64_t layoutNodes;
+  public uint64_t mountNanos;
+  public uint64_t removeNanos;
+  public uint64_t removes;
+  public uint64_t textMeasureNanos;
+  public uint64_t textMeasurements;
+  public uint64_t transactions;
+  public uint64_t updateNanos;
+  public uint64_t updates;
+}
+
+struct RCTRenderSweepStats {
+  public uint64_t maxNanos;
+  public uint64_t nanos;
+  public uint64_t prerender;
+  public uint64_t rows;
+  public uint64_t singles;
+  public uint64_t sweeps;
+  public uint64_t visible;
+}
+
 struct RCTTransformOrigin {
   public CGFloat z;
   public YGValue x;
   public YGValue y;
+}
+
+struct RCTVirtualViewGeometry {
+  public CGRect frame;
+  public __unsafe_unretained UIView* _Nullable superview;
 }
 
 struct YGConfig {
@@ -3371,6 +3434,7 @@ const char facebook::react::ExpoKeyboardAccessoryComponentName[];
 const char facebook::react::ExpoKeyboardPanelComponentName[];
 const char facebook::react::ExpoNativeButtonComponentName[];
 const char facebook::react::ExpoPopoverComponentName[];
+const char facebook::react::ExpoScrollViewComponentName[];
 const char facebook::react::ExpoTopLayerComponentName[];
 const char facebook::react::InlineContentComponentName[];
 const char facebook::react::InlineTextComponentName[];
@@ -3453,6 +3517,7 @@ using facebook::react::ExpoNativeButtonComponentDescriptor = facebook::react::Co
 using facebook::react::ExpoNativeButtonShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoNativeButtonComponentName, facebook::react::ExpoNativeButtonProps, facebook::react::ExpoNativeButtonEventEmitter>;
 using facebook::react::ExpoPopoverComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoPopoverShadowNode>;
 using facebook::react::ExpoPopoverShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoPopoverComponentName, facebook::react::ExpoPopoverProps, facebook::react::ExpoPopoverEventEmitter>;
+using facebook::react::ExpoScrollViewComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoScrollViewShadowNode>;
 using facebook::react::ExpoTopLayerComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoTopLayerShadowNode>;
 using facebook::react::Float = CGFloat;
 using facebook::react::GradientDirection = std::variant<facebook::react::Float, facebook::react::GradientKeyword>;
@@ -3694,6 +3759,8 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext& co
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::Cursor& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ElementMenuCommand& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ElementSelectOption& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ExpoScrollEdgeEffects& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ExpoScrollIndicatorInsets& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ImportantForAccessibility& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::OutlineStyle& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::PointerEventsMode& result);
@@ -3716,6 +3783,10 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::CornerInsets& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::DynamicRangeLimit& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::EdgeInsets& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ExpoScrollAutomaticInsets& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ExpoScrollContentAnchor& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ExpoScrollEdgeEffect& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ExpoScrollKeyboardDismissMode& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ImageResizeMode& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ImageSource& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Isolation& result);
@@ -4594,6 +4665,45 @@ class facebook::react::ExpoPopoverProps : public facebook::react::HostPlatformVi
   public facebook::react::Float anchorWidth;
   public facebook::react::Float anchorX;
   public facebook::react::Float anchorY;
+}
+
+class facebook::react::ExpoScrollViewEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onInsetChange(const facebook::react::ExpoScrollEvent& event) const;
+  public void onMomentumScrollBegin(const facebook::react::ExpoScrollEvent& event) const;
+  public void onMomentumScrollEnd(const facebook::react::ExpoScrollEvent& event) const;
+  public void onScroll(const facebook::react::ExpoScrollEvent& event) const;
+  public void onScrollBeginDrag(const facebook::react::ExpoScrollEvent& event) const;
+  public void onScrollEndDrag(const facebook::react::ExpoScrollEndDragEvent& event) const;
+}
+
+class facebook::react::ExpoScrollViewProps : public facebook::react::HostPlatformViewProps {
+  public ExpoScrollViewProps() = default;
+  public ExpoScrollViewProps(const facebook::react::PropsParserContext& context, const facebook::react::ExpoScrollViewProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool avoidsKeyboard;
+  public bool bounces;
+  public bool scrollEnabled;
+  public bool showsScrollIndicator;
+  public facebook::react::EdgeInsets contentInset;
+  public facebook::react::ExpoScrollAutomaticInsets automaticInsets;
+  public facebook::react::ExpoScrollContentAnchor contentAnchor;
+  public facebook::react::ExpoScrollEdgeEffects edgeEffects;
+  public facebook::react::ExpoScrollIndicatorInsets scrollIndicatorInsets;
+  public facebook::react::ExpoScrollKeyboardDismissMode keyboardDismissMode;
+}
+
+class facebook::react::ExpoScrollViewShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ExpoScrollViewComponentName, facebook::react::ExpoScrollViewProps, facebook::react::ExpoScrollViewEventEmitter, facebook::react::ExpoScrollViewState> {
+  public ExpoScrollViewShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ExpoScrollViewShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public virtual facebook::react::Point getContentOriginOffset(bool includeTransform) const override;
+  public virtual void layout(facebook::react::LayoutContext layoutContext) override;
+}
+
+class facebook::react::ExpoScrollViewState {
+  public ExpoScrollViewState() = default;
+  public ExpoScrollViewState(facebook::react::Point contentOffset, facebook::react::Rect contentBoundingRect);
+  public facebook::react::Point contentOffset;
+  public facebook::react::Rect contentBoundingRect;
+  public facebook::react::Size getContentSize() const;
 }
 
 class facebook::react::ExpoTopLayerEventEmitter : public facebook::react::BaseViewEventEmitter {
@@ -6140,6 +6250,24 @@ enum facebook::react::EventPayloadType {
   ValueFactory,
 }
 
+enum facebook::react::ExpoScrollContentAnchor {
+  Bottom,
+  Top,
+}
+
+enum facebook::react::ExpoScrollEdgeEffect {
+  Automatic,
+  Hard,
+  Hidden,
+  Soft,
+}
+
+enum facebook::react::ExpoScrollKeyboardDismissMode {
+  Interactive,
+  None,
+  OnDrag,
+}
+
 enum facebook::react::FilterType {
   Blur,
   Brightness,
@@ -6932,6 +7060,50 @@ struct facebook::react::ExpoKeyboardDockEvent : public facebook::react::EventPay
   public virtual facebook::jsi::Value asJSIValue(facebook::jsi::Runtime& runtime) const override;
   public virtual facebook::react::EventPayloadType getType() const override;
   public virtual std::optional<double> extractValue(const std::vector<std::string>& path) const override;
+}
+
+struct facebook::react::ExpoScrollAutomaticInsets {
+  public bool bottom;
+  public bool left;
+  public bool operator==(const facebook::react::ExpoScrollAutomaticInsets& other) const = default;
+  public bool right;
+  public bool top;
+}
+
+struct facebook::react::ExpoScrollEdgeEffects {
+  public bool operator==(const facebook::react::ExpoScrollEdgeEffects& other) const = default;
+  public facebook::react::ExpoScrollEdgeEffect bottom;
+  public facebook::react::ExpoScrollEdgeEffect left;
+  public facebook::react::ExpoScrollEdgeEffect right;
+  public facebook::react::ExpoScrollEdgeEffect top;
+}
+
+struct facebook::react::ExpoScrollEndDragEvent : public facebook::react::ExpoScrollEvent {
+  public ExpoScrollEndDragEvent() = default;
+  public ExpoScrollEndDragEvent(const facebook::react::ExpoScrollEvent& event);
+  public facebook::react::Point targetContentOffset;
+  public facebook::react::Point velocity;
+}
+
+struct facebook::react::ExpoScrollEvent : public facebook::react::EventPayload {
+  public ExpoScrollEvent() = default;
+  public facebook::react::EdgeInsets inset;
+  public facebook::react::Float restOffset;
+  public facebook::react::Float timestamp;
+  public facebook::react::Point contentOffset;
+  public facebook::react::Point contentShift;
+  public facebook::react::Size containerSize;
+  public facebook::react::Size contentSize;
+  public folly::dynamic asDynamic() const;
+  public virtual facebook::jsi::Value asJSIValue(facebook::jsi::Runtime& runtime) const override;
+  public virtual facebook::react::EventPayloadType getType() const override;
+  public virtual std::optional<double> extractValue(const std::vector<std::string>& path) const override;
+}
+
+struct facebook::react::ExpoScrollIndicatorInsets {
+  public bool operator==(const facebook::react::ExpoScrollIndicatorInsets& other) const = default;
+  public std::optional<facebook::react::Float> left;
+  public std::optional<facebook::react::Float> right;
 }
 
 struct facebook::react::FilterFunction {
