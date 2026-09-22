@@ -26,6 +26,7 @@
 #include <react/renderer/components/view/ElementSelectShadowNode.h>
 #include <react/renderer/components/view/ElementTextAreaShadowNode.h>
 #include <react/renderer/components/view/ElementTextInputShadowNode.h>
+#include <react/renderer/components/view/ExpoKeyboardAccessoryShadowNode.h>
 
 #include <react/renderer/attributedstring/AttributedString.h>
 #include <react/renderer/attributedstring/AttributedStringBox.h>
@@ -157,6 +158,9 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders()
   providers.push_back(concreteComponentDescriptorProvider<ElementColorInputComponentDescriptor>());
   // `<input type="file">`.
   providers.push_back(concreteComponentDescriptorProvider<ElementFileInputComponentDescriptor>());
+  // `<native:keyboardaccessory>`: a bar that is PART of the keyboard rather than
+  // a view that follows it, so a drag begun on it drags the keyboard.
+  providers.push_back(concreteComponentDescriptorProvider<ExpoKeyboardAccessoryComponentDescriptor>());
   return providers;
 }
 
