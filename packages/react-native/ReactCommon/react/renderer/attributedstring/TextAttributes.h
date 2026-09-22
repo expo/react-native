@@ -177,6 +177,12 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<LineBreakMode> lineBreakMode{};
   // `white-space`. Inherited, so a container passes it to every run inside it.
   std::optional<WhiteSpace> whiteSpace{};
+  /*
+   * Whether a run that wraps reports its longest line rather than the width it
+   * was given — see `inheritedHugsWrappedLines` in `BaseViewProps.h`. Inherited
+   * with the rest of them, and read at measure time.
+   */
+  std::optional<bool> hugsWrappedLines{};
   // `<sup>`/`<sub>`: a baseline shift the platform's text engine computes.
   std::optional<TextVerticalAlign> verticalAlign{};
   // `dynamic-range-limit`: not a text property, but this bag is the element
@@ -293,6 +299,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.allowFontScaling,
         textAttributes.textTransform,
         textAttributes.whiteSpace,
+        textAttributes.hugsWrappedLines,
         textAttributes.dynamicRangeLimit,
         textAttributes.alignment,
         textAttributes.baseWritingDirection,
