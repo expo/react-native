@@ -5,6 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+/*
+ * The React Native Gradle plugin on the buildscript classpath, which every project in the build
+ * then inherits.
+ *
+ * `packages/react-native` and `private/helloworld` already do this for themselves; the root needs
+ * it for the projects nobody writes a build file for. An autolinked third-party library applies
+ * the plugin the old way — `apply plugin: "com.facebook.react"` — and that resolves from the
+ * classpath rather than from `pluginManagement`, so without this a library such as
+ * react-native-screens fails during configuration with "Plugin with id 'com.facebook.react' not
+ * found", taking the whole build with it.
+ *
+ * The coordinate is substituted by the included build in settings.gradle.kts, so this is the
+ * plugin in this repository rather than a published one.
+ */
+buildscript { dependencies { classpath("com.facebook.react:react-native-gradle-plugin") } }
+
 plugins {
   alias(libs.plugins.nexus.publish)
   alias(libs.plugins.android.library) apply false
@@ -169,6 +185,49 @@ if (hermesSubstitution != null) {
             .using(module("com.facebook.hermes:hermes-android:$hermesVersion"))
             .because(reason)
       }
+    }
+  }
+}
+
+/*
+ * Autolinked third-party libraries, built against React Native from source.
+ *
+ * A library such as react-native-screens declares `com.facebook.react:react-native:+`. The React
+ * Native Gradle plugin rewrites that to `com.facebook.react:react-android:<version>` and FORCES the
+ * version, which is right for an app consuming a published React Native and impossible here: this
+ * repository IS React Native, and 1000.0.0 has never been published anywhere.
+ *
+ * A dependency substitution cannot win against the plugin's `force`, so the coordinate is excluded
+ * outright and the project that provides those classes is added in its place. Excluding rather than
+ * substituting also keeps a second copy of React Native out of the APK, which is what resolving the
+ * artifact alongside the project dependency would produce.
+ *
+ * Named projects rather than a pattern: this should fail loudly when a new library is autolinked
+ * and needs the same treatment, rather than quietly matching something it should not.
+ */
+/*
+ * Third-party libraries read their minimum SDK from this, and default to 21. ReactAndroid's prefab
+ * is built for 24, and CMake refuses to link a library declaring a lower minimum against it —
+ * "User has minSdkVersion 21 but library was built for 24".
+ *
+ * Kept because it is correct regardless, and because it is the first of the two walls in the way
+ * of building react-native-screens here. The second is a link failure — undefined vtables for
+ * RNSFullWindowOverlayProps and its siblings — which says the library's generated Props are not in
+ * the autolinked C++ target. That is a codegen-integration problem between a released library and a
+ * source build, and not one to guess at.
+ */
+extra["minSdkVersion"] = 24
+
+val librariesBuiltAgainstSource = setOf("react-native-screens", "react-native-safe-area-context")
+
+subprojects {
+  if (name in librariesBuiltAgainstSource) {
+    configurations.configureEach {
+      exclude(mapOf("group" to "com.facebook.react", "module" to "react-android"))
+      exclude(mapOf("group" to "com.facebook.react", "module" to "react-native"))
+    }
+    afterEvaluate {
+      dependencies.add("implementation", project(":packages:react-native:ReactAndroid"))
     }
   }
 }

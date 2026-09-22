@@ -1,0 +1,23 @@
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve("react-native/scripts/react_native_pods.rb", {paths: [process.argv[1]]})',
+  __dir__]).strip
+
+platform :ios, min_ios_version_supported
+prepare_react_native_project!
+
+target 'ChatDemo' do
+  use_react_native!(
+    path: '../../react-native',
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  # iOS only. Android doesn't link it (an unresolved vtable in RNSFullWindowOverlay), so App.js
+  # checks at runtime whether its native views exist.
+  pod 'RNScreens', :path => '../../../node_modules/react-native-screens'
+
+  # Required: it defines `REACT_NATIVE_PATH` for the pod targets. Without it hermes-engine's script
+  # phase fails, and Xcode reports an "internal inconsistency error" that names an unrelated target.
+  post_install do |installer|
+    react_native_post_install(installer, '../../react-native')
+  end
+end
