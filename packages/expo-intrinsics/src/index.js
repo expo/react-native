@@ -52,8 +52,9 @@ import {imgIsExpoImage} from './imgBacking';
 import Input from './Input';
 import Label from './Label';
 import {LIST_TAGS, makeList} from './List';
-import NativeKeyboardAccessory from './NativeKeyboardAccessory';
 import NativeButton from './NativeButton';
+import NativeChatBubble from './NativeChatBubble';
+import NativeKeyboardAccessory from './NativeKeyboardAccessory';
 import NativePopover from './NativePopover';
 import NativeSafeArea from './NativeSafeArea';
 import NativeScroll from './NativeScroll';
@@ -1065,6 +1066,39 @@ registerFrameworkElement('native-scroll', () =>
   }),
 );
 
+/*
+ * The host element `<native:keyboardaccessory>` renders.
+ *
+ * No attributes of its own. What makes it an accessory is the NAME — it is what
+ * makes each platform mount a view that hands its children to the keyboard
+ * rather than an ordinary one — and everything else is style and children.
+ */
+/*
+ * The host element `<native:chatbubble>` renders.
+ *
+ * `tail` and `bubbleRadius` reach the shadow node only because they are listed
+ * here — an attribute the view config does not name is dropped before it gets
+ * there, silently, and the element renders as if it had been given nothing.
+ *
+ * No peek attributes: `wantsContextMenu` and the `<menu>` belong to the BOX,
+ * which is what receives the touch and what has to come up with the words
+ * inside it. What this element contributes is the SHAPE of the lift — its view
+ * hands its own outline, tail included, up to the box, which gives it to UIKit.
+ * See `ContextMenu.md`.
+ */
+registerFrameworkElement('native-chatbubble', () =>
+  createViewConfig({
+    validAttributes: {
+      // So a balloon can be named — the send's flying copy is `flier`, and
+      // the trace tells it from any other balloon leaving the window.
+      nativeID: true,
+      tail: true,
+      bubbleRadius: true,
+    },
+    uiViewClassName: 'native-chatbubble',
+  }),
+);
+
 registerFrameworkElement('native-keyboardaccessory', () =>
   createViewConfig({
     // `scope`: "screen" (the default) or "app". Declared here or it is dropped
@@ -1223,6 +1257,12 @@ defineReactComponent('native', 'button', NativeButton);
  * the element under `anchor`; the native chat's `+` opens one.
  */
 defineReactComponent('native', 'popover', NativePopover);
+
+/*
+ * `<native:chatbubble>`, a chat balloon. One word for the same reason
+ * `keyboardaccessory` is one.
+ */
+defineReactComponent('native', 'chatbubble', NativeChatBubble);
 
 // `<textarea>` joins a form the same way `<input>` does, and for the same
 // reason: an uncontrolled one keeps its value in the native view.
