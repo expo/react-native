@@ -52,6 +52,7 @@ import {imgIsExpoImage} from './imgBacking';
 import Input from './Input';
 import Label from './Label';
 import {LIST_TAGS, makeList} from './List';
+import NativeKeyboardAccessory from './NativeKeyboardAccessory';
 import NativeButton from './NativeButton';
 import NativeSafeArea from './NativeSafeArea';
 import Picture from './Picture';
@@ -1012,6 +1013,79 @@ registerFrameworkComponent('select', Select);
 // still `resolveUIViewClassName`'s decision. See Input.js.
 registerFrameworkComponent('input', Input);
 
+registerFrameworkElement('native-keyboardaccessory', () =>
+  createViewConfig({
+    // `scope`: "screen" (the default) or "app". Declared here or it is dropped
+    // before it reaches the shadow node.
+    // `appleVisualEffect` and its fade: the bar's whole surface, declared here
+    // for the same reason `scope` is — an attribute the view config does not
+    // list never reaches the shadow node.
+    validAttributes: {
+      scope: true,
+      // Also takes `-apple-system-glass-container`, which groups the glass
+      // surfaces inside it into one shape — see `EXPMaterialSurface`.
+      appleVisualEffect: true,
+      appleVisualEffectFade: true,
+      /*
+       * How strongly the material is worn, 0 to 1. It attenuates the blur and
+       * the tint together — see the prop's comment in the shadow node for what
+       * that trade buys and costs.
+       */
+      appleVisualEffectOpacity: true,
+      /*
+       * Whether the bar reserves the home indicator's strip. On by default; off
+       * is how an app draws into it, which is what the platform's own composer does —
+       * see the prop's own comment in `ExpoKeyboardAccessoryShadowNode.h`.
+       */
+      automaticInsets: true,
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {
+      /*
+       * How much of the home indicator's strip the bar is reserving, and the
+       * same answer as a fraction. The only signal that says whether the bar is
+       * resting on the screen or riding the keys — see the event's own comment
+       * in `ExpoKeyboardAccessoryEventEmitter.h` for why nothing else is.
+       */
+      topDockChange: {registrationName: 'onDockChange'},
+    },
+    uiViewClassName: 'native-keyboardaccessory',
+  }),
+);
+
+/*
+ * The host element `<native:keyboardpanel>` renders.
+ *
+ * A panel that takes the KEYBOARD'S place rather than sitting above it — what
+ * the platform's own `+` opens. `visible` is the whole surface: raising it is the same
+ * act as raising a keyboard, so the system runs the transition, sizes it and
+ * dismisses it.
+ */
+registerFrameworkElement('native-keyboardpanel', () =>
+  createViewConfig({
+    validAttributes: {
+      visible: true,
+      // `inputView` (the default) or `overlay`. See the shadow node: which one
+      // is right is a question about whether the panel is an alternative INPUT
+      // or a list of COMMANDS.
+      presentation: true,
+      // The rectangle an overlay grows out of, in window coordinates. Four
+      // numbers rather than an object because a raw prop of a struct type has
+      // to be taught to the parser, and this is measured in JS anyway.
+      anchorX: true,
+      anchorY: true,
+      anchorWidth: true,
+      anchorHeight: true,
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {
+      // The panel dismissed itself — an overlay is closed by tapping outside
+      // it, and `visible` is the app's state to correct.
+      topClose: {registrationName: 'onClose'},
+    },
+    uiViewClassName: 'native-keyboardpanel',
+  }),
+);
 /*
  * The host element `<native:button>` renders.
  *
@@ -1058,6 +1132,12 @@ registerFrameworkElement('native-button', () =>
  */
 defineReactComponent('native', 'safearea', NativeSafeArea);
 
+/*
+ * `<native:keyboardaccessory>`, the bar that rides the keyboard. One word rather
+ * than two because element names have no separator to spare — the namespace has
+ * already used the colon.
+ */
+defineReactComponent('native', 'keyboardaccessory', NativeKeyboardAccessory);
 /*
  * `<native:button>`, a button whose action is a menu the SYSTEM presents.
  * One word for the same reason `keyboardaccessory` is one.
