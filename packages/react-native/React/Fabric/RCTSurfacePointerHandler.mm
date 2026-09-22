@@ -960,9 +960,26 @@ static NSString *EXPPointerStateName(UIGestureRecognizerState state)
     shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
 {
   if (EXPKeyboardTrace.touchTracing) {
-    [EXPKeyboardTrace record:@"pointer simultaneous? %@ state=%@ -> YES",
+    /*
+     * The DELEGATE and the press duration identify WHICH recognizer this is,
+     * which the class name alone cannot: two long presses live on
+     * `RCTViewComponentView` and they behave oppositely. `_textSelectionLongPress`
+     * has no delegate and the default half-second, so it answers NO to
+     * simultaneous recognition and can prevent a pan; the radio row's press has
+     * a delegate that answers YES and a zero duration. A long press already
+     * `began` a few milliseconds after touch-down is a zero-duration one.
+     */
+    NSString *detail = @"";
+    if ([otherGestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]]) {
+      UILongPressGestureRecognizer *press = (UILongPressGestureRecognizer *)otherGestureRecognizer;
+      detail = [NSString stringWithFormat:@" minPress=%.2f delegate=%@",
+                                          press.minimumPressDuration,
+                                          press.delegate == nil ? @"(none)" : NSStringFromClass([press.delegate class])];
+    }
+    [EXPKeyboardTrace record:@"pointer simultaneous? %@ state=%@%@ -> YES",
                              NSStringFromClass(otherGestureRecognizer.class),
-                             EXPPointerStateName(otherGestureRecognizer.state)];
+                             EXPPointerStateName(otherGestureRecognizer.state),
+                             detail];
   }
   return YES;
 }
