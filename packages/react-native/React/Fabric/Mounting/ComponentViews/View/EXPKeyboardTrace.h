@@ -37,6 +37,17 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)isRecording;
 
 /**
+ * Whether the TOUCH ARBITRATION sites should record.
+ *
+ * Off by default and separate from `isRecording`, because those sites sit in
+ * `RCTSurfaceTouchHandler` and the scroll views — code every app in this repo
+ * runs. An app that records keyboard geometry does not want a line per touch
+ * in the same ring; an app chasing a gesture that fails to scroll wants
+ * nothing else. The app decides.
+ */
+@property (class, nonatomic, assign) BOOL touchTracing;
+
+/**
  * Append one line, tagged with a time relative to the start.
  *
  * A no-op when not recording, so call sites need no guard of their own and cost

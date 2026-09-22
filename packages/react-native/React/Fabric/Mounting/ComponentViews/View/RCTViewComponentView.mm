@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#import <React/EXPKeyboardTrace.h>
 #import "RCTViewComponentView.h"
 
 #if TARGET_OS_IOS
@@ -1377,6 +1378,16 @@ static CGRect RCTUntransformedFrame(UIView *view)
 
 - (void)setIsJSResponder:(BOOL)isJSResponder
 {
+  /*
+   * Every grant and release, because this flag stops any scroll view BELOW
+   * this view from scrolling (`_shouldDisableScrollInteraction`), and a grant
+   * that is never released leaves the list dead with nothing on screen to say
+   * why. A capture that shows a grant and no matching release is that.
+   */
+  if (EXPKeyboardTrace.touchTracing && _isJSResponder != isJSResponder) {
+    [EXPKeyboardTrace record:@"JS responder %@ %@", isJSResponder ? @"granted to" : @"released by",
+                             NSStringFromClass(self.class)];
+  }
   _isJSResponder = isJSResponder;
 }
 
