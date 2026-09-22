@@ -448,7 +448,9 @@ rather than going quiet.
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `checkable-line-centering` — deviation, `packages/expo-intrinsics/__tests__/CheckableLineCentering-itest.js`
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
+- `clipping-eats-the-shadow` — limitation, `packages/chat-demo/Composer.js`
 - `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
+- `compact-menu-row-holds-four` — limitation, `packages/chat-demo/screens/ChatScreen.js`
 - `corner-shape-clips-border-and-shadow` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `corner-shape-ios-only` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `display-on-inline-text-elements` — limitation, `packages/rn-tester/js/astryx/radix/toggles.js`
@@ -478,8 +480,10 @@ rather than going quiet.
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `panel-content-fades-without-the-blur` — deviation, `packages/chat-demo/Composer.js`
 - `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
 - `peek-outruns-the-scroll` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPPeekInteraction.h`
+- `plus-symbol-rides-the-button` — deviation, `packages/chat-demo/Composer.js`
 - `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `press-dim-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
 - `press-scale-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`

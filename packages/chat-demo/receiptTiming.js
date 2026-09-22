@@ -1,0 +1,215 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow strict-local
+ * @format
+ */
+
+/**
+ * When a receipt moves from one message to the next, and what moves with it.
+ *
+ * Its own module, and a leaf one, for two reasons. The numbers are shared by
+ * things that are not near each other — a balloon's tail in the elements
+ * package, a receipt's box in the transcript — and one of them is an INVARIANT
+ * rather than a taste: everything that moves the column has to move at the same
+ * speed or the column moves twice. Nothing here pulls in a component, so a plain
+ * unit test can import it and say so. See `__tests__/receiptTiming-test.js`.
+ */
+
+import {
+  CHAT_BUBBLE_TAIL_MORPH,
+  CHAT_BUBBLE_TAIL_MORPH_CURVE,
+} from '../expo-intrinsics/src/chatBubbleMetrics';
+
+/**
+ * The tail's own clock, which the element owns — re-exported so the test below
+ * can compare the two without importing a component.
+ */
+export const TAIL_MORPH_MS: number = CHAT_BUBBLE_TAIL_MORPH;
+
+/**
+ * How long anything that moves the transcript's layout takes.
+ *
+ * A handover moves the column twice over: the balloon that loses its tail gives
+ * back the space reserved for it, and the receipt's own box closes on one row
+ * while it opens on the next. Separate transitions on separate elements, and
+ * they compose into ONE movement only while they share this — so it is the
+ * tail's number, taken rather than repeated.
+ */
+export const RECEIPT_LAYOUT_MS: number = TAIL_MORPH_MS;
+
+/**
+ * On the tail's curve too, and for the same reason — two boxes moving together
+ * over the same 250ms still move twice if one of them eases and the other does
+ * not.
+ */
+export const RECEIPT_LAYOUT_CURVE: string = CHAT_BUBBLE_TAIL_MORPH_CURVE;
+
+/*
+ * NOTE: `RECEIPT_LAYOUT_MS` is what moves the COLUMN, and it stays tied to the
+ * tail. `RECEIPT_LEAVE_MS` below is what the old receipt's ink does, which
+ * moves nothing and so is free to differ — and does.
+ */
+
+/**
+ * How long the OLD receipt's ink takes to go.
+ *
+ * Measured off the native chat, ink counted per frame in the row the old
+ * `Read 4:13 PM`
+ * occupies: 154 at t=2530, 121 at 2580, nothing at 2630. A hundred
+ * milliseconds.
+ *
+ * SHORTER than the layout, deliberately, and this is the one number here that
+ * is not tied to the others. The words are gone well before the row that held
+ * them has finished closing, so there is never ink sitting over a box that is
+ * still moving — which is the state the reports kept catching, in two different
+ * disguises: clipped when the box closed under it, and then floating when the
+ * box waited for it.
+ */
+export const RECEIPT_LEAVE_MS: number = 100;
+
+/**
+ * And how long the transcript then waits before the new one arrives.
+ *
+ * The native chat leaves a GAP. The old receipt is gone at t=2630 and the new
+ * one does
+ * not appear until t=2880 — a quarter of a second with no receipt on screen at
+ * all, deliberately.
+ *
+ * This corrects a reading of the same recording that said the two CROSS-FADE.
+ * They do not: what looked like both at once was the old one fading in the row
+ * it had always been in while the column moved under it. Reported from a device
+ * as "the new read indicator does not wait for the old one to fully disappear
+ * before appearing", which is exactly right.
+ */
+export const RECEIPT_HANDOVER_GAP_MS: number = 250;
+
+/**
+ * So the ink waits for both: the old one to finish leaving, and the pause after
+ * it. The renderer has no `transitionend`, so "after" can only be said as a
+ * delay — which is why this is a sum of the two numbers above rather than one
+ * chosen on its own.
+ */
+export const RECEIPT_INK_DELAY_MS: number =
+  RECEIPT_LEAVE_MS + RECEIPT_HANDOVER_GAP_MS;
+
+/**
+ * The ink's own two durations, which move nothing and so need not agree with
+ * anything — and they are not the same length, deliberately.
+ *
+ * FITTED, not read off two frames, and that is the difference that matters.
+ *
+ * The platform sending to itself over SMS on this simulator, 60fps, the ink's
+ * bounding box thresholded identically in every frame — `Delivered` settling at
+ * 50.00 x 8.67pt. Twenty-three frames of it, least squares over duration,
+ * starting scale and the cubic-bezier family:
+ *
+ *     duration 610ms   start 0.21   cubic-bezier(0.25, 1, 0.5, 1)
+ *     worst residual 0.125pt, which is a third of a device pixel
+ *
+ * And it is a UNIFORM SCALE ABOUT THE CENTRE, which the same frames settle
+ * outright: the ink's horizontal centre is 219.5 in every one of them, and its
+ * top rises eleven pixels while its bottom falls eleven. Both the earlier
+ * readings of this — a trailing-edge anchor, and a width-only grow — came from
+ * comparing a first frame with a last one.
+ *
+ * The OPACITY is the shorter of the two: peak brightness 162 to 130 over eight
+ * frames and flat after. So the words are legible almost at once and then
+ * visibly grow, which is what makes it read as arriving rather than appearing.
+ *
+ * Two earlier readings, both taken from the first and last frames alone, said
+ * 435ms from 0.61 and 533ms from 0.40. A ratio between two frames cannot see a
+ * curve, and the curve is what was wrong: reported as "Messages animates the
+ * Delivered text faster. Maybe with a different curve."
+ */
+export const RECEIPT_GROW_MS: number = 610;
+export const RECEIPT_FADE_MS: number = 133;
+
+/**
+ * And the curve it grows on, which is NOT the one it fades on.
+ *
+ * Quartic ease-out, from the fit above. Nine curves were tried and this one is
+ * four times better than CSS `ease-out` — which is what was here, and is far
+ * gentler at the start: a quarter of a second in, the platform's receipt is at
+ * 0.91 of its size and ours was at 0.79. That is the whole of the reported
+ * difference, and it is why LENGTHENING the animation from 533 to 610 makes it
+ * feel quicker rather than slower. Almost all of the travel is in the first
+ * third; what follows is a settle nobody waits for.
+ *
+ * The fade keeps its own `ease-out` — a curve was fitted for the scale and not
+ * for the opacity, and saying one number for both would be stating a
+ * measurement that was never made.
+ */
+export const RECEIPT_GROW_CURVE: string = 'cubic-bezier(0.25, 1, 0.5, 1)';
+
+/*
+ * And the words CHANGING under a message that is already wearing them —
+ * `Delivered` becoming `Read 5:29 PM`.
+ *
+ * The same three-part shape as a handover and a shorter clock, measured off a
+ * 60fps capture of the platform by the ink's PEAK BRIGHTNESS per frame: the old
+ * word fades over ten frames, nothing is on screen for six, and the new one
+ * fades in over thirteen.
+ *
+ * Counted as pixels-over-a-threshold instead — which is the obvious way and the
+ * wrong one — the same recording reads 5, 14 and 10: as ink fades its pixels
+ * drop below the threshold one by one, so both tails are cut off and the gap
+ * between them is inflated by what was lost at each end. The numbers that came
+ * out of that were quicker transitions around a longer pause, which is what
+ * "harsher than Messages" turned out to mean. Nothing else happens — the new words are at their full
+ * width from the first frame they can be seen, the trailing edge does not move,
+ * and the line does not change height. So this is opacity and only opacity,
+ * which is what separates it from an arrival: that one grows.
+ */
+export const RECEIPT_SWAP_OUT_MS: number = 175;
+export const RECEIPT_SWAP_GAP_MS: number = 100;
+export const RECEIPT_SWAP_IN_MS: number = 217;
+
+/**
+ * When the words themselves change, which is once the old ones are gone and
+ * the pause after them is over. A sum for the same reason `RECEIPT_INK_DELAY_MS`
+ * is one: the renderer has no `transitionend`, so "after" is said as a delay.
+ */
+export const RECEIPT_SWAP_AT_MS: number =
+  RECEIPT_SWAP_OUT_MS + RECEIPT_SWAP_GAP_MS;
+
+/**
+ * How long a receipt's words have to have been FULLY on screen before anything
+ * may replace them.
+ *
+ * Ours rather than the platform's, and the platform cannot answer it: what
+ * holds `Delivered` up over there is the network, and it is usually seconds.
+ * In a demo the two states are on a timer, and without a floor the second one
+ * arrives while the first is still fading IN — the words are replaced before
+ * they were ever solid, which is what it looked like. So the swap waits for the
+ * arrival to finish and then for this.
+ *
+ * `RECEIPT_INK_DELAY_MS + RECEIPT_FADE_MS` is how long the ink takes to get
+ * there from the moment its receipt is shown; this is the beat after it.
+ *
+ * SIXTEEN HUNDRED, and it was four hundred — which was a FLOOR and never a
+ * judgement. Four hundred is what it takes to stop the swap landing while the
+ * first words are still fading in; how long a reader needs them afterwards is a
+ * different question and nobody had asked it. Reported twice from a phone as
+ * `Delivered` turning to `Read` too quickly, on a build with none of this
+ * week's work in it, so it is the demo's own pacing rather than anything that
+ * changed.
+ *
+ * There is no platform number to copy. Over there what holds `Delivered` up is
+ * the network — usually seconds, sometimes much longer — and a demo on a timer
+ * cannot reproduce a wait it does not have. So this is a judgement: long enough
+ * that the word is read rather than glimpsed, short enough that the demo still
+ * shows the transition to someone watching for it. The whole sequence now takes
+ * about 3.1 seconds from `Delivered` appearing to `Read` replacing it, against
+ * 1.95 before.
+ *
+ * It is one constant, deliberately: this is the knob to turn if it still reads
+ * wrong, and turning it moves the assertion band in `ReceiptCheck` by exactly
+ * the same amount.
+ */
+export const RECEIPT_SETTLED_MS: number =
+  RECEIPT_INK_DELAY_MS + RECEIPT_FADE_MS;
+export const RECEIPT_HOLD_MS: number = 1600;
