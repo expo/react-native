@@ -508,6 +508,13 @@ static void RCTPerformMountInstructions(
   RCTExecuteOnMainQueue(^{
     UIView<RCTComponentViewProtocol> *componentView = [self->_componentViewRegistry findComponentViewWithTag:reactTag];
     [componentView setIsJSResponder:isJSResponder];
+    // `blockNativeResponder` used to be accepted here and dropped, so an
+    // enclosing scroll view read "is the responder" as "has blocked the
+    // scroller". They are different questions and JavaScript answers both:
+    // `Pressability` passes `false` unless a component asks otherwise, and
+    // Android has always honoured it (`JSResponderHandler` only calls
+    // `requestDisallowInterceptTouchEvent` when a blocking parent is given).
+    [componentView setBlocksNativeResponder:isJSResponder && blockNativeResponder];
   });
 }
 

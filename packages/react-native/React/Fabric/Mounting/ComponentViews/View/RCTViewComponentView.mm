@@ -178,6 +178,7 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   NSMutableArray<CALayer *> *_backgroundImageLayers;
   BOOL _needsInvalidateLayer;
   BOOL _isJSResponder;
+  BOOL _blocksNativeResponder;
   BOOL _removeClippedSubviews;
   // Set by the recycle pixel clear, consumed by the next -updateProps:'s
   // unconditional pixel restore, asserted spent in -finalizeUpdates. See the
@@ -1444,6 +1445,16 @@ static CGRect RCTUntransformedFrame(UIView *view)
   _isJSResponder = isJSResponder;
 }
 
+- (BOOL)blocksNativeResponder
+{
+  return _blocksNativeResponder;
+}
+
+- (void)setBlocksNativeResponder:(BOOL)blocksNativeResponder
+{
+  _blocksNativeResponder = blocksNativeResponder;
+}
+
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask
 {
   [super finalizeUpdates:updateMask];
@@ -1537,6 +1548,7 @@ static CGRect RCTUntransformedFrame(UIView *view)
   _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN = nil;
   _eventEmitter.reset();
   _isJSResponder = NO;
+  _blocksNativeResponder = NO;
   // Chrome that asked for this is gone by now, and the view is about to become
   // something with no list behind it.
   _passesTouchesToHostChrome = NO;

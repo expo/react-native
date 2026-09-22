@@ -592,9 +592,20 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
   UIView *ancestorView = self.superview;
 
   while (ancestorView) {
-    if ([ancestorView respondsToSelector:@selector(isJSResponder)]) {
-      BOOL isJSResponder = ((UIView<RCTComponentViewProtocol> *)ancestorView).isJSResponder;
-      if (isJSResponder) {
+    if ([ancestorView respondsToSelector:@selector(blocksNativeResponder)]) {
+      /*
+       * The question is whether an ancestor ASKED to block the native
+       * responder, not whether it happens to be the JavaScript responder.
+       *
+       * This read `isJSResponder`, so any component that took the responder —
+       * every `Pressable`, which passes `blockNativeResponder: false` — stopped
+       * this scroll view from cancelling its content view's touches, and a
+       * scroll view that cannot cancel them does not scroll. Android never had
+       * this: `JSResponderHandler` calls `requestDisallowInterceptTouchEvent`
+       * only when a blocking parent was given, and undoes it on clear.
+       */
+      BOOL blocksNativeResponder = ((UIView<RCTComponentViewProtocol> *)ancestorView).blocksNativeResponder;
+      if (blocksNativeResponder) {
         /*
          * An ANCESTOR of this scroll view holds the JavaScript responder, so
          * this scroll view will not scroll — for as long as that stays true.
@@ -609,7 +620,7 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
          */
         if (EXPKeyboardTrace.touchTracing) {
           [EXPKeyboardTrace
-              record:@"scroll disabled: %@ holds the JS responder", NSStringFromClass(ancestorView.class)];
+              record:@"scroll disabled: %@ asked to block the native responder", NSStringFromClass(ancestorView.class)];
         }
         return YES;
       }
