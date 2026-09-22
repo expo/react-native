@@ -1,0 +1,78 @@
+name: ChatDemo
+options:
+  bundleIdPrefix: dev.expo
+  deploymentTarget:
+    iOS: '15.1'
+targets:
+  ChatDemo:
+    type: application
+    platform: iOS
+    sources:
+      - ChatDemo
+    info:
+      path: ChatDemo/Info.plist
+      properties:
+        CFBundleDisplayName: Chat Demo
+        UILaunchScreen: {}
+        # Must match the scene configuration in AppDelegate.mm (`Default`, `SceneDelegate`).
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: SceneDelegate
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
+        UIViewControllerBasedStatusBarAppearance: true
+        # Lets the app run at 120Hz. Without it iOS limits an iPhone app to 60fps while the keyboard
+        # animates at 120Hz, so views that follow the keyboard lag behind it. See ui-metrics.md,
+        # "Keyboard reveal at the 60fps cap".
+        CADisableMinimumFrameDurationOnPhone: true
+    postBuildScripts:
+      # Read by RenderStatsModule.mm (`buildCommit`, `buildStamp`). A `+` after the
+      # commit means the tree had uncommitted changes.
+      - name: Stamp the build into Info.plist
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          COMMIT=$(cd "$PROJECT_DIR" && git rev-parse --short HEAD 2>/dev/null || echo unknown)
+          DIRTY=$(cd "$PROJECT_DIR" && git diff --quiet 2>/dev/null || echo "+")
+          STAMP=$(date "+%m-%d %H:%M")
+          /usr/libexec/PlistBuddy -c "Delete :EXPBuildCommit" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Delete :EXPBuildStamp" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :EXPBuildCommit string $COMMIT$DIRTY" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :EXPBuildStamp string $STAMP" "$PLIST"
+      # xcodegen adds no bundling phase. Without this a Release build succeeds but has no
+      # `main.jsbundle`, and the app fails to load at launch.
+      - name: Bundle React Native code and images
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          export NODE_BINARY=node
+          # PROJECT_ROOT must be this package, where `react-native.config.js` is. From the
+          # repository root the CLI finds no platforms and Metro rejects `--platform ios`.
+          # (Metro's own `projectRoot` is still the repository root; see metro.config.js.)
+          export PROJECT_ROOT="$PROJECT_DIR/.."
+          REPO_ROOT="$PROJECT_DIR/../../.."
+          export ENTRY_FILE="$PROJECT_ROOT/index.js"
+          export BUNDLE_CONFIG="$PROJECT_ROOT/metro.config.js"
+          WITH_ENVIRONMENT="$REPO_ROOT/packages/react-native/scripts/xcode/with-environment.sh"
+          REACT_NATIVE_XCODE="$REPO_ROOT/packages/react-native/scripts/react-native-xcode.sh"
+          /bin/sh -c "$WITH_ENVIRONMENT $REACT_NATIVE_XCODE"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.expo.frontierdemo
+        # Signed so the app runs on devices: some keyboard bugs only reproduce on
+        # hardware.
+        DEVELOPMENT_TEAM: C8D8QTF339
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: '5.0'
+        OTHER_LDFLAGS: '$(inherited) -ObjC -lc++'
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
