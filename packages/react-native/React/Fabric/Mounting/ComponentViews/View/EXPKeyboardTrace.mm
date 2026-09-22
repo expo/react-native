@@ -196,6 +196,20 @@ static void EXPKeyboardTraceObserveTurn(CFRunLoopObserverRef, CFRunLoopActivity 
   os_unfair_lock_unlock(&traceLock);
 }
 
+static BOOL touchTracingEnabled = NO;
+
++ (void)setTouchTracing:(BOOL)enabled
+{
+  touchTracingEnabled = enabled;
+}
+
++ (BOOL)touchTracing
+{
+  // Recording is the precondition: a touch line with nowhere to go is a
+  // string format for nothing, on the main thread, per touch.
+  return touchTracingEnabled && [self isRecording];
+}
+
 + (BOOL)isRecording
 {
   os_unfair_lock_lock(&traceLock);

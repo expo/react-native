@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#import <React/EXPKeyboardTrace.h>
 #import "RCTScrollViewComponentView.h"
 
 #import <React/RCTAssert.h>
@@ -818,6 +819,21 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
 {
+  /*
+   * THE LINE THAT SAYS THE DRAG WON.
+   *
+   * A finger that fails to scroll is a pan that never reached this method. The
+   * touch lines in `RCTSurfaceTouchHandler` say what the finger did; this says
+   * whether UIKit ever handed the gesture over, and `enabled`/`scrollEnabled`
+   * say whether it could have. See `EXPKeyboardTrace.touchTracing`.
+   */
+  if (EXPKeyboardTrace.touchTracing) {
+    [EXPKeyboardTrace record:@"scroll drag began at=%.0f delays=%d panEnabled=%d scrollEnabled=%d",
+                             scrollView.contentOffset.y,
+                             scrollView.delaysContentTouches,
+                             scrollView.panGestureRecognizer.isEnabled,
+                             scrollView.isScrollEnabled];
+  }
   [self _forceDispatchNextScrollEvent];
 
   if (!_eventEmitter) {
