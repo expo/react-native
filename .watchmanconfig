@@ -13,8 +13,6 @@
     "packages/rn-tester/node_modules/.cache",
     "node_modules/expo",
     "node_modules/expo-image",
-    "node_modules/expo-modules-core",
-    "node_modules/expo-modules-autolinking",
-    "node_modules/@expo"
+    "node_modules/expo-modules-autolinking"
   ]
 }
