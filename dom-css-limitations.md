@@ -440,6 +440,7 @@ rather than going quiet.
 
 - `abbr-underline-is-unconditional` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
+- `android-chat-bubble-has-no-tail` — limitation, `packages/expo-intrinsics/src/NativeChatBubble.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `backdrop-under-background` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`

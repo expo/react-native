@@ -22,6 +22,7 @@
 #include <react/renderer/components/view/ElementDateInputShadowNode.h>
 #include <react/renderer/components/view/ElementFileInputShadowNode.h>
 #include <react/renderer/components/view/ExpoScrollViewShadowNode.h>
+#include <react/renderer/components/view/ExpoChatBubbleShadowNode.h>
 #include <react/renderer/components/view/ExpoKeyboardAccessoryShadowNode.h>
 #include <react/renderer/components/view/ElementProgressShadowNode.h>
 #include <react/renderer/components/view/ElementRadioShadowNode.h>
@@ -181,6 +182,11 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders() {
   providers.push_back(
       concreteComponentDescriptorProvider<
           ExpoKeyboardAccessoryComponentDescriptor>());
+  // `<native:chatbubble>`: a chat balloon. Its own element because the tail is
+  // part of the box's geometry — it makes the box taller and the content stop
+  // short — and that has to be settled where the layout is, not by the app.
+  providers.push_back(
+      concreteComponentDescriptorProvider<ExpoChatBubbleComponentDescriptor>());
   return providers;
 }
 
