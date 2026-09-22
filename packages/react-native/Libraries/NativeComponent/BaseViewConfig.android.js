@@ -221,6 +221,8 @@ const validAttributesForNonEventProps = {
   textTransform: true,
   // `white-space`: inherited like the rest of this group.
   whiteSpace: true,
+  // Whether a wrapped box shrinks to its longest line; see StyleSheetTypes.
+  experimental_hugsWrappedLines: true,
   // The platform's own name for the text's ROLE, from which the platform
   // supplies the font. Inherited with the rest of this group: the role is set
   // on the element and the text inside it is a run that has to receive it.

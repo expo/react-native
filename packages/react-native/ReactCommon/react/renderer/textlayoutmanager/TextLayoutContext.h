@@ -53,6 +53,15 @@ struct TextLayoutContext {
    */
   bool needsFragmentRects{false};
 
+  /**
+   * Whether a run that wraps reports the width of its longest line instead of
+   * the width it was given (`experimental_hugsWrappedLines`; see
+   * `inheritedHugsWrappedLines` in `BaseViewProps.h`). Only the caller knows: a
+   * shrink-to-fit box around a wrapped run is the width it was given
+   * (css-sizing-3 §5.2.2).
+   */
+  bool hugsWrappedLines{false};
+
   bool operator==(const TextLayoutContext &rhs) const = default;
 };
 

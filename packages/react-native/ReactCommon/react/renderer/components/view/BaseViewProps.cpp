@@ -235,6 +235,15 @@ BaseViewProps::BaseViewProps(
                     sourceProps.inheritedWhiteSpace,
                     {})
               : sourceProps.inheritedWhiteSpace),
+      inheritedHugsWrappedLines(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "experimental_hugsWrappedLines",
+                    sourceProps.inheritedHugsWrappedLines,
+                    {})
+              : sourceProps.inheritedHugsWrappedLines),
       // Under the color spaces flag too, and for a paragraph, which skips the
       // inherited text props: a view's own limit bounds its HDR colors
       inheritedDynamicRangeLimit(
@@ -685,6 +694,7 @@ bool BaseViewProps::computeHasInheritedTextProps() const {
       !std::isnan(inheritedLetterSpacing) || !std::isnan(inheritedLineHeight) ||
       inheritedTextAlign.has_value() || inheritedTextTransform.has_value() ||
       inheritedWhiteSpace.has_value() || inheritedDynamicTypeRamp.has_value() ||
+      inheritedHugsWrappedLines.has_value() ||
       inheritedDynamicRangeLimit.has_value();
 }
 
@@ -739,6 +749,8 @@ void BaseViewProps::setProp(
     INHERITED_TEXT_PROP_SET_CASE(inheritedTextAlign, "textAlign");
     INHERITED_TEXT_PROP_SET_CASE(inheritedTextTransform, "textTransform");
     INHERITED_TEXT_PROP_SET_CASE(inheritedWhiteSpace, "whiteSpace");
+    INHERITED_TEXT_PROP_SET_CASE(
+        inheritedHugsWrappedLines, "experimental_hugsWrappedLines");
     INHERITED_TEXT_PROP_SET_CASE(inheritedDynamicTypeRamp, "dynamicTypeRamp");
     case CONSTEXPR_RAW_PROPS_KEY_HASH("dynamicRangeLimit"):
       if (ReactNativeFeatureFlags::enableStringChildren() ||
@@ -751,88 +763,89 @@ void BaseViewProps::setProp(
         hasInheritedTextProps = computeHasInheritedTextProps();
       }
       return;
-    RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockEm);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockRem);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(uaFontSizeEm);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(uaFontWeight);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundImage);
-    RAW_SET_PROP_SWITCH_CASE(backgroundImage, "experimental_backgroundImage");
-    RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundSize);
-    RAW_SET_PROP_SWITCH_CASE(backgroundSize, "experimental_backgroundSize");
-    RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundPosition);
-    RAW_SET_PROP_SWITCH_CASE(
-        backgroundPosition, "experimental_backgroundPosition");
-    RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundRepeat);
-    RAW_SET_PROP_SWITCH_CASE(backgroundRepeat, "experimental_backgroundRepeat");
-    RAW_SET_PROP_SWITCH_CASE(
-        backgroundAttachmentFixed, "experimental_backgroundAttachmentFixed");
-    RAW_SET_PROP_SWITCH_CASE_BASIC(shadowColor);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(shadowOffset);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(shadowOpacity);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(shadowRadius);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(transform);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(transformOrigin);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(backfaceVisibility);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(shouldRasterize);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(zIndex);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(pointerEvents);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(isolation);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(hitSlop);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(onLayout);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(collapsable);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(collapsableChildren);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(removeClippedSubviews);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(cursor);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(userSelect);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(outlineColor);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(outlineOffset);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(outlineStyle);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(outlineWidth);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(filter);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(boxShadow);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(mixBlendMode);
-    // events field
-    VIEW_EVENT_CASE(PointerEnter);
-    VIEW_EVENT_CASE(PointerEnterCapture);
-    VIEW_EVENT_CASE(PointerMove);
-    VIEW_EVENT_CASE(PointerMoveCapture);
-    VIEW_EVENT_CASE(PointerLeave);
-    VIEW_EVENT_CASE(PointerLeaveCapture);
-    VIEW_EVENT_CASE(PointerOver);
-    VIEW_EVENT_CASE(PointerOverCapture);
-    VIEW_EVENT_CASE(PointerOut);
-    VIEW_EVENT_CASE(PointerOutCapture);
-    VIEW_EVENT_CASE(Click);
-    VIEW_EVENT_CASE(ClickCapture);
-    VIEW_EVENT_CASE(PointerDown);
-    VIEW_EVENT_CASE(PointerDownCapture);
-    VIEW_EVENT_CASE(PointerUp);
-    VIEW_EVENT_CASE(PointerUpCapture);
-    VIEW_EVENT_CASE(GotPointerCapture);
-    VIEW_EVENT_CASE(LostPointerCapture);
-    VIEW_EVENT_CASE(MoveShouldSetResponder);
-    VIEW_EVENT_CASE(MoveShouldSetResponderCapture);
-    VIEW_EVENT_CASE(StartShouldSetResponder);
-    VIEW_EVENT_CASE(StartShouldSetResponderCapture);
-    VIEW_EVENT_CASE(ResponderGrant);
-    VIEW_EVENT_CASE(ResponderReject);
-    VIEW_EVENT_CASE(ResponderStart);
-    VIEW_EVENT_CASE(ResponderEnd);
-    VIEW_EVENT_CASE(ResponderRelease);
-    VIEW_EVENT_CASE(ResponderMove);
-    VIEW_EVENT_CASE(ResponderTerminate);
-    VIEW_EVENT_CASE(ResponderTerminationRequest);
-    VIEW_EVENT_CASE(ShouldBlockNativeResponder);
-    VIEW_EVENT_CASE(TouchStart);
-    VIEW_EVENT_CASE(TouchMove);
-    VIEW_EVENT_CASE(TouchEnd);
-    VIEW_EVENT_CASE(TouchCancel);
-    // BorderRadii
-    SET_CASCADED_RECTANGLE_CORNERS(borderRadii, "border", "Radius", value);
-    SET_CASCADED_RECTANGLE_EDGES(borderColors, "border", "Color", value);
-    SET_CASCADED_RECTANGLE_CORNERS(borderCurves, "border", "Curve", value);
-    SET_CASCADED_RECTANGLE_CORNERS(cornerShapes, "corner", "Shape", value);
-    SET_CASCADED_RECTANGLE_EDGES(borderStyles, "border", "Style", value);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockEm);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockRem);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(uaFontSizeEm);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(uaFontWeight);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundImage);
+      RAW_SET_PROP_SWITCH_CASE(backgroundImage, "experimental_backgroundImage");
+      RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundSize);
+      RAW_SET_PROP_SWITCH_CASE(backgroundSize, "experimental_backgroundSize");
+      RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundPosition);
+      RAW_SET_PROP_SWITCH_CASE(
+          backgroundPosition, "experimental_backgroundPosition");
+      RAW_SET_PROP_SWITCH_CASE_BASIC(backgroundRepeat);
+      RAW_SET_PROP_SWITCH_CASE(
+          backgroundRepeat, "experimental_backgroundRepeat");
+      RAW_SET_PROP_SWITCH_CASE(
+          backgroundAttachmentFixed, "experimental_backgroundAttachmentFixed");
+      RAW_SET_PROP_SWITCH_CASE_BASIC(shadowColor);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(shadowOffset);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(shadowOpacity);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(shadowRadius);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(transform);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(transformOrigin);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(backfaceVisibility);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(shouldRasterize);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(zIndex);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(pointerEvents);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(isolation);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(hitSlop);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(onLayout);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(collapsable);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(collapsableChildren);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(removeClippedSubviews);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(cursor);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(userSelect);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(outlineColor);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(outlineOffset);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(outlineStyle);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(outlineWidth);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(filter);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(boxShadow);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(mixBlendMode);
+      // events field
+      VIEW_EVENT_CASE(PointerEnter);
+      VIEW_EVENT_CASE(PointerEnterCapture);
+      VIEW_EVENT_CASE(PointerMove);
+      VIEW_EVENT_CASE(PointerMoveCapture);
+      VIEW_EVENT_CASE(PointerLeave);
+      VIEW_EVENT_CASE(PointerLeaveCapture);
+      VIEW_EVENT_CASE(PointerOver);
+      VIEW_EVENT_CASE(PointerOverCapture);
+      VIEW_EVENT_CASE(PointerOut);
+      VIEW_EVENT_CASE(PointerOutCapture);
+      VIEW_EVENT_CASE(Click);
+      VIEW_EVENT_CASE(ClickCapture);
+      VIEW_EVENT_CASE(PointerDown);
+      VIEW_EVENT_CASE(PointerDownCapture);
+      VIEW_EVENT_CASE(PointerUp);
+      VIEW_EVENT_CASE(PointerUpCapture);
+      VIEW_EVENT_CASE(GotPointerCapture);
+      VIEW_EVENT_CASE(LostPointerCapture);
+      VIEW_EVENT_CASE(MoveShouldSetResponder);
+      VIEW_EVENT_CASE(MoveShouldSetResponderCapture);
+      VIEW_EVENT_CASE(StartShouldSetResponder);
+      VIEW_EVENT_CASE(StartShouldSetResponderCapture);
+      VIEW_EVENT_CASE(ResponderGrant);
+      VIEW_EVENT_CASE(ResponderReject);
+      VIEW_EVENT_CASE(ResponderStart);
+      VIEW_EVENT_CASE(ResponderEnd);
+      VIEW_EVENT_CASE(ResponderRelease);
+      VIEW_EVENT_CASE(ResponderMove);
+      VIEW_EVENT_CASE(ResponderTerminate);
+      VIEW_EVENT_CASE(ResponderTerminationRequest);
+      VIEW_EVENT_CASE(ShouldBlockNativeResponder);
+      VIEW_EVENT_CASE(TouchStart);
+      VIEW_EVENT_CASE(TouchMove);
+      VIEW_EVENT_CASE(TouchEnd);
+      VIEW_EVENT_CASE(TouchCancel);
+      // BorderRadii
+      SET_CASCADED_RECTANGLE_CORNERS(borderRadii, "border", "Radius", value);
+      SET_CASCADED_RECTANGLE_EDGES(borderColors, "border", "Color", value);
+      SET_CASCADED_RECTANGLE_CORNERS(borderCurves, "border", "Curve", value);
+      SET_CASCADED_RECTANGLE_CORNERS(cornerShapes, "corner", "Shape", value);
+      SET_CASCADED_RECTANGLE_EDGES(borderStyles, "border", "Style", value);
   }
 }
 
@@ -1080,6 +1093,9 @@ void BaseViewProps::applyInheritedTextAttributes(
   }
   if (inheritedWhiteSpace) {
     textAttributes.whiteSpace = inheritedWhiteSpace;
+  }
+  if (inheritedHugsWrappedLines) {
+    textAttributes.hugsWrappedLines = inheritedHugsWrappedLines;
   }
   if (inheritedDynamicRangeLimit) {
     textAttributes.dynamicRangeLimit = inheritedDynamicRangeLimit;

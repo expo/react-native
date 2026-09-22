@@ -92,8 +92,8 @@ import com.facebook.react.uimanager.events.EventDispatcher;
 import com.facebook.react.uimanager.events.FabricEventDispatcher;
 import com.facebook.react.uimanager.events.RCTEventEmitter;
 import com.facebook.react.uimanager.events.SynchronousEventReceiver;
-import com.facebook.react.views.text.PreparedLayout;
 import com.facebook.react.views.text.MaterialTypeScale;
+import com.facebook.react.views.text.PreparedLayout;
 import com.facebook.react.views.text.ReactTextViewManager;
 import com.facebook.react.views.text.ReactTextViewManagerCallback;
 import com.facebook.react.views.text.ReactTypefaceUtils;
@@ -190,11 +190,10 @@ public class FabricUIManager
   /**
    * The event emitter for a mounted view, or null if it has none.
    *
-   * Exposed so a view can ask JavaScript a question it needs answered before a
-   * platform callback returns — a text field asking whether an edit may be
-   * applied. The ordinary event path is the {@link
-   * com.facebook.react.uimanager.events.EventDispatcher}, which is asynchronous
-   * by design; this is the narrow exception, and callers should treat it as one.
+   * <p>Exposed so a view can ask JavaScript a question it needs answered before a platform callback
+   * returns — a text field asking whether an edit may be applied. The ordinary event path is the
+   * {@link com.facebook.react.uimanager.events.EventDispatcher}, which is asynchronous by design;
+   * this is the narrow exception, and callers should treat it as one.
    */
   @Nullable
   public com.facebook.react.fabric.events.EventEmitterWrapper getEventEmitter(
@@ -291,33 +290,28 @@ public class FabricUIManager
   /**
    * Sends the theme's type scale to the layout layer.
    *
-   * A heading states the spec's `em` FACTOR for its block margin and the
-   * renderer multiplies it by the size the heading is drawn at — which on this
-   * platform comes from the theme, and which the layout layer has no context to
-   * ask for. So it is published, here, right after the scale that produces it
-   * is primed.
+   * <p>A heading states the spec's `em` FACTOR for its block margin and the renderer multiplies it
+   * by the size the heading is drawn at — which on this platform comes from the theme, and which
+   * the layout layer has no context to ask for. So it is published, here, right after the scale
+   * that produces it is primed.
    *
-   * Published at BOTH priming sites, and deliberately: the constructor's
-   * attempt runs before any tree exists, which is what the first commit's
-   * margins need, and the measure-time attempt is the first with an Activity's
-   * theme to offer. Where those two disagree — an Application theme without the
-   * Material attributes under an Activity that has them — the first commit's
-   * margins are computed from the provisional scale. That is the same lag the
-   * TEXT already has, from the same provisional answer, so the margin stays
-   * consistent with the type it belongs to rather than acquiring a lag of its
-   * own.
+   * <p>Published at BOTH priming sites, and deliberately: the constructor's attempt runs before any
+   * tree exists, which is what the first commit's margins need, and the measure-time attempt is the
+   * first with an Activity's theme to offer. Where those two disagree — an Application theme
+   * without the Material attributes under an Activity that has them — the first commit's margins
+   * are computed from the provisional scale. That is the same lag the TEXT already has, from the
+   * same provisional answer, so the margin stays consistent with the type it belongs to rather than
+   * acquiring a lag of its own.
    */
   private void publishTextRoleSizes(Context context) {
     FabricUIManagerBinding binding = mBinding;
     if (binding == null) {
       return;
     }
-    for (Map.Entry<String, Float> role :
-        MaterialTypeScale.roleSizesDp(context).entrySet()) {
+    for (Map.Entry<String, Float> role : MaterialTypeScale.roleSizesDp(context).entrySet()) {
       binding.publishTextRoleSize(role.getKey(), role.getValue());
     }
   }
-
 
   @Override
   @UiThread
@@ -700,7 +694,8 @@ public class FabricUIManager
       float minHeight,
       float maxHeight,
       @Nullable float[] attachmentsPositions,
-      @Nullable float[] floatExclusionsDip) {
+      @Nullable float[] floatExclusionsDip,
+      boolean hugsWrappedLines) {
 
     ViewManager<?, ?> textViewManager = mViewManagerRegistry.get(ReactTextViewManager.REACT_CLASS);
 
@@ -729,7 +724,8 @@ public class FabricUIManager
             : null,
         attachmentsPositions,
         floatExclusionsDip,
-        mTextEffectRegistry);
+        mTextEffectRegistry,
+        hugsWrappedLines);
   }
 
   /**
@@ -757,7 +753,6 @@ public class FabricUIManager
         getYogaMeasureMode(minHeight, maxHeight),
         floatExclusionsDip);
   }
-
 
   @AnyThread
   @ThreadConfined(ANY)
@@ -1187,7 +1182,8 @@ public class FabricUIManager
       final int heightMeasureSpec,
       final int offsetX,
       final int offsetY) {
-    updateRootLayoutSpecs(surfaceId, widthMeasureSpec, heightMeasureSpec, offsetX, offsetY, 0, 0, 0, 0);
+    updateRootLayoutSpecs(
+        surfaceId, widthMeasureSpec, heightMeasureSpec, offsetX, offsetY, 0, 0, 0, 0);
   }
 
   @Override
