@@ -557,7 +557,9 @@ rather than going quiet.
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `checkable-line-centering` — deviation, `packages/expo-intrinsics/__tests__/CheckableLineCentering-itest.js`
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
+- `clipping-eats-the-shadow` — limitation, `packages/chat-demo/Composer.js`
 - `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
+- `compact-menu-row-holds-four` — limitation, `packages/chat-demo/screens/ChatScreen.js`
 - `container-query-is-a-media-query` — deviation, `packages/rn-tester/js/astryx/css/__tests__/parse-test.js`
 - `corner-shape-clips-border-and-shadow` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `corner-shape-ios-only` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
@@ -586,6 +588,7 @@ rather than going quiet.
 - `no-nested-vertical-scroll` — limitation, `packages/react-native/ReactCommon/react/renderer/components/view/ExpoScrollViewShadowNode.cpp`
 - `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `panel-content-fades-without-the-blur` — deviation, `packages/chat-demo/Composer.js`
 - `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
 - `peek-outruns-the-scroll` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPPeekInteraction.h`
 - `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`

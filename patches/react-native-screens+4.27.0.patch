@@ -1,0 +1,15 @@
+diff --git a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
+--- a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
++++ b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
+@@ -380,6 +380,11 @@
+       appearance.shadowColor = shadowColor;
+       appearance.shadowImage = shadowImage;
+     }
++  } else if (config.translucent && config.backgroundColor == nil) {
++    // No colour and translucent: the system's own bar background — Liquid Glass
++    // on iOS 26 and later — which neither the transparent nor the opaque
++    // configuration can produce.
++    [appearance configureWithDefaultBackground];
+   } else {
+     [appearance configureWithOpaqueBackground];
+   }
