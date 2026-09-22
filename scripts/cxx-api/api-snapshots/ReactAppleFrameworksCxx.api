@@ -426,6 +426,7 @@ interface EXPKeyboardPanelComponentView : public RCTViewComponentView {
 }
 
 interface EXPKeyboardTrace : public NSObject {
+  public @property (assign) BOOL touchTracing;
   public virtual static BOOL isRecording();
   public virtual static NSString* barOffScreenMarker();
   public virtual static NSString* callers();
