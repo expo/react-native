@@ -7,6 +7,7 @@
 
 #import "RCTSurfaceTouchHandler.h"
 
+#import <React/EXPKeyboardTrace.h>
 #import <React/RCTIdentifierPool.h>
 #import <React/RCTLog.h>
 #import <React/RCTUtils.h>
@@ -302,11 +303,63 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
   }
 }
 
+/*
+ * The arbitration, said out loud — see `EXPKeyboardTrace.touchTracing`.
+ *
+ * This recognizer reaches `Began` on the FIRST TOUCH, before any movement, so
+ * it always recognizes before a scroll view's pan can. What keeps it from
+ * eating every drag is that it declines to prevent anyone
+ * (`canPreventGestureRecognizer:` → NO) and sets `cancelsTouchesInView = NO`,
+ * leaving UIKit free to let the pan recognize later and cancel these touches.
+ *
+ * That is a contract between four separate decisions, three of which are
+ * UIKit's, and when a drag fails to scroll there is nothing in any log that
+ * says which of them went the other way. These lines are that record: what the
+ * finger did, what this recognizer's state did, and what it answered when UIKit
+ * asked about somebody else's.
+ */
+static NSString *EXPTouchStateName(UIGestureRecognizerState state)
+{
+  switch (state) {
+    case UIGestureRecognizerStatePossible:
+      return @"possible";
+    case UIGestureRecognizerStateBegan:
+      return @"began";
+    case UIGestureRecognizerStateChanged:
+      return @"changed";
+    case UIGestureRecognizerStateEnded:
+      return @"ended";
+    case UIGestureRecognizerStateCancelled:
+      return @"cancelled";
+    case UIGestureRecognizerStateFailed:
+      return @"failed";
+  }
+  return @"?";
+}
+
+static void EXPRecordTouch(NSString *what, UIGestureRecognizer *self_, NSSet<UITouch *> *touches)
+{
+  if (!EXPKeyboardTrace.touchTracing) {
+    return;
+  }
+  UITouch *touch = touches.anyObject;
+  const CGPoint at = [touch locationInView:self_.view];
+  [EXPKeyboardTrace record:@"touch %@ n=%lu at=%.0f,%.0f state=%@ on=%@",
+                           what,
+                           (unsigned long)touches.count,
+                           at.x,
+                           at.y,
+                           EXPTouchStateName(self_.state),
+                           NSStringFromClass(touch.view.class)];
+}
+
 #pragma mark - `UIResponder`-ish touch-delivery methods
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
   [super touchesBegan:touches withEvent:event];
+
+  EXPRecordTouch(@"began", self, touches);
 
   [self _registerTouches:touches];
   [self _dispatchActiveTouches:[self _activeTouchesFromTouches:touches] eventType:RCTTouchEventTypeTouchStart];
@@ -322,6 +375,8 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 {
   [super touchesMoved:touches withEvent:event];
 
+  EXPRecordTouch(@"moved", self, touches);
+
   [self _updateTouches:touches];
   [self _dispatchActiveTouches:[self _activeTouchesFromTouches:touches] eventType:RCTTouchEventTypeTouchMove];
 
@@ -331,6 +386,8 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
   [super touchesEnded:touches withEvent:event];
+
+  EXPRecordTouch(@"ended", self, touches);
 
   [self _updateTouches:touches];
   [self _dispatchActiveTouches:[self _activeTouchesFromTouches:touches] eventType:RCTTouchEventTypeTouchEnd];
@@ -346,6 +403,8 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
   [super touchesCancelled:touches withEvent:event];
+
+  EXPRecordTouch(@"cancelled", self, touches);
 
   [self _updateTouches:touches];
   [self _dispatchActiveTouches:[self _activeTouchesFromTouches:touches] eventType:RCTTouchEventTypeTouchCancel];
@@ -387,7 +446,16 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 {
   // We fail in favour of other external gesture recognizers.
   // iOS will ask `delegate`'s opinion about this gesture recognizer little bit later.
-  return ![preventingGestureRecognizer.view isDescendantOfView:self.view];
+  const BOOL answer = ![preventingGestureRecognizer.view isDescendantOfView:self.view];
+  if (EXPKeyboardTrace.touchTracing) {
+    // NO here means "a scroll view inside this surface cannot stand me down",
+    // which is the normal answer and the one the whole contract rests on.
+    [EXPKeyboardTrace record:@"touch canBePreventedBy %@ (%@) -> %@",
+                             NSStringFromClass(preventingGestureRecognizer.class),
+                             NSStringFromClass(preventingGestureRecognizer.view.class),
+                             answer ? @"YES" : @"NO"];
+  }
+  return answer;
 }
 
 #pragma mark - UIGestureRecognizerDelegate
@@ -403,6 +471,16 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
     shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
 {
   BOOL canBePrevented = [self canBePreventedByGestureRecognizer:otherGestureRecognizer];
+  if (EXPKeyboardTrace.touchTracing) {
+    // The other recognizer's own state matters as much as the answer: a pan
+    // that is still `possible` here has not taken the gesture, and a drag that
+    // never scrolls is a pan that never left that state.
+    [EXPKeyboardTrace record:@"touch simultaneous? %@ state=%@ cancelsInView=%d prevented=%d -> NO",
+                             NSStringFromClass(otherGestureRecognizer.class),
+                             EXPTouchStateName(otherGestureRecognizer.state),
+                             otherGestureRecognizer.cancelsTouchesInView,
+                             canBePrevented];
+  }
   if (canBePrevented && otherGestureRecognizer.cancelsTouchesInView) {
     [self _cancelTouches];
   }

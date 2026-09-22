@@ -6,6 +6,7 @@
  */
 
 #import "RCTSurfacePointerHandler.h"
+#import <React/EXPKeyboardTrace.h>
 
 #import <React/RCTIdentifierPool.h>
 #import <React/RCTReactTaggedView.h>
@@ -773,8 +774,52 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 
 #pragma mark - `UIResponder`-ish touch-delivery methods
 
+/*
+ * The pointer handler's own state, said out loud — see
+ * `EXPKeyboardTrace.touchTracing`.
+ *
+ * This is the handler that runs when W3C pointer events are on, which is the
+ * case for RNTester. The comment on `shouldRecognizeSimultaneously` below
+ * records a failure already found once here: if this recognizer participates in
+ * arbitration at all, a second finger landing while a first is scrolling
+ * desyncs its state from UIKit's touch registry and WEDGES the enclosing
+ * ScrollView's pan, leaving scrolling locked. These lines exist to show whether
+ * that is happening again — `active` is the count it believes is down, and a
+ * drag that fails to scroll after a count that never returned to zero is that
+ * fault.
+ */
+static NSString *EXPPointerStateName(UIGestureRecognizerState state)
+{
+  switch (state) {
+    case UIGestureRecognizerStatePossible:
+      return @"possible";
+    case UIGestureRecognizerStateBegan:
+      return @"began";
+    case UIGestureRecognizerStateChanged:
+      return @"changed";
+    case UIGestureRecognizerStateEnded:
+      return @"ended";
+    case UIGestureRecognizerStateCancelled:
+      return @"cancelled";
+    case UIGestureRecognizerStateFailed:
+      return @"failed";
+  }
+  return @"?";
+}
+
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
+  if (EXPKeyboardTrace.touchTracing) {
+    UITouch *aTouch = touches.anyObject;
+    const CGPoint at = [aTouch locationInView:self.view];
+    [EXPKeyboardTrace record:@"pointer began n=%lu active=%lu at=%.0f,%.0f state=%@ on=%@",
+                             (unsigned long)touches.count,
+                             (unsigned long)_activePointers.size(),
+                             at.x,
+                             at.y,
+                             EXPPointerStateName(self.state),
+                             NSStringFromClass(aTouch.view.class)];
+  }
   [super touchesBegan:touches withEvent:event];
 
   [self _registerTouches:touches withEvent:event];
@@ -789,6 +834,17 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
+  if (EXPKeyboardTrace.touchTracing) {
+    UITouch *aTouch = touches.anyObject;
+    const CGPoint at = [aTouch locationInView:self.view];
+    [EXPKeyboardTrace record:@"pointer moved n=%lu active=%lu at=%.0f,%.0f state=%@ on=%@",
+                             (unsigned long)touches.count,
+                             (unsigned long)_activePointers.size(),
+                             at.x,
+                             at.y,
+                             EXPPointerStateName(self.state),
+                             NSStringFromClass(aTouch.view.class)];
+  }
   [super touchesMoved:touches withEvent:event];
 
   [self _updateTouches:touches withEvent:event];
@@ -802,6 +858,17 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
+  if (EXPKeyboardTrace.touchTracing) {
+    UITouch *aTouch = touches.anyObject;
+    const CGPoint at = [aTouch locationInView:self.view];
+    [EXPKeyboardTrace record:@"pointer ended n=%lu active=%lu at=%.0f,%.0f state=%@ on=%@",
+                             (unsigned long)touches.count,
+                             (unsigned long)_activePointers.size(),
+                             at.x,
+                             at.y,
+                             EXPPointerStateName(self.state),
+                             NSStringFromClass(aTouch.view.class)];
+  }
   [super touchesEnded:touches withEvent:event];
 
   [self _updateTouches:touches withEvent:event];
@@ -817,6 +884,17 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
+  if (EXPKeyboardTrace.touchTracing) {
+    UITouch *aTouch = touches.anyObject;
+    const CGPoint at = [aTouch locationInView:self.view];
+    [EXPKeyboardTrace record:@"pointer cancelled n=%lu active=%lu at=%.0f,%.0f state=%@ on=%@",
+                             (unsigned long)touches.count,
+                             (unsigned long)_activePointers.size(),
+                             at.x,
+                             at.y,
+                             EXPPointerStateName(self.state),
+                             NSStringFromClass(aTouch.view.class)];
+  }
   [super touchesCancelled:touches withEvent:event];
 
   [self _updateTouches:touches withEvent:event];
@@ -834,6 +912,11 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 {
   [super reset];
 
+  if (EXPKeyboardTrace.touchTracing) {
+    // A reset with pointers still active is the desync: UIKit has taken the
+    // gesture away while this handler still believes fingers are down.
+    [EXPKeyboardTrace record:@"pointer reset active=%lu", (unsigned long)_activePointers.size()];
+  }
   if (!_activePointers.empty()) {
     std::vector<ActivePointer> activePointers;
     activePointers.reserve(_activePointers.size());
@@ -875,6 +958,29 @@ RCT_NOT_IMPLEMENTED(-(instancetype)initWithTarget : (id)target action : (SEL)act
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
     shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
 {
+  if (EXPKeyboardTrace.touchTracing) {
+    /*
+     * The DELEGATE and the press duration identify WHICH recognizer this is,
+     * which the class name alone cannot: two long presses live on
+     * `RCTViewComponentView` and they behave oppositely. `_textSelectionLongPress`
+     * has no delegate and the default half-second, so it answers NO to
+     * simultaneous recognition and can prevent a pan; the radio row's press has
+     * a delegate that answers YES and a zero duration. A long press already
+     * `began` a few milliseconds after touch-down is a zero-duration one.
+     */
+    NSString *detail = @"";
+    if ([otherGestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]]) {
+      UILongPressGestureRecognizer *press = (UILongPressGestureRecognizer *)otherGestureRecognizer;
+      detail =
+          [NSString stringWithFormat:@" minPress=%.2f delegate=%@",
+                                     press.minimumPressDuration,
+                                     press.delegate == nil ? @"(none)" : NSStringFromClass([press.delegate class])];
+    }
+    [EXPKeyboardTrace record:@"pointer simultaneous? %@ state=%@%@ -> YES",
+                             NSStringFromClass(otherGestureRecognizer.class),
+                             EXPPointerStateName(otherGestureRecognizer.state),
+                             detail];
+  }
   return YES;
 }
 
