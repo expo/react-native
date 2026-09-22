@@ -26,6 +26,7 @@
 #include <react/renderer/components/view/ElementSelectShadowNode.h>
 #include <react/renderer/components/view/ElementTextAreaShadowNode.h>
 #include <react/renderer/components/view/ElementTextInputShadowNode.h>
+#include <react/renderer/components/view/ExpoChatBubbleShadowNode.h>
 #include <react/renderer/components/view/ExpoKeyboardAccessoryShadowNode.h>
 #include <react/renderer/components/view/ExpoScrollViewShadowNode.h>
 #include <react/renderer/components/view/ExpoTopLayerShadowNode.h>
@@ -155,6 +156,9 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders()
   // `<native:keyboardaccessory>`: a bar that is PART of the keyboard rather than
   // a view that follows it, so a drag begun on it drags the keyboard.
   providers.push_back(concreteComponentDescriptorProvider<ExpoKeyboardAccessoryComponentDescriptor>());
+  // `<native:chatbubble>`: its own element because the tail is part of the
+  // box's geometry and has to be settled in layout
+  providers.push_back(concreteComponentDescriptorProvider<ExpoChatBubbleComponentDescriptor>());
   // `<native:toplayer>`: HTML's top layer, where a shown popover and a modal
   // dialog are painted above the page while staying where React renders them
   providers.push_back(concreteComponentDescriptorProvider<ExpoTopLayerComponentDescriptor>());
