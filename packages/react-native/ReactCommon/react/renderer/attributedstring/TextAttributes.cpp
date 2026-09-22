@@ -134,6 +134,9 @@ void TextAttributes::apply(TextAttributes textAttributes) {
       : textTransform;
   whiteSpace = textAttributes.whiteSpace.has_value() ? textAttributes.whiteSpace
                                                      : whiteSpace;
+  hugsWrappedLines = textAttributes.hugsWrappedLines.has_value()
+      ? textAttributes.hugsWrappedLines
+      : hugsWrappedLines;
   dynamicRangeLimit = textAttributes.dynamicRangeLimit.has_value()
       ? textAttributes.dynamicRangeLimit
       : dynamicRangeLimit;
@@ -234,6 +237,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              role,
              textTransform,
              whiteSpace,
+             hugsWrappedLines,
              dynamicRangeLimit,
              textEffects) ==
       std::tie(
@@ -262,6 +266,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              rhs.role,
              rhs.textTransform,
              rhs.whiteSpace,
+             rhs.hugsWrappedLines,
              rhs.dynamicRangeLimit,
              rhs.textEffects) &&
       floatEquality(maxFontSizeMultiplier, rhs.maxFontSizeMultiplier) &&
