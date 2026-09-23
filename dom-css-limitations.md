@@ -450,7 +450,7 @@ per-frame work on the paint path down to one branch.
 
 ## Performance
 
-
+**`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`
 `yoga::Node` is held by value, so an element that generates *no* box — a
 span-like inline that folds into its parent's inline formatting context — still
 pays 744 bytes for a node it never uses. Making it lazy would make folding
