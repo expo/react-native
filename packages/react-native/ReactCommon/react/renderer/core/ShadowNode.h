@@ -172,6 +172,27 @@ class ShadowNode : public Sealable, public DebugStringConvertible, public jsi::N
 
   void sealRecursive() const;
 
+  /*
+   * Whether this node has been published to a revision. See `isPublished_`.
+   * Ask this before mutating a node you did not create.
+   */
+  bool isPublished() const
+  {
+    return isPublished_.load(std::memory_order_relaxed);
+  }
+
+  /*
+   * Seals content this node OWNS but does not keep in `children_`.
+   *
+   * `sealRecursive` walks `children_`, which is the shadow tree as React knows
+   * it. A node may own more than that: an element with inline content owns
+   * anonymous boxes that are deliberately invisible to the differ, mounting and
+   * the DOM APIs, and therefore invisible here too. Left unsealed they stay
+   * writable for ever, so the copy-on-write rule silently exempts exactly the
+   * nodes this fork added. Overridden where such content exists.
+   */
+  virtual void sealOwnedContentRecursive() const {}
+
   const ShadowNodeFamily &getFamily() const;
 
   ShadowNodeFamily::Shared getFamilyShared() const;
@@ -271,6 +292,38 @@ class ShadowNode : public Sealable, public DebugStringConvertible, public jsi::N
    * intents and purposes it should be treated as mounted.
    */
   mutable std::atomic<bool> hasBeenMounted_{false};
+
+  /*
+   * Whether this node has been PUBLISHED to a revision — i.e. whether anyone
+   * other than its creator may be holding it.
+   *
+   * This is the authority for copy-on-write, and it has to exist in release
+   * builds, which is why it does not live in `Sealable`. `seal()` compiles away
+   * outside debug (it is an assertion aid), so a caller deciding whether it may
+   * mutate a node in place had nothing to ask and fell back on the Yoga owner
+   * pointer — which answers "is this in my LAYOUT tree", a different question
+   * about a mutable structure keyed on address identity.
+   *
+   * Set in `sealRecursive`, which runs at publish inside the shadow tree's
+   * exclusive lock, and never reversed. So
+   *
+   *     !isPublished() => exclusively mine
+   *
+   * holds without a race: a commit reaches nodes only through a published
+   * revision, and everything in one is published, so an unpublished node is
+   * unreachable by anyone else and cannot become published underneath a writer.
+   * The rule must be "clone if not owned", never "check then mutate".
+   *
+   * Relaxed, and deliberately: the revision is handed between threads through
+   * that lock, which already orders everything reachable from it. It lowers to
+   * a plain byte load.
+   *
+   * FREE: it sits in the padding `hasBeenMounted_` already leaves before
+   * `traits_`. `ViewShadowNode` has a 1088-byte budget asserted in
+   * `ViewShadowNode.cpp` and putting this in the `Sealable` base instead cost
+   * the alignment of a whole pointer and broke it.
+   */
+  mutable std::atomic<bool> isPublished_{false};
 
   static Props::Shared propsForClonedShadowNode(const ShadowNode &sourceShadowNode, const Props::Shared &props);
 

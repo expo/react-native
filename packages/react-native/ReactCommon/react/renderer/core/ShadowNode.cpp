@@ -235,13 +235,21 @@ int ShadowNode::getOrderIndex() const {
 }
 
 void ShadowNode::sealRecursive() const {
-  if (getSealed()) {
+  if (isPublished_.load(std::memory_order_relaxed)) {
     return;
   }
+
+  // The release-visible half: `seal()` below is a debug assertion aid and
+  // compiles away, but copy-on-write needs this fact in every build.
+  isPublished_.store(true, std::memory_order_relaxed);
 
   seal();
 
   props_->seal();
+
+  // Content owned outside `children_` — anonymous inline boxes and what hangs
+  // off them. Sealed first so a subtree is never half-published.
+  sealOwnedContentRecursive();
 
   for (const auto& child : *children_) {
     child->sealRecursive();
