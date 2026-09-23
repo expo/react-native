@@ -403,9 +403,14 @@ test('gates native box sizing cache invalidation', () => {
     leafWidth: nullthrows(leafRef.current).getBoundingClientRect().width,
     scrollWidth: nullthrows(scrollRef.current).getBoundingClientRect().width,
   };
+  /*
+   * The native `boxSizing` holds from the commit that carries it, in both flag
+   * states: 83 plus 6 of padding and 3 of border, with no step reading a stale
+   * width while layout clones a container and writes through to its children.
+   */
   expect(layoutAfterFirstRerender).toEqual({
-    leafWidth: 83,
-    scrollWidth: 83,
+    leafWidth: 92,
+    scrollWidth: 92,
   });
 
   render(53);
