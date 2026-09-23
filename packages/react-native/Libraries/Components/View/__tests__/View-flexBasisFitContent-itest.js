@@ -403,9 +403,17 @@ test('gates native box sizing cache invalidation', () => {
     leafWidth: nullthrows(leafRef.current).getBoundingClientRect().width,
     scrollWidth: nullthrows(scrollRef.current).getBoundingClientRect().width,
   };
+  /*
+   * The native `boxSizing` holds from the commit that carries it, in both flag
+   * states: 83 plus 6 of padding and 3 of border. It used to read 83 through
+   * that commit and the next render and only reach 92 on the one after, while
+   * layout cloned a container and then wrote through to children the
+   * committed revision still held. With those children cloned before they are
+   * written, no step reads the stale width.
+   */
   expect(layoutAfterFirstRerender).toEqual({
-    leafWidth: 83,
-    scrollWidth: 83,
+    leafWidth: 92,
+    scrollWidth: 92,
   });
 
   render(53);

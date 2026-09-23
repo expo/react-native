@@ -191,6 +191,19 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * one box, and no Yoga children, because the container took the box's place
    * in the Yoga tree.
    */
+  /*
+   * The anonymous boxes are this node's own content, so they are published
+   * with it — see `ShadowNode::sealOwnedContentRecursive`. A box is not in
+   * `children_`, so without this it and everything under it (the text nodes
+   * and inline elements of the run) would never be sealed, and copy-on-write
+   * would treat them as writable for ever.
+   */
+  void sealOwnedContentRecursive() const override {
+    for (const auto &box : anonymousTextContentChildren_) {
+      box->sealRecursive();
+    }
+  }
+
   YogaLayoutableShadowNode *elidedInlineRun() const {
     if (!measuresOwnInlineRun_) {
       return nullptr;
