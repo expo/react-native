@@ -38,7 +38,11 @@ SurfaceId NativeFantom::startSurface(
     double devicePixelRatio,
     double viewportOffsetX,
     double viewportOffsetY,
-    double fontSizeMultiplier) {
+    double fontSizeMultiplier,
+    double safeAreaLeft,
+    double safeAreaTop,
+    double safeAreaRight,
+    double safeAreaBottom) {
   SurfaceId surfaceId = nextSurfaceId_;
   nextSurfaceId_ += 10;
   appDelegate_.startSurface(
@@ -49,8 +53,39 @@ SurfaceId NativeFantom::startSurface(
       static_cast<float>(devicePixelRatio),
       static_cast<float>(viewportOffsetX),
       static_cast<float>(viewportOffsetY),
-      static_cast<float>(fontSizeMultiplier));
+      static_cast<float>(fontSizeMultiplier),
+      static_cast<float>(safeAreaLeft),
+      static_cast<float>(safeAreaTop),
+      static_cast<float>(safeAreaRight),
+      static_cast<float>(safeAreaBottom));
   return surfaceId;
+}
+
+void NativeFantom::updateSurfaceConstraints(
+    jsi::Runtime& /*runtime*/,
+    SurfaceId surfaceId,
+    double viewportWidth,
+    double viewportHeight,
+    double devicePixelRatio,
+    double viewportOffsetX,
+    double viewportOffsetY,
+    double fontSizeMultiplier,
+    double safeAreaLeft,
+    double safeAreaTop,
+    double safeAreaRight,
+    double safeAreaBottom) {
+  appDelegate_.updateSurfaceConstraints(
+      surfaceId,
+      static_cast<float>(viewportWidth),
+      static_cast<float>(viewportHeight),
+      static_cast<float>(devicePixelRatio),
+      static_cast<float>(viewportOffsetX),
+      static_cast<float>(viewportOffsetY),
+      static_cast<float>(fontSizeMultiplier),
+      static_cast<float>(safeAreaLeft),
+      static_cast<float>(safeAreaTop),
+      static_cast<float>(safeAreaRight),
+      static_cast<float>(safeAreaBottom));
 }
 
 void NativeFantom::stopSurface(jsi::Runtime& /*runtime*/, SurfaceId surfaceId) {

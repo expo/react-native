@@ -32,11 +32,93 @@ type FantomRenderedOutputConfig = {
   props?: ReadonlyArray<string>,
 };
 
+/** Whether the renderer produced any view at all */
+function isEmptyTree(json: FantomJson): boolean {
+  return Array.isArray(json) ? json.length === 0 : json == null;
+}
+
+/** Every prop name present anywhere in the tree */
+function allPropNames(json: FantomJson): Array<string> {
+  const found = new Set<string>();
+  const visit = (node: FantomJsonObject | string) => {
+    if (typeof node === 'string') {
+      return;
+    }
+    for (const name of Object.keys(node.props)) {
+      found.add(name);
+    }
+    for (const child of node.children) {
+      visit(child);
+    }
+  };
+  if (Array.isArray(json)) {
+    json.forEach(visit);
+  } else {
+    visit(json);
+  }
+  return Array.from(found).sort();
+}
+
 class FantomRenderedOutput {
   #json: FantomJson;
+  #unfiltered: FantomJson;
+  #config: FantomRenderedOutputConfig;
 
   constructor(json: FantomJson, config: FantomRenderedOutputConfig) {
     this.#json = this.#filterJson(json, config);
+    this.#unfiltered = json;
+    this.#config = config;
+  }
+
+  /**
+   * Why a prop you expected is not in the output. A `props` filter that comes
+   * back empty has three causes with an identical result: the value equals its
+   * default (`debugStringConvertibleItem` drops those); the C++ `Props` class
+   * does not emit it from `getDebugProps()`; or no view was rendered because
+   * it was flattened away. A method rather than a warning, because correct
+   * tests assert each of the three on purpose.
+   */
+  explain(): string {
+    const patterns = this.#config.props;
+    const present = allPropNames(this.#unfiltered);
+    const lines = [];
+
+    if (patterns == null || patterns.length === 0) {
+      lines.push('No `props` filter was given, so nothing was filtered out.');
+    } else {
+      for (const pattern of patterns) {
+        const matched = present.filter(name => new RegExp(pattern).test(name));
+        lines.push(
+          matched.length > 0
+            ? `  /${pattern}/ matched: ${matched.join(', ')}`
+            : `  /${pattern}/ matched NOTHING`,
+        );
+      }
+    }
+
+    if (isEmptyTree(this.#unfiltered)) {
+      lines.push(
+        '',
+        'NOTHING WAS RENDERED. The tree is empty, so every prop reads as',
+        'absent whether it works or not. The usual cause is view flattening: a',
+        'view with only layout style and nothing to paint never reaches the',
+        'mounting layer. Give it a backgroundColor, or assert on a child that',
+        'does paint.',
+      );
+    } else {
+      lines.push('', `Present anywhere in the tree: ${present.join(', ')}`);
+    }
+
+    lines.push(
+      '',
+      'A prop is only visible here if the C++ Props class emits it from',
+      'getDebugProps() AND its value differs from the default. If the name is',
+      'not in the list above and the tree is not empty, add it to',
+      'getDebugProps() in the relevant Props.cpp — until then it cannot be',
+      'observed from a test however well it works.',
+    );
+
+    return lines.join('\n');
   }
 
   toJSON(): FantomJson {
