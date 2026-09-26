@@ -53,6 +53,28 @@ public interface UIManager : PerformanceCounter {
   )
 
   /**
+   * As above, and additionally tells the surface what `env(safe-area-inset-*)` resolves to. It
+   * arrives with the layout specs because a safe area delivered afterwards would lay the surface
+   * out once against a value not yet known and again once it is. Defaulted so an implementation
+   * that publishes none keeps compiling; `env()` then resolves to its fallback.
+   */
+  @UiThread
+  @ThreadConfined(ThreadConfined.UI)
+  public fun updateRootLayoutSpecs(
+      rootTag: Int,
+      widthMeasureSpec: Int,
+      heightMeasureSpec: Int,
+      offsetX: Int,
+      offsetY: Int,
+      safeAreaLeft: Int,
+      safeAreaTop: Int,
+      safeAreaRight: Int,
+      safeAreaBottom: Int,
+  ) {
+    updateRootLayoutSpecs(rootTag, widthMeasureSpec, heightMeasureSpec, offsetX, offsetY)
+  }
+
+  /**
    * Dispatches the commandId received by parameter to the view associated with the reactTag. The
    * command will be processed in the UIThread.
    *

@@ -115,6 +115,7 @@ public class ReactRootView extends FrameLayout implements RootView, ReactRoot {
   private int mLastHeight = 0;
   private int mLastOffsetX = Integer.MIN_VALUE;
   private int mLastOffsetY = Integer.MIN_VALUE;
+  private @Nullable Rect mLastSafeArea = null;
   private final AtomicInteger mState = new AtomicInteger(STATE_STOPPED);
 
   @SuppressWarnings("this-escape")
@@ -657,12 +658,29 @@ public class ReactRootView extends FrameLayout implements RootView, ReactRoot {
           offsetY = viewportOffset.y;
         }
 
-        if (measureSpecsChanged || offsetX != mLastOffsetX || offsetY != mLastOffsetY) {
+        // What `env(safe-area-inset-*)` resolves to. Part of the change test below as well as
+        // of the call, because a rotation changes it without changing the measure specs or the
+        // offset.
+        Rect safeArea = RootViewUtil.getSafeAreaInsets(this);
+
+        if (measureSpecsChanged
+            || offsetX != mLastOffsetX
+            || offsetY != mLastOffsetY
+            || !safeArea.equals(mLastSafeArea)) {
           uiManager.updateRootLayoutSpecs(
-              getRootViewTag(), widthMeasureSpec, heightMeasureSpec, offsetX, offsetY);
+              getRootViewTag(),
+              widthMeasureSpec,
+              heightMeasureSpec,
+              offsetX,
+              offsetY,
+              safeArea.left,
+              safeArea.top,
+              safeArea.right,
+              safeArea.bottom);
         }
         mLastOffsetX = offsetX;
         mLastOffsetY = offsetY;
+        mLastSafeArea = safeArea;
       }
     }
 

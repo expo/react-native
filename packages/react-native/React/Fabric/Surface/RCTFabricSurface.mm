@@ -211,6 +211,23 @@ using namespace facebook::react;
 
 - (void)setMinimumSize:(CGSize)minimumSize maximumSize:(CGSize)maximumSize viewportOffset:(CGPoint)viewportOffset
 {
+  /*
+   * Keep whatever safe area was last published rather than zeroing it:
+   * `-setMinimumSize:maximumSize:` and `-setSize:` reach the layout through
+   * this method and know nothing about safe areas
+   */
+  auto insets = _surfaceHandler->getLayoutContext().environmentValues.safeAreaInsets;
+  [self setMinimumSize:minimumSize
+           maximumSize:maximumSize
+        viewportOffset:viewportOffset
+        safeAreaInsets:UIEdgeInsetsMake(insets.top, insets.left, insets.bottom, insets.right)];
+}
+
+- (void)setMinimumSize:(CGSize)minimumSize
+           maximumSize:(CGSize)maximumSize
+        viewportOffset:(CGPoint)viewportOffset
+        safeAreaInsets:(UIEdgeInsets)safeAreaInsets
+{
   auto layoutConstraints = _surfaceHandler->getLayoutConstraints();
   auto layoutContext = _surfaceHandler->getLayoutContext();
 
@@ -221,6 +238,14 @@ using namespace facebook::react;
     layoutContext.viewportOffset = RCTPointFromCGPoint(viewportOffset);
   }
   layoutContext.viewportSize = layoutConstraints.maximumSize;
+  // UIKit's safe area is per view rather than per window, so a surface that
+  // is already inset, inside a navigation controller say, reports nothing at
+  // that edge
+  layoutContext.environmentValues.safeAreaInsets = EdgeInsets{
+      .left = (Float)safeAreaInsets.left,
+      .top = (Float)safeAreaInsets.top,
+      .right = (Float)safeAreaInsets.right,
+      .bottom = (Float)safeAreaInsets.bottom};
 
   _surfaceHandler->constraintLayout(layoutConstraints, layoutContext);
 }

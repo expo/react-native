@@ -8,12 +8,14 @@
 package com.facebook.react.uimanager
 
 import android.graphics.Point
+import android.graphics.Rect
 import android.view.View
 import androidx.annotation.UiThread
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.facebook.infer.annotation.Assertions
 import com.facebook.react.views.view.isEdgeToEdgeFeatureFlagOn
+import kotlin.math.max
 
 public object RootViewUtil {
   /** Returns the root view of a given view in a react application. */
@@ -51,5 +53,39 @@ public object RootViewUtil {
     }
 
     return Point(locationInWindow[0], locationInWindow[1])
+  }
+
+  /**
+   * How much of [v] the status bar, navigation bar and cutout draw over, in pixels: the value
+   * `env(safe-area-inset-*)` resolves to. Measured as the overlap of the view with each bar rather
+   * than as the window's insets, so a root already sitting below the status bar reserves nothing at
+   * its top whether or not the app is edge-to-edge. [width] and [height] are passed because the
+   * first caller is `onMeasure`, where the view has a measured size but not a laid-out one.
+   */
+  @UiThread
+  @JvmStatic
+  @JvmOverloads
+  public fun getSafeAreaInsets(v: View, width: Int = v.width, height: Int = v.height): Rect {
+    val insets = ViewCompat.getRootWindowInsets(v) ?: return Rect()
+    val root = v.rootView ?: return Rect()
+    val bars =
+        insets.getInsets(
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        )
+    val location = IntArray(2)
+    v.getLocationInWindow(location)
+
+    // The view's far edges, clamped to the window: a surface can be measured taller than the
+    // window it is in (a collapsing toolbar does that to its scrolling child), and without the
+    // clamp the overlap would grow by the overhang
+    val right = minOf(location[0] + width, root.width)
+    val bottom = minOf(location[1] + height, root.height)
+
+    return Rect(
+        max(bars.left - location[0], 0),
+        max(bars.top - location[1], 0),
+        max(right - (root.width - bars.right), 0),
+        max(bottom - (root.height - bars.bottom), 0),
+    )
   }
 }
