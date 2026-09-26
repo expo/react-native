@@ -66,9 +66,33 @@ class TesterAppDelegate {
       float pointScaleFactor = 1.0f,
       float viewportOffsetX = 0.0f,
       float viewportOffsetY = 0.0f,
-      float fontSizeMultiplier = 1.0f);
+      float fontSizeMultiplier = 1.0f,
+      // What `env(safe-area-inset-*)` resolves to in this surface. Zero by
+      // default, which is what a surface with nothing covering it reports.
+      float safeAreaLeft = 0.0f,
+      float safeAreaTop = 0.0f,
+      float safeAreaRight = 0.0f,
+      float safeAreaBottom = 0.0f);
 
-  void updateSurfaceConstraints(SurfaceId surfaceId, float widthDp, float heightDp, float pointScaleFactor);
+  /**
+   * Re-states a running surface's constraints AND its environment.
+   *
+   * Everything is passed rather than remembered because the caller — a test's
+   * `Root` — already holds all of it, and a second copy here would be a second
+   * thing that can disagree with the first.
+   */
+  void updateSurfaceConstraints(
+      SurfaceId surfaceId,
+      float widthDp,
+      float heightDp,
+      float pointScaleFactor,
+      float viewportOffsetX = 0.0f,
+      float viewportOffsetY = 0.0f,
+      float fontSizeMultiplier = 1.0f,
+      float safeAreaLeft = 0.0f,
+      float safeAreaTop = 0.0f,
+      float safeAreaRight = 0.0f,
+      float safeAreaBottom = 0.0f);
 
   void stopSurface(SurfaceId surfaceId);
 
