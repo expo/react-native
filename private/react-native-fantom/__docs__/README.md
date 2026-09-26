@@ -246,6 +246,46 @@ expect(root.getRenderedOutput({props: ['backgroundColor']}).toJSX()).toEqual(
 );
 ```
 
+### When a prop you expect is not in the output
+
+The rendered output is not the props your component was given. It is what the
+C++ `Props` class chose to describe itself with, and two rules decide what
+appears:
+
+- **Only props emitted from `getDebugProps()` are visible.** A prop the renderer
+  handles perfectly but does not list there cannot be observed from a test at
+  all — adding one is a few lines in the relevant `Props.cpp`.
+- **A value equal to its default is omitted.** `debugStringConvertibleItem`
+  drops it, so a prop at its initial value is absent by design. This is how
+  absence assertions work (`FlatList`'s `inverted` defaults to false and is
+  checked by there being no such prop) — but it also means "the default" and
+  "not implemented" look identical.
+
+A third reason a prop can be missing is that the whole **view was flattened
+away**. A `<View>` with only layout style and nothing to paint does not reach
+the mounting layer, and `toJSX()` returns `null` for the lot. Give it a
+`backgroundColor` if you need something to assert on.
+
+All three produce the same empty result, and nothing warns about any of them,
+because each is something a correct test deliberately asserts — `FlatList`'s
+`inverted` by the prop being absent, `<View pointerEvents="box-none">` by the
+tree being empty. What separates a mistake from an intent is the assertion, not
+the read, and the query cannot see it.
+
+So when a read comes back empty and you do not know which of the three you are
+looking at, ask:
+
+```javascript
+const output = root.getRenderedOutput({props: ['cornerShape']});
+console.log(output.explain());
+//   /cornerShape/ matched NOTHING
+//
+//   Present anywhere in the tree: backgroundColor, height, overflow, width
+//
+//   A prop is only visible here if the C++ Props class emits it from
+//   getDebugProps() AND its value differs from the default. …
+```
+
 For element-level assertions, get a typed reference and inspect tag names,
 layout metrics, or children:
 
