@@ -174,6 +174,16 @@ class RCTAnimationChoreographer : public AnimationChoreographer {
     if (_animationDisplayLink == nil) {
       _animationDisplayLink = [CADisplayLink displayLinkWithTarget:_displayLinkTarget
                                                           selector:@selector(displayLinkTick:)];
+      /*
+       * At the display's rate: left to itself a display link runs at 60 on a
+       * ProMotion screen even with `CADisableMinimumFrameDurationOnPhone` set,
+       * and this link drives the CSS transition engine, which must step at the
+       * rate a keyboard rise and a finger move at
+       */
+      const float rate = (float)UIScreen.mainScreen.maximumFramesPerSecond;
+      if (rate > 0) {
+        _animationDisplayLink.preferredFrameRateRange = CAFrameRateRangeMake(rate / 2, rate, rate);
+      }
       [_animationDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
     }
     [_animationDisplayLink setPaused:NO];
