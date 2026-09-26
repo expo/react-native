@@ -1147,6 +1147,22 @@ public class FabricUIManager
       final int heightMeasureSpec,
       final int offsetX,
       final int offsetY) {
+    updateRootLayoutSpecs(surfaceId, widthMeasureSpec, heightMeasureSpec, offsetX, offsetY, 0, 0, 0, 0);
+  }
+
+  @Override
+  @UiThread
+  @ThreadConfined(UI)
+  public void updateRootLayoutSpecs(
+      final int surfaceId,
+      final int widthMeasureSpec,
+      final int heightMeasureSpec,
+      final int offsetX,
+      final int offsetY,
+      final int safeAreaLeft,
+      final int safeAreaTop,
+      final int safeAreaRight,
+      final int safeAreaBottom) {
 
     if (ReactNativeFeatureFlags.enableFabricLogs()) {
       FLog.d(TAG, "Updating Root Layout Specs for [%d]", surfaceId);
@@ -1181,7 +1197,11 @@ public class FabricUIManager
         offsetX,
         offsetY,
         isRTL,
-        doLeftAndRightSwapInRTL);
+        doLeftAndRightSwapInRTL,
+        safeAreaLeft,
+        safeAreaTop,
+        safeAreaRight,
+        safeAreaBottom);
   }
 
   @Override
