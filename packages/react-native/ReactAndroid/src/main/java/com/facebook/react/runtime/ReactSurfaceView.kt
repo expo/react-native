@@ -15,6 +15,7 @@ import android.graphics.Rect
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowInsets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.facebook.common.logging.FLog
@@ -28,6 +29,7 @@ import com.facebook.react.uimanager.IllegalViewOperationException
 import com.facebook.react.uimanager.JSKeyDispatcher
 import com.facebook.react.uimanager.JSPointerDispatcher
 import com.facebook.react.uimanager.JSTouchDispatcher
+import com.facebook.react.uimanager.RootViewUtil
 import com.facebook.react.views.view.isEdgeToEdgeFeatureFlagOn
 import com.facebook.systrace.Systrace
 import java.util.Objects
@@ -69,6 +71,16 @@ public class ReactSurfaceView(context: Context?, internal val surface: ReactSurf
       return Point(locationInWindow[0], locationInWindow[1])
     }
 
+  /**
+   * How much of this surface the system bars and cutout draw over, in pixels: what
+   * `env(safe-area-inset-*)` resolves to. css-env-1 defines it against the viewport, so it is asked
+   * once here and travels with the layout constraints. Measured as the overlap of this view with
+   * each bar rather than as the window's insets, so a surface already sitting below the status bar
+   * reserves nothing at its top whether or not the app is edge-to-edge.
+   */
+  private fun safeAreaInsets(width: Int, height: Int): Rect =
+      RootViewUtil.getSafeAreaInsets(this, width, height)
+
   init {
     if (ReactFeatureFlags.dispatchPointerEvents) {
       jsPointerDispatcher = JSPointerDispatcher(this)
@@ -107,11 +119,16 @@ public class ReactSurfaceView(context: Context?, internal val surface: ReactSurf
     this.widthMeasureSpec = widthMeasureSpec
     this.heightMeasureSpec = heightMeasureSpec
     val viewportOffset = viewportOffset
+    val safeArea = safeAreaInsets(width, height)
     surface.updateLayoutSpecs(
         widthMeasureSpec,
         heightMeasureSpec,
         viewportOffset.x,
         viewportOffset.y,
+        safeArea.left,
+        safeArea.top,
+        safeArea.right,
+        safeArea.bottom,
     )
     Systrace.endSection(Systrace.TRACE_TAG_REACT)
   }
@@ -119,14 +136,35 @@ public class ReactSurfaceView(context: Context?, internal val surface: ReactSurf
   override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
     // Call updateLayoutSpecs to update locationOnScreen offsets, in case they've changed
     if (wasMeasured && changed) {
-      val viewportOffset = viewportOffset
-      surface.updateLayoutSpecs(
-          widthMeasureSpec,
-          heightMeasureSpec,
-          viewportOffset.x,
-          viewportOffset.y,
-      )
+      pushLayoutSpecs()
     }
+  }
+
+  /**
+   * The bars can change without the surface being measured again (rotation, immersive mode), and a
+   * surface whose layout depends on them has to be told
+   */
+  override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
+    val result = super.onApplyWindowInsets(insets)
+    if (wasMeasured) {
+      pushLayoutSpecs()
+    }
+    return result
+  }
+
+  private fun pushLayoutSpecs() {
+    val viewportOffset = viewportOffset
+    val safeArea = safeAreaInsets(width, height)
+    surface.updateLayoutSpecs(
+        widthMeasureSpec,
+        heightMeasureSpec,
+        viewportOffset.x,
+        viewportOffset.y,
+        safeArea.left,
+        safeArea.top,
+        safeArea.right,
+        safeArea.bottom,
+    )
   }
 
   override fun requestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {

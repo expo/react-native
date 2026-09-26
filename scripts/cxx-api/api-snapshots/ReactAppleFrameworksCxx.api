@@ -3169,6 +3169,7 @@ protocol RCTSurfaceProtocol : public NSObject {
   public virtual RCTSurfaceView* view();
   public virtual void setMinimumSize:maximumSize:(CGSize minimumSize, CGSize maximumSize);
   public virtual void setMinimumSize:maximumSize:viewportOffset:(CGSize minimumSize, CGSize maximumSize, CGPoint viewportOffset);
+  public virtual void setMinimumSize:maximumSize:viewportOffset:safeAreaInsets:(CGSize minimumSize, CGSize maximumSize, CGPoint viewportOffset, UIEdgeInsets safeAreaInsets);
   public virtual void start();
   public virtual void stop();
 }
