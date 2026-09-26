@@ -85,16 +85,27 @@ class NativeFantom : public NativeFantomCxxSpec<NativeFantom> {
       double devicePixelRatio,
       double fontScale,
       double viewportOffsetX,
-      double viewportOffsetY);
-
-  void stopSurface(jsi::Runtime &runtime, SurfaceId surfaceId);
+      double viewportOffsetY,
+      double safeAreaLeft,
+      double safeAreaTop,
+      double safeAreaRight,
+      double safeAreaBottom);
 
   void updateSurfaceConstraints(
       jsi::Runtime &runtime,
       SurfaceId surfaceId,
       double viewportWidth,
       double viewportHeight,
-      double devicePixelRatio);
+      double devicePixelRatio,
+      double viewportOffsetX,
+      double viewportOffsetY,
+      double fontSizeMultiplier,
+      double safeAreaLeft,
+      double safeAreaTop,
+      double safeAreaRight,
+      double safeAreaBottom);
+
+  void stopSurface(jsi::Runtime &runtime, SurfaceId surfaceId);
 
   void produceFramesForDuration(jsi::Runtime &runtime, double milliseconds);
 
