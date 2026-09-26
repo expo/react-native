@@ -82,6 +82,10 @@ internal class FabricUIManagerBinding : HybridClassBase() {
       offsetY: Float,
       isRTL: Boolean,
       doLeftAndRightSwapInRTL: Boolean,
+      safeAreaLeft: Float,
+      safeAreaTop: Float,
+      safeAreaRight: Float,
+      safeAreaBottom: Float,
   )
 
   external fun driveCxxAnimations()
