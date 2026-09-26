@@ -37,6 +37,21 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)setMinimumSize:(CGSize)minimumSize maximumSize:(CGSize)maximumSize viewportOffset:(CGPoint)viewportOffset;
 
+@optional
+
+/**
+ * As above, and additionally tells the Surface what `env(safe-area-inset-*)` resolves to. It
+ * travels with the layout constraints because a safe area delivered afterwards would lay the
+ * surface out once against a value not yet known and again once it is. Optional; a surface that
+ * does not implement it publishes no safe area and `env()` resolves to its fallback.
+ */
+- (void)setMinimumSize:(CGSize)minimumSize
+           maximumSize:(CGSize)maximumSize
+        viewportOffset:(CGPoint)viewportOffset
+        safeAreaInsets:(UIEdgeInsets)safeAreaInsets;
+
+@required
+
 #pragma mark - Dealing with UIView representation, the Main thread only access
 
 /**

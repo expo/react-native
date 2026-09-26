@@ -49,7 +49,11 @@ void SurfaceHandlerBinding::setLayoutConstraints(
     jboolean doLeftAndRightSwapInRTL,
     jboolean isRTL,
     jfloat pixelDensity,
-    jfloat fontScale) {
+    jfloat fontScale,
+    jfloat safeAreaLeft,
+    jfloat safeAreaTop,
+    jfloat safeAreaRight,
+    jfloat safeAreaBottom) {
   LayoutConstraints constraints = {};
   constraints.minimumSize = {.width = minWidth, .height = minHeight};
   constraints.maximumSize = {.width = maxWidth, .height = maxHeight};
@@ -62,6 +66,11 @@ void SurfaceHandlerBinding::setLayoutConstraints(
   context.viewportOffset = {.x = offsetX, .y = offsetY};
   context.viewportSize = {.width = maxWidth, .height = maxHeight};
   context.fontSizeMultiplier = fontScale;
+  context.environmentValues.safeAreaInsets = EdgeInsets{
+      .left = safeAreaLeft,
+      .top = safeAreaTop,
+      .right = safeAreaRight,
+      .bottom = safeAreaBottom};
 
   surfaceHandler_.constraintLayout(constraints, context);
 }

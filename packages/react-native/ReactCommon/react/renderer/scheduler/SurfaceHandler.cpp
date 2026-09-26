@@ -214,10 +214,29 @@ Size SurfaceHandler::measure(
 
 void SurfaceHandler::constraintLayout(
     const LayoutConstraints& layoutConstraints,
-    const LayoutContext& layoutContext) const {
+    const LayoutContext& incomingLayoutContext) const {
   TraceSection s("SurfaceHandler::constraintLayout");
+  auto layoutContext = incomingLayoutContext;
   {
     std::unique_lock lock(parametersMutex_);
+
+    // Number the environment here, the one place on every platform that sees
+    // both the reported values and the previous ones; shadow nodes then
+    // remember the generation rather than the values (see
+    // `EnvironmentValues::generation`). Carried over unchanged when the values
+    // are unchanged, so an unchanged re-layout does not commit. The first
+    // constraint always counts as an answer, even all zeros, hence
+    // `generation != 0`: a device with no notch reports zero and
+    // `env(safe-area-inset-bottom, 24)` must compute to 0, not the fallback.
+    const auto& previousEnvironment =
+        parameters_.layoutContext.environmentValues;
+    const bool alreadyAnswered = previousEnvironment.generation != 0;
+    const bool unchanged = alreadyAnswered &&
+        layoutContext.environmentValues.safeAreaInsets ==
+            previousEnvironment.safeAreaInsets;
+    layoutContext.environmentValues.generation = unchanged
+        ? previousEnvironment.generation
+        : previousEnvironment.generation + 1;
 
     if (parameters_.layoutConstraints == layoutConstraints &&
         parameters_.layoutContext == layoutContext) {

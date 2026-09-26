@@ -57,7 +57,11 @@ class FabricUIManagerBinding : public jni::HybridClass<FabricUIManagerBinding>,
       jfloat offsetX,
       jfloat offsetY,
       jboolean isRTL,
-      jboolean doLeftAndRightSwapInRTL);
+      jboolean doLeftAndRightSwapInRTL,
+      jfloat safeAreaLeft,
+      jfloat safeAreaTop,
+      jfloat safeAreaRight,
+      jfloat safeAreaBottom);
 
   static void initHybrid(jni::alias_ref<jhybridobject> jobj);
 
