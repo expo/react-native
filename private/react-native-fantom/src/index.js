@@ -52,6 +52,21 @@ export type RootConfig = {
   fontSizeMultiplier?: number,
   viewportOffsetX?: number,
   viewportOffsetY?: number,
+  /**
+   * What `env(safe-area-inset-*)` resolves to in this surface.
+   *
+   * Zero by default, which is what a surface with nothing covering it reports —
+   * and what every existing test therefore keeps seeing. Set it to say "this
+   * screen has a status bar and a home indicator": the value travels with the
+   * surface's layout constraints, so it is an input to the FIRST layout rather
+   * than something a render has to correct.
+   */
+  safeAreaInsets?: {
+    readonly left?: number,
+    readonly top?: number,
+    readonly right?: number,
+    readonly bottom?: number,
+  },
 };
 
 export {getConstants} from './Constants';
@@ -79,6 +94,12 @@ class Root {
   #viewportOffsetY: number;
   #devicePixelRatio: number;
   #fontSizeMultiplier: number;
+  #safeAreaInsets: {
+    readonly left: number,
+    readonly top: number,
+    readonly right: number,
+    readonly bottom: number,
+  };
   #document: ?ReactNativeDocument;
 
   constructor(config?: RootConfig) {
@@ -89,6 +110,12 @@ class Root {
     this.#fontSizeMultiplier = config?.fontSizeMultiplier ?? 1;
     this.#viewportOffsetX = config?.viewportOffsetX ?? 0;
     this.#viewportOffsetY = config?.viewportOffsetY ?? 0;
+    this.#safeAreaInsets = {
+      left: config?.safeAreaInsets?.left ?? 0,
+      top: config?.safeAreaInsets?.top ?? 0,
+      right: config?.safeAreaInsets?.right ?? 0,
+      bottom: config?.safeAreaInsets?.bottom ?? 0,
+    };
 
     this.#surfaceId = NativeFantom.startSurface(
       this.#viewportWidth,
@@ -97,6 +124,10 @@ class Root {
       this.#viewportOffsetX,
       this.#viewportOffsetY,
       this.#fontSizeMultiplier,
+      this.#safeAreaInsets.left,
+      this.#safeAreaInsets.top,
+      this.#safeAreaInsets.right,
+      this.#safeAreaInsets.bottom,
     );
   }
 
@@ -136,6 +167,43 @@ class Root {
 
   takeMountingManagerLogs(): Array<string> {
     return NativeFantom.takeMountingManagerLogs(this.#surfaceId);
+  }
+
+  /**
+   * Change what `env(safe-area-inset-*)` resolves to, on a surface that is
+   * already running.
+   *
+   * A rotation, in effect — and the only way to test the part of the renderer
+   * that is easy to get wrong. The layout walk deliberately skips a subtree
+   * whose configuration has not moved, so a node whose props are untouched has
+   * to notice the ENVIRONMENT moved on its own; a test that only ever states
+   * the safe area once cannot tell whether it does.
+   */
+  setSafeAreaInsets(insets: {
+    readonly left?: number,
+    readonly top?: number,
+    readonly right?: number,
+    readonly bottom?: number,
+  }): void {
+    this.#safeAreaInsets = {
+      left: insets.left ?? 0,
+      top: insets.top ?? 0,
+      right: insets.right ?? 0,
+      bottom: insets.bottom ?? 0,
+    };
+    NativeFantom.updateSurfaceConstraints(
+      this.#surfaceId,
+      this.#viewportWidth,
+      this.#viewportHeight,
+      this.#devicePixelRatio,
+      this.#viewportOffsetX,
+      this.#viewportOffsetY,
+      this.#fontSizeMultiplier,
+      this.#safeAreaInsets.left,
+      this.#safeAreaInsets.top,
+      this.#safeAreaInsets.right,
+      this.#safeAreaInsets.bottom,
+    );
   }
 
   destroy() {
