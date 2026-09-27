@@ -1,0 +1,234 @@
+<!doctype html>
+<!--
+  Web mirror of the RN text-children demo (text-children-plan.md).
+
+  Organized to match the native RNTester screen so the two can be compared side
+  by side, grouped by CONTAINER × CHILD TYPE — because the container is what
+  decides the layout model:
+
+    §1 <div>  (block container, one inline formatting context)
+       1a. div with strings   — bare text + inline elements flow inline
+       1b. div with <Text>    — explicit text blocks inside the flow
+    §2 <View> (flex container, children become flex items)
+       2a. View with strings  — bare text + inline become stacked items
+       2b. View with <Text>   — explicit text as flex items
+
+  Styling (inheritance) and events (hit-testing, paint order) live inside the
+  section whose layout they exercise.
+
+  Markup mapping:  RN <View> ≈ <div class="view">  (flex column, align stretch)
+                   RN block/<div> ≈ <div class="block">  (display:block)
+                   RN <Text> ≈ <p class="text">  (block text container)
+                   RN inline element ≈ <b>/<i>/<span>
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text children demo (web mirror)</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font: 15px/1.35 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    margin: 0 auto; max-width: 460px; padding: 14px 12px 56px;
+    background: light-dark(#ffffff, #000000);
+    color: light-dark(#111111, #f2f2f2);
+  }
+  h1 { font-size: 17px; font-weight: 700; margin: 4px 0 2px; }
+  .intro { color: light-dark(#888, #98989f); font-size: 12px; margin: 0 0 8px; }
+  h2 { font-size: 15px; font-weight: 700; margin: 26px 0 0; }
+  h2 code { font: 600 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  h2 .desc { display: block; font: 400 12px/1.3 -apple-system, sans-serif; color: light-dark(#888, #98989f); margin-top: 2px; }
+  h3 { font-size: 13px; font-weight: 600; color: light-dark(#555, #c7c7cc); margin: 16px 0 0; }
+  .case { margin: 8px 0; }
+  .label { font-size: 11px; color: light-dark(#888, #98989f); margin: 0 0 3px; }
+  .box {
+    border: 1px solid light-dark(#cccccc, #3a3a3c);
+    border-radius: 6px; padding: 6px 8px; position: relative; min-height: 1.6em;
+  }
+  /* container models */
+  .view  { display: flex; flex-direction: column; align-items: stretch; }
+  .row   { flex-direction: row; }
+  .block { display: block; }
+  p.text { display: block; margin: 0; }
+  /* helpers */
+  /* baseline-align like RN's inline image (RN sits it on the text bottom, not centered) */
+  img.inl { width: 32px; height: 32px; vertical-align: baseline; }
+  .bar { height: 8px; background: #6ea8fe; }
+  .badge { position: absolute; top: 4px; right: 6px; font-size: 10px; font-weight: 700; }
+  .pass { color: #34c759; } .fail { color: #ff3b30; }
+  .note { font-size: 10.5px; color: light-dark(#a06, #f6a); margin-top: 2px; }
+</style>
+</head>
+<body>
+<h1>Text children demo (web mirror)</h1>
+<p class="intro">The same markup as the native RN screen, in a real browser. RN&nbsp;<code>&lt;View&gt;</code>&nbsp;≈&nbsp;flex&nbsp;<code>&lt;div&gt;</code>, block&nbsp;<code>/&lt;div&gt;</code>&nbsp;≈&nbsp;<code>display:block</code>, RN&nbsp;<code>&lt;Text&gt;</code>&nbsp;≈&nbsp;<code>&lt;p&gt;</code>, inline&nbsp;≈&nbsp;<code>&lt;b&gt;/&lt;i&gt;/&lt;span&gt;</code>. Each case shows a ✓/✗ for its behavioral assertion.</p>
+<div id="app"></div>
+
+<script>
+// -------- cases: {sec, sub, label, html, note?, wire?, test?} ----------------
+const C = [];
+const add = (o) => C.push(o);
+
+const SEC_DIV = '<code>&lt;div&gt;</code> — block container';
+const SEC_DIV_DESC = 'one inline formatting context; children flow inline / stack as blocks';
+const SEC_VIEW = '<code>&lt;View&gt;</code> — flex container';
+const SEC_VIEW_DESC = 'children become flex items (align-items: stretch)';
+
+// height of one inline text row, for stacked-vs-inline assertions
+const lineH = (() => {
+  const d = document.createElement('div'); d.className = 'block';
+  d.style.cssText = 'position:absolute;visibility:hidden'; d.textContent = 'x';
+  document.body.appendChild(d); const h = d.getBoundingClientRect().height; d.remove(); return h;
+})();
+
+/* ===== §1a  div with strings ===== */
+add({sec: SEC_DIV, secDesc: SEC_DIV_DESC, sub: 'div with strings — bare text + inline elements flow inline',
+  label: 'a <b>bold</b> <i>italic</i> <span>span</span>… → one wrapping paragraph',
+  html: `<div class="block">a <b>bold</b> <i>italic</i><span> span and text flowing inline in one wrapping paragraph, </span>just like a web div.</div>`,
+  test: (b) => b.firstElementChild.getBoundingClientRect().height >= lineH * 1.5});
+
+add({sec: SEC_DIV, sub: 'div with strings — bare text + inline elements flow inline',
+  label: 'inline &lt;img&gt; flows with the caption text',
+  html: `<div class="block"><img class="inl" alt="" src="https://reactnative.dev/img/tiny_logo.png"> a bare-text caption next to an inline image</div>`,
+  test: (b) => b.querySelector('img').getBoundingClientRect().height > 0});
+
+add({sec: SEC_DIV, sub: 'div with strings — bare text + inline elements flow inline',
+  label: 'whitespace collapses across text/element boundaries (white-space: normal)',
+  html: `<div class="block" id="ws">one two three<b> four </b>five</div>`,
+  test: (b) => b.querySelector('#ws').textContent.replace(/\s+/g, ' ').trim() === 'one two three four five'});
+
+add({sec: SEC_DIV, sub: 'div with strings — bare text + inline elements flow inline',
+  label: 'styling: color + font-size cascade to the bare text (inheritance)',
+  html: `<div class="block" style="color:#c2185b;font-size:18px">inherited pink 18pt bare text</div>`,
+  test: (b) => getComputedStyle(b.firstElementChild).color === 'rgb(194, 24, 91)'});
+
+add({sec: SEC_DIV, sub: 'div with strings — bare text + inline elements flow inline',
+  label: 'events: tapping inline <b> fires its handler; bare text falls through to the div',
+  html: `<div class="block" id="ht">tap the bare text here, or the <b id="bold" style="color:#0a0">BOLD WORD</b> here.</div><div style="margin-top:4px;font-variant-numeric:tabular-nums">inline handler fired: <span id="htin">0</span></div><div style="font-variant-numeric:tabular-nums">container taps: <span id="htbox">0</span></div>`,
+  wire: (b) => { let inl = 0, box = 0;
+    const inEl = b.querySelector('#htin'), boxEl = b.querySelector('#htbox');
+    // Mirrors RN target/bubbling: tapping the inline <b> fires its own handler AND
+    // bubbles to the container (both counters bump); tapping bare text hits only
+    // the container. (No stopPropagation.)
+    b.querySelector('#ht').addEventListener('click', () => { box++; boxEl.textContent = box; });
+    b.querySelector('#bold').addEventListener('click', () => { inl++; inEl.textContent = inl; }); },
+  test: (b) => !!b.querySelector('#bold')});
+
+add({sec: SEC_DIV, sub: 'div with strings — bare text + inline elements flow inline',
+  label: "DOM target API: event.target is the tapped node (tagName + textContent) — via addEventListener('click')",
+  html: `<div class="block" id="tgt">tap <b>alpha</b>, <span style="color:#06c">beta</span>, or bare text</div><div style="margin-top:4px">event.target: <span id="tgtout">(tap something)</span></div>`,
+  wire: (b) => {
+    const out = b.querySelector('#tgtout');
+    // one listener on the container; event.target is the exact node clicked.
+    b.querySelector('#tgt').addEventListener('click', (e) => {
+      const t = e.target;
+      const name = t.tagName ? '<' + t.tagName.toLowerCase() + '>' : 'node';
+      out.textContent = name + ' “' + (t.textContent || '') + '”';
+    });
+  },
+  test: (b) => !!b.querySelector('#tgt')});
+
+add({sec: SEC_DIV, sub: 'div with strings — bare text + inline elements flow inline',
+  label: 'paint order: text before a box paints under (hidden); text after paints over (visible)',
+  html: `<div style="display:flex;flex-direction:row;gap:8px">
+      <div class="block" style="position:relative;width:120px;height:24px;font-weight:700;color:#000"><span id="under" style="position:relative">UNDER</span><div style="position:absolute;inset:0;background:#f88"></div></div>
+      <div class="block" style="position:relative;width:120px;height:24px;font-weight:700;color:#000"><div style="position:absolute;inset:0;background:#8f8"></div><span id="over" style="position:relative">OVER</span></div>
+    </div>`,
+  // Faithful paint order = DOCUMENT order among same-stacking siblings (no z-index):
+  // text authored before the box is painted over by it; text after paints over it.
+  // Assert with the topmost element at each label's center.
+  test: (b) => {
+    // elementFromPoint only resolves within the viewport, and this case renders
+    // below the fold at load on a short (mobile) viewport — so scroll the row in
+    // first, hit-test, then restore the page scroll.
+    const savedY = window.scrollY;
+    const over = b.querySelector('#over'), under = b.querySelector('#under');
+    over.scrollIntoView({block: 'center'});
+    const hit = (el) => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); };
+    const overOnTop = hit(over) === over;                 // OVER (authored after) paints over the box
+    const underCovered = hit(under) !== under;            // UNDER (authored before) is covered by the box
+    window.scrollTo(0, savedY);
+    return overOnTop && underCovered;
+  }});
+
+/* ===== §1b  div with Text ===== */
+add({sec: SEC_DIV, sub: 'div with &lt;Text&gt; — explicit text blocks inside the flow',
+  label: 'two <Text> blocks stack (each &lt;p&gt; is block-level)',
+  html: `<div class="block"><p class="text">first Text block</p><p class="text">second Text block</p></div>`,
+  test: (b) => { const p = b.querySelectorAll('p'); return p.length === 2 && p[1].getBoundingClientRect().top >= p[0].getBoundingClientRect().bottom - 1; }});
+
+add({sec: SEC_DIV, sub: 'div with &lt;Text&gt; — explicit text blocks inside the flow',
+  label: 'a <Text> block, then bare strings continue as their own run below',
+  html: `<div class="block"><p class="text">a Text block (its own paragraph)</p>then bare strings flow as a separate run</div>`,
+  test: (b) => b.firstElementChild.getBoundingClientRect().height > b.querySelector('p').getBoundingClientRect().height + 1});
+
+/* ===== §2a  View with strings ===== */
+add({sec: SEC_VIEW, secDesc: SEC_VIEW_DESC, sub: 'View with strings — bare text + inline become stacked items',
+  label: 'bare string under a View sizes like text',
+  html: `<div class="view">hello from a bare string</div>`,
+  test: (b) => Math.abs(b.firstElementChild.getBoundingClientRect().height - lineH) < 4});
+
+add({sec: SEC_VIEW, sub: 'View with strings — bare text + inline become stacked items',
+  label: 'a<b>b</b>c → three STACKED items (flex blockifies each run) — contrast with the div above',
+  html: `<div class="view">a<b>b</b>c</div>`,
+  test: (b) => b.firstElementChild.getBoundingClientRect().height >= lineH * 2.5});
+
+add({sec: SEC_VIEW, sub: 'View with strings — bare text + inline become stacked items',
+  label: 'runs split around a block child (before / block / after)',
+  html: `<div class="view">before<div class="bar"></div>after</div>`,
+  test: (b) => b.firstElementChild.getBoundingClientRect().height >= lineH * 2});
+
+add({sec: SEC_VIEW, sub: 'View with strings — bare text + inline become stacked items',
+  label: 'styling: color + font-size cascade from the View to bare text',
+  html: `<div class="view" style="color:#c2185b;font-size:18px">inherited pink 18pt bare text</div>`,
+  test: (b) => getComputedStyle(b.firstElementChild).color === 'rgb(194, 24, 91)'});
+
+/* ===== §2b  View with Text ===== */
+add({sec: SEC_VIEW, sub: 'View with &lt;Text&gt; — explicit text as flex items',
+  label: 'two <Text> flex items stack',
+  html: `<div class="view"><p class="text">first Text item</p><p class="text">second Text item</p></div>`,
+  test: (b) => b.querySelectorAll('p').length === 2 && b.firstElementChild.getBoundingClientRect().height >= lineH * 2});
+
+add({sec: SEC_VIEW, sub: 'View with &lt;Text&gt; — explicit text as flex items',
+  label: 'explicit <Text> next to bare text',
+  html: `<div class="view" style="color:#c2185b"><p class="text">explicit Text keeps its own color</p>bare text goes pink</div>`,
+  note: 'RN deviation: RN &lt;Text&gt; opts OUT of the View color cascade (keeps its own theme color, not the View’s pink); a web &lt;p&gt; inherits, so it reads pink here.',
+  test: () => true});
+
+// -------- render, grouped by section → subsection ----------------------------
+const app = document.getElementById('app');
+const results = [];
+let curSec = null, curSub = null;
+for (const c of C) {
+  if (c.sec !== curSec) {
+    curSec = c.sec; curSub = null;
+    const h2 = document.createElement('h2');
+    h2.innerHTML = c.sec + (c.secDesc ? `<span class="desc">${c.secDesc}</span>` : '');
+    app.appendChild(h2);
+  }
+  if (c.sub !== curSub) {
+    curSub = c.sub;
+    const h3 = document.createElement('h3'); h3.innerHTML = c.sub; app.appendChild(h3);
+  }
+  const wrap = document.createElement('div'); wrap.className = 'case';
+  const lab = document.createElement('div'); lab.className = 'label'; lab.innerHTML = c.label; wrap.appendChild(lab);
+  const box = document.createElement('div'); box.className = 'box'; box.innerHTML = c.html; wrap.appendChild(box);
+  if (c.note) { const n = document.createElement('div'); n.className = 'note'; n.innerHTML = c.note; wrap.appendChild(n); }
+  app.appendChild(wrap);
+  if (c.wire) c.wire(box);
+  let ok = true; try { ok = c.test ? !!c.test(box) : true; } catch (e) { ok = false; }
+  const badge = document.createElement('span'); badge.className = 'badge ' + (ok ? 'pass' : 'fail'); badge.textContent = ok ? '✓' : '✗';
+  box.appendChild(badge);
+  results.push({label: c.label, pass: ok});
+}
+// expose machine-readable results (parity with the RN Fantom suite)
+window.__results = results;
+const passed = results.filter((r) => r.pass).length;
+const summary = document.createElement('p'); summary.className = 'intro'; summary.style.marginTop = '20px';
+summary.textContent = `${passed}/${results.length} behavioral checks pass`;
+app.appendChild(summary);
+</script>
+</body>
+</html>

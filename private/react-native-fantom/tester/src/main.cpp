@@ -10,7 +10,9 @@
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/featureflags/ReactNativeFeatureFlagsDynamicProvider.h>
 #include <chrono>
+#include <cstdio>
 #include <memory>
+#include <stdexcept>
 #include <thread>
 #include "AppSettings.h"
 #include "TesterAppDelegate.h"
@@ -38,11 +40,10 @@ static void setUpFeatureFlags() {
           dynamicFeatureFlags));
 }
 
-int main(int argc, char* argv[]) {
-  AppSettings::init(argc, argv);
-
-  setUpLogging();
-
+// The body of `main`, so that a failure anywhere in it is reported as a
+// message and a non-zero exit code. Without this an exception escapes to
+// `std::terminate`, which the runner sees only as a signal.
+static int runTester() {
   setUpFeatureFlags();
 
   auto config = ReactInstanceConfig{
@@ -79,4 +80,25 @@ int main(int argc, char* argv[]) {
   appDelegate.loadScriptAndRunTests(AppSettings::defaultBundlePath, "");
 
   return 0;
+}
+
+int main(int argc, char* argv[]) {
+  AppSettings::init(argc, argv);
+
+  setUpLogging();
+
+  try {
+    return runTester();
+  } catch (const std::exception& e) {
+    // Say it on stderr as well as through glog: the runner surfaces the
+    // process's output verbatim, and a bare signal with empty output is the
+    // hardest possible thing to act on.
+    fprintf(stderr, "fantom_tester failed: %s\n", e.what());
+    LOG(ERROR) << "fantom_tester failed: " << e.what();
+    return 1;
+  } catch (...) {
+    fprintf(stderr, "fantom_tester failed with an unknown exception\n");
+    LOG(ERROR) << "fantom_tester failed with an unknown exception";
+    return 1;
+  }
 }

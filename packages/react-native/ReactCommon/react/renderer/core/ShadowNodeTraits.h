@@ -109,6 +109,62 @@ class ShadowNodeTraits {
     // of a hardcoded component-name list — lets any new intrinsic flow inline with no
     // core change, and avoids a components/view → components/text include dependency.
     InlineText = 1 << 16,
+
+    // The node is an inline *replaced* element (an <img>-like attachment): it flows
+    // inside the current text run and is positioned by the owning View's
+    // attachment-layout pass, and it is NEVER blockified — where an inline text
+    // element becomes its own flex item in a flex container, a replaced element
+    // stays in the run. Stronger than InlineText, and set alongside it. Checking
+    // this trait instead of the component name "img" is what lets a provider back
+    // the element with any component (e.g. expo-image) under any name.
+    InlineReplaced = 1 << 17,
+
+    // The node itself consumes the inherited text cascade: a paragraph (which
+    // folds it under its own TextProps) or an anonymous IFC box (which
+    // measures and paints bare-text runs from it). Set by those classes'
+    // BaseTraits.
+    TextCascadeConsumer = 1 << 18,
+
+    // Somewhere in this node's subtree is a TextCascadeConsumer that DEPENDS
+    // on this node's cascade — i.e. not sealed off behind an inheritance
+    // boundary. Maintained bottom-up by updateYogaChildren. When unset, an
+    // inheritable-prop change on this node has no observer: nothing needs
+    // dirtying and the cascade never needs to walk in.
+    SubtreeHasCascadeDependents = 1 << 19,
+
+    // The node is an inheritance boundary: the cascade below it restarts from
+    // the defaults, so nothing below depends on anything above. Resolved from
+    // the authored `all` and the UACascadeBoundary declaration below
+    // (BaseViewProps::isInheritanceBoundary) at construction and on every
+    // props change.
+    InheritanceBoundary = 1 << 20,
+
+    // The node IS a YogaLayoutableShadowNode. Layout code downcasts child
+    // ShadowNodes constantly — per child, per pass — and RTTI dynamic_cast was
+    // the top CPU consumer in inline-content-heavy profiles. The trait plus a
+    // static_cast answers the same question in two loads.
+    YogaLayoutableKind = 1 << 21,
+
+    // The element's user-agent stylesheet declares `all: 'initial'` on this
+    // element class — the native cascade's UA origin, which an authored `all`
+    // cascades over: `initial` and `unset` override it, `revert` and an
+    // absent declaration roll back to it (css-cascade-4 §7.3). Set in
+    // BaseTraits (a static per-class fact, never mutated); root <Text>'s
+    // ParagraphShadowNode is the one declarer — old React Native's "<Text> is
+    // a style boundary" contract, expressed in the web's own vocabulary.
+    UACascadeBoundary = 1 << 22,
+
+    // This node resolves a length against a font size the cascade decides —
+    // `margin-block: 1em`, `margin-block: 1rem`. It observes the cascade while
+    // holding no text, and the dependents optimisation would otherwise skip it:
+    // nothing below such a node consumes the cascade, so the walk would never
+    // hand it one and its `em` would resolve against the default font size
+    // rather than the inherited one.
+    //
+    // It cannot reuse TextCascadeConsumer, which is overloaded: that trait also
+    // marks where LINE BOXES live, so a text-free <div> carrying it would start
+    // answering `baseline()` from a box that has none.
+    ResolvesRelativeLength = 1 << 23,
   };
 
   /*
