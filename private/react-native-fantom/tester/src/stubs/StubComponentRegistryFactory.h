@@ -13,7 +13,7 @@
 #include <react/renderer/components/modal/ModalHostViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
-#include <react/renderer/components/text/RawTextComponentDescriptor.h>
+#include <react/renderer/components/text/TextNodeComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
 #include <react/renderer/components/view/ViewComponentDescriptor.h>
 
@@ -28,10 +28,11 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<ImageComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ParagraphComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ScrollViewComponentDescriptor>());
-      providerRegistry->add(concreteComponentDescriptorProvider<RawTextComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<TextNodeComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<TextComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
+      // Intrinsic DOM elements (<b>/<i>/<span>/<img>/<div> + unknown fallback).
       return providerRegistry;
     }();
     return providerRegistry->createComponentDescriptorRegistry({eventDispatcher, contextContainer, nullptr});

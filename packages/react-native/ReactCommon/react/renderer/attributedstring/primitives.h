@@ -12,9 +12,14 @@
 
 namespace facebook::react {
 
-enum class FontStyle { Normal, Italic, Oblique };
+// The enums below carry explicit small underlying types: TextAttributes holds
+// ~13 of them in std::optionals, which cost 8 bytes each with the default int
+// base and 2 bytes with uint8_t — and TextAttributes is copied into every
+// AttributedString fragment and TextMeasureCache key. FontVariant stays int:
+// it is a bitmask up to 1 << 25.
+enum class FontStyle : uint8_t { Normal, Italic, Oblique };
 
-enum class FontWeight : int {
+enum class FontWeight : uint16_t {
   Weight100 = 100,
   UltraLight = 100,
   Weight200 = 200,
@@ -65,7 +70,7 @@ enum class FontVariant : int {
   StylisticTwenty = 1 << 25
 };
 
-enum class DynamicTypeRamp {
+enum class DynamicTypeRamp : uint8_t {
   Caption2,
   Caption1,
   Footnote,
@@ -92,7 +97,7 @@ enum class TextBreakStrategy {
   Balanced // Balances line lengths.
 };
 
-enum class TextAlignment {
+enum class TextAlignment : uint8_t {
   Natural, // Indicates the default alignment for script.
   Left, // Visually left aligned.
   Center, // Visually centered.
@@ -102,21 +107,21 @@ enum class TextAlignment {
   End // Aligned to the end side of the paragraph direction.
 };
 
-enum class TextAlignmentVertical {
+enum class TextAlignmentVertical : uint8_t {
   Auto,
   Top,
   Bottom,
   Center,
 };
 
-enum class WritingDirection {
+enum class WritingDirection : uint8_t {
   Natural, // Determines direction using the Unicode Bidi Algorithm rules P2 and
            // P3.
   LeftToRight, // Left to right writing direction.
   RightToLeft // Right to left writing direction.
 };
 
-enum class LineBreakStrategy {
+enum class LineBreakStrategy : uint8_t {
   None, // Don't use any line break strategies
   PushOut, // Use the push out line break strategy.
   HangulWordPriority, // When specified, it prohibits breaking between Hangul
@@ -125,7 +130,7 @@ enum class LineBreakStrategy {
            // system uses for standard UI labels.
 };
 
-enum class LineBreakMode {
+enum class LineBreakMode : uint8_t {
   Word, // Wrap at word boundaries, default
   Char, // Wrap at character boundaries
   Clip, // Simply clip
@@ -134,17 +139,68 @@ enum class LineBreakMode {
   Tail // Truncate at tail of line: "abcd..."
 };
 
-enum class TextDecorationLineType { None, Underline, Strikethrough, UnderlineStrikethrough };
+enum class TextDecorationLineType : uint8_t { None, Underline, Strikethrough, UnderlineStrikethrough };
 
-enum class TextDecorationStyle { Solid, Double, Dotted, Dashed, Wavy };
+enum class TextDecorationStyle : uint8_t { Solid, Double, Dotted, Dashed, Wavy };
 
-enum class TextTransform {
+enum class TextTransform : uint8_t {
   None,
   Uppercase,
   Lowercase,
   Capitalize,
   Unset,
 };
+
+/*
+ * `white-space` (css-text-3 §3). A shorthand over three independent behaviours,
+ * which is why the values are read through the predicates below rather than
+ * compared directly: no single value is "more preserving" than another along
+ * every axis at once — `pre-line` preserves newlines while collapsing spaces,
+ * and `nowrap` collapses everything yet does not wrap.
+ *
+ *   value          newlines    spaces/tabs   wraps
+ *   normal         collapse    collapse      yes
+ *   pre            preserve    preserve      no
+ *   nowrap         collapse    collapse      no
+ *   pre-wrap       preserve    preserve      yes
+ *   pre-line       preserve    collapse      yes
+ *   break-spaces   preserve    preserve      yes
+ */
+enum class WhiteSpace : uint8_t {
+  Normal,
+  Pre,
+  NoWrap,
+  PreWrap,
+  PreLine,
+  BreakSpaces,
+};
+
+/*
+ * Whether a segment break in the source is content that ends a line, rather
+ * than collapsible whitespace that becomes a single space.
+ */
+inline bool preservesNewlines(WhiteSpace whiteSpace) {
+  return whiteSpace == WhiteSpace::Pre || whiteSpace == WhiteSpace::PreWrap ||
+      whiteSpace == WhiteSpace::PreLine ||
+      whiteSpace == WhiteSpace::BreakSpaces;
+}
+
+/*
+ * Whether runs of spaces and tabs survive as authored. Note `pre-line` does
+ * NOT: it is the one value that preserves newlines but still collapses spaces.
+ */
+inline bool preservesSpaces(WhiteSpace whiteSpace) {
+  return whiteSpace == WhiteSpace::Pre || whiteSpace == WhiteSpace::PreWrap ||
+      whiteSpace == WhiteSpace::BreakSpaces;
+}
+
+/*
+ * Whether a line that does not fit is broken to the next one. When false the
+ * text overflows its container instead, and only a segment break ends a line.
+ */
+inline bool wrapsText(WhiteSpace whiteSpace) {
+  return whiteSpace != WhiteSpace::Pre && whiteSpace != WhiteSpace::NoWrap;
+}
 
 enum class HyphenationFrequency {
   None, // No hyphenation.

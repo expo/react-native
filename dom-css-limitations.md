@@ -27,6 +27,11 @@ object at that point. Matching that needs a remount signal the reconciler does
 not have. Static display — the overwhelming case, and all of Astryx — is
 correct.
 
+**`no-grid`** — `ReactCommon/.../components/view/conversions.h`
+`display: grid` and `inline-grid` are not handled and fall through to a parse
+error. Yoga has no grid engine, so this is a feature to build rather than a
+value to map. Astryx uses it in ~22 places.
+
 **`escaped-margin-walk-approximations`** — `yoga/algorithm/CalculateLayout.cpp`
 Two approximations in the walk that folds descendant margins escaping through a
 block container's edges. Descendants of self-collapsing boxes are not walked,
@@ -36,3 +41,23 @@ rather than against the margin's own containing block, which differ once the
 walk has descended a level. Both were documented in the code as deliberate and
 carried no marker, so neither reached this file. Recorded rather than measured:
 they need nesting deep enough that the corpus has not produced either.
+
+## Performance
+
+**`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`
+`yoga::Node` is held by value, so an element that generates *no* box — a
+span-like inline that folds into its parent's inline formatting context — still
+pays 744 bytes for a node it never uses. Making it lazy would make folding
+elements *cheaper than they are now*, which is the argument for doing it. It
+changes memory layout for every view in the app, so it wants measuring against
+a real screen first. Background in `element-model-design.md`.
+
+---
+
+## Every other marked divergence
+
+Each remaining marker, with the file that carries it.
+
+- `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `list-style-type-additive-scripts` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`

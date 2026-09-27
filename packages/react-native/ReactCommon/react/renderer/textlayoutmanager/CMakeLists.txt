@@ -47,6 +47,7 @@ target_link_libraries(react_renderer_textlayoutmanager
         react_renderer_mapbuffer
         react_renderer_mounting
         react_renderer_telemetry
+        react_featureflags
         react_utils
         ${reactnativejni}
         yoga
