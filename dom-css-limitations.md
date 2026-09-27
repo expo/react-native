@@ -32,6 +32,11 @@ correct.
 error. Yoga has no grid engine, so this is a feature to build rather than a
 value to map. Astryx uses it in ~22 places.
 
+**`no-box-decoration-break-clone`** — `.../ios/.../RCTTextLayoutManager.mm`
+A wrapped inline box paints with `box-decoration-break: slice` (the CSS
+default) — leading edge on the first fragment, trailing on the last. `clone`,
+which repeats both edges on every fragment, is not implemented.
+
 **`escaped-margin-walk-approximations`** — `yoga/algorithm/CalculateLayout.cpp`
 Two approximations in the walk that folds descendant margins escaping through a
 block container's edges. Descendants of self-collapsing boxes are not walked,
