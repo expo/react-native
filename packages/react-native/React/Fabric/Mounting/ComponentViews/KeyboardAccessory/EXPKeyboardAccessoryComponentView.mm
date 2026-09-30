@@ -110,6 +110,9 @@ static CGFloat EXPKeyboardAccessoryMaterialRiseForFade(CGFloat fade)
 /** The height React laid the bar's content out at. The safe area is added to it, not taken from it. */
 @property (nonatomic, assign) CGFloat contentHeight;
 
+/** The bar this is the content of; the content is hosted in the screen's view, not in the bar. */
+@property (nonatomic, weak, nullable) EXPKeyboardAccessoryComponentView *owner;
+
 /**
  * Where React's children go, and ONLY React's children.
  *
@@ -606,14 +609,17 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   NSLayoutConstraint *_restingOnScreenConstraint;
   /** Which of the two holds: YES while this bar's field has, or is losing, the keyboard. */
   BOOL _shouldDockToKeyboard;
+  /** `holdsItsPlace`: the bar's bottom pinned where it was, in place of the two anchors above. */
+  NSLayoutConstraint *_heldConstraint;
+  BOOL _holdsItsPlace;
 
   EXPKeyboardInsets *_insets;
+  /** The bar's drawn top as last published — see `-_emitDockChangeWithTop:`. */
+  CGFloat _emittedTop;
   /**
    * The last strip reported to JavaScript, so the same answer is not sent twice.
    * Seeded to a value no reserve can take: ZERO is a real state.
    */
-  /** The bar's drawn top as last published — see `-_emitDockChangeWithTop:`. */
-  CGFloat _emittedTop;
   CGFloat _emittedReserve;
   /** Which bar a trace line is about: a counter, readable in a dump, unlike a reused address. */
   NSInteger _barId;
@@ -624,6 +630,7 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   if (self = [super initWithFrame:frame]) {
     _props = ExpoKeyboardAccessoryShadowNode::defaultSharedProps();
     _contentView = [EXPKeyboardAccessoryContentView new];
+    _contentView.owner = self;
     _emittedReserve = -1;
     static NSInteger nextBarId = 1;
     _barId = nextBarId++;
@@ -803,6 +810,12 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   if (_contentView.superview == nil || _dockedToKeyboardConstraint == nil) {
     return;
   }
+  // Held: the keyboard comes and goes under the picture, and the bar keeps the
+  // anchor it had. `setHoldsItsPlace:` re-derives the anchor on release.
+  if (_holdsItsPlace) {
+    [EXPKeyboardTrace record:@"accessory#%ld holds its place (%@)", (long)_barId, why];
+    return;
+  }
   if (shouldDock == _shouldDockToKeyboard && _dockedToKeyboardConstraint.active == shouldDock &&
       _restingOnScreenConstraint.active != shouldDock) {
     return;
@@ -817,6 +830,50 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   [self _refreshReserve];
   [_insets obstructingViewsDidChange];
   [EXPKeyboardTrace record:@"accessory#%ld bottom=%@ (%@)", (long)_barId, shouldDock ? @"keyboard" : @"screen", why];
+}
+
++ (nullable EXPKeyboardAccessoryComponentView *)barHosting:(UIView *)view
+{
+  for (UIView *ancestor = view; ancestor != nil; ancestor = ancestor.superview) {
+    if ([ancestor isKindOfClass:EXPKeyboardAccessoryContentView.class]) {
+      return ((EXPKeyboardAccessoryContentView *)ancestor).owner;
+    }
+  }
+  return nil;
+}
+
+- (BOOL)holdsItsPlace
+{
+  return _holdsItsPlace;
+}
+
+- (void)setHoldsItsPlace:(BOOL)holds
+{
+  UIView *host = _contentView.superview;
+  if (holds == _holdsItsPlace || host == nil || _dockedToKeyboardConstraint == nil) {
+    return;
+  }
+  _holdsItsPlace = holds;
+  if (holds) {
+    // Pinned to the host's top, not the guide's: the guide is about to move to
+    // the screen's edge with the keyboard
+    _heldConstraint = [_contentView.bottomAnchor constraintEqualToAnchor:host.topAnchor
+                                                                constant:CGRectGetMaxY(_contentView.frame)];
+    _dockedToKeyboardConstraint.active = NO;
+    _restingOnScreenConstraint.active = NO;
+    _heldConstraint.active = YES;
+    [EXPKeyboardTrace record:@"accessory#%ld HELD bottom=%.1f", (long)_barId, CGRectGetMaxY(_contentView.frame)];
+    return;
+  }
+  _heldConstraint.active = NO;
+  _heldConstraint = nil;
+  const BOOL shouldDock = [self _editingFieldInBar] != nil;
+  _shouldDockToKeyboard = shouldDock;
+  _dockedToKeyboardConstraint.active = shouldDock;
+  _restingOnScreenConstraint.active = !shouldDock;
+  [self _refreshReserve];
+  [_insets obstructingViewsDidChange];
+  [EXPKeyboardTrace record:@"accessory#%ld RELEASED bottom=%@", (long)_barId, shouldDock ? @"keyboard" : @"screen"];
 }
 
 /**
@@ -962,6 +1019,10 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   _hostEdgeConstraints = nil;
   _dockedToKeyboardConstraint = nil;
   _restingOnScreenConstraint = nil;
+  // A hold ends with the screen: the panel that asked for it may already be gone
+  _heldConstraint.active = NO;
+  _heldConstraint = nil;
+  _holdsItsPlace = NO;
   // The guide is the screen's; what this bar set on it goes with the bar.
   if (@available(iOS 17.0, *)) {
     _contentView.superview.keyboardLayoutGuide.usesBottomSafeArea = YES;
@@ -1131,12 +1192,19 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   if (appWindow == nil || _contentView.window == nil || CGRectGetHeight(_contentView.bounds) <= 0) {
     return CGFLOAT_MAX;
   }
-  [self _reserveForObstruction:_shouldDockToKeyboard ? MAX(obstructionHeight, 0) : 0];
   const CGFloat top =
       [appWindow convertPoint:CGPointMake(0, [self _edgeOnScreenNow:0 ofView:_contentView]) fromWindow:nil].y;
   if ([EXPKeyboardTrace isRecording]) {
     [self _traceDockAt:top forObstructionHeight:obstructionHeight inWindow:appWindow];
   }
+  // Held: the sampled height is the keyboard's, which is going or coming under
+  // the picture; a reserve laid out from it would grow the bar by the strip and
+  // lift its top into the transcript, and a dock event would have JavaScript
+  // lay the bar out as docked. Keep what the keys left.
+  if (_holdsItsPlace) {
+    return top;
+  }
+  [self _reserveForObstruction:_shouldDockToKeyboard ? MAX(obstructionHeight, 0) : 0];
   // Published from here, because this is the only thing that runs every frame
   // the keyboard moves — see `-_emitDockChangeWithTop:`.
   [self _emitDockChangeWithTop:top];

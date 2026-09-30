@@ -42,6 +42,15 @@ typedef struct {
  * safe area larger than the obstruction — and none of them need a device to
  * provoke.
  */
+/**
+ * Posted, with the view that would resign as its object, when a field is asked
+ * to blur. A field whose keyboard someone has stood down behind a picture is
+ * not first responder, so the resign itself is a no-op and the intent would be
+ * lost; whoever holds the keyboard for that field listens here and does not
+ * give it back.
+ */
+FOUNDATION_EXPORT const NSNotificationName EXPFieldAskedToBlurNotification;
+
 FOUNDATION_EXPORT EXPKeyboardGeometry
 EXPKeyboardGeometryFromFollower(CGRect followerInWindow, CGFloat windowHeight, CGFloat safeAreaBottom);
 
