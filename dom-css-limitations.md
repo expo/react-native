@@ -297,10 +297,12 @@ on Android and only the construction would differ — a view positioned where th
 keyboard was, animated by the machinery `<native:keyboardaccessory>` already
 uses for its bar.
 
-A panel inside an accessory has a second wall, on iOS this time: the card cannot
-be a material. A `UIVisualEffectView` samples what is behind it *within its own
-window*, and a panel mounted in an accessory is in the keyboard's window, where
-there is nothing behind it — so the material blurs nothing and draws nothing.
+A panel that replaces the keys (`presentation="inputView"`) has a second wall,
+on iOS this time: it cannot be a material. A `UIVisualEffectView` samples what
+is behind it *within its own window*, and an input view is in the keyboard's
+window, where there is nothing behind it — so the material blurs nothing and
+draws nothing. The overlay does not have this wall: it is a popover in the
+app's window, on the popover's own glass platter.
 
 An earlier version of this paragraph called that window "the only window that is
 above the keys". It is not above the keys, and nothing is: `windowLevel` is
@@ -309,6 +311,12 @@ anything higher comes back at 10000000 and draws underneath. The measurement it
 cited — "an overlay window at level 100000000 still being behind them" — was
 measuring the clamp rather than the compositing. See
 `overlay-cannot-cover-the-keys`.
+
+**`ios-only-popover`** — `packages/expo-intrinsics/src/NativePopover.js`
+`<native:popover>` is iOS only: it is a `UIPopoverPresentationController` with
+UIKit's zoom transition and a snapshot of the keyboard, none of which Android
+has. On Android it renders nothing rather than red-boxing, so an app can write
+it unconditionally.
 
 **`ios-only-native-button`** — `packages/expo-intrinsics/src/NativeButton.js`
 `<native:button>` is iOS only, and deliberately so: it is a
@@ -362,7 +370,7 @@ Closing it means the strip not being part of the bar's height — a different
 architecture for how a docked bar clears the indicator, since today it clears it
 by being taller and it is the tallness that cannot change quietly.
 
-**`overlay-cannot-cover-the-keys`** — `React/.../KeyboardPanel/EXPKeyboardPanelComponentView.mm`
+**`overlay-cannot-cover-the-keys`** — `packages/expo-intrinsics/src/NativeButton.js`
 A panel presented as an overlay CAN cover the keyboard, and this entry used to
 say it could not. What it can never do is get there with a window of its own.
 
@@ -378,10 +386,12 @@ which puts a coloured band in each and photographs the result:
 - `UIRemoteKeyboardWindow` itself, after its `UIInputSetContainerView`, covers
   the keys completely — which is what the platform's own `+` card does.
 
-So the panel hosts its overlay in the keyboard's own window, and the remaining
-limitation is narrow: an overlay panel cannot be a **material**, because a
-`UIVisualEffectView` samples what is behind it within its own window and there
-is nothing behind it there. A stated colour is the substitute.
+So the panel's overlay is a popover in the app's window, over a picture of the
+keys stood down for it, and the card is the popover's own glass platter. The
+remaining limitation is the input view's: a panel that replaces the keys cannot
+be a **material**, because a `UIVisualEffectView` samples what is behind it
+within its own window and there is nothing behind it there. A stated colour is
+the substitute.
 
 What this entry got wrong is worth keeping, because the same mistake is easy to
 repeat. It reported "an overlay window at level 100000000 was still behind them,

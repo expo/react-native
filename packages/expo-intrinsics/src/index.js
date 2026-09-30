@@ -54,6 +54,7 @@ import Label from './Label';
 import {LIST_TAGS, makeList} from './List';
 import NativeKeyboardAccessory from './NativeKeyboardAccessory';
 import NativeButton from './NativeButton';
+import NativePopover from './NativePopover';
 import NativeSafeArea from './NativeSafeArea';
 import Picture from './Picture';
 import Quote from './Quote';
@@ -1065,11 +1066,23 @@ registerFrameworkElement('native-keyboardpanel', () =>
   createViewConfig({
     validAttributes: {
       visible: true,
-      // `inputView` (the default) or `overlay`. See the shadow node: which one
-      // is right is a question about whether the panel is an alternative INPUT
-      // or a list of COMMANDS.
-      presentation: true,
-      // The rectangle an overlay grows out of, in window coordinates. Four
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {},
+    uiViewClassName: 'native-keyboardpanel',
+  }),
+);
+
+/*
+ * The host element `<native:popover>` renders: a card the platform presents as
+ * a popover, zoomed out of the element under `anchor`, over a keyboard stood
+ * down behind a picture of its keys.
+ */
+registerFrameworkElement('native-popover', () =>
+  createViewConfig({
+    validAttributes: {
+      visible: true,
+      // The rectangle the card grows out of, in window coordinates. Four
       // numbers rather than an object because a raw prop of a struct type has
       // to be taught to the parser, and this is measured in JS anyway.
       anchorX: true,
@@ -1079,11 +1092,11 @@ registerFrameworkElement('native-keyboardpanel', () =>
     },
     bubblingEventTypes: {},
     directEventTypes: {
-      // The panel dismissed itself — an overlay is closed by tapping outside
-      // it, and `visible` is the app's state to correct.
+      // The card dismissed itself — a tap outside, a pull, a rotation — and
+      // `visible` is the app's state to correct.
       topClose: {registrationName: 'onClose'},
     },
-    uiViewClassName: 'native-keyboardpanel',
+    uiViewClassName: 'native-popover',
   }),
 );
 /*
@@ -1143,6 +1156,12 @@ defineReactComponent('native', 'keyboardaccessory', NativeKeyboardAccessory);
  * One word for the same reason `keyboardaccessory` is one.
  */
 defineReactComponent('native', 'button', NativeButton);
+
+/*
+ * `<native:popover>`, a card the platform presents as a popover, zoomed out of
+ * the element under `anchor`; the native chat's `+` opens one.
+ */
+defineReactComponent('native', 'popover', NativePopover);
 
 // `<textarea>` joins a form the same way `<input>` does, and for the same
 // reason: an uncontrolled one keeps its value in the native view.

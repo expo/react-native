@@ -544,10 +544,10 @@ lumping them together as "iOS-only" would hide that.
 | `-apple-visual-effect`   | the keywords are Apple's and so are `UIBlurEffect`/`UIGlassEffect`                                          | Android's `RenderEffect` blur is a _different construction_, which is why the property is spelled `-apple-` rather than pretending to be portable   |
 | `-apple-balloon-tail`    | nothing — unfinished                                                                                        | the same path in a `Drawable`                                                                                                                       |
 | `<native:keyboardpanel>` | **the platform cannot**: an IME belongs to another process, so nothing an app owns can stand in its place   | a view positioned where the keyboard was, animated by the machinery the accessory already uses — same element, same meaning, different construction |
-| `<native:button>`    | it is a `UIButtonConfiguration` and a `UIMenu` — it exists to be the PLATFORM's control and nothing of ours | nothing: use `<button>` with a `<menu>` child, which says the same thing in HTML's own words and works on both platforms                            |
+| `<native:button>`        | it is a `UIButtonConfiguration` and a `UIMenu` — it exists to be the PLATFORM's control and nothing of ours | nothing: use `<button>` with a `<menu>` child, which says the same thing in HTML's own words and works on both platforms                            |
 
 Markers: `ios-only-materials`, `ios-only-balloon-tail`,
-`ios-only-keyboard-panel`, `ios-only-native-button`.
+`ios-only-keyboard-panel`, `ios-only-popover`, `ios-only-native-button`.
 
 ---
 
