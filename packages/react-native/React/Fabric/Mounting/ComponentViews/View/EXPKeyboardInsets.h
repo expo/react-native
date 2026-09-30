@@ -10,24 +10,14 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /**
- * How much of the window's bottom edge is currently obstructed, in points.
+ * How much of the window's bottom edge is obstructed this frame, in points,
+ * sampled from what is on screen rather than where the keyboard was asked to go.
  *
- * `height` is the whole obstruction — the keyboard when one is up, the bottom
- * safe area when it is not. They are one quantity, not two: UIKit's own
- * `keyboardLayoutGuide` rests on the safe area when the keyboard is gone, which
- * is what makes a bar pinned to it correct in both states without branching.
- *
- * `safeArea` is the part of that which is always there. A consumer that already
- * insets for the safe area wants `height - safeArea`; one that insets for
- * nothing wants `height`.
- *
- * Deliberately not a third "keyboard height" field. The two platforms cannot
- * agree on what it would mean — iOS slides a guide that IS the safe area once
- * the keyboard has gone, so mid-flight there is no honest answer to "how tall is
- * the keyboard" — and every consumer so far wants one of the two numbers above.
- *
- * These are sampled from what is ON SCREEN this frame, not from where the
- * keyboard has been asked to end up.
+ * `height` is the whole obstruction: the keyboard when one is up, the bottom safe
+ * area when it is not, one quantity as UIKit's `keyboardLayoutGuide` treats it.
+ * `safeArea` is the part that is always there; a consumer already inset for the
+ * safe area wants `height - safeArea`. There is no separate keyboard height,
+ * since mid-flight the guide gives no honest answer to it.
  */
 typedef struct {
   CGFloat height;
@@ -35,13 +25,16 @@ typedef struct {
 } EXPKeyboardGeometry;
 
 /**
- * The geometry implied by where the follower has come to rest.
- *
- * Split out from the sampling so it can be checked without a keyboard: the
- * arithmetic is the part that has edge cases — a follower below the window, a
- * safe area larger than the obstruction — and none of them need a device to
- * provoke.
+ * Posted, with the view that would resign as its object, when a field is asked
+ * to blur. A field whose keyboard is stood down behind a picture is not first
+ * responder, so the resign is a no-op; whoever holds the keyboard for that
+ * field listens here and does not give it back.
  */
+FOUNDATION_EXPORT const NSNotificationName EXPFieldAskedToBlurNotification;
+
+// The geometry implied by where the follower rests, split from the sampling so
+// the edge cases (a follower below the window, a safe area larger than the
+// obstruction) can be checked without a keyboard
 FOUNDATION_EXPORT EXPKeyboardGeometry
 EXPKeyboardGeometryFromFollower(CGRect followerInWindow, CGFloat windowHeight, CGFloat safeAreaBottom);
 

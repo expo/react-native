@@ -17,6 +17,7 @@
 #import <React/RCTConversions.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/components/view/ElementTextAreaShadowNode.h>
+#import "EXPKeyboardInsets.h"
 #import "EXPKeyboardTrace.h"
 
 #import "RCTComponentViewFactory.h"
@@ -670,6 +671,9 @@ static UIFont *EXPElementTextAreaFont(void)
     return;
   }
   if ([commandName isEqualToString:@"blur"]) {
+    // Whoever stood this field's keyboard down hears the intent, which the
+    // resign below cannot carry while the field is not first responder
+    [NSNotificationCenter.defaultCenter postNotificationName:EXPFieldAskedToBlurNotification object:_textView];
     [_textView resignFirstResponder];
     return;
   }
