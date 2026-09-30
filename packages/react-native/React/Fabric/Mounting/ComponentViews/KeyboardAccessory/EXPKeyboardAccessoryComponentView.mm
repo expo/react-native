@@ -73,83 +73,62 @@ static CGFloat EXPKeyboardAccessoryMaterialRiseForFade(CGFloat fade)
 
 /**
  * The bar: the view React's children live in, sized to their layout plus the
- * strip of the home indicator it reserves when nothing is below it.
- *
- * A `UIInputView`, not a plain `UIView`, so a bar with no surface of its own is
- * drawn on the keyboard's material rather than on nothing; a bar that carries a
- * surface hides that backdrop and draws its own.
+ * strip of the home indicator it reserves when nothing is below it. A
+ * `UIInputView`, so a bar with no surface of its own is drawn on the keyboard's
+ * material; a bar with a surface hides that backdrop.
  */
 @interface EXPKeyboardAccessoryContentView : UIInputView
 
-/** The height React laid the bar's content out at. The safe area is added to it, not taken from it. */
+// The height React laid the bar's content out at; the safe area is added to it
 @property (nonatomic, assign) CGFloat contentHeight;
 
-/**
- * Where React's children go, and ONLY React's children.
- *
- * Named, not an override of `insertSubview:atIndex:`. A `UIInputView` inserts
- * subviews of its own — a full-width backdrop among them — and a blanket
- * override would redirect those into the content container too, where placed
- * after React's children it covers the whole bar.
- */
+// The bar this is the content of; the content is hosted in the screen's view
+@property (nonatomic, weak, nullable) EXPKeyboardAccessoryComponentView *owner;
+
+// Where React's children go. Not an override of `insertSubview:atIndex:`, which
+// a `UIInputView` calls for subviews of its own, a full-width backdrop among them.
 - (void)insertContentSubview:(UIView *)view atIndex:(NSInteger)index;
 
-/**
- * The bar's surface, which is the WHOLE bar.
- *
- * On this view rather than on a child box, because a docked bar is taller than
- * the content React laid out: it reaches through the home indicator's strip to
- * the bottom of the screen. A child could only ever be as tall as its own
- * layout, so a material written on one stops at the content's edge and leaves
- * the last thirty-four points bare — a visible seam under the bar.
- */
+// The bar's surface, on this view rather than a child box because a docked bar
+// is taller than the content React laid out, reaching through the home
+// indicator's strip
 - (void)setMaterial:(nullable NSString *)keyword
                fade:(CGFloat)fade
                fill:(nullable UIColor *)fill
            strength:(CGFloat)strength;
 
 /**
- * The strip of the home indicator the bar reserves below its content, from the
- * keyboard's height: the part of the indicator's band the keys do not cover.
+ * The strip of the home indicator the bar reserves below its content: the part
+ * of the indicator's band the keys do not cover.
  *
  *     reserve = clamp(safeArea - max(obstruction - safeArea, 0), 0, safeArea)
  *
- * The obstruction already includes the strip (34 with the keys down, which is
- * the strip itself), so only what stands above the strip eats into it. Down:
- * the whole strip is reserved and the bar clears the indicator. Up: none is,
- * and the bar sits on the keys. Continuous in between, over the last
- * thirty-four points of the keys' travel, which is the only part of the journey
- * where the indicator is uncovered. Called once a frame while the keyboard
- * moves, because UIKit moves the keyboard by translating its window and a
- * translation lays nothing out. *
+ * The obstruction already includes the strip, so only what stands above the
+ * strip eats into it; continuous over the last safe-area points of the keys'
+ * travel. Called once a frame while the keyboard moves, because UIKit moves the
+ * keyboard by translating its window and a translation lays nothing out.
+ *
  * DOM-CSS-LIMITATION(accessory-drifts-while-the-keyboard-rises): the reserve
- * is applied by making the bar TALLER, and UIKit animates the input view's
- * height across its own keyboard transition, so the bar's content slides 18
- * points against the keys on the way up instead of tracking them frame by
- * frame.
+ * is applied by making the bar taller, and UIKit animates the input view's
+ * height across its own keyboard transition, so the bar's content slides
+ * against the keys on the way up instead of tracking them frame by frame.
  */
 - (void)updateBottomReserveForObstruction:(CGFloat)obstruction safeArea:(CGFloat)safeArea;
 
-/** The same, from the bar's own resting frame, for a layout pass with no sampler running. */
+// The same, from the bar's own resting frame, for a layout pass with no sampler running
 - (void)updateBottomReserve;
-/** Forget the obstruction this bar was docked against; for a bar about to serve another element. */
+// Forgets the obstruction this bar was docked against, for a bar about to serve another element
 - (void)forgetObstruction;
 
-/** The strip of the home indicator this bar is currently reserving, in points. */
+// The strip of the home indicator this bar is reserving, in points
 @property (nonatomic, readonly) CGFloat bottomReserve;
 
-/**
- * Whether that strip is added to the bar's HEIGHT.
- *
- * It is measured either way, because `onDockChange` publishes it and an author
- * who owns the strip needs the number more than one who does not. Off makes the
- * bar exactly as tall as its content, and everything below the content is the
- * author's to pay for. See `automaticInsets` in
- * `ExpoKeyboardAccessoryShadowNode.h`.
- */
+// Whether that strip is added to the bar's height. It is measured either way,
+// since `onDockChange` publishes it; see `automaticInsets` in
+// `ExpoKeyboardAccessoryShadowNode.h`.
 @property (nonatomic, assign) BOOL reservesBottom;
 
-/** The bottom safe area the reserve is a fraction OF. */
+// The bottom safe area the reserve is a fraction of
 @property (nonatomic, readonly) CGFloat appSafeArea;
 
 @end
@@ -529,26 +508,27 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
 
 @implementation EXPKeyboardAccessoryComponentView {
   EXPKeyboardAccessoryContentView *_contentView;
-  /** Hears the screen's appearance callbacks; see `EXPComposerScreenWatcher`. */
+  // Hears the screen's appearance callbacks, see `EXPComposerScreenWatcher`
   EXPComposerScreenWatcher *_watcher;
-  /** The bar spans the host's width. */
+  // The bar spans the host's width
   NSArray<NSLayoutConstraint *> *_hostEdgeConstraints;
-  /** The bar's bottom on the keyboard layout guide's top: on the keys, or on the screen's bottom edge. */
+  // The bar's bottom on the keyboard layout guide's top
   NSLayoutConstraint *_dockedToKeyboardConstraint;
-  /** The bar's bottom on the screen's bottom edge. */
+  // The bar's bottom on the screen's bottom edge
   NSLayoutConstraint *_restingOnScreenConstraint;
-  /** Which of the two holds: YES while this bar's field has, or is losing, the keyboard. */
+  // Which of the two holds: YES while this bar's field has, or is losing, the keyboard
   BOOL _shouldDockToKeyboard;
+  // `holdsItsPlace`: the bar's bottom pinned where it was, in place of the two anchors
+  NSLayoutConstraint *_heldConstraint;
+  BOOL _holdsItsPlace;
 
   EXPKeyboardInsets *_insets;
-  /**
-   * The last strip reported to JavaScript, so the same answer is not sent twice.
-   * Seeded to a value no reserve can take: ZERO is a real state.
-   */
-  /** The bar's drawn top as last published — see `-_emitDockChangeWithTop:`. */
+  // The bar's drawn top as last published, see `-_emitDockChangeWithTop:`
   CGFloat _emittedTop;
+  // The last strip reported to JavaScript; seeded to a value no reserve can
+  // take, since zero is a real state
   CGFloat _emittedReserve;
-  /** Which bar a trace line is about: a counter, readable in a dump, unlike a reused address. */
+  // Which bar a trace line is about: a counter, unlike a reused address
   NSInteger _barId;
 }
 
@@ -557,6 +537,7 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   if (self = [super initWithFrame:frame]) {
     _props = ExpoKeyboardAccessoryShadowNode::defaultSharedProps();
     _contentView = [EXPKeyboardAccessoryContentView new];
+    _contentView.owner = self;
     _emittedReserve = -1;
     static NSInteger nextBarId = 1;
     _barId = nextBarId++;
@@ -706,6 +687,12 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   if (_contentView.superview == nil || _dockedToKeyboardConstraint == nil) {
     return;
   }
+  // Held: the keyboard comes and goes under the picture and the bar keeps its
+  // anchor; `setHoldsItsPlace:` re-derives it on release
+  if (_holdsItsPlace) {
+    [EXPKeyboardTrace record:@"accessory#%ld holds its place (%@)", (long)_barId, why];
+    return;
+  }
   if (shouldDock == _shouldDockToKeyboard && _dockedToKeyboardConstraint.active == shouldDock &&
       _restingOnScreenConstraint.active != shouldDock) {
     return;
@@ -720,10 +707,51 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   [EXPKeyboardTrace record:@"accessory#%ld bottom=%@ (%@)", (long)_barId, shouldDock ? @"keyboard" : @"screen", why];
 }
 
-/**
- * The reserve from the keyboard as sampled now: the keys cover this screen's
- * strip only while the bar is docked to them.
- */
++ (nullable EXPKeyboardAccessoryComponentView *)barHosting:(UIView *)view
+{
+  for (UIView *ancestor = view; ancestor != nil; ancestor = ancestor.superview) {
+    if ([ancestor isKindOfClass:EXPKeyboardAccessoryContentView.class]) {
+      return ((EXPKeyboardAccessoryContentView *)ancestor).owner;
+    }
+  }
+  return nil;
+}
+
+- (BOOL)holdsItsPlace
+{
+  return _holdsItsPlace;
+}
+
+- (void)setHoldsItsPlace:(BOOL)holds
+{
+  UIView *host = _contentView.superview;
+  if (holds == _holdsItsPlace || host == nil || _dockedToKeyboardConstraint == nil) {
+    return;
+  }
+  _holdsItsPlace = holds;
+  if (holds) {
+    // Pinned to the host's top, not the guide, which is about to move with the keyboard
+    _heldConstraint = [_contentView.bottomAnchor constraintEqualToAnchor:host.topAnchor
+                                                                constant:CGRectGetMaxY(_contentView.frame)];
+    _dockedToKeyboardConstraint.active = NO;
+    _restingOnScreenConstraint.active = NO;
+    _heldConstraint.active = YES;
+    [EXPKeyboardTrace record:@"accessory#%ld HELD bottom=%.1f", (long)_barId, CGRectGetMaxY(_contentView.frame)];
+    return;
+  }
+  _heldConstraint.active = NO;
+  _heldConstraint = nil;
+  const BOOL shouldDock = [self _editingFieldInBar] != nil;
+  _shouldDockToKeyboard = shouldDock;
+  _dockedToKeyboardConstraint.active = shouldDock;
+  _restingOnScreenConstraint.active = !shouldDock;
+  [self _refreshReserve];
+  [_insets obstructingViewsDidChange];
+  [EXPKeyboardTrace record:@"accessory#%ld RELEASED bottom=%@", (long)_barId, shouldDock ? @"keyboard" : @"screen"];
+}
+
+// The reserve from the keyboard as sampled now; the keys cover this screen's
+// strip only while the bar is docked to them
 - (void)_refreshReserve
 {
   UIView *host = _contentView.superview;
@@ -857,7 +885,11 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   _hostEdgeConstraints = nil;
   _dockedToKeyboardConstraint = nil;
   _restingOnScreenConstraint = nil;
-  // The guide is the screen's; what this bar set on it goes with the bar.
+  // A hold ends with the screen: the panel that asked for it may already be gone
+  _heldConstraint.active = NO;
+  _heldConstraint = nil;
+  _holdsItsPlace = NO;
+  // The guide is the screen's; what this bar set on it goes with the bar
   if (@available(iOS 17.0, *)) {
     _contentView.superview.keyboardLayoutGuide.usesBottomSafeArea = YES;
     _contentView.superview.keyboardLayoutGuide.keyboardDismissPadding = 0;
@@ -1011,23 +1043,23 @@ static CGFloat EXPKeyboardAccessoryReserveForObstruction(CGFloat obstruction, CG
   if (appWindow == nil || _contentView.window == nil || CGRectGetHeight(_contentView.bounds) <= 0) {
     return CGFLOAT_MAX;
   }
-  [self _reserveForObstruction:_shouldDockToKeyboard ? MAX(obstructionHeight, 0) : 0];
   const CGFloat top =
       [appWindow convertPoint:CGPointMake(0, [self _edgeOnScreenNow:0 ofView:_contentView]) fromWindow:nil].y;
   if ([EXPKeyboardTrace isRecording]) {
     [self _traceDockAt:top forObstructionHeight:obstructionHeight inWindow:appWindow];
   }
-  // Published from here, because this is the only thing that runs every frame
-  // the keyboard moves — see `-_emitDockChangeWithTop:`.
+  // Held: the sampled height is the keyboard's, coming or going under the
+  // picture; a reserve from it would lift the bar's top into the transcript
+  if (_holdsItsPlace) {
+    return top;
+  }
+  [self _reserveForObstruction:_shouldDockToKeyboard ? MAX(obstructionHeight, 0) : 0];
   [self _emitDockChangeWithTop:top];
   return top;
 }
 
-/**
- * The strip the bar keeps clear below its content for the obstruction it is
- * docked against, and — because the strip is what JavaScript is told about —
- * the dock event, sent from here so it follows the change that causes it.
- */
+// The strip the bar keeps clear for the obstruction it is docked against, and
+// the dock event that reports it
 - (void)_reserveForObstruction:(CGFloat)obstruction
 {
   UIView *host = _contentView.superview;
