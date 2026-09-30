@@ -52,6 +52,8 @@ static const CFTimeInterval EXPKeyboardGraceAfterWake = 0.6;
  */
 static __weak UIWindow *EXPKeyboardWindow = nil;
 
+NSNotificationName const EXPFieldAskedToBlurNotification = @"EXPFieldAskedToBlur";
+
 @implementation EXPKeyboardInsets {
   NSHashTable<id<EXPKeyboardInsetObserving>> *_observers;
   NSHashTable<id<EXPKeyboardObstructingView>> *_obstructingViews;

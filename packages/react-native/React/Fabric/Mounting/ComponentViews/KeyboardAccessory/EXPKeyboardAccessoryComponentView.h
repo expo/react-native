@@ -39,6 +39,19 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (BOOL)asksForKeyboardOnArrival;
 
+/**
+ * Holds the bar where it is drawn while a picture of the keys stands in for
+ * them (the `+` card's), so its field can resign and the keyboard go without
+ * the bar dropping to the screen's edge. The anchor, the reserve and the dock
+ * event JavaScript lays the bar out from are frozen while held; the picture
+ * registers the obstruction. `NO` lets the bar follow the keyboard again, from
+ * wherever the keyboard now is.
+ */
+@property (nonatomic, assign) BOOL holdsItsPlace;
+
+/** The bar whose content `view` is inside, if any. */
++ (nullable EXPKeyboardAccessoryComponentView *)barHosting:(UIView *)view;
+
 @end
 
 NS_ASSUME_NONNULL_END

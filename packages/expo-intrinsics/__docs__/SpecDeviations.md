@@ -547,7 +547,7 @@ lumping them together as "iOS-only" would hide that.
 | `<native:button>`    | it is a `UIButtonConfiguration` and a `UIMenu` — it exists to be the PLATFORM's control and nothing of ours | nothing: use `<button>` with a `<menu>` child, which says the same thing in HTML's own words and works on both platforms                            |
 
 Markers: `ios-only-materials`, `ios-only-balloon-tail`,
-`ios-only-keyboard-panel`, `ios-only-native-button`.
+`ios-only-keyboard-panel`, `ios-only-popover`, `ios-only-native-button`.
 
 ---
 
