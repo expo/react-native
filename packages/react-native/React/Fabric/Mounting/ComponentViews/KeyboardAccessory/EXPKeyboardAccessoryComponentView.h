@@ -12,32 +12,31 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /**
- * The view behind `<native:keyboardaccessory>`.
+ * The view behind `<native:keyboardaccessory>`. It draws nothing itself; its
+ * children are mounted into the bar, a subview of the screen's view with its
+ * bottom on the screen's `keyboardLayoutGuide` while a field inside it has the
+ * keyboard and on the screen's bottom edge otherwise, the home indicator's strip
+ * reserved inside its own height. The bar travels with its screen's card and is
+ * never re-hosted, as the platform's chat hosts its entry view.
  *
- * It draws nothing itself. Its children are mounted into a separate view, the bar, which is a
- * subview of the SCREEN's view: its bottom on the screen's `keyboardLayoutGuide` while a field inside
- * it has the keyboard, and on the screen's bottom edge otherwise, the home indicator's strip
- * reserved inside its own height. UIKit moves the guide with the keyboard and freezes it for a
- * navigation transition, so
- * the bar docks to the keys, travels with its screen's card, and is never re-hosted. A screen popped with the
- * keyboard up keeps its field, which UIKit slides with the card and restores if the pop is
- * cancelled; a screen covered by a push lets its field go. This is how the native chat hosts
- * its entry view.
- *
- * It is not an input accessory. Measured on a phone with a plain-UIKit probe: UIKit hides every
- * input accessory for the length of an interactive pop while sliding only the keys with the card.
- * The reach an accessory gave — a transcript drag that begins dismissing the keyboard when it
- * reaches the composer rather than the keys — comes from the guide's `keyboardDismissPadding`,
- * set to the bar's height.
+ * Not an input accessory, which UIKit hides for the length of an interactive
+ * pop; the reach an accessory gives comes from the guide's
+ * `keyboardDismissPadding`, set to the bar's height.
  */
 @interface EXPKeyboardAccessoryComponentView : RCTViewComponentView
 
-/**
- * Whether a field in this bar will take the keyboard as the bar enters the
- * window. The screen being covered by this bar's screen asks, to hand the
- * keyboard over instead of dismissing it.
- */
+// Whether a field in this bar will take the keyboard as the bar enters the
+// window; the screen being covered asks, to hand the keyboard over instead of
+// dismissing it
 - (BOOL)asksForKeyboardOnArrival;
+
+// Holds the bar where it is drawn while a picture of the keys stands in for
+// them, so its field can resign without the bar dropping to the screen's edge;
+// the anchor, the reserve and the dock event are frozen while held
+@property (nonatomic, assign) BOOL holdsItsPlace;
+
+// The bar whose content `view` is inside, if any
++ (nullable EXPKeyboardAccessoryComponentView *)barHosting:(UIView *)view;
 
 @end
 

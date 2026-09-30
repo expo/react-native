@@ -9,48 +9,27 @@
 
 #import <objc/runtime.h>
 
-/**
- * The keyboard is idle far more often than it moves. Sampling every frame
- * forever would keep a display link — and therefore the main run loop — awake
- * for nothing, so the link runs only while something is in flight and parks
- * itself once the geometry has held still for a few frames.
- *
- * Three frames rather than one: the spring's tail moves by less than a tenth of
- * a point per frame before it settles, and a single stable frame is reachable
- * mid-flight when the curve crosses a rounding boundary.
- */
+// The display link parks once the geometry has held still this many frames.
+// Three rather than one: a spring's tail can hold a rounding boundary for a frame.
 static const NSInteger EXPKeyboardStableFramesBeforeParking = 3;
 
-/**
- * How long after being woken the link keeps sampling even if nothing has moved.
- *
- * A wake arrives BEFORE the motion it predicts: `keyboardWillShow` is posted
- * while the keyboard is still at rest, so the first frames after it are
- * legitimately stable. Parking on that stability would switch the sampler off at
- * the exact moment the animation starts.
- *
- * The measured spring settles in a little over 0.4s, so this is that with room
- * to spare. A finger-driven drag can pause for longer than this, but that case
- * re-wakes the link on every scroll callback rather than relying on the grace.
- */
+// How long after a wake the link keeps sampling though nothing has moved: a
+// wake arrives before the motion it predicts, and the keyboard's spring settles
+// in a little over 0.4s
 static const CFTimeInterval EXPKeyboardGraceAfterWake = 0.6;
 
 @interface EXPKeyboardInsets ()
-/** The screen's view this sampler belongs to; the follower lives in it, on its guide. */
+// The screen's view this sampler belongs to; the follower lives in it, on its guide
 @property (nonatomic, weak) UIView *host;
 @property (nonatomic, strong) UIView *follower;
 @property (nonatomic, strong, nullable) CADisplayLink *link;
 @end
 
-/*
- * The keyboard's window, weakly, for the whole process.
- *
- * Static rather than per-instance: an instance is created when something first
- * asks about a window, which is long after the keyboard's window became visible,
- * so a per-instance observer never sees the notification it needs. There is one
- * keyboard, and the observer for it has to be running before anyone asks.
- */
+// The keyboard's window, weakly, for the whole process: it becomes visible long
+// before any instance exists, so only a `+load` observer sees the notification
 static __weak UIWindow *EXPKeyboardWindow = nil;
+
+const NSNotificationName EXPFieldAskedToBlurNotification = @"EXPFieldAskedToBlur";
 
 @implementation EXPKeyboardInsets {
   NSHashTable<id<EXPKeyboardInsetObserving>> *_observers;
