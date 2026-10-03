@@ -23,6 +23,9 @@ prepare_react_native_project!
 
 # RN-Tester builds with the C++ stable API enforced. Run `RN_STRICT_API=0 pod install` to opt out.
 ENV['RN_STRICT_API'] ||= '1'
+# The tester also hosts framework component descriptors (including Screens).
+# Acknowledge that tier without permitting private React Native headers.
+ENV['RN_ALLOW_FRAMEWORKS'] ||= '1'
 
 @prefix_path = "../react-native"
 

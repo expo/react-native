@@ -3183,6 +3183,7 @@ using facebook::react::SharedEventEmitter = std::shared_ptr<facebook::react::Eve
 using facebook::react::SharedEventPayload = std::shared_ptr<const facebook::react::EventPayload>;
 using facebook::react::SharedEventTarget = std::shared_ptr<facebook::react::EventTarget>;
 using facebook::react::SharedShadowNodeFamily = std::shared_ptr<const facebook::react::ShadowNodeFamily>;
+using facebook::react::SharedTextAttributes = std::shared_ptr<const facebook::react::TextAttributes>;
 using facebook::react::SharedTouchEventEmitter = std::shared_ptr<const facebook::react::TouchEventEmitter>;
 using facebook::react::SharedViewEventEmitter = std::shared_ptr<const facebook::react::ViewEventEmitter>;
 using facebook::react::SharedViewProps = std::shared_ptr<const facebook::react::ViewProps>;
@@ -3227,6 +3228,9 @@ bool facebook::react::areBorderRadiiCircular(const facebook::react::BorderRadii&
 bool facebook::react::hostPlatformColorIsColorMeaningful(facebook::react::Color color) noexcept;
 bool facebook::react::isColorMeaningful(const facebook::react::SharedColor& color) noexcept;
 bool facebook::react::isZero(facebook::react::Float n);
+bool facebook::react::preservesNewlines(facebook::react::WhiteSpace whiteSpace);
+bool facebook::react::preservesSpaces(facebook::react::WhiteSpace whiteSpace);
+bool facebook::react::wrapsText(facebook::react::WhiteSpace whiteSpace);
 constexpr auto facebook::react::to_underlying(auto e) noexcept;
 constexpr char facebook::react::toLower(char c);
 constexpr uint32_t facebook::react::fnv1aLowercase(std::string_view string);
@@ -3470,6 +3474,37 @@ class facebook::react::AsyncArrayBuffer {
   public std::shared_ptr<facebook::jsi::MutableBuffer> getMutableBuffer() const noexcept;
   public uint8_t* data() noexcept;
   public ~AsyncArrayBuffer() = default;
+}
+
+class facebook::react::AttributedString : public facebook::react::Sealable, public facebook::react::DebugStringConvertible {
+  public bool compareTextAttributesWithoutFrame(const facebook::react::AttributedString& rhs) const;
+  public bool isContentEqual(const facebook::react::AttributedString& rhs) const;
+  public bool isEmpty() const;
+  public bool operator==(const facebook::react::AttributedString& rhs) const;
+  public const facebook::react::AttributedString::Fragments& getFragments() const;
+  public const facebook::react::TextAttributes& getBaseTextAttributes() const;
+  public facebook::react::AttributedString::Fragments& getFragments();
+  public std::string getString() const;
+  public using Fragments = std::vector<facebook::react::AttributedString::Fragment>;
+  public void appendFragment(facebook::react::AttributedString::Fragment&& fragment);
+  public void prependFragment(facebook::react::AttributedString::Fragment&& fragment);
+  public void setBaseTextAttributes(const facebook::react::TextAttributes& defaultAttributes);
+}
+
+class facebook::react::AttributedString::Fragment {
+  public bool isAttachment() const;
+  public bool isContentEqual(const facebook::react::AttributedString::Fragment& rhs) const;
+  public bool operator==(const facebook::react::AttributedString::Fragment& rhs) const;
+  public facebook::react::Float atomicInlineBaseline;
+  public facebook::react::ShadowView parentShadowView;
+  public facebook::react::TextAttributes textAttributes;
+  public static std::string AttachmentCharacter();
+  public std::string string;
+}
+
+class facebook::react::AttributedString::Range {
+  public int length;
+  public int location;
 }
 
 class facebook::react::BaseViewEventEmitter : public facebook::react::TouchEventEmitter {
@@ -3921,14 +3956,18 @@ class facebook::react::InlineContentShadowNode : public facebook::react::Concret
   public InlineContentShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public facebook::react::TextAttributes baseTextAttributes() const;
   public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual facebook::react::AttributedString getContentAttributedString(facebook::react::Float fontSizeMultiplier) const override;
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
+  public virtual std::shared_ptr<const facebook::react::TextLayoutManager> getContentTextLayoutManager() const override;
   public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const override;
   public void setTextLayoutManager(std::shared_ptr<const facebook::react::TextLayoutManager> textLayoutManager);
 }
 
 class facebook::react::InlineTextContentAccessor {
+  public virtual facebook::react::AttributedString getContentAttributedString(facebook::react::Float fontSizeMultiplier) const = 0;
+  public virtual std::shared_ptr<const facebook::react::TextLayoutManager> getContentTextLayoutManager() const = 0;
   public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const = 0;
   public virtual ~InlineTextContentAccessor() = default;
 }
@@ -4630,6 +4669,45 @@ class facebook::react::SwitchProps : public facebook::react::HostPlatformViewPro
   public facebook::react::SharedColor trackColorForTrue;
 }
 
+class facebook::react::TextAttributes : public facebook::react::DebugStringConvertible {
+  public bool operator==(const facebook::react::TextAttributes& rhs) const;
+  public facebook::react::Float fontSize;
+  public facebook::react::Float fontSizeMultiplier;
+  public facebook::react::Float letterSpacing;
+  public facebook::react::Float lineHeight;
+  public facebook::react::Float maxFontSizeMultiplier;
+  public facebook::react::Float opacity;
+  public facebook::react::Float textShadowRadius;
+  public facebook::react::SharedColor backgroundColor;
+  public facebook::react::SharedColor foregroundColor;
+  public facebook::react::SharedColor textDecorationColor;
+  public facebook::react::SharedColor textShadowColor;
+  public static facebook::react::TextAttributes defaultTextAttributes();
+  public std::optional<bool> allowFontScaling;
+  public std::optional<bool> isHighlighted;
+  public std::optional<bool> isPressable;
+  public std::optional<facebook::react::AccessibilityRole> accessibilityRole;
+  public std::optional<facebook::react::DynamicTypeRamp> dynamicTypeRamp;
+  public std::optional<facebook::react::FontStyle> fontStyle;
+  public std::optional<facebook::react::FontVariant> fontVariant;
+  public std::optional<facebook::react::FontWeight> fontWeight;
+  public std::optional<facebook::react::LayoutDirection> layoutDirection;
+  public std::optional<facebook::react::LineBreakMode> lineBreakMode;
+  public std::optional<facebook::react::LineBreakStrategy> lineBreakStrategy;
+  public std::optional<facebook::react::Role> role;
+  public std::optional<facebook::react::Size> textShadowOffset;
+  public std::optional<facebook::react::TextAlignment> alignment;
+  public std::optional<facebook::react::TextDecorationLineType> textDecorationLineType;
+  public std::optional<facebook::react::TextDecorationStyle> textDecorationStyle;
+  public std::optional<facebook::react::TextTransform> textTransform;
+  public std::optional<facebook::react::WhiteSpace> whiteSpace;
+  public std::optional<facebook::react::WritingDirection> baseWritingDirection;
+  public std::optional<std::string> fontVariationSettings;
+  public std::string fontFamily;
+  public std::vector<facebook::react::TextEffectInfo> textEffects;
+  public void apply(facebook::react::TextAttributes textAttributes);
+}
+
 class facebook::react::TextNodeComponentDescriptor : public facebook::react::ConcreteComponentDescriptor<facebook::react::TextNodeShadowNode> {
   public TextNodeComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters);
 }
@@ -4706,14 +4784,30 @@ class facebook::react::ValueFactoryEventPayload : public facebook::react::EventP
 
 class facebook::react::ViewComponentDescriptor : public facebook::react::ConcreteComponentDescriptor<facebook::react::ViewShadowNode> {
   public ViewComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters);
+  public virtual facebook::react::State::Shared createInitialState(const facebook::react::Props::Shared&, const facebook::react::ShadowNodeFamily::Shared&) const override;
 }
 
-class facebook::react::ViewShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ViewComponentName, facebook::react::ViewProps, facebook::react::ViewEventEmitter> {
+class facebook::react::ViewShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ViewComponentName, facebook::react::ViewProps, facebook::react::ViewEventEmitter, facebook::react::ViewState> {
   public ViewShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public ViewShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
+}
+
+class facebook::react::ViewState {
+  public ViewState() = default;
+  public ViewState(std::vector<facebook::react::ViewState::TextRun> textRuns, std::weak_ptr<const facebook::react::TextLayoutManager> layoutManager);
+  public std::vector<facebook::react::ViewState::TextRun> textRuns;
+  public std::weak_ptr<const facebook::react::TextLayoutManager> layoutManager;
+}
+
+struct facebook::react::ViewState::TextRun {
+  public bool operator!=(const facebook::react::ViewState::TextRun& other) const;
+  public bool operator==(const facebook::react::ViewState::TextRun& other) const;
+  public facebook::react::AttributedString attributedString;
+  public facebook::react::Rect frame;
+  public int documentOrder;
 }
 
 class facebook::react::VirtualViewEventEmitter : public facebook::react::BaseViewEventEmitter {
@@ -4755,10 +4849,12 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public YogaLayoutableShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public YogaLayoutableShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public const facebook::react::YogaLayoutableShadowNode::ListOfShared& getYogaLayoutableChildren() const;
+  public const std::vector<size_t>& getAnonymousTextContentChildIndices() const;
   public const std::vector<std::shared_ptr<facebook::react::YogaLayoutableShadowNode>>& getAnonymousTextContentChildren() const;
   public facebook::react::Rect getContentBounds() const;
   public static bool isAtomicInline(const facebook::react::ShadowNode& child);
   public static bool isInlineFlowContent(const facebook::react::ShadowNode& child);
+  public static bool isInlineTextContent(const facebook::react::ShadowNode& child);
   public static const facebook::react::YogaLayoutableShadowNode* asYogaLayoutable(const facebook::react::ShadowNode& node);
   public static facebook::react::YogaLayoutableShadowNode::AnonymousTextContentFactory getAnonymousTextContentFactory();
   public static std::shared_ptr<const facebook::react::YogaLayoutableShadowNode> asYogaLayoutable(const std::shared_ptr<const facebook::react::ShadowNode>& node);
@@ -4990,6 +5086,27 @@ enum facebook::react::DisplayType {
   None,
 }
 
+enum facebook::react::DynamicTypeRamp : uint8_t {
+  Body,
+  Callout,
+  Caption1,
+  Caption2,
+  Footnote,
+  Headline,
+  LargeTitle,
+  Subheadline,
+  Title1,
+  Title2,
+  Title3,
+}
+
+enum facebook::react::EllipsizeMode {
+  Clip,
+  Head,
+  Middle,
+  Tail,
+}
+
 enum facebook::react::EventPayloadType {
   PointerEvent,
   ScrollEvent,
@@ -5009,6 +5126,63 @@ enum facebook::react::FilterType {
   Sepia,
 }
 
+enum facebook::react::FontStyle : uint8_t {
+  Italic,
+  Normal,
+  Oblique,
+}
+
+enum facebook::react::FontVariant : int {
+  Default,
+  LiningNums,
+  OldstyleNums,
+  ProportionalNums,
+  SmallCaps,
+  StylisticEight,
+  StylisticEighteen,
+  StylisticEleven,
+  StylisticFifteen,
+  StylisticFive,
+  StylisticFour,
+  StylisticFourteen,
+  StylisticNine,
+  StylisticNineteen,
+  StylisticOne,
+  StylisticSeven,
+  StylisticSeventeen,
+  StylisticSix,
+  StylisticSixteen,
+  StylisticTen,
+  StylisticThirteen,
+  StylisticThree,
+  StylisticTwelve,
+  StylisticTwenty,
+  StylisticTwo,
+  TabularNums,
+}
+
+enum facebook::react::FontWeight : uint16_t {
+  Black,
+  Bold,
+  Demibold,
+  Heavy,
+  Light,
+  Medium,
+  Regular,
+  Semibold,
+  Thin,
+  UltraLight,
+  Weight100,
+  Weight200,
+  Weight300,
+  Weight400,
+  Weight500,
+  Weight600,
+  Weight700,
+  Weight800,
+  Weight900,
+}
+
 enum facebook::react::GradientDirectionType {
   Angle,
   Keyword,
@@ -5019,6 +5193,12 @@ enum facebook::react::GradientKeyword : uint8_t {
   ToBottomRight,
   ToTopLeft,
   ToTopRight,
+}
+
+enum facebook::react::HyphenationFrequency {
+  Full,
+  None,
+  Normal,
 }
 
 enum facebook::react::ImageResizeMode : int8_t {
@@ -5051,6 +5231,29 @@ enum facebook::react::LayoutDirection {
   LeftToRight,
   RightToLeft,
   Undefined,
+}
+
+enum facebook::react::LineBreak {
+  Auto,
+  Loose,
+  Normal,
+  Strict,
+}
+
+enum facebook::react::LineBreakMode : uint8_t {
+  Char,
+  Clip,
+  Head,
+  Middle,
+  Tail,
+  Word,
+}
+
+enum facebook::react::LineBreakStrategy : uint8_t {
+  HangulWordPriority,
+  None,
+  PushOut,
+  Standard,
 }
 
 enum facebook::react::ModalHostViewAnimationType {
@@ -5181,6 +5384,57 @@ enum facebook::react::SchedulerPriority : int {
   UserBlockingPriority,
 }
 
+enum facebook::react::TextAlignment : uint8_t {
+  Center,
+  End,
+  Justified,
+  Left,
+  Natural,
+  Right,
+  Start,
+}
+
+enum facebook::react::TextAlignmentVertical {
+  Auto,
+  Bottom,
+  Center,
+  Top,
+}
+
+enum facebook::react::TextBreakStrategy {
+  Balanced,
+  HighQuality,
+  Simple,
+}
+
+enum facebook::react::TextDecorationLineType : uint8_t {
+  None,
+  Strikethrough,
+  Underline,
+  UnderlineStrikethrough,
+}
+
+enum facebook::react::TextDecorationStyle : uint8_t {
+  Dashed,
+  Dotted,
+  Double,
+  Solid,
+  Wavy,
+}
+
+enum facebook::react::TextTransform : uint8_t {
+  Capitalize,
+  Lowercase,
+  None,
+  Unset,
+  Uppercase,
+}
+
+enum facebook::react::TextWidthMode {
+  Auto,
+  LongestLine,
+}
+
 enum facebook::react::TransformOperationType : uint8_t {
   Arbitrary,
   Identity,
@@ -5207,6 +5461,26 @@ enum facebook::react::UnitType {
   Percent,
   Point,
   Undefined,
+}
+
+enum facebook::react::WhiteSpace : uint8_t {
+  BreakSpaces,
+  NoWrap,
+  Normal,
+  Pre,
+  PreLine,
+  PreWrap,
+}
+
+enum facebook::react::WordBreak {
+  AutoPhrase,
+  Normal,
+}
+
+enum facebook::react::WritingDirection : uint8_t {
+  LeftToRight,
+  Natural,
+  RightToLeft,
 }
 
 struct facebook::react::AccessibilityAction {
@@ -5636,6 +5910,25 @@ struct facebook::react::ShadowNodeWrapper : public facebook::jsi::NativeState {
   public ~ShadowNodeWrapper() override;
 }
 
+struct facebook::react::ShadowView {
+  public ShadowView() = default;
+  public ShadowView(const facebook::react::ShadowNode& shadowNode);
+  public ShadowView(const facebook::react::ShadowView& shadowView) = default;
+  public ShadowView(facebook::react::ShadowView&& shadowView) noexcept = default;
+  public bool operator==(const facebook::react::ShadowView& rhs) const;
+  public facebook::react::ComponentHandle componentHandle;
+  public facebook::react::ComponentName componentName;
+  public facebook::react::EventEmitter::Shared eventEmitter;
+  public facebook::react::LayoutMetrics layoutMetrics;
+  public facebook::react::Props::Shared props;
+  public facebook::react::ShadowNodeTraits traits;
+  public facebook::react::ShadowView& operator=(const facebook::react::ShadowView& other) = default;
+  public facebook::react::ShadowView& operator=(facebook::react::ShadowView&& other) = default;
+  public facebook::react::State::Shared state;
+  public facebook::react::SurfaceId surfaceId;
+  public facebook::react::Tag tag;
+}
+
 struct facebook::react::Size {
   public facebook::react::Float height;
   public facebook::react::Float width;
@@ -5645,6 +5938,12 @@ struct facebook::react::Size {
 
 struct facebook::react::StateData {
   public using Shared = std::shared_ptr<const void>;
+}
+
+struct facebook::react::TextEffectInfo {
+  public bool operator==(const facebook::react::TextEffectInfo&) const = default;
+  public folly::dynamic props;
+  public std::string name;
 }
 
 struct facebook::react::TouchEvent {
@@ -9413,6 +9712,10 @@ struct std::hash<RCTComponentViewDescriptor> {
   public size_t operator()(const RCTComponentViewDescriptor& componentViewDescriptor) const;
 }
 
+struct std::hash<facebook::react::AttributedString> {
+  public size_t operator()(const facebook::react::AttributedString& attributedString) const;
+}
+
 struct std::hash<facebook::react::Color> {
   public size_t operator()(const facebook::react::Color& color) const;
 }
@@ -9433,12 +9736,24 @@ struct std::hash<facebook::react::Rect> {
   public size_t operator()(const facebook::react::Rect& rect) const noexcept;
 }
 
+struct std::hash<facebook::react::ShadowView> {
+  public size_t operator()(const facebook::react::ShadowView& shadowView) const;
+}
+
 struct std::hash<facebook::react::SharedColor> {
   public size_t operator()(const facebook::react::SharedColor& color) const;
 }
 
 struct std::hash<facebook::react::Size> {
   public size_t operator()(const facebook::react::Size& size) const;
+}
+
+struct std::hash<facebook::react::TextAttributes> {
+  public size_t operator()(const facebook::react::TextAttributes& textAttributes) const;
+}
+
+struct std::hash<facebook::react::TextEffectInfo> {
+  public size_t operator()(const facebook::react::TextEffectInfo& info) const;
 }
 
 struct std::hash<facebook::react::Transform> {
@@ -9453,6 +9768,10 @@ struct std::hash<facebook::react::RectangleCorners<T>> {
 template <typename T>
 struct std::hash<facebook::react::RectangleEdges<T>> {
   public size_t operator()(const facebook::react::RectangleEdges<T>& edges) const noexcept;
+}
+
+struct std::hash<facebook::react::AttributedString::Fragment> {
+  public size_t operator()(const facebook::react::AttributedString::Fragment& fragment) const;
 }
 
 

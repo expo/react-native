@@ -10,6 +10,12 @@ project(appmodules)
 
 include(${REACT_ANDROID_DIR}/cmake-utils/ReactNative-application.cmake)
 
+# RNTester exercises renderer internals and hosts third-party component
+# descriptors. Keep private-header enforcement while acknowledging that this
+# integration code uses the framework tier, including its shared PCH.
+target_compile_definitions(common_flags INTERFACE RN_ALLOW_FRAMEWORKS)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE RN_ALLOW_FRAMEWORKS)
+
 add_subdirectory(${REACT_COMMON_DIR}/react/nativemodule/samples/platform/android/ sampleturbomodule_build)
 add_subdirectory(${REACT_COMMON_DIR}/../../rn-tester/NativeCxxModuleExample/ nativecxxmoduleexample_build)
 
