@@ -173,8 +173,11 @@ std::vector<Rect> measureFragmentRectsDeterministically(
       continue;
     }
 
+    // The leading edge is part of the element's box, so the pen advances
+    // before the glyphs and the rect starts at the box edge, not the text.
     Float startLine = line;
     Float minX = penX;
+    penX += fragment.leadingInlineSpace();
     Float maxX = penX;
 
     // Walk spans rather than characters: characters advance the pen one grid
@@ -240,6 +243,9 @@ std::vector<Rect> measureFragmentRectsDeterministically(
       }
     }
 
+    penX += fragment.trailingInlineSpace();
+    maxX = std::max(maxX, penX);
+
     rects.push_back(
         Rect{
             .origin = {minX, startLine * lineHeight},
@@ -300,6 +306,10 @@ TextMeasurement measureDeterministically(
   Float intrinsicWidth = 0;
   Float maxAttachmentHeight = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
+    // An inline element's box edges (margin, border and padding) take up
+    // advance on the line
+    intrinsicWidth +=
+        fragment.leadingInlineSpace() + fragment.trailingInlineSpace();
     if (fragment.isAttachment()) {
       // An atomic inline: reserve its box in the run — width adds to the line,
       // height can grow the line box. The size is carried on the attachment
@@ -344,6 +354,8 @@ TextMeasurement measureDeterministically(
   size_t segmentLength = 0;
   Float segmentWidth = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
+    segmentWidth +=
+        fragment.leadingInlineSpace() + fragment.trailingInlineSpace();
     if (fragment.isAttachment()) {
       segmentLength += static_cast<size_t>(attachmentColumns(fragment));
       segmentWidth += fragment.parentShadowView.layoutMetrics.frame.size.width;
