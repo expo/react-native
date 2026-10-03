@@ -9,7 +9,9 @@
 
 #include <react/cxxstableapi/UmbrellaGuard.h>
 
+#include <react/renderer/components/view/ListStyle.h>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <yoga/node/Node.h>
@@ -133,6 +135,34 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   {
     return yogaLayoutableChildren_;
   }
+
+  /*
+   * List marker generation (css-lists-3 §3) runs on the list CONTAINER: a
+   * marker's text depends on the item's position among its siblings, and a
+   * shadow node has no parent pointer, so an item cannot count itself.
+   */
+  void prepareListContext(int depth);
+  /*
+   * The marker `child` takes as the list's next item, counting it, when it
+   * differs from the one it has; nothing for a child that is not an item, has
+   * no inline content to carry a marker, or already has its marker.
+   */
+  std::optional<ListMarker> nextListMarkerIfChanged(const YogaLayoutableShadowNode &child);
+  static void assignListMarker(YogaLayoutableShadowNode &item, const ListMarker &marker);
+
+  struct ListContext {
+    bool isList{false};
+    ListStyleType type{ListStyleType::Disc};
+    ListStylePosition position{ListStylePosition::Outside};
+    int nextOrdinal{1};
+  };
+  ListContext listContext_{};
+
+  /*
+   * How many lists enclose this node, so an unordered list can take the UA
+   * bullet for its depth (disc, circle, square) without walking ancestors.
+   */
+  int listDepth_{0};
 
   const std::vector<std::shared_ptr<YogaLayoutableShadowNode>> &getAnonymousTextContentChildren() const
   {

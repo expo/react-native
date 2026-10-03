@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <string_view>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
@@ -25,6 +26,30 @@ namespace {
 // `enableStringChildren`; with the flag off this stub returns `minimumSize`,
 // which several test suites rely on.
 constexpr Float kDeterministicCharacterWidth = 10;
+
+// A fragment's text as the deterministic metrics count it: without the
+// left-to-right and right-to-left marks, which a real text engine draws at
+// zero width
+std::string measuredText(const std::string& string) {
+  constexpr std::string_view leftToRightMark{"\xE2\x80\x8E"};
+  constexpr std::string_view rightToLeftMark{"\xE2\x80\x8F"};
+  if (string.find("\xE2\x80") == std::string::npos) {
+    return string;
+  }
+  std::string result;
+  result.reserve(string.size());
+  for (size_t i = 0; i < string.size();) {
+    const auto rest = std::string_view{string}.substr(i);
+    if (rest.starts_with(leftToRightMark) ||
+        rest.starts_with(rightToLeftMark)) {
+      i += leftToRightMark.size();
+      continue;
+    }
+    result += string[i];
+    i++;
+  }
+  return result;
+}
 
 // How far text descends below its baseline, as a fraction of the line height.
 // Deterministic like everything else here, and non-zero so that "aligned to
@@ -160,7 +185,8 @@ std::vector<Rect> measureFragmentRectsDeterministically(
   Float penX = 0; // pen position within the current line, in points
 
   for (const auto& fragment : fragments) {
-    const auto text = fragment.isAttachment() ? std::string{} : fragment.string;
+    const auto text =
+        fragment.isAttachment() ? std::string{} : measuredText(fragment.string);
     const auto characters =
         fragment.isAttachment() ? static_cast<size_t>(1) : text.size();
     const auto advance = fragment.isAttachment()
@@ -331,7 +357,7 @@ TextMeasurement measureDeterministically(
           std::max(maxAttachmentHeight, attachmentSize.height);
       characterCount += 1;
     } else {
-      const auto text = fragment.string;
+      const auto text = measuredText(fragment.string);
       characterCount += text.size();
       intrinsicWidth +=
           static_cast<Float>(text.size()) * perCharacterAdvance(fragment);
@@ -374,7 +400,7 @@ TextMeasurement measureDeterministically(
       continue;
     }
     const auto advance = perCharacterAdvance(fragment);
-    for (char character : fragment.string) {
+    for (char character : measuredText(fragment.string)) {
       if (character == '\n') {
         segmentLengths.push_back(segmentLength);
         segmentWidths.push_back(segmentWidth);
