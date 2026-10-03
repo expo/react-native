@@ -560,6 +560,11 @@ Size InlineContentShadowNode::measureContent(
   TextLayoutContext textLayoutContext{
       .pointScaleFactor = layoutContext.pointScaleFactor,
       .surfaceId = getSurfaceId(),
+      // Lets the platform park the layout it builds to measure this run for
+      // reuse at mount. Only this site tags: the stamp and attachment measures
+      // lay out variant strings that the mount-side content check would reject
+      // anyway.
+      .runTag = getTag(),
   };
 
   auto measureConstraints =

@@ -403,6 +403,7 @@ static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_BASE_AT
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_CACHE_ID;
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_FRAGMENTS;
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_HASH;
+static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_RUN_TAG;
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_STRING;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_ATOMIC_INLINE_BASELINE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_HEIGHT;
@@ -760,7 +761,7 @@ facebook::react::Float facebook::react::floatFromYogaOptionalFloat(facebook::yog
 facebook::react::InlineBoxProps facebook::react::parseInlineBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
 facebook::react::LayoutConstraints facebook::react::constraintsHonoringOwnBounds(const facebook::react::ShadowNode& node, facebook::react::LayoutConstraints constraints);
 facebook::react::LayoutMetrics facebook::react::layoutMetricsFromYogaNode(facebook::yoga::Node& yogaNode);
-facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::AttributedString& attributedString);
+facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::AttributedString& attributedString, facebook::react::Tag runTag = 0);
 facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::AttributedString::Fragment& fragment);
 facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::FontVariant& fontVariant);
 facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::InlineBoxDecorations& inlineBox);
@@ -4510,6 +4511,7 @@ struct facebook::react::ViewState::TextRun {
   public bool operator==(const facebook::react::ViewState::TextRun& other) const;
   public facebook::react::AttributedString attributedString;
   public facebook::react::Rect frame;
+  public facebook::react::Tag runTag;
   public int documentOrder;
 }
 
@@ -6873,6 +6875,7 @@ struct facebook::react::TextLayoutContext {
   public bool operator==(const facebook::react::TextLayoutContext& rhs) const = default;
   public facebook::react::Float pointScaleFactor;
   public facebook::react::SurfaceId surfaceId;
+  public facebook::react::Tag runTag;
 }
 
 struct facebook::react::TimerCallback {

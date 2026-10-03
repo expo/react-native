@@ -2957,6 +2957,7 @@ struct facebook::react::ViewState::TextRun {
   public bool operator==(const facebook::react::ViewState::TextRun& other) const;
   public facebook::react::AttributedString attributedString;
   public facebook::react::Rect frame;
+  public facebook::react::Tag runTag;
   public int documentOrder;
 }
 
@@ -5016,6 +5017,7 @@ struct facebook::react::TextLayoutContext {
   public Float pointScaleFactor;
   public bool operator==(const facebook::react::TextLayoutContext& rhs) const = default;
   public facebook::react::SurfaceId surfaceId;
+  public facebook::react::Tag runTag;
 }
 
 struct facebook::react::TimerCallback {

@@ -40,9 +40,18 @@ class ViewState final {
      */
     int documentOrder{0};
 
+    /*
+     * The anonymous box's tag for content runs, which keys the registry that
+     * hands a run's measured layout over to the mounting layer; 0 for runs
+     * that opt out of the handoff (outside list markers share their box's tag
+     * with the content run and would collide, and their layouts are trivial).
+     */
+    Tag runTag{0};
+
     bool operator==(const TextRun &other) const
     {
-      return attributedString == other.attributedString && frame == other.frame && documentOrder == other.documentOrder;
+      return attributedString == other.attributedString && frame == other.frame &&
+          documentOrder == other.documentOrder && runTag == other.runTag;
     }
     bool operator!=(const TextRun &other) const
     {

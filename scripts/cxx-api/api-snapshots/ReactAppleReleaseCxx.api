@@ -4869,6 +4869,7 @@ struct facebook::react::ViewState::TextRun {
   public bool operator==(const facebook::react::ViewState::TextRun& other) const;
   public facebook::react::AttributedString attributedString;
   public facebook::react::Rect frame;
+  public facebook::react::Tag runTag;
   public int documentOrder;
 }
 

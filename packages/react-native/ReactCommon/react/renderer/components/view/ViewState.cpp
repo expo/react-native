@@ -18,7 +18,9 @@ MapBuffer ViewState::getMapBuffer() const {
   runs.reserve(textRuns.size());
   for (const auto& run : textRuns) {
     auto runBuilder = MapBufferBuilder();
-    runBuilder.putMapBuffer(0, toMapBuffer(run.attributedString));
+    // Serialized with the same run tag the measurement path used, so the
+    // mount-side handoff check can compare the two buffers byte-for-byte.
+    runBuilder.putMapBuffer(0, toMapBuffer(run.attributedString, run.runTag));
     runBuilder.putDouble(1, run.frame.origin.x);
     runBuilder.putDouble(2, run.frame.origin.y);
     runBuilder.putDouble(3, run.frame.size.width);

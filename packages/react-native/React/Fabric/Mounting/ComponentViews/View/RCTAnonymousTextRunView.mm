@@ -141,6 +141,21 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
       RCTRunGeometryMatchesYogaFrame(frame, _run.frame, self.traitCollection.displayScale ?: 3.0),
       @"text-children run paint geometry must be the run's Yoga frame, pixel-aligned");
 
+  // Draw from the TextKit storage already built and laid out when this run was
+  // measured, instead of converting, rebuilding and re-shaping it here on the
+  // main thread. The cache is keyed by content, so a hit is the layout for
+  // exactly this content at this width; a miss falls back to the rebuild path
+  // below.
+  NSTextStorage *cachedTextStorage = _run.runTag != 0
+      ? [nativeTextLayoutManager cachedRunTextStorageForAttributedString:_run.attributedString width:frame.size.width]
+      : nil;
+  if (cachedTextStorage != nil) {
+    [nativeTextLayoutManager drawTextStorage:cachedTextStorage
+                            attributedString:_run.attributedString
+                                       frame:frame
+                           drawHighlightPath:nil];
+    return;
+  }
   [nativeTextLayoutManager drawAttributedString:_run.attributedString
                             paragraphAttributes:facebook::react::ParagraphAttributes {}
                                           frame:frame

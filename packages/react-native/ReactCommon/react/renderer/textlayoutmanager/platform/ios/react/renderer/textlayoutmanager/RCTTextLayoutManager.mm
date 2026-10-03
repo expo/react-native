@@ -29,6 +29,143 @@
 
 using namespace facebook::react;
 
+namespace {
+
+/*
+ * The run TextKit storage cache. Measuring a
+ * run builds and fully lays out its NSTextStorage stack on the layout
+ * thread; caching it by CONTENT + width lets the run view draw from it
+ * instead of converting, rebuilding, and re-shaping the identical stack on
+ * the main thread. Content keying — not take-on-remove — is deliberate: it
+ * extends the exact caching policy the C++ text measure cache already
+ * applies to the same inputs, so a measure-cache-hit re-mount (repeated
+ * content, relayout churn) still finds its storage at draw. Entries are
+ * only ever inserted whole and never mutated; the mutex is the
+ * happens-before edge for the layout-thread -> main-thread handoff, and
+ * draws happen serially on the main thread.
+ */
+struct RunStorageKey {
+  AttributedString attributedString;
+  CGFloat width;
+
+  /*
+   * Equality over exactly what glyph layout depends on: the container width,
+   * the base attributes, and each fragment's content.
+   *
+   * "Content" is `Fragment::isContentEqual` rather than a field list written
+   * out here, and that is the point. A fragment's inline box is not
+   * decoration the draw adds on top — its inline-axis margin/border/padding
+   * becomes kerning and `firstLineHeadIndent` on the NSAttributedString
+   * (RCTApplyInlineBoxSpacing), so it moves glyphs and changes where lines
+   * break. Listing fields by hand is how a key silently stops covering one:
+   * two rows in a fixed-width block with the same text and the same text
+   * attributes but different `<span>` padding are a legal cache collision
+   * under a text-and-attributes key, and they render identically.
+   * `isContentEqual` is the codebase's existing "everything measurement
+   * depends on" predicate, so a new layout-affecting field on Fragment is
+   * covered the day it lands.
+   *
+   * Deliberately NOT the fragments' parentShadowView — its layout metrics
+   * are zero at measure and stamped with real geometry by publish
+   * (inline-element rects), and they have no effect on shaping for
+   * non-attachment fragments. Attachment fragments DO layout by those
+   * metrics, which is why attachment-bearing runs are never cached (see the
+   * park site) and are rejected here too.
+   */
+  bool operator==(const RunStorageKey &other) const
+  {
+    if (width != other.width ||
+        !(attributedString.getBaseTextAttributes() == other.attributedString.getBaseTextAttributes())) {
+      return false;
+    }
+    const auto &fragments = attributedString.getFragments();
+    const auto &otherFragments = other.attributedString.getFragments();
+    if (fragments.size() != otherFragments.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < fragments.size(); i++) {
+      if (fragments[i].isAttachment() || otherFragments[i].isAttachment() ||
+          !fragments[i].isContentEqual(otherFragments[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+struct RunStorageKeyHash {
+  size_t operator()(const RunStorageKey &key) const
+  {
+    // Hash only the components equality always inspects; collisions are
+    // resolved by the full comparison above.
+    return std::hash<std::string>{}(key.attributedString.getString()) ^ std::hash<CGFloat>{}(key.width);
+  }
+};
+
+struct RunStorageState {
+  // Most-recently-used at the back. The list owns the storages; the map
+  // indexes into it.
+  std::list<std::pair<RunStorageKey, NSTextStorage * __strong>> order;
+  std::unordered_map<RunStorageKey, decltype(order)::iterator, RunStorageKeyHash> entries;
+  size_t totalChars = 0;
+};
+
+// Bounded by character count: entries hold whole laid-out TextKit stacks.
+constexpr size_t kRunStorageMaxChars = 65536;
+constexpr size_t kRunStorageMaxEntries = 256;
+
+std::mutex &runStorageMutex()
+{
+  static std::mutex mutex;
+  return mutex;
+}
+RunStorageState &runStorageState()
+{
+  static RunStorageState state;
+  return state;
+}
+
+void cacheRunTextStorage(const AttributedString &attributedString, CGFloat width, NSTextStorage *textStorage)
+{
+  auto key = RunStorageKey{.attributedString = attributedString, .width = width};
+  size_t chars = attributedString.getString().size();
+  std::lock_guard<std::mutex> lock(runStorageMutex());
+  auto &state = runStorageState();
+  auto it = state.entries.find(key);
+  if (it != state.entries.end()) {
+    state.totalChars -= it->second->first.attributedString.getString().size();
+    state.order.erase(it->second);
+    state.entries.erase(it);
+  }
+  state.order.emplace_back(key, textStorage);
+  state.entries[key] = std::prev(state.order.end());
+  state.totalChars += chars;
+  while (!state.order.empty() &&
+         (state.totalChars > kRunStorageMaxChars || state.entries.size() > kRunStorageMaxEntries)) {
+    auto &oldest = state.order.front();
+    state.totalChars -= oldest.first.attributedString.getString().size();
+    state.entries.erase(oldest.first);
+    state.order.pop_front();
+  }
+}
+
+NSTextStorage *cachedRunTextStorage(const AttributedString &attributedString, CGFloat width)
+{
+  auto key = RunStorageKey{.attributedString = attributedString, .width = width};
+  std::lock_guard<std::mutex> lock(runStorageMutex());
+  auto &state = runStorageState();
+  auto it = state.entries.find(key);
+  if (it == state.entries.end()) {
+    return nil;
+  }
+  // Touch: move to most-recently-used.
+  state.order.splice(state.order.end(), state.order, it->second);
+  it->second = std::prev(state.order.end());
+  return it->second->second;
+}
+
+} // namespace
+
 @implementation RCTGlyphHuggingLayoutManager {
   CGPoint _backgroundDrawOrigin;
 }
@@ -140,10 +277,57 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
                              layoutContext:(TextLayoutContext)layoutContext
                          layoutConstraints:(LayoutConstraints)layoutConstraints
 {
-  return [self measureNSAttributedString:[self _nsAttributedStringFromAttributedString:attributedString]
+  NSAttributedString *nsAttributedString = [self _nsAttributedStringFromAttributedString:attributedString];
+
+  // A run-tagged measure caches the TextKit stack it builds — fully laid
+  // out on this (layout) thread — for the run view to draw from instead of
+  // rebuilding and re-shaping it on the main thread.
+  if (layoutContext.runTag != 0 && nsAttributedString.length != 0) {
+    CGSize maximumSize = CGSize{layoutConstraints.maximumSize.width, CGFLOAT_MAX};
+    NSTextStorage *textStorage =
+        [self _textStorageAndLayoutManagerWithAttributesString:nsAttributedString
+                                           paragraphAttributes:paragraphAttributes
+                                                          size:maximumSize
+                                                    exclusions:layoutConstraints.floatExclusions];
+    auto measurement = [self _measureTextStorage:textStorage
+                             paragraphAttributes:paragraphAttributes
+                                   layoutContext:layoutContext];
+    // Attachment-bearing runs are never cached: an attachment's placeholder
+    // lays out by its parentShadowView's metrics, which change between
+    // measure and mount — the cache key deliberately ignores those metrics
+    // for the fragments it does compare.
+    bool hasAttachments = false;
+    for (const auto &fragment : attributedString.getFragments()) {
+      if (fragment.isAttachment()) {
+        hasAttachments = true;
+        break;
+      }
+    }
+    // Nor a run beside a float: the cache is keyed on the container WIDTH, and
+    // two runs of the same string at the same width lay out differently when
+    // one of them has a float eating into its lines.
+    if (!hasAttachments && layoutConstraints.floatExclusions.empty()) {
+      cacheRunTextStorage(attributedString, maximumSize.width, textStorage);
+    }
+    return measurement;
+  }
+
+  return [self measureNSAttributedString:nsAttributedString
                      paragraphAttributes:paragraphAttributes
                            layoutContext:layoutContext
                        layoutConstraints:layoutConstraints];
+}
+
+- (nullable NSTextStorage *)cachedRunTextStorageForAttributedString:(const AttributedString &)attributedString
+                                                              width:(CGFloat)width
+{
+  // Content-keyed: the storage returned is by construction the layout for
+  // exactly what is being drawn (the key IS the content plus the container
+  // width wrapping depends on; the container height deliberately differs —
+  // CGFLOAT_MAX at measure — and cannot affect glyph layout because runs
+  // never truncate). A miss falls back to the rebuild path; it can never
+  // become wrong pixels.
+  return cachedRunTextStorage(attributedString, width);
 }
 
 - (CGRect)drawingFrameForAttributedString:(const AttributedString &)attributedString
@@ -468,6 +652,14 @@ void drawInlineBoxDecorations(
       _textStorageAndLayoutManagerWithAttributesString:[self _nsAttributedStringFromAttributedString:attributedString]
                                    paragraphAttributes:paragraphAttributes
                                                   size:frame.size];
+  [self drawTextStorage:textStorage attributedString:attributedString frame:frame drawHighlightPath:block];
+}
+
+- (void)drawTextStorage:(NSTextStorage *)textStorage
+       attributedString:(const AttributedString &)attributedString
+                  frame:(CGRect)frame
+      drawHighlightPath:(void (^_Nullable)(UIBezierPath *highlightPath))block
+{
   NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
   NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
 
