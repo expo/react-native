@@ -300,6 +300,10 @@ const ReactNativeStyleAttributes: {[key: string]: AnyAttributeType, ...} = {
   textShadowOffset: true,
   textShadowRadius: true,
   textTransform: true,
+  // `white-space`. Registered here so it survives style flattening — the
+  // inheritable text properties reach native as top-level props, and a key
+  // missing from this table is dropped before it ever gets there.
+  whiteSpace: true,
   userSelect: true,
   verticalAlign: true,
   writingDirection: true,

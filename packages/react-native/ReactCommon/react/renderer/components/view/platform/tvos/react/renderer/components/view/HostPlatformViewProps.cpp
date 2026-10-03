@@ -14,8 +14,15 @@ namespace facebook::react {
 HostPlatformViewProps::HostPlatformViewProps(
     const PropsParserContext& context,
     const HostPlatformViewProps& sourceProps,
-    const RawProps& rawProps)
-    : BaseViewProps(context, sourceProps, rawProps),
+    const RawProps& rawProps,
+    const std::function<bool(const std::string&)>& filterObjectKeys,
+    bool parseInheritedTextProps)
+    : BaseViewProps(
+          context,
+          sourceProps,
+          rawProps,
+          filterObjectKeys,
+          parseInheritedTextProps),
       focusable(convertRawProp(
           context,
           rawProps,

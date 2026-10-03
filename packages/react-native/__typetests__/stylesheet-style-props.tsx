@@ -89,8 +89,8 @@ const imageStyleWithScrollOverflow: ImageStyle = {
 };
 
 const imageStyleWithTextProp: ImageStyle = {
-  // @ts-expect-error `fontSize` is not an Image style prop.
-  fontSize: 12,
+  // @ts-expect-error `textDecorationLine` is not an Image style prop.
+  textDecorationLine: 'underline',
 };
 
 const viewStyle: ViewStyle = {
