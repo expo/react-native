@@ -6,7 +6,9 @@
  */
 
 #include "YogaLayoutableShadowNode.h"
+
 #include <cxxreact/TraceSection.h>
+#include <glog/logging.h>
 #include <logger/react_native_log.h>
 #include <react/debug/flags.h>
 #include <react/debug/react_native_assert.h>
@@ -71,6 +73,7 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     : LayoutableShadowNode(fragment, family, traits),
       yogaConfig_(FabricDefaultYogaLog),
       yogaNode_(&initializeYogaConfig(yogaConfig_)) {
+  traits_.set(ShadowNodeTraits::Trait::YogaLayoutableKind);
   YGNodeSetContext(&yogaNode_, this);
 
   if (getTraits().check(ShadowNodeTraits::Trait::MeasurableYogaNode)) {
@@ -201,7 +204,7 @@ void YogaLayoutableShadowNode::adoptYogaChild(size_t index) {
       !getTraits().check(ShadowNodeTraits::Trait::LeafYogaNode));
 
   auto& childNode =
-      dynamic_cast<const YogaLayoutableShadowNode&>(*getChildren().at(index));
+      *YogaLayoutableShadowNode::asYogaLayoutable(*getChildren().at(index));
 
   if (YGNodeGetOwner(&childNode.yogaNode_) == nullptr) {
     // The child node is not owned.
@@ -265,9 +268,9 @@ void YogaLayoutableShadowNode::replaceChild(
   ensureYogaChildrenLookFine();
 
   auto layoutableOldChild =
-      dynamic_cast<const YogaLayoutableShadowNode*>(&oldChild);
+      YogaLayoutableShadowNode::asYogaLayoutable(oldChild);
   auto layoutableNewChild =
-      std::dynamic_pointer_cast<const YogaLayoutableShadowNode>(newChild);
+      YogaLayoutableShadowNode::asYogaLayoutable(newChild);
 
   if (layoutableOldChild == nullptr && layoutableNewChild == nullptr) {
     // No need to mutate yogaLayoutableChildren_
@@ -1125,7 +1128,7 @@ void YogaLayoutableShadowNode::ensureYogaChildrenAlignment() const {
     auto& child = children.at(i);
     react_native_assert(
         yogaChild->getContext() ==
-        dynamic_cast<const YogaLayoutableShadowNode*>(child.get()));
+        YogaLayoutableShadowNode::asYogaLayoutable(*child));
   }
 #endif
 }
