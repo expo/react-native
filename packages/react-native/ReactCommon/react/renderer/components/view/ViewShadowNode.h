@@ -30,6 +30,20 @@ class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, Vi
 
   void layout(LayoutContext layoutContext) override;
 
+  /*
+   * The first baseline, which flex baseline alignment and an inline-flex box's
+   * line use. A flex container exports its first flex item's (css-flexbox-1
+   * §8.5); any other box answers as `YogaLayoutableShadowNode` does.
+   */
+  Float baseline(const LayoutContext &layoutContext, Size size) const override;
+
+  /*
+   * Where this box's baseline sits as an inline-block, measured from its top
+   * (CSS2 §10.8.1): the baseline of its last in-flow line box, or its bottom
+   * edge when it has none or clips its content.
+   */
+  Float lastLineBaseline(const LayoutContext &layoutContext, Size size) const override;
+
  private:
   void initialize() noexcept;
 

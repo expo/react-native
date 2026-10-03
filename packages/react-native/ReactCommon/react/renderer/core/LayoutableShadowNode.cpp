@@ -282,6 +282,12 @@ Float LayoutableShadowNode::baseline(
   return size.height;
 }
 
+Float LayoutableShadowNode::lastLineBaseline(
+    const LayoutContext& layoutContext,
+    Size size) const {
+  return baseline(layoutContext, size);
+}
+
 std::shared_ptr<const ShadowNode> LayoutableShadowNode::findNodeAtPoint(
     const std::shared_ptr<const ShadowNode>& node,
     Point point) {
