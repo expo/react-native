@@ -6,13 +6,17 @@
  */
 
 #include "YogaLayoutableShadowNode.h"
+
 #include <cxxreact/TraceSection.h>
+#include <glog/logging.h>
 #include <logger/react_native_log.h>
 #include <react/debug/flags.h>
 #include <react/debug/react_native_assert.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/BaseViewProps.h>
+#include <react/renderer/components/view/ElementBoxShadowNode.h>
 #include <react/renderer/components/view/LayoutConformanceShadowNode.h>
+#include <react/renderer/components/view/ListStyle.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/ViewShadowNode.h>
 #include <react/renderer/components/view/conversions.h>
@@ -20,6 +24,7 @@
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/debug/DebugStringConvertibleItem.h>
+#include <react/renderer/dom/NodeNameProvider.h>
 #include <react/utils/FloatComparison.h>
 #include <yoga/Yoga.h>
 #include <algorithm>
@@ -137,6 +142,12 @@ static bool inheritableTextPropsDiffer(
 // span-like inline flow content. Defined with the other classification
 // predicates below.
 static bool isInlineLevelBox(const ShadowNode& child);
+
+// Whether the author's own `display` makes `child` block-level regardless of
+// its UA default (css-display-3 §2's blockification, from the other
+// direction): `display: 'block'` on an element whose trait says inline takes
+// it out of inline flow.
+static bool authorDisplayBlockifies(const ShadowNode& child);
 
 YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     const ShadowNodeFragment& fragment,
@@ -322,7 +333,7 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     }
 
     // Still force a reconfigure so the next pass re-runs the full cascade
-    // over the rebuilt boxes.
+    // over the rebuilt boxes and reassigns list markers and depths.
     yogaTreeHasBeenConfigured_ = false;
   }
 
@@ -502,7 +513,7 @@ void YogaLayoutableShadowNode::replaceChild(
   auto layoutableOldChild =
       YogaLayoutableShadowNode::asYogaLayoutable(oldChild);
   auto layoutableNewChild =
-      std::dynamic_pointer_cast<const YogaLayoutableShadowNode>(newChild);
+      YogaLayoutableShadowNode::asYogaLayoutable(newChild);
 
   if (layoutableOldChild == nullptr && layoutableNewChild == nullptr) {
     // No need to mutate yogaLayoutableChildren_
@@ -652,6 +663,26 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       static_cast<const YogaStylableProps&>(*props_).displayBlock;
 
   for (size_t i = 0; i < getChildren().size(); i++) {
+    // An inline *replaced* element (e.g. <img>) is layoutable but flows inside
+    // the current run as an attachment, never as a block Yoga child. It still
+    // mounts (differ-driven) and is positioned by the owning View's
+    // attachment-layout pass.
+    //
+    // In a BLOCK container only. A flex container blockifies its inline-level
+    // children into flex items (css-flexbox-1 §4, css-display-3 §2.7), so an
+    // <img> in a flex row is an ordinary item that honours `gap` and
+    // `alignItems`. The trait states the element's UA default, not an
+    // unconditional fate: an author `display: 'block'` blockifies an inline
+    // replaced element out of inline flow (css-display-3 §2), and it lays out
+    // as an ordinary block-level Yoga child below — which is also what lets
+    // <img>'s box-chrome composite fill its wrapper's content box by flex.
+    if (inlineLayoutEnabled && containerIsBlock &&
+        getChildren()[i]->getTraits().check(
+            ShadowNodeTraits::Trait::InlineReplaced) &&
+        !authorDisplayBlockifies(*getChildren()[i])) {
+      appendToInlineRun(i);
+      continue;
+    }
     if (auto yogaLayoutableChild =
             YogaLayoutableShadowNode::asYogaLayoutable(getChildren()[i])) {
       if (inlineLayoutEnabled && containerIsBlock &&
@@ -668,12 +699,14 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       }
       // Box-generation rules for run contiguity (each verified against
       // Safari): a `display:'none'` child generates NO box and never
-      // interrupts inline content. An absolutely-positioned child is
+      // interrupts inline content — the surrounding text runs stay contiguous
+      // in both block and flex containers. An absolutely-positioned child is
       // out-of-flow: in a block container it does not interrupt the IFC
       // (CSS2 §9.2.1.1 anonymous boxes form around in-flow block-level boxes
-      // only). Either way the child remains an ordinary Yoga child
-      // (Display::None is skipped by layout; absolute children are positioned
-      // by absolute layout), only the run flush is skipped.
+      // only), but in a flex container it does separate text-run sequences
+      // (css-flexbox-1 §4). Either way the child remains an ordinary Yoga
+      // child (Display::None is skipped by layout; absolute children are
+      // positioned by absolute layout), only the run flush is skipped.
       const auto& childStyle =
           static_cast<const YogaStylableProps&>(*yogaLayoutableChild->props_)
               .yogaStyle;
@@ -712,8 +745,23 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
             (newYogaChildNode.style() == oldYogaChildNode.style());
       }
     } else if (inlineLayoutEnabled && isInlineTextContent(*getChildren()[i])) {
-      // Text always joins the current run
-      appendToInlineRun(i);
+      const auto& child = getChildren()[i];
+      const std::string_view childComponentName{child->getComponentName()};
+      if (containerIsBlock || childComponentName == "#text" ||
+          child->getTraits().check(ShadowNodeTraits::Trait::InlineReplaced)) {
+        // Text always joins the current run; in block containers inline
+        // *elements* join it too (single inline formatting context,
+        // CSS2 §9.2.1.1). An inline replaced element that reaches this branch
+        // is not Yoga-layoutable, so it can only flow in the run as an
+        // attachment.
+        appendToInlineRun(i);
+      } else {
+        // Inline text *element* in a flex container: blockified into its own
+        // anonymous item, exactly as on web (css-flexbox-1 §4).
+        flushInlineRun();
+        appendToInlineRun(i);
+        flushInlineRun();
+      }
     }
   }
   flushInlineRun();
@@ -791,9 +839,18 @@ static bool isInlineLevelBox(const ShadowNode& child) {
 
 bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   // Inline-level text content joins a text run rather than becoming its own
-  // block/flex item. Identified by the InlineText trait, which #text sets,
-  // so that components/view needs no components/text include.
+  // block/flex item. Identified by the InlineText trait — set by #text, Text,
+  // every inline text intrinsic (<b>/<i>/<span>/<u>/… and the unknown fallback,
+  // all TextShadowNode subclasses), and the inline replaced <img> — so a new
+  // intrinsic flows inline with no change here, and components/view needs no
+  // components/text include.
   return child.getTraits().check(ShadowNodeTraits::Trait::InlineText);
+}
+
+static bool authorDisplayBlockifies(const ShadowNode& child) {
+  const auto* props =
+      dynamic_cast<const YogaStylableProps*>(child.getProps().get());
+  return props != nullptr && props->displayBlock;
 }
 
 bool YogaLayoutableShadowNode::isAtomicInline(const ShadowNode& child) {
@@ -827,10 +884,10 @@ bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
   }
   for (const auto& grandChild : child.getChildren()) {
     // Inline-level content flows: text and inline elements (trait) and nested
-    // inline boxes — span-like or atomic. Block-level content inside an inline
-    // box would require block-in-inline splitting (CSS2 §9.2.1.1); such boxes
-    // — and ones with absolutely-positioned children — fall back to atomic
-    // inline.
+    // inline boxes — span-like or atomic (a span containing an <img> flows on
+    // web). Block-level content inside an inline box would require
+    // block-in-inline splitting (CSS2 §9.2.1.1); such boxes — and ones with
+    // absolutely-positioned children — fall back to atomic inline.
     if (!isInlineTextContent(*grandChild) && !isInlineLevelBox(*grandChild)) {
       return false;
     }
@@ -863,12 +920,14 @@ void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
     boxStyle.setAlignSelf(yoga::Align::Stretch);
     box->yogaNode_.setStyle(boxStyle);
   } else {
-    // In a FLEX container this box is an anonymous flex item (css-flexbox-1
+    // In a FLEX container this box is an anonymous flex item (a text-run
+    // sequence, or a single blockified inline text element — css-flexbox-1
     // §4), and a flex item's `flex-shrink` initial value is 1 (§7.3). React
     // Native's own default is 0, and text carries no Yoga style to say
-    // otherwise, so without this the item could never yield: a
-    // long run beside a fixed-width sibling in a flex row would overflow and
-    // clip at the row's edge where every browser wraps its text.
+    // otherwise (TextProps is not YogaStylable), so without this the item
+    // could never yield: a long run beside a fixed-width sibling in a flex row
+    // would overflow and clip at the row's edge where every browser wraps its
+    // text.
     auto boxStyle = box->yogaNode_.style();
     boxStyle.setFlexShrink(yoga::FloatOptional{1.0f});
     box->yogaNode_.setStyle(boxStyle);
@@ -896,11 +955,19 @@ void YogaLayoutableShadowNode::updateYogaProps() {
   auto& props = static_cast<const YogaStylableProps&>(*props_);
   auto styleResult = applyAliasedProps(props.yogaStyle, props);
 
-  if (props.displayBlock && ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
-    // A CSS block container: block-level children stack in the block
-    // direction with block sizing rather than as flex items. The algorithm
-    // lives in Yoga's `calculateBlockLayout`.
-    styleResult.setDisplay(yoga::Display::Block);
+  if (props.displayBlock) {
+    if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
+      // A CSS block container: block-level children stack in the block
+      // direction with block sizing rather than as flex items. The algorithm
+      // lives in Yoga's `calculateBlockLayout`.
+      styleResult.setDisplay(yoga::Display::Block);
+    } else if (ReactNativeFeatureFlags::enableStringChildren()) {
+      // Without the native block layout, emulate it on Yoga's flex primitives
+      // so the elements that are blocks by default still stack: vertical
+      // stacking with full-width children
+      styleResult.setFlexDirection(yoga::FlexDirection::Column);
+      styleResult.setAlignItems(yoga::Align::Stretch);
+    }
   }
 
   // Resetting `dirty` flag only if `yogaStyle` portion of `Props` was
@@ -986,6 +1053,111 @@ void YogaLayoutableShadowNode::updateYogaProps() {
   return result;
 }
 
+namespace {
+
+/*
+ * The DOM tag a node reports, or empty for one that does not carry a name.
+ */
+std::string domNameOf(const ShadowNode& node) {
+  const auto* provider =
+      dynamic_cast<const NodeNameProvider*>(node.getProps().get());
+  return provider != nullptr ? provider->domNodeName() : std::string{};
+}
+
+/*
+ * The anonymous IFC box a list item wraps its inline content in, or nullptr if
+ * it has none (an item whose content is all block-level, say).
+ */
+ListMarkerSink* markerSinkOf(const YogaLayoutableShadowNode& item) {
+  // The anonymous IFC box is a Yoga child, never a shadow-tree child, so this
+  // walks the layoutable children rather than `getChildren()`.
+  for (const auto& child : item.getYogaLayoutableChildren()) {
+    if (child->getTraits().check(ShadowNodeTraits::Trait::AnonymousBox)) {
+      return const_cast<ListMarkerSink*>(
+          dynamic_cast<const ListMarkerSink*>(child.get()));
+    }
+  }
+  return nullptr;
+}
+
+} // namespace
+
+/*
+ * Generates a list item's marker (css-lists-3 §3). This runs on the list
+ * CONTAINER, not the item, for one reason: a marker's text depends on the
+ * item's position among its siblings, and a shadow node has no parent pointer,
+ * so an item cannot count itself. The container has its children in order.
+ *
+ * It runs before layout, so the marker is part of what the item measures.
+ */
+void YogaLayoutableShadowNode::assignListMarkerIfNeeded(
+    YogaLayoutableShadowNode& child) {
+  if (!listContext_.isList) {
+    return;
+  }
+  if (domNameOf(child) != "li") {
+    return;
+  }
+
+  auto* sink = markerSinkOf(child);
+  if (sink == nullptr) {
+    // Nothing to put a marker on: the item has no inline content of its own.
+    return;
+  }
+
+  const auto ordinal = listContext_.nextOrdinal++;
+  const auto marker = ListMarker{
+      .text = listMarkerText(listContext_.type, ordinal),
+      .outside = listContext_.position == ListStylePosition::Outside,
+      .symbolic = isSymbolicListStyleType(listContext_.type)};
+
+  if (sink->getListMarker() == marker) {
+    return;
+  }
+  sink->setListMarker(marker);
+  // An `inside` marker is measured, so Yoga's cached layout for the box is
+  // stale the moment it changes.
+  for (const auto& grandChild : child.getChildren()) {
+    if (grandChild->getTraits().check(ShadowNodeTraits::Trait::AnonymousBox)) {
+      const_cast<YogaLayoutableShadowNode&>(
+          static_cast<const YogaLayoutableShadowNode&>(*grandChild))
+          .yogaNode_.markDirtyAndPropagate();
+    }
+  }
+}
+
+/*
+ * Reads the list properties off this node's own props, once per layout, so the
+ * per-child work above is a lookup rather than a parse.
+ */
+void YogaLayoutableShadowNode::prepareListContext(int depth) {
+  listContext_ = ListContext{};
+  const auto* boxProps = dynamic_cast<const ElementBoxProps*>(getProps().get());
+  if (boxProps == nullptr) {
+    return;
+  }
+  const auto name = boxProps->domNodeName();
+  const auto ordered = name == "ol";
+  // `<menu>` is a list of commands and the HTML Standard renders it exactly
+  // as `<ul>` (html.css groups them for both margins and the disc marker).
+  if (!ordered && name != "ul" && name != "menu") {
+    return;
+  }
+
+  listContext_.isList = true;
+  // An unordered list with no authored type takes the UA bullet for its depth
+  // — disc, then circle, then square — which is how `ul ul { … }` in a UA
+  // stylesheet behaves without needing an ancestor walk.
+  const auto fallback =
+      ordered ? ListStyleType::Decimal : nestedBulletForDepth(depth);
+  listContext_.type =
+      listStyleTypeFromString(boxProps->listStyleTypeValue, fallback);
+  listContext_.position = listStylePositionFromString(
+      boxProps->listStylePositionValue, ListStylePosition::Outside);
+  // `<ol start>` seeds the counter; unordered lists always count from 1.
+  listContext_.nextOrdinal = ordered ? boxProps->start : 1;
+}
+
 void YogaLayoutableShadowNode::configureYogaTree(
     float pointScaleFactor,
     Float fontSizeMultiplier,
@@ -998,6 +1170,8 @@ void YogaLayoutableShadowNode::configureYogaTree(
     updateYogaChildren();
     ensureConsistency();
   }
+
+  prepareListContext(listDepth_);
 
   // Set state on our own Yoga node
   YGErrata errata = resolveErrata(defaultErrata);
@@ -1089,6 +1263,9 @@ void YogaLayoutableShadowNode::configureYogaTree(
       if (childObservesCascade) {
         mutableChild.receivedTextAttributes_ = cascadeForChild;
       }
+      // Nesting depth, so a nested `<ul>` can take the next UA bullet without
+      // walking ancestors it has no pointer to.
+      mutableChild.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
       // An anonymous IFC box measures and paints from the cascade. A cascade
       // change that does not alter size (e.g. `color`) leaves Yoga's cached
       // layout valid, so the box would never be revisited and its containing
@@ -1109,14 +1286,15 @@ void YogaLayoutableShadowNode::configureYogaTree(
       if (childObservesCascade) {
         clonedChild.receivedTextAttributes_ = cascadeForChild;
       }
+      clonedChild.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
       clonedChild.configureYogaTree(
           pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);
     }
   }
 
   // An anonymous IFC box is a Yoga LEAF: the inline content it wraps —
-  // including atomic inlines like `inline-block` — hangs off it as SHADOW
-  // children, never as Yoga children. The loop above walks
+  // including atomic inlines like `inline-block` and `<img>` — hangs off it as
+  // SHADOW children, never as Yoga children. The loop above walks
   // `yogaLayoutableChildren_`, so without this the cascade stopped dead at the
   // anonymous box and an atomic inline's text fell back to the default font,
   // rendering visibly smaller than the text around it.
@@ -1134,6 +1312,21 @@ void YogaLayoutableShadowNode::configureYogaTree(
       if (mutableChild.getTraits().check(
               ShadowNodeTraits::Trait::TextCascadeConsumer)) {
         mutableChild.setInheritedCascade(effectiveCascade);
+      }
+    }
+  }
+
+  // Markers are assigned in their own pass, once every child is configured:
+  // the anonymous box a marker attaches to is created during the child's own
+  // configuration, and the loop above deliberately skips children whose
+  // configuration is unchanged — which would drop items out of the count.
+  if (listContext_.isList) {
+    for (const auto& child : getChildren()) {
+      auto* layoutableChild =
+          YogaLayoutableShadowNode::asYogaLayoutable(*child);
+      if (layoutableChild != nullptr) {
+        assignListMarkerIfNeeded(
+            const_cast<YogaLayoutableShadowNode&>(*layoutableChild));
       }
     }
   }
@@ -1336,11 +1529,13 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
   // Reading data from a dirtied node does not make sense.
   react_native_assert(!YGNodeIsDirty(&yogaNode_));
 
-  for (auto childYogaNode : yogaNode_.getChildren()) {
-    auto& childNode = shadowNodeFromContext(childYogaNode);
+  const auto& yogaChildren = yogaNode_.getChildren();
+  for (size_t childIndex = 0; childIndex < yogaChildren.size(); childIndex++) {
+    auto* childYogaNode = yogaChildren[childIndex];
+    auto* childNodePtr = &shadowNodeFromContext(childYogaNode);
 
     // Verifying that the Yoga node belongs to the ShadowNode.
-    react_native_assert(&childNode.yogaNode_ == childYogaNode);
+    react_native_assert(&childNodePtr->yogaNode_ == childYogaNode);
 
     if (childYogaNode->getHasNewLayout()) {
       childYogaNode->setHasNewLayout(false);
@@ -1351,6 +1546,33 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
       // We must copy layout metrics from Yoga node only once (when the parent
       // node exclusively ownes the child node).
       react_native_assert(YGNodeGetOwner(childYogaNode) == &yogaNode_);
+
+      /*
+       * The last line of defence for structural sharing: a child that is
+       * still SEALED here is shared with a committed tree, and writing its
+       * metrics would mutate that tree — an `Attempt to mutate a sealed
+       * object` abort in Debug, and in Release (where the seal is compiled
+       * out) silently corrupted old-generation metrics. The contract that is
+       * supposed to prevent this — Yoga's clone-node callback plus
+       * `configureYogaTree`'s ownership adoption — recognises foreign
+       * children BY their yoga owner, and interleaved generations (a React
+       * commit racing a state-progression commit, as an image `onLoad`
+       * handler's setState produces) can launder a shared child through an
+       * owner-resetting detach so that it arrives here wearing this parent's
+       * ownership. Clone it in place, exactly as the callback would have,
+       * and lay out the clone. Debug-only by construction — `getSealed()` is
+       * constant `true` in Release, where `cloneChildInPlace` on every child
+       * would be pure churn, and the abort this guards against is also
+       * Debug-only; the ownership adoption above remains the primary
+       * mechanism in both modes.
+       */
+      if (childNodePtr->getSealed() && !this->getSealed()) {
+        auto& clonedChild = cloneChildInPlace(childIndex);
+        childYogaNode = &clonedChild.yogaNode_;
+        childYogaNode->setHasNewLayout(false);
+        childNodePtr = &clonedChild;
+      }
+      auto& childNode = *childNodePtr;
 
       // We are about to mutate layout metrics of the node.
       childNode.ensureUnsealed();

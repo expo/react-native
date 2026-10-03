@@ -34,3 +34,41 @@ flow around floats.
 block keeps collapsing margins with its children where a browser would treat it
 as a new formatting context.
 
+**`display-change-needs-remount`** — `Libraries/Renderer/shims/ReactNativeTypes.js`
+An element's backing box is chosen at instance creation, so one whose `display`
+later crosses the box/no-box boundary (e.g. `inline` → `inline-flex`) keeps its
+original backing until it remounts. Browsers destroy and recreate the layout
+object at that point. Matching that needs a remount signal the reconciler does
+not have. Static display — the overwhelming case, and all of Astryx — is
+correct.
+
+**`no-grid`** — `ReactCommon/.../components/view/conversions.h`
+`display: grid` and `inline-grid` are not handled and fall through to a parse
+error. Yoga has no grid engine, so this is a feature to build rather than a
+value to map. Astryx uses it in ~22 places.
+
+**`no-box-decoration-break-clone`** — `.../ios/.../RCTTextLayoutManager.mm`
+A wrapped inline box paints with `box-decoration-break: slice` (the CSS
+default) — leading edge on the first fragment, trailing on the last. `clone`,
+which repeats both edges on every fragment, is not implemented.
+
+## Performance
+
+**`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`
+`yoga::Node` is held by value, so an element that generates *no* box — a
+span-like inline that folds into its parent's inline formatting context — still
+pays 744 bytes for a node it never uses. Making it lazy would make folding
+elements *cheaper than they are now*, which is the argument for doing it. It
+changes memory layout for every view in the app, so it wants measuring against
+a real screen first. Background in `element-model-design.md`.
+
+---
+
+## Every other marked divergence
+
+Each remaining marker, with the file that carries it.
+
+- `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
+- `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`

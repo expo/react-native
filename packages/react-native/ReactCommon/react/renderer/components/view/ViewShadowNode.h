@@ -21,13 +21,32 @@ extern const char ViewComponentName[];
 using ViewShadowNodeProps = ViewProps;
 
 /*
- * `ShadowNode` for <View> component.
+ * Shared `ShadowNode` implementation for block-level view containers that host
+ * an anonymous inline formatting context: `<View>` and the intrinsic `<div>`.
+ * Templated on the component name and props so both share one copy of the
+ * text-children layout and paint machinery; the only difference is the
+ * concrete props default (`<div>` forces `displayBlock`).
  */
-class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, ViewProps, ViewEventEmitter, ViewState> {
- public:
-  ViewShadowNode(const ShadowNodeFragment &fragment, const ShadowNodeFamily::Shared &family, ShadowNodeTraits traits);
+template <const char *concreteComponentName, typename ViewPropsT = ViewProps>
+class AbstractViewShadowNode
+    : public ConcreteViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitter, ViewState> {
+  using BaseShadowNode = ConcreteViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitter, ViewState>;
 
-  ViewShadowNode(const ShadowNode &sourceShadowNode, const ShadowNodeFragment &fragment);
+ public:
+  AbstractViewShadowNode(
+      const ShadowNodeFragment &fragment,
+      const ShadowNodeFamily::Shared &family,
+      ShadowNodeTraits traits)
+      : BaseShadowNode(fragment, family, traits)
+  {
+    initialize();
+  }
+
+  AbstractViewShadowNode(const ShadowNode &sourceShadowNode, const ShadowNodeFragment &fragment)
+      : BaseShadowNode(sourceShadowNode, fragment)
+  {
+    initialize();
+  }
 
   void layout(LayoutContext layoutContext) override;
 
@@ -43,7 +62,8 @@ class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, Vi
 
   /*
    * Positions the atomic inline-level children of this View's anonymous inline
-   * boxes at the frames their run's line layout gave them.
+   * boxes, such as the replaced `<img>` and atomic `display: 'inline'`
+   * elements, at the frames their run's line layout gave them.
    */
   void layoutInlineAttachments(LayoutContext layoutContext);
 
@@ -53,5 +73,10 @@ class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, Vi
    */
   void updateTextRunStateIfNeeded(Float fontSizeMultiplier);
 };
+
+/*
+ * `ShadowNode` for the <View> component.
+ */
+using ViewShadowNode = AbstractViewShadowNode<ViewComponentName, ViewProps>;
 
 } // namespace facebook::react

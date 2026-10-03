@@ -46,6 +46,15 @@ class TextAttributes : public DebugStringConvertible {
    */
   static TextAttributes defaultTextAttributes();
 
+  /*
+   * `font-size`'s initial value — the platform's body text size.
+   *
+   * Reading it through `defaultTextAttributes()` copies the whole struct,
+   * including a `std::string` and a `std::vector`, to get at one float. The
+   * cascade asks for this per element.
+   */
+  static Float initialFontSize();
+
 #pragma mark - Fields
 
   // Color
@@ -69,15 +78,24 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<bool> allowFontScaling{};
   std::optional<DynamicTypeRamp> dynamicTypeRamp{};
   std::optional<TextTransform> textTransform{};
-  // `white-space`. Inherited, so a container passes it to every run inside it.
-  std::optional<WhiteSpace> whiteSpace{};
 
   // Paragraph Styles
   Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
+  /*
+   * A NUMERIC baseline shift in points; positive raises the glyphs. Unlike
+   * `verticalAlign`, whose amount each platform derives from its font, this
+   * states the distance — what a symbolic list marker needs to centre its
+   * ink on the x-height midpoint the way browsers paint theirs, and what
+   * `vertical-align: <length>` will need. iOS: NSBaselineOffset; Android: a
+   * MetricAffecting span adjusting TextPaint.baselineShift.
+   */
+  Float baselineShift{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextAlignment> alignment{};
   std::optional<WritingDirection> baseWritingDirection{};
   std::optional<LineBreakStrategy> lineBreakStrategy{};
   std::optional<LineBreakMode> lineBreakMode{};
+  // `white-space`. Inherited, so a container passes it to every run inside it.
+  std::optional<WhiteSpace> whiteSpace{};
 
   // Decoration
   SharedColor textDecorationColor{};
@@ -153,6 +171,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.maxFontSizeMultiplier,
         textAttributes.fontSizeMultiplier,
         textAttributes.letterSpacing,
+        textAttributes.baselineShift,
         textAttributes.lineHeight,
         textAttributes.textShadowRadius,
         textAttributes.textDecorationColor,

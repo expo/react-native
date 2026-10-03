@@ -11,6 +11,7 @@
 
 #include <React/RendererCore.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
+#include <react/renderer/components/text/InlineBoxProps.h>
 #include <react/renderer/graphics/Color.h>
 
 namespace facebook::react {
@@ -22,7 +23,14 @@ namespace facebook::react {
 class BaseTextProps {
  public:
   BaseTextProps() = default;
-  BaseTextProps(const PropsParserContext &context, const BaseTextProps &sourceProps, const RawProps &rawProps);
+  BaseTextProps(
+      const PropsParserContext &context,
+      const BaseTextProps &sourceProps,
+      const RawProps &rawProps,
+      // Root paragraphs pass false: a ParagraphShadowNode never folds into a
+      // surrounding run, so its inline box decorations are never read and the
+      // probes are pure waste on every <Text> parse.
+      bool parseInlineBox = true);
 
   void
   setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
@@ -30,6 +38,13 @@ class BaseTextProps {
 #pragma mark - Props
 
   TextAttributes textAttributes{};
+
+  /*
+   * CSS box decorations when this element is used *inline*. Empty for the
+   * overwhelming majority of text, so consumers can take a zero-cost path via
+   * `isEmpty()`.
+   */
+  InlineBoxProps inlineBox{};
 
   /*
    * CSS `all: initial` (css-cascade-4 §3.2) authored on an INLINE element: the

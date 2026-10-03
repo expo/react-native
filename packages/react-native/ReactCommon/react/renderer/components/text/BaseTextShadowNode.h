@@ -58,6 +58,12 @@ class BaseTextShadowNode {
    * formatting root's own initial values. A `<Text>` restarts from React
    * Native's defaults; an element's anonymous run from the element cascade's.
    */
+  /*
+   * `initialTextAttributes` are what an `all` reset returns to: the formatting
+   * root's own initial values. A `<Text>` restarts from React Native's
+   * defaults; an element's anonymous run from the element cascade's, where
+   * `color` is CanvasText.
+   */
   static void buildAttributedString(
       const TextAttributes &baseTextAttributes,
       const ShadowNode &parentNode,

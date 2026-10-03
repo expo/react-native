@@ -34,7 +34,7 @@ import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/React
 
 type Rect = {x: number, y: number, width: number, height: number};
 
-const DEFAULT_FONT_SIZE = 14;
+const DEFAULT_FONT_SIZE = 17;
 // How far a line's strut hangs below its baseline
 const STRUT_DESCENT = (DEFAULT_FONT_SIZE + 6) * 0.2;
 

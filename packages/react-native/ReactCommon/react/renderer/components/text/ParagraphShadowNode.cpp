@@ -7,6 +7,8 @@
 
 #include "ParagraphShadowNode.h"
 
+#include <react/renderer/components/text/InlineElementMetrics.h>
+
 #include <cmath>
 
 #include <react/debug/react_native_assert.h>
@@ -130,8 +132,14 @@ Content ParagraphShadowNode::getContentWithMeasuredAttachments(
       continue;
     }
 
-    auto size =
-        laytableShadowNode->measure(layoutContext, localLayoutConstraints);
+    // A measurement root takes its min/max from the constraints, not from
+    // its own style — see `constraintsHonoringOwnBounds` for the bug that
+    // is. The zeroed minimum above stays right for the RUN; the attachment's
+    // own stated bounds must survive it.
+    auto size = laytableShadowNode->measure(
+        layoutContext,
+        constraintsHonoringOwnBounds(
+            *attachment.shadowNode, localLayoutConstraints));
 
     // Rounding to *next* value on the pixel grid.
     size.width += 0.01f;
@@ -353,6 +361,36 @@ void ParagraphShadowNode::layout(LayoutContext layoutContext) {
       .layoutDirection = layoutMetrics.layoutDirection};
   auto content =
       getContentWithMeasuredAttachments(layoutContext, layoutConstraints);
+
+  // Give nested inline elements (a nested `<Text>`, `<b>`, `<span>`) a real
+  // box to report from `getBoundingClientRect()`. Nothing here feeds back into
+  // measuring or painting, so authored `<Text>` keeps its layout.
+  //
+  // Only when there IS such an element: this is a second full text layout of
+  // the whole paragraph, and most `<Text>` elements contain nothing but their
+  // own string and have no box to report. The predicate is the same one the
+  // anonymous-run path applies, and it is a scan of the fragments rather than
+  // a layout.
+  if (hasStampableInlineElements(*this, content.attributedString)) {
+    TextLayoutContext inlineMetricsContext{
+        .pointScaleFactor = layoutContext.pointScaleFactor,
+        .surfaceId = getSurfaceId(),
+        .needsFragmentRects = true,
+    };
+    auto measurement = textLayoutManager_->measure(
+        AttributedStringBox{content.attributedString},
+        content.paragraphAttributes,
+        inlineMetricsContext,
+        layoutConstraints);
+    stampInlineElementMetrics(
+        *this,
+        content.attributedString,
+        measurement.fragmentRects,
+        layoutMetrics.contentInsets.left != 0 || layoutMetrics.contentInsets.top != 0
+            ? Point{layoutMetrics.contentInsets.left, layoutMetrics.contentInsets.top}
+            : Point{0, 0},
+        layoutMetrics);
+  }
 
   auto measuredLayout = findUsableLayout();
 

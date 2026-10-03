@@ -9,6 +9,8 @@
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 
+#include <react/renderer/components/text/InlineBoxProps.h>
+
 #include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/core/propsConversions.h>
@@ -236,12 +238,20 @@ static TextAttributes convertRawProp(
 BaseTextProps::BaseTextProps(
     const PropsParserContext& context,
     const BaseTextProps& sourceProps,
-    const RawProps& rawProps)
+    const RawProps& rawProps,
+    bool parseInlineBox)
     : textAttributes(convertRawProp(
           context,
           rawProps,
           sourceProps.textAttributes,
-          TextAttributes{})) {
+          TextAttributes{})),
+      // CSS box decorations for inline use. Parsed behind the feature flag:
+      // with `enableStringChildren` off, a <Text> parse probes none of these
+      // keys.
+      inlineBox(
+          parseInlineBox && ReactNativeFeatureFlags::enableStringChildren()
+              ? parseInlineBoxProps(context, sourceProps.inlineBox, rawProps)
+              : sourceProps.inlineBox) {
   if (const auto* rawValue = ReactNativeFeatureFlags::enableStringChildren()
           ? rawProps.at("all")
           : nullptr) {

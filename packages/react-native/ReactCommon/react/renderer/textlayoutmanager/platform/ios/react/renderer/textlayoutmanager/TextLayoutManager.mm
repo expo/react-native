@@ -40,36 +40,62 @@ TextMeasurement TextLayoutManager::measure(
       auto originalAtributedString = attributedStringBox.getValue();
       auto attributedString = ensurePlaceholderIfEmpty_DO_NOT_USE(originalAtributedString);
 
+      auto doMeasure = [&]() {
+        auto telemetry = TransactionTelemetry::threadLocalTelemetry();
+        if (telemetry) {
+          telemetry->willMeasureText();
+        }
+
+        auto measurement = [textLayoutManager measureAttributedString:attributedString
+                                                  paragraphAttributes:paragraphAttributes
+                                                        layoutContext:layoutContext
+                                                    layoutConstraints:layoutConstraints];
+
+        // Per-fragment rects, so inline elements (`<b>`, `<span>`, a
+        // nested `<Text>`) can report a real box from
+        // `getBoundingClientRect()`. Laid out at the measured size, which
+        // is the size the text will actually occupy.
+        //
+        // Only when the caller asked. It is a second full text layout, and
+        // it was being paid on EVERY measurement — including every plain
+        // `<Text>`, which has no inline element to report a box for.
+        if (layoutContext.needsFragmentRects) {
+          measurement.fragmentRects = [textLayoutManager
+              getFragmentRectsWithAttributedString:attributedString
+                               paragraphAttributes:paragraphAttributes
+                                              size:CGSize{measurement.size.width, measurement.size.height}
+                                        exclusions:layoutConstraints.floatExclusions];
+        }
+
+        // TODO(D63303709): We compensate for the placeholder character
+        // being used to represent empty string. iOS TextLayoutManager
+        // should instead measure using `baseTextAttributes` of the
+        // `AttributedString`.
+        if (originalAtributedString.isEmpty()) {
+          measurement.size.width = 0;
+        }
+
+        if (telemetry) {
+          telemetry->didMeasureText();
+        }
+
+        return measurement;
+      };
+
+      // The measure cache stays in force for run-tagged measures: the run
+      // storage cache (RCTTextLayoutManager) is content-keyed, so a
+      // cache-hit measure still finds its TextKit stack at draw when one
+      // was built for the same content+width earlier. Bypassing this cache
+      // was measured as a regression — it converts cache-hot re-measures
+      // (repeated content, relayout churn) into full re-shapes on the
+      // layout thread (ios-run-draw-reuse-plan.md).
       measurement = textMeasureCache_.get(
           {.attributedString = attributedString,
            .paragraphAttributes = paragraphAttributes,
            .layoutConstraints = layoutConstraints,
-           .pointScaleFactor = layoutContext.pointScaleFactor},
-          [&]() {
-            auto telemetry = TransactionTelemetry::threadLocalTelemetry();
-            if (telemetry) {
-              telemetry->willMeasureText();
-            }
-
-            auto measurement = [textLayoutManager measureAttributedString:attributedString
-                                                      paragraphAttributes:paragraphAttributes
-                                                            layoutContext:layoutContext
-                                                        layoutConstraints:layoutConstraints];
-
-            // TODO(D63303709): We compensate for the placeholder character
-            // being used to represent empty string. iOS TextLayoutManager
-            // should instead measure using `baseTextAttributes` of the
-            // `AttributedString`.
-            if (originalAtributedString.isEmpty()) {
-              measurement.size.width = 0;
-            }
-
-            if (telemetry) {
-              telemetry->didMeasureText();
-            }
-
-            return measurement;
-          });
+           .pointScaleFactor = layoutContext.pointScaleFactor,
+           .needsFragmentRects = layoutContext.needsFragmentRects},
+          std::move(doMeasure));
       break;
     }
 

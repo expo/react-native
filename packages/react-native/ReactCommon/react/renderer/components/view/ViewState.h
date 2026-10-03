@@ -42,9 +42,18 @@ class ViewState final {
      */
     int documentOrder{0};
 
+    /*
+     * The anonymous box's tag for content runs, which keys the registry that
+     * hands a run's measured layout over to the mounting layer; 0 for runs
+     * that opt out of the handoff (outside list markers share their box's tag
+     * with the content run and would collide, and their layouts are trivial).
+     */
+    Tag runTag{0};
+
     bool operator==(const TextRun &other) const
     {
-      return attributedString == other.attributedString && frame == other.frame && documentOrder == other.documentOrder;
+      return attributedString == other.attributedString && frame == other.frame &&
+          documentOrder == other.documentOrder && runTag == other.runTag;
     }
     bool operator!=(const TextRun &other) const
     {
@@ -100,7 +109,9 @@ class ViewState final {
     runs.reserve(textRuns.size());
     for (const auto &run : textRuns) {
       auto runBuilder = MapBufferBuilder();
-      runBuilder.putMapBuffer(0, toMapBuffer(run.attributedString));
+      // Serialized with the same run tag the measurement path used, so the
+      // mount-side handoff check can compare the two buffers byte-for-byte.
+      runBuilder.putMapBuffer(0, toMapBuffer(run.attributedString, run.runTag));
       runBuilder.putDouble(1, run.frame.origin.x);
       runBuilder.putDouble(2, run.frame.origin.y);
       runBuilder.putDouble(3, run.frame.size.width);

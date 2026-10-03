@@ -148,12 +148,6 @@ class ParagraphShadowNode
   mutable std::optional<Content> content_{};
 
   /*
-   * Intermediate layout results generated during measurement, that may be
-   * reused by the platform.
-   */
-  mutable std::vector<MeasuredPreparedTextLayout> measuredLayouts_;
-
-  /*
    * The effective inherited cascade, stamped by the configure pass — a
    * paragraph is a TextCascadeConsumer and reads it at measure time (see
    * getContent), so it stores its own copy; ordinary Views do not.
@@ -170,6 +164,13 @@ class ParagraphShadowNode
   {
     return &inheritedCascade_;
   }
+
+ private:
+  /*
+   * Intermediate layout results generated during measurement, that may be
+   * reused by the platform.
+   */
+  mutable std::vector<MeasuredPreparedTextLayout> measuredLayouts_;
 };
 
 } // namespace facebook::react

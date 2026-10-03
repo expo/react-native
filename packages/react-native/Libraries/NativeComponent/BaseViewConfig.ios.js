@@ -202,6 +202,22 @@ const validAttributesForNonEventProps = {
   textTransform: true,
   // `white-space`: inherited like the rest of this group.
   whiteSpace: true,
+  // `transition` (css-transitions-1). Delivered as the four longhands and
+  // zipped in the renderer, which is also where the animation runs — these
+  // never reach JavaScript again once set.
+  transitionProperty: true,
+  transitionDuration: true,
+  transitionDelay: true,
+  transitionTimingFunction: true,
+  // `animation` (css-animations-1). Keyframes arrive pre-resolved as a JSON
+  // string; the longhands ride alongside. Run by the same renderer engine.
+  animationKeyframes: true,
+  animationDuration: true,
+  animationDelay: true,
+  animationTimingFunction: true,
+  animationIterationCount: true,
+  animationDirection: true,
+  animationFillMode: true,
 
   // View Props
   accessible: true,

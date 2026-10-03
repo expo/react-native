@@ -14,6 +14,7 @@
 #include <cstring>
 #include <limits>
 #include <string>
+#include <string_view>
 
 #include <react/renderer/attributedstring/AttributedStringBox.h>
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
@@ -22,6 +23,8 @@
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
+#include <react/renderer/dom/NodeNameProvider.h>
+#include <react/renderer/mounting/ShadowView.h>
 #include <react/renderer/textlayoutmanager/TextLayoutContext.h>
 #include <react/renderer/textlayoutmanager/TextLayoutManagerExtended.h>
 
@@ -105,6 +108,14 @@ void collapseWhitespace(AttributedString& attributedString) {
       // is cleared so a following normal-whitespace run does not treat the
       // preserved text as if it had ended in a collapsed space.
       pendingCollapse = false;
+      continue;
+    }
+    if (fragment.forcedBreak) {
+      // A forced break from `<br>`. Its newline is content, not collapsible
+      // whitespace, so it survives untouched — but whitespace FOLLOWING it
+      // sits at the start of a new line and is dropped, which is what leaving
+      // `pendingCollapse` set does.
+      pendingCollapse = true;
       continue;
     }
     const bool keepNewlines = preservesNewlines(whiteSpace);
@@ -260,16 +271,20 @@ void collapseWhitespace(AttributedString& attributedString) {
   }
 
   // Drop fragments emptied by collapsing so the run stays canonical and
-  // `isEmpty()` reports true for a run that reduced to nothing.
+  // `isEmpty()` reports true for a run that reduced to nothing. An element
+  // that was empty to begin with is not one of those: its fragment carries no
+  // text on purpose, and it is the only record that the element has a box.
   std::erase_if(fragments, [](const AttributedString::Fragment& fragment) {
-    return !fragment.isAttachment() && fragment.string.empty();
+    return !fragment.isAttachment() && !fragment.isEmptyElement &&
+        fragment.string.empty();
   });
 }
 
 // Reserves each atomic inline's box in the run by measuring the attachment
 // shadow node and stamping its size onto the attachment fragment, so the run
 // measures with the box included. Mirrors
-// `ParagraphShadowNode::getContentWithMeasuredAttachments`.
+// `ParagraphShadowNode::getContentWithMeasuredAttachments`. Runs before
+// whitespace collapsing so the attachment fragment indices are still valid.
 void measureAtomicInlines(
     AttributedString& attributedString,
     const BaseTextShadowNode::Attachments& attachments,
@@ -315,12 +330,161 @@ void measureAtomicInlines(
   }
 }
 
+// The list marker's text in the list's own direction (css-lists-3 §3.1 gives
+// a marker the list item's `direction`). Without the mark, a marker's
+// direction would come from its first strong letter, so Hebrew numbering
+// would read right to left, with its period and gap on the wrong side.
+std::string markerInListDirection(
+    const std::string& marker,
+    const TextAttributes& textAttributes) {
+  const auto* mark =
+      textAttributes.layoutDirection == LayoutDirection::RightToLeft
+      ? reinterpret_cast<const char*>(u8"\u200F") // RIGHT-TO-LEFT MARK
+      : reinterpret_cast<const char*>(u8"\u200E"); // LEFT-TO-RIGHT MARK
+  return mark + marker;
+}
+
 } // namespace
+
+void InlineContentShadowNode::appendListMarkerIfNeeded(
+    AttributedString& attributedString,
+    const TextAttributes& textAttributes) const {
+  // The marker leads the content, so it is MEASURED with it and the first line
+  // starts after it. Every builder in this file has to run it — measurement
+  // builds its own attributed string separately from painting, and a marker in
+  // only one of them would overlap the text instead of displacing it.
+  //
+  // We have neither `::marker` nor generated content, so it is an ordinary
+  // fragment of this box's inline flow and inherits the element's font and
+  // colour the way a real marker does.
+  if (listMarker_.text.empty() || listMarker_.outside) {
+    return;
+  }
+  auto marker = AttributedString::Fragment{};
+  marker.textAttributes = textAttributes;
+  if (listMarker_.symbolic) {
+    // A geometric glyph at the item's full size dwarfs the browsers' painted
+    // markers; the scale puts its ink where theirs measures, and the
+    // baseline shift centres that ink on the x-height midpoint the way
+    // browsers place theirs — a scaled glyph seated ON the baseline reads
+    // visibly low. See kSymbolicMarkerFontScale/-BaselineShiftEm.
+    Float base = !std::isnan(marker.textAttributes.fontSize)
+        ? marker.textAttributes.fontSize
+        : TextAttributes::defaultTextAttributes().fontSize;
+    marker.string = listMarker_.text;
+    marker.textAttributes.fontSize = base * kSymbolicMarkerFontScale;
+    marker.textAttributes.baselineShift = base * kSymbolicMarkerBaselineShiftEm;
+    attributedString.appendFragment(std::move(marker));
+    // The gap in the ITEM's font, not the marker's reduced one — scaled
+    // down with the glyph, it would be about 0.1em and the marker would read
+    // as glued to the text. No-break spaces survive white-space collapsing.
+    auto gap = AttributedString::Fragment{};
+    gap.textAttributes = textAttributes;
+    for (int i = 0; i < kSymbolicMarkerGapSpaces; i++) {
+      gap.string += reinterpret_cast<const char*>(u8"\u00A0");
+    }
+    attributedString.appendFragment(std::move(gap));
+    return;
+  }
+  // The gap after the marker is a no-break space, so it survives the
+  // white-space collapsing a plain space would not.
+  marker.string = markerInListDirection(listMarker_.text, textAttributes) +
+      reinterpret_cast<const char*>(u8"\u00A0");
+  // No `parentShadowView`: the marker is not any element's content, so it is
+  // treated as bare text and never stamped with an element box.
+  attributedString.appendFragment(std::move(marker));
+}
+
+void InlineContentShadowNode::setListMarker(ListMarker listMarker) {
+  // The marker is folded into the built content; invalidate the memo.
+  cachedContent_ = nullptr;
+  ensureUnsealed();
+  listMarker_ = std::move(listMarker);
+}
 
 void InlineContentShadowNode::setTextLayoutManager(
     std::shared_ptr<const TextLayoutManager> textLayoutManager) {
   ensureUnsealed();
   textLayoutManager_ = std::move(textLayoutManager);
+}
+
+InlineContentShadowNode::OutsideMarker
+InlineContentShadowNode::getOutsideMarker() const {
+  // Only `outside` markers are painted separately; an `inside` one is already
+  // part of the measured content.
+  if (listMarker_.text.empty() || !listMarker_.outside ||
+      textLayoutManager_ == nullptr) {
+    return {};
+  }
+
+  auto markerString = AttributedString{};
+  auto fragment = AttributedString::Fragment{};
+  fragment.textAttributes = baseTextAttributes();
+  if (listMarker_.symbolic) {
+    // Same scale, shift and item-sized gap as the inside path — see
+    // kSymbolicMarkerFontScale/-BaselineShiftEm/-GapSpaces. The gap is
+    // measured as part of the marker, which is what sets the marker's start
+    // once the caller right-aligns the whole thing to the content edge.
+    Float base = !std::isnan(fragment.textAttributes.fontSize)
+        ? fragment.textAttributes.fontSize
+        : TextAttributes::defaultTextAttributes().fontSize;
+    fragment.string = listMarker_.text;
+    auto gap = AttributedString::Fragment{};
+    gap.textAttributes = fragment.textAttributes;
+    fragment.textAttributes.fontSize = base * kSymbolicMarkerFontScale;
+    fragment.textAttributes.baselineShift =
+        base * kSymbolicMarkerBaselineShiftEm;
+    // A fragment reaching the paint path needs a real `parentShadowView`:
+    // the text-effect machinery walks it, and a default-constructed one
+    // segfaults.
+    fragment.parentShadowView = ShadowView{*this};
+    markerString.appendFragment(std::move(fragment));
+    for (int i = 0; i < kSymbolicMarkerGapSpaces; i++) {
+      gap.string += reinterpret_cast<const char*>(u8"\u00A0");
+    }
+    gap.parentShadowView = ShadowView{*this};
+    markerString.appendFragment(std::move(gap));
+  } else {
+    // The trailing no-break space is the gap between the marker and the
+    // content, measured as part of the marker so the right-alignment to the
+    // content edge places the text where it should start.
+    fragment.string =
+        markerInListDirection(listMarker_.text, fragment.textAttributes) +
+        reinterpret_cast<const char*>(u8"\u00A0");
+    fragment.parentShadowView = ShadowView{*this};
+    markerString.appendFragment(std::move(fragment));
+  }
+
+  const auto measurement = textLayoutManager_->measure(
+      AttributedStringBox{markerString},
+      ParagraphAttributes{},
+      TextLayoutContext{
+          .pointScaleFactor = getLayoutMetrics().pointScaleFactor,
+          .surfaceId = getSurfaceId()},
+      LayoutConstraints{});
+
+  // The marker's own baseline, so the caller can align it with the content's
+  // first line rather than the box top — the same bottom-minus-descender
+  // formulation baseline() uses, for the same reason.
+  Float markerBaseline = 0;
+  if constexpr (TextLayoutManagerExtended::supportsLineMeasurement()) {
+    auto lines = TextLayoutManagerExtended(*textLayoutManager_)
+                     .measureLines(
+                         AttributedStringBox{markerString},
+                         ParagraphAttributes{},
+                         measurement.size);
+    if (!lines.empty()) {
+      const auto& line = lines[0];
+      markerBaseline = line.frame.origin.y + line.frame.size.height -
+          std::abs(line.descender);
+    }
+  }
+
+  return OutsideMarker{
+      .attributedString = markerString,
+      .size = measurement.size,
+      .baseline = markerBaseline,
+      .present = true};
 }
 
 Float InlineContentShadowNode::baseline(
@@ -345,6 +509,7 @@ Float InlineContentShadowNode::lineBaseline(
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
   const auto textAttributes = baseTextAttributes();
+  appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
       textAttributes,
       *this,
@@ -384,6 +549,56 @@ Float InlineContentShadowNode::lineBaseline(
   return 0;
 }
 
+AttributedString InlineContentShadowNode::getContentAttributedString(
+    Float fontSizeMultiplier) const {
+  auto textAttributes = baseTextAttributes();
+  // Mirror `measureContent`: the published string must be the SAME value
+  // measurement produced — multiplier included — or the platform layout
+  // caches keyed by content can never hit.
+  textAttributes.fontSizeMultiplier = fontSizeMultiplier;
+  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments &&
+      cachedContentMatches(textAttributes)) {
+    return cachedContent_->attributedString;
+  }
+  auto attributedString = AttributedString{};
+  auto attachments = BaseTextShadowNode::Attachments{};
+
+  appendListMarkerIfNeeded(attributedString, textAttributes);
+  BaseTextShadowNode::buildAttributedString(
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
+  // Reserve each atomic inline's box so the painted run offsets the
+  // surrounding glyphs past it, matching the measured layout. The boxes are
+  // never Yoga-laid-out in place (their owning View lays out clones), so their
+  // own layout metrics are zero here — they are measured instead, exactly as
+  // `measureContent` does, using the box's own pixel scale. The inline axis is
+  // bounded by the run's own final width: layout is done on this path.
+  auto layoutContext = LayoutContext{};
+  layoutContext.pointScaleFactor = getLayoutMetrics().pointScaleFactor;
+  const auto runWidth = getLayoutMetrics().frame.size.width;
+  measureAtomicInlines(
+      attributedString,
+      attachments,
+      layoutContext,
+      LayoutConstraints{
+          .minimumSize = {0, 0},
+          .maximumSize = {
+              runWidth > 0 ? runWidth : std::numeric_limits<Float>::infinity(),
+              std::numeric_limits<Float>::infinity()}});
+  collapseWhitespace(attributedString);
+  attributedString.setBaseTextAttributes(textAttributes);
+  cachedContent_ = std::make_shared<const CachedContent>(CachedContent{
+      .fontSizeMultiplier = textAttributes.fontSizeMultiplier,
+      .layoutDirection = textAttributes.layoutDirection,
+      .hasAttachments = !attachments.empty(),
+      .attributedString =
+          attachments.empty() ? attributedString : AttributedString{}});
+  return attributedString;
+}
+
 std::vector<InlineAttachmentPlacement>
 InlineContentShadowNode::getInlineAttachmentPlacements(
     const LayoutContext& layoutContext) const {
@@ -392,11 +607,19 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
     return placements;
   }
 
+  // Attachment presence is structural (it does not depend on the multiplier
+  // or constraints): a prior build having found none means there is nothing
+  // to place, and the whole content build below is skipped.
+  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments) {
+    return placements;
+  }
+
   auto textAttributes = baseTextAttributes();
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
 
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
+  appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
       textAttributes,
       *this,
@@ -457,42 +680,76 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
   return placements;
 }
 
-AttributedString InlineContentShadowNode::getContentAttributedString(
-    Float fontSizeMultiplier) const {
+std::vector<PendingInlineElementMetrics>
+InlineContentShadowNode::stampInlineElementMetrics(
+    const LayoutContext& layoutContext,
+    Point contentOrigin,
+    const LayoutMetrics& ownerLayoutMetrics) const {
+  if (textLayoutManager_ == nullptr) {
+    return {};
+  }
+
   auto textAttributes = baseTextAttributes();
-  // Mirror `measureContent`: the published string must be the SAME value
-  // measurement produced — multiplier included — or the platform layout
-  // caches keyed by content can never hit.
-  textAttributes.fontSizeMultiplier = fontSizeMultiplier;
+  textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
+
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
+  appendListMarkerIfNeeded(attributedString, textAttributes);
   BaseTextShadowNode::buildAttributedString(
       textAttributes,
       *this,
       attributedString,
       attachments,
       *defaultCascadeTextAttributes());
-  // Reserve each atomic inline's box so the painted run offsets the
-  // surrounding glyphs past it, matching the measured layout. The boxes are
-  // never Yoga-laid-out in place (their owning View lays out clones), so their
-  // own layout metrics are zero here — they are measured instead, exactly as
-  // `measureContent` does, using the box's own pixel scale. The inline axis is
-  // bounded by the run's own final width: layout is done on this path.
-  auto layoutContext = LayoutContext{};
-  layoutContext.pointScaleFactor = getLayoutMetrics().pointScaleFactor;
-  const auto runWidth = getLayoutMetrics().frame.size.width;
+  if (attributedString.isEmpty()) {
+    return {};
+  }
+
+  // The rects have to come from the SAME string the run measured and painted,
+  // or the elements are located in a layout nobody sees. Two steps make it so:
+  //
+  //  - `measureAtomicInlines` gives each atomic inline (an `<img>`, an
+  //    `inline-block`, an `inline-flex`) its size. Without it the attachment
+  //    character occupies no advance, so every element after one would report
+  //    a box shifted left by that box's width.
+  //  - `collapseWhitespace` changes the string, and therefore every character
+  //    offset the rects are queried at.
+  const auto boxSize = getLayoutMetrics().frame.size;
+  auto attachmentLayoutContext = layoutContext;
   measureAtomicInlines(
       attributedString,
       attachments,
-      layoutContext,
-      LayoutConstraints{
-          .minimumSize = {0, 0},
-          .maximumSize = {
-              runWidth > 0 ? runWidth : std::numeric_limits<Float>::infinity(),
-              std::numeric_limits<Float>::infinity()}});
+      attachmentLayoutContext,
+      LayoutConstraints{.minimumSize = {0, 0}, .maximumSize = boxSize});
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
-  return attributedString;
+
+  // Skip the layout below when the run carries no inline element: the rects
+  // cost a full text layout of the run, and their only consumer is the
+  // per-element box built from them.
+  if (!facebook::react::hasStampableInlineElements(*this, attributedString)) {
+    return {};
+  }
+
+  // Lay the run out at the size it was actually given, so the rects reflect
+  // the wrapping the user sees. (`boxSize` is read above, for the attachments.)
+  TextLayoutContext textLayoutContext{
+      .pointScaleFactor = layoutContext.pointScaleFactor,
+      .surfaceId = getSurfaceId(),
+      .needsFragmentRects = true,
+  };
+  const auto measurement = textLayoutManager_->measure(
+      AttributedStringBox{attributedString},
+      ParagraphAttributes{},
+      textLayoutContext,
+      LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
+
+  return facebook::react::stampInlineElementMetrics(
+      *this,
+      attributedString,
+      measurement.fragmentRects,
+      contentOrigin,
+      ownerLayoutMetrics);
 }
 
 /*
@@ -522,17 +779,29 @@ Size InlineContentShadowNode::measureContent(
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
 
   auto attributedString = AttributedString{};
-  auto attachments = BaseTextShadowNode::Attachments{};
-  BaseTextShadowNode::buildAttributedString(
-      textAttributes,
-      *this,
-      attributedString,
-      attachments,
-      *defaultCascadeTextAttributes());
-  measureAtomicInlines(
-      attributedString, attachments, layoutContext, layoutConstraints);
-  collapseWhitespace(attributedString);
-  attributedString.setBaseTextAttributes(textAttributes);
+  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments &&
+      cachedContentMatches(textAttributes)) {
+    attributedString = cachedContent_->attributedString;
+  } else {
+    auto attachments = BaseTextShadowNode::Attachments{};
+    appendListMarkerIfNeeded(attributedString, textAttributes);
+    BaseTextShadowNode::buildAttributedString(
+        textAttributes,
+        *this,
+        attributedString,
+        attachments,
+        *defaultCascadeTextAttributes());
+    measureAtomicInlines(
+        attributedString, attachments, layoutContext, layoutConstraints);
+    collapseWhitespace(attributedString);
+    attributedString.setBaseTextAttributes(textAttributes);
+    cachedContent_ = std::make_shared<const CachedContent>(CachedContent{
+        .fontSizeMultiplier = textAttributes.fontSizeMultiplier,
+        .layoutDirection = textAttributes.layoutDirection,
+        .hasAttachments = !attachments.empty(),
+        .attributedString =
+            attachments.empty() ? attributedString : AttributedString{}});
+  }
 
   if (attributedString.isEmpty()) {
     return layoutConstraints.clamp({0, 0});
@@ -541,6 +810,11 @@ Size InlineContentShadowNode::measureContent(
   TextLayoutContext textLayoutContext{
       .pointScaleFactor = layoutContext.pointScaleFactor,
       .surfaceId = getSurfaceId(),
+      // Lets the platform park the layout it builds to measure this run for
+      // reuse at mount. Only this site tags: the stamp and attachment measures
+      // lay out variant strings that the mount-side content check would reject
+      // anyway.
+      .runTag = getTag(),
   };
 
   return textLayoutManager_

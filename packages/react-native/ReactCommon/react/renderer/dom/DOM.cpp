@@ -8,6 +8,7 @@
 #include "DOM.h"
 #include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/core/LayoutMetrics.h>
+#include <react/renderer/dom/NodeNameProvider.h>
 #include <react/renderer/graphics/Point.h>
 #include <react/renderer/graphics/Rect.h>
 #include <react/renderer/graphics/Size.h>
@@ -479,6 +480,19 @@ std::string getTagName(const ShadowNode& shadowNode) {
     canonicalComponentName = "TextInput";
   } else if (canonicalComponentName == "AndroidSwitch") {
     canonicalComponentName = "Switch";
+  }
+
+  // Generic seam: a component may override the tag name it reports (e.g.
+  // HTMLUnknownElement keeps its authored tag). Core consults the
+  // NodeNameProvider interface without knowing about any specific intrinsic
+  // element — the implementation lives in the intrinsic-component module.
+  const auto* nodeNameProvider =
+      dynamic_cast<const NodeNameProvider*>(shadowNode.getProps().get());
+  if (nodeNameProvider != nullptr) {
+    auto overriddenName = nodeNameProvider->domNodeName();
+    if (!overriddenName.empty()) {
+      canonicalComponentName = std::move(overriddenName);
+    }
   }
 
   // Prefix with RN:
