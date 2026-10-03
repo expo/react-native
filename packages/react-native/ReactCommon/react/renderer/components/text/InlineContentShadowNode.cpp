@@ -108,6 +108,14 @@ void collapseWhitespace(AttributedString& attributedString) {
       pendingCollapse = false;
       continue;
     }
+    if (fragment.forcedBreak) {
+      // A forced break from `<br>`. Its newline is content, not collapsible
+      // whitespace, so it survives untouched — but whitespace FOLLOWING it
+      // sits at the start of a new line and is dropped, which is what leaving
+      // `pendingCollapse` set does.
+      pendingCollapse = true;
+      continue;
+    }
     const bool keepNewlines = preservesNewlines(whiteSpace);
     const auto& source = fragment.string;
     const size_t size = source.size();

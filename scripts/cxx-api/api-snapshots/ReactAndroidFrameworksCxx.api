@@ -1401,6 +1401,7 @@ class facebook::react::AttributedString : public facebook::react::Sealable, publ
 }
 
 class facebook::react::AttributedString::Fragment {
+  public bool forcedBreak;
   public bool isAttachment() const;
   public bool isContentEqual(const facebook::react::AttributedString::Fragment& rhs) const;
   public bool isInlineBoxEnd;

@@ -207,7 +207,8 @@ std::vector<Rect> measureFragmentRectsDeterministically(
       size_t i = 0;
       while (i < characters) {
         if (string[i] == '\n') {
-          // A mandatory break. Every real engine breaks here, so the
+          // A mandatory break, such as one from `<br>`, which survives
+          // whitespace collapsing. Every real engine breaks here, so the
           // deterministic measurer must too.
           column = 0;
           line += 1;
