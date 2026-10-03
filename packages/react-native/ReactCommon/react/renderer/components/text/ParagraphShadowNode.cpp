@@ -58,6 +58,10 @@ ParagraphShadowNode::ParagraphShadowNode(
     const ShadowNode& sourceShadowNode,
     const ShadowNodeFragment& fragment)
     : ConcreteViewShadowNode(sourceShadowNode, fragment) {
+  // A clone the configure pass later skips (unchanged cascade) must keep the
+  // cascade its source was stamped with.
+  inheritedCascade_ = static_cast<const ParagraphShadowNode&>(sourceShadowNode)
+                          .inheritedCascade_;
   initialize();
 }
 
@@ -76,6 +80,15 @@ const Content& ParagraphShadowNode::getContent(
   ensureUnsealed();
 
   auto textAttributes = TextAttributes::defaultTextAttributes();
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      !getTraits().check(ShadowNodeTraits::Trait::InheritanceBoundary) &&
+      inheritedCascade_ != nullptr) {
+    // Web-like inheritance from ancestor elements. <Text> ships with
+    // `all: 'initial'` in its user-agent style — the compatibility boundary,
+    // in the web's own vocabulary — so a default <Text> never reaches here;
+    // an authored `all: 'unset'` opts in.
+    textAttributes = *inheritedCascade_;
+  }
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
   textAttributes.apply(getConcreteProps().textAttributes);
   textAttributes.layoutDirection =

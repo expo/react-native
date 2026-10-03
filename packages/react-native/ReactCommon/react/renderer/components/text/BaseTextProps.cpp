@@ -7,6 +7,8 @@
 
 #include "BaseTextProps.h"
 
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+
 #include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/core/propsConversions.h>
@@ -239,7 +241,25 @@ BaseTextProps::BaseTextProps(
           context,
           rawProps,
           sourceProps.textAttributes,
-          TextAttributes{})) {};
+          TextAttributes{})) {
+  if (const auto* rawValue = ReactNativeFeatureFlags::enableStringChildren()
+          ? rawProps.at("all")
+          : nullptr) {
+    if (rawValue->hasType<std::string>()) {
+      const auto stringValue = (std::string)*rawValue;
+      // Only `initial` resets the run fold. No inline text element's native
+      // user-agent stylesheet declares `all` (root <Text>'s declaration lives
+      // on ParagraphShadowNode; nested <Text> is virtual text), so `revert`
+      // rolls back to an empty UA origin and resolves to unset — inherit —
+      // exactly like `unset`/`inherit`/absent (css-cascade-4 §7.3).
+      cascadeResetAll = stringValue == "initial";
+    } else {
+      cascadeResetAll = false;
+    }
+  } else {
+    cascadeResetAll = sourceProps.cascadeResetAll;
+  }
+};
 
 void BaseTextProps::setProp(
     const PropsParserContext& context,

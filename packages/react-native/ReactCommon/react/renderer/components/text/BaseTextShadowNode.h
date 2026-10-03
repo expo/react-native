@@ -52,12 +52,18 @@ class BaseTextShadowNode {
    * TextInput (which does not) can use this.
    * TODO T53299884: decide if this should be moved out and made a static
    * function, or if TextInput should inherit from BaseTextShadowNode.
+   *
+   *
+   * `initialTextAttributes` are what an `all: initial` reset returns to: the
+   * formatting root's own initial values. A `<Text>` restarts from React
+   * Native's defaults; an element's anonymous run from the element cascade's.
    */
   static void buildAttributedString(
       const TextAttributes &baseTextAttributes,
       const ShadowNode &parentNode,
       AttributedString &outAttributedString,
-      Attachments &outAttachments);
+      Attachments &outAttachments,
+      const TextAttributes &initialTextAttributes = TextAttributes::defaultTextAttributes());
 };
 
 } // namespace facebook::react

@@ -452,6 +452,35 @@ BaseViewProps::BaseViewProps(
           sourceProps.removeClippedSubviews,
           false)) {
   hasInheritedTextProps = computeHasInheritedTextProps();
+
+  // `all` — parsed by hand: its value space here is tiny and a boundary is
+  // structural enough that a malformed value should mean "no declaration".
+  // The keyword is stored as a `CascadeReset` and resolved against the
+  // element's user-agent origin in isInheritanceBoundary(): `unset` erases the
+  // cascaded value from every origin — for inherited properties that means
+  // inherit — so it is the author's switch for turning OFF a user-agent
+  // boundary (<Text style={{all: 'unset'}}>), while `revert` only rolls back
+  // to it.
+  if (const auto* rawValue = stringChildrenEnabled
+          ? rawProps.at("all", nullptr, nullptr)
+          : nullptr) {
+    if (rawValue->hasType<std::string>()) {
+      const auto stringValue = (std::string)*rawValue;
+      // `inherit` explicitly inherits every property; since this `all` is
+      // scoped to inherited properties only, that is the same resolved value
+      // as `unset` (css-cascade-4 §7.3) — and like `unset` it overrides a
+      // user-agent boundary.
+      cascadeReset = stringValue == "initial" ? CascadeReset::Initial
+          : stringValue == "revert"           ? CascadeReset::Revert
+          : stringValue == "unset"            ? CascadeReset::Unset
+          : stringValue == "inherit"          ? CascadeReset::Unset
+                                              : CascadeReset::None;
+    } else {
+      cascadeReset = CascadeReset::None;
+    }
+  } else {
+    cascadeReset = sourceProps.cascadeReset;
+  }
 }
 
 bool BaseViewProps::computeHasInheritedTextProps() const {

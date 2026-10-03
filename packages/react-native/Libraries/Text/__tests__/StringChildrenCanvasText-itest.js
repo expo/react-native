@@ -98,3 +98,13 @@ test('an author colour still reaches the text', () => {
     ),
   ).toEqual({plain: RED, inline: RED});
 });
+
+test("`all: 'initial'` in an element restarts at CanvasText, not black", () => {
+  expect(
+    fragmentColors(
+      <View style={{color: 'red'}}>
+        plain <View style={{display: 'inline', all: 'initial'}}>reset</View>
+      </View>,
+    ),
+  ).toEqual({plain: RED, reset: UNSET});
+});

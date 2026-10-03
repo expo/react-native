@@ -174,9 +174,9 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   static bool isInlineFlowContent(const ShadowNode &child);
 
   /*
-   * Cascade storage hooks. Only CONSUMER nodes — anonymous IFC boxes — store
-   * the effective cascade (they read it at measure time, when no configure
-   * walk is on the stack); everyone else derives it locally in
+   * Cascade storage hooks. Only CONSUMER nodes — paragraphs and anonymous IFC
+   * boxes — store the effective cascade (they read it at measure time, when
+   * no configure walk is on the stack); everyone else derives it locally in
    * `configureYogaTree` from `receivedTextAttributes_`. The virtuals let the
    * configure pass stamp consumers without knowing their concrete types.
    */
@@ -350,7 +350,7 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    *    `configureYogaTree` is pointer identity in the common case.
    * 2. PROPAGATION happens only inside `configureYogaTree`, parent to child,
    *    and only into children that can observe it: a cascade CONSUMER
-   *    (TextCascadeConsumer — anonymous IFC boxes) or a subtree
+   *    (TextCascadeConsumer — paragraphs, anonymous IFC boxes) or a subtree
    *    containing one (SubtreeHasCascadeDependents).
    * 3. The DEPENDENTS BIT is maintained bottom-up: recomputed from scratch by
    *    `updateYogaChildren`, OR-ed in by `appendChild` (Fabric appends

@@ -99,6 +99,10 @@ YogaLayoutableShadowNode::defaultCascadeTextAttributes() {
 static bool inheritableTextPropsDiffer(
     const BaseViewProps& a,
     const BaseViewProps& b) {
+  // Toggling an inheritance boundary rewires what the whole subtree inherits.
+  if (a.cascadeReset != b.cascadeReset) {
+    return true;
+  }
   if (a.inheritedColor != b.inheritedColor ||
       a.inheritedFontFamily != b.inheritedFontFamily ||
       a.inheritedFontWeight != b.inheritedFontWeight ||
@@ -159,6 +163,17 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
 
   updateYogaProps();
   updateYogaChildren();
+
+  // Asked once per node construction, so both halves are kept cheap: the
+  // boundary query is virtual on Props rather than an RTTI cast, and the
+  // trait check runs first because a node that is neither a user-agent
+  // boundary nor carrying an `all` declaration is the overwhelming majority.
+  if (props_ != nullptr &&
+      props_->isInheritanceBoundary(
+          getTraits().check(ShadowNodeTraits::Trait::UACascadeBoundary)) &&
+      ReactNativeFeatureFlags::enableStringChildren()) {
+    traits_.set(ShadowNodeTraits::Trait::InheritanceBoundary);
+  }
 
   ensureConsistency();
 }
@@ -236,13 +251,26 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     const auto* oldProps =
         dynamic_cast<const BaseViewProps*>(source.props_.get());
     const auto* newProps = dynamic_cast<const BaseViewProps*>(props_.get());
+    if (newProps != nullptr) {
+      // The boundary is a per-node fact resolved from the authored `all` and
+      // the element's UA declaration (UACascadeBoundary rides along in the
+      // traits copied from the source revision, immutable per class); keep
+      // the resolved trait in sync on the revision that changed props.
+      if (newProps->isInheritanceBoundary(
+              getTraits().check(ShadowNodeTraits::Trait::UACascadeBoundary))) {
+        traits_.set(ShadowNodeTraits::Trait::InheritanceBoundary);
+      } else {
+        traits_.unset(ShadowNodeTraits::Trait::InheritanceBoundary);
+      }
+    }
     // One-load fast path: when neither revision sets any inheritable text
-    // prop — almost every View — nothing can differ. And when something does
-    // differ, dirty only if some descendant text actually DEPENDS on this
-    // node's cascade; with no dependents there is no observer, and the whole
-    // subtree walk the dirtying would cause is skipped.
+    // prop or boundary — almost every View — nothing can differ. And when
+    // something does differ, dirty only if some descendant text actually
+    // DEPENDS on this node's cascade; with no dependents there is no observer,
+    // and the whole subtree walk the dirtying would cause is skipped.
     if (oldProps != nullptr && newProps != nullptr &&
-        (oldProps->hasInheritedTextProps || newProps->hasInheritedTextProps) &&
+        (oldProps->hasInheritedTextProps || newProps->hasInheritedTextProps ||
+         oldProps->cascadeReset != newProps->cascadeReset) &&
         getTraits().check(
             ShadowNodeTraits::Trait::SubtreeHasCascadeDependents) &&
         inheritableTextPropsDiffer(*oldProps, *newProps)) {
@@ -414,9 +442,10 @@ void YogaLayoutableShadowNode::appendChild(
       if (const auto* layoutableChild =
               YogaLayoutableShadowNode::asYogaLayoutable(*childNode)) {
         const auto childTraits = layoutableChild->getTraits();
-        if (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
-            childTraits.check(
-                ShadowNodeTraits::Trait::SubtreeHasCascadeDependents)) {
+        if (!childTraits.check(ShadowNodeTraits::Trait::InheritanceBoundary) &&
+            (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
+             childTraits.check(
+                 ShadowNodeTraits::Trait::SubtreeHasCascadeDependents))) {
           traits_.set(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
         }
       }
@@ -449,9 +478,10 @@ void YogaLayoutableShadowNode::appendChild(
         !getTraits().check(
             ShadowNodeTraits::Trait::SubtreeHasCascadeDependents)) {
       const auto childTraits = yogaLayoutableChild->getTraits();
-      if (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
-          childTraits.check(
-              ShadowNodeTraits::Trait::SubtreeHasCascadeDependents)) {
+      if (!childTraits.check(ShadowNodeTraits::Trait::InheritanceBoundary) &&
+          (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
+           childTraits.check(
+               ShadowNodeTraits::Trait::SubtreeHasCascadeDependents))) {
         traits_.set(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
       }
     }
@@ -700,14 +730,19 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
 
   yogaNode_.setDirty(!isClean);
   // Element-tree cascade dependents: a node has cascade dependents when some
-  // consumer below it — an anonymous IFC box — actually inherits through it.
-  // When the bit is unset, an inheritable-prop change here dirties nothing
-  // and the cascade never walks in.
+  // consumer below it — a paragraph or an anonymous IFC box — actually
+  // inherits through it. A child that is an inheritance boundary contributes
+  // nothing: its subtree restarts from the defaults and cannot observe this
+  // node's cascade. When the bit is unset, an inheritable-prop change here
+  // dirties nothing and the cascade never walks in.
   if (ReactNativeFeatureFlags::enableStringChildren()) {
     bool hasDependents = !anonymousTextContentChildren_.empty();
     if (!hasDependents) {
       for (const auto& child : yogaLayoutableChildren_) {
         const auto childTraits = child->getTraits();
+        if (childTraits.check(ShadowNodeTraits::Trait::InheritanceBoundary)) {
+          continue;
+        }
         if (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
             childTraits.check(
                 ShadowNodeTraits::Trait::SubtreeHasCascadeDependents)) {
@@ -1023,17 +1058,22 @@ void YogaLayoutableShadowNode::configureYogaTree(
     // otherwise unchanged (same props, same layout context), the new cascade
     // value must still reach its anonymous IFC boxes. A changed cascade is
     // detected by comparing against what this child was handed last time. A
-    // child with no consumer anywhere below it has nothing that could observe
-    // the cascade, so it neither compares nor receives.
+    // boundary child (`all: 'initial'`) restarts from the defaults, so it is
+    // handed those; a child with no consumer anywhere below it has nothing
+    // that could observe the cascade, so it neither compares nor receives.
     const auto childTraits = child.getTraits();
-    const bool childObservesCascade =
+    const bool childIsBoundary =
+        childTraits.check(ShadowNodeTraits::Trait::InheritanceBoundary);
+    const auto& cascadeForChild =
+        childIsBoundary ? defaultCascadeTextAttributes() : effectiveCascade;
+    const bool childObservesCascade = childIsBoundary ||
         childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
         childTraits.check(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
     const bool cascadeChanged =
         ReactNativeFeatureFlags::enableStringChildren() &&
         childObservesCascade &&
-        child.receivedTextAttributes_ != effectiveCascade &&
-        !(*child.receivedTextAttributes_ == *effectiveCascade);
+        child.receivedTextAttributes_ != cascadeForChild &&
+        !(*child.receivedTextAttributes_ == *cascadeForChild);
 
     if (child.yogaTreeHasBeenConfigured_ && !cascadeChanged &&
         childLayoutMetrics.pointScaleFactor == pointScaleFactor &&
@@ -1047,7 +1087,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
     if (doesOwn(child)) {
       auto& mutableChild = const_cast<YogaLayoutableShadowNode&>(child);
       if (childObservesCascade) {
-        mutableChild.receivedTextAttributes_ = effectiveCascade;
+        mutableChild.receivedTextAttributes_ = cascadeForChild;
       }
       // An anonymous IFC box measures and paints from the cascade. A cascade
       // change that does not alter size (e.g. `color`) leaves Yoga's cached
@@ -1067,7 +1107,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
     } else {
       auto& clonedChild = cloneChildInPlace(i);
       if (childObservesCascade) {
-        clonedChild.receivedTextAttributes_ = effectiveCascade;
+        clonedChild.receivedTextAttributes_ = cascadeForChild;
       }
       clonedChild.configureYogaTree(
           pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);

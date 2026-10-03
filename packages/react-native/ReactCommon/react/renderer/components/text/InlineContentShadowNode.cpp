@@ -346,7 +346,11 @@ Float InlineContentShadowNode::lineBaseline(
   auto attachments = BaseTextShadowNode::Attachments{};
   const auto textAttributes = baseTextAttributes();
   BaseTextShadowNode::buildAttributedString(
-      textAttributes, *this, attributedString, attachments);
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
   if (attributedString.isEmpty()) {
     return 0;
   }
@@ -394,7 +398,11 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
   BaseTextShadowNode::buildAttributedString(
-      textAttributes, *this, attributedString, attachments);
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
   if (attachments.empty()) {
     return placements;
   }
@@ -459,7 +467,11 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
   BaseTextShadowNode::buildAttributedString(
-      textAttributes, *this, attributedString, attachments);
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
   // Reserve each atomic inline's box so the painted run offsets the
   // surrounding glyphs past it, matching the measured layout. The boxes are
   // never Yoga-laid-out in place (their owning View lays out clones), so their
@@ -512,7 +524,11 @@ Size InlineContentShadowNode::measureContent(
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
   BaseTextShadowNode::buildAttributedString(
-      textAttributes, *this, attributedString, attachments);
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
   measureAtomicInlines(
       attributedString, attachments, layoutContext, layoutConstraints);
   collapseWhitespace(attributedString);
