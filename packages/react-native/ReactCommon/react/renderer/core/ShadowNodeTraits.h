@@ -108,6 +108,17 @@ class ShadowNodeTraits {
     // dependency.
     InlineText = 1 << 16,
 
+    // The node itself consumes the inherited text cascade: an anonymous IFC
+    // box, which measures and paints bare-text runs from it. Set by that
+    // class's BaseTraits.
+    TextCascadeConsumer = 1 << 18,
+
+    // Somewhere in this node's subtree is a TextCascadeConsumer that DEPENDS
+    // on this node's cascade. Maintained bottom-up by updateYogaChildren.
+    // When unset, an inheritable-prop change on this node has no observer:
+    // nothing needs dirtying and the cascade never needs to walk in.
+    SubtreeHasCascadeDependents = 1 << 19,
+
     // The node IS a YogaLayoutableShadowNode. Layout code downcasts child
     // ShadowNodes per child, per pass; the trait plus a static_cast answers
     // the same question as an RTTI dynamic_cast without walking the class
