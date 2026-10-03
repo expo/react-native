@@ -1132,6 +1132,9 @@ interface RCTGenericDelegateSplitter<DelegateT> : public NSObject {
   public virtual void removeDelegate:(DelegateT delegate);
 }
 
+interface RCTGlyphHuggingLayoutManager : public NSLayoutManager {
+}
+
 interface RCTGradientUtils : public NSObject {
   public virtual static std::pair<CGPoint, CGPoint> pointsForCAGradientLayerLinearGradient:endPoint:bounds:(CGPoint startPoint, CGPoint endPoint, CGSize bounds);
   public virtual static std::vector<facebook::react::ProcessedColorStop> clipColorStops:end:(const std::vector<facebook::react::ProcessedColorStop>& colorStops, facebook::react::Float end);

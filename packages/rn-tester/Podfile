@@ -72,4 +72,17 @@ end
 
 post_install do |installer|
   react_native_post_install(installer, @prefix_path, :mac_catalyst_enabled => false)
+  # RNTesterUnitTests holds tests of React Native's internals (text layout, view
+  # recycling, the element views), the kind upstream keeps in its pods' own test
+  # specs, where RN_BUILDING applies. CocoaPods never builds those specs here, so
+  # the test target compiles as React Native's own sources do. The RNTester app
+  # target stays under RN_STRICT_API.
+  installer.aggregate_targets.select { |t| t.name == 'Pods-RNTesterUnitTests' }.each do |aggregate|
+    aggregate.user_build_configurations.each_key do |config_name|
+      path = aggregate.xcconfig_path(config_name)
+      xcconfig = Xcodeproj::Config.new(path)
+      xcconfig.merge!('GCC_PREPROCESSOR_DEFINITIONS' => 'RN_BUILDING=1')
+      xcconfig.save_as(path)
+    end
+  end
 end
