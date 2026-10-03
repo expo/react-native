@@ -4657,6 +4657,11 @@ struct facebook::react::MeasuredPreparedTextLayout {
   public facebook::react::detail::TextLayoutManagerExtended::PreparedTextLayout preparedTextLayout;
 }
 
+struct facebook::react::NodeNameProvider {
+  public virtual std::string domNodeName() const = 0;
+  public virtual ~NodeNameProvider() = default;
+}
+
 struct facebook::react::Point {
   public Float x;
   public Float y;

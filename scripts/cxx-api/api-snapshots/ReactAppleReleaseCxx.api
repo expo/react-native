@@ -5795,6 +5795,11 @@ struct facebook::react::ModalHostViewSupportedOrientationsMaskWrapped {
   public facebook::react::ModalHostViewSupportedOrientationsMask value;
 }
 
+struct facebook::react::NodeNameProvider {
+  public virtual std::string domNodeName() const = 0;
+  public virtual ~NodeNameProvider() = default;
+}
+
 struct facebook::react::Point {
   public bool operator==(const facebook::react::Point& rhs) const = default;
   public facebook::react::Float x;
