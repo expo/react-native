@@ -247,10 +247,19 @@ std::vector<Rect> measureFragmentRectsDeterministically(
     penX += fragment.trailingInlineSpace();
     maxX = std::max(maxX, penX);
 
+    // An element reports its border box, and block-axis padding and borders
+    // are part of it. They do not grow the line box (CSS2 §10.6.1 has them
+    // overflow it instead, which is why the line's height is untouched here),
+    // but they are still inside the box the element reports.
+    const auto blockAxis = fragment.blockAxisBoxEdges();
+
     rects.push_back(
         Rect{
-            .origin = {minX, startLine * lineHeight},
-            .size = {maxX - minX, (line - startLine + 1) * lineHeight}});
+            .origin = {minX, startLine * lineHeight - blockAxis.top},
+            .size = {
+                maxX - minX,
+                (line - startLine + 1) * lineHeight + blockAxis.top +
+                    blockAxis.bottom}});
   }
 
   return rects;
@@ -338,7 +347,8 @@ TextMeasurement measureDeterministically(
     placeAttachments(attributedStringBox, emptyRects, lineBox, attachments);
     return TextMeasurement{
         .size = layoutConstraints.clamp({0, 0}),
-        .attachments = std::move(attachments)};
+        .attachments = std::move(attachments),
+        .fragmentRects = std::move(emptyRects)};
   }
 
   auto maximumWidth = layoutConstraints.maximumSize.width;
@@ -408,15 +418,19 @@ TextMeasurement measureDeterministically(
 
   // Take the line count from the placement pass too: it moves an atomic inline
   // that does not fit in what remains of a line wholly onto the next one,
-  // which can need more lines than dividing the segment lengths suggests
-  for (const auto& rect : rects) {
-    lineCount = std::max(
-        lineCount, std::round((rect.origin.y + rect.size.height) / lineHeight));
+  // which can need more lines than dividing the segment lengths suggests. A
+  // rect's block-axis box edges overflow its line, so they are left out.
+  const auto& fragments = attributedStringBox.getValue().getFragments();
+  for (size_t i = 0; i < rects.size() && i < fragments.size(); i++) {
+    const auto lineBottom = rects[i].origin.y + rects[i].size.height -
+        fragments[i].blockAxisBoxEdges().bottom;
+    lineCount = std::max(lineCount, std::round(lineBottom / lineHeight));
   }
 
   return TextMeasurement{
       .size = layoutConstraints.clamp({width, lineHeight * lineCount}),
-      .attachments = std::move(attachments)};
+      .attachments = std::move(attachments),
+      .fragmentRects = std::move(rects)};
 }
 
 } // namespace

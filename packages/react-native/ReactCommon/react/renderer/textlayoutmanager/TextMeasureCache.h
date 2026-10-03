@@ -58,6 +58,23 @@ class TextMeasurement final {
 
   Size size;
   Attachments attachments;
+
+  /*
+   * The laid-out rect of each fragment of the measured `AttributedString`,
+   * parallel to its fragment list and relative to the text frame's origin.
+   *
+   * This is what gives an *inline element* (`<b>`, `<span>`, a nested
+   * `<Text>`) a box to report from `getBoundingClientRect()`: fragments carry
+   * their owning element in `parentShadowView`, so the rects of the fragments
+   * belonging to one element union into that element's border box, which the
+   * containing Paragraph/View then stamps onto it (text-children-plan.md
+   * §3.G "Geometry APIs").
+   *
+   * Empty when the platform text engine has not implemented it — consumers
+   * must treat it as "unknown" and leave the element without metrics, which
+   * is the pre-existing behavior.
+   */
+  std::vector<Rect> fragmentRects;
 };
 
 // The Key type that is used for Text Measure Cache.
@@ -72,6 +89,14 @@ class TextMeasureCacheKey final {
   // are rounded to the pixel grid. Two otherwise-identical measures at different
   // densities are not interchangeable, so the scale factor is part of the key.
   Float pointScaleFactor{};
+  // Whether the entry carries `fragmentRects`. Two measures of the same string
+  // at the same size are the same SIZE, but not the same ENTRY: one of them
+  // has the per-fragment geometry and the other does not, and handing the
+  // rect-less one to a caller that asked for rects loses every inline
+  // element's box silently. Cheap to carry — only a string that is measured
+  // both ways ever occupies two entries, which is a paragraph with an inline
+  // element in it.
+  bool needsFragmentRects{false};
 };
 
 // The Key type that is used for Line Measure Cache.
@@ -96,6 +121,11 @@ class PreparedTextCacheKey final {
   // A prepared layout is rounded to the pixel grid, so it is only reusable at
   // the pixel scale factor it was laid out at.
   Float pointScaleFactor{};
+  // Whether the layout carries per-fragment rects. A layout prepared without
+  // them must not be handed to a caller that needs them: the entry is a
+  // complete answer to a different question, and reusing it silently loses
+  // every inline element's box. Same reason it is in TextMeasureCacheKey.
+  bool needsFragmentRects{false};
 };
 
 /*
@@ -287,7 +317,7 @@ inline bool operator==(const TextMeasureCacheKey &lhs, const TextMeasureCacheKey
 {
   return areAttributedStringsEquivalentLayoutWise(lhs.attributedString, rhs.attributedString) &&
       lhs.paragraphAttributes == rhs.paragraphAttributes && lhs.layoutConstraints == rhs.layoutConstraints &&
-      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor);
+      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor) && lhs.needsFragmentRects == rhs.needsFragmentRects;
 }
 
 inline bool operator==(const LineMeasureCacheKey &lhs, const LineMeasureCacheKey &rhs)
@@ -300,7 +330,7 @@ inline bool operator==(const PreparedTextCacheKey &lhs, const PreparedTextCacheK
 {
   return areAttributedStringsEquivalentDisplayWise(lhs.attributedString, rhs.attributedString) &&
       lhs.paragraphAttributes == rhs.paragraphAttributes && lhs.layoutConstraints == rhs.layoutConstraints &&
-      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor);
+      floatEquality(lhs.pointScaleFactor, rhs.pointScaleFactor) && lhs.needsFragmentRects == rhs.needsFragmentRects;
 }
 
 } // namespace facebook::react
@@ -315,7 +345,8 @@ struct hash<facebook::react::TextMeasureCacheKey> {
         attributedStringHashLayoutWise(key.attributedString),
         key.paragraphAttributes,
         key.layoutConstraints,
-        key.pointScaleFactor);
+        key.pointScaleFactor,
+        key.needsFragmentRects);
   }
 };
 
@@ -336,7 +367,8 @@ struct hash<facebook::react::PreparedTextCacheKey> {
         attributedStringHashDisplayWise(key.attributedString),
         key.paragraphAttributes,
         key.layoutConstraints,
-        key.pointScaleFactor);
+        key.pointScaleFactor,
+        key.needsFragmentRects);
   }
 };
 

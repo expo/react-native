@@ -409,6 +409,7 @@ static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_ATOMIC_
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_HEIGHT;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_INLINE_BOX;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_IS_ATTACHMENT;
+static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_IS_EMPTY_ELEMENT;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_IS_INLINE_BOX_END;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_IS_INLINE_BOX_START;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_REACT_TAG;
@@ -730,6 +731,7 @@ bool facebook::react::areAttributedStringsEquivalentDisplayWise(const facebook::
 bool facebook::react::areAttributedStringsEquivalentLayoutWise(const facebook::react::AttributedString& lhs, const facebook::react::AttributedString& rhs);
 bool facebook::react::areBorderRadiiCircular(const facebook::react::BorderRadii& borderRadii);
 bool facebook::react::areTextAttributesEquivalentLayoutWise(const facebook::react::TextAttributes& lhs, const facebook::react::TextAttributes& rhs);
+bool facebook::react::hasStampableInlineElements(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString);
 bool facebook::react::hostPlatformColorIsColorMeaningful(facebook::react::Color color) noexcept;
 bool facebook::react::isColorMeaningful(const facebook::react::SharedColor& color) noexcept;
 bool facebook::react::isHermesBytecodeBundle(const facebook::react::BundleHeader& header);
@@ -860,6 +862,7 @@ std::string facebook::react::toString(facebook::react::AccessibilityLiveRegion a
 std::string facebook::react::toString(facebook::react::PointerEventsMode value);
 std::unique_ptr<const facebook::react::JSBigString> facebook::react::loadScriptFromAssets(AAssetManager* assetManager, const std::string& assetName);
 std::unordered_map<std::string, std::function<std::shared_ptr<facebook::react::TurboModule>(std::shared_ptr<facebook::react::CallInvoker> jsInvoker)>>& facebook::react::globalExportedCxxTurboModuleMap();
+std::vector<facebook::react::PendingInlineElementMetrics> facebook::react::stampInlineElementMetrics(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString, const std::vector<facebook::react::Rect>& fragmentRects, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics);
 template <CSSKeywordSet KeywordT>
 constexpr std::optional<KeywordT> facebook::react::parseCSSKeyword(std::string_view ident);
 template <CSSMaybeCompoundDataType... AllowedTypesT>
@@ -1406,6 +1409,7 @@ class facebook::react::AttributedString::Fragment {
   public bool forcedBreak;
   public bool isAttachment() const;
   public bool isContentEqual(const facebook::react::AttributedString::Fragment& rhs) const;
+  public bool isEmptyElement;
   public bool isInlineBoxEnd;
   public bool isInlineBoxStart;
   public bool operator==(const facebook::react::AttributedString::Fragment& rhs) const;
@@ -1413,6 +1417,7 @@ class facebook::react::AttributedString::Fragment {
   public facebook::react::Float leadingInlineSpace() const;
   public facebook::react::Float trailingInlineSpace() const;
   public facebook::react::InlineBoxDecorations inlineBox;
+  public facebook::react::RectangleEdges<facebook::react::Float> blockAxisBoxEdges() const;
   public facebook::react::ShadowView parentShadowView;
   public facebook::react::TextAttributes textAttributes;
   public static std::string AttachmentCharacter();
@@ -2369,6 +2374,7 @@ class facebook::react::InlineContentShadowNode : public facebook::react::Concret
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
   public virtual std::shared_ptr<const facebook::react::TextLayoutManager> getContentTextLayoutManager() const override;
   public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const override;
+  public virtual std::vector<facebook::react::PendingInlineElementMetrics> stampInlineElementMetrics(const facebook::react::LayoutContext& layoutContext, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics) const override;
   public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
   public void setTextLayoutManager(std::shared_ptr<const facebook::react::TextLayoutManager> textLayoutManager);
 }
@@ -2377,6 +2383,7 @@ class facebook::react::InlineTextContentAccessor {
   public virtual facebook::react::AttributedString getContentAttributedString(facebook::react::Float fontSizeMultiplier) const = 0;
   public virtual std::shared_ptr<const facebook::react::TextLayoutManager> getContentTextLayoutManager() const = 0;
   public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const = 0;
+  public virtual std::vector<facebook::react::PendingInlineElementMetrics> stampInlineElementMetrics(const facebook::react::LayoutContext& layoutContext, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics) const = 0;
   public virtual ~InlineTextContentAccessor() = default;
 }
 
@@ -2724,6 +2731,7 @@ class facebook::react::LayoutableShadowNode : public facebook::react::ShadowNode
   public virtual const facebook::react::LayoutableShadowNode* asLayoutable() const override;
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const;
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const;
+  public virtual facebook::react::LayoutMetrics getMountedLayoutMetrics() const;
   public virtual facebook::react::Point getContentOriginOffset(bool includeTransform) const;
   public virtual facebook::react::Size measure(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const;
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const;
@@ -3361,6 +3369,7 @@ class facebook::react::PointerHoverTracker {
 }
 
 class facebook::react::PreparedTextCacheKey {
+  public bool needsFragmentRects;
   public facebook::react::AttributedString attributedString;
   public facebook::react::Float pointScaleFactor;
   public facebook::react::LayoutConstraints layoutConstraints;
@@ -4144,6 +4153,7 @@ class facebook::react::TextLayoutManager {
 }
 
 class facebook::react::TextMeasureCacheKey {
+  public bool needsFragmentRects;
   public facebook::react::AttributedString attributedString;
   public facebook::react::Float pointScaleFactor;
   public facebook::react::LayoutConstraints layoutConstraints;
@@ -4153,6 +4163,7 @@ class facebook::react::TextMeasureCacheKey {
 class facebook::react::TextMeasurement {
   public facebook::react::Size size;
   public facebook::react::TextMeasurement::Attachments attachments;
+  public std::vector<facebook::react::Rect> fragmentRects;
   public using Attachments = std::vector<facebook::react::TextMeasurement::Attachment>;
 }
 
@@ -4185,10 +4196,15 @@ class facebook::react::TextProps : public facebook::react::Props, public faceboo
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
 
-class facebook::react::TextShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::TextComponentName, facebook::react::ShadowNode, facebook::react::TextProps, facebook::react::TextEventEmitter>, public facebook::react::BaseTextShadowNode {
+class facebook::react::TextShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::TextComponentName, facebook::react::LayoutableShadowNode, facebook::react::TextProps, facebook::react::TextEventEmitter>, public facebook::react::BaseTextShadowNode {
   public TextShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public static facebook::react::ShadowNodeTraits BaseTraits();
-  public using BaseShadowNode = facebook::react::ConcreteShadowNode<facebook::react::TextComponentName, facebook::react::ShadowNode, facebook::react::TextProps, facebook::react::TextEventEmitter>;
+  public using BaseShadowNode = facebook::react::ConcreteShadowNode<facebook::react::TextComponentName, facebook::react::LayoutableShadowNode, facebook::react::TextProps, facebook::react::TextEventEmitter>;
+  public virtual bool getIsLayoutClean() const override;
+  public virtual facebook::react::LayoutMetrics getMountedLayoutMetrics() const override;
+  public virtual void dirtyLayout() override;
+  public virtual void layout(facebook::react::LayoutContext) override;
+  public virtual void layoutTree(facebook::react::LayoutContext, facebook::react::LayoutConstraints) override;
 }
 
 class facebook::react::TimerManager {
@@ -6548,6 +6564,11 @@ struct facebook::react::NodeNameProvider {
   public virtual ~NodeNameProvider() = default;
 }
 
+struct facebook::react::PendingInlineElementMetrics {
+  public const facebook::react::ShadowNodeFamily* family;
+  public facebook::react::LayoutMetrics metrics;
+}
+
 struct facebook::react::Point {
   public bool operator==(const facebook::react::Point& rhs) const = default;
   public facebook::react::Float x;
@@ -6872,6 +6893,7 @@ struct facebook::react::TextEffectInfo {
 }
 
 struct facebook::react::TextLayoutContext {
+  public bool needsFragmentRects;
   public bool operator==(const facebook::react::TextLayoutContext& rhs) const = default;
   public facebook::react::Float pointScaleFactor;
   public facebook::react::SurfaceId surfaceId;

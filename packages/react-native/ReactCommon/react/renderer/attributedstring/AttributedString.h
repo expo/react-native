@@ -55,6 +55,19 @@ class AttributedString : public Sealable, public DebugStringConvertible {
     bool forcedBreak{false};
 
     /*
+     * An inline element that contributed no text of its own — `<span></span>`.
+     *
+     * It still has a box: the web gives it zero width and the height of the
+     * line it sits on, and code measures empty inlines on purpose, as anchors.
+     * Without a fragment there is nothing to hang that box on, so an empty
+     * element gets an empty fragment and this flag, which says two things
+     * nothing else can: whitespace collapsing must not drop it for having no
+     * text, and the fragment-rect pass must answer with the caret box at its
+     * position rather than the nothing a zero-length glyph range returns.
+     */
+    bool isEmptyElement{false};
+
+    /*
      * CSS box decorations of the inline element that contributed this
      * fragment. Carried on *every* fragment of the element so painting can
      * find its full extent, while `isInlineBoxStart` / `isInlineBoxEnd` mark
@@ -78,6 +91,25 @@ class AttributedString : public Sealable, public DebugStringConvertible {
     Float trailingInlineSpace() const
     {
       return isInlineBoxEnd ? inlineBox.trailingInlineSpace() : 0;
+    }
+
+    /**
+     * How far this fragment's border box extends above and below the line box,
+     * which is what `getBoundingClientRect()` has to include.
+     *
+     * Unlike the inline-axis edges, these apply to EVERY fragment of the
+     * element rather than only its first and last: a wrapped inline is one box
+     * per line, and `box-decoration-break: slice` (CSS §8.6, the initial value)
+     * draws the block-axis padding and border on each of them.
+     *
+     * Margin is excluded — this is the border box, and margin is outside it.
+     */
+    RectangleEdges<Float> blockAxisBoxEdges() const
+    {
+      return {
+          .top = inlineBox.padding.top + inlineBox.borderWidth.top,
+          .bottom = inlineBox.padding.bottom + inlineBox.borderWidth.bottom,
+      };
     }
 
     /*

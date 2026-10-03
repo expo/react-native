@@ -3233,6 +3233,7 @@ NSError* facebook::react::tryAndReturnError(const std::function<void()>& func);
 NSString* facebook::react::deriveSourceURL(NSURL* url);
 YGDirection facebook::react::yogaDirectionFromLayoutDirection(facebook::react::LayoutDirection direction);
 bool facebook::react::areBorderRadiiCircular(const facebook::react::BorderRadii& borderRadii);
+bool facebook::react::hasStampableInlineElements(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString);
 bool facebook::react::hostPlatformColorIsColorMeaningful(facebook::react::Color color) noexcept;
 bool facebook::react::isColorMeaningful(const facebook::react::SharedColor& color) noexcept;
 bool facebook::react::isZero(facebook::react::Float n);
@@ -3295,6 +3296,7 @@ std::string facebook::react::toString(double doubleValue, char suffix);
 std::string facebook::react::toString(facebook::react::AccessibilityLiveRegion accessibilityLiveRegion);
 std::string facebook::react::toString(facebook::react::PointerEventsMode value);
 std::unordered_map<std::string, std::function<std::shared_ptr<facebook::react::TurboModule>(std::shared_ptr<facebook::react::CallInvoker> jsInvoker)>>& facebook::react::globalExportedCxxTurboModuleMap();
+std::vector<facebook::react::PendingInlineElementMetrics> facebook::react::stampInlineElementMetrics(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString, const std::vector<facebook::react::Rect>& fragmentRects, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics);
 template <Hashable T, Hashable... Args>
 std::size_t facebook::react::hash_combine(const T& v, const Args &... args);
 template <Hashable T, Hashable... Rest>
@@ -3509,6 +3511,7 @@ class facebook::react::AttributedString::Fragment {
   public bool forcedBreak;
   public bool isAttachment() const;
   public bool isContentEqual(const facebook::react::AttributedString::Fragment& rhs) const;
+  public bool isEmptyElement;
   public bool isInlineBoxEnd;
   public bool isInlineBoxStart;
   public bool operator==(const facebook::react::AttributedString::Fragment& rhs) const;
@@ -3516,6 +3519,7 @@ class facebook::react::AttributedString::Fragment {
   public facebook::react::Float leadingInlineSpace() const;
   public facebook::react::Float trailingInlineSpace() const;
   public facebook::react::InlineBoxDecorations inlineBox;
+  public facebook::react::RectangleEdges<facebook::react::Float> blockAxisBoxEdges() const;
   public facebook::react::ShadowView parentShadowView;
   public facebook::react::TextAttributes textAttributes;
   public static std::string AttachmentCharacter();
@@ -4017,6 +4021,7 @@ class facebook::react::InlineContentShadowNode : public facebook::react::Concret
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
   public virtual std::shared_ptr<const facebook::react::TextLayoutManager> getContentTextLayoutManager() const override;
   public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const override;
+  public virtual std::vector<facebook::react::PendingInlineElementMetrics> stampInlineElementMetrics(const facebook::react::LayoutContext& layoutContext, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics) const override;
   public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
   public void setTextLayoutManager(std::shared_ptr<const facebook::react::TextLayoutManager> textLayoutManager);
 }
@@ -4025,6 +4030,7 @@ class facebook::react::InlineTextContentAccessor {
   public virtual facebook::react::AttributedString getContentAttributedString(facebook::react::Float fontSizeMultiplier) const = 0;
   public virtual std::shared_ptr<const facebook::react::TextLayoutManager> getContentTextLayoutManager() const = 0;
   public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const = 0;
+  public virtual std::vector<facebook::react::PendingInlineElementMetrics> stampInlineElementMetrics(const facebook::react::LayoutContext& layoutContext, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics) const = 0;
   public virtual ~InlineTextContentAccessor() = default;
 }
 
@@ -4100,6 +4106,7 @@ class facebook::react::LayoutableShadowNode : public facebook::react::ShadowNode
   public virtual const facebook::react::LayoutableShadowNode* asLayoutable() const override;
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const;
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const;
+  public virtual facebook::react::LayoutMetrics getMountedLayoutMetrics() const;
   public virtual facebook::react::Point getContentOriginOffset(bool includeTransform) const;
   public virtual facebook::react::Size measure(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const;
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const;
@@ -5837,6 +5844,11 @@ struct facebook::react::ModalHostViewSupportedOrientationsMaskWrapped {
 struct facebook::react::NodeNameProvider {
   public virtual std::string domNodeName() const = 0;
   public virtual ~NodeNameProvider() = default;
+}
+
+struct facebook::react::PendingInlineElementMetrics {
+  public const facebook::react::ShadowNodeFamily* family;
+  public facebook::react::LayoutMetrics metrics;
 }
 
 struct facebook::react::Point {

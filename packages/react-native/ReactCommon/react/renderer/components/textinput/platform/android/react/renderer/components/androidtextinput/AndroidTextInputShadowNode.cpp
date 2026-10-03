@@ -228,6 +228,14 @@ AttributedString AndroidTextInputShadowNode::getPlaceholderAttributedString(
         {.string = props.placeholder,
          .textAttributes = attributedString.getBaseTextAttributes(),
          .parentShadowView = {}});
+  } else {
+    // An empty field still stands one line tall. The measurer sizes a run
+    // with no characters as nothing, so a zero-width space carries the font's
+    // line height here without adding any width.
+    attributedString.appendFragment(
+        {.string = reinterpret_cast<const char*>(u8"​"),
+         .textAttributes = attributedString.getBaseTextAttributes(),
+         .parentShadowView = {}});
   }
   return attributedString;
 }

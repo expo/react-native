@@ -17,6 +17,7 @@
 #include <react/renderer/core/ConcreteState.h>
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
+#include <react/renderer/core/LayoutableShadowNode.h>
 
 #include <functional>
 #include <limits>
@@ -363,6 +364,34 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     const auto boxFrame = box->getLayoutMetrics().frame;
     const auto* accessor =
         dynamic_cast<const InlineTextContentAccessor*>(box.get());
+
+    // Give the run's inline elements (`<b>`, `<span>`, …) a real box to report
+    // from `getBoundingClientRect()`. It has no effect on layout or paint, and
+    // goes through the accessor so this module keeps no text dependency.
+    // The frames stamped on sealed inline elements, which are applied to
+    // clones and so are not visible on the nodes of `box`
+    std::unordered_map<const ShadowNodeFamily*, Rect> pendingFrames;
+    if (accessor != nullptr) {
+      // Elements whose nodes are unsealed are stamped in place; the rest come
+      // back here to be applied by cloning the path to them, as the
+      // attachment loop below repositions an atomic inline. Without this, an
+      // inline element keeps reporting its previous line's rect after a resize
+      // rewraps the run around it.
+      for (const auto& stamp : accessor->stampInlineElementMetrics(
+               layoutContext, boxFrame.origin, this->getLayoutMetrics())) {
+        pendingFrames.emplace(stamp.family, stamp.metrics.frame);
+        owning = current->cloneTree(
+            *stamp.family, [&](const ShadowNode& oldShadowNode) {
+              auto cloned = oldShadowNode.clone({});
+              dynamic_cast<LayoutableShadowNode&>(*cloned).setLayoutMetrics(
+                  stamp.metrics);
+              return cloned;
+            });
+        if (owning != nullptr) {
+          current = static_cast<AbstractViewShadowNode*>(owning.get());
+        }
+      }
+    }
 
     const auto placements = accessor != nullptr
         ? accessor->getInlineAttachmentPlacements(layoutContext)

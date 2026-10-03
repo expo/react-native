@@ -135,6 +135,11 @@ class InlineContentShadowNode final
   std::vector<InlineAttachmentPlacement> getInlineAttachmentPlacements(
       const LayoutContext &layoutContext) const override;
 
+  std::vector<PendingInlineElementMetrics> stampInlineElementMetrics(
+      const LayoutContext &layoutContext,
+      Point contentOrigin,
+      const LayoutMetrics &ownerLayoutMetrics) const override;
+
  private:
   // The baseline of the run's first or last line.
   Float lineBaseline(const LayoutContext &layoutContext, Size size, bool lastLine) const;
