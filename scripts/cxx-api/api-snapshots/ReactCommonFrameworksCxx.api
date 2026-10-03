@@ -71,6 +71,7 @@ struct facebook::hermes::ISetEventLoopControl : public facebook::jsi::ICast {
 }
 
 
+const char facebook::react::ElementBoxComponentName[];
 const char facebook::react::ImageComponentName[];
 const char facebook::react::ImageManagerKey[];
 const char facebook::react::InlineContentComponentName[];
@@ -147,6 +148,8 @@ using facebook::react::ComponentRegistryFactory = std::function<facebook::react:
 using facebook::react::CornerInsets = facebook::react::RectangleCorners<Float>;
 using facebook::react::DispatchEvent = std::function<void(const facebook::react::ShadowNode& targetNode, const std::string& type, facebook::react::ReactEventPriority priority, const facebook::react::EventPayload& payload)>;
 using facebook::react::EdgeInsets = facebook::react::RectangleEdges<Float>;
+using facebook::react::ElementBoxComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementBoxShadowNode>;
+using facebook::react::ElementBoxShadowNode = facebook::react::AbstractViewShadowNode<facebook::react::ElementBoxComponentName, facebook::react::ElementBoxProps>;
 using facebook::react::EndResult = NativeAnimatedTurboModuleEndResult<bool, std::optional<double>, std::optional<double>>;
 using facebook::react::EventEmitterListener = facebook::react::EventListenerT<facebook::react::Tag, const std::string&, const facebook::react::EventPayload&>;
 using facebook::react::EventEmitterListenerContainer = facebook::react::EventListenerContainerT<facebook::react::Tag, const std::string&, const facebook::react::EventPayload&>;
@@ -213,6 +216,7 @@ using facebook::react::UiTask = std::function<void()>;
 using facebook::react::ValueFactory = std::function<facebook::jsi::Value(facebook::jsi::Runtime& runtime)>;
 using facebook::react::ViewEventEmitter = facebook::react::HostPlatformViewEventEmitter;
 using facebook::react::ViewProps = facebook::react::HostPlatformViewProps;
+using facebook::react::ViewShadowNode = facebook::react::AbstractViewShadowNode<facebook::react::ViewComponentName, facebook::react::ViewProps>;
 using facebook::react::ViewShadowNodeProps = facebook::react::ViewProps;
 using facebook::react::parsePlatformColorFn = facebook::react::SharedColor(*)(const facebook::react::ContextContainer&, int32_t, const facebook::react::RawValue&);
 template <typename GeneratorT, typename ValueT>
@@ -1082,6 +1086,16 @@ class facebook::react::ContextContainer {
 }
 
 class facebook::react::DebugStringConvertible {
+}
+
+class facebook::react::ElementBoxProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementBoxProps() = default;
+  public ElementBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public int start;
+  public std::string listStylePositionValue;
+  public std::string listStyleTypeValue;
+  public std::string nodeName;
+  public virtual std::string domNodeName() const override;
 }
 
 class facebook::react::Error {
@@ -2905,14 +2919,6 @@ class facebook::react::ViewComponentDescriptor : public facebook::react::Concret
   public virtual facebook::react::State::Shared createInitialState(const facebook::react::Props::Shared&, const facebook::react::ShadowNodeFamily::Shared&) const override;
 }
 
-class facebook::react::ViewShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ViewComponentName, facebook::react::ViewProps, facebook::react::ViewEventEmitter, facebook::react::ViewState> {
-  public ViewShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
-  public ViewShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
-  public virtual Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
-  public virtual Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
-  public virtual void layout(facebook::react::LayoutContext layoutContext) override;
-}
-
 class facebook::react::ViewState {
   public ViewState() = default;
   public ViewState(std::vector<facebook::react::ViewState::TextRun> textRuns, std::weak_ptr<const TextLayoutManager> layoutManager);
@@ -3890,7 +3896,7 @@ enum facebook::react::TextAlignment : uint8_t {
   Start,
 }
 
-enum facebook::react::TextAlignmentVertical {
+enum facebook::react::TextAlignmentVertical : uint8_t {
   Auto,
   Bottom,
   Center,
@@ -5117,6 +5123,15 @@ class facebook::react::ConcreteViewShadowNode : public facebook::react::Concrete
   public virtual bool canBeTouchTarget() const override;
   public virtual bool canChildrenBeTouchTarget() const override;
   public virtual facebook::react::Transform getTransform() const override;
+}
+
+template <const char* concreteComponentName, typename ViewPropsT = facebook::react::ViewProps>
+class facebook::react::AbstractViewShadowNode : public facebook::react::ConcreteViewShadowNode<concreteComponentName, ViewPropsT, facebook::react::ViewEventEmitter, facebook::react::ViewState> {
+  public AbstractViewShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public AbstractViewShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public virtual Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
+  public virtual Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
+  public virtual void layout(facebook::react::LayoutContext layoutContext) override;
 }
 
 template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT, typename StateDataT>

@@ -30,13 +30,15 @@
 #import <react/renderer/components/view/ViewComponentDescriptor.h>
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
+#import <react/renderer/components/view/ViewShadowNode.h>
 #import <react/renderer/components/view/ViewState.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
 
-#ifdef RCT_DYNAMIC_FRAMEWORKS
+// The generic-box component view (RCTElementBoxComponentView) self-registers
+// with the factory, so both headers are needed unconditionally.
 #import <React/RCTComponentViewFactory.h>
-#endif
+#import <react/renderer/components/view/ElementBoxShadowNode.h>
 
 // Per-run text painting lives in its own file: it is a self-contained concept,
 // and this class is the one every React Native change touches.
@@ -2188,6 +2190,37 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 }
 
 #endif
+
+@end
+
+/*
+ * The box-backed flavor of a DOM element (`element-box`): a plain view, since
+ * everything that distinguishes it lives in layout, not in drawing. The
+ * renderer swaps an element onto this component when its display generates a
+ * box — see ElementBoxShadowNode.h.
+ */
+@interface RCTElementBoxComponentView : RCTViewComponentView
+@end
+
+@implementation RCTElementBoxComponentView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (self = [super initWithFrame:frame]) {
+    _props = ElementBoxShadowNode::defaultSharedProps();
+  }
+  return self;
+}
+
++ (facebook::react::ComponentDescriptorProvider)componentDescriptorProvider
+{
+  return facebook::react::concreteComponentDescriptorProvider<facebook::react::ElementBoxComponentDescriptor>();
+}
+
++ (void)load
+{
+  [[RCTComponentViewFactory currentComponentViewFactory] registerComponentViewClass:self];
+}
 
 @end
 

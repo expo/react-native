@@ -9,6 +9,8 @@
 #include <yoga/algorithm/Baseline.h>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/view/BaseViewProps.h>
+#include <react/renderer/components/view/ElementBoxShadowNode.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
@@ -20,29 +22,68 @@
 #include <limits>
 #include <optional>
 #include <unordered_map>
+#include <vector>
+
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
 
 namespace facebook::react {
 
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char ViewComponentName[] = "View";
 
-ViewShadowNode::ViewShadowNode(
-    const ShadowNodeFragment& fragment,
-    const ShadowNodeFamily::Shared& family,
-    ShadowNodeTraits traits)
-    : ConcreteViewShadowNode(fragment, family, traits) {
-  initialize();
-}
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// Not JSX-addressable: the renderer swaps an element onto this component when
+// its display generates a box (ElementBoxShadowNode.h).
+const char ElementBoxComponentName[] = "element-box";
 
-ViewShadowNode::ViewShadowNode(
-    const ShadowNode& sourceShadowNode,
-    const ShadowNodeFragment& fragment)
-    : ConcreteViewShadowNode(sourceShadowNode, fragment) {
-  initialize();
-}
+#if defined(__APPLE__) && defined(__aarch64__) && defined(NDEBUG)
+// Memory budgets. Every View in every shadow-tree generation is one of these,
+// so growth here is a per-node cost on whole trees. If a deliberate change
+// trips one, re-measure the sizes and move the bound consciously.
+//
+// Checked in optimised builds (`NDEBUG`) only. A debug build's standard-library
+// types are larger (hardened containers, no empty-base collapsing), so a
+// ceiling measured in Release says nothing about a Debug build, and holding a
+// Debug build to it would stop it from compiling.
+//
+// The ceilings are per-OS: iOS types are larger (SharedColor carries a platform
+// color object there, not a packed int32), so the same structs measure bigger
+// under an iphoneos or iphonesimulator target.
+// The ViewShadowNode ceilings include 72 bytes for upstream owner-size keys
+// in Yoga's nine cached measurements.
+#if TARGET_OS_OSX || (!TARGET_OS_IPHONE && !TARGET_OS_TV && !TARGET_OS_WATCH)
+static_assert(
+    sizeof(ViewShadowNode) <= 1088,
+    "ViewShadowNode grew past its memory budget");
+static_assert(
+    sizeof(TextAttributes) <= 208,
+    "TextAttributes grew; it is copied and compared throughout the text stack");
+static_assert(
+    sizeof(ViewProps) <= 1376,
+    "ViewProps grew; every mounted View holds one, plus one per pending "
+    "generation during commits");
+#else
+static_assert(
+    sizeof(ViewShadowNode) <= 1144,
+    "ViewShadowNode grew past its memory budget");
+static_assert(
+    // Sized for the numeric `baselineShift`, which symbolic list markers use
+    // to centre their ink and which `vertical-align: <length>` will also use
+    sizeof(TextAttributes) <= 328,
+    "TextAttributes grew; it is copied and compared throughout the text stack");
+static_assert(
+    sizeof(ViewProps) <= 1888,
+    "ViewProps grew; every mounted View holds one, plus one per pending "
+    "generation during commits");
+#endif
+#endif
 
-void ViewShadowNode::initialize() noexcept {
-  auto& viewProps = static_cast<const ViewProps&>(*props_);
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    initialize() noexcept {
+  auto& viewProps = static_cast<const ViewProps&>(*this->props_);
 
   auto hasBorder = [&]() {
     for (auto edge : yoga::ordinals<yoga::Edge>()) {
@@ -81,7 +122,7 @@ void ViewShadowNode::initialize() noexcept {
       HostPlatformViewTraitsInitializer::formsView(viewProps) ||
       viewProps.outlineWidth > 0;
 
-  if (!getAnonymousTextContentChildren().empty()) {
+  if (!this->getAnonymousTextContentChildren().empty()) {
     // Text-bearing Views paint their runs and must not be flattened away.
     formsView = true;
     formsStackingContext = true;
@@ -98,25 +139,27 @@ void ViewShadowNode::initialize() noexcept {
   }
 
   if (formsView) {
-    traits_.set(ShadowNodeTraits::Trait::FormsView);
+    this->traits_.set(ShadowNodeTraits::Trait::FormsView);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::FormsView);
+    this->traits_.unset(ShadowNodeTraits::Trait::FormsView);
   }
 
   if (formsStackingContext) {
-    traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
+    this->traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::FormsStackingContext);
+    this->traits_.unset(ShadowNodeTraits::Trait::FormsStackingContext);
   }
 
   if (!viewProps.collapsableChildren) {
-    traits_.set(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+    this->traits_.set(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+    this->traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   }
 }
 
-void ViewShadowNode::layout(LayoutContext layoutContext) {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::layout(
+    LayoutContext layoutContext) {
   YogaLayoutableShadowNode::layout(layoutContext);
   layoutInlineAttachments(layoutContext);
   updateTextRunStateIfNeeded(layoutContext.fontSizeMultiplier);
@@ -235,12 +278,14 @@ std::vector<int> paintPositionsOfRuns(
 
 } // namespace
 
-void ViewShadowNode::updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
   if (!ReactNativeFeatureFlags::enableStringChildren()) {
     return;
   }
 
-  const auto& anonymousBoxes = getAnonymousTextContentChildren();
+  const auto& anonymousBoxes = this->getAnonymousTextContentChildren();
 
   // Zero-cost hot path: a View that has never carried anonymous text runs
   // keeps a null `ViewState`, exactly like a plain View. State is allocated
@@ -248,16 +293,16 @@ void ViewShadowNode::updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
   // allocated it persists — possibly emptied when text is removed — for the
   // node's life.
   if (anonymousBoxes.empty() &&
-      (state_ == nullptr || getStateData().textRuns.empty())) {
+      (this->state_ == nullptr || this->getStateData().textRuns.empty())) {
     return;
   }
 
-  ensureUnsealed();
+  this->ensureUnsealed();
 
   auto textRuns = std::vector<ViewState::TextRun>{};
   auto layoutManager = std::weak_ptr<const TextLayoutManager>{};
   const auto paintPositions =
-      paintPositionsOfRuns(*this, getAnonymousTextContentChildIndices());
+      paintPositionsOfRuns(*this, this->getAnonymousTextContentChildIndices());
   textRuns.reserve(anonymousBoxes.size());
   for (size_t i = 0; i < anonymousBoxes.size(); i++) {
     const auto& box = anonymousBoxes[i];
@@ -279,24 +324,27 @@ void ViewShadowNode::updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
             .documentOrder = documentOrder});
   }
 
-  if (state_ == nullptr) {
+  if (this->state_ == nullptr) {
     // First runs on a previously-stateless View: allocate the state on demand,
     // seeded from the family like `createInitialState` would (there is no
     // prior state to chain from).
-    state_ = std::make_shared<const facebook::react::ConcreteState<ViewState>>(
+    this->state_ = std::make_shared<const ConcreteState<ViewState>>(
         std::make_shared<const ViewState>(
             ViewState(std::move(textRuns), std::move(layoutManager))),
-        getFamilyShared());
-  } else if (getStateData().textRuns != textRuns) {
-    setStateData(ViewState(std::move(textRuns), std::move(layoutManager)));
+        this->getFamilyShared());
+  } else if (this->getStateData().textRuns != textRuns) {
+    this->setStateData(
+        ViewState(std::move(textRuns), std::move(layoutManager)));
   }
 }
 
-void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    layoutInlineAttachments(LayoutContext layoutContext) {
   if (!ReactNativeFeatureFlags::enableStringChildren()) {
     return;
   }
-  const auto& boxes = getAnonymousTextContentChildren();
+  const auto& boxes = this->getAnonymousTextContentChildren();
   if (boxes.empty()) {
     return;
   }
@@ -306,7 +354,7 @@ void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
   // its line layout; the attachment is placed at the box origin plus that
   // frame, so it sits in its line and follows wrapping, like an atomic inline
   // in a web line box.
-  ViewShadowNode* current = this;
+  auto* current = this;
   auto owning = std::shared_ptr<ShadowNode>{};
 
   for (const auto& box : boxes) {
@@ -396,13 +444,13 @@ void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
             return cloned;
           });
       if (owning != nullptr) {
-        current = static_cast<ViewShadowNode*>(owning.get());
+        current = static_cast<AbstractViewShadowNode*>(owning.get());
       }
     }
   }
 
   if (current != this) {
-    children_ = current->children_;
+    this->children_ = current->children_;
   }
 }
 
@@ -545,9 +593,12 @@ std::shared_ptr<ShadowNodeT> layOutCloneAt(
 
 } // namespace
 
-Float ViewShadowNode::baseline(const LayoutContext& layoutContext, Size size)
-    const {
-  const auto& viewProps = static_cast<const ViewProps&>(*getProps().get());
+template <const char* concreteComponentName, typename ViewPropsT>
+Float AbstractViewShadowNode<concreteComponentName, ViewPropsT>::baseline(
+    const LayoutContext& layoutContext,
+    Size size) const {
+  const auto& viewProps =
+      static_cast<const ViewPropsT&>(*this->getProps().get());
   if (viewProps.displayBlock ||
       viewProps.yogaStyle.display() != yoga::Display::Flex) {
     return YogaLayoutableShadowNode::baseline(layoutContext, size);
@@ -561,9 +612,9 @@ Float ViewShadowNode::baseline(const LayoutContext& layoutContext, Size size)
       &layOutCloneAt(*this, layoutContext, size)->yogaNode_);
 }
 
-Float ViewShadowNode::lastLineBaseline(
-    const LayoutContext& layoutContext,
-    Size size) const {
+template <const char* concreteComponentName, typename ViewPropsT>
+Float AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    lastLineBaseline(const LayoutContext& layoutContext, Size size) const {
   // CSS2 §10.8.1: an inline-block's baseline is the baseline of its last
   // in-flow line box; with no line boxes it is the bottom margin edge. The
   // line boxes live in the anonymous IFC box this View wraps its inline
@@ -581,7 +632,8 @@ Float ViewShadowNode::lastLineBaseline(
   // mounted as its border box — margin sits outside the frame the attachment
   // uses, so adding it would offset the baseline from the box actually drawn.
   // The no-line-boxes fallback below returns the same edge for the same reason.
-  const auto& viewProps = static_cast<const ViewProps&>(*getProps().get());
+  const auto& viewProps =
+      static_cast<const ViewPropsT&>(*this->getProps().get());
   if (viewProps.getClipsContentToBounds()) {
     return size.height;
   }
@@ -590,5 +642,11 @@ Float ViewShadowNode::lastLineBaseline(
       *layOutCloneAt(*this, layoutContext, size), layoutContext);
   return baseline.has_value() ? *baseline : size.height;
 }
+
+// Instantiate the two concrete specializations explicitly so their member
+// definitions above are emitted here and linkable from other translation
+// units: `<View>` and the intrinsic `<div>`.
+template class AbstractViewShadowNode<ViewComponentName, ViewProps>;
+template class AbstractViewShadowNode<ElementBoxComponentName, ElementBoxProps>;
 
 } // namespace facebook::react
