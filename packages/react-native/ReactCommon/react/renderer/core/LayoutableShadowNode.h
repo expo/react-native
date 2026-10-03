@@ -159,6 +159,15 @@ class LayoutableShadowNode : public ShadowNode {
    */
   virtual Float baseline(const LayoutContext &layoutContext, Size size) const;
 
+  /*
+   * The distance from the top of the node to the baseline of its LAST line,
+   * which is what an inline-block containing the node aligns by (CSS2 §10.8.1).
+   * `baseline()` is the first line's, which is what flex and grid baseline
+   * alignment use. They differ only for nodes with several lines of text, so
+   * the default is `baseline()`.
+   */
+  virtual Float lastLineBaseline(const LayoutContext &layoutContext, Size size) const;
+
   virtual bool canBeTouchTarget() const;
   virtual bool canChildrenBeTouchTarget() const;
 

@@ -30,6 +30,13 @@ class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, Vi
 
   void layout(LayoutContext layoutContext) override;
 
+  /*
+   * Where this box's baseline sits, measured from its top — what an atomic
+   * inline exposes to the line it sits in (CSS2 §10.8.1): the baseline of its
+   * last in-flow line box, or its bottom edge when it has none.
+   */
+  Float baseline(const LayoutContext &layoutContext, Size size) const override;
+
  private:
   void initialize() noexcept;
 
