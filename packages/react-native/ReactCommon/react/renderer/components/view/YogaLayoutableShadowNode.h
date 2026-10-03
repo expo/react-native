@@ -108,6 +108,54 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
         : nullptr;
   }
 
+#pragma mark - Anonymous inline formatting contexts
+
+  /*
+   * Factory producing an anonymous box (a Yoga-layoutable node establishing an
+   * inline formatting context) for a run of inline-level children of a block
+   * container. Implemented and installed by the text module (components/text)
+   * to keep the dependency direction intact; returns nullptr for runs that
+   * generate no box.
+   */
+  using AnonymousTextContentFactory = std::shared_ptr<YogaLayoutableShadowNode> (*)(
+      std::vector<std::shared_ptr<const ShadowNode>> runChildren,
+      const ShadowNode &containerShadowNode);
+
+  static void setAnonymousTextContentFactory(AnonymousTextContentFactory factory);
+  static AnonymousTextContentFactory getAnonymousTextContentFactory();
+
+  /*
+   * The layoutable children, which includes anonymous boxes — those live here
+   * and never in `children_`.
+   */
+  const ListOfShared &getYogaLayoutableChildren() const
+  {
+    return yogaLayoutableChildren_;
+  }
+
+  const std::vector<std::shared_ptr<YogaLayoutableShadowNode>> &getAnonymousTextContentChildren() const
+  {
+    return anonymousTextContentChildren_;
+  }
+
+  /*
+   * True when `child` is an atomic inline-level box: an otherwise block-level
+   * element (`View`, `Image`, …) opted inline via `display:'inline'` that is
+   * sized or has non-inline content. In a block container it joins the
+   * current run as an inline attachment; in a flex container it is blockified
+   * into a regular flex item (css-display-3 §2.7). Absolutely-positioned
+   * elements are never inline (CSS2 §9.7 blockification).
+   */
+  static bool isAtomicInline(const ShadowNode &child);
+
+  /*
+   * True when `child` is a span-like inline box: `display:'inline'` with auto
+   * size and all-inline contents — its contents flow into the surrounding
+   * inline formatting context, exactly like a <span>. Mutually exclusive with
+   * `isAtomicInline`.
+   */
+  static bool isInlineFlowContent(const ShadowNode &child);
+
  protected:
   /**
    * Subclasses which provide MeasurableYogaNode may override to signal that a
@@ -224,6 +272,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void ensureYogaChildrenAlignment() const;
   void ensureYogaChildrenLookFine() const;
 
+  /*
+   * Appends an anonymous box produced by the factory for the given run into
+   * the Yoga children (it is never part of `children_` — box tree only).
+   */
+  void appendAnonymousTextContentChild(std::vector<std::shared_ptr<const ShadowNode>> &&runChildren);
+
 #pragma mark - Private member variables
   /*
    * List of children which derive from YogaLayoutableShadowNode
@@ -231,9 +285,26 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   ListOfShared yogaLayoutableChildren_;
 
   /*
+   * Anonymous boxes generated for runs of inline-level children. Owned
+   * exclusively by this shadow-node revision (rebuilt on clone); present in
+   * `yogaLayoutableChildren_` and the Yoga node, never in `children_`.
+   */
+  std::vector<std::shared_ptr<YogaLayoutableShadowNode>> anonymousTextContentChildren_;
+
+  /*
    * Whether the full Yoga subtree of this Node has been configured.
    */
   bool yogaTreeHasBeenConfigured_{false};
+
+  /*
+   * Inline-level children joined since the Yoga children were last built, and
+   * the rebuild is DEFERRED to the next configure pass. Fabric appends
+   * children one at a time, and rebuilding the anonymous-box structure on
+   * every inline append is O(children) each — O(n²) for a container with n
+   * inline children. One deferred rebuild is O(n).
+   * (Declared next to the bool above so the two share one alignment slot.)
+   */
+  bool yogaChildrenNeedInlineRebuild_{false};
 };
 
 } // namespace facebook::react

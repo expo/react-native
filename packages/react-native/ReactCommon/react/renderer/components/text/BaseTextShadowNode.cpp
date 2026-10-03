@@ -12,6 +12,7 @@
 #include <react/renderer/components/text/TextEffectShadowNode.h>
 #include <react/renderer/components/text/TextProps.h>
 #include <react/renderer/components/text/TextShadowNode.h>
+#include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <react/renderer/mounting/ShadowView.h>
 
 namespace facebook::react {
@@ -86,6 +87,16 @@ void BaseTextShadowNode::buildAttributedString(
           *textEffectNode,
           outAttributedString,
           outAttachments);
+      continue;
+    }
+
+    // Span-like `display:'inline'` box (un-sized, all-inline contents): its
+    // children join the surrounding run, exactly like a <span>
+    // (css-display; Safari-pinned). Sized or non-inline-content inline boxes
+    // fall through to the atomic attachment branch below.
+    if (YogaLayoutableShadowNode::isInlineFlowContent(*childNode)) {
+      buildAttributedString(
+          baseTextAttributes, *childNode, outAttributedString, outAttachments);
       continue;
     }
 
