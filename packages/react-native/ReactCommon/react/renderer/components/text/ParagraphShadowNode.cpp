@@ -130,6 +130,9 @@ Content ParagraphShadowNode::getContentWithMeasuredAttachments(
     fragmentLayoutMetrics.frame.size = size;
     fragments[attachment.fragmentIndex].parentShadowView.layoutMetrics =
         fragmentLayoutMetrics;
+    // A View inside a `<Text>` has always sat on the line by its bottom edge,
+    // and keeps doing so: that is the baseline of a box with no line boxes.
+    fragments[attachment.fragmentIndex].atomicInlineBaseline = size.height;
   }
 
   return content;

@@ -233,6 +233,11 @@ const APIs: Array<RNTesterModuleInfo> = (
       module: require('../examples/Dimensions/DimensionsExample'),
     },
     {
+      key: 'InlineFlowExample',
+      category: 'UI',
+      module: require('../examples/InlineFlow/InlineFlowExample').default,
+    },
+    {
       key: 'DisplayContentsExample',
       category: 'UI',
       module: require('../examples/DisplayContents/DisplayContentsExample')
