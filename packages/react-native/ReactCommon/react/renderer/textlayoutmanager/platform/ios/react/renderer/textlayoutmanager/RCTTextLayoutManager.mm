@@ -643,14 +643,26 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
                   CGRect glyphRect = [layoutManager boundingRectForGlyphRange:range inTextContainer:textContainer];
 
                   CGRect frame;
-                  UIFont *font = [[textStorage attributedSubstringFromRange:range] attribute:NSFontAttributeName
-                                                                                     atIndex:0
-                                                                              effectiveRange:nil];
-                  frame = {
-                      .origin =
-                          {glyphRect.origin.x,
-                           glyphRect.origin.y + glyphRect.size.height - attachmentSize.height + font.descender},
-                      .size = attachmentSize};
+                  // The line's baseline, asked of TextKit rather than derived
+                  // as `lineBottom + font.descender`: the line's descent is
+                  // whatever the tallest thing on it needs, and an attachment
+                  // hanging below the baseline makes it larger than the text's
+                  // descender. `locationForGlyphAtIndex:` returns the glyph's
+                  // position within its line fragment, and its y is the
+                  // baseline, with the attachment's own `bounds.origin.y`
+                  // already applied, so that offset is backed out here.
+                  CGRect lineFragment = [layoutManager lineFragmentRectForGlyphAtIndex:range.location
+                                                                        effectiveRange:NULL];
+                  CGPoint glyphLocation = [layoutManager locationForGlyphAtIndex:range.location];
+                  CGFloat lineBaseline = lineFragment.origin.y + glyphLocation.y + attachment.bounds.origin.y;
+                  // The box's OWN baseline goes on the line's (CSS2 §10.8.1).
+                  // `bounds.origin.y` is how far the box hangs below the
+                  // baseline (negative), so the box's baseline sits
+                  // `height + origin.y` down from its top. The bounds position
+                  // the glyph TextKit lays out; this positions the view that
+                  // draws the box, and the two have to agree.
+                  CGFloat baselineFromTop = attachmentSize.height + attachment.bounds.origin.y;
+                  frame = {.origin = {glyphRect.origin.x, lineBaseline - baselineFromTop}, .size = attachmentSize};
 
                   auto rect = facebook::react::Rect{
                       .origin = facebook::react::Point{.x = frame.origin.x, .y = frame.origin.y},
