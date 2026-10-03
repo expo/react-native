@@ -28,7 +28,7 @@ BaseParagraphProps::BaseParagraphProps(
           rawProps,
           nullptr,
           /*parseInheritedTextProps*/ false),
-      BaseTextProps(context, sourceProps, rawProps),
+      BaseTextProps(context, sourceProps, rawProps, /*parseInlineBox*/ false),
       paragraphAttributes(convertRawProp(
           context,
           rawProps,

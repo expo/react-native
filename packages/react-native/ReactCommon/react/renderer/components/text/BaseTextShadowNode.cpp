@@ -79,12 +79,41 @@ void BaseTextShadowNode::buildAttributedString(
       }
       localTextAttributes.apply(
           textShadowNode->getConcreteProps().textAttributes);
+
+      // An inline element's inline-axis margin/border/padding add to the
+      // advance at its leading and trailing edges (CSS2 §10.6.1). Record it on
+      // the element's first and last fragments so a wrapped box pays for its
+      // edges once rather than per line; block-axis values deliberately do not
+      // touch the line height. Resolved HERE rather than at parse:
+      // `marginInlineStart` and friends name the inline axis, and which
+      // physical edge that is depends on the direction Yoga resolved for this
+      // subtree — which the cascade carries by the time a string is being
+      // built, and the parser could not know.
+      const auto inlineBox =
+          textShadowNode->getConcreteProps().inlineBox.resolve(
+              localTextAttributes.layoutDirection);
+      const auto firstIndex = outAttributedString.getFragments().size();
+
       buildAttributedString(
           localTextAttributes,
           *textShadowNode,
           outAttributedString,
           outAttachments,
           initialTextAttributes);
+
+      if (!inlineBox.isEmpty()) {
+        auto& fragments = outAttributedString.getFragments();
+        if (firstIndex < fragments.size()) {
+          // Every fragment of the element carries the decorations so painting
+          // can find the box's full extent; only the outer edges reserve
+          // advance.
+          for (auto i = firstIndex; i < fragments.size(); i++) {
+            fragments[i].inlineBox = inlineBox;
+          }
+          fragments[firstIndex].isInlineBoxStart = true;
+          fragments.back().isInlineBoxEnd = true;
+        }
+      }
       continue;
     }
 

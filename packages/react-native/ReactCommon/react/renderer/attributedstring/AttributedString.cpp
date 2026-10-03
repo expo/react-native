@@ -42,10 +42,23 @@ bool Fragment::operator==(const Fragment& rhs) const {
 }
 
 bool Fragment::isContentEqual(const Fragment& rhs) const {
-  // `atomicInlineBaseline` changes where the box sits on the line, so it is
-  // part of the content for measure-cache purposes.
-  return std::tie(string, textAttributes, atomicInlineBaseline) ==
-      std::tie(rhs.string, rhs.textAttributes, rhs.atomicInlineBaseline);
+  // Inline box spacing changes the measured advance and `atomicInlineBaseline`
+  // changes where the box sits on the line, so both are part of the content
+  // for measure-cache purposes.
+  return std::tie(
+             string,
+             textAttributes,
+             inlineBox,
+             isInlineBoxStart,
+             isInlineBoxEnd,
+             atomicInlineBaseline) ==
+      std::tie(
+             rhs.string,
+             rhs.textAttributes,
+             rhs.inlineBox,
+             rhs.isInlineBoxStart,
+             rhs.isInlineBoxEnd,
+             rhs.atomicInlineBaseline);
 }
 
 #pragma mark - AttributedString
@@ -75,6 +88,25 @@ const Fragments& AttributedString::getFragments() const {
 
 Fragments& AttributedString::getFragments() {
   return fragments_;
+}
+
+RectangleEdges<Float> AttributedString::inlineBoxBlockAxisOverflow() const {
+  auto overflow = RectangleEdges<Float>{};
+  for (const auto& fragment : fragments_) {
+    const auto& box = fragment.inlineBox;
+    if (box.isEmpty()) {
+      continue;
+    }
+    // The outline is stroked centred on a path `outlineOffset` outside the
+    // border box, so it reaches `outlineOffset + outlineWidth` beyond it.
+    auto outline =
+        box.outlineWidth > 0 ? box.outlineOffset + box.outlineWidth : 0;
+    overflow.top =
+        std::max(overflow.top, box.padding.top + box.borderWidth.top + outline);
+    overflow.bottom = std::max(
+        overflow.bottom, box.padding.bottom + box.borderWidth.bottom + outline);
+  }
+  return overflow;
 }
 
 std::string AttributedString::getString() const {
