@@ -55,10 +55,11 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // `enableStringChildren` ONCE and forwards the answer; this one takes it as
   // a plain bool.
   //
-  // The flag is read once rather than at each of the eleven probe sites: the
-  // getter is a cross-module call that ends in a sequentially-consistent
+  // Reading the flag at each probe site instead would cost more than the probes
+  // do. The getter is a cross-module call ending in a sequentially-consistent
   // atomic load, it does not inline, and it is paid whether the flag is on or
-  // off.
+  // off — so asking it once per View is cheaper than asking it once per
+  // property.
   struct ResolvedFlag {};
 
   BaseViewProps(
@@ -165,6 +166,13 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   Float shadowRadius{3};
 
   Cursor cursor{};
+
+  /*
+   * `user-select` (css-ui-4 §5.1) — whether the anonymous text runs this View
+   * paints can be selected and copied. Per-element, like `<Text selectable>`:
+   * it does not cascade to descendant Views (see the note on the enum).
+   */
+  UserSelect userSelect{UserSelect::Auto};
 
   // Box shadow
   std::vector<BoxShadow> boxShadow{};
