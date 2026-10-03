@@ -59,6 +59,22 @@ class YogaStylableProps : public Props {
   yoga::Style::Length paddingBlockStart;
   yoga::Style::Length paddingBlockEnd;
 
+  /*
+   * True when style `display` is 'block'. Yoga lays the View out as a CSS
+   * block container (`yoga::Display::Block`) when `enableYogaDisplayBlock` is
+   * on; the parsed `yogaStyle.display()` stays Flex so that turning the flag
+   * off leaves the View exactly as it was.
+   */
+  bool displayBlock{false};
+
+  /*
+   * True when style `display` is 'flow-root': a block container that
+   * establishes a block formatting context of its own (css-display-3 §2), so
+   * its children's margins do not collapse through its edges. `displayBlock`
+   * is true too.
+   */
+  bool displayFlowRoot{false};
+
 #if RN_DEBUG_STRING_CONVERTIBLE
 
 #pragma mark - DebugStringConvertible (Partial)
