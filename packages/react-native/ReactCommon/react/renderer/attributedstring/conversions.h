@@ -647,28 +647,6 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
   LOG(ERROR) << "Could not parse WhiteSpace: " << (std::string)value;
 }
 
-inline std::string toString(const WhiteSpace &whiteSpace)
-{
-  switch (whiteSpace) {
-    case WhiteSpace::Normal:
-      return "normal";
-    case WhiteSpace::Pre:
-      return "pre";
-    case WhiteSpace::NoWrap:
-      return "nowrap";
-    case WhiteSpace::PreWrap:
-      return "pre-wrap";
-    case WhiteSpace::PreLine:
-      return "pre-line";
-    case WhiteSpace::BreakSpaces:
-      return "break-spaces";
-  }
-
-  LOG(ERROR) << "Unsupported WhiteSpace value";
-  // sane default for prod
-  return "normal";
-}
-
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, TextTransform &result)
 {
   react_native_expect(value.hasType<std::string>());
@@ -887,6 +865,28 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   LOG(ERROR) << "Unsupported LineBreakStrategy type";
   // sane default for prod
   result = LineBreakStrategy::None;
+}
+
+inline std::string toString(const WhiteSpace &whiteSpace)
+{
+  switch (whiteSpace) {
+    case WhiteSpace::Normal:
+      return "normal";
+    case WhiteSpace::Pre:
+      return "pre";
+    case WhiteSpace::NoWrap:
+      return "nowrap";
+    case WhiteSpace::PreWrap:
+      return "pre-wrap";
+    case WhiteSpace::PreLine:
+      return "pre-line";
+    case WhiteSpace::BreakSpaces:
+      return "break-spaces";
+  }
+
+  LOG(ERROR) << "Unsupported WhiteSpace value";
+  // sane default for prod
+  return "normal";
 }
 
 inline std::string toString(const LineBreakStrategy &lineBreakStrategy)
@@ -1353,6 +1353,9 @@ constexpr static MapBuffer::Key TA_KEY_ALIGNMENT_VERTICAL = 28;
 constexpr static MapBuffer::Key TA_KEY_MAX_FONT_SIZE_MULTIPLIER = 29;
 constexpr static MapBuffer::Key TA_KEY_TEXT_EFFECTS = 30;
 constexpr static MapBuffer::Key TA_KEY_FONT_VARIATION_SETTINGS = 31;
+// `white-space`, so Android's text layout sees the same value the C++
+// collapsing pass used.
+constexpr static MapBuffer::Key TA_KEY_WHITE_SPACE = 32;
 
 // Keys within each text effect entry MapBuffer
 constexpr static MapBuffer::Key TE_KEY_NAME = 0;
@@ -1530,6 +1533,9 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   }
   if (textAttributes.lineBreakStrategy.has_value()) {
     builder.putString(TA_KEY_LINE_BREAK_STRATEGY, toString(*textAttributes.lineBreakStrategy));
+  }
+  if (textAttributes.whiteSpace.has_value()) {
+    builder.putString(TA_KEY_WHITE_SPACE, toString(*textAttributes.whiteSpace));
   }
   if (textAttributes.textTransform.has_value()) {
     builder.putString(TA_KEY_TEXT_TRANSFORM, toString(*textAttributes.textTransform));

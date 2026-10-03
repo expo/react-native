@@ -343,13 +343,14 @@ TextMeasurement measureDeterministically(
 
   auto maximumWidth = layoutConstraints.maximumSize.width;
 
-  // Mandatory breaks (`\n`) split the run into segments that each wrap on
-  // their own, so counting characters across the whole string would
-  // undercount the lines.
+  // Mandatory breaks (`\n`, from `<br>` or from preserved `white-space: pre`
+  // text) split the run into segments that each wrap on their own, so
+  // counting characters across the whole string would undercount the lines.
   //
   // Their WIDTHS are tracked too, because a run's intrinsic width is its
   // longest line and not the sum of them. That only becomes visible when the
-  // width is unbounded, and it otherwise reads as a correct-looking total.
+  // width is unbounded, as it is for `pre`, which does not wrap, and it
+  // otherwise reads as a correct-looking total.
   std::vector<size_t> segmentLengths;
   std::vector<Float> segmentWidths;
   size_t segmentLength = 0;

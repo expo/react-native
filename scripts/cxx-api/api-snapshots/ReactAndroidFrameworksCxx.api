@@ -475,6 +475,7 @@ static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_SH
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_SHADOW_OFFSET_DY;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_SHADOW_RADIUS;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_TEXT_TRANSFORM;
+static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_WHITE_SPACE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TE_KEY_NAME;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TE_KEY_PROPS;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TX_STATE_KEY_ATTRIBUTED_STRING;
