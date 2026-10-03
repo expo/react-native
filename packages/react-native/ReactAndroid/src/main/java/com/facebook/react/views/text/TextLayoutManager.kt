@@ -146,6 +146,8 @@ internal object TextLayoutManager {
   private const val DEFAULT_ADJUST_FONT_SIZE_TO_FIT = false
 
   private const val TEXT_WIDTH_MODE_LONGEST_LINE = "longest-line"
+  /** Far below a pixel and far above the error of a dp→px round trip; see [wholePixelsCovering] */
+  private const val WIDTH_ROUND_TRIP_TOLERANCE_PX = 0.01f
 
   private val tagToSpannableCache = ConcurrentHashMap<Int, Spannable>()
 
@@ -590,21 +592,24 @@ internal object TextLayoutManager {
       previousWasAttachment = isAttachment
       val reactTag =
           if (fragment.contains(FR_KEY_REACT_TAG)) fragment.getInt(FR_KEY_REACT_TAG) else View.NO_ID
-      if (fragment.contains(FR_KEY_IS_ATTACHMENT) && fragment.getBoolean(FR_KEY_IS_ATTACHMENT)) {
-        val height = inlineViewSizeToPixels(fragment.getDouble(FR_KEY_HEIGHT))
+      if (isAttachment) {
+        val width = PixelUtil.toPixelFromDIP(fragment.getDouble(FR_KEY_WIDTH))
+        val height = PixelUtil.toPixelFromDIP(fragment.getDouble(FR_KEY_HEIGHT))
+        val baselineFromTop =
+            if (fragment.contains(FR_KEY_ATOMIC_INLINE_BASELINE))
+                PixelUtil.toPixelFromDIP(fragment.getDouble(FR_KEY_ATOMIC_INLINE_BASELINE))
+            else height
         ops.add(
             SetSpanOperation(
                 sb.length - 1,
                 sb.length,
                 TextInlineViewPlaceholderSpan(
                     reactTag,
-                    inlineViewSizeToPixels(fragment.getDouble(FR_KEY_WIDTH)),
-                    height,
-                    if (fragment.contains(FR_KEY_ATOMIC_INLINE_BASELINE))
-                        inlineViewSizeToPixels(fragment.getDouble(FR_KEY_ATOMIC_INLINE_BASELINE))
-                    else height,
+                    wholePixelsCovering(width),
+                    wholePixelsCovering(height),
+                    wholePixelsCovering(baselineFromTop),
                 ),
-            ),
+            )
         )
       } else if (end >= start) {
         val roleIsLink =
@@ -888,9 +893,9 @@ internal object TextLayoutManager {
         spannable.setSpan(
             TextInlineViewPlaceholderSpan(
                 fragment.reactTag,
-                inlineViewSizeToPixels(fragment.width),
-                inlineViewSizeToPixels(fragment.height),
-                inlineViewSizeToPixels(fragment.atomicInlineBaseline),
+                wholePixelsCovering(PixelUtil.toPixelFromDIP(fragment.width)),
+                wholePixelsCovering(PixelUtil.toPixelFromDIP(fragment.height)),
+                wholePixelsCovering(PixelUtil.toPixelFromDIP(fragment.atomicInlineBaseline)),
             ),
             start,
             end,
@@ -1180,6 +1185,20 @@ internal object TextLayoutManager {
       return sb
     }
   }
+
+  /**
+   * The whole pixels an atomic inline's placeholder occupies: never fewer than the box was laid
+   * out at, forgiving the float error of the dp -> px conversion.
+   *
+   * The placeholder's size is not only painted around; it comes back as the attachment's frame and
+   * its run's width, and the box is laid out again at that size. Truncating would lose a pixel
+   * whenever the conversion lands a hair under a whole one — a 202px box is 76.952377dp, which
+   * converts back as 201.99998px — so the box would be laid out again a pixel narrower than its
+   * content and its text would wrap.
+   */
+  @VisibleForTesting
+  internal fun wholePixelsCovering(px: Float): Int =
+      ceil(px - WIDTH_ROUND_TRIP_TOLERANCE_PX).toInt()
 
   @VisibleForTesting
   internal fun createLayout(
