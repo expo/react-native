@@ -105,6 +105,41 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   bool computeHasInheritedTextProps() const;
 
   /*
+   * CSS `all` (css-cascade-4 §3.2), scoped to the inherited text set — the
+   * only cascading properties this renderer has. The keyword is parsed into
+   * `CascadeReset`; what it MEANS depends on the element's user-agent origin, so
+   * resolution happens in `isInheritanceBoundary(bool)` below, against the
+   * UACascadeBoundary trait. Styles merged into props on the JS side are
+   * author-level from this cascade's point of view; the UA origin here is
+   * exclusively the trait-declared one.
+   */
+  enum class CascadeReset : uint8_t { None, Initial, Revert, Unset };
+  CascadeReset cascadeReset{CascadeReset::None};
+
+  /*
+   * Resolves the authored `all` against the element's user-agent declaration
+   * (`uaDeclaresBoundary` = the node's UACascadeBoundary trait), per
+   * css-cascade-4 §7.3: `initial` is a boundary and `unset` is not, from any
+   * origin's default; `revert` rolls the author declaration back to the UA
+   * origin; and an absent declaration leaves the UA origin in force. Root
+   * <Text> (UA `all: 'initial'`) therefore stays a boundary under `revert`
+   * and loses it under `unset`; every other element inherits under both.
+   */
+  bool isInheritanceBoundary(bool uaDeclaresBoundary) const override
+  {
+    switch (cascadeReset) {
+      case CascadeReset::Initial:
+        return true;
+      case CascadeReset::Unset:
+        return false;
+      case CascadeReset::Revert:
+      case CascadeReset::None:
+        return uaDeclaresBoundary;
+    }
+    return uaDeclaresBoundary;
+  }
+
+  /*
    * Folds the set inheritable text props above into `textAttributes`: the
    * single place that decides what a View passes on to the text that
    * inherits from it.

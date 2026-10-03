@@ -130,10 +130,27 @@ class ParagraphShadowNode
   mutable std::optional<Content> content_{};
 
   /*
+   * The effective inherited cascade, stamped by the configure pass — a
+   * paragraph is a TextCascadeConsumer and reads it at measure time (see
+   * getContent), so it stores its own copy; ordinary Views do not.
+   */
+  std::shared_ptr<const TextAttributes> inheritedCascade_{};
+
+ public:
+  void setInheritedCascade(const std::shared_ptr<const TextAttributes> &cascade) override
+  {
+    inheritedCascade_ = cascade;
+  }
+
+  const std::shared_ptr<const TextAttributes> *getStoredCascade() const override
+  {
+    return &inheritedCascade_;
+  }
+
+ private:
+  /*
    * Intermediate layout results generated during measurement, that may be
-   * reused by the platform. Layouts are immutable once measured, so a clone
-   * shares them instead of copying them (on Android, copying one creates a
-   * JNI global reference).
+   * reused by the platform. Layouts are immutable once measured and shared by clones.
    */
   mutable std::vector<std::shared_ptr<const MeasuredPreparedTextLayout>> measuredLayouts_;
 };

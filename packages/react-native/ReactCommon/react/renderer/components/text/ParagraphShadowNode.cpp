@@ -43,6 +43,18 @@ const char ParagraphComponentName[] = "Paragraph";
   traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
   traits.set(ShadowNodeTraits::Trait::MeasurableYogaNode);
   traits.set(ShadowNodeTraits::Trait::BaselineYogaNode);
+  // A paragraph folds the inherited text cascade beneath its own TextProps
+  // (see getContent), so it is a cascade consumer.
+  traits.set(ShadowNodeTraits::Trait::TextCascadeConsumer);
+  // Root <Text>'s user-agent stylesheet declares `all: 'initial'`: old
+  // React Native's "<Text> is a style boundary" contract, kept for
+  // pixel-identical compatibility and expressed as the cascade's native UA
+  // origin. Authored `all` resolves against this declaration in
+  // BaseViewProps::isInheritanceBoundary — `unset`/`inherit` switch the
+  // boundary off, `revert` rolls back to it. Nested <Text> renders as
+  // virtual text (no ParagraphShadowNode), so the declaration reaches
+  // exactly the roots.
+  traits.set(ShadowNodeTraits::Trait::UACascadeBoundary);
 
 #ifdef ANDROID
   // Unsetting `FormsStackingContext` trait is essential on Android where we
@@ -78,6 +90,10 @@ ParagraphShadowNode::ParagraphShadowNode(
     const ShadowNode& sourceShadowNode,
     const ShadowNodeFragment& fragment)
     : ConcreteViewShadowNode(sourceShadowNode, fragment) {
+  // A clone the configure pass later skips (unchanged cascade) must keep the
+  // cascade its source was stamped with.
+  inheritedCascade_ = static_cast<const ParagraphShadowNode&>(sourceShadowNode)
+                          .inheritedCascade_;
   initialize();
   // A revision with neither new props nor new children (e.g. one Yoga cloned
   // because a sibling changed) renders the same content, so keep the
@@ -153,6 +169,15 @@ const Content& ParagraphShadowNode::getContent(
   ensureUnsealed();
 
   auto textAttributes = TextAttributes::defaultTextAttributes();
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      !getTraits().check(ShadowNodeTraits::Trait::InheritanceBoundary) &&
+      inheritedCascade_ != nullptr) {
+    // Web-like inheritance from ancestor elements. <Text> ships with
+    // `all: 'initial'` in its user-agent style — the compatibility boundary,
+    // in the web's own vocabulary — so a default <Text> never reaches here;
+    // an authored `all: 'unset'` opts in.
+    textAttributes = *inheritedCascade_;
+  }
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
   textAttributes.apply(getConcreteProps().textAttributes);
   textAttributes.layoutDirection = resolvedLayoutDirection();

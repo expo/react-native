@@ -45,6 +45,19 @@ class Props : public virtual Sealable, public virtual DebugStringConvertible {
 
   Props(const Props &other) = default;
   Props &operator=(const Props &other) = delete;
+  /*
+   * Whether this element stops inherited text properties from reaching its
+   * descendants (css-cascade-4 `all`). Only view-like props can declare one,
+   * so the default answer is whatever the element's user-agent origin says.
+   *
+   * Virtual rather than a `dynamic_cast` at the call site: this is asked once
+   * per node construction. A virtual call is a load and an indirect branch; a
+   * `dynamic_cast` walks the type hierarchy.
+   */
+  virtual bool isInheritanceBoundary(bool uaDeclaresBoundary) const
+  {
+    return uaDeclaresBoundary;
+  }
 
   /**
    * Set a prop value via iteration (see enableIterator above).

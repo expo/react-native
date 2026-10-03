@@ -31,6 +31,16 @@ class BaseTextProps {
 
   TextAttributes textAttributes{};
 
+  /*
+   * CSS `all: initial` (css-cascade-4 §3.2) authored on an INLINE element: the
+   * run fold restarts this element's text attributes from the defaults
+   * instead of the surrounding run's, making it an inheritance boundary
+   * inside an inline formatting context — the same semantics the element-tree
+   * boundary gives block-level elements and root <Text>. (`unset` and absence
+   * mean "inherit normally" and stay false.)
+   */
+  bool cascadeResetAll{false};
+
 #pragma mark - DebugStringConvertible (partially)
 
 #if RN_DEBUG_STRING_CONVERTIBLE
