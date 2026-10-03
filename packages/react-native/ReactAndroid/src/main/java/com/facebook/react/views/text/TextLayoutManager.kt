@@ -266,6 +266,39 @@ internal object TextLayoutManager {
     return null
   }
 
+  /**
+   * Whether the run's `white-space` forbids wrapping (css-text-3 §3) — `pre` or `nowrap`. A line
+   * then ends only where the source has a segment break, and a long one overflows its container
+   * rather than folding onto the next line.
+   *
+   * The other four values all wrap; they differ from each other in which whitespace survives, which
+   * is settled before this point, in the collapsing pass.
+   *
+   * Read off the first fragment because `white-space` is inherited and applies to the whole run,
+   * the same way [getTextAlignmentAttr] reads `textAlign`.
+   */
+  @JvmStatic
+  public fun forbidsWrapping(attributedString: MapBuffer): Boolean {
+    if (!attributedString.contains(AS_KEY_FRAGMENTS)) {
+      return false
+    }
+
+    val fragments = attributedString.getMapBuffer(AS_KEY_FRAGMENTS)
+    if (fragments.count == 0) {
+      return false
+    }
+
+    val textAttributes = fragments.getMapBuffer(0).getMapBuffer(FR_KEY_TEXT_ATTRIBUTES)
+    if (!textAttributes.contains(TextAttributeProps.TA_KEY_WHITE_SPACE)) {
+      return false
+    }
+    return when (textAttributes.getString(TextAttributeProps.TA_KEY_WHITE_SPACE)) {
+      "pre",
+      "nowrap" -> true
+      else -> false
+    }
+  }
+
   private fun getTextJustificationMode(alignmentAttr: String?): Int {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
       return -1
@@ -1659,12 +1692,19 @@ internal object TextLayoutManager {
       )
     }
 
+    // A `white-space` that forbids wrapping lays out as though there were no available width at
+    // all, so the only line breaks are the ones in the text. The container still clips it — the
+    // text overflows rather than reflowing, which is what the web does. Only elements carry the
+    // attribute; a `<Text>` never does (see ____TextStyle_InternalBase.whiteSpace).
+    val layoutWidthMode =
+        if (forbidsWrapping(attributedString)) YogaMeasureMode.UNDEFINED else widthYogaMeasureMode
+
     var layout =
         createLayout(
             text,
             boring,
             width,
-            widthYogaMeasureMode,
+            layoutWidthMode,
             includeFontPadding,
             textBreakStrategy,
             hyphenationFrequency,

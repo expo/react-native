@@ -78,8 +78,6 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<bool> allowFontScaling{};
   std::optional<DynamicTypeRamp> dynamicTypeRamp{};
   std::optional<TextTransform> textTransform{};
-  // `white-space`. Inherited, so a container passes it to every run inside it.
-  std::optional<WhiteSpace> whiteSpace{};
 
   // Paragraph Styles
   Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
@@ -87,6 +85,8 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<WritingDirection> baseWritingDirection{};
   std::optional<LineBreakStrategy> lineBreakStrategy{};
   std::optional<LineBreakMode> lineBreakMode{};
+  // `white-space`. Inherited, so a container passes it to every run inside it.
+  std::optional<WhiteSpace> whiteSpace{};
 
   // Decoration
   SharedColor textDecorationColor{};
