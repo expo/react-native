@@ -9,6 +9,7 @@
 
 #include <react/cxxstableapi/UmbrellaGuard.h>
 
+#include <react/renderer/components/view/ListStyle.h>
 #include <memory>
 #include <vector>
 
@@ -109,6 +110,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
         : nullptr;
   }
 
+  /*
+   * The content box this container's own inline run occupies, which is the
+   * whole content box unless `align-content` moved it (css-align-3 §5.3).
+   */
+  Rect alignedInlineRunFrame(YogaLayoutableShadowNode &box, const LayoutContext &layoutContext) const;
+
 #pragma mark - Anonymous inline formatting contexts
 
   /*
@@ -133,6 +140,28 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   {
     return yogaLayoutableChildren_;
   }
+
+  /*
+   * List marker generation (css-lists-3 §3) runs on the list CONTAINER: a
+   * marker's text depends on the item's position among its siblings, and a
+   * shadow node has no parent pointer, so an item cannot count itself.
+   */
+  void prepareListContext(int depth);
+  void assignListMarkerIfNeeded(YogaLayoutableShadowNode &child);
+
+  struct ListContext {
+    bool isList{false};
+    ListStyleType type{ListStyleType::Disc};
+    ListStylePosition position{ListStylePosition::Outside};
+    int nextOrdinal{1};
+  };
+  ListContext listContext_{};
+
+  /*
+   * How many lists enclose this node, so an unordered list can take the UA
+   * bullet for its depth (disc, circle, square) without walking ancestors.
+   */
+  int listDepth_{0};
 
   const std::vector<std::shared_ptr<YogaLayoutableShadowNode>> &getAnonymousTextContentChildren() const
   {
@@ -205,6 +234,9 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Yoga node as `mutable` here to avoid `static_cast`ing the pointer to this
    * all the time.
    */
+  // Held by value, so an element that generates no box — a span-like inline
+  // that folds into its parent's inline formatting context — still carries a
+  // Yoga node it never uses.
   mutable yoga::Node yogaNode_;
 
  private:
@@ -351,13 +383,14 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * 2. PROPAGATION happens only inside `configureYogaTree`, parent to child,
    *    and only into children that can observe it: a cascade CONSUMER
    *    (TextCascadeConsumer — paragraphs, anonymous IFC boxes) or a subtree
-   *    containing one (SubtreeHasCascadeDependents).
+   *    containing one (SubtreeHasCascadeDependents). An InheritanceBoundary
+   *    child (`all: 'initial'`) is handed the default instead.
    * 3. The DEPENDENTS BIT is maintained bottom-up: recomputed from scratch by
    *    `updateYogaChildren`, OR-ed in by `appendChild` (Fabric appends
    *    children one at a time, after construction — and adoption by ancestors
    *    happens before any deferred rebuild, so inline content sets the bit
-   *    the moment it joins).
-   * 4. DIRTYING: an inheritable-prop change marks the
+   *    the moment it joins). Boundary children contribute nothing.
+   * 4. DIRTYING: an inheritable-prop change (or boundary toggle) marks the
    *    node dirty ONLY if the bit says something below depends on it. No
    *    dependents, no walk.
    * 5. A cascade change that cannot alter size (e.g. color) still must reach

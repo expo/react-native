@@ -6,41 +6,82 @@
  */
 
 #include "ViewShadowNode.h"
+
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/view/BaseViewProps.h>
+#include <react/renderer/components/view/ElementBoxShadowNode.h>
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/ConcreteState.h>
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
+#include <react/renderer/core/LayoutableShadowNode.h>
 
 #include <functional>
 #include <limits>
 #include <optional>
 #include <unordered_map>
+#include <vector>
+
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
 
 namespace facebook::react {
 
 // NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
 const char ViewComponentName[] = "View";
 
-ViewShadowNode::ViewShadowNode(
-    const ShadowNodeFragment& fragment,
-    const ShadowNodeFamily::Shared& family,
-    ShadowNodeTraits traits)
-    : ConcreteViewShadowNode(fragment, family, traits) {
-  initialize();
-}
+// NOLINTNEXTLINE(facebook-hte-CArray,modernize-avoid-c-arrays)
+// Not JSX-addressable: the renderer swaps an element onto this component when
+// its display generates a box (ElementBoxShadowNode.h).
+const char ElementBoxComponentName[] = "element-box";
 
-ViewShadowNode::ViewShadowNode(
-    const ShadowNode& sourceShadowNode,
-    const ShadowNodeFragment& fragment)
-    : ConcreteViewShadowNode(sourceShadowNode, fragment) {
-  initialize();
-}
+#if defined(__APPLE__) && defined(__aarch64__) && defined(NDEBUG)
+// Memory budgets. Every View in every shadow-tree generation is one of these,
+// so growth here is a per-node cost on whole trees. If a deliberate change
+// trips one, re-measure the sizes and move the bound consciously.
+//
+// Checked in optimised builds (`NDEBUG`) only. A debug build's standard-library
+// types are larger (hardened containers, no empty-base collapsing), so a
+// ceiling measured in Release says nothing about a Debug build, and holding a
+// Debug build to it would stop it from compiling.
+//
+// The ceilings are per-OS: iOS types are larger (SharedColor carries a platform
+// color object there, not a packed int32), so the same structs measure bigger
+// under an iphoneos or iphonesimulator target.
+#if TARGET_OS_OSX || (!TARGET_OS_IPHONE && !TARGET_OS_TV && !TARGET_OS_WATCH)
+static_assert(
+    sizeof(ViewShadowNode) <= 1016,
+    "ViewShadowNode grew past its memory budget");
+static_assert(
+    sizeof(TextAttributes) <= 200,
+    "TextAttributes grew; it is copied and compared throughout the text stack");
+static_assert(
+    sizeof(ViewProps) <= 1376,
+    "ViewProps grew; every mounted View holds one, plus one per pending "
+    "generation during commits");
+#else
+static_assert(
+    sizeof(ViewShadowNode) <= 1072,
+    "ViewShadowNode grew past its memory budget");
+static_assert(
+    // Sized for the numeric `baselineShift`, which symbolic list markers use
+    // to centre their ink and which `vertical-align: <length>` will also use
+    sizeof(TextAttributes) <= 320,
+    "TextAttributes grew; it is copied and compared throughout the text stack");
+static_assert(
+    sizeof(ViewProps) <= 1888,
+    "ViewProps grew; every mounted View holds one, plus one per pending "
+    "generation during commits");
+#endif
+#endif
 
-void ViewShadowNode::initialize() noexcept {
-  auto& viewProps = static_cast<const ViewProps&>(*props_);
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    initialize() noexcept {
+  auto& viewProps = static_cast<const ViewProps&>(*this->props_);
 
   auto hasBorder = [&]() {
     for (auto edge : yoga::ordinals<yoga::Edge>()) {
@@ -78,7 +119,7 @@ void ViewShadowNode::initialize() noexcept {
       HostPlatformViewTraitsInitializer::formsView(viewProps) ||
       viewProps.outlineWidth > 0;
 
-  if (!getAnonymousTextContentChildren().empty()) {
+  if (!this->getAnonymousTextContentChildren().empty()) {
     // Text-bearing Views paint their runs and must not be flattened away.
     formsView = true;
     formsStackingContext = true;
@@ -95,25 +136,27 @@ void ViewShadowNode::initialize() noexcept {
   }
 
   if (formsView) {
-    traits_.set(ShadowNodeTraits::Trait::FormsView);
+    this->traits_.set(ShadowNodeTraits::Trait::FormsView);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::FormsView);
+    this->traits_.unset(ShadowNodeTraits::Trait::FormsView);
   }
 
   if (formsStackingContext) {
-    traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
+    this->traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::FormsStackingContext);
+    this->traits_.unset(ShadowNodeTraits::Trait::FormsStackingContext);
   }
 
   if (!viewProps.collapsableChildren) {
-    traits_.set(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+    this->traits_.set(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   } else {
-    traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+    this->traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   }
 }
 
-void ViewShadowNode::layout(LayoutContext layoutContext) {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::layout(
+    LayoutContext layoutContext) {
   YogaLayoutableShadowNode::layout(layoutContext);
   layoutInlineAttachments(layoutContext);
   updateTextRunStateIfNeeded(layoutContext.fontSizeMultiplier);
@@ -220,12 +263,14 @@ std::vector<int> paintPositionsOfRuns(
 
 } // namespace
 
-void ViewShadowNode::updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
   if (!ReactNativeFeatureFlags::enableStringChildren()) {
     return;
   }
 
-  const auto& anonymousBoxes = getAnonymousTextContentChildren();
+  const auto& anonymousBoxes = this->getAnonymousTextContentChildren();
 
   // Zero-cost hot path: a View that has never carried anonymous text runs
   // keeps a null `ViewState`, exactly like a plain View. State is allocated
@@ -233,16 +278,16 @@ void ViewShadowNode::updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
   // allocated it persists — possibly emptied when text is removed — for the
   // node's life.
   if (anonymousBoxes.empty() &&
-      (state_ == nullptr || getStateData().textRuns.empty())) {
+      (this->state_ == nullptr || this->getStateData().textRuns.empty())) {
     return;
   }
 
-  ensureUnsealed();
+  this->ensureUnsealed();
 
   auto textRuns = std::vector<ViewState::TextRun>{};
   auto layoutManager = std::weak_ptr<const TextLayoutManager>{};
   const auto paintPositions =
-      paintPositionsOfRuns(*this, getAnonymousTextContentChildIndices());
+      paintPositionsOfRuns(*this, this->getAnonymousTextContentChildIndices());
   textRuns.reserve(anonymousBoxes.size());
   for (size_t i = 0; i < anonymousBoxes.size(); i++) {
     const auto& box = anonymousBoxes[i];
@@ -256,42 +301,86 @@ void ViewShadowNode::updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
     }
     const auto documentOrder =
         i < paintPositions.size() ? paintPositions[i] : static_cast<int>(i);
+    const auto contentFrame = box->getLayoutMetrics().frame;
+
+    // An `outside` list marker (css-lists-3 §3.2) is painted rather than
+    // measured with the content, which is what lets the content hang past it:
+    // it sits in the gutter the list's `padding-inline-start` reserves, to the
+    // inline-start side of the content box, so every line of the item —
+    // continuations included — starts at the content edge.
+    const auto marker = contentAccessor->getOutsideMarker();
+    if (marker.present) {
+      // Sit the marker's glyphs on the content's first-line baseline rather
+      // than top-aligning the boxes, because a symbolic marker renders at
+      // kSymbolicMarkerFontScale and its own line is far shorter than the
+      // content's. The content baseline (`LayoutableShadowNode::baseline`)
+      // already includes the box's baseline-shift reserve, so nothing else is
+      // added. When either baseline is unavailable, top-align the boxes.
+      Float markerY = contentFrame.origin.y;
+      if (marker.baseline > 0) {
+        if (const auto* layoutable =
+                dynamic_cast<const LayoutableShadowNode*>(box.get())) {
+          const auto contentBaseline =
+              layoutable->baseline(LayoutContext{}, contentFrame.size);
+          if (contentBaseline > 0) {
+            markerY = contentFrame.origin.y + contentBaseline - marker.baseline;
+          }
+        }
+      }
+      textRuns.push_back(
+          ViewState::TextRun{
+              .attributedString = marker.attributedString,
+              .frame =
+                  Rect{
+                      .origin =
+                          {contentFrame.origin.x - marker.size.width, markerY},
+                      .size = marker.size},
+              .documentOrder = documentOrder});
+    }
+
     textRuns.push_back(
         ViewState::TextRun{
             .attributedString =
                 contentAccessor->getContentAttributedString(fontSizeMultiplier),
-            .frame = box->getLayoutMetrics().frame,
-            .documentOrder = documentOrder});
+            .frame = contentFrame,
+            .documentOrder = documentOrder,
+            // Leave the marker run above untagged: it shares this box's tag
+            // and would collide in the run-layout handoff registry
+            .runTag = box->getTag()});
   }
 
-  if (state_ == nullptr) {
+  if (this->state_ == nullptr) {
     // First runs on a previously-stateless View: allocate the state on demand,
     // seeded from the family like `createInitialState` would (there is no
     // prior state to chain from).
-    state_ = std::make_shared<const facebook::react::ConcreteState<ViewState>>(
+    this->state_ = std::make_shared<const ConcreteState<ViewState>>(
         std::make_shared<const ViewState>(
             ViewState(std::move(textRuns), std::move(layoutManager))),
-        getFamilyShared());
-  } else if (getStateData().textRuns != textRuns) {
-    setStateData(ViewState(std::move(textRuns), std::move(layoutManager)));
+        this->getFamilyShared());
+  } else if (this->getStateData().textRuns != textRuns) {
+    this->setStateData(
+        ViewState(std::move(textRuns), std::move(layoutManager)));
   }
 }
 
-void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
+template <const char* concreteComponentName, typename ViewPropsT>
+void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
+    layoutInlineAttachments(LayoutContext layoutContext) {
   if (!ReactNativeFeatureFlags::enableStringChildren()) {
     return;
   }
-  const auto& boxes = getAnonymousTextContentChildren();
+  const auto& boxes = this->getAnonymousTextContentChildren();
   if (boxes.empty()) {
     return;
   }
 
-  // Clone-and-position each atomic inline (non-Yoga children) at its exact
+  // Clone-and-position each atomic inline (non-Yoga children), such as the
+  // replaced `<img>` and atomic `display: 'inline'` elements, at its exact
   // offset within the run. The run box resolves each attachment's frame via
   // its line layout; the attachment is placed at the box origin plus that
   // frame, so it sits in its line and follows wrapping, like an atomic inline
   // in a web line box.
-  ViewShadowNode* current = this;
+  auto* current = this;
   auto owning = std::shared_ptr<ShadowNode>{};
 
   for (const auto& box : boxes) {
@@ -299,25 +388,71 @@ void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
     const auto* accessor =
         dynamic_cast<const InlineTextContentAccessor*>(box.get());
 
+    // Give the run's inline elements (`<b>`, `<span>`, …) a real box to report
+    // from `getBoundingClientRect()`. It has no effect on layout or paint, and
+    // goes through the accessor so this module keeps no text dependency.
+    // The frames stamped on sealed inline elements, which are applied to
+    // clones and so are not visible on the nodes of `box`
+    std::unordered_map<const ShadowNodeFamily*, Rect> pendingFrames;
+    if (accessor != nullptr) {
+      // Elements whose nodes are unsealed are stamped in place; the rest come
+      // back here to be applied by cloning the path to them, as the
+      // attachment loop below repositions an atomic inline. Without this, an
+      // inline element keeps reporting its previous line's rect after a resize
+      // rewraps the run around it.
+      for (const auto& stamp : accessor->stampInlineElementMetrics(
+               layoutContext, boxFrame.origin, this->getLayoutMetrics())) {
+        pendingFrames.emplace(stamp.family, stamp.metrics.frame);
+        owning = current->cloneTree(
+            *stamp.family, [&](const ShadowNode& oldShadowNode) {
+              auto cloned = oldShadowNode.clone({});
+              dynamic_cast<LayoutableShadowNode&>(*cloned).setLayoutMetrics(
+                  stamp.metrics);
+              return cloned;
+            });
+        if (owning != nullptr) {
+          current = static_cast<AbstractViewShadowNode*>(owning.get());
+        }
+      }
+    }
+
     const auto placements = accessor != nullptr
         ? accessor->getInlineAttachmentPlacements(layoutContext)
         : std::vector<InlineAttachmentPlacement>{};
 
     // Attachment candidates are the run's direct children plus descendants
     // reached through span-like inline boxes (whose contents flow into this
-    // run rather than forming their own).
-    std::vector<std::shared_ptr<const ShadowNode>> attachmentCandidates;
-    const std::function<void(const ShadowNode&)> collectCandidates =
-        [&](const ShadowNode& parent) {
+    // run rather than forming their own). A span-like box mounts as a view at
+    // the frame stamped on it, so a candidate inside one is placed relative
+    // to that frame: `parentOrigin` is where the candidate's parent sits in
+    // this View's coordinate space.
+    struct AttachmentCandidate {
+      std::shared_ptr<const ShadowNode> node;
+      Point parentOrigin;
+    };
+    std::vector<AttachmentCandidate> attachmentCandidates;
+    const std::function<void(const ShadowNode&, Point)> collectCandidates =
+        [&](const ShadowNode& parent, Point parentOrigin) {
           for (const auto& child : parent.getChildren()) {
             if (YogaLayoutableShadowNode::isInlineFlowContent(*child)) {
-              collectCandidates(*child);
+              auto frame = static_cast<const LayoutableShadowNode&>(*child)
+                               .getLayoutMetrics()
+                               .frame;
+              if (auto it = pendingFrames.find(&child->getFamily());
+                  it != pendingFrames.end()) {
+                frame = it->second;
+              }
+              collectCandidates(
+                  *child,
+                  Point{
+                      parentOrigin.x + frame.origin.x,
+                      parentOrigin.y + frame.origin.y});
             } else {
-              attachmentCandidates.push_back(child);
+              attachmentCandidates.push_back({child, parentOrigin});
             }
           }
         };
-    collectCandidates(*box);
+    collectCandidates(*box, Point{0, 0});
 
     // One attachment can be looked up per candidate; a linear scan per
     // candidate is O(attachments²) in an attachment-heavy run.
@@ -327,11 +462,10 @@ void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
       placementsByFamily.emplace(placement.family, &placement.frame);
     }
 
-    for (const auto& runChild : attachmentCandidates) {
+    for (const auto& [runChild, parentOrigin] : attachmentCandidates) {
       const auto* layoutable =
           dynamic_cast<const LayoutableShadowNode*>(runChild.get());
-      if (layoutable == nullptr ||
-          !YogaLayoutableShadowNode::isAtomicInline(*runChild)) {
+      if (layoutable == nullptr) {
         continue;
       }
 
@@ -342,6 +476,20 @@ void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
       if (auto it = placementsByFamily.find(&runChild->getFamily());
           it != placementsByFamily.end()) {
         attachmentFrame = it->second;
+      }
+
+      // Treat a reported placement as proof that this candidate is an
+      // attachment, since the line layout measured it into the run. A backing
+      // component need not declare the traits: the expo-image `<img>` carries
+      // neither InlineReplaced nor an inline display, and gating on them would
+      // drop the frame the run reserved for it and mount the picture at the
+      // line's start. The traits decide only for candidates the layout did
+      // not place.
+      if (attachmentFrame == nullptr &&
+          !runChild->getTraits().check(
+              ShadowNodeTraits::Trait::InlineReplaced) &&
+          !YogaLayoutableShadowNode::isAtomicInline(*runChild)) {
+        continue;
       }
 
       auto attachmentSize = attachmentFrame != nullptr &&
@@ -359,7 +507,9 @@ void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
                     std::numeric_limits<Float>::infinity()}});
       }
 
-      auto attachmentOrigin = boxFrame.origin;
+      auto attachmentOrigin = Point{
+          boxFrame.origin.x - parentOrigin.x,
+          boxFrame.origin.y - parentOrigin.y};
       if (attachmentFrame != nullptr) {
         attachmentOrigin.x += attachmentFrame->origin.x;
         attachmentOrigin.y += attachmentFrame->origin.y;
@@ -381,13 +531,13 @@ void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {
             return cloned;
           });
       if (owning != nullptr) {
-        current = static_cast<ViewShadowNode*>(owning.get());
+        current = static_cast<AbstractViewShadowNode*>(owning.get());
       }
     }
   }
 
   if (current != this) {
-    children_ = current->children_;
+    this->children_ = current->children_;
   }
 }
 
@@ -506,8 +656,10 @@ bool subtreeHasLineBox(
 
 } // namespace
 
-Float ViewShadowNode::baseline(const LayoutContext& layoutContext, Size size)
-    const {
+template <const char* concreteComponentName, typename ViewPropsT>
+Float AbstractViewShadowNode<concreteComponentName, ViewPropsT>::baseline(
+    const LayoutContext& layoutContext,
+    Size size) const {
   // CSS2 §10.8.1: an inline-block's baseline is the baseline of its last
   // in-flow line box; with no line boxes it is the bottom margin edge. The
   // line boxes live in the anonymous IFC box this View wraps its inline
@@ -525,7 +677,8 @@ Float ViewShadowNode::baseline(const LayoutContext& layoutContext, Size size)
   // mounted as its border box — margin sits outside the frame the attachment
   // uses, so adding it would offset the baseline from the box actually drawn.
   // The no-line-boxes fallback below returns the same edge for the same reason.
-  const auto& viewProps = static_cast<const ViewProps&>(*getProps().get());
+  const auto& viewProps =
+      static_cast<const ViewPropsT&>(*this->getProps().get());
   if (viewProps.getClipsContentToBounds()) {
     return size.height;
   }
@@ -535,7 +688,7 @@ Float ViewShadowNode::baseline(const LayoutContext& layoutContext, Size size)
   // measure pass, when this node's own children still carry stale metrics —
   // reading them directly returned a baseline of zero, which pushed the box a
   // full descent below the line instead of onto it.
-  auto clonedShadowNode = clone({});
+  auto clonedShadowNode = this->clone({});
   auto& laidOut = static_cast<YogaLayoutableShadowNode&>(*clonedShadowNode);
   auto localLayoutContext = layoutContext;
   localLayoutContext.affectedNodes = nullptr;
@@ -544,10 +697,16 @@ Float ViewShadowNode::baseline(const LayoutContext& layoutContext, Size size)
       LayoutConstraints{
           .minimumSize = size,
           .maximumSize = size,
-          .layoutDirection = getLayoutMetrics().layoutDirection});
+          .layoutDirection = this->getLayoutMetrics().layoutDirection});
 
   auto baseline = lastInFlowLineBoxBaseline(laidOut, layoutContext);
   return baseline.has_value() ? *baseline : size.height;
 }
+
+// Instantiate the two concrete specializations explicitly so their member
+// definitions above are emitted here and linkable from other translation
+// units: `<View>` and the intrinsic `<div>`.
+template class AbstractViewShadowNode<ViewComponentName, ViewProps>;
+template class AbstractViewShadowNode<ElementBoxComponentName, ElementBoxProps>;
 
 } // namespace facebook::react

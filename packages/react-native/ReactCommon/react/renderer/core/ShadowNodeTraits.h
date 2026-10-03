@@ -103,10 +103,21 @@ class ShadowNodeTraits {
 
     // The node is inline-level text content: it participates in a text run rather
     // than becoming its own block/flex item when it is a child of a View's anonymous
-    // inline formatting context. Set by #text nodes. Checking this trait instead of
-    // a component name avoids a components/view → components/text include
-    // dependency.
+    // inline formatting context. Set by #text nodes and every inline text element
+    // (Text and the intrinsics <b>/<i>/<span>/<u>/… and the unknown fallback via
+    // TextShadowNode, plus the inline replaced <img>). Checking this trait — instead
+    // of a hardcoded component-name list — lets any new intrinsic flow inline with no
+    // core change, and avoids a components/view → components/text include dependency.
     InlineText = 1 << 16,
+
+    // The node is an inline *replaced* element (an <img>-like attachment): it flows
+    // inside the current text run and is positioned by the owning View's
+    // attachment-layout pass, and it is NEVER blockified — where an inline text
+    // element becomes its own flex item in a flex container, a replaced element
+    // stays in the run. Stronger than InlineText, and set alongside it. Checking
+    // this trait instead of the component name "img" is what lets a provider back
+    // the element with any component (e.g. expo-image) under any name.
+    InlineReplaced = 1 << 17,
 
     // The node itself consumes the inherited text cascade: a paragraph (which
     // folds it under its own TextProps) or an anonymous IFC box (which
@@ -142,6 +153,18 @@ class ShadowNodeTraits {
     // ParagraphShadowNode is the one declarer — old React Native's "<Text> is
     // a style boundary" contract, expressed in the web's own vocabulary.
     UACascadeBoundary = 1 << 22,
+
+    // This node resolves a length against a font size the cascade decides —
+    // `margin-block: 1em`, `margin-block: 1rem`. It observes the cascade while
+    // holding no text, and the dependents optimisation would otherwise skip it:
+    // nothing below such a node consumes the cascade, so the walk would never
+    // hand it one and its `em` would resolve against the default font size
+    // rather than the inherited one.
+    //
+    // It cannot reuse TextCascadeConsumer, which is overloaded: that trait also
+    // marks where LINE BOXES live, so a text-free <div> carrying it would start
+    // answering `baseline()` from a box that has none.
+    ResolvesRelativeLength = 1 << 23,
   };
 
   /*

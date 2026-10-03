@@ -15,8 +15,11 @@ namespace facebook::react {
 static LayoutMetrics layoutMetricsFromShadowNode(const ShadowNode& shadowNode) {
   auto layoutableShadowNode =
       dynamic_cast<const LayoutableShadowNode*>(&shadowNode);
+  // Deliberately the *mounted* metrics: a node whose box is not a rectangle
+  // keeps real metrics in the shadow tree while mounting an unsized view. See
+  // `LayoutableShadowNode::getMountedLayoutMetrics`.
   return layoutableShadowNode != nullptr
-      ? layoutableShadowNode->getLayoutMetrics()
+      ? layoutableShadowNode->getMountedLayoutMetrics()
       : EmptyLayoutMetrics;
 }
 

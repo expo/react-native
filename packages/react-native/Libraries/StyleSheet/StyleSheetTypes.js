@@ -86,6 +86,13 @@ type ____LayoutStyle_Internal = Readonly<{
    */
   float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end',
 
+  /** Where an inline-level box sits against the line it is on (CSS2 §10.8.1).
+   *  It belongs here rather than with the text properties because it places a
+   *  BOX: an `inline-block` View, or an HTML element backed by one, is aligned
+   *  by it exactly as a `<Text>` is.
+   */
+  verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
+
   /** `clear` places a box below any preceding floats on the given side(s)
    *  (CSS2 §9.5.2). Honored inside `display:'block'` containers only.
    */
@@ -906,6 +913,35 @@ export type ____InheritableTextStyle_Internal = Readonly<{
 
 export type ____ViewStyle_InternalBase = Readonly<{
   backfaceVisibility?: 'visible' | 'hidden',
+  /**
+   * `transition` (css-transitions-1), as the four longhands. When a declared
+   * property's value changes, the renderer animates from the previous value —
+   * off the JavaScript thread, driven by the platform display link, gated
+   * behind `useSharedAnimatedBackend`. Comma-separated lists zip by index, and
+   * shorter lists repeat, exactly as on the web.
+   *
+   * Transitionable so far: `opacity`, `background-color`, `border-color`,
+   * `transform` (and `all`, meaning that set). Other property names are
+   * accepted and ignored: the value still applies, immediately.
+   */
+  transitionProperty?: string,
+  transitionDuration?: string | number,
+  transitionDelay?: string | number,
+  transitionTimingFunction?: string,
+  /**
+   * `animation` (css-animations-1), run by the same renderer engine as
+   * transitions. `animationKeyframes` is a JSON string of pre-resolved stops
+   * (`[{offset, opacity?, backgroundColor?, borderColor?, transform?}, ...]`)
+   * — a CSS-in-JS style layer serializes its `@keyframes` rules into it.
+   * Animatable properties match the transitionable set.
+   */
+  animationKeyframes?: string,
+  animationDuration?: string | number,
+  animationDelay?: string | number,
+  animationTimingFunction?: string,
+  animationIterationCount?: string | number,
+  animationDirection?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse',
+  animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both',
   backgroundColor?: ____ColorValue_Internal,
   borderColor?: ____ColorValue_Internal,
   /**
@@ -1141,7 +1177,6 @@ type ____TextStyle_InternalBase = Readonly<{
   textDecorationStyle?: 'solid' | 'double' | 'dotted' | 'dashed' | 'wavy',
   textDecorationColor?: ____ColorValue_Internal,
   userSelect?: 'auto' | 'text' | 'none' | 'contain' | 'all',
-  verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
   writingDirection?: 'auto' | 'ltr' | 'rtl',
 }>;
 

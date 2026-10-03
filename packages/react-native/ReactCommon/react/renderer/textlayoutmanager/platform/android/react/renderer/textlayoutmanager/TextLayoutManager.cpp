@@ -39,6 +39,100 @@ int countAttachments(const AttributedString& attributedString) {
   return count;
 }
 
+// Per-fragment rects from the Android text layout, so inline elements can
+// report a real box from `getBoundingClientRect()` (text-children-plan.md
+// §3.G). Returns 4 floats per fragment: x, y, width, height. Mirrors
+// `measureText` below — the call goes through FabricUIManager, which supplies
+// the AssetManager.
+/*
+ * The float bands, flattened for the JNI boundary: four floats each, in the
+ * order the Kotlin side reads them back. A plain array rather than a MapBuffer
+ * key because these are per-measurement geometry, not paragraph style, and
+ * because the array is empty for essentially every measurement.
+ *
+ * Still in DIPs on the way across — the Kotlin side converts, because that is
+ * where the pixel-valued line coordinates they get compared against live.
+ */
+jfloatArray toExclusionArrayDip(
+    JNIEnv* env,
+    const std::vector<FloatExclusion>& exclusions) {
+  auto array = env->NewFloatArray(static_cast<jsize>(exclusions.size() * 4));
+  if (exclusions.empty()) {
+    return array;
+  }
+  std::vector<jfloat> flat;
+  flat.reserve(exclusions.size() * 4);
+  for (const auto& exclusion : exclusions) {
+    flat.push_back(exclusion.blockStart);
+    flat.push_back(exclusion.blockEnd);
+    flat.push_back(exclusion.leftInset);
+    flat.push_back(exclusion.rightInset);
+  }
+  env->SetFloatArrayRegion(
+      array, 0, static_cast<jsize>(flat.size()), flat.data());
+  return array;
+}
+
+std::vector<Rect> measureFragmentRects(
+    const std::shared_ptr<const ContextContainer>& contextContainer,
+    MapBuffer attributedString,
+    MapBuffer paragraphAttributes,
+    float minWidth,
+    float maxWidth,
+    float minHeight,
+    float maxHeight,
+    size_t fragmentCount,
+    jfloatArray floatExclusionsDip) {
+  std::vector<Rect> rects;
+  if (fragmentCount == 0) {
+    return rects;
+  }
+
+  const jni::global_ref<jobject>& fabricUIManager =
+      contextContainer->at<jni::global_ref<jobject>>("FabricUIManager");
+
+  static auto measure =
+      jni::findClassStatic("com/facebook/react/fabric/FabricUIManager")
+          ->getMethod<jni::JArrayFloat::javaobject(
+              JReadableMapBuffer::javaobject,
+              JReadableMapBuffer::javaobject,
+              jfloat,
+              jfloat,
+              jfloat,
+              jfloat,
+              jfloatArray)>("measureFragmentRects");
+
+  auto attributedStringBuffer =
+      JReadableMapBuffer::createWithContents(std::move(attributedString));
+  auto paragraphAttributesBuffer =
+      JReadableMapBuffer::createWithContents(std::move(paragraphAttributes));
+
+  auto result = measure(
+      fabricUIManager,
+      attributedStringBuffer.get(),
+      paragraphAttributesBuffer.get(),
+      minWidth,
+      maxWidth,
+      minHeight,
+      maxHeight,
+      floatExclusionsDip);
+  if (result == nullptr) {
+    return rects;
+  }
+
+  // `measure` already hands back a local_ref to the float[]; read it once.
+  const auto size = static_cast<size_t>(result->size());
+  auto values = result->getRegion(0, static_cast<jsize>(size));
+  rects.reserve(size / 4);
+  for (size_t i = 0; i + 3 < size; i += 4) {
+    rects.push_back(
+        Rect{
+            .origin = {.x = values[i], .y = values[i + 1]},
+            .size = {.width = values[i + 2], .height = values[i + 3]}});
+  }
+  return rects;
+}
+
 Size measureText(
     const std::shared_ptr<const ContextContainer>& contextContainer,
     MapBuffer attributedString,
@@ -47,7 +141,8 @@ Size measureText(
     float maxWidth,
     float minHeight,
     float maxHeight,
-    jfloatArray attachmentPositions) {
+    jfloatArray attachmentPositions,
+    jfloatArray floatExclusionsDip) {
   const jni::global_ref<jobject>& fabricUIManager =
       contextContainer->at<jni::global_ref<jobject>>("FabricUIManager");
 
@@ -60,6 +155,7 @@ Size measureText(
               jfloat,
               jfloat,
               jfloat,
+              jfloatArray,
               jfloatArray)>("measureText");
 
   auto attributedStringBuffer =
@@ -75,7 +171,8 @@ Size measureText(
       maxWidth,
       minHeight,
       maxHeight,
-      attachmentPositions));
+      attachmentPositions,
+      floatExclusionsDip));
 }
 
 TextMeasurement doMeasure(
@@ -97,8 +194,31 @@ TextMeasurement doMeasure(
   // TODO: This is suss, and not at the right layer
   maximumSize.height = std::numeric_limits<Float>::infinity();
 
-  auto attributedStringMap = toMapBuffer(attributedString);
+  // The run tag rides inside the attributed-string buffer: it tells the Java
+  // side to park the layout it builds for this measurement so the mounting
+  // layer can reuse it instead of rebuilding on the UI thread, and it keeps
+  // this buffer byte-identical to the ViewState run serialization for the
+  // mount-side content check (run-layout-reuse-plan.md).
+  auto attributedStringMap =
+      toMapBuffer(attributedString, layoutContext.runTag);
   auto paragraphAttributesMap = toMapBuffer(paragraphAttributes);
+
+  // Inline-element geometry (T14) needs a rect per fragment, which costs a
+  // second layout pass — so it is computed only when the caller says it wants
+  // one. Plain text, the overwhelmingly common case, never pays for it.
+  auto fragmentRects = std::vector<Rect>{};
+  if (layoutContext.needsFragmentRects) {
+    fragmentRects = measureFragmentRects(
+        contextContainer,
+        toMapBuffer(attributedString),
+        toMapBuffer(paragraphAttributes),
+        minimumSize.width,
+        maximumSize.width,
+        minimumSize.height,
+        maximumSize.height,
+        attributedString.getFragments().size(),
+        toExclusionArrayDip(env, layoutConstraints.floatExclusions));
+  }
 
   auto size = measureText(
       contextContainer,
@@ -108,7 +228,8 @@ TextMeasurement doMeasure(
       maximumSize.width,
       minimumSize.height,
       maximumSize.height,
-      attachmentPositions);
+      attachmentPositions,
+      toExclusionArrayDip(env, layoutConstraints.floatExclusions));
 
   jfloat* attachmentDataElements =
       env->GetFloatArrayElements(attachmentPositions, nullptr /*isCopy*/);
@@ -145,7 +266,10 @@ TextMeasurement doMeasure(
       attachmentPositions, attachmentDataElements, JNI_ABORT);
   env->DeleteLocalRef(attachmentPositions);
 
-  return TextMeasurement{.size = size, .attachments = attachments};
+  return TextMeasurement{
+      .size = size,
+      .attachments = attachments,
+      .fragmentRects = std::move(fragmentRects)};
 }
 
 } // namespace
@@ -186,15 +310,22 @@ TextMeasurement TextLayoutManager::measure(
     return measurement;
   };
 
+  // A run-tagged measure must actually reach Java even for repeated content:
+  // its side effect — parking the built layout for the mounting layer — is
+  // the point. A measure-cache hit here would skip the parking and force the
+  // mount to rebuild the layout on the UI thread; redoing the build on this
+  // (background) thread instead is the cheaper side of that trade.
   auto measurement =
       (ReactNativeFeatureFlags::disableTextLayoutManagerCacheAndroid() ||
-       ReactNativeFeatureFlags::enablePreparedTextLayout())
+       ReactNativeFeatureFlags::enablePreparedTextLayout() ||
+       layoutContext.runTag != 0)
       ? measureText()
       : textMeasureCache_.get(
             {.attributedString = attributedString,
              .paragraphAttributes = paragraphAttributes,
              .layoutConstraints = layoutConstraints,
-             .pointScaleFactor = layoutContext.pointScaleFactor},
+             .pointScaleFactor = layoutContext.pointScaleFactor,
+             .needsFragmentRects = layoutContext.needsFragmentRects},
             std::move(measureText));
 
   measurement.size = layoutConstraints.clamp(measurement.size);
@@ -224,7 +355,8 @@ TextMeasurement TextLayoutManager::measureCachedSpannableById(
       maximumSize.width,
       minimumSize.height,
       maximumSize.height,
-      attachmentPositions);
+      attachmentPositions,
+      toExclusionArrayDip(env, layoutConstraints.floatExclusions));
 
   // Clean up allocated ref - it still takes up space in the JNI ref table even
   // though it's 0 length
@@ -317,7 +449,8 @@ TextLayoutManager::PreparedTextLayout TextLayoutManager::prepareLayout(
       {.attributedString = attributedString,
        .paragraphAttributes = paragraphAttributes,
        .layoutConstraints = layoutConstraints,
-       .pointScaleFactor = layoutContext.pointScaleFactor},
+       .pointScaleFactor = layoutContext.pointScaleFactor,
+       .needsFragmentRects = layoutContext.needsFragmentRects},
       [&]() {
         const auto& fabricUIManager =
             contextContainer_->at<jni::global_ref<jobject>>("FabricUIManager");

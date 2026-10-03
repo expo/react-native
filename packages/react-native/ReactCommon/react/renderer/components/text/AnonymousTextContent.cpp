@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <string_view>
 
 #include <react/renderer/components/text/BaseParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/InlineContentShadowNode.h>
@@ -114,6 +115,10 @@ std::shared_ptr<YogaLayoutableShadowNode> createAnonymousTextContent(
               std::move(runChildren)),
       },
       family);
+
+  // The marker is NOT decided here: it depends on the item's position among
+  // its siblings, which only the list container knows. The container assigns
+  // it in `configureYogaTree`, before layout.
 
   return std::static_pointer_cast<YogaLayoutableShadowNode>(shadowNode);
 }

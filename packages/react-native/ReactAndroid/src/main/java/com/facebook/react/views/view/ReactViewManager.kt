@@ -9,6 +9,8 @@ package com.facebook.react.views.view
 
 import android.graphics.Paint
 import android.graphics.Rect
+import android.text.Layout
+import android.text.Spannable
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.view.View
@@ -25,6 +27,7 @@ import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.LengthPercentage
+import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PointerEvents
 import com.facebook.react.uimanager.ReactAxOrderHelper
@@ -43,6 +46,7 @@ import com.facebook.react.uimanager.style.BackgroundSize
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
+import com.facebook.react.views.text.RunLayoutHandoff
 import com.facebook.react.views.text.TextLayoutManager
 import kotlin.math.ceil
 
@@ -490,14 +494,25 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
     // ViewState MapBuffer keys (mirror ViewState.getMapBuffer): 0 = list of runs; per run,
     // 0 = attributed string, 1..3 = left/top/width (dips), 5 = document order.
     if (state == null || !state.contains(0)) {
+      view.mountedTextRunsState = null
       view.setTextRunLayouts(null)
       return null
     }
     val runMapBuffers = state.getMapBufferList(0)
     if (runMapBuffers.isEmpty()) {
+      view.mountedTextRunsState = null
       view.setTextRunLayouts(null)
       return null
     }
+    // Fabric delivers the same runs more than once (the initial mount and the
+    // state-update mount item of the commit that computed them). Identical
+    // serialized state means identical layouts — keep the mounted ones rather
+    // than rebuilding on the UI thread.
+    val mounted = view.mountedTextRunsState
+    if (mounted != null && RunLayoutHandoff.contentEquals(mounted, state)) {
+      return null
+    }
+    view.mountedTextRunsState = state
     val assets = view.context.assets
     val runs = ArrayList<ReactViewGroup.TextRunLayout>(runMapBuffers.size)
     for (runMb in runMapBuffers) {
@@ -512,17 +527,50 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       val top = Math.round(runMb.getDouble(2).dpToPx()).toFloat()
       val width = runMb.getDouble(3).dpToPx()
       val documentOrder = runMb.getInt(5)
-      val spannable = TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
-      val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-      val layout =
-          StaticLayout.Builder.obtain(
-                  spannable,
-                  0,
-                  spannable.length,
-                  paint,
-                  ceil(width.toDouble()).toInt(),
-              )
-              .build()
+
+      // Claim the layout the measurement pass already built for this run
+      // instead of rebuilding it here on the UI thread. The entry is only
+      // trusted after verification: its serialized attributed string must
+      // equal this run's byte-for-byte (an async mount racing a newer commit's
+      // measure, or a tag collision, fails here and rebuilds) and the density
+      // must be unchanged. The layout itself is reusable when left-aligned and
+      // either nothing was soft-wrapped (line breaks are all hard breaks, so
+      // painting is width-independent) or it was built at exactly the mount
+      // width.
+      var reusedLayout: Layout? = null
+      var reusedSpannable: Spannable? = null
+      if (attributedString.contains(TextLayoutManager.AS_KEY_RUN_TAG)) {
+        val entry = RunLayoutHandoff.take(attributedString.getInt(TextLayoutManager.AS_KEY_RUN_TAG))
+        if (entry != null &&
+            entry.density == PixelUtil.getDisplayMetricDensity() &&
+            RunLayoutHandoff.contentEquals(entry.attributedString, attributedString)) {
+          reusedSpannable = entry.spannable
+          if (entry.layout.alignment == Layout.Alignment.ALIGN_NORMAL &&
+              (entry.notSoftWrapped || entry.layout.width == ceil(width.toDouble()).toInt())) {
+            reusedLayout = entry.layout
+          }
+        }
+      }
+
+      val layout: Layout
+      if (reusedLayout != null) {
+        layout = reusedLayout
+      } else {
+        val spannable =
+            reusedSpannable
+                ?: TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
+        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+        // `white-space: pre` and `nowrap` do not wrap (css-text-3 §3): the only line breaks are
+        // the ones in the text, and a long line overflows the container rather than folding onto
+        // the next line. Laid out at its own desired width so nothing wraps; the View clips it, as
+        // the web does.
+        val layoutWidth =
+            if (TextLayoutManager.forbidsWrapping(attributedString))
+                ceil(Layout.getDesiredWidth(spannable, paint).toDouble()).toInt()
+            else ceil(width.toDouble()).toInt()
+        layout =
+            StaticLayout.Builder.obtain(spannable, 0, spannable.length, paint, layoutWidth).build()
+      }
       runs.add(ReactViewGroup.TextRunLayout(layout, left, top, documentOrder))
     }
     view.setTextRunLayouts(runs)

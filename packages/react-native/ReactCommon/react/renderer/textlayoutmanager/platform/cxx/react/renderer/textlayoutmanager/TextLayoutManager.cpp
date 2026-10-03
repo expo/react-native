@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <string_view>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
@@ -26,6 +27,30 @@ namespace {
 // which several test suites rely on.
 constexpr Float kDeterministicCharacterWidth = 10;
 
+// A fragment's text as the deterministic metrics count it: without the
+// left-to-right and right-to-left marks, which a real text engine draws at
+// zero width
+std::string measuredText(const std::string& string) {
+  constexpr std::string_view leftToRightMark{"\xE2\x80\x8E"};
+  constexpr std::string_view rightToLeftMark{"\xE2\x80\x8F"};
+  if (string.find("\xE2\x80") == std::string::npos) {
+    return string;
+  }
+  std::string result;
+  result.reserve(string.size());
+  for (size_t i = 0; i < string.size();) {
+    const auto rest = std::string_view{string}.substr(i);
+    if (rest.starts_with(leftToRightMark) ||
+        rest.starts_with(rightToLeftMark)) {
+      i += leftToRightMark.size();
+      continue;
+    }
+    result += string[i];
+    i++;
+  }
+  return result;
+}
+
 // How far text descends below its baseline, as a fraction of the line height.
 // Deterministic like everything else here, and non-zero so that "aligned to
 // the baseline" and "aligned to the bottom edge" are distinguishable — with a
@@ -41,7 +66,7 @@ Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
       !std::isnan(fragments[0].textAttributes.lineHeight)) {
     return fragments[0].textAttributes.lineHeight;
   }
-  auto fontSize = TextAttributes::defaultTextAttributes().fontSize;
+  auto fontSize = TextAttributes::initialFontSize();
   if (!fragments.empty() && !std::isnan(fragments[0].textAttributes.fontSize)) {
     fontSize = fragments[0].textAttributes.fontSize;
   }
@@ -160,7 +185,8 @@ std::vector<Rect> measureFragmentRectsDeterministically(
   Float penX = 0; // pen position within the current line, in points
 
   for (const auto& fragment : fragments) {
-    const auto text = fragment.isAttachment() ? std::string{} : fragment.string;
+    const auto text =
+        fragment.isAttachment() ? std::string{} : measuredText(fragment.string);
     const auto characters =
         fragment.isAttachment() ? static_cast<size_t>(1) : text.size();
     const auto advance = fragment.isAttachment()
@@ -173,8 +199,11 @@ std::vector<Rect> measureFragmentRectsDeterministically(
       continue;
     }
 
+    // The leading edge is part of the element's box, so the pen advances
+    // before the glyphs and the rect starts at the box edge, not the text.
     Float startLine = line;
     Float minX = penX;
+    penX += fragment.leadingInlineSpace();
     Float maxX = penX;
 
     // Walk spans rather than characters: characters advance the pen one grid
@@ -204,7 +233,8 @@ std::vector<Rect> measureFragmentRectsDeterministically(
       size_t i = 0;
       while (i < characters) {
         if (string[i] == '\n') {
-          // A mandatory break. Every real engine breaks here, so the
+          // A mandatory break, such as one from `<br>`, which survives
+          // whitespace collapsing. Every real engine breaks here, so the
           // deterministic measurer must too.
           column = 0;
           line += 1;
@@ -240,10 +270,22 @@ std::vector<Rect> measureFragmentRectsDeterministically(
       }
     }
 
+    penX += fragment.trailingInlineSpace();
+    maxX = std::max(maxX, penX);
+
+    // An element reports its border box, and block-axis padding and borders
+    // are part of it. They do not grow the line box (CSS2 §10.6.1 has them
+    // overflow it instead, which is why the line's height is untouched here),
+    // but they are still inside the box the element reports.
+    const auto blockAxis = fragment.blockAxisBoxEdges();
+
     rects.push_back(
         Rect{
-            .origin = {minX, startLine * lineHeight},
-            .size = {maxX - minX, (line - startLine + 1) * lineHeight}});
+            .origin = {minX, startLine * lineHeight - blockAxis.top},
+            .size = {
+                maxX - minX,
+                (line - startLine + 1) * lineHeight + blockAxis.top +
+                    blockAxis.bottom}});
   }
 
   return rects;
@@ -300,6 +342,10 @@ TextMeasurement measureDeterministically(
   Float intrinsicWidth = 0;
   Float maxAttachmentHeight = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
+    // An inline element's box edges (margin, border and padding) take up
+    // advance on the line
+    intrinsicWidth +=
+        fragment.leadingInlineSpace() + fragment.trailingInlineSpace();
     if (fragment.isAttachment()) {
       // An atomic inline: reserve its box in the run — width adds to the line,
       // height can grow the line box. The size is carried on the attachment
@@ -311,7 +357,7 @@ TextMeasurement measureDeterministically(
           std::max(maxAttachmentHeight, attachmentSize.height);
       characterCount += 1;
     } else {
-      const auto text = fragment.string;
+      const auto text = measuredText(fragment.string);
       characterCount += text.size();
       intrinsicWidth +=
           static_cast<Float>(text.size()) * perCharacterAdvance(fragment);
@@ -327,30 +373,34 @@ TextMeasurement measureDeterministically(
     placeAttachments(attributedStringBox, emptyRects, lineBox, attachments);
     return TextMeasurement{
         .size = layoutConstraints.clamp({0, 0}),
-        .attachments = std::move(attachments)};
+        .attachments = std::move(attachments),
+        .fragmentRects = std::move(emptyRects)};
   }
 
   auto maximumWidth = layoutConstraints.maximumSize.width;
 
-  // Mandatory breaks (`\n`) split the run into segments that each wrap on
-  // their own, so counting characters across the whole string would
-  // undercount the lines.
+  // Mandatory breaks (`\n`, from `<br>` or from preserved `white-space: pre`
+  // text) split the run into segments that each wrap on their own, so
+  // counting characters across the whole string would undercount the lines.
   //
   // Their WIDTHS are tracked too, because a run's intrinsic width is its
   // longest line and not the sum of them. That only becomes visible when the
-  // width is unbounded, and it otherwise reads as a correct-looking total.
+  // width is unbounded, as it is for `pre`, which does not wrap, and it
+  // otherwise reads as a correct-looking total.
   std::vector<size_t> segmentLengths;
   std::vector<Float> segmentWidths;
   size_t segmentLength = 0;
   Float segmentWidth = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
+    segmentWidth +=
+        fragment.leadingInlineSpace() + fragment.trailingInlineSpace();
     if (fragment.isAttachment()) {
       segmentLength += static_cast<size_t>(attachmentColumns(fragment));
       segmentWidth += fragment.parentShadowView.layoutMetrics.frame.size.width;
       continue;
     }
     const auto advance = perCharacterAdvance(fragment);
-    for (char character : fragment.string) {
+    for (char character : measuredText(fragment.string)) {
       if (character == '\n') {
         segmentLengths.push_back(segmentLength);
         segmentWidths.push_back(segmentWidth);
@@ -394,15 +444,19 @@ TextMeasurement measureDeterministically(
 
   // Take the line count from the placement pass too: it moves an atomic inline
   // that does not fit in what remains of a line wholly onto the next one,
-  // which can need more lines than dividing the segment lengths suggests
-  for (const auto& rect : rects) {
-    lineCount = std::max(
-        lineCount, std::round((rect.origin.y + rect.size.height) / lineHeight));
+  // which can need more lines than dividing the segment lengths suggests. A
+  // rect's block-axis box edges overflow its line, so they are left out.
+  const auto& fragments = attributedStringBox.getValue().getFragments();
+  for (size_t i = 0; i < rects.size() && i < fragments.size(); i++) {
+    const auto lineBottom = rects[i].origin.y + rects[i].size.height -
+        fragments[i].blockAxisBoxEdges().bottom;
+    lineCount = std::max(lineCount, std::round(lineBottom / lineHeight));
   }
 
   return TextMeasurement{
       .size = layoutConstraints.clamp({width, lineHeight * lineCount}),
-      .attachments = std::move(attachments)};
+      .attachments = std::move(attachments),
+      .fragmentRects = std::move(rects)};
 }
 
 } // namespace

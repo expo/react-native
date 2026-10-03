@@ -202,6 +202,10 @@ LayoutMetrics LayoutableShadowNode::getLayoutMetrics() const {
   return layoutMetrics_;
 }
 
+LayoutMetrics LayoutableShadowNode::getMountedLayoutMetrics() const {
+  return getLayoutMetrics();
+}
+
 void LayoutableShadowNode::setLayoutMetrics(LayoutMetrics layoutMetrics) {
   ensureUnsealed();
 
@@ -268,8 +272,8 @@ Float LayoutableShadowNode::baseline(
     const LayoutContext& /*layoutContext*/,
     Size size) const {
   // CSS2 §10.8.1's fallback: a box with no in-flow line boxes to align to —
-  // which includes every replaced element — is aligned by its bottom margin
-  // edge. So the default is the bottom of the box, not zero.
+  // which includes every replaced element, `<img>` among them — is aligned by
+  // its bottom margin edge. So the default is the bottom of the box, not zero.
   //
   // Zero would mean "the baseline is the box's TOP", which drops an atomic
   // inline a full box-height below the line, because `InlineContentShadowNode`
