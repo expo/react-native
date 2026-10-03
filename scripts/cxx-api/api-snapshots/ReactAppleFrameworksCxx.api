@@ -4057,12 +4057,13 @@ class facebook::react::BaseTextInputProps : public facebook::react::HostPlatform
 class facebook::react::BaseTextProps {
   public BaseTextProps() = default;
   public BaseTextProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseTextProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool cascadeResetAll;
   public facebook::react::TextAttributes textAttributes;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
 
 class facebook::react::BaseTextShadowNode {
-  public static void buildAttributedString(const facebook::react::TextAttributes& baseTextAttributes, const facebook::react::ShadowNode& parentNode, facebook::react::AttributedString& outAttributedString, facebook::react::BaseTextShadowNode::Attachments& outAttachments);
+  public static void buildAttributedString(const facebook::react::TextAttributes& baseTextAttributes, const facebook::react::ShadowNode& parentNode, facebook::react::AttributedString& outAttributedString, facebook::react::BaseTextShadowNode::Attachments& outAttachments, const facebook::react::TextAttributes& initialTextAttributes = facebook::react::TextAttributes::defaultTextAttributes());
   public using Attachments = std::vector<facebook::react::BaseTextShadowNode::Attachment>;
 }
 
@@ -4095,6 +4096,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public bool removeClippedSubviews;
   public bool shouldRasterize;
   public facebook::react::BackfaceVisibility backfaceVisibility;
+  public facebook::react::BaseViewProps::CascadeReset cascadeReset;
   public facebook::react::BlendMode mixBlendMode;
   public facebook::react::BorderMetrics resolveBorderMetrics(const facebook::react::LayoutMetrics& layoutMetrics) const;
   public facebook::react::CascadedBorderColors borderColors;
@@ -4139,8 +4141,16 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public std::vector<facebook::react::BackgroundSize> backgroundSize;
   public std::vector<facebook::react::BoxShadow> boxShadow;
   public std::vector<facebook::react::FilterFunction> filter;
+  public virtual bool isInheritanceBoundary(bool uaDeclaresBoundary) const override;
   public void applyInheritedTextAttributes(facebook::react::TextAttributes& textAttributes) const;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
+}
+
+enum facebook::react::BaseViewProps::CascadeReset : uint8_t {
+  Initial,
+  None,
+  Revert,
+  Unset,
 }
 
 class facebook::react::BindingsInstaller {
@@ -5409,10 +5419,12 @@ class facebook::react::ParagraphShadowNode : public facebook::react::ConcreteVie
   public ParagraphShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public ParagraphShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual const std::shared_ptr<const facebook::react::TextAttributes>* getStoredCascade() const override;
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
+  public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
   public void setTextLayoutManager(std::shared_ptr<const facebook::react::TextLayoutManager> textLayoutManager);
 }
 
@@ -5470,6 +5482,7 @@ class facebook::react::Props : public virtual facebook::react::Sealable, public 
   public facebook::react::Props& operator=(const facebook::react::Props& other) = delete;
   public std::string nativeId;
   public using Shared = std::shared_ptr<const facebook::react::Props>;
+  public virtual bool isInheritanceBoundary(bool uaDeclaresBoundary) const;
   public virtual ~Props() = default;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
@@ -5933,6 +5946,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   FormsStackingContext,
   FormsView,
   Hidden,
+  InheritanceBoundary,
   InlineText,
   KeyboardFocusable,
   LeafYogaNode,
@@ -5941,6 +5955,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   RootNodeKind,
   SubtreeHasCascadeDependents,
   TextCascadeConsumer,
+  UACascadeBoundary,
   Unstable_uncullableTrace,
   Unstable_uncullableView,
   ViewKind,

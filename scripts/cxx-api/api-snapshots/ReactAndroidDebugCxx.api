@@ -931,6 +931,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public bool removeClippedSubviews;
   public bool shouldRasterize;
   public facebook::react::BackfaceVisibility backfaceVisibility;
+  public facebook::react::BaseViewProps::CascadeReset cascadeReset;
   public facebook::react::BlendMode mixBlendMode;
   public facebook::react::BorderMetrics resolveBorderMetrics(const facebook::react::LayoutMetrics& layoutMetrics) const;
   public facebook::react::CascadedBorderColors borderColors;
@@ -975,8 +976,16 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public std::vector<facebook::react::BackgroundSize> backgroundSize;
   public std::vector<facebook::react::BoxShadow> boxShadow;
   public std::vector<facebook::react::FilterFunction> filter;
+  public virtual bool isInheritanceBoundary(bool uaDeclaresBoundary) const override;
   public void applyInheritedTextAttributes(facebook::react::TextAttributes& textAttributes) const;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
+}
+
+enum facebook::react::BaseViewProps::CascadeReset : uint8_t {
+  Initial,
+  None,
+  Revert,
+  Unset,
 }
 
 class facebook::react::BindingsInstallerHolder : public jni::HybridClass<facebook::react::BindingsInstallerHolder> {
@@ -2180,6 +2189,7 @@ class facebook::react::Props : public virtual facebook::react::Sealable, public 
   public folly::dynamic rawProps;
   public std::string nativeId;
   public using Shared = std::shared_ptr<const facebook::react::Props>;
+  public virtual bool isInheritanceBoundary(bool uaDeclaresBoundary) const;
   public virtual facebook::react::ComponentName getDiffPropsImplementationTarget() const;
   public virtual folly::dynamic getDiffProps(const facebook::react::Props* prevProps) const;
   public virtual ~Props() = default;
@@ -2387,6 +2397,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   FormsStackingContext,
   FormsView,
   Hidden,
+  InheritanceBoundary,
   InlineText,
   KeyboardFocusable,
   LeafYogaNode,
@@ -2395,6 +2406,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   RootNodeKind,
   SubtreeHasCascadeDependents,
   TextCascadeConsumer,
+  UACascadeBoundary,
   Unstable_uncullableTrace,
   Unstable_uncullableView,
   ViewKind,
