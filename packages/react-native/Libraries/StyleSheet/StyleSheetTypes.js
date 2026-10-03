@@ -872,6 +872,20 @@ type ____BlendMode_Internal =
  * property here that the native side does not read is silently ignored.
  */
 export type ____InheritableTextStyle_Internal = Readonly<{
+  /**
+   * The CSS-wide shorthand that resets the properties above.
+   *
+   * Scoped to the inherited properties, which is why it lives with them:
+   * `initial` drops to the initial value, `revert` rolls back to the
+   * user-agent origin, and `unset`/`inherit` erase the cascaded value from
+   * every origin — which for an inherited property means inherit, and is
+   * therefore the author's switch for turning OFF a user-agent boundary such
+   * as the one `<Text>` establishes.
+   *
+   * `inherit` resolves the same as `unset` here rather than being missing:
+   * for inherited properties the two agree (css-cascade-4 §7.3).
+   */
+  all?: 'initial' | 'inherit' | 'unset' | 'revert',
   color?: ____ColorValue_Internal,
   fontFamily?: string,
   fontSize?: number,

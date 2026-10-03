@@ -295,6 +295,10 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   // inheritable text properties reach native as top-level props, and a key
   // missing from this table is dropped before it ever gets there.
   whiteSpace: true,
+  // `all` (css-cascade-4 §3.2): `all: 'initial'` makes the element an
+  // inheritance boundary — the cascade below it restarts from the initial
+  // values, like the web's own reset.
+  all: true,
   userSelect: true,
   verticalAlign: true,
   writingDirection: true,
