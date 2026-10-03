@@ -7,6 +7,8 @@
 
 #include "TextLayout.h"
 
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+
 #include <hb-ot.h>
 #include <hb.h>
 #include <include/core/SkData.h>
@@ -573,8 +575,15 @@ void paintText(SkCanvas* canvas, const TextLayout& layout, Float width) {
 TextMeasurement FantomTextLayoutManager::measure(
     const AttributedStringBox& text,
     const ParagraphAttributes& paragraph,
-    const TextLayoutContext& /*context*/,
+    const TextLayoutContext& context,
     const LayoutConstraints& constraints) const {
+  // With string children, text runs are laid out from the base class's
+  // deterministic metrics (`measureLines`, run widths), so a paragraph is
+  // measured with the same metrics; measuring it with Skia would size it
+  // differently from the lines inside it.
+  if (ReactNativeFeatureFlags::enableStringChildren()) {
+    return TextLayoutManager::measure(text, paragraph, context, constraints);
+  }
   auto result =
       layoutText(
           nullptr, text.getValue(), paragraph, constraints.maximumSize.width)
