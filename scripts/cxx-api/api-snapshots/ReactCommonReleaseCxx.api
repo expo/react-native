@@ -1116,6 +1116,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   Unstable_uncullableTrace,
   Unstable_uncullableView,
   ViewKind,
+  YogaLayoutableKind,
 }
 
 class facebook::react::SharedColor {
@@ -1217,6 +1218,8 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public YogaLayoutableShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public YogaLayoutableShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public facebook::react::Rect getContentBounds() const;
+  public static const facebook::react::YogaLayoutableShadowNode* asYogaLayoutable(const facebook::react::ShadowNode& node);
+  public static std::shared_ptr<const facebook::react::YogaLayoutableShadowNode> asYogaLayoutable(const std::shared_ptr<const facebook::react::ShadowNode>& node);
   public using ListOfShared = std::vector<facebook::react::YogaLayoutableShadowNode::Shared>;
   public using Shared = std::shared_ptr<const facebook::react::YogaLayoutableShadowNode>;
   public virtual bool getIsLayoutClean() const override;

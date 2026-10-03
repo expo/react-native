@@ -93,6 +93,12 @@ class ShadowNodeTraits {
     // **Deprecated**: This trait is deprecated and will be removed in a future
     // version of React Native.
     DirtyYogaNode = 1 << 14,
+
+    // The node IS a YogaLayoutableShadowNode. Layout code downcasts child
+    // ShadowNodes per child, per pass; the trait plus a static_cast answers
+    // the same question as an RTTI dynamic_cast without walking the class
+    // hierarchy.
+    YogaLayoutableKind = 1 << 21,
   };
 
   /*
