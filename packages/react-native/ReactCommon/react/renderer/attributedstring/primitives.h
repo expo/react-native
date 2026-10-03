@@ -113,7 +113,7 @@ enum class TextAlignment : uint8_t {
   End // Aligned to the end side of the paragraph direction.
 };
 
-enum class TextAlignmentVertical {
+enum class TextAlignmentVertical : uint8_t {
   Auto,
   Top,
   Bottom,
@@ -155,12 +155,6 @@ enum class TextTransform : uint8_t {
   Lowercase,
   Capitalize,
   Unset,
-};
-
-enum class HyphenationFrequency {
-  None, // No hyphenation.
-  Normal, // Less frequent hyphenation.
-  Full // Standard amount of hyphenation.
 };
 
 /*
@@ -214,5 +208,11 @@ inline bool wrapsText(WhiteSpace whiteSpace)
 {
   return whiteSpace != WhiteSpace::Pre && whiteSpace != WhiteSpace::NoWrap;
 }
+
+enum class HyphenationFrequency {
+  None, // No hyphenation.
+  Normal, // Less frequent hyphenation.
+  Full // Standard amount of hyphenation.
+};
 
 } // namespace facebook::react

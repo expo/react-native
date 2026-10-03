@@ -32,6 +32,7 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<TextComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
+      // Intrinsic DOM elements (<b>/<i>/<span>/<img>/<div> + unknown fallback).
       return providerRegistry;
     }();
     return providerRegistry->createComponentDescriptorRegistry({eventDispatcher, contextContainer, nullptr});

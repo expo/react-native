@@ -34,7 +34,8 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 /**
- * Sizes this run's canvas to the owning View's content box.
+ * Sizes this run's canvas to the owning View's content box, plus whatever its
+ * inline elements' decorations paint outside the line box.
  */
 - (void)setContainerBounds:(CGRect)containerBounds;
 

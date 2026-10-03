@@ -67,12 +67,37 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
       fabs(frame.origin.y - raw.origin.y) < onePixel;
 }
 
-// Sizes this run's canvas to the owning View's bounds, so the run view's
-// coordinate space is the owning View's and `containerFrame` — the one
-// geometry shared by painting and hit-testing — needs no translation.
+// Sizes this run's canvas to the owning View's content box, plus whatever its
+// inline elements' decorations paint *outside* the line box.
+//
+// An inline box's block-axis padding, border and outline overflow the line box
+// rather than growing it (CSS2 §10.6.1), so the View's bounds, which are
+// exactly the measured text, are too small to draw them into, and `-drawRect:`
+// would clip them away.
+//
+// Only the canvas grows. The compensating `bounds.origin` keeps this view's
+// coordinate space identical to the owning View's, so `containerFrame` — the
+// one geometry shared by painting and hit-testing — is untouched, as is layout.
 - (void)setContainerBounds:(CGRect)containerBounds
 {
-  self.frame = containerBounds;
+  auto overflow = _run.attributedString.inlineBoxBlockAxisOverflow();
+  // Make room for a run that starts *before* the content box in the inline
+  // axis: an `outside` list marker (css-lists-3 §3.2) sits in the gutter to the
+  // inline-start side so the content can hang past it, giving this run a
+  // negative origin that `-drawRect:` would otherwise clip away.
+  CGFloat leading = MAX(0, -RCTCGRectFromRect(_run.frame).origin.x);
+  self.frame = CGRectMake(
+      containerBounds.origin.x - leading,
+      containerBounds.origin.y - overflow.top,
+      containerBounds.size.width + leading,
+      containerBounds.size.height + overflow.top + overflow.bottom);
+  // The compensating origin keeps this view's coordinate space identical to
+  // the owning View's, in both axes, so `containerFrame` — the one geometry
+  // shared by painting and hit-testing — is untouched, as is layout.
+  CGRect bounds = self.bounds;
+  bounds.origin.x = -leading;
+  bounds.origin.y = -overflow.top;
+  self.bounds = bounds;
 }
 
 // The content of -drawRect: resolves DYNAMIC colors against the trait
@@ -116,6 +141,21 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
       RCTRunGeometryMatchesYogaFrame(frame, _run.frame, self.traitCollection.displayScale ?: 3.0),
       @"text-children run paint geometry must be the run's Yoga frame, pixel-aligned");
 
+  // Draw from the TextKit storage already built and laid out when this run was
+  // measured, instead of converting, rebuilding and re-shaping it here on the
+  // main thread. The cache is keyed by content, so a hit is the layout for
+  // exactly this content at this width; a miss falls back to the rebuild path
+  // below.
+  NSTextStorage *cachedTextStorage = _run.runTag != 0
+      ? [nativeTextLayoutManager cachedRunTextStorageForAttributedString:_run.attributedString width:frame.size.width]
+      : nil;
+  if (cachedTextStorage != nil) {
+    [nativeTextLayoutManager drawTextStorage:cachedTextStorage
+                            attributedString:_run.attributedString
+                                       frame:frame
+                           drawHighlightPath:nil];
+    return;
+  }
   [nativeTextLayoutManager drawAttributedString:_run.attributedString
                             paragraphAttributes:facebook::react::ParagraphAttributes {}
                                           frame:frame

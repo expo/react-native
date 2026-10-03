@@ -647,28 +647,6 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
   LOG(ERROR) << "Could not parse WhiteSpace: " << (std::string)value;
 }
 
-inline std::string toString(const WhiteSpace &whiteSpace)
-{
-  switch (whiteSpace) {
-    case WhiteSpace::Normal:
-      return "normal";
-    case WhiteSpace::Pre:
-      return "pre";
-    case WhiteSpace::NoWrap:
-      return "nowrap";
-    case WhiteSpace::PreWrap:
-      return "pre-wrap";
-    case WhiteSpace::PreLine:
-      return "pre-line";
-    case WhiteSpace::BreakSpaces:
-      return "break-spaces";
-  }
-
-  LOG(ERROR) << "Unsupported WhiteSpace value";
-  // sane default for prod
-  return "normal";
-}
-
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, TextTransform &result)
 {
   react_native_expect(value.hasType<std::string>());
@@ -887,6 +865,28 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   LOG(ERROR) << "Unsupported LineBreakStrategy type";
   // sane default for prod
   result = LineBreakStrategy::None;
+}
+
+inline std::string toString(const WhiteSpace &whiteSpace)
+{
+  switch (whiteSpace) {
+    case WhiteSpace::Normal:
+      return "normal";
+    case WhiteSpace::Pre:
+      return "pre";
+    case WhiteSpace::NoWrap:
+      return "nowrap";
+    case WhiteSpace::PreWrap:
+      return "pre-wrap";
+    case WhiteSpace::PreLine:
+      return "pre-line";
+    case WhiteSpace::BreakSpaces:
+      return "break-spaces";
+  }
+
+  LOG(ERROR) << "Unsupported WhiteSpace value";
+  // sane default for prod
+  return "normal";
 }
 
 inline std::string toString(const LineBreakStrategy &lineBreakStrategy)
@@ -1198,6 +1198,9 @@ constexpr static MapBuffer::Key AS_KEY_STRING = 1;
 constexpr static MapBuffer::Key AS_KEY_FRAGMENTS = 2;
 constexpr static MapBuffer::Key AS_KEY_CACHE_ID = 3;
 constexpr static MapBuffer::Key AS_KEY_BASE_ATTRIBUTES = 4;
+// The owning anonymous run box's tag, present only on text-run content. It keys
+// the measure->mount layout handoff.
+constexpr static MapBuffer::Key AS_KEY_RUN_TAG = 5;
 
 // constants for Fragment serialization
 constexpr static MapBuffer::Key FR_KEY_STRING = 0;
@@ -1210,6 +1213,34 @@ constexpr static MapBuffer::Key FR_KEY_TEXT_ATTRIBUTES = 5;
 // the platform can sit that baseline on the line's instead of dropping the
 // box's bottom onto it.
 constexpr static MapBuffer::Key FR_KEY_ATOMIC_INLINE_BASELINE = 6;
+// Inline box decorations. Only present on fragments of a decorated inline
+// element, so undecorated text costs nothing.
+constexpr static MapBuffer::Key FR_KEY_INLINE_BOX = 7;
+constexpr static MapBuffer::Key FR_KEY_IS_INLINE_BOX_START = 8;
+constexpr static MapBuffer::Key FR_KEY_IS_INLINE_BOX_END = 9;
+// An inline element that contributed no text of its own. Its fragment is empty
+// on purpose, and the platform has to build its zero-width box from the line it
+// sits on rather than from glyphs it does not have.
+constexpr static MapBuffer::Key FR_KEY_IS_EMPTY_ELEMENT = 10;
+
+constexpr static MapBuffer::Key IB_KEY_MARGIN_LEFT = 0;
+constexpr static MapBuffer::Key IB_KEY_MARGIN_RIGHT = 1;
+constexpr static MapBuffer::Key IB_KEY_PADDING_LEFT = 2;
+constexpr static MapBuffer::Key IB_KEY_PADDING_TOP = 3;
+constexpr static MapBuffer::Key IB_KEY_PADDING_RIGHT = 4;
+constexpr static MapBuffer::Key IB_KEY_PADDING_BOTTOM = 5;
+constexpr static MapBuffer::Key IB_KEY_BORDER_LEFT_WIDTH = 6;
+constexpr static MapBuffer::Key IB_KEY_BORDER_TOP_WIDTH = 7;
+constexpr static MapBuffer::Key IB_KEY_BORDER_RIGHT_WIDTH = 8;
+constexpr static MapBuffer::Key IB_KEY_BORDER_BOTTOM_WIDTH = 9;
+constexpr static MapBuffer::Key IB_KEY_BORDER_LEFT_COLOR = 10;
+constexpr static MapBuffer::Key IB_KEY_BORDER_TOP_COLOR = 11;
+constexpr static MapBuffer::Key IB_KEY_BORDER_RIGHT_COLOR = 12;
+constexpr static MapBuffer::Key IB_KEY_BORDER_BOTTOM_COLOR = 13;
+constexpr static MapBuffer::Key IB_KEY_BORDER_RADIUS = 14;
+constexpr static MapBuffer::Key IB_KEY_OUTLINE_COLOR = 15;
+constexpr static MapBuffer::Key IB_KEY_OUTLINE_WIDTH = 16;
+constexpr static MapBuffer::Key IB_KEY_OUTLINE_OFFSET = 17;
 
 // constants for Text Attributes serialization
 constexpr static MapBuffer::Key TA_KEY_FOREGROUND_COLOR = 0;
@@ -1223,6 +1254,9 @@ constexpr static MapBuffer::Key TA_KEY_FONT_STYLE = 7;
 constexpr static MapBuffer::Key TA_KEY_FONT_VARIANT = 8;
 constexpr static MapBuffer::Key TA_KEY_ALLOW_FONT_SCALING = 9;
 constexpr static MapBuffer::Key TA_KEY_LETTER_SPACING = 10;
+// The numeric baseline shift (points; positive raises) — symbolic list
+// markers centre their ink with it. Must match TextAttributeProps.kt.
+constexpr static MapBuffer::Key TA_KEY_BASELINE_SHIFT = 33;
 constexpr static MapBuffer::Key TA_KEY_LINE_HEIGHT = 11;
 constexpr static MapBuffer::Key TA_KEY_ALIGNMENT = 12;
 constexpr static MapBuffer::Key TA_KEY_BEST_WRITING_DIRECTION = 13;
@@ -1243,6 +1277,9 @@ constexpr static MapBuffer::Key TA_KEY_ALIGNMENT_VERTICAL = 28;
 constexpr static MapBuffer::Key TA_KEY_MAX_FONT_SIZE_MULTIPLIER = 29;
 constexpr static MapBuffer::Key TA_KEY_TEXT_EFFECTS = 30;
 constexpr static MapBuffer::Key TA_KEY_FONT_VARIATION_SETTINGS = 31;
+// `white-space`, so Android's text layout sees the same value the C++
+// collapsing pass used.
+constexpr static MapBuffer::Key TA_KEY_WHITE_SPACE = 32;
 
 // Keys within each text effect entry MapBuffer
 constexpr static MapBuffer::Key TE_KEY_NAME = 0;
@@ -1405,6 +1442,9 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   if (!std::isnan(textAttributes.letterSpacing)) {
     builder.putDouble(TA_KEY_LETTER_SPACING, textAttributes.letterSpacing);
   }
+  if (!std::isnan(textAttributes.baselineShift)) {
+    builder.putDouble(TA_KEY_BASELINE_SHIFT, textAttributes.baselineShift);
+  }
   if (!std::isnan(textAttributes.lineHeight)) {
     builder.putDouble(TA_KEY_LINE_HEIGHT, textAttributes.lineHeight);
   }
@@ -1416,6 +1456,9 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   }
   if (textAttributes.lineBreakStrategy.has_value()) {
     builder.putString(TA_KEY_LINE_BREAK_STRATEGY, toString(*textAttributes.lineBreakStrategy));
+  }
+  if (textAttributes.whiteSpace.has_value()) {
+    builder.putString(TA_KEY_WHITE_SPACE, toString(*textAttributes.whiteSpace));
   }
   if (textAttributes.textTransform.has_value()) {
     builder.putString(TA_KEY_TEXT_TRANSFORM, toString(*textAttributes.textTransform));
@@ -1469,6 +1512,42 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   return builder.build();
 }
 
+inline MapBuffer toMapBuffer(const InlineBoxDecorations &inlineBox)
+{
+  auto builder = MapBufferBuilder();
+
+  builder.putDouble(IB_KEY_MARGIN_LEFT, inlineBox.margin.left);
+  builder.putDouble(IB_KEY_MARGIN_RIGHT, inlineBox.margin.right);
+  builder.putDouble(IB_KEY_PADDING_LEFT, inlineBox.padding.left);
+  builder.putDouble(IB_KEY_PADDING_TOP, inlineBox.padding.top);
+  builder.putDouble(IB_KEY_PADDING_RIGHT, inlineBox.padding.right);
+  builder.putDouble(IB_KEY_PADDING_BOTTOM, inlineBox.padding.bottom);
+  builder.putDouble(IB_KEY_BORDER_LEFT_WIDTH, inlineBox.borderWidth.left);
+  builder.putDouble(IB_KEY_BORDER_TOP_WIDTH, inlineBox.borderWidth.top);
+  builder.putDouble(IB_KEY_BORDER_RIGHT_WIDTH, inlineBox.borderWidth.right);
+  builder.putDouble(IB_KEY_BORDER_BOTTOM_WIDTH, inlineBox.borderWidth.bottom);
+  if (inlineBox.borderColor.left) {
+    builder.putInt(IB_KEY_BORDER_LEFT_COLOR, toAndroidRepr(inlineBox.borderColor.left));
+  }
+  if (inlineBox.borderColor.top) {
+    builder.putInt(IB_KEY_BORDER_TOP_COLOR, toAndroidRepr(inlineBox.borderColor.top));
+  }
+  if (inlineBox.borderColor.right) {
+    builder.putInt(IB_KEY_BORDER_RIGHT_COLOR, toAndroidRepr(inlineBox.borderColor.right));
+  }
+  if (inlineBox.borderColor.bottom) {
+    builder.putInt(IB_KEY_BORDER_BOTTOM_COLOR, toAndroidRepr(inlineBox.borderColor.bottom));
+  }
+  builder.putDouble(IB_KEY_BORDER_RADIUS, inlineBox.borderRadius);
+  if (inlineBox.outlineColor) {
+    builder.putInt(IB_KEY_OUTLINE_COLOR, toAndroidRepr(inlineBox.outlineColor));
+  }
+  builder.putDouble(IB_KEY_OUTLINE_WIDTH, inlineBox.outlineWidth);
+  builder.putDouble(IB_KEY_OUTLINE_OFFSET, inlineBox.outlineOffset);
+
+  return builder.build();
+}
+
 inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
 {
   auto builder = MapBufferBuilder();
@@ -1484,14 +1563,30 @@ inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
   }
   auto textAttributesMap = toMapBuffer(fragment.textAttributes);
   builder.putMapBuffer(FR_KEY_TEXT_ATTRIBUTES, textAttributesMap);
+  if (!fragment.inlineBox.isEmpty()) {
+    auto inlineBoxMap = toMapBuffer(fragment.inlineBox);
+    builder.putMapBuffer(FR_KEY_INLINE_BOX, inlineBoxMap);
+    builder.putBool(FR_KEY_IS_INLINE_BOX_START, fragment.isInlineBoxStart);
+    builder.putBool(FR_KEY_IS_INLINE_BOX_END, fragment.isInlineBoxEnd);
+  }
   if (fragment.isAttachment()) {
     builder.putDouble(FR_KEY_ATOMIC_INLINE_BASELINE, fragment.atomicInlineBaseline);
+  }
+  if (fragment.isEmptyElement) {
+    builder.putBool(FR_KEY_IS_EMPTY_ELEMENT, true);
   }
 
   return builder.build();
 }
 
-inline MapBuffer toMapBuffer(const AttributedString &attributedString)
+/*
+ * `runTag`: when the string is the content of an anonymous text-run box, the
+ * box's tag, written as AS_KEY_RUN_TAG. It keys the measure->mount layout
+ * handoff; both the measurement path and the ViewState run serialization must
+ * pass it so the two buffers stay byte-comparable for the mount-side content
+ * check.
+ */
+inline MapBuffer toMapBuffer(const AttributedString &attributedString, Tag runTag = 0)
 {
   auto fragmentsBuilder = MapBufferBuilder();
 
@@ -1508,6 +1603,9 @@ inline MapBuffer toMapBuffer(const AttributedString &attributedString)
   builder.putMapBuffer(AS_KEY_BASE_ATTRIBUTES, toMapBuffer(attributedString.getBaseTextAttributes()));
   auto fragmentsMap = fragmentsBuilder.build();
   builder.putMapBuffer(AS_KEY_FRAGMENTS, fragmentsMap);
+  if (runTag != 0) {
+    builder.putInt(AS_KEY_RUN_TAG, runTag);
+  }
   return builder.build();
 }
 
