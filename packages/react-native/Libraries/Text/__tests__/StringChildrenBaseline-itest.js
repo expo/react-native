@@ -83,9 +83,7 @@ describe('text children: baseline (flag off)', () => {
 
     Fantom.runTask(() => {
       root.render(
-        // Apps pass inert text keys like `color` to Views in the wild, which
-        // is what this guards.
-        // $FlowExpectedError[incompatible-type]
+        // With the flag off, a View's `color` does not reach its text
         <View collapsable={false} style={{color: 'red'}}>
           <Text>hello</Text>
         </View>,

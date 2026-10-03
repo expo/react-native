@@ -607,6 +607,68 @@ inline std::string toString(const FontVariant &fontVariant)
   return result;
 }
 
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, WhiteSpace &result)
+{
+  react_native_expect(value.hasType<std::string>());
+  if (value.hasType<std::string>()) {
+    auto string = (std::string)value;
+    if (string == "normal") {
+      result = WhiteSpace::Normal;
+      return;
+    }
+    if (string == "pre") {
+      result = WhiteSpace::Pre;
+      return;
+    }
+    if (string == "nowrap") {
+      result = WhiteSpace::NoWrap;
+      return;
+    }
+    if (string == "pre-wrap") {
+      result = WhiteSpace::PreWrap;
+      return;
+    }
+    if (string == "pre-line") {
+      result = WhiteSpace::PreLine;
+      return;
+    }
+    // `break-spaces` differs from `pre-wrap` only in what happens to a run of
+    // preserved spaces sitting at a wrap point: `pre-wrap` lets it hang past
+    // the edge, `break-spaces` measures it so it wraps like any other
+    // character. Hanging is what both platform text engines do and neither
+    // exposes a knob for it, so this behaves as `pre-wrap` — identical unless
+    // a space run is long enough to outrun the line. Closing the gap means
+    // breaking lines ourselves rather than asking the platform.
+    if (string == "break-spaces") {
+      result = WhiteSpace::BreakSpaces;
+      return;
+    }
+  }
+  LOG(ERROR) << "Could not parse WhiteSpace: " << (std::string)value;
+}
+
+inline std::string toString(const WhiteSpace &whiteSpace)
+{
+  switch (whiteSpace) {
+    case WhiteSpace::Normal:
+      return "normal";
+    case WhiteSpace::Pre:
+      return "pre";
+    case WhiteSpace::NoWrap:
+      return "nowrap";
+    case WhiteSpace::PreWrap:
+      return "pre-wrap";
+    case WhiteSpace::PreLine:
+      return "pre-line";
+    case WhiteSpace::BreakSpaces:
+      return "break-spaces";
+  }
+
+  LOG(ERROR) << "Unsupported WhiteSpace value";
+  // sane default for prod
+  return "normal";
+}
+
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, TextTransform &result)
 {
   react_native_expect(value.hasType<std::string>());

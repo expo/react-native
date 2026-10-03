@@ -20,7 +20,12 @@ BaseParagraphProps::BaseParagraphProps(
     const PropsParserContext& context,
     const BaseParagraphProps& sourceProps,
     const RawProps& rawProps)
-    : ViewProps(context, sourceProps, rawProps),
+    : ViewProps(
+          context,
+          sourceProps,
+          rawProps,
+          nullptr,
+          /*parseInheritedTextProps*/ false),
       BaseTextProps(context, sourceProps, rawProps),
       paragraphAttributes(convertRawProp(
           context,
