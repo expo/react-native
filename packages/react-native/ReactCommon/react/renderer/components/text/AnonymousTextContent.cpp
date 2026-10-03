@@ -12,6 +12,7 @@
 
 #include <react/renderer/components/text/BaseParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/InlineContentShadowNode.h>
+#include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/textlayoutmanager/TextLayoutManager.h>
@@ -57,11 +58,35 @@ Tag nextAnonymousTag() {
   return tag.fetch_sub(2);
 }
 
+bool isWhitespaceOnlyRun(
+    const std::vector<std::shared_ptr<const ShadowNode>>& runChildren) {
+  for (const auto& child : runChildren) {
+    const auto* textNode = dynamic_cast<const TextNodeShadowNode*>(child.get());
+    if (textNode == nullptr) {
+      // Inline elements and inline-level boxes always generate a box.
+      return false;
+    }
+    for (auto character : textNode->getText()) {
+      if (character != ' ' && character != '\t' && character != '\n' &&
+          character != '\r' && character != '\f') {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 std::shared_ptr<YogaLayoutableShadowNode> createAnonymousTextContent(
     std::vector<std::shared_ptr<const ShadowNode>> runChildren,
     const ShadowNode& containerShadowNode) {
   auto& state = anonymousTextContentState();
   if (state.componentDescriptor == nullptr || runChildren.empty()) {
+    return nullptr;
+  }
+
+  // Anonymous flex items consisting entirely of white space are not rendered
+  // (css-flexbox-1 §4).
+  if (isWhitespaceOnlyRun(runChildren)) {
     return nullptr;
   }
 

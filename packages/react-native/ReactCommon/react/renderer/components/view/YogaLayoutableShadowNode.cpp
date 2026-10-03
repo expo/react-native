@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <string_view>
 #include <unordered_set>
 
 namespace facebook::react {
@@ -253,7 +254,7 @@ void YogaLayoutableShadowNode::appendChild(
 
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       getAnonymousTextContentFactory() != nullptr &&
-      (isInlineLevelBox(*childNode) ||
+      (isInlineTextContent(*childNode) || isInlineLevelBox(*childNode) ||
        !anonymousTextContentChildren_.empty())) {
     // Inline-level content joined (or its runs may have shifted). The Yoga
     // children need rebuilding with fresh anonymous boxes — but doing it per
@@ -427,15 +428,26 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
   yogaNode_.setChildren({});
   yogaLayoutableChildren_.clear();
   anonymousTextContentChildren_.clear();
+  anonymousTextContentChildIndices_.clear();
   yogaLayoutableChildren_.reserve(getChildren().size());
 
-  // Contiguous inline-level boxes in a block container are wrapped in
-  // anonymous boxes, each establishing an inline formatting context, by the
-  // text module's factory (CSS2 §9.2.1.1).
+  // Contiguous inline-level content — text nodes and inline-level boxes — is
+  // wrapped in anonymous boxes, each establishing an inline formatting
+  // context, by the text module's factory (CSS2 §9.2.1.1).
+  // `inlineRunStart` is the index of the run's first child, so the mounting
+  // layer can interleave the per-run paint views with mounted children in
+  // document order.
+  size_t inlineRunStart = 0;
   std::vector<std::shared_ptr<const ShadowNode>> inlineRun;
+  auto appendToInlineRun = [&](size_t childIndex) {
+    if (inlineRun.empty()) {
+      inlineRunStart = childIndex;
+    }
+    inlineRun.push_back(getChildren()[childIndex]);
+  };
   auto flushInlineRun = [&]() {
     if (!inlineRun.empty()) {
-      appendAnonymousTextContentChild(std::move(inlineRun));
+      appendAnonymousTextContentChild(std::move(inlineRun), inlineRunStart);
       inlineRun.clear();
       isClean = false;
     }
@@ -456,7 +468,7 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
         // whose contents flow into the run (isInlineFlowContent). In flex
         // containers it falls through below and is blockified into a regular
         // flex item (css-display-3 §2.7).
-        inlineRun.push_back(getChildren()[i]);
+        appendToInlineRun(i);
         continue;
       }
       // Box-generation rules for run contiguity (each verified against
@@ -504,9 +516,19 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
         isClean = isClean && !newYogaChildNode.isDirty() &&
             (newYogaChildNode.style() == oldYogaChildNode.style());
       }
+    } else if (inlineLayoutEnabled && isInlineTextContent(*getChildren()[i])) {
+      // Text always joins the current run
+      appendToInlineRun(i);
     }
   }
   flushInlineRun();
+
+  if (!anonymousTextContentChildren_.empty()) {
+    // Text-bearing containers paint their runs and must not be flattened
+    // away by view flattening.
+    traits_.set(ShadowNodeTraits::Trait::FormsView);
+    traits_.set(ShadowNodeTraits::Trait::FormsStackingContext);
+  }
 
   react_native_assert(
       yogaLayoutableChildren_.size() == YGNodeGetChildCount(&yogaNode_));
@@ -544,6 +566,13 @@ static bool isInlineLevelBox(const ShadowNode& child) {
       props->yogaStyle.floatSide() == yoga::FloatSide::None;
 }
 
+bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
+  // Inline-level text content joins a text run rather than becoming its own
+  // block/flex item. Identified by the InlineText trait, which #text sets,
+  // so that components/view needs no components/text include.
+  return child.getTraits().check(ShadowNodeTraits::Trait::InlineText);
+}
+
 bool YogaLayoutableShadowNode::isAtomicInline(const ShadowNode& child) {
   return isInlineLevelBox(child) && !isInlineFlowContent(child);
 }
@@ -574,11 +603,12 @@ bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
     return false;
   }
   for (const auto& grandChild : child.getChildren()) {
-    // Only nested inline-level boxes flow — span-like or atomic. Block-level
-    // content inside an inline box would require block-in-inline splitting
-    // (CSS2 §9.2.1.1); such boxes — and ones with absolutely-positioned
-    // children — fall back to atomic inline.
-    if (!isInlineLevelBox(*grandChild)) {
+    // Inline-level content flows: text and inline elements (trait) and nested
+    // inline boxes — span-like or atomic. Block-level content inside an inline
+    // box would require block-in-inline splitting (CSS2 §9.2.1.1); such boxes
+    // — and ones with absolutely-positioned children — fall back to atomic
+    // inline.
+    if (!isInlineTextContent(*grandChild) && !isInlineLevelBox(*grandChild)) {
       return false;
     }
   }
@@ -586,10 +616,11 @@ bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
 }
 
 void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
-    std::vector<std::shared_ptr<const ShadowNode>>&& runChildren) {
+    std::vector<std::shared_ptr<const ShadowNode>>&& runChildren,
+    size_t firstChildIndex) {
   auto box = getAnonymousTextContentFactory()(std::move(runChildren), *this);
   if (box == nullptr) {
-    // The run generates no box.
+    // The run generates no box (e.g. whitespace-only anonymous flex item).
     return;
   }
   // Structural invariant: the factory must produce an anonymous IFC box, a
@@ -600,11 +631,25 @@ void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
   react_native_assert(
       box->getTraits().check(ShadowNodeTraits::Trait::LeafYogaNode));
 
-  // Anonymous block boxes always fill the containing block on web; pin
-  // stretch so `alignItems` overrides cannot shrink-wrap the run.
-  auto boxStyle = box->yogaNode_.style();
-  boxStyle.setAlignSelf(yoga::Align::Stretch);
-  box->yogaNode_.setStyle(boxStyle);
+  anonymousTextContentChildIndices_.push_back(firstChildIndex);
+
+  if (static_cast<const YogaStylableProps&>(*props_).displayBlock) {
+    // Anonymous block boxes always fill the containing block on web; pin
+    // stretch so `alignItems` overrides cannot shrink-wrap the run.
+    auto boxStyle = box->yogaNode_.style();
+    boxStyle.setAlignSelf(yoga::Align::Stretch);
+    box->yogaNode_.setStyle(boxStyle);
+  } else {
+    // In a FLEX container this box is an anonymous flex item (css-flexbox-1
+    // §4), and a flex item's `flex-shrink` initial value is 1 (§7.3). React
+    // Native's own default is 0, and text carries no Yoga style to say
+    // otherwise, so without this the item could never yield: a
+    // long run beside a fixed-width sibling in a flex row would overflow and
+    // clip at the row's edge where every browser wraps its text.
+    auto boxStyle = box->yogaNode_.style();
+    boxStyle.setFlexShrink(yoga::FloatOptional{1.0f});
+    box->yogaNode_.setStyle(boxStyle);
+  }
 
   yogaLayoutableChildren_.push_back(box);
   yogaNode_.insertChild(&box->yogaNode_, YGNodeGetChildCount(&yogaNode_));
@@ -613,6 +658,13 @@ void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
   // container, which the attachment layout assumes.
   react_native_assert(box->yogaNode_.getOwner() == &yogaNode_);
   anonymousTextContentChildren_.push_back(std::move(box));
+  // Structural invariant: the index vector (where each run starts among the
+  // children, used to interleave paint views with mounted children) is parallel
+  // to the box vector — they are cleared together and must grow together, or
+  // run paint order desyncs.
+  react_native_assert(
+      anonymousTextContentChildIndices_.size() ==
+      anonymousTextContentChildren_.size());
 }
 
 void YogaLayoutableShadowNode::updateYogaProps() {

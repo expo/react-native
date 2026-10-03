@@ -11,7 +11,10 @@
 
 #include <React/Debug.h>
 #include <React/RendererCore.h>
-#include <React/View.h>
+// The accessibility conversions, not the `<React/View.h>` umbrella: the view
+// module includes this header for its text runs, and the umbrella would include
+// the view module back before it is complete
+#include <react/renderer/components/view/accessibilityPropsConversions.h>
 #include <react/featureflags/ReactNativePublicFeatureFlags.h>
 #include <react/renderer/attributedstring/AttributedString.h>
 #include <react/renderer/attributedstring/ParagraphAttributes.h>

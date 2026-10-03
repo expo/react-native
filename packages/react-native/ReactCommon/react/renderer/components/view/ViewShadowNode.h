@@ -11,6 +11,7 @@
 
 #include <react/renderer/components/view/ConcreteViewShadowNode.h>
 #include <react/renderer/components/view/ViewProps.h>
+#include <react/renderer/components/view/ViewState.h>
 
 namespace facebook::react {
 
@@ -22,7 +23,7 @@ using ViewShadowNodeProps = ViewProps;
 /*
  * `ShadowNode` for <View> component.
  */
-class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, ViewProps, ViewEventEmitter> {
+class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, ViewProps, ViewEventEmitter, ViewState> {
  public:
   ViewShadowNode(const ShadowNodeFragment &fragment, const ShadowNodeFamily::Shared &family, ShadowNodeTraits traits);
 
@@ -45,6 +46,12 @@ class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, Vi
    * boxes at the frames their run's line layout gave them.
    */
   void layoutInlineAttachments(LayoutContext layoutContext);
+
+  /*
+   * Publishes this View's anonymous text runs, laid out, in `ViewState` for
+   * the mounting layer to paint. A View without runs keeps a null state.
+   */
+  void updateTextRunStateIfNeeded(Float fontSizeMultiplier);
 };
 
 } // namespace facebook::react

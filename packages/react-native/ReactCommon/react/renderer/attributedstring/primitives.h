@@ -163,4 +163,56 @@ enum class HyphenationFrequency {
   Full // Standard amount of hyphenation.
 };
 
+/*
+ * `white-space` (css-text-3 §3). A shorthand over three independent behaviours,
+ * which is why the values are read through the predicates below rather than
+ * compared directly: no single value is "more preserving" than another along
+ * every axis at once — `pre-line` preserves newlines while collapsing spaces,
+ * and `nowrap` collapses everything yet does not wrap.
+ *
+ *   value          newlines    spaces/tabs   wraps
+ *   normal         collapse    collapse      yes
+ *   pre            preserve    preserve      no
+ *   nowrap         collapse    collapse      no
+ *   pre-wrap       preserve    preserve      yes
+ *   pre-line       preserve    collapse      yes
+ *   break-spaces   preserve    preserve      yes
+ */
+enum class WhiteSpace : uint8_t {
+  Normal,
+  Pre,
+  NoWrap,
+  PreWrap,
+  PreLine,
+  BreakSpaces,
+};
+
+/*
+ * Whether a segment break in the source is content that ends a line, rather
+ * than collapsible whitespace that becomes a single space.
+ */
+inline bool preservesNewlines(WhiteSpace whiteSpace)
+{
+  return whiteSpace == WhiteSpace::Pre || whiteSpace == WhiteSpace::PreWrap || whiteSpace == WhiteSpace::PreLine ||
+      whiteSpace == WhiteSpace::BreakSpaces;
+}
+
+/*
+ * Whether runs of spaces and tabs survive as authored. Note `pre-line` does
+ * NOT: it is the one value that preserves newlines but still collapses spaces.
+ */
+inline bool preservesSpaces(WhiteSpace whiteSpace)
+{
+  return whiteSpace == WhiteSpace::Pre || whiteSpace == WhiteSpace::PreWrap || whiteSpace == WhiteSpace::BreakSpaces;
+}
+
+/*
+ * Whether a line that does not fit is broken to the next one. When false the
+ * text overflows its container instead, and only a segment break ends a line.
+ */
+inline bool wrapsText(WhiteSpace whiteSpace)
+{
+  return whiteSpace != WhiteSpace::Pre && whiteSpace != WhiteSpace::NoWrap;
+}
+
 } // namespace facebook::react
