@@ -126,9 +126,11 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
   }
 
   CGSize maximumSize = CGSize{layoutConstraints.maximumSize.width, CGFLOAT_MAX};
-  NSTextStorage *textStorage = [self _textStorageAndLayoutManagerWithAttributesString:attributedString
-                                                                  paragraphAttributes:paragraphAttributes
-                                                                                 size:maximumSize];
+  NSTextStorage *textStorage =
+      [self _textStorageAndLayoutManagerWithAttributesString:attributedString
+                                         paragraphAttributes:paragraphAttributes
+                                                        size:maximumSize
+                                                  exclusions:layoutConstraints.floatExclusions];
 
   return [self _measureTextStorage:textStorage paragraphAttributes:paragraphAttributes layoutContext:layoutContext];
 }
@@ -785,7 +787,57 @@ void drawInlineBoxDecorations(
                                                 paragraphAttributes:(ParagraphAttributes)paragraphAttributes
                                                                size:(CGSize)size
 {
+  return [self _textStorageAndLayoutManagerWithAttributesString:attributedString
+                                            paragraphAttributes:paragraphAttributes
+                                                           size:size
+                                                     exclusions:{}];
+}
+
+/*
+ * Float exclusions become `exclusionPaths` on the text container: TextKit
+ * shortens exactly the line fragments a path overlaps and leaves the rest
+ * full width, which is what CSS2 §9.5 asks for and is why this is a rect per
+ * band rather than a smaller container.
+ *
+ * No unit conversion, and that is not an omission: the renderer's
+ * device-independent unit IS the iOS point, which is what a text container
+ * measures in. The Android side of this feature has to convert, because a
+ * `Layout` there measures in physical pixels.
+ */
+- (NSTextStorage *)_textStorageAndLayoutManagerWithAttributesString:(NSAttributedString *)attributedString
+                                                paragraphAttributes:(ParagraphAttributes)paragraphAttributes
+                                                               size:(CGSize)size
+                                                         exclusions:(const std::vector<FloatExclusion> &)exclusionsPt
+{
   NSTextContainer *textContainer = [[NSTextContainer alloc] initWithSize:size];
+
+  if (!exclusionsPt.empty()) {
+    NSMutableArray<UIBezierPath *> *paths = [NSMutableArray arrayWithCapacity:exclusionsPt.size()];
+    for (const auto &exclusionPt : exclusionsPt) {
+      CGFloat heightPt = exclusionPt.blockEnd - exclusionPt.blockStart;
+      if (heightPt <= 0) {
+        continue;
+      }
+      if (exclusionPt.leftInset > 0) {
+        [paths
+            addObject:[UIBezierPath
+                          bezierPathWithRect:CGRectMake(0, exclusionPt.blockStart, exclusionPt.leftInset, heightPt)]];
+      }
+      // A right float is measured from the container's own right edge, so an
+      // unbounded width (`nowrap`) has no edge to hang it off and it is
+      // dropped rather than placed at infinity.
+      if (exclusionPt.rightInset > 0 && !isinf(size.width)) {
+        [paths addObject:[UIBezierPath bezierPathWithRect:CGRectMake(
+                                                              size.width - exclusionPt.rightInset,
+                                                              exclusionPt.blockStart,
+                                                              exclusionPt.rightInset,
+                                                              heightPt)]];
+      }
+    }
+    if (paths.count > 0) {
+      textContainer.exclusionPaths = paths;
+    }
+  }
 
   textContainer.lineFragmentPadding = 0.0; // Note, the default value is 5.
   textContainer.lineBreakMode = paragraphAttributes.maximumNumberOfLines > 0

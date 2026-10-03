@@ -39,6 +39,35 @@ int countAttachments(const AttributedString& attributedString) {
   return count;
 }
 
+/*
+ * The float bands, flattened for the JNI boundary: four floats each, in the
+ * order the Kotlin side reads them back. A plain array rather than a MapBuffer
+ * key because these are per-measurement geometry, not paragraph style, and
+ * because the array is empty for essentially every measurement.
+ *
+ * Still in DIPs on the way across — the Kotlin side converts, because that is
+ * where the pixel-valued line coordinates they get compared against live.
+ */
+jfloatArray toExclusionArrayDip(
+    JNIEnv* env,
+    const std::vector<FloatExclusion>& exclusions) {
+  auto array = env->NewFloatArray(static_cast<jsize>(exclusions.size() * 4));
+  if (exclusions.empty()) {
+    return array;
+  }
+  std::vector<jfloat> flat;
+  flat.reserve(exclusions.size() * 4);
+  for (const auto& exclusion : exclusions) {
+    flat.push_back(exclusion.blockStart);
+    flat.push_back(exclusion.blockEnd);
+    flat.push_back(exclusion.leftInset);
+    flat.push_back(exclusion.rightInset);
+  }
+  env->SetFloatArrayRegion(
+      array, 0, static_cast<jsize>(flat.size()), flat.data());
+  return array;
+}
+
 Size measureText(
     const std::shared_ptr<const ContextContainer>& contextContainer,
     MapBuffer attributedString,
@@ -47,7 +76,8 @@ Size measureText(
     float maxWidth,
     float minHeight,
     float maxHeight,
-    jfloatArray attachmentPositions) {
+    jfloatArray attachmentPositions,
+    jfloatArray floatExclusionsDip) {
   const jni::global_ref<jobject>& fabricUIManager =
       contextContainer->at<jni::global_ref<jobject>>("FabricUIManager");
 
@@ -60,6 +90,7 @@ Size measureText(
               jfloat,
               jfloat,
               jfloat,
+              jfloatArray,
               jfloatArray)>("measureText");
 
   auto attributedStringBuffer =
@@ -75,7 +106,8 @@ Size measureText(
       maxWidth,
       minHeight,
       maxHeight,
-      attachmentPositions));
+      attachmentPositions,
+      floatExclusionsDip));
 }
 
 TextMeasurement doMeasure(
@@ -108,7 +140,8 @@ TextMeasurement doMeasure(
       maximumSize.width,
       minimumSize.height,
       maximumSize.height,
-      attachmentPositions);
+      attachmentPositions,
+      toExclusionArrayDip(env, layoutConstraints.floatExclusions));
 
   jfloat* attachmentDataElements =
       env->GetFloatArrayElements(attachmentPositions, nullptr /*isCopy*/);
@@ -224,7 +257,8 @@ TextMeasurement TextLayoutManager::measureCachedSpannableById(
       maximumSize.width,
       minimumSize.height,
       maximumSize.height,
-      attachmentPositions);
+      attachmentPositions,
+      toExclusionArrayDip(env, layoutConstraints.floatExclusions));
 
   // Clean up allocated ref - it still takes up space in the JNI ref table even
   // though it's 0 length

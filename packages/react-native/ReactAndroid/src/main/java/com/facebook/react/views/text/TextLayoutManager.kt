@@ -1233,6 +1233,9 @@ internal object TextLayoutManager {
   internal fun wholePixelsCovering(px: Float): Int =
       ceil(px - WIDTH_ROUND_TRIP_TOLERANCE_PX).toInt()
 
+  // `@JvmOverloads` keeps the pre-float-exclusions signature callable: upstream's
+  // TextLayoutManagerStartOverhangTest reaches this by reflection with it.
+  @JvmOverloads
   @VisibleForTesting
   internal fun createLayout(
       text: Spannable,
@@ -1249,6 +1252,7 @@ internal object TextLayoutManager {
       ellipsizeMode: TextUtils.TruncateAt?,
       maxNumberOfLines: Int,
       paint: TextPaint,
+      floatExclusionsDip: FloatArray? = null,
   ): Layout {
     // If our text is boring, and fully fits in the available space, we can represent the text
     // layout as a BoringLayout
@@ -1312,6 +1316,7 @@ internal object TextLayoutManager {
             maxNumberOfLines,
             paint,
             enableStartOverhang,
+            floatExclusionsDip,
         )
 
     // Android 15/16 leak RTL line bounds into later LTR lines, shifting the whole drawing right.
@@ -1330,6 +1335,7 @@ internal object TextLayoutManager {
           maxNumberOfLines,
           paint,
           enableStartOverhang,
+          floatExclusionsDip,
           shiftDrawingOffsetForStartOverhang = false,
       )
     }
@@ -1352,6 +1358,7 @@ internal object TextLayoutManager {
             maxNumberOfLines,
             paint,
             enableStartOverhang,
+            floatExclusionsDip,
         )
       }
     } else {
@@ -1413,52 +1420,116 @@ internal object TextLayoutManager {
       maxNumberOfLines: Int,
       paint: TextPaint,
       enableStartOverhang: Boolean,
+      floatExclusionsDip: FloatArray? = null,
       shiftDrawingOffsetForStartOverhang: Boolean = enableStartOverhang,
   ): Layout {
-    val builder =
-        StaticLayout.Builder.obtain(text, 0, text.length, paint, layoutWidth)
-            .setAlignment(alignment)
-            .setLineSpacing(0f, 1f)
-            .setIncludePad(includeFontPadding)
-            .setBreakStrategy(textBreakStrategy)
-            .setHyphenationFrequency(hyphenationFrequency)
+    // A fresh builder per layout, deliberately. `StaticLayout.Builder.obtain`
+    // hands out a POOLED builder and `build()` recycles it, so a builder that
+    // has produced a layout cannot produce another — reusing one for the
+    // second pass below threw a NullPointerException out of `build()`.
+    fun newBuilder(): StaticLayout.Builder {
+      val builder =
+          StaticLayout.Builder.obtain(text, 0, text.length, paint, layoutWidth)
+              .setAlignment(alignment)
+              .setLineSpacing(0f, 1f)
+              .setIncludePad(includeFontPadding)
+              .setBreakStrategy(textBreakStrategy)
+              .setHyphenationFrequency(hyphenationFrequency)
 
-    if (maxNumberOfLines != ReactConstants.UNSET && maxNumberOfLines != 0) {
-      builder.setEllipsize(ellipsizeMode).setMaxLines(maxNumberOfLines)
+      if (maxNumberOfLines != ReactConstants.UNSET && maxNumberOfLines != 0) {
+        builder.setEllipsize(ellipsizeMode).setMaxLines(maxNumberOfLines)
+      }
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        builder.setJustificationMode(justificationMode)
+      }
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        builder.setUseLineSpacingFromFallbacks(true)
+      }
+
+      // Keep the platform default unless the caller requests line/word breaking.
+      if (
+          Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+              (lineBreakStyle != LineBreakConfig.LINE_BREAK_STYLE_NONE ||
+                  lineBreakWordStyle != LineBreakConfig.LINE_BREAK_WORD_STYLE_NONE)
+      ) {
+        builder.setLineBreakConfig(
+            LineBreakConfig.Builder()
+                .setLineBreakStyle(lineBreakStyle)
+                .setLineBreakWordStyle(lineBreakWordStyle)
+                .build()
+        )
+      }
+
+      // Android shifts negative (left-side) start overhang itself. RTL start overhang is on the
+      // right, so createLayout reserves that space in a second pass while preserving the EXACT Yoga
+      // measurement returned to the caller.
+      if (Build.VERSION.SDK_INT >= VERSION_CODE_VANILLA_ICE_CREAM) {
+        setUseBoundsForWidth(builder, enableStartOverhang)
+        setShiftDrawingOffsetForStartOverhang(builder, shiftDrawingOffsetForStartOverhang)
+      }
+
+      return builder
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      builder.setJustificationMode(justificationMode)
+    if (floatExclusionsDip != null && floatExclusionsDip.isNotEmpty()) {
+      return buildLayoutWithFloatIndents(::newBuilder, floatExclusionsDip)
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-      builder.setUseLineSpacingFromFallbacks(true)
+    return newBuilder().build()
+  }
+
+  /**
+   * A layout whose lines shorten beside the floats intruding on it (CSS2 §9.5).
+   *
+   * `setIndents` is per LINE, and which lines a float covers depends on where the lines fall — so
+   * the layout is built once to learn their tops, then rebuilt with the indents that band implies.
+   * Laying out twice is confined to content that actually has a float beside it, which is rare;
+   * estimating line positions from the font metrics instead would be wrong for any run whose lines
+   * differ in height, which is exactly the mixed content floats are used with.
+   */
+  private fun buildLayoutWithFloatIndents(
+      newBuilder: () -> StaticLayout.Builder,
+      floatExclusionsDip: FloatArray,
+  ): Layout {
+    val probe = newBuilder().build()
+    val lineCount = probe.lineCount
+    if (lineCount == 0) {
+      return probe
     }
 
-    // Leave the platform default in place unless a style was requested, so text without these props
-    // lays out exactly as before.
-    if (
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            (lineBreakStyle != LineBreakConfig.LINE_BREAK_STYLE_NONE ||
-                lineBreakWordStyle != LineBreakConfig.LINE_BREAK_WORD_STYLE_NONE)
-    ) {
-      builder.setLineBreakConfig(
-          LineBreakConfig.Builder()
-              .setLineBreakStyle(lineBreakStyle)
-              .setLineBreakWordStyle(lineBreakWordStyle)
-              .build()
-      )
+    val leftIndentsPx = IntArray(lineCount)
+    val rightIndentsPx = IntArray(lineCount)
+    var anyIndent = false
+    for (line in 0 until lineCount) {
+      val lineTopPx = probe.getLineTop(line).toFloat()
+      val lineBottomPx = probe.getLineBottom(line).toFloat()
+      var i = 0
+      while (i + 3 < floatExclusionsDip.size) {
+        // Converted here, once, because everything below compares against a
+        // LINE coordinate and those are pixels. Comparing a DIP band with a
+        // pixel line indents by a density's worth of the intended amount, and
+        // that reads as a layout bug rather than a unit one.
+        val bandTopPx = PixelUtil.toPixelFromDIP(floatExclusionsDip[i])
+        val bandBottomPx = PixelUtil.toPixelFromDIP(floatExclusionsDip[i + 1])
+        // A line is beside a float when their extents OVERLAP; touching at an
+        // edge is the next line down, not this one.
+        if (lineBottomPx > bandTopPx && lineTopPx < bandBottomPx) {
+          val leftInsetPx = ceil(PixelUtil.toPixelFromDIP(floatExclusionsDip[i + 2])).toInt()
+          val rightInsetPx = ceil(PixelUtil.toPixelFromDIP(floatExclusionsDip[i + 3])).toInt()
+          if (leftInsetPx > leftIndentsPx[line]) leftIndentsPx[line] = leftInsetPx
+          if (rightInsetPx > rightIndentsPx[line]) rightIndentsPx[line] = rightInsetPx
+          if (leftInsetPx > 0 || rightInsetPx > 0) anyIndent = true
+        }
+        i += 4
+      }
     }
 
-    // Android shifts negative (left-side) start overhang itself. RTL start overhang is on the
-    // right, so createLayout reserves that space in a second pass while preserving the EXACT Yoga
-    // measurement returned to the caller.
-    if (Build.VERSION.SDK_INT >= VERSION_CODE_VANILLA_ICE_CREAM) {
-      setUseBoundsForWidth(builder, enableStartOverhang)
-      setShiftDrawingOffsetForStartOverhang(builder, shiftDrawingOffsetForStartOverhang)
+    if (!anyIndent) {
+      return probe
     }
-
-    return builder.build()
+    return newBuilder().setIndents(leftIndentsPx, rightIndentsPx).build()
   }
 
   /**
@@ -1574,6 +1645,7 @@ internal object TextLayoutManager {
       heightYogaMeasureMode: YogaMeasureMode,
       reactTextViewManagerCallback: ReactTextViewManagerCallback?,
       textEffectRegistry: TextEffectRegistry? = null,
+      floatExclusionsDip: FloatArray? = null,
   ): Layout {
     val text =
         getOrCreateSpannableForText(
@@ -1602,6 +1674,7 @@ internal object TextLayoutManager {
             widthYogaMeasureMode,
             height,
             heightYogaMeasureMode,
+            floatExclusionsDip,
         )
         .layout
   }
@@ -1615,6 +1688,7 @@ internal object TextLayoutManager {
       widthYogaMeasureMode: YogaMeasureMode,
       height: Float,
       heightYogaMeasureMode: YogaMeasureMode,
+      floatExclusionsDip: FloatArray? = null,
   ): CreateLayoutResult {
     val boring = isBoring(text, paint)
 
@@ -1715,6 +1789,7 @@ internal object TextLayoutManager {
             ellipsizeMode,
             maximumNumberOfLines,
             paint,
+            floatExclusionsDip,
         )
 
     if (
@@ -1741,6 +1816,7 @@ internal object TextLayoutManager {
                 maximumNumberOfLines,
                 paint,
                 /* enableStartOverhang = */ false,
+                floatExclusionsDip,
             )
         if (calculateLineCount(tightenedLayout, maximumNumberOfLines) == lineCount) {
           layout = tightenedLayout
@@ -1977,6 +2053,7 @@ internal object TextLayoutManager {
       heightYogaMeasureMode: YogaMeasureMode,
       reactTextViewManagerCallback: ReactTextViewManagerCallback?,
       attachmentsPositions: FloatArray?,
+      floatExclusionsDip: FloatArray? = null,
       textEffectRegistry: TextEffectRegistry? = null,
   ): Long =
       measureText(
@@ -1990,6 +2067,7 @@ internal object TextLayoutManager {
           heightYogaMeasureMode,
           reactTextViewManagerCallback,
           attachmentsPositions,
+          floatExclusionsDip,
           textEffectRegistry,
       )
 
@@ -2006,6 +2084,7 @@ internal object TextLayoutManager {
       heightYogaMeasureMode: YogaMeasureMode,
       reactTextViewManagerCallback: ReactTextViewManagerCallback?,
       attachmentsPositions: FloatArray?,
+      floatExclusionsDip: FloatArray? = null,
       textEffectRegistry: TextEffectRegistry? = null,
   ): Long {
     // TODO(5578671): Handle text direction (see View#getTextDirectionHeuristic)
@@ -2021,6 +2100,7 @@ internal object TextLayoutManager {
             heightYogaMeasureMode,
             reactTextViewManagerCallback,
             textEffectRegistry,
+            floatExclusionsDip,
         )
 
     val maximumNumberOfLines =
