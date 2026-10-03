@@ -29,7 +29,7 @@ import ensureInstance from '../../../../src/private/__tests__/utilities/ensureIn
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
-import {View} from 'react-native';
+import {Text, View} from 'react-native';
 import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 
 type Rect = {x: number, y: number, width: number, height: number};
@@ -289,6 +289,78 @@ describe('atomic inlines in a block container', () => {
       width: 50,
       height: 20,
     });
+  });
+});
+
+describe('the baseline of an inline-block', () => {
+  it('is the baseline of its last line box', () => {
+    const container = createRef<HostInstance>();
+    const withText = createRef<HostInstance>();
+    const tall = createRef<HostInstance>();
+    render(
+      <View ref={container} style={{display: 'block', width: 300}}>
+        <View ref={withText} style={{display: 'inline-block', width: 60}}>
+          {/* <Text> clips by default, and a clipped box offers its bottom
+              edge instead of its line box */}
+          <Text style={{overflow: 'visible', fontSize: 14}}>abc</Text>
+        </View>
+        <View
+          ref={tall}
+          style={{display: 'inline-block', width: 50, height: 40}}
+        />
+      </View>,
+    );
+    // The paragraph's baseline is 16pt below its top. The 40pt box has no
+    // line boxes, so it sits on the baseline by its bottom edge, which puts
+    // the baseline 40pt down the line and the paragraph's box 24pt down.
+    expect(relativeRect(tall, container).y).toBe(0);
+    expect(relativeRect(withText, container).y).toBe(24);
+  });
+
+  it('is the baseline of the LAST line when its text wraps', () => {
+    const container = createRef<HostInstance>();
+    const wrapped = createRef<HostInstance>();
+    const tall = createRef<HostInstance>();
+    render(
+      <View ref={container} style={{display: 'block', width: 300}}>
+        <View ref={wrapped} style={{display: 'inline-block', width: 40}}>
+          <Text style={{overflow: 'visible', fontSize: 14}}>abc def</Text>
+        </View>
+        <View
+          ref={tall}
+          style={{display: 'inline-block', width: 50, height: 50}}
+        />
+      </View>,
+    );
+    // Two 20pt lines, so the last baseline is 36pt below the box's top. The
+    // 50pt box puts the line's baseline 50pt down, and the text's box 14pt
+    // down. Aligning by the first line would put it 34pt down instead.
+    expect(relativeRect(wrapped, container).height).toBe(40);
+    expect(relativeRect(wrapped, container).y).toBe(14);
+  });
+
+  it('is its bottom edge when it clips its contents', () => {
+    const container = createRef<HostInstance>();
+    const clipped = createRef<HostInstance>();
+    const tall = createRef<HostInstance>();
+    render(
+      <View ref={container} style={{display: 'block', width: 300}}>
+        <View
+          ref={clipped}
+          style={{display: 'inline-block', width: 60, overflow: 'hidden'}}>
+          <Text>abc</Text>
+        </View>
+        <View
+          ref={tall}
+          style={{display: 'inline-block', width: 50, height: 40}}
+        />
+      </View>,
+    );
+    const clippedRect = relativeRect(clipped, container);
+    const tallRect = relativeRect(tall, container);
+    expect(clippedRect.y + clippedRect.height).toBe(
+      tallRect.y + tallRect.height,
+    );
   });
 });
 

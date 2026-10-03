@@ -33,11 +33,12 @@ float calculateBaseline(const yoga::Node* node) {
 
   yoga::Node* baselineChild = nullptr;
   for (auto child : node->getLayoutChildren()) {
+    if (child->style().positionType() == PositionType::Absolute ||
+        child->style().display() == Display::None) {
+      continue;
+    }
     if (child->getLineIndex() > 0) {
       break;
-    }
-    if (child->style().positionType() == PositionType::Absolute) {
-      continue;
     }
     if (resolveChildAlignment(node, child) == Align::Baseline ||
         child->isReferenceBaseline()) {
