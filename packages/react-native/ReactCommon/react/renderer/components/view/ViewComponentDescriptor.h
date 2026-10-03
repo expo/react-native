@@ -11,6 +11,7 @@
 
 #include <react/renderer/components/view/ViewShadowNode.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
+#include <react/renderer/core/State.h>
 
 namespace facebook::react {
 
@@ -19,6 +20,20 @@ class ViewComponentDescriptor : public ConcreteComponentDescriptor<ViewShadowNod
   ViewComponentDescriptor(const ComponentDescriptorParameters &parameters)
       : ConcreteComponentDescriptor<ViewShadowNode>(parameters)
   {
+  }
+
+  /*
+   * Views start stateless. Although `ViewShadowNode` declares a `ViewState`
+   * (to paint anonymous text runs), a plain View has no runs and needs no
+   * state — so a `ViewState` is allocated lazily, on the first runs, rather
+   * than for every View at construction. A textless View allocates no state
+   * object, exactly as before. `ViewShadowNode::updateTextRunStateIfNeeded`
+   * performs the null -> non-null transition when runs appear.
+   */
+  State::Shared createInitialState(const Props::Shared & /*props*/, const ShadowNodeFamily::Shared & /*family*/)
+      const override
+  {
+    return nullptr;
   }
 };
 

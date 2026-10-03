@@ -10,6 +10,7 @@
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/ConcreteState.h>
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
 
@@ -77,6 +78,12 @@ void ViewShadowNode::initialize() noexcept {
       HostPlatformViewTraitsInitializer::formsView(viewProps) ||
       viewProps.outlineWidth > 0;
 
+  if (!getAnonymousTextContentChildren().empty()) {
+    // Text-bearing Views paint their runs and must not be flattened away.
+    formsView = true;
+    formsStackingContext = true;
+  }
+
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       viewProps.displayInline) {
     // Atomic `display:'inline'` boxes are positioned by their container's
@@ -109,6 +116,165 @@ void ViewShadowNode::initialize() noexcept {
 void ViewShadowNode::layout(LayoutContext layoutContext) {
   YogaLayoutableShadowNode::layout(layoutContext);
   layoutInlineAttachments(layoutContext);
+  updateTextRunStateIfNeeded(layoutContext.fontSizeMultiplier);
+}
+
+namespace {
+
+// A view the mounting layer mounts among a View's children, with what decides
+// where it lands among them
+struct MountedView {
+  int orderIndex;
+  bool isStatic;
+  size_t childIndex;
+};
+
+/*
+ * Collects the views the mounting layer mounts for `node`, the child at
+ * `childIndex`, mirroring view flattening in `sliceChildShadowNodeViewPairs`:
+ * a node that forms a view mounts as one, and a flattened node's children
+ * mount in its place.
+ */
+void collectMountedViews(
+    const ShadowNode& node,
+    bool parentChildrenFormStackingContext,
+    size_t childIndex,
+    std::vector<MountedView>& mountedViews) {
+  const auto traits = node.getTraits();
+  if (
+#ifdef ANDROID
+      ReactNativeFeatureFlags::useTraitHiddenOnAndroid() &&
+#endif
+      traits.check(ShadowNodeTraits::Trait::Hidden)) {
+    return;
+  }
+  const bool forceFlatten =
+      traits.check(ShadowNodeTraits::Trait::ForceFlattenView);
+  const bool isConcreteView =
+      (traits.check(ShadowNodeTraits::Trait::FormsView) ||
+       parentChildrenFormStackingContext) &&
+      !forceFlatten;
+  const bool areChildrenFlattened =
+      (!traits.check(ShadowNodeTraits::Trait::FormsStackingContext) &&
+       !parentChildrenFormStackingContext) ||
+      forceFlatten;
+  if (isConcreteView) {
+    const auto* layoutableNode =
+        traits.check(ShadowNodeTraits::Trait::YogaLayoutableKind)
+        ? static_cast<const LayoutableShadowNode*>(&node)
+        : dynamic_cast<const LayoutableShadowNode*>(&node);
+    mountedViews.push_back(
+        {.orderIndex = node.getOrderIndex(),
+         .isStatic = layoutableNode != nullptr &&
+             layoutableNode->getLayoutMetrics().positionType ==
+                 PositionType::Static,
+         .childIndex = childIndex});
+  }
+  if (areChildrenFlattened) {
+    const bool childrenFormStackingContext =
+        traits.check(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+    for (const auto& child : node.getChildren()) {
+      collectMountedViews(
+          *child, childrenFormStackingContext, childIndex, mountedViews);
+    }
+  }
+}
+
+/*
+ * For each run, the number of the View's mounted views that paint below it,
+ * which is where the platforms place the run among them.
+ *
+ * The mounting layer mounts views with `position: 'static'` before the rest
+ * and then stable-sorts everything by `zIndex`. A run paints like a
+ * non-static view with no `zIndex`: above every static view and every view
+ * with a negative `zIndex`, among the other views in document order, and
+ * below every view with a positive `zIndex`.
+ */
+std::vector<int> paintPositionsOfRuns(
+    const ShadowNode& view,
+    const std::vector<size_t>& runChildIndices) {
+  std::vector<MountedView> mountedViews;
+  const bool childrenFormStackingContext = view.getTraits().check(
+      ShadowNodeTraits::Trait::ChildrenFormStackingContext);
+  const auto& children = view.getChildren();
+  for (size_t i = 0; i < children.size(); i++) {
+    collectMountedViews(
+        *children[i], childrenFormStackingContext, i, mountedViews);
+  }
+
+  std::vector<int> positions;
+  positions.reserve(runChildIndices.size());
+  for (auto runChildIndex : runChildIndices) {
+    int position = 0;
+    for (const auto& mountedView : mountedViews) {
+      if (mountedView.orderIndex < 0 ||
+          (mountedView.orderIndex == 0 &&
+           (mountedView.isStatic || mountedView.childIndex < runChildIndex))) {
+        position++;
+      }
+    }
+    positions.push_back(position);
+  }
+  return positions;
+}
+
+} // namespace
+
+void ViewShadowNode::updateTextRunStateIfNeeded(Float fontSizeMultiplier) {
+  if (!ReactNativeFeatureFlags::enableStringChildren()) {
+    return;
+  }
+
+  const auto& anonymousBoxes = getAnonymousTextContentChildren();
+
+  // Zero-cost hot path: a View that has never carried anonymous text runs
+  // keeps a null `ViewState`, exactly like a plain View. State is allocated
+  // lazily on the first runs (the null -> non-null transition below); once
+  // allocated it persists — possibly emptied when text is removed — for the
+  // node's life.
+  if (anonymousBoxes.empty() &&
+      (state_ == nullptr || getStateData().textRuns.empty())) {
+    return;
+  }
+
+  ensureUnsealed();
+
+  auto textRuns = std::vector<ViewState::TextRun>{};
+  auto layoutManager = std::weak_ptr<const TextLayoutManager>{};
+  const auto paintPositions =
+      paintPositionsOfRuns(*this, getAnonymousTextContentChildIndices());
+  textRuns.reserve(anonymousBoxes.size());
+  for (size_t i = 0; i < anonymousBoxes.size(); i++) {
+    const auto& box = anonymousBoxes[i];
+    const auto* contentAccessor =
+        dynamic_cast<const InlineTextContentAccessor*>(box.get());
+    if (contentAccessor == nullptr) {
+      continue;
+    }
+    if (layoutManager.expired()) {
+      layoutManager = contentAccessor->getContentTextLayoutManager();
+    }
+    const auto documentOrder =
+        i < paintPositions.size() ? paintPositions[i] : static_cast<int>(i);
+    textRuns.push_back(
+        ViewState::TextRun{
+            .attributedString =
+                contentAccessor->getContentAttributedString(fontSizeMultiplier),
+            .frame = box->getLayoutMetrics().frame,
+            .documentOrder = documentOrder});
+  }
+
+  if (state_ == nullptr) {
+    // First runs on a previously-stateless View: allocate the state on demand,
+    // seeded from the family like `createInitialState` would (there is no
+    // prior state to chain from).
+    state_ = std::make_shared<const facebook::react::ConcreteState<ViewState>>(
+        std::make_shared<const ViewState>(
+            ViewState(std::move(textRuns), std::move(layoutManager))),
+        getFamilyShared());
+  } else if (getStateData().textRuns != textRuns) {
+    setStateData(ViewState(std::move(textRuns), std::move(layoutManager)));
+  }
 }
 
 void ViewShadowNode::layoutInlineAttachments(LayoutContext layoutContext) {

@@ -139,6 +139,22 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   }
 
   /*
+   * Parallel to `getAnonymousTextContentChildren()`: for each anonymous run box,
+   * the index in `getChildren()` of the run's first child. Used to interleave
+   * per-run paint views with mounted children in authored order.
+   */
+  const std::vector<size_t> &getAnonymousTextContentChildIndices() const
+  {
+    return anonymousTextContentChildIndices_;
+  }
+
+  /*
+   * True when `child` is inline-level content (a text node or an inline text
+   * element) that participates in anonymous box generation under this node.
+   */
+  static bool isInlineTextContent(const ShadowNode &child);
+
+  /*
    * True when `child` is an atomic inline-level box: an otherwise block-level
    * element (`View`, `Image`, …) opted inline via `display:'inline'` that is
    * sized or has non-inline content. In a block container it joins the
@@ -276,7 +292,9 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Appends an anonymous box produced by the factory for the given run into
    * the Yoga children (it is never part of `children_` — box tree only).
    */
-  void appendAnonymousTextContentChild(std::vector<std::shared_ptr<const ShadowNode>> &&runChildren);
+  void appendAnonymousTextContentChild(
+      std::vector<std::shared_ptr<const ShadowNode>> &&runChildren,
+      size_t firstChildIndex);
 
 #pragma mark - Private member variables
   /*
@@ -290,6 +308,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * `yogaLayoutableChildren_` and the Yoga node, never in `children_`.
    */
   std::vector<std::shared_ptr<YogaLayoutableShadowNode>> anonymousTextContentChildren_;
+
+  /*
+   * Parallel to `anonymousTextContentChildren_`: the index of each run box's
+   * first child (document-order interleaving).
+   */
+  std::vector<size_t> anonymousTextContentChildIndices_;
 
   /*
    * Whether the full Yoga subtree of this Node has been configured.

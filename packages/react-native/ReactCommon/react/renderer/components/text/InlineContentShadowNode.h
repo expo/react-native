@@ -27,9 +27,10 @@ extern const char InlineContentComponentName[];
  * the shadow tree's `children_`, so they are invisible to the differ,
  * mounting, events, and DOM APIs.
  *
- * The run's lines are laid out by the platform text layout manager: each
- * atomic inline is an attachment, sized by measuring it, and the line layout
- * decides where each one lands.
+ * The run's lines are laid out by the platform text layout manager: text
+ * nodes and inline text elements contribute their text, each atomic inline is
+ * an attachment, sized by measuring it, and the line layout decides where
+ * everything lands. White space collapses as CSS's `white-space: normal` says.
  */
 class InlineContentShadowNode final
     : public ConcreteShadowNode<InlineContentComponentName, YogaLayoutableShadowNode, ViewProps>,
@@ -87,6 +88,13 @@ class InlineContentShadowNode final
   Float lastLineBaseline(const LayoutContext &layoutContext, Size size) const override;
 
 #pragma mark - InlineTextContentAccessor
+
+  AttributedString getContentAttributedString(Float fontSizeMultiplier) const override;
+
+  std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const override
+  {
+    return textLayoutManager_;
+  }
 
   // Re-runs the run's line layout at the box's final laid-out size and returns
   // the resolved frame of each atomic inline. Empty when the run has no
