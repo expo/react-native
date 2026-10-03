@@ -55,9 +55,18 @@ void measureAtomicInlines(
         layoutContext,
         constraintsHonoringOwnBounds(*attachment.shadowNode, baseConstraints));
     // Where this box's baseline sits, so the line layout can put that baseline
-    // on the line's rather than dropping the box's bottom onto it.
-    fragments[attachment.fragmentIndex].atomicInlineBaseline =
-        layoutable->baseline(layoutContext, size);
+    // on the line's rather than dropping the box's bottom onto it. An
+    // inline-flex box aligns by the first baseline its flex items export
+    // (css-flexbox-1 §8.5); any other atomic inline, by its last line box
+    // (CSS2 §10.8.1).
+    const auto* boxProps = dynamic_cast<const YogaStylableProps*>(
+        attachment.shadowNode->getProps().get());
+    const bool isFlexContainer = boxProps != nullptr &&
+        !boxProps->displayBlock &&
+        boxProps->yogaStyle.display() == yoga::Display::Flex;
+    fragments[attachment.fragmentIndex].atomicInlineBaseline = isFlexContainer
+        ? layoutable->baseline(layoutContext, size)
+        : layoutable->lastLineBaseline(layoutContext, size);
 
     // An atomic inline box's inline-axis margins add to the advance it
     // occupies on the line (CSS2 §10.8): the reserved box is the MARGIN box,
@@ -91,6 +100,19 @@ void InlineContentShadowNode::setTextLayoutManager(
 Float InlineContentShadowNode::baseline(
     const LayoutContext& layoutContext,
     Size size) const {
+  return lineBaseline(layoutContext, size, /* lastLine */ false);
+}
+
+Float InlineContentShadowNode::lastLineBaseline(
+    const LayoutContext& layoutContext,
+    Size size) const {
+  return lineBaseline(layoutContext, size, /* lastLine */ true);
+}
+
+Float InlineContentShadowNode::lineBaseline(
+    const LayoutContext& layoutContext,
+    Size size,
+    bool lastLine) const {
   if (textLayoutManager_ == nullptr) {
     return 0;
   }
@@ -124,7 +146,7 @@ Float InlineContentShadowNode::baseline(
     // a font metric and overshoots the real distance from the content's top to
     // the baseline whenever the line box is not exactly ascent+descent tall.
     // The bottom minus the descender is where the line's baseline actually is.
-    const auto& line = lines[0];
+    const auto& line = lastLine ? lines.back() : lines.front();
     return line.frame.origin.y + line.frame.size.height -
         std::abs(line.descender);
   }
