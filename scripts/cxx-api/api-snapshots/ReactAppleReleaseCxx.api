@@ -3238,6 +3238,7 @@ bool facebook::react::isZero(facebook::react::Float n);
 bool facebook::react::preservesNewlines(facebook::react::WhiteSpace whiteSpace);
 bool facebook::react::preservesSpaces(facebook::react::WhiteSpace whiteSpace);
 bool facebook::react::wrapsText(facebook::react::WhiteSpace whiteSpace);
+const facebook::react::BaseViewProps* facebook::react::viewPropsOf(const facebook::react::ShadowNode& node);
 constexpr auto facebook::react::to_underlying(auto e) noexcept;
 constexpr char facebook::react::toLower(char c);
 constexpr uint32_t facebook::react::fnv1aLowercase(std::string_view string);
@@ -3977,12 +3978,15 @@ class facebook::react::InlineContentShadowNode : public facebook::react::Concret
   public InlineContentShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public facebook::react::TextAttributes baseTextAttributes() const;
   public static facebook::react::ShadowNodeTraits BaseTraits();
+  public std::shared_ptr<const facebook::react::TextAttributes> inheritedCascade_;
+  public virtual const std::shared_ptr<const facebook::react::TextAttributes>* getStoredCascade() const override;
   public virtual facebook::react::AttributedString getContentAttributedString(facebook::react::Float fontSizeMultiplier) const override;
   public virtual facebook::react::Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
   public virtual std::shared_ptr<const facebook::react::TextLayoutManager> getContentTextLayoutManager() const override;
   public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const override;
+  public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
   public void setTextLayoutManager(std::shared_ptr<const facebook::react::TextLayoutManager> textLayoutManager);
 }
 
@@ -4628,6 +4632,8 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   MeasurableYogaNode,
   None,
   RootNodeKind,
+  SubtreeHasCascadeDependents,
+  TextCascadeConsumer,
   Unstable_uncullableTrace,
   Unstable_uncullableView,
   ViewKind,
@@ -4877,6 +4883,7 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public static bool isInlineFlowContent(const facebook::react::ShadowNode& child);
   public static bool isInlineTextContent(const facebook::react::ShadowNode& child);
   public static const facebook::react::YogaLayoutableShadowNode* asYogaLayoutable(const facebook::react::ShadowNode& node);
+  public static const std::shared_ptr<const facebook::react::TextAttributes>& defaultCascadeTextAttributes();
   public static facebook::react::YogaLayoutableShadowNode::AnonymousTextContentFactory getAnonymousTextContentFactory();
   public static std::shared_ptr<const facebook::react::YogaLayoutableShadowNode> asYogaLayoutable(const std::shared_ptr<const facebook::react::ShadowNode>& node);
   public static void setAnonymousTextContentFactory(facebook::react::YogaLayoutableShadowNode::AnonymousTextContentFactory factory);
@@ -4884,12 +4891,14 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public using ListOfShared = std::vector<facebook::react::YogaLayoutableShadowNode::Shared>;
   public using Shared = std::shared_ptr<const facebook::react::YogaLayoutableShadowNode>;
   public virtual bool getIsLayoutClean() const override;
+  public virtual const std::shared_ptr<const facebook::react::TextAttributes>* getStoredCascade() const;
   public virtual void appendChild(const std::shared_ptr<const facebook::react::ShadowNode>& child) override;
   public virtual void completeClone(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment) override;
   public virtual void dirtyLayout() override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
   public virtual void layoutTree(facebook::react::LayoutContext layoutContext, facebook::react::LayoutConstraints layoutConstraints) override;
   public virtual void replaceChild(const facebook::react::ShadowNode& oldChild, const std::shared_ptr<const facebook::react::ShadowNode>& newChild, size_t suggestedIndex = SIZE_MAX) override;
+  public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>&);
   public void enableMeasurement();
   public void setPadding(facebook::react::RectangleEdges<facebook::react::Float> padding) const;
   public void setPositionType(YGPositionType positionType) const;
