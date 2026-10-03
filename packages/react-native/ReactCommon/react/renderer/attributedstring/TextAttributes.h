@@ -18,9 +18,12 @@
 #include <React/RendererCore.h>
 #include <React/RendererDebug.h>
 #include <React/Utils.h>
-#include <React/View.h>
 #include <folly/dynamic.h>
 #include <react/renderer/attributedstring/primitives.h>
+// Only the accessibility primitives, not the `<React/View.h>` umbrella: the
+// view module includes this header for text inheritance, and the umbrella
+// would include the view module back before it is complete
+#include <react/renderer/components/view/AccessibilityPrimitives.h>
 
 namespace facebook::react {
 
@@ -66,6 +69,8 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<bool> allowFontScaling{};
   std::optional<DynamicTypeRamp> dynamicTypeRamp{};
   std::optional<TextTransform> textTransform{};
+  // `white-space`. Inherited, so a container passes it to every run inside it.
+  std::optional<WhiteSpace> whiteSpace{};
 
   // Paragraph Styles
   Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
@@ -161,6 +166,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.fontVariationSettings,
         textAttributes.allowFontScaling,
         textAttributes.textTransform,
+        textAttributes.whiteSpace,
         textAttributes.alignment,
         textAttributes.baseWritingDirection,
         textAttributes.lineBreakStrategy,

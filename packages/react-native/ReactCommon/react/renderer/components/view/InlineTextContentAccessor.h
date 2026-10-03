@@ -10,11 +10,13 @@
 #include <memory>
 #include <vector>
 
+#include <react/renderer/attributedstring/AttributedString.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/graphics/Rect.h>
 
 namespace facebook::react {
 
+class TextLayoutManager;
 class ShadowNodeFamily;
 struct LayoutContext;
 
@@ -31,12 +33,22 @@ struct InlineAttachmentPlacement {
 
 /*
  * Implemented by anonymous inline-formatting-context boxes so their containing
- * View can place their contents without depending on the text module, which
- * implements them.
+ * View can place and paint their contents without depending on the text
+ * module, which implements them.
  */
 class InlineTextContentAccessor {
  public:
   virtual ~InlineTextContentAccessor() = default;
+
+  /*
+   * `fontSizeMultiplier`: the accessibility font scale the content was
+   * measured under (LayoutContext.fontSizeMultiplier). The published string
+   * must carry it so it compares equal to — and renders identically to —
+   * what measurement laid out.
+   */
+  virtual AttributedString getContentAttributedString(Float fontSizeMultiplier) const = 0;
+
+  virtual std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const = 0;
 
   // Resolved frames of this run's atomic inlines, so the owning View can
   // position each one at its place in the run's lines rather than at the box
