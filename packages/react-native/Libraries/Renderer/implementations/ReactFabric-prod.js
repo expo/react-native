@@ -7457,6 +7457,17 @@ function completeWork(current, workInProgress, renderLanes) {
           newProps,
           renderLanes.validAttributes
         );
+        // Generic seam: a view config may opt into recording its authored JSX
+        // type as a `nodeName` prop (recordNodeName). Intrinsic-component
+        // modules use this so a tag keeps its name for DOM APIs without the
+        // renderer knowing any component. This has to be in EVERY renderer
+        // build, not just dev: it was dev-only, so release builds delivered no
+        // tag to C++ at all and anything reading one — list markers, DOM
+        // tagName from native — silently saw an empty string.
+        if (renderLanes.recordNodeName)
+          updatePayload = Object.assign({}, updatePayload, {
+            nodeName: workInProgress.type
+          });
         current = {
           node: createNode(
             previousCache,

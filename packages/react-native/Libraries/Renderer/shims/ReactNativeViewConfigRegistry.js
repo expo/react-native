@@ -95,11 +95,32 @@ export function register(name: string, callback: () => ViewConfig): string {
  * If this is the first time the view has been used,
  * This configuration will be lazy-loaded from UIManager.
  */
+let fallbackViewConfigResolver: ?(name: string) => ?ViewConfig = null;
+
+/**
+ * Installs a resolver consulted by `get` when a component name has no registered
+ * view config. This is the generic seam an intrinsic-component module (e.g.
+ * expo-intrinsics) uses to resolve tags core does not know about — most notably
+ * the HTMLUnknownElement fallback for unregistered lowercase tags. Core stays
+ * agnostic: it neither names nor knows any intrinsic element, it only offers the
+ * hook. Returning `null` from the resolver means "not handled" and falls through
+ * to the usual invariant.
+ */
+export function setFallbackViewConfigResolver(
+  resolver: (name: string) => ?ViewConfig,
+): void {
+  fallbackViewConfigResolver = resolver;
+}
+
 export function get(name: string): ViewConfig {
   let viewConfig = viewConfigs.get(name);
   if (viewConfig == null) {
     const callback = viewConfigCallbacks.get(name);
     if (typeof callback !== 'function') {
+      const fallbackViewConfig = fallbackViewConfigResolver?.(name);
+      if (fallbackViewConfig != null) {
+        return fallbackViewConfig;
+      }
       invariant(
         false,
         'View config getter callback for component `%s` must be a function (received `%s`).%s',
