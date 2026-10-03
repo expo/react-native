@@ -29,12 +29,17 @@
 #import <react/renderer/components/view/ViewComponentDescriptor.h>
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
+#import <react/renderer/components/view/ViewState.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
 #import <React/RCTComponentViewFactory.h>
 #endif
+
+// Per-run text painting lives in its own file: it is a self-contained concept,
+// and this class is the one every React Native change touches.
+#import "RCTAnonymousTextRunView.h"
 
 using namespace facebook::react;
 
@@ -122,6 +127,9 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   NSMutableSet<NSString *> *_accessibilityOrderNativeIDs;
   RCTSwiftUIContainerViewWrapper *_swiftUIWrapper;
   BOOL _focusable;
+  // One paint view per anonymous text run, interleaved with mounted children in
+  // document order. Internal, never differ-driven.
+  NSMutableArray<RCTAnonymousTextRunView *> *_textRunViews;
 }
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -220,6 +228,33 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   return concreteComponentDescriptorProvider<ViewComponentDescriptor>();
 }
 
+// Anonymous text run views are the container's own paint layers (plain
+// UIViews, tag 0), interleaved BETWEEN mounted children to honor CSS painting
+// order. Mounting instructions know nothing about them: a mutation's index
+// counts only Fabric children. With run views present, that logical index and
+// the UIKit subview index diverge — using one as the other mounts children at
+// the wrong z-position and trips the unmount assertions on perfectly valid
+// removals. This maps a mutation's index to the UIKit position of that slot,
+// counting only non-run subviews.
+- (NSInteger)_containerIndexForMountIndex:(NSInteger)index
+{
+  if (_textRunViews.count == 0) {
+    return index;
+  }
+  NSArray<UIView *> *subviews = self.currentContainerView.subviews;
+  NSInteger mountedSeen = 0;
+  for (NSUInteger position = 0; position < subviews.count; position++) {
+    if ([subviews[position] isKindOfClass:[RCTAnonymousTextRunView class]]) {
+      continue;
+    }
+    if (mountedSeen == index) {
+      return (NSInteger)position;
+    }
+    mountedSeen++;
+  }
+  return (NSInteger)subviews.count;
+}
+
 - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index
 {
   RCTAssert(
@@ -233,7 +268,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   if (_removeClippedSubviews) {
     [_reactSubviews insertObject:childComponentView atIndex:index];
   } else {
-    [self.currentContainerView insertSubview:childComponentView atIndex:index];
+    [self.currentContainerView insertSubview:childComponentView atIndex:[self _containerIndexForMountIndex:index]];
   }
 }
 
@@ -256,16 +291,17 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
         @(index),
         @([childComponentView.superview tag]));
 #ifndef NS_BLOCK_ASSERTIONS
+    NSInteger containerIndex = [self _containerIndexForMountIndex:index];
     NSArray<UIView *> *containerSubviews = self.currentContainerView.subviews;
-    BOOL isIndexInBounds = index >= 0 && (NSUInteger)index < containerSubviews.count;
+    BOOL isIndexInBounds = containerIndex >= 0 && (NSUInteger)containerIndex < containerSubviews.count;
     RCTAssert(
-        isIndexInBounds && [containerSubviews objectAtIndex:index] == childComponentView,
+        isIndexInBounds && [containerSubviews objectAtIndex:containerIndex] == childComponentView,
         @"Attempt to unmount a view which has a different index. (parent: %@, child: %@, index: %@, actual index: %@, tag at index: %@)",
         self,
         childComponentView,
         @(index),
         @([containerSubviews indexOfObject:childComponentView]),
-        isIndexInBounds ? @([[containerSubviews objectAtIndex:index] tag]) : @"out of bounds");
+        isIndexInBounds ? @([[containerSubviews objectAtIndex:containerIndex] tag]) : @"out of bounds");
 #endif
   }
 
@@ -283,7 +319,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
         self,
         @(_reactSubviews.count));
     if (self.currentContainerView.subviews.count > 0) {
-      _reactSubviews = [NSMutableArray arrayWithArray:self.currentContainerView.subviews];
+      _reactSubviews = [NSMutableArray new];
+      for (UIView *subview in self.currentContainerView.subviews) {
+        // The container's own text-run paint layers are not React children.
+        if (![subview isKindOfClass:[RCTAnonymousTextRunView class]]) {
+          [_reactSubviews addObject:subview];
+        }
+      }
     }
   } else {
     // Toggled OFF: re-mount all children in the correct order, then clear the tracking array.
@@ -327,6 +369,96 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       // View is completely outside the clipRect, so unmount it
       [view removeFromSuperview];
     }
+  }
+}
+
+- (void)updateState:(const facebook::react::State::Shared &)state
+           oldState:(const facebook::react::State::Shared &)oldState
+{
+  const auto *viewState =
+      std::dynamic_pointer_cast<const facebook::react::ConcreteState<facebook::react::ViewState>>(state).get();
+  if (viewState == nullptr) {
+    return;
+  }
+
+  const auto &data = viewState->getData();
+
+  // Remove surplus run views when the run count shrinks (incl. to zero).
+  while (_textRunViews.count > data.textRuns.size()) {
+    [_textRunViews.lastObject removeFromSuperview];
+    [_textRunViews removeLastObject];
+  }
+  if (data.textRuns.empty()) {
+    return;
+  }
+
+  if (_textRunViews == nil) {
+    _textRunViews = [NSMutableArray new];
+  }
+  for (size_t i = 0; i < data.textRuns.size(); i++) {
+    RCTAnonymousTextRunView *runView = nil;
+    if (i < _textRunViews.count) {
+      runView = _textRunViews[i];
+    } else {
+      runView = [[RCTAnonymousTextRunView alloc] initWithFrame:self.currentContainerView.bounds];
+      [_textRunViews addObject:runView];
+      [self.currentContainerView addSubview:runView];
+    }
+    runView->_run = data.textRuns[i];
+    runView->_layoutManager = data.layoutManager;
+    [runView setContainerBounds:self.currentContainerView.bounds];
+    [runView setNeedsDisplay];
+  }
+  // Re-establish authored paint order relative to mounted children.
+  [self setNeedsLayout];
+}
+
+// Interleaves the internal per-run paint views with mounted child views in
+// authored document order (CSS painting order): a run with
+// `documentOrder == d` is placed just below the d-th mounted child, so text
+// authored before a child paints under it and text after paints over it.
+- (void)reorderAnonymousTextRunViewsIfNeeded
+{
+  if (_textRunViews.count == 0) {
+    return;
+  }
+  UIView *container = self.currentContainerView;
+
+  // Nothing to interleave WITH is the overwhelmingly common case — a row, a
+  // cell, a label: a view whose only content is its own text. Its run views
+  // were appended in order and there is no mounted child to sit above or
+  // below, so there is nothing to do.
+  if (container.subviews.count == _textRunViews.count) {
+    return;
+  }
+
+  NSMutableArray<UIView *> *mountedChildren = [NSMutableArray new];
+  for (UIView *subview in container.subviews) {
+    if (![subview isKindOfClass:[RCTAnonymousTextRunView class]]) {
+      [mountedChildren addObject:subview];
+    }
+  }
+  for (NSUInteger i = 0; i < _textRunViews.count; i++) {
+    RCTAnonymousTextRunView *runView = _textRunViews[i];
+    int documentOrder = runView->_run.documentOrder;
+    if (documentOrder >= (int)mountedChildren.count) {
+      // After all mounted children: on top.
+      [container bringSubviewToFront:runView];
+    } else {
+      // Just below the child it precedes in document order.
+      [container insertSubview:runView belowSubview:mountedChildren[documentOrder]];
+    }
+  }
+}
+
+- (void)layoutSubviews
+{
+  [super layoutSubviews];
+  if (_textRunViews.count > 0) {
+    for (RCTAnonymousTextRunView *runView in _textRunViews) {
+      [runView setContainerBounds:self.currentContainerView.bounds];
+    }
+    [self reorderAnonymousTextRunViewsIfNeeded];
   }
 }
 
@@ -754,6 +886,12 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
     self.layer.opacity = (float)props.opacity;
   }
+
+  // A recycled View must not paint the text runs of the View it used to be.
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    [runView removeFromSuperview];
+  }
+  _textRunViews = nil;
 
   // Clean up box shadow layers to prevent cross-component contamination
   if (_boxShadowLayers != nullptr) {
@@ -1742,6 +1880,19 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 
 - (SharedTouchEventEmitter)touchEventEmitterAtPoint:(CGPoint)point
 {
+  // A tap that lands on an inline element with its own handler resolves to
+  // that element's fragment emitter; a tap on bare text resolves to null here
+  // (text-node fragments carry the emitter-less anonymous box) and falls
+  // through to the View's own emitter — matching the web, where text nodes are
+  // not event targets but the containing element is. Each run view resolves
+  // the hit against the same `containerFrame` it paints with, so a tap can
+  // never land somewhere the glyphs are not drawn. Runs do not overlap (block
+  // children separate them), so the first containing run wins.
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    if (auto touchEventEmitter = [runView touchEventEmitterAtContainerPoint:point]) {
+      return touchEventEmitter;
+    }
+  }
   return _eventEmitter;
 }
 
