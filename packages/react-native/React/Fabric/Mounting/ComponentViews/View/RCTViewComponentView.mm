@@ -9,6 +9,7 @@
 #import <React/RCTSurfaceHostingProxyRootView.h>
 
 #import <CoreGraphics/CoreGraphics.h>
+#import <MobileCoreServices/UTCoreTypes.h>
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
 #import <ranges>
@@ -34,6 +35,10 @@
 #import <react/renderer/components/view/ViewState.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
+#import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
+#import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
+#import <react/renderer/textlayoutmanager/TextLayoutManager.h>
+#import <react/utils/ManagedObjectWrapper.h>
 
 // The generic-box component view (RCTElementBoxComponentView) self-registers
 // with the factory, so both headers are needed unconditionally.
@@ -112,6 +117,12 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
 }
 #endif
 
+#if !TARGET_OS_TV
+@interface RCTViewComponentView () <UIEditMenuInteractionDelegate>
+@property (nonatomic, nullable) UIEditMenuInteraction *textSelectionEditMenuInteraction API_AVAILABLE(ios(16.0));
+@end
+#endif
+
 @implementation RCTViewComponentView {
   UIColor *_backgroundColor;
   CALayer *_backgroundColorLayer;
@@ -133,6 +144,11 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   // One paint view per anonymous text run, interleaved with mounted children in
   // document order. Internal, never differ-driven.
   NSMutableArray<RCTAnonymousTextRunView *> *_textRunViews;
+#if !TARGET_OS_TV
+  // Installed only while this View both paints text and asks for it to be
+  // selectable. See the `user-select` section below.
+  UILongPressGestureRecognizer *_textSelectionLongPress;
+#endif
 }
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -392,6 +408,8 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     [_textRunViews removeLastObject];
   }
   if (data.textRuns.empty()) {
+    // The last run just went away: there is nothing left to select.
+    [self _updateTextSelectionInteraction];
     return;
   }
 
@@ -414,6 +432,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   }
   // Re-establish authored paint order relative to mounted children.
   [self setNeedsLayout];
+  [self _updateTextSelectionInteraction];
 }
 
 // Interleaves the internal per-run paint views with mounted child views in
@@ -454,6 +473,104 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   }
 }
 
+#pragma mark - `user-select` on a View's own text
+
+/*
+ * A View that paints its own text is not a text view, so none of UIKit's
+ * text-selection machinery reaches it. What `<Text selectable>` gives on iOS
+ * is not range selection either — it is a long press that offers **Copy**,
+ * and copies the whole string (`RCTParagraphComponentView`'s context menu).
+ * This gives a View with `userSelect: 'text'` exactly that, from the runs it
+ * already holds, so bare strings and `<Text selectable>` behave identically
+ * on this platform.
+ *
+ * Range selection with drag handles does not exist for either one on iOS.
+ */
+
+- (BOOL)_hasSelectableText
+{
+  // Report no text while the run views are absent or pooled and detached (see
+  // -prepareForRecycle)
+  if (_textRunViews.count == 0 || _textRunViews.firstObject.superview == nil) {
+    return NO;
+  }
+  return selectsText(static_cast<const ViewProps &>(*_props).userSelect);
+}
+
+#if !TARGET_OS_TV
+- (void)_updateTextSelectionInteraction
+{
+  BOOL wanted = [self _hasSelectableText];
+  BOOL installed = _textSelectionLongPress != nil;
+  if (wanted == installed) {
+    return;
+  }
+
+  if (wanted) {
+    _textSelectionLongPress =
+        [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(_handleTextSelectionLongPress:)];
+    [self addGestureRecognizer:_textSelectionLongPress];
+    if (@available(iOS 16.0, *)) {
+      self.textSelectionEditMenuInteraction = [[UIEditMenuInteraction alloc] initWithDelegate:self];
+      [self addInteraction:self.textSelectionEditMenuInteraction];
+    }
+  } else {
+    [self removeGestureRecognizer:_textSelectionLongPress];
+    _textSelectionLongPress = nil;
+    if (@available(iOS 16.0, *)) {
+      if (self.textSelectionEditMenuInteraction != nil) {
+        [self removeInteraction:self.textSelectionEditMenuInteraction];
+        self.textSelectionEditMenuInteraction = nil;
+      }
+    }
+  }
+}
+
+- (void)_handleTextSelectionLongPress:(UILongPressGestureRecognizer *)gesture
+{
+  if (gesture.state != UIGestureRecognizerStateBegan) {
+    return;
+  }
+  if (![self becomeFirstResponder]) {
+    return;
+  }
+  if (@available(iOS 16.0, *)) {
+    UIEditMenuInteraction *interaction = self.textSelectionEditMenuInteraction;
+    if (interaction != nil) {
+      CGPoint location = [gesture locationInView:self];
+      UIEditMenuConfiguration *config = [UIEditMenuConfiguration configurationWithIdentifier:nil sourcePoint:location];
+      [interaction presentEditMenuWithConfiguration:config];
+    }
+  }
+}
+
+/*
+ * Every run this View paints, in authored document order, joined by newlines —
+ * the same text a reader sees, in the order they see it. The run views are
+ * kept in the order of the state's runs, which is document order; their
+ * `documentOrder` is a paint position, which a `zIndex` can reorder, so it is
+ * not used here.
+ */
+- (NSAttributedString *)_selectableAttributedText
+{
+  NSMutableAttributedString *text = [NSMutableAttributedString new];
+  for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    NSAttributedString *runText = RCTNSAttributedStringFromAttributedString(runView->_run.attributedString);
+    if (runText.length == 0) {
+      continue;
+    }
+    if (text.length > 0) {
+      [text appendAttributedString:[[NSAttributedString alloc] initWithString:@"\n"]];
+    }
+    [text appendAttributedString:runText];
+  }
+  return text;
+}
+#else
+- (void)_updateTextSelectionInteraction
+{
+}
+#endif
 - (void)layoutSubviews
 {
   [super layoutSubviews];
@@ -821,7 +938,27 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 
   _needsInvalidateLayer = _needsInvalidateLayer || needsInvalidateLayer;
 
+  /*
+   * Compared BEFORE `_props` is reassigned, and acted on after.
+   *
+   * `oldViewProps` is a reference *into the object `_props` owns* (bound at the
+   * top of this method). The assignment below drops the last strong reference
+   * to that object, so it is freed and every `oldViewProps` member is dangling
+   * from that point on. Reading one is a use-after-free: AddressSanitizer stops
+   * the app on the first mount with a 1-byte read — the size of this enum.
+   *
+   * The call still has to happen after the assignment, because
+   * `_updateTextSelectionInteraction` reads `_hasSelectableText`, which reads
+   * the *new* `_props`. So the comparison and the action are split rather than
+   * either being moved.
+   */
+  const bool userSelectChanged = oldViewProps.userSelect != newViewProps.userSelect;
+
   _props = std::static_pointer_cast<const ViewProps>(props);
+
+  if (userSelectChanged) {
+    [self _updateTextSelectionInteraction];
+  }
 }
 
 - (void)updateEventEmitter:(const EventEmitter::Shared &)eventEmitter
@@ -2081,8 +2218,40 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
 
 - (BOOL)canBecomeFirstResponder
 {
-  return ReactNativeFeatureFlags::enableImperativeFocus();
+  // Presenting the Copy menu requires first-responder status, so a View whose
+  // own text is selectable must be able to take it even with imperative focus
+  // off.
+  return ReactNativeFeatureFlags::enableImperativeFocus() || [self _hasSelectableText];
 }
+
+#if !TARGET_OS_TV
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender
+{
+  if (action == @selector(copy:) && [self _hasSelectableText]) {
+    return YES;
+  }
+  return [super canPerformAction:action withSender:sender];
+}
+
+- (void)copy:(id)sender
+{
+  NSAttributedString *attributedText = [self _selectableAttributedText];
+  if (attributedText.length == 0) {
+    return;
+  }
+
+  NSMutableDictionary *item = [NSMutableDictionary new];
+  NSData *rtf = [attributedText dataFromRange:NSMakeRange(0, attributedText.length)
+                           documentAttributes:@{NSDocumentTypeDocumentAttribute : NSRTFDTextDocumentType}
+                                        error:nil];
+  if (rtf) {
+    [item setObject:rtf forKey:(id)kUTTypeFlatRTFD];
+  }
+  [item setObject:attributedText.string forKey:(id)kUTTypeUTF8PlainText];
+
+  UIPasteboard.generalPasteboard.items = @[ item ];
+}
+#endif
 
 - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args
 {

@@ -3247,6 +3247,7 @@ bool facebook::react::isZero(facebook::react::Float n);
 bool facebook::react::preservesNewlines(facebook::react::WhiteSpace whiteSpace);
 bool facebook::react::preservesSpaces(facebook::react::WhiteSpace whiteSpace);
 bool facebook::react::rendererAbiMatchesHeaders(uint32_t headerVersion = facebook::react::kRendererAbiVersion);
+bool facebook::react::selectsText(facebook::react::UserSelect userSelect);
 bool facebook::react::wrapsText(facebook::react::WhiteSpace whiteSpace);
 const facebook::react::BaseViewProps* facebook::react::viewPropsOf(const facebook::react::ShadowNode& node);
 constexpr auto facebook::react::to_underlying(auto e) noexcept;
@@ -3383,6 +3384,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::LayoutConformance& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Point& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::Size& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::UserSelect& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ValueUnit& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::BoxSizing& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Clear& result);
@@ -3591,6 +3593,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::Transform resolveTransform(const facebook::react::LayoutMetrics& layoutMetrics) const;
   public facebook::react::Transform transform;
   public facebook::react::TransformOrigin transformOrigin;
+  public facebook::react::UserSelect userSelect;
   public facebook::react::ViewEvents events;
   public static facebook::react::Transform resolveTransform(const facebook::react::Size& frameSize, const facebook::react::Transform& transform, const facebook::react::TransformOrigin& transformOrigin);
   public std::optional<facebook::react::FontStyle> inheritedFontStyle;
@@ -5542,6 +5545,14 @@ enum facebook::react::UnitType {
   Percent,
   Point,
   Undefined,
+}
+
+enum facebook::react::UserSelect : uint8_t {
+  All,
+  Auto,
+  Contain,
+  None,
+  Text,
 }
 
 enum facebook::react::WhiteSpace : uint8_t {
