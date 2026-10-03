@@ -702,6 +702,9 @@ static CGSize RCTTextLayoutSizeForFrameSize(CGSize frameSize, const ParagraphAtt
                   CGSize attachmentSize = attachment.bounds.size;
                   CGRect glyphRect = [layoutManager boundingRectForGlyphRange:range inTextContainer:textContainer];
 
+                  // `locationForGlyphAtIndex:` already includes the attachment's
+                  // `bounds.origin.y`, so a box with its own baseline (an
+                  // inline-block) sits with that baseline on the line's.
                   CGRect lineFragmentRect = [layoutManager lineFragmentRectForGlyphAtIndex:attachmentGlyphRange.location
                                                                             effectiveRange:nil];
                   CGFloat baseline = lineFragmentRect.origin.y +
