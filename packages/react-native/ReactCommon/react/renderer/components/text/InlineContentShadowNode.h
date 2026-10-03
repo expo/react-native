@@ -78,11 +78,13 @@ class InlineContentShadowNode final
   Size measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const override;
 
   /*
-   * The distance from this box's top to the baseline of its FIRST line, which
-   * is what an atomic inline containing it exposes to the line it sits in
-   * (CSS2 §10.8.1).
+   * The distance from this box's top to the baseline of its first line, which
+   * flex and grid baseline alignment use. An atomic inline containing the box
+   * exposes `lastLineBaseline` to the line it sits in instead (CSS2 §10.8.1).
    */
   Float baseline(const LayoutContext &layoutContext, Size size) const override;
+
+  Float lastLineBaseline(const LayoutContext &layoutContext, Size size) const override;
 
 #pragma mark - InlineTextContentAccessor
 
@@ -93,6 +95,9 @@ class InlineContentShadowNode final
       const LayoutContext &layoutContext) const override;
 
  private:
+  // The baseline of the run's first or last line.
+  Float lineBaseline(const LayoutContext &layoutContext, Size size, bool lastLine) const;
+
   std::shared_ptr<const TextLayoutManager> textLayoutManager_;
 };
 

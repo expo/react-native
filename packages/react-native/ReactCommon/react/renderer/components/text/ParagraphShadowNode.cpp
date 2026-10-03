@@ -273,6 +273,31 @@ Size ParagraphShadowNode::measureContent(
   return size;
 }
 
+Float ParagraphShadowNode::lastLineBaseline(
+    const LayoutContext& layoutContext,
+    Size size) const {
+  auto layoutMetrics = getLayoutMetrics();
+  auto layoutConstraints =
+      LayoutConstraints{size, size, layoutMetrics.layoutDirection};
+  auto content =
+      getContentWithMeasuredAttachments(layoutContext, layoutConstraints);
+
+  if constexpr (TextLayoutManagerExtended::supportsLineMeasurement()) {
+    auto lines = TextLayoutManagerExtended(*textLayoutManager_)
+                     .measureLines(
+                         AttributedStringBox{content.attributedString},
+                         content.paragraphAttributes,
+                         size);
+    if (lines.empty()) {
+      return 0;
+    }
+    const auto& line = lines.back();
+    return line.frame.origin.y + line.ascender;
+  } else {
+    return baseline(layoutContext, size);
+  }
+}
+
 Float ParagraphShadowNode::baseline(
     const LayoutContext& layoutContext,
     Size size) const {

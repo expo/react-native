@@ -90,6 +90,19 @@ void InlineContentShadowNode::setTextLayoutManager(
 Float InlineContentShadowNode::baseline(
     const LayoutContext& layoutContext,
     Size size) const {
+  return lineBaseline(layoutContext, size, /* lastLine */ false);
+}
+
+Float InlineContentShadowNode::lastLineBaseline(
+    const LayoutContext& layoutContext,
+    Size size) const {
+  return lineBaseline(layoutContext, size, /* lastLine */ true);
+}
+
+Float InlineContentShadowNode::lineBaseline(
+    const LayoutContext& layoutContext,
+    Size size,
+    bool lastLine) const {
   if (textLayoutManager_ == nullptr) {
     return 0;
   }
@@ -123,7 +136,7 @@ Float InlineContentShadowNode::baseline(
     // a font metric and overshoots the real distance from the content's top to
     // the baseline whenever the line box is not exactly ascent+descent tall.
     // The bottom minus the descender is where the line's baseline actually is.
-    const auto& line = lines[0];
+    const auto& line = lastLine ? lines.back() : lines.front();
     return line.frame.origin.y + line.frame.size.height -
         std::abs(line.descender);
   }
