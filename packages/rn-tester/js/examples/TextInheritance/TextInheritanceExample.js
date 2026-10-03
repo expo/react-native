@@ -14,7 +14,7 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 
 import * as React from 'react';
 import {useState} from 'react';
-import {Button, StyleSheet, View} from 'react-native';
+import {Button, StyleSheet, Text, View} from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -57,7 +57,7 @@ export default {
   title: 'Text inheritance',
   category: 'UI',
   description:
-    'Inheritable text styles set on a View apply to the text inside it.',
+    'Inheritable text styles set on a View apply to the text inside it, and the CSS `all` property stops or restarts that inheritance.',
   examples: [
     {
       title: 'Text inherits from its Views',
@@ -79,6 +79,38 @@ export default {
         'Changing an ancestor’s color restyles text below it, even though nothing between them re-renders.',
       render(): React.Node {
         return <ToggleColor />;
+      },
+    },
+    {
+      title: "`all: 'initial'` stops inheritance",
+      name: 'all-initial',
+      description:
+        "The inner View declares `all: 'initial'`, so its text starts again from the default style.",
+      render(): React.Node {
+        return (
+          <View style={[styles.container, styles.styled]}>
+            Inherits the red italic style.
+            <View style={[styles.inner, {all: 'initial'}]}>
+              Back to the default style.
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      title: '<Text> does not inherit by default',
+      name: 'text-boundary',
+      description:
+        "A root <Text> keeps React Native's isolated styling: its user-agent style is `all: 'initial'`. `all: 'unset'` opts it in.",
+      render(): React.Node {
+        return (
+          <View style={[styles.container, styles.styled]}>
+            <Text>A plain {'<Text>'} keeps its own default style.</Text>
+            <Text style={{all: 'unset'}}>
+              {"<Text style={{all: 'unset'}}>"} inherits the red italic style.
+            </Text>
+          </View>
+        );
       },
     },
   ],
