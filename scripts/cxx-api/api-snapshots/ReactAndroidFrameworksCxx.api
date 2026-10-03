@@ -406,11 +406,32 @@ static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_HASH;
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_STRING;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_ATOMIC_INLINE_BASELINE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_HEIGHT;
+static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_INLINE_BOX;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_IS_ATTACHMENT;
+static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_IS_INLINE_BOX_END;
+static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_IS_INLINE_BOX_START;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_REACT_TAG;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_STRING;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_TEXT_ATTRIBUTES;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_WIDTH;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_BOTTOM_COLOR;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_BOTTOM_WIDTH;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_LEFT_COLOR;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_LEFT_WIDTH;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_RADIUS;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_RIGHT_COLOR;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_RIGHT_WIDTH;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_TOP_COLOR;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_BORDER_TOP_WIDTH;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_MARGIN_LEFT;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_MARGIN_RIGHT;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_OUTLINE_COLOR;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_OUTLINE_OFFSET;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_OUTLINE_WIDTH;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_PADDING_BOTTOM;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_PADDING_LEFT;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_PADDING_RIGHT;
+static constexpr facebook::react::MapBuffer::Key facebook::react::IB_KEY_PADDING_TOP;
 static constexpr facebook::react::MapBuffer::Key facebook::react::PA_KEY_ADJUST_FONT_SIZE_TO_FIT;
 static constexpr facebook::react::MapBuffer::Key facebook::react::PA_KEY_ELLIPSIZE_MODE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::PA_KEY_HYPHENATION_FREQUENCY;
@@ -735,11 +756,13 @@ facebook::react::ComponentRegistryFactory facebook::react::getDefaultComponentRe
 facebook::react::DisplayType facebook::react::displayTypeFromYGDisplay(YGDisplay display);
 facebook::react::Float facebook::react::floatFromYogaFloat(float value);
 facebook::react::Float facebook::react::floatFromYogaOptionalFloat(facebook::yoga::FloatOptional value);
+facebook::react::InlineBoxProps facebook::react::parseInlineBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
 facebook::react::LayoutConstraints facebook::react::constraintsHonoringOwnBounds(const facebook::react::ShadowNode& node, facebook::react::LayoutConstraints constraints);
 facebook::react::LayoutMetrics facebook::react::layoutMetricsFromYogaNode(facebook::yoga::Node& yogaNode);
 facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::AttributedString& attributedString);
 facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::AttributedString::Fragment& fragment);
 facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::FontVariant& fontVariant);
+facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::InlineBoxDecorations& inlineBox);
 facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::ParagraphAttributes& paragraphAttributes);
 facebook::react::MapBuffer facebook::react::toMapBuffer(const facebook::react::TextAttributes& textAttributes);
 facebook::react::ParagraphAttributes facebook::react::convertRawProp(const facebook::react::PropsParserContext& context, const facebook::react::RawProps& rawProps, const facebook::react::ParagraphAttributes& sourceParagraphAttributes, const facebook::react::ParagraphAttributes& defaultParagraphAttributes);
@@ -1369,6 +1392,7 @@ class facebook::react::AttributedString : public facebook::react::Sealable, publ
   public const facebook::react::AttributedString::Fragments& getFragments() const;
   public const facebook::react::TextAttributes& getBaseTextAttributes() const;
   public facebook::react::AttributedString::Fragments& getFragments();
+  public facebook::react::RectangleEdges<facebook::react::Float> inlineBoxBlockAxisOverflow() const;
   public std::string getString() const;
   public using Fragments = std::vector<facebook::react::AttributedString::Fragment>;
   public void appendFragment(facebook::react::AttributedString::Fragment&& fragment);
@@ -1379,8 +1403,13 @@ class facebook::react::AttributedString : public facebook::react::Sealable, publ
 class facebook::react::AttributedString::Fragment {
   public bool isAttachment() const;
   public bool isContentEqual(const facebook::react::AttributedString::Fragment& rhs) const;
+  public bool isInlineBoxEnd;
+  public bool isInlineBoxStart;
   public bool operator==(const facebook::react::AttributedString::Fragment& rhs) const;
   public facebook::react::Float atomicInlineBaseline;
+  public facebook::react::Float leadingInlineSpace() const;
+  public facebook::react::Float trailingInlineSpace() const;
+  public facebook::react::InlineBoxDecorations inlineBox;
   public facebook::react::ShadowView parentShadowView;
   public facebook::react::TextAttributes textAttributes;
   public static std::string AttachmentCharacter();
@@ -1495,8 +1524,9 @@ class facebook::react::BaseTextInputProps : public facebook::react::HostPlatform
 
 class facebook::react::BaseTextProps {
   public BaseTextProps() = default;
-  public BaseTextProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseTextProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public BaseTextProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseTextProps& sourceProps, const facebook::react::RawProps& rawProps, bool parseInlineBox = true);
   public bool cascadeResetAll;
+  public facebook::react::InlineBoxProps inlineBox;
   public facebook::react::TextAttributes textAttributes;
   public void appendTextAttributesProps(folly::dynamic& result, const facebook::react::BaseTextProps* prevProps) const;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
@@ -6292,6 +6322,32 @@ struct facebook::react::ImageRequestItem {
 struct facebook::react::InlineAttachmentPlacement {
   public const facebook::react::ShadowNodeFamily* family;
   public facebook::react::Rect frame;
+}
+
+struct facebook::react::InlineBoxDecorations {
+  public bool isEmpty() const;
+  public bool operator==(const facebook::react::InlineBoxDecorations& rhs) const = default;
+  public facebook::react::Float borderRadius;
+  public facebook::react::Float leadingInlineSpace() const;
+  public facebook::react::Float outlineOffset;
+  public facebook::react::Float outlineWidth;
+  public facebook::react::Float trailingInlineSpace() const;
+  public facebook::react::RectangleEdges<facebook::react::Float> borderWidth;
+  public facebook::react::RectangleEdges<facebook::react::Float> margin;
+  public facebook::react::RectangleEdges<facebook::react::Float> padding;
+  public facebook::react::RectangleEdges<facebook::react::SharedColor> borderColor;
+  public facebook::react::SharedColor outlineColor;
+}
+
+struct facebook::react::InlineBoxProps {
+  public bool isEmpty() const;
+  public bool operator==(const facebook::react::InlineBoxProps& rhs) const = default;
+  public facebook::react::Float rtlMarginLeft;
+  public facebook::react::Float rtlMarginRight;
+  public facebook::react::Float rtlPaddingLeft;
+  public facebook::react::Float rtlPaddingRight;
+  public facebook::react::InlineBoxDecorations ltr;
+  public facebook::react::InlineBoxDecorations resolve(std::optional<facebook::react::LayoutDirection> layoutDirection) const;
 }
 
 struct facebook::react::JAssetManager : public facebook::jni::JavaClass<facebook::react::JAssetManager> {

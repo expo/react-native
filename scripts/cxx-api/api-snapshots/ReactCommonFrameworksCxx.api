@@ -335,6 +335,7 @@ facebook::react::ColorComponents facebook::react::colorComponentsFromColor(faceb
 facebook::react::ColorSpace facebook::react::getDefaultColorSpace();
 facebook::react::ComponentRegistryFactory facebook::react::getDefaultComponentRegistryFactory();
 facebook::react::DisplayType facebook::react::displayTypeFromYGDisplay(YGDisplay display);
+facebook::react::InlineBoxProps facebook::react::parseInlineBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
 facebook::react::LayoutConstraints facebook::react::constraintsHonoringOwnBounds(const facebook::react::ShadowNode& node, facebook::react::LayoutConstraints constraints);
 facebook::react::LayoutMetrics facebook::react::layoutMetricsFromYogaNode(facebook::yoga::Node& yogaNode);
 facebook::react::ParagraphAttributes facebook::react::convertRawProp(const facebook::react::PropsParserContext& context, const facebook::react::RawProps& rawProps, const facebook::react::ParagraphAttributes& sourceParagraphAttributes, const facebook::react::ParagraphAttributes& defaultParagraphAttributes);
@@ -709,6 +710,7 @@ class facebook::react::AttributedString : public facebook::react::Sealable, publ
   public const facebook::react::AttributedString::Fragments& getFragments() const;
   public const facebook::react::TextAttributes& getBaseTextAttributes() const;
   public facebook::react::AttributedString::Fragments& getFragments();
+  public facebook::react::RectangleEdges<Float> inlineBoxBlockAxisOverflow() const;
   public std::string getString() const;
   public using Fragments = std::vector<facebook::react::AttributedString::Fragment>;
   public void appendFragment(facebook::react::AttributedString::Fragment&& fragment);
@@ -718,9 +720,14 @@ class facebook::react::AttributedString : public facebook::react::Sealable, publ
 
 class facebook::react::AttributedString::Fragment {
   public Float atomicInlineBaseline;
+  public Float leadingInlineSpace() const;
+  public Float trailingInlineSpace() const;
   public bool isAttachment() const;
   public bool isContentEqual(const facebook::react::AttributedString::Fragment& rhs) const;
+  public bool isInlineBoxEnd;
+  public bool isInlineBoxStart;
   public bool operator==(const facebook::react::AttributedString::Fragment& rhs) const;
+  public facebook::react::InlineBoxDecorations inlineBox;
   public facebook::react::ShadowView parentShadowView;
   public facebook::react::TextAttributes textAttributes;
   public static std::string AttachmentCharacter();
@@ -835,8 +842,9 @@ class facebook::react::BaseTextInputProps : public facebook::react::HostPlatform
 
 class facebook::react::BaseTextProps {
   public BaseTextProps() = default;
-  public BaseTextProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseTextProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public BaseTextProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseTextProps& sourceProps, const facebook::react::RawProps& rawProps, bool parseInlineBox = true);
   public bool cascadeResetAll;
+  public facebook::react::InlineBoxProps inlineBox;
   public facebook::react::TextAttributes textAttributes;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
@@ -4590,6 +4598,32 @@ struct facebook::react::FloatExclusion {
 struct facebook::react::InlineAttachmentPlacement {
   public const facebook::react::ShadowNodeFamily* family;
   public facebook::react::Rect frame;
+}
+
+struct facebook::react::InlineBoxDecorations {
+  public Float borderRadius;
+  public Float leadingInlineSpace() const;
+  public Float outlineOffset;
+  public Float outlineWidth;
+  public Float trailingInlineSpace() const;
+  public bool isEmpty() const;
+  public bool operator==(const facebook::react::InlineBoxDecorations& rhs) const = default;
+  public facebook::react::RectangleEdges<Float> borderWidth;
+  public facebook::react::RectangleEdges<Float> margin;
+  public facebook::react::RectangleEdges<Float> padding;
+  public facebook::react::RectangleEdges<facebook::react::SharedColor> borderColor;
+  public facebook::react::SharedColor outlineColor;
+}
+
+struct facebook::react::InlineBoxProps {
+  public Float rtlMarginLeft;
+  public Float rtlMarginRight;
+  public Float rtlPaddingLeft;
+  public Float rtlPaddingRight;
+  public bool isEmpty() const;
+  public bool operator==(const facebook::react::InlineBoxProps& rhs) const = default;
+  public facebook::react::InlineBoxDecorations ltr;
+  public facebook::react::InlineBoxDecorations resolve(std::optional<facebook::react::LayoutDirection> layoutDirection) const;
 }
 
 struct facebook::react::LayoutAnimation {
