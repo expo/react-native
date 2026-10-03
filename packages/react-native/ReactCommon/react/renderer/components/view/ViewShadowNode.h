@@ -69,7 +69,8 @@ class AbstractViewShadowNode
 
   /*
    * Positions the atomic inline-level children of this View's anonymous inline
-   * boxes at the frames their run's line layout gave them.
+   * boxes, such as the replaced `<img>` and atomic `display: 'inline'`
+   * elements, at the frames their run's line layout gave them.
    */
   void layoutInlineAttachments(LayoutContext layoutContext);
 
