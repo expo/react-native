@@ -30,21 +30,22 @@ bool Fragment::isAttachment() const {
 }
 
 bool Fragment::operator==(const Fragment& rhs) const {
-  return std::tie(
-             string,
-             textAttributes,
-             parentShadowView.tag,
-             parentShadowView.layoutMetrics) ==
-      std::tie(
-             rhs.string,
-             rhs.textAttributes,
-             rhs.parentShadowView.tag,
-             rhs.parentShadowView.layoutMetrics);
+  // Full equality is content equality plus the two parentShadowView fields
+  // that identify and place the fragment's element. Deferring to
+  // `isContentEqual` rather than listing the content fields again is what
+  // keeps the two from drifting apart: a field added for layout gets picked
+  // up by both, and there is exactly one place to decide whether a new field
+  // is content.
+  return isContentEqual(rhs) &&
+      std::tie(parentShadowView.tag, parentShadowView.layoutMetrics) ==
+      std::tie(rhs.parentShadowView.tag, rhs.parentShadowView.layoutMetrics);
 }
 
 bool Fragment::isContentEqual(const Fragment& rhs) const {
-  return std::tie(string, textAttributes) ==
-      std::tie(rhs.string, rhs.textAttributes);
+  // `atomicInlineBaseline` changes where the box sits on the line, so it is
+  // part of the content for measure-cache purposes.
+  return std::tie(string, textAttributes, atomicInlineBaseline) ==
+      std::tie(rhs.string, rhs.textAttributes, rhs.atomicInlineBaseline);
 }
 
 #pragma mark - AttributedString
