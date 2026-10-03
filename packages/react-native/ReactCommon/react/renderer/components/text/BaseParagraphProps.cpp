@@ -7,6 +7,8 @@
 
 #include "BaseParagraphProps.h"
 
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+
 #include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/core/propsConversions.h>
@@ -50,6 +52,26 @@ BaseParagraphProps::BaseParagraphProps(
    */
   textAttributes.opacity = std::numeric_limits<Float>::quiet_NaN();
   textAttributes.backgroundColor = {};
+
+  if (ReactNativeFeatureFlags::enableStringChildren()) {
+    // The inheritable text fields, so that a paragraph answers like any other
+    // View when asked what it passes on. BaseTextProps already probed these
+    // exact style keys into `textAttributes`; copy the parsed values instead of
+    // probing rawProps a second time.
+    inheritedColor = textAttributes.foregroundColor;
+    inheritedFontSize = textAttributes.fontSize;
+    inheritedFontFamily = textAttributes.fontFamily;
+    inheritedFontWeight = textAttributes.fontWeight;
+    inheritedFontStyle = textAttributes.fontStyle;
+    inheritedFontVariant = textAttributes.fontVariant;
+    inheritedLetterSpacing = textAttributes.letterSpacing;
+    inheritedLineHeight = textAttributes.lineHeight;
+    inheritedTextAlign = textAttributes.alignment;
+    inheritedTextTransform = textAttributes.textTransform;
+    inheritedWhiteSpace = convertRawProp(
+        context, rawProps, "whiteSpace", sourceProps.inheritedWhiteSpace, {});
+    hasInheritedTextProps = computeHasInheritedTextProps();
+  }
 };
 
 void BaseParagraphProps::setProp(
