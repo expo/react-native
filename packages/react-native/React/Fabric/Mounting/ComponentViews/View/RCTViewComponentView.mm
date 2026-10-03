@@ -420,6 +420,12 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     RCTAnonymousTextRunView *runView = nil;
     if (i < _textRunViews.count) {
       runView = _textRunViews[i];
+      // A recycled View keeps its run views but detaches them (see
+      // -prepareForRecycle), so one being reused for text again is re-attached
+      // rather than allocated.
+      if (runView.superview == nil) {
+        [self.currentContainerView addSubview:runView];
+      }
     } else {
       runView = [[RCTAnonymousTextRunView alloc] initWithFrame:self.currentContainerView.bounds];
       [_textRunViews addObject:runView];
@@ -441,7 +447,9 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 // authored before a child paints under it and text after paints over it.
 - (void)reorderAnonymousTextRunViewsIfNeeded
 {
-  if (_textRunViews.count == 0) {
+  // Skip a pooled-but-detached run view (see -prepareForRecycle): it is not in
+  // the hierarchy and has no order to establish.
+  if (_textRunViews.count == 0 || _textRunViews.firstObject.superview == nil) {
     return;
   }
   UIView *container = self.currentContainerView;
@@ -1129,11 +1137,23 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
     self.layer.opacity = (float)props.opacity;
   }
 
-  // A recycled View must not paint the text runs of the View it used to be.
-  for (RCTAnonymousTextRunView *runView in _textRunViews) {
-    [runView removeFromSuperview];
+  // Detach the per-run text paint views rather than destroying them, so a
+  // recycled View that is given text again re-attaches them instead of
+  // allocating new ones, as a recycled `<Text>` reuses its paragraph view.
+  // Detaching keeps this safe: a recycled View that is given no text displays
+  // nothing, because nothing is in its hierarchy until `updateState` puts it
+  // back. A few spare views held by a pooled container is the whole cost.
+  static const NSUInteger kMaxPooledRunViews = 4;
+  if (_textRunViews != nil) {
+    for (RCTAnonymousTextRunView *runView in _textRunViews) {
+      [runView removeFromSuperview];
+    }
+    while (_textRunViews.count > kMaxPooledRunViews) {
+      [_textRunViews removeLastObject];
+    }
   }
-  _textRunViews = nil;
+  // No runs left, so this tears the selection interaction down with them.
+  [self _updateTextSelectionInteraction];
 
   // Clean up box shadow layers to prevent cross-component contamination
   if (_boxShadowLayers != nullptr) {
@@ -2133,6 +2153,11 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
   // never land somewhere the glyphs are not drawn. Runs do not overlap (block
   // children separate them), so the first containing run wins.
   for (RCTAnonymousTextRunView *runView in _textRunViews) {
+    // Skip a pooled run view detached by -prepareForRecycle: it still holds the
+    // run it painted before the recycle
+    if (runView.superview == nil) {
+      continue;
+    }
     if (auto touchEventEmitter = [runView touchEventEmitterAtContainerPoint:point]) {
       return touchEventEmitter;
     }
