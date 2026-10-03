@@ -405,6 +405,8 @@ void InlineContentShadowNode::appendListMarkerIfNeeded(
 }
 
 void InlineContentShadowNode::setListMarker(ListMarker listMarker) {
+  // The marker is folded into the built content; invalidate the memo.
+  cachedContent_ = nullptr;
   ensureUnsealed();
   listMarker_ = std::move(listMarker);
 }
@@ -563,6 +565,10 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
   // measurement produced — multiplier included — or the platform layout
   // caches keyed by content can never hit.
   textAttributes.fontSizeMultiplier = fontSizeMultiplier;
+  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments &&
+      cachedContentMatches(textAttributes)) {
+    return cachedContent_->attributedString;
+  }
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
 
@@ -593,6 +599,12 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
               std::numeric_limits<Float>::infinity()}});
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
+  cachedContent_ = std::make_shared<const CachedContent>(CachedContent{
+      .fontSizeMultiplier = textAttributes.fontSizeMultiplier,
+      .layoutDirection = textAttributes.layoutDirection,
+      .hasAttachments = !attachments.empty(),
+      .attributedString =
+          attachments.empty() ? attributedString : AttributedString{}});
   return attributedString;
 }
 
@@ -601,6 +613,13 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
     const LayoutContext& layoutContext) const {
   std::vector<InlineAttachmentPlacement> placements;
   if (textLayoutManager_ == nullptr) {
+    return placements;
+  }
+
+  // Attachment presence is structural (it does not depend on the multiplier
+  // or constraints): a prior build having found none means there is nothing
+  // to place, and the whole content build below is skipped.
+  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments) {
     return placements;
   }
 
@@ -769,18 +788,29 @@ Size InlineContentShadowNode::measureContent(
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
 
   auto attributedString = AttributedString{};
-  auto attachments = BaseTextShadowNode::Attachments{};
-  appendListMarkerIfNeeded(attributedString, textAttributes);
-  BaseTextShadowNode::buildAttributedString(
-      textAttributes,
-      *this,
-      attributedString,
-      attachments,
-      *defaultCascadeTextAttributes());
-  measureAtomicInlines(
-      attributedString, attachments, layoutContext, layoutConstraints);
-  collapseWhitespace(attributedString);
-  attributedString.setBaseTextAttributes(textAttributes);
+  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments &&
+      cachedContentMatches(textAttributes)) {
+    attributedString = cachedContent_->attributedString;
+  } else {
+    auto attachments = BaseTextShadowNode::Attachments{};
+    appendListMarkerIfNeeded(attributedString, textAttributes);
+    BaseTextShadowNode::buildAttributedString(
+        textAttributes,
+        *this,
+        attributedString,
+        attachments,
+        *defaultCascadeTextAttributes());
+    measureAtomicInlines(
+        attributedString, attachments, layoutContext, layoutConstraints);
+    collapseWhitespace(attributedString);
+    attributedString.setBaseTextAttributes(textAttributes);
+    cachedContent_ = std::make_shared<const CachedContent>(CachedContent{
+        .fontSizeMultiplier = textAttributes.fontSizeMultiplier,
+        .layoutDirection = textAttributes.layoutDirection,
+        .hasAttachments = !attachments.empty(),
+        .attributedString =
+            attachments.empty() ? attributedString : AttributedString{}});
+  }
 
   if (attributedString.isEmpty()) {
     return layoutConstraints.clamp({0, 0});

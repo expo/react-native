@@ -55,13 +55,19 @@ class InlineContentShadowNode final
         // A clone must keep the cascade its source was stamped with: boxes
         // are cloned by state progression, and a fresh default here is text
         // dropping to the default font on re-render.
-        inheritedCascade_(static_cast<const InlineContentShadowNode &>(sourceShadowNode).inheritedCascade_)
+        inheritedCascade_(static_cast<const InlineContentShadowNode &>(sourceShadowNode).inheritedCascade_),
+        // Content depends only on children (fixed at construction; state
+        // clones keep them), the cascade, and the list marker — the clone
+        // shares its source's memoized build until either changes.
+        cachedContent_(static_cast<const InlineContentShadowNode &>(sourceShadowNode).cachedContent_)
   {
   }
 
   void setInheritedCascade(const std::shared_ptr<const TextAttributes> &cascade) override
   {
     inheritedCascade_ = cascade;
+    // The cascade is a content input; a stale build must not survive it.
+    cachedContent_ = nullptr;
   }
 
   const std::shared_ptr<const TextAttributes> *getStoredCascade() const override
@@ -96,6 +102,61 @@ class InlineContentShadowNode final
         : LayoutDirection::LeftToRight;
     return textAttributes;
   }
+
+  /*
+   * Memoized content build, so measurement, state publishing and attachment
+   * placement do not each rebuild the run from scratch (fold, attachment
+   * measurement, white-space collapsing) in the same commit. The attributed
+   * string is reusable only for attachment-free content (attachment
+   * measurement depends on per-call layout constraints); `hasAttachments`
+   * itself is structural and lets the placement pass skip building entirely.
+   *
+   * Threading: this memo is written from layout, on a node that a concurrent
+   * commit may share with another revision — `ShadowTree::tryCommit` lays out
+   * before it takes the revision lock, so two commits can reach the same
+   * shared node. The write is a `shared_ptr` store, so it is a data race in
+   * the language sense, but not the same hazard as mutating a node's layout
+   * metrics in place:
+   *
+   *  - the payload is immutable and content-derived, so both threads compute
+   *    the SAME value; the loser of a store is a lost cache update, and the
+   *    next caller rebuilds. Nothing observable differs.
+   *  - metrics, by contrast, are read by the mounting thread for the tree on
+   *    screen, so writing them into a shared node shows the wrong geometry.
+   *
+   * Upstream's `ParagraphShadowNode::measuredLayouts_` has the same shape and
+   * the same exposure. Making it airtight would take an atomic store here.
+   */
+  struct CachedContent {
+    Float fontSizeMultiplier;
+    /*
+     * Part of the key, not decoration: the build resolves the inline
+     * direction into the base attributes AND into which physical edge an
+     * inline element's `inline-start` padding lands on. A `direction` flip on
+     * an ancestor re-layouts without touching this box's cascade or children,
+     * so nothing else here would notice it.
+     */
+    std::optional<LayoutDirection> layoutDirection;
+    bool hasAttachments;
+    AttributedString attributedString; // valid only when !hasAttachments
+  };
+
+  /*
+   * Whether a memoized build is still the one the current inputs would
+   * produce. `fontSizeMultiplier` legitimately holds NaN ("unset"), and IEEE
+   * NaN != NaN would silently turn every probe into a miss.
+   */
+  bool cachedContentMatches(const TextAttributes &textAttributes) const
+  {
+    if (cachedContent_ == nullptr) {
+      return false;
+    }
+    const auto cached = cachedContent_->fontSizeMultiplier;
+    const auto wanted = textAttributes.fontSizeMultiplier;
+    return (cached == wanted || (std::isnan(cached) && std::isnan(wanted))) &&
+        cachedContent_->layoutDirection == textAttributes.layoutDirection;
+  }
+  mutable std::shared_ptr<const CachedContent> cachedContent_;
 
   static ShadowNodeTraits BaseTraits()
   {

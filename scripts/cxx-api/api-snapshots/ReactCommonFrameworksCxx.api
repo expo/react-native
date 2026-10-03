@@ -1487,8 +1487,10 @@ class facebook::react::ImgTagShadowNode : public facebook::react::ConcreteViewSh
 class facebook::react::InlineContentShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::InlineContentComponentName, facebook::react::YogaLayoutableShadowNode, facebook::react::ViewProps>, public facebook::react::InlineTextContentAccessor, public facebook::react::ListMarkerSink {
   public InlineContentShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public InlineContentShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public bool cachedContentMatches(const facebook::react::TextAttributes& textAttributes) const;
   public bool listMarkerEquals(const facebook::react::ListMarker& other) const;
   public facebook::react::TextAttributes baseTextAttributes() const;
+  public mutable std::shared_ptr<const facebook::react::InlineContentShadowNode::CachedContent> cachedContent_;
   public static facebook::react::ShadowNodeTraits BaseTraits();
   public std::shared_ptr<const facebook::react::TextAttributes> inheritedCascade_;
   public virtual Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
@@ -1504,6 +1506,13 @@ class facebook::react::InlineContentShadowNode : public facebook::react::Concret
   public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
   public virtual void setListMarker(facebook::react::ListMarker listMarker) override;
   public void setTextLayoutManager(std::shared_ptr<const TextLayoutManager> textLayoutManager);
+}
+
+struct facebook::react::InlineContentShadowNode::CachedContent {
+  public Float fontSizeMultiplier;
+  public bool hasAttachments;
+  public facebook::react::AttributedString attributedString;
+  public std::optional<facebook::react::LayoutDirection> layoutDirection;
 }
 
 class facebook::react::InlineTextContentAccessor {
