@@ -326,7 +326,8 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
             .attributedString =
                 contentAccessor->getContentAttributedString(fontSizeMultiplier),
             .frame = box->getLayoutMetrics().frame,
-            .documentOrder = documentOrder});
+            .documentOrder = documentOrder,
+            .runTag = box->getTag()});
   }
 
   if (this->state_ == nullptr) {

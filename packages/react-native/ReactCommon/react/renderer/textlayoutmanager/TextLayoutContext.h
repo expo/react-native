@@ -32,6 +32,15 @@ struct TextLayoutContext {
    */
   SurfaceId surfaceId{-1};
 
+  /**
+   * When the string being measured is the content of an anonymous text-run
+   * box (text-children-plan.md §3.B), the box's tag; 0 otherwise. Platforms
+   * that build a full text layout to measure can park it under this tag for
+   * the mounting layer to reuse, instead of rebuilding the same layout on
+   * the UI thread (run-layout-reuse-plan.md).
+   */
+  Tag runTag{0};
+
   bool operator==(const TextLayoutContext &rhs) const = default;
 };
 

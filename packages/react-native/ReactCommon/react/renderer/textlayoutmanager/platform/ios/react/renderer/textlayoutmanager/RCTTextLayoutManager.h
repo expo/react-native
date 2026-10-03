@@ -54,6 +54,31 @@ using RCTTextLayoutFragmentEnumerationBlock =
                        frame:(CGRect)frame
            drawHighlightPath:(void (^_Nullable)(UIBezierPath *highlightPath))block;
 
+/*
+ * The run TextKit storage cache (ios-run-draw-reuse-plan.md). Measuring a
+ * run already builds and fully lays out its NSTextStorage stack on the
+ * layout thread; caching it by content + container width lets the run view
+ * draw from it instead of converting, building, and re-shaping the
+ * identical stack on the main thread. Content keying mirrors the caching
+ * policy the C++ text measure cache already applies to the same inputs, so
+ * measure-cache-hit re-mounts still find their storage. Returns nil on a
+ * miss (the draw falls back to the rebuild path).
+ */
+- (nullable NSTextStorage *)cachedRunTextStorageForAttributedString:
+                                (const facebook::react::AttributedString &)attributedString
+                                                              width:(CGFloat)width;
+
+/*
+ * Draws a laid-out text storage (from the handoff above) exactly as
+ * `drawAttributedString` would: background, inline box decorations, glyphs,
+ * custom decorations, highlight path. The storage must already have a
+ * layout manager and container attached.
+ */
+- (void)drawTextStorage:(NSTextStorage *)textStorage
+       attributedString:(const facebook::react::AttributedString &)attributedString
+                  frame:(CGRect)frame
+      drawHighlightPath:(void (^_Nullable)(UIBezierPath *highlightPath))block;
+
 - (facebook::react::LinesMeasurements)
     getLinesForAttributedString:(const facebook::react::AttributedString &)attributedString
             paragraphAttributes:(facebook::react::ParagraphAttributes)paragraphAttributes
