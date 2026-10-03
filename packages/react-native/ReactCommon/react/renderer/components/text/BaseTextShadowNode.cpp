@@ -11,6 +11,7 @@
 #include <react/renderer/components/text/TextNodeShadowNode.h>
 #include <react/renderer/components/text/TextProps.h>
 #include <react/renderer/components/text/TextShadowNode.h>
+#include <react/renderer/components/view/ViewPropsOf.h>
 #include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <react/renderer/mounting/ShadowView.h>
 
@@ -94,12 +95,17 @@ void BaseTextShadowNode::buildAttributedString(
     }
 
     // Span-like `display:'inline'` box (un-sized, all-inline contents): its
-    // children join the surrounding run, exactly like a <span>
-    // (css-display; Safari-pinned). Sized or non-inline-content inline boxes
-    // fall through to the atomic attachment branch below.
+    // children join the surrounding run with its inheritable text props
+    // applied, exactly like a <span> (css-display; Safari-pinned). Sized or
+    // non-inline-content inline boxes fall through to the atomic attachment
+    // branch below.
     if (YogaLayoutableShadowNode::isInlineFlowContent(*childNode)) {
+      auto localTextAttributes = baseTextAttributes;
+      if (const auto* baseViewProps = viewPropsOf(*childNode)) {
+        baseViewProps->applyInheritedTextAttributes(localTextAttributes);
+      }
       buildAttributedString(
-          baseTextAttributes, *childNode, outAttributedString, outAttachments);
+          localTextAttributes, *childNode, outAttributedString, outAttachments);
       continue;
     }
 

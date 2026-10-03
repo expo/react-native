@@ -45,18 +45,46 @@ class InlineContentShadowNode final
   }
 
   InlineContentShadowNode(const ShadowNode &sourceShadowNode, const ShadowNodeFragment &fragment)
-      : ConcreteShadowNode(sourceShadowNode, fragment)
+      : ConcreteShadowNode(sourceShadowNode, fragment),
+        // A clone must keep the cascade its source was stamped with: boxes
+        // are cloned by state progression, and a fresh default here is text
+        // dropping to the default font on re-render.
+        inheritedCascade_(static_cast<const InlineContentShadowNode &>(sourceShadowNode).inheritedCascade_)
   {
   }
 
+  void setInheritedCascade(const std::shared_ptr<const TextAttributes> &cascade) override
+  {
+    inheritedCascade_ = cascade;
+  }
+
+  const std::shared_ptr<const TextAttributes> *getStoredCascade() const override
+  {
+    return &inheritedCascade_;
+  }
+
   /*
-   * The text attributes every content build starts from, with this box's
-   * RESOLVED inline direction stamped on them: the line layout places atomic
-   * inlines from the inline-start edge, which is the right one under RTL.
+   * The effective inherited cascade, stamped by the owning View's configure
+   * pass (or, for a box rebuilt during a layout clone, copied from the source
+   * box). An anonymous IFC box measures and paints its runs from this at
+   * measure time, so it stores its own copy; ordinary Views do not.
+   */
+  std::shared_ptr<const TextAttributes> inheritedCascade_{YogaLayoutableShadowNode::defaultCascadeTextAttributes()};
+
+  /*
+   * The inherited cascade with this box's RESOLVED inline direction stamped
+   * on it — what every content build starts from.
+   *
+   * `ParagraphShadowNode` does exactly this before building its own string,
+   * and a run needs it for the same reasons: the text engines resolve
+   * `textAlign: 'auto'` against it, and atomic inlines are placed from the
+   * inline-start edge, which is the right one under RTL. It cannot live in
+   * the cascade itself — that is copy-on-write state shared between nodes and
+   * stamped during configure, long before Yoga has resolved a direction.
    */
   TextAttributes baseTextAttributes() const
   {
-    auto textAttributes = TextAttributes::defaultTextAttributes();
+    auto textAttributes = *inheritedCascade_;
     textAttributes.layoutDirection = YGNodeLayoutGetDirection(&yogaNode_) == YGDirectionRTL
         ? LayoutDirection::RightToLeft
         : LayoutDirection::LeftToRight;
@@ -69,6 +97,9 @@ class InlineContentShadowNode final
     traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
     traits.set(ShadowNodeTraits::Trait::MeasurableYogaNode);
     traits.set(ShadowNodeTraits::Trait::AnonymousBox);
+    // An anonymous IFC box measures and paints its runs straight from the
+    // inherited cascade.
+    traits.set(ShadowNodeTraits::Trait::TextCascadeConsumer);
     return traits;
   }
 

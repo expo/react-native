@@ -15,6 +15,7 @@
 #include <yoga/node/Node.h>
 
 #include <react/debug/react_native_assert.h>
+#include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/core/Sealable.h>
@@ -172,6 +173,20 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    */
   static bool isInlineFlowContent(const ShadowNode &child);
 
+  /*
+   * Cascade storage hooks. Only CONSUMER nodes — anonymous IFC boxes — store
+   * the effective cascade (they read it at measure time, when no configure
+   * walk is on the stack); everyone else derives it locally in
+   * `configureYogaTree` from `receivedTextAttributes_`. The virtuals let the
+   * configure pass stamp consumers without knowing their concrete types.
+   */
+  virtual void setInheritedCascade(const std::shared_ptr<const TextAttributes> & /*cascade*/) {}
+
+  virtual const std::shared_ptr<const TextAttributes> *getStoredCascade() const
+  {
+    return nullptr;
+  }
+
  protected:
   /**
    * Subclasses which provide MeasurableYogaNode may override to signal that a
@@ -314,6 +329,52 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * first child (document-order interleaving).
    */
   std::vector<size_t> anonymousTextContentChildIndices_;
+
+ public:
+  /*
+   * The text attributes a node starts from when no ancestor has set any
+   */
+  static const std::shared_ptr<const TextAttributes> &defaultCascadeTextAttributes();
+
+ private:
+  /*
+   * == The inherited-text cascade: invariants in one place ==
+   * (the machinery is spread across this class by lifecycle, so the rules
+   * live here.)
+   *
+   * 1. STORAGE is copy-on-write: nodes under an unstyled ancestor — the
+   *    overwhelming majority — share one immutable object (the process-wide
+   *    default). A node ESTABLISHES a distinct value (allocates) only when its
+   *    own props carry inheritable text props (`hasInheritedTextProps`, one
+   *    parse-time bit). Clones copy pointers; the per-child comparison in
+   *    `configureYogaTree` is pointer identity in the common case.
+   * 2. PROPAGATION happens only inside `configureYogaTree`, parent to child,
+   *    and only into children that can observe it: a cascade CONSUMER
+   *    (TextCascadeConsumer — anonymous IFC boxes) or a subtree
+   *    containing one (SubtreeHasCascadeDependents).
+   * 3. The DEPENDENTS BIT is maintained bottom-up: recomputed from scratch by
+   *    `updateYogaChildren`, OR-ed in by `appendChild` (Fabric appends
+   *    children one at a time, after construction — and adoption by ancestors
+   *    happens before any deferred rebuild, so inline content sets the bit
+   *    the moment it joins).
+   * 4. DIRTYING: an inheritable-prop change marks the
+   *    node dirty ONLY if the bit says something below depends on it. No
+   *    dependents, no walk.
+   * 5. A cascade change that cannot alter size (e.g. color) still must reach
+   *    the text: anonymous boxes are Yoga-dirtied on cascade change so they
+   *    re-measure and republish their run state.
+   */
+  // (The effective cascade is not stored here: consumers keep their own copy
+  // via setInheritedCascade, and everyone else derives it on the fly.)
+
+  /*
+   * The cascade value handed down by the parent during `configureYogaTree`,
+   * before this node folds in its own inheritable props. Retained across
+   * revisions so a later pass can detect when an ancestor's inheritable prop
+   * changed and re-cascade into an otherwise unchanged subtree that the
+   * layout-context skip guard would skip.
+   */
+  std::shared_ptr<const TextAttributes> receivedTextAttributes_{defaultCascadeTextAttributes()};
 
   /*
    * Whether the full Yoga subtree of this Node has been configured.

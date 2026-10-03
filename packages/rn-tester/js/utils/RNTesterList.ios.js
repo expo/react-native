@@ -243,6 +243,12 @@ const APIs: Array<RNTesterModuleInfo> = (
       module: require('../examples/TextRuns/TextRunsExample').default,
     },
     {
+      key: 'TextInheritanceExample',
+      category: 'UI',
+      module: require('../examples/TextInheritance/TextInheritanceExample')
+        .default,
+    },
+    {
       key: 'DisplayContentsExample',
       category: 'UI',
       module: require('../examples/DisplayContents/DisplayContentsExample')
