@@ -3928,6 +3928,7 @@ class facebook::react::AttributedString::Fragment {
   public bool isAttachment() const;
   public bool isContentEqual(const facebook::react::AttributedString::Fragment& rhs) const;
   public bool operator==(const facebook::react::AttributedString::Fragment& rhs) const;
+  public facebook::react::Float atomicInlineBaseline;
   public facebook::react::ShadowView parentShadowView;
   public facebook::react::TextAttributes textAttributes;
   public static std::string AttachmentCharacter();

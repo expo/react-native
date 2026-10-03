@@ -34,6 +34,14 @@ class AttributedString : public Sealable, public DebugStringConvertible {
     ShadowView parentShadowView;
 
     /*
+     * For an attachment (an atomic inline box), the distance from the box's
+     * top to its baseline — what the text engine needs to sit it on the line's
+     * baseline (CSS2 §10.8.1). Equal to the box's height when it has no line
+     * boxes of its own, which is the synthesized bottom-edge baseline.
+     */
+    Float atomicInlineBaseline{0};
+
+    /*
      * Returns true is the Fragment represents an attachment.
      * Equivalent to `string == AttachmentCharacter()`.
      */

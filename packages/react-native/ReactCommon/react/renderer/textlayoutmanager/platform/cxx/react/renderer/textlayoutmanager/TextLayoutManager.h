@@ -51,6 +51,19 @@ class TextLayoutManager {
       const TextLayoutContext &layoutContext,
       const LayoutConstraints &layoutConstraints) const;
 
+  /*
+   * Measures the individual lines of `attributedString`.
+   *
+   * Declaring this is what makes `TextLayoutManagerExtended::
+   * supportsLineMeasurement()` true for this platform, which in turn is what
+   * lets a box report a real baseline in a headless test rather than its top
+   * edge.
+   */
+  LinesMeasurements measureLines(
+      const AttributedStringBox &attributedStringBox,
+      const ParagraphAttributes &paragraphAttributes,
+      const Size &size) const;
+
  protected:
   std::shared_ptr<const ContextContainer> contextContainer_;
   TextMeasureCache textMeasureCache_;
