@@ -2535,6 +2535,7 @@ class facebook::react::TextAttributes : public facebook::react::DebugStringConve
   public facebook::react::SharedColor foregroundColor;
   public facebook::react::SharedColor textDecorationColor;
   public facebook::react::SharedColor textShadowColor;
+  public static facebook::react::Float initialFontSize();
   public static facebook::react::TextAttributes defaultTextAttributes();
   public std::optional<bool> allowFontScaling;
   public std::optional<bool> isHighlighted;

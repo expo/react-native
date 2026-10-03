@@ -46,6 +46,15 @@ class TextAttributes : public DebugStringConvertible {
    */
   static TextAttributes defaultTextAttributes();
 
+  /*
+   * `font-size`'s initial value — the platform's body text size.
+   *
+   * Reading it through `defaultTextAttributes()` copies the whole struct,
+   * including a `std::string` and a `std::vector`, to get at one float. The
+   * cascade asks for this per element.
+   */
+  static Float initialFontSize();
+
 #pragma mark - Fields
 
   // Color
