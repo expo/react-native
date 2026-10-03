@@ -89,6 +89,25 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   Rect getContentBounds() const;
 
+  /*
+   * Trait-based downcast: the YogaLayoutableKind trait is set by this class's
+   * constructors, so the check-and-static_cast is exact, and it avoids an RTTI
+   * dynamic_cast on the per-child hot paths that need it.
+   */
+  static const YogaLayoutableShadowNode *asYogaLayoutable(const ShadowNode &node)
+  {
+    return node.getTraits().check(ShadowNodeTraits::Trait::YogaLayoutableKind)
+        ? static_cast<const YogaLayoutableShadowNode *>(&node)
+        : nullptr;
+  }
+
+  static std::shared_ptr<const YogaLayoutableShadowNode> asYogaLayoutable(const std::shared_ptr<const ShadowNode> &node)
+  {
+    return node != nullptr && node->getTraits().check(ShadowNodeTraits::Trait::YogaLayoutableKind)
+        ? std::static_pointer_cast<const YogaLayoutableShadowNode>(node)
+        : nullptr;
+  }
+
  protected:
   /**
    * Subclasses which provide MeasurableYogaNode may override to signal that a

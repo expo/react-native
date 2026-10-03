@@ -99,6 +99,12 @@ class ShadowNodeTraits {
 
     // Scroll container for descendant views, independent of user scrolling.
     FormsScrollContainer = 1 << 16,
+
+    // The node IS a YogaLayoutableShadowNode. Layout code downcasts child
+    // ShadowNodes per child, per pass; the trait plus a static_cast answers
+    // the same question as an RTTI dynamic_cast without walking the class
+    // hierarchy.
+    YogaLayoutableKind = 1 << 21,
   };
 
   /*
