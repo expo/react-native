@@ -165,7 +165,9 @@ inline static UIFont *RCTEffectiveFontFromTextAttributes(const TextAttributes &t
 
 inline static UIColor *RCTEffectiveForegroundColorFromTextAttributes(const TextAttributes &textAttributes)
 {
-  UIColor *effectiveForegroundColor = RCTUIColorFromSharedColor(textAttributes.foregroundColor) ?: [UIColor blackColor];
+  // An unset colour is CanvasText: the platform's own text colour, dynamic
+  // with the appearance, as UILabel draws. `<Text>` always states one.
+  UIColor *effectiveForegroundColor = RCTUIColorFromSharedColor(textAttributes.foregroundColor) ?: [UIColor labelColor];
 
   if (!isnan(textAttributes.opacity)) {
     effectiveForegroundColor = [effectiveForegroundColor
@@ -201,9 +203,7 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
   // Colors
   UIColor *effectiveForegroundColor = RCTEffectiveForegroundColorFromTextAttributes(textAttributes);
 
-  if (textAttributes.foregroundColor || !isnan(textAttributes.opacity)) {
-    attributes[NSForegroundColorAttributeName] = effectiveForegroundColor;
-  }
+  attributes[NSForegroundColorAttributeName] = effectiveForegroundColor;
 
   if (textAttributes.backgroundColor || !isnan(textAttributes.opacity)) {
     attributes[NSBackgroundColorAttributeName] = RCTEffectiveBackgroundColorFromTextAttributes(textAttributes);
