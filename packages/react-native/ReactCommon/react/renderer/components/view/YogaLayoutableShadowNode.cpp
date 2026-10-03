@@ -907,12 +907,20 @@ void YogaLayoutableShadowNode::updateYogaProps() {
   auto& props = static_cast<const YogaStylableProps&>(*props_);
   auto styleResult = applyAliasedProps(props.yogaStyle, props);
 
-  if (props.displayBlock && ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
-    // A CSS block container: block-level children stack in the block
-    // direction with block sizing rather than as flex items. The algorithm
-    // lives in Yoga's `calculateBlockLayout`.
-    styleResult.setDisplay(yoga::Display::Block);
-    styleResult.setFormattingContextRoot(props.displayFlowRoot);
+  if (props.displayBlock) {
+    if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
+      // A CSS block container: block-level children stack in the block
+      // direction with block sizing rather than as flex items. The algorithm
+      // lives in Yoga's `calculateBlockLayout`.
+      styleResult.setDisplay(yoga::Display::Block);
+      styleResult.setFormattingContextRoot(props.displayFlowRoot);
+    } else if (ReactNativeFeatureFlags::enableStringChildren()) {
+      // Without the native block layout, emulate it on Yoga's flex primitives
+      // so the elements that are blocks by default still stack: vertical
+      // stacking with full-width children
+      styleResult.setFlexDirection(yoga::FlexDirection::Column);
+      styleResult.setAlignItems(yoga::Align::Stretch);
+    }
   }
 
   // Resetting `dirty` flag only if `yogaStyle` portion of `Props` was
