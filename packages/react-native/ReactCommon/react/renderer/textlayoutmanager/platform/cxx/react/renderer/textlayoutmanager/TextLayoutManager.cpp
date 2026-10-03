@@ -41,7 +41,7 @@ Float deterministicLineHeight(const AttributedStringBox& attributedStringBox) {
       !std::isnan(fragments[0].textAttributes.lineHeight)) {
     return fragments[0].textAttributes.lineHeight;
   }
-  auto fontSize = TextAttributes::defaultTextAttributes().fontSize;
+  auto fontSize = TextAttributes::initialFontSize();
   if (!fragments.empty() && !std::isnan(fragments[0].textAttributes.fontSize)) {
     fontSize = fragments[0].textAttributes.fontSize;
   }

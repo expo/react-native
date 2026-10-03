@@ -28,6 +28,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with ful
       allowFontScaling="true"
       ellipsizeMode="tail"
       fontFamily="monospace"
+      fontSize="14"
       fontSizeMultiplier="NaN"
       foregroundColor="rgba(255, 255, 255, 1)"
       includeFontPadding="false"
@@ -39,6 +40,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with ful
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -51,6 +53,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with ful
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -126,6 +129,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       allowFontScaling="true"
       ellipsizeMode="tail"
       fontFamily="monospace"
+      fontSize="14"
       fontSizeMultiplier="NaN"
       foregroundColor="rgba(255, 255, 255, 1)"
       includeFontPadding="false"
@@ -137,6 +141,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -149,6 +154,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -185,6 +191,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       allowFontScaling="true"
       ellipsizeMode="tail"
       fontFamily="monospace"
+      fontSize="14"
       fontSizeMultiplier="NaN"
       foregroundColor="rgba(255, 255, 255, 1)"
       includeFontPadding="false"
@@ -196,6 +203,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -208,6 +216,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -244,6 +253,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       allowFontScaling="true"
       ellipsizeMode="tail"
       fontFamily="monospace"
+      fontSize="14"
       fontSizeMultiplier="NaN"
       foregroundColor="rgba(255, 255, 255, 1)"
       includeFontPadding="false"
@@ -255,6 +265,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -267,6 +278,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with mor
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -344,6 +356,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with par
       allowFontScaling="true"
       ellipsizeMode="tail"
       fontFamily="monospace"
+      fontSize="14"
       fontSizeMultiplier="NaN"
       foregroundColor="rgba(255, 255, 255, 1)"
       includeFontPadding="false"
@@ -355,6 +368,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with par
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -367,6 +381,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames with par
       <rn-text
         allowFontScaling="true"
         fontFamily="monospace"
+        fontSize="14"
         fontWeight="500"
         foregroundColor="rgba(255, 255, 255, 0.4)"
         layoutDirection="ltr"
@@ -435,6 +450,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames without 
     allowFontScaling="true"
     ellipsizeMode="tail"
     fontFamily="monospace"
+    fontSize="14"
     fontSizeMultiplier="NaN"
     foregroundColor="rgba(255, 255, 255, 1)"
     includeFontPadding="false"
@@ -446,6 +462,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames without 
     <rn-text
       allowFontScaling="true"
       fontFamily="monospace"
+      fontSize="14"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 0.4)"
       layoutDirection="ltr"
@@ -458,6 +475,7 @@ exports[`LogBoxInspectorReactFrames should render componentStack frames without 
     <rn-text
       allowFontScaling="true"
       fontFamily="monospace"
+      fontSize="14"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 0.4)"
       layoutDirection="ltr"

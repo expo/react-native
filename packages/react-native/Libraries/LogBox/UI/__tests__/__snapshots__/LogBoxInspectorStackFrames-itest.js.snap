@@ -52,6 +52,7 @@ exports[`LogBoxInspectorStackFrames should render stack frames with 1 frame coll
       allowFontScaling="true"
       ellipsizeMode="tail"
       fontFamily="monospace"
+      fontSize="14"
       fontSizeMultiplier="NaN"
       fontWeight="400"
       foregroundColor="rgba(255, 255, 255, 1)"

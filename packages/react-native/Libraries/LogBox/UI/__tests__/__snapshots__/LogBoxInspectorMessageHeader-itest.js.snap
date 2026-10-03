@@ -24,6 +24,7 @@ exports[`LogBoxInspectorMessageHeader should not render "See More" if expanded 1
   <rn-paragraph
     allowFontScaling="true"
     ellipsizeMode="tail"
+    fontSize="14"
     fontSizeMultiplier="NaN"
     fontWeight="500"
     foregroundColor="rgba(255, 255, 255, 1)"
@@ -37,6 +38,7 @@ exports[`LogBoxInspectorMessageHeader should not render "See More" if expanded 1
   >
     <rn-text
       allowFontScaling="true"
+      fontSize="14"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 1)"
       layoutDirection="ltr"
@@ -73,6 +75,7 @@ exports[`LogBoxInspectorMessageHeader should not render See More button for shor
   <rn-paragraph
     allowFontScaling="true"
     ellipsizeMode="tail"
+    fontSize="14"
     fontSizeMultiplier="NaN"
     fontWeight="500"
     foregroundColor="rgba(255, 255, 255, 1)"
@@ -86,6 +89,7 @@ exports[`LogBoxInspectorMessageHeader should not render See More button for shor
   >
     <rn-text
       allowFontScaling="true"
+      fontSize="14"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 1)"
       layoutDirection="ltr"
@@ -122,6 +126,7 @@ exports[`LogBoxInspectorMessageHeader should render "See More" if collapsed 1`] 
   <rn-paragraph
     allowFontScaling="true"
     ellipsizeMode="tail"
+    fontSize="14"
     fontSizeMultiplier="NaN"
     fontWeight="500"
     foregroundColor="rgba(255, 255, 255, 1)"
@@ -135,6 +140,7 @@ exports[`LogBoxInspectorMessageHeader should render "See More" if collapsed 1`] 
   >
     <rn-text
       allowFontScaling="true"
+      fontSize="14"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 1)"
       layoutDirection="ltr"
@@ -146,6 +152,7 @@ exports[`LogBoxInspectorMessageHeader should render "See More" if collapsed 1`] 
     <rn-text
       accessibilityRole="link"
       allowFontScaling="true"
+      fontSize="14"
       fontWeight="300"
       foregroundColor="rgba(255, 255, 255, 0.701961)"
       isHighlighted="false"
@@ -184,6 +191,7 @@ exports[`LogBoxInspectorMessageHeader should render error 1`] = `
   <rn-paragraph
     allowFontScaling="true"
     ellipsizeMode="tail"
+    fontSize="14"
     fontSizeMultiplier="NaN"
     fontWeight="500"
     foregroundColor="rgba(255, 255, 255, 1)"
@@ -197,6 +205,7 @@ exports[`LogBoxInspectorMessageHeader should render error 1`] = `
   >
     <rn-text
       allowFontScaling="true"
+      fontSize="14"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 1)"
       layoutDirection="ltr"
@@ -233,6 +242,7 @@ exports[`LogBoxInspectorMessageHeader should render fatal 1`] = `
   <rn-paragraph
     allowFontScaling="true"
     ellipsizeMode="tail"
+    fontSize="14"
     fontSizeMultiplier="NaN"
     fontWeight="500"
     foregroundColor="rgba(255, 255, 255, 1)"
@@ -246,6 +256,7 @@ exports[`LogBoxInspectorMessageHeader should render fatal 1`] = `
   >
     <rn-text
       allowFontScaling="true"
+      fontSize="14"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 1)"
       layoutDirection="ltr"
@@ -282,6 +293,7 @@ exports[`LogBoxInspectorMessageHeader should render syntax error 1`] = `
   <rn-paragraph
     allowFontScaling="true"
     ellipsizeMode="tail"
+    fontSize="14"
     fontSizeMultiplier="NaN"
     fontWeight="500"
     foregroundColor="rgba(255, 255, 255, 1)"
@@ -295,6 +307,7 @@ exports[`LogBoxInspectorMessageHeader should render syntax error 1`] = `
   >
     <rn-text
       allowFontScaling="true"
+      fontSize="14"
       fontWeight="500"
       foregroundColor="rgba(255, 255, 255, 1)"
       layoutDirection="ltr"
