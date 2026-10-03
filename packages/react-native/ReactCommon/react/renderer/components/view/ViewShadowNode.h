@@ -28,8 +28,16 @@ class ViewShadowNode final : public ConcreteViewShadowNode<ViewComponentName, Vi
 
   ViewShadowNode(const ShadowNode &sourceShadowNode, const ShadowNodeFragment &fragment);
 
+  void layout(LayoutContext layoutContext) override;
+
  private:
   void initialize() noexcept;
+
+  /*
+   * Positions the atomic inline-level children of this View's anonymous inline
+   * boxes at the frames their run's line layout gave them.
+   */
+  void layoutInlineAttachments(LayoutContext layoutContext);
 };
 
 } // namespace facebook::react

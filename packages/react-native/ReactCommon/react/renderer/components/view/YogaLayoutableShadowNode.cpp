@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <unordered_set>
 
 namespace facebook::react {
 
@@ -64,6 +65,12 @@ static int FabricDefaultYogaLog(
 
 thread_local LayoutContext threadLocalLayoutContext;
 
+// Whether `child` is an inline-level box (`display:'inline'`, neither
+// absolutely positioned nor floated) — the union of atomic inline boxes and
+// span-like inline flow content. Defined with the other classification
+// predicates below.
+static bool isInlineLevelBox(const ShadowNode& child);
+
 YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     const ShadowNodeFragment& fragment,
     const ShadowNodeFamily::Shared& family,
@@ -100,7 +107,10 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
       yogaConfig_(FabricDefaultYogaLog),
       yogaNode_(
           static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
-              .yogaNode_) {
+              .yogaNode_),
+      yogaChildrenNeedInlineRebuild_(
+          static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
+              .yogaChildrenNeedInlineRebuild_) {
   // Note, cloned `yoga::Node` instance (copied using copy-constructor)
   // inherits dirty flag, measure function, and other properties being set
   // originally in the `YogaLayoutableShadowNode` constructor above.
@@ -145,6 +155,13 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
 
   if (fragment.children) {
     updateYogaChildren();
+  } else if (!static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
+                  .anonymousTextContentChildren_.empty()) {
+    // Anonymous boxes are owned exclusively by one shadow-node revision:
+    // rebuild rather than share the source's, and reconfigure the rebuilt
+    // boxes before the next layout.
+    updateYogaChildren();
+    yogaTreeHasBeenConfigured_ = false;
   }
 
   ensureConsistency();
@@ -234,9 +251,30 @@ void YogaLayoutableShadowNode::appendChild(
     return;
   }
 
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      getAnonymousTextContentFactory() != nullptr &&
+      (isInlineLevelBox(*childNode) ||
+       !anonymousTextContentChildren_.empty())) {
+    // Inline-level content joined (or its runs may have shifted). The Yoga
+    // children need rebuilding with fresh anonymous boxes — but doing it per
+    // append is O(children) each and O(n²) for the whole construction, so it
+    // is deferred: one rebuild, at the start of the next configure pass.
+    //
+    // In a flex container an inline-level box is blockified instead
+    // (css-display-3 §2.7). Flagging the rebuild there is harmless:
+    // `configureYogaTree` re-runs and takes the same blockifying path.
+    yogaNode_.setDirty(true);
+    yogaChildrenNeedInlineRebuild_ = true;
+    return;
+  }
+
+  if (yogaChildrenNeedInlineRebuild_) {
+    // A pending rebuild covers this child's Yoga plumbing.
+    return;
+  }
+
   if (auto yogaLayoutableChild =
-          std::dynamic_pointer_cast<const YogaLayoutableShadowNode>(
-              childNode)) {
+          YogaLayoutableShadowNode::asYogaLayoutable(childNode)) {
     // Here we don't have information about the previous structure of the node
     // (if it that existed before), so we don't have anything to compare the
     // Yoga node with (like a previous version of this node). Therefore we must
@@ -354,6 +392,11 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
   }
 
   ensureUnsealed();
+  yogaChildrenNeedInlineRebuild_ = false;
+
+  const auto inlineLayoutEnabled =
+      ReactNativeFeatureFlags::enableStringChildren() &&
+      getAnonymousTextContentFactory() != nullptr;
 
   bool isClean = !YGNodeIsDirty(&yogaNode_) &&
       getChildren().size() == YGNodeGetChildCount(&yogaNode_);
@@ -361,14 +404,94 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
   auto oldYogaChildren =
       isClean ? yogaNode_.getChildren() : std::vector<yoga::Node*>{};
 
+  /*
+   * Which children are SHARED WITH ANOTHER TREE: carried over from the
+   * previous commit, sealed, and with yoga nodes owned by the committed
+   * tree's node. Laying such a child out from this parent would write metrics
+   * into the other tree's node — an `Attempt to mutate a sealed object` abort
+   * in Debug, and silently corrupted old-tree metrics in Release, where the
+   * seal is compiled out — so the loop below clones each one before adopting
+   * it, keeping its state.
+   */
+  std::unordered_set<const yoga::Node*> childrenSharedWithAnotherTree;
+  for (const auto& childToScan : getChildren()) {
+    if (auto yogaChildToScan =
+            YogaLayoutableShadowNode::asYogaLayoutable(childToScan)) {
+      const auto* owner = YGNodeGetOwner(&yogaChildToScan->yogaNode_);
+      if (owner != nullptr && owner != &yogaNode_) {
+        childrenSharedWithAnotherTree.insert(&yogaChildToScan->yogaNode_);
+      }
+    }
+  }
+
   yogaNode_.setChildren({});
   yogaLayoutableChildren_.clear();
+  anonymousTextContentChildren_.clear();
   yogaLayoutableChildren_.reserve(getChildren().size());
+
+  // Contiguous inline-level boxes in a block container are wrapped in
+  // anonymous boxes, each establishing an inline formatting context, by the
+  // text module's factory (CSS2 §9.2.1.1).
+  std::vector<std::shared_ptr<const ShadowNode>> inlineRun;
+  auto flushInlineRun = [&]() {
+    if (!inlineRun.empty()) {
+      appendAnonymousTextContentChild(std::move(inlineRun));
+      inlineRun.clear();
+      isClean = false;
+    }
+  };
+
+  const bool containerIsBlock =
+      static_cast<const YogaStylableProps&>(*props_).displayBlock;
 
   for (size_t i = 0; i < getChildren().size(); i++) {
     if (auto yogaLayoutableChild =
-            std::dynamic_pointer_cast<const YogaLayoutableShadowNode>(
-                getChildren()[i])) {
+            YogaLayoutableShadowNode::asYogaLayoutable(getChildren()[i])) {
+      if (inlineLayoutEnabled && containerIsBlock &&
+          isInlineLevelBox(*yogaLayoutableChild)) {
+        // `display:'inline'` element in a block container: an inline-level
+        // box that joins the current run, never a block-level Yoga child —
+        // either an *atomic* inline (an attachment in the run's lines) or,
+        // when un-sized with all-inline contents, a *span-like* inline box
+        // whose contents flow into the run (isInlineFlowContent). In flex
+        // containers it falls through below and is blockified into a regular
+        // flex item (css-display-3 §2.7).
+        inlineRun.push_back(getChildren()[i]);
+        continue;
+      }
+      // Box-generation rules for run contiguity (each verified against
+      // Safari): a `display:'none'` child generates NO box and never
+      // interrupts inline content. An absolutely-positioned child is
+      // out-of-flow: in a block container it does not interrupt the IFC
+      // (CSS2 §9.2.1.1 anonymous boxes form around in-flow block-level boxes
+      // only). Either way the child remains an ordinary Yoga child
+      // (Display::None is skipped by layout; absolute children are positioned
+      // by absolute layout), only the run flush is skipped.
+      const auto& childStyle =
+          static_cast<const YogaStylableProps&>(*yogaLayoutableChild->props_)
+              .yogaStyle;
+      const bool interruptsInlineContent = !inlineLayoutEnabled ||
+          !(childStyle.display() == yoga::Display::None ||
+            (containerIsBlock &&
+             childStyle.positionType() == yoga::PositionType::Absolute));
+      if (interruptsInlineContent) {
+        flushInlineRun();
+      }
+      if (childrenSharedWithAnotherTree.count(
+              &yogaLayoutableChild->yogaNode_) != 0) {
+        // See the note above the detach: this child belongs to another tree,
+        // and the detach hid that from `adoptYogaChild`. Clone it here, with
+        // the same fragment `cloneChildInPlace` uses, so the adoption below
+        // takes the fresh copy.
+        auto clonedChild = yogaLayoutableChild->clone(
+            {.props = ShadowNodeFragment::propsPlaceholder(),
+             .children = ShadowNodeFragment::childrenPlaceholder(),
+             .state = yogaLayoutableChild->getState()});
+        replaceChild(
+            *yogaLayoutableChild, clonedChild, static_cast<ssize_t>(i));
+        yogaLayoutableChild =
+            YogaLayoutableShadowNode::asYogaLayoutable(getChildren()[i]);
+      }
       appendYogaChild(yogaLayoutableChild);
       adoptYogaChild(i);
 
@@ -383,11 +506,113 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       }
     }
   }
+  flushInlineRun();
 
   react_native_assert(
       yogaLayoutableChildren_.size() == YGNodeGetChildCount(&yogaNode_));
 
   yogaNode_.setDirty(!isClean);
+}
+
+static YogaLayoutableShadowNode::AnonymousTextContentFactory&
+anonymousTextContentFactorySingleton() {
+  static YogaLayoutableShadowNode::AnonymousTextContentFactory factory =
+      nullptr;
+  return factory;
+}
+
+void YogaLayoutableShadowNode::setAnonymousTextContentFactory(
+    AnonymousTextContentFactory factory) {
+  anonymousTextContentFactorySingleton() = factory;
+}
+
+YogaLayoutableShadowNode::AnonymousTextContentFactory
+YogaLayoutableShadowNode::getAnonymousTextContentFactory() {
+  return anonymousTextContentFactorySingleton();
+}
+
+static bool isInlineLevelBox(const ShadowNode& child) {
+  // An otherwise block-level element opted inline via `display:'inline'`
+  // (YogaStylableProps::displayInline). CSS2 §9.7 blockifies in two cases and
+  // both are excluded here: an absolutely-positioned box, and a FLOATED one.
+  // Each must stay an ordinary Yoga child so the code that places it — the
+  // absolute pass, or the float band search — can see it at all.
+  const auto* props =
+      dynamic_cast<const YogaStylableProps*>(child.getProps().get());
+  return props != nullptr && props->displayInline &&
+      props->yogaStyle.positionType() != yoga::PositionType::Absolute &&
+      props->yogaStyle.floatSide() == yoga::FloatSide::None;
+}
+
+bool YogaLayoutableShadowNode::isAtomicInline(const ShadowNode& child) {
+  return isInlineLevelBox(child) && !isInlineFlowContent(child);
+}
+
+bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
+  // A span-like inline box: `display:'inline'` on an otherwise block-level
+  // element whose size is auto and whose contents are all inline-level — its
+  // contents flow into the surrounding IFC, exactly like a <span>
+  // (Safari-pinned). A *sized* inline View stays an atomic inline box instead:
+  // an RN View is an opaque native box, closer to a replaced element, so the
+  // web's "non-replaced inline boxes ignore width/height" rule is
+  // deliberately not applied.
+  if (!isInlineLevelBox(child)) {
+    return false;
+  }
+  if (YogaLayoutableShadowNode::asYogaLayoutable(child) == nullptr) {
+    return false;
+  }
+  const auto& props = static_cast<const YogaStylableProps&>(*child.getProps());
+  // `inline-flex`/`inline-block` are inline-level but establish a formatting
+  // context, so they are atomic by definition: their contents are flex items /
+  // block boxes of their own and can never join the surrounding inline flow.
+  if (props.displayInlineAtomic) {
+    return false;
+  }
+  if (!props.yogaStyle.dimension(yoga::Dimension::Width).isAuto() ||
+      !props.yogaStyle.dimension(yoga::Dimension::Height).isAuto()) {
+    return false;
+  }
+  for (const auto& grandChild : child.getChildren()) {
+    // Only nested inline-level boxes flow — span-like or atomic. Block-level
+    // content inside an inline box would require block-in-inline splitting
+    // (CSS2 §9.2.1.1); such boxes — and ones with absolutely-positioned
+    // children — fall back to atomic inline.
+    if (!isInlineLevelBox(*grandChild)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
+    std::vector<std::shared_ptr<const ShadowNode>>&& runChildren) {
+  auto box = getAnonymousTextContentFactory()(std::move(runChildren), *this);
+  if (box == nullptr) {
+    // The run generates no box.
+    return;
+  }
+  // Structural invariant: the factory must produce an anonymous IFC box, a
+  // Yoga leaf that measures its own run. A non-anonymous or non-leaf box
+  // would accrue stray Yoga children.
+  react_native_assert(
+      box->getTraits().check(ShadowNodeTraits::Trait::AnonymousBox));
+  react_native_assert(
+      box->getTraits().check(ShadowNodeTraits::Trait::LeafYogaNode));
+
+  // Anonymous block boxes always fill the containing block on web; pin
+  // stretch so `alignItems` overrides cannot shrink-wrap the run.
+  auto boxStyle = box->yogaNode_.style();
+  boxStyle.setAlignSelf(yoga::Align::Stretch);
+  box->yogaNode_.setStyle(boxStyle);
+
+  yogaLayoutableChildren_.push_back(box);
+  yogaNode_.insertChild(&box->yogaNode_, YGNodeGetChildCount(&yogaNode_));
+  box->yogaNode_.setOwner(&yogaNode_);
+  // Structural invariant: the box must be a Yoga child of its owning
+  // container, which the attachment layout assumes.
+  react_native_assert(box->yogaNode_.getOwner() == &yogaNode_);
+  anonymousTextContentChildren_.push_back(std::move(box));
 }
 
 void YogaLayoutableShadowNode::updateYogaProps() {
@@ -492,6 +717,12 @@ void YogaLayoutableShadowNode::configureYogaTree(
     YGErrata defaultErrata,
     bool swapLeftAndRight) {
   ensureUnsealed();
+
+  if (yogaChildrenNeedInlineRebuild_) {
+    // The one deferred rebuild for all the inline appends since construction.
+    updateYogaChildren();
+    ensureConsistency();
+  }
 
   // Set state on our own Yoga node
   YGErrata errata = resolveErrata(defaultErrata);
