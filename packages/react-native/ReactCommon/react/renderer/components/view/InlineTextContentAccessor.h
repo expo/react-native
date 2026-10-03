@@ -67,6 +67,37 @@ class InlineTextContentAccessor {
 
   virtual std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const = 0;
 
+  /*
+   * An `outside` list marker, already measured (css-lists-3 §3.2).
+   *
+   * Measuring happens on this side of the interface because the view layer
+   * cannot include the text layout manager, and the caller only needs to know
+   * how wide the marker is so it can place it in the gutter to the
+   * inline-start side of the content box.
+   *
+   * Adding a virtual to this interface changes its vtable, and an incremental
+   * Android build can leave `ReactAndroid/build/prefab-headers` stale: the
+   * app's own C++ then compiles against the old layout while linking the new
+   * library, which corrupts memory rather than failing to build. Delete that
+   * directory and `rn-tester/android/app/build/intermediates/cxx` after
+   * changing this file.
+   */
+  struct OutsideMarker {
+    AttributedString attributedString;
+    Size size;
+    /*
+     * Distance from the marker box's top to its glyphs' baseline. The caller
+     * aligns this with the content's first-line baseline, because a symbolic
+     * marker renders at a reduced font size (kSymbolicMarkerFontScale) and its
+     * own line is much shorter than the content's, so top-aligning the two
+     * boxes would raise the bullet to cap height. 0 when line measurement is
+     * unavailable; the caller then falls back to top alignment.
+     */
+    Float baseline{0};
+    bool present{false};
+  };
+  virtual OutsideMarker getOutsideMarker() const = 0;
+
   // Resolved frames of this run's atomic inlines, so the owning View can
   // position each one at its place in the run's lines rather than at the box
   // origin.

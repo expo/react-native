@@ -7,10 +7,15 @@
 
 #pragma once
 
+#include <cmath>
+#include <optional>
+#include <string>
 #include <vector>
 
+#include <react/renderer/attributedstring/AttributedString.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/components/view/InlineTextContentAccessor.h>
+#include <react/renderer/components/view/ListStyle.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <react/renderer/core/ConcreteShadowNode.h>
@@ -34,7 +39,8 @@ extern const char InlineContentComponentName[];
  */
 class InlineContentShadowNode final
     : public ConcreteShadowNode<InlineContentComponentName, YogaLayoutableShadowNode, ViewProps>,
-      public InlineTextContentAccessor {
+      public InlineTextContentAccessor,
+      public ListMarkerSink {
  public:
   InlineContentShadowNode(
       const ShadowNodeFragment &fragment,
@@ -107,6 +113,32 @@ class InlineContentShadowNode final
 
   void setTextLayoutManager(std::shared_ptr<const TextLayoutManager> textLayoutManager);
 
+  /*
+   * The marker text a `display: list-item` container renders before its
+   * content — `<li>`'s bullet.
+   *
+   * Set by whoever creates this anonymous box, because only they know the
+   * element it belongs to: this node's own props are plain `ViewProps`, so the
+   * owning tag is not visible from in here. It has to be part of the content
+   * the box MEASURES, not something painted afterwards, or the marker would
+   * overlap the first line instead of displacing it.
+   */
+  void setListMarker(ListMarker listMarker) override;
+
+  bool listMarkerEquals(const ListMarker &other) const
+  {
+    return listMarker_ == other;
+  }
+
+  /*
+   * The marker to paint in the gutter, empty unless this box has an `outside`
+   * marker. Read by the owning View when it publishes its text runs.
+   */
+  const ListMarker &getListMarker() const override
+  {
+    return listMarker_;
+  }
+
 #pragma mark - LayoutableShadowNode
 
   Size measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const override;
@@ -123,6 +155,8 @@ class InlineContentShadowNode final
 #pragma mark - InlineTextContentAccessor
 
   AttributedString getContentAttributedString(Float fontSizeMultiplier) const override;
+
+  OutsideMarker getOutsideMarker() const override;
 
   std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const override
   {
@@ -144,7 +178,10 @@ class InlineContentShadowNode final
   // The baseline of the run's first or last line.
   Float lineBaseline(const LayoutContext &layoutContext, Size size, bool lastLine) const;
 
+  void appendListMarkerIfNeeded(AttributedString &attributedString, const TextAttributes &textAttributes) const;
+
   std::shared_ptr<const TextLayoutManager> textLayoutManager_;
+  ListMarker listMarker_{};
 };
 
 } // namespace facebook::react
