@@ -4926,6 +4926,7 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public YogaLayoutableShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public YogaLayoutableShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public const facebook::react::YogaLayoutableShadowNode::ListOfShared& getYogaLayoutableChildren() const;
+  public const facebook::yoga::Style& getYogaStyle() const;
   public const std::vector<size_t>& getAnonymousTextContentChildIndices() const;
   public const std::vector<std::shared_ptr<facebook::react::YogaLayoutableShadowNode>>& getAnonymousTextContentChildren() const;
   public facebook::react::Rect getContentBounds() const;

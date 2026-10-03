@@ -8,6 +8,7 @@
 #include "InlineElementMetrics.h"
 
 #include <react/renderer/components/text/TextShadowNode.h>
+#include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <unordered_map>
 
 namespace facebook::react {
@@ -91,10 +92,16 @@ void stampSubtree(
   const auto box = hasBox ? found->second : Rect{};
 
   // Stampable inline-level content: the text vocabulary (TextShadowNode —
-  // <span>/<b>/nested <Text>). Everything Yoga lays out keeps its real
-  // metrics.
+  // <span>/<b>/nested <Text>) and span-like `display:'inline'` Views. The
+  // Views use the SAME predicate the run fold uses to decide folding
+  // (isInlineFlowContent), so an element folds into the run and reports
+  // fragment geometry under one definition — and everything Yoga actually
+  // lays out (atomic inlines, blockified Views in flex containers) is
+  // excluded by that same predicate and keeps its real metrics.
   const auto* textNode = dynamic_cast<const TextShadowNode*>(&node);
-  const bool stampable = textNode != nullptr;
+  const bool stampableInlineFlow = textNode == nullptr &&
+      YogaLayoutableShadowNode::isInlineFlowContent(node);
+  const bool stampable = textNode != nullptr || stampableInlineFlow;
 
   if (hasBox && stampable) {
     auto metrics = ownerLayoutMetrics;
@@ -124,7 +131,13 @@ void stampSubtree(
     // come from the run's layout, not its content, so an element that did not
     // change still moves whenever the run rewraps around it.
     if (!node.getSealed()) {
-      const_cast<TextShadowNode*>(textNode)->setLayoutMetrics(metrics);
+      if (textNode != nullptr) {
+        const_cast<TextShadowNode*>(textNode)->setLayoutMetrics(metrics);
+      } else {
+        const_cast<YogaLayoutableShadowNode*>(
+            static_cast<const YogaLayoutableShadowNode*>(&node))
+            ->setLayoutMetrics(metrics);
+      }
     } else if (
         static_cast<const LayoutableShadowNode&>(node).getLayoutMetrics() !=
         metrics) {

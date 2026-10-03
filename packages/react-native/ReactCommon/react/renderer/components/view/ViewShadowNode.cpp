@@ -399,19 +399,37 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
 
     // Attachment candidates are the run's direct children plus descendants
     // reached through span-like inline boxes (whose contents flow into this
-    // run rather than forming their own).
-    std::vector<std::shared_ptr<const ShadowNode>> attachmentCandidates;
-    const std::function<void(const ShadowNode&)> collectCandidates =
-        [&](const ShadowNode& parent) {
+    // run rather than forming their own). A span-like box mounts as a view at
+    // the frame stamped on it, so a candidate inside one is placed relative
+    // to that frame: `parentOrigin` is where the candidate's parent sits in
+    // this View's coordinate space.
+    struct AttachmentCandidate {
+      std::shared_ptr<const ShadowNode> node;
+      Point parentOrigin;
+    };
+    std::vector<AttachmentCandidate> attachmentCandidates;
+    const std::function<void(const ShadowNode&, Point)> collectCandidates =
+        [&](const ShadowNode& parent, Point parentOrigin) {
           for (const auto& child : parent.getChildren()) {
             if (YogaLayoutableShadowNode::isInlineFlowContent(*child)) {
-              collectCandidates(*child);
+              auto frame = static_cast<const LayoutableShadowNode&>(*child)
+                               .getLayoutMetrics()
+                               .frame;
+              if (auto it = pendingFrames.find(&child->getFamily());
+                  it != pendingFrames.end()) {
+                frame = it->second;
+              }
+              collectCandidates(
+                  *child,
+                  Point{
+                      parentOrigin.x + frame.origin.x,
+                      parentOrigin.y + frame.origin.y});
             } else {
-              attachmentCandidates.push_back(child);
+              attachmentCandidates.push_back({child, parentOrigin});
             }
           }
         };
-    collectCandidates(*box);
+    collectCandidates(*box, Point{0, 0});
 
     // One attachment can be looked up per candidate; a linear scan per
     // candidate is O(attachments²) in an attachment-heavy run.
@@ -421,7 +439,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
       placementsByFamily.emplace(placement.family, &placement.frame);
     }
 
-    for (const auto& runChild : attachmentCandidates) {
+    for (const auto& [runChild, parentOrigin] : attachmentCandidates) {
       const auto* layoutable =
           dynamic_cast<const LayoutableShadowNode*>(runChild.get());
       if (layoutable == nullptr) {
@@ -466,7 +484,9 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
                     std::numeric_limits<Float>::infinity()}});
       }
 
-      auto attachmentOrigin = boxFrame.origin;
+      auto attachmentOrigin = Point{
+          boxFrame.origin.x - parentOrigin.x,
+          boxFrame.origin.y - parentOrigin.y};
       if (attachmentFrame != nullptr) {
         attachmentOrigin.x += attachmentFrame->origin.x;
         attachmentOrigin.y += attachmentFrame->origin.y;
