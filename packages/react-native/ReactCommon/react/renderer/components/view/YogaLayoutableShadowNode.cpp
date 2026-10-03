@@ -1355,11 +1355,13 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
   // Reading data from a dirtied node does not make sense.
   react_native_assert(!YGNodeIsDirty(&yogaNode_));
 
-  for (auto childYogaNode : yogaNode_.getChildren()) {
-    auto& childNode = shadowNodeFromContext(childYogaNode);
+  const auto& yogaChildren = yogaNode_.getChildren();
+  for (size_t childIndex = 0; childIndex < yogaChildren.size(); childIndex++) {
+    auto* childYogaNode = yogaChildren[childIndex];
+    auto* childNodePtr = &shadowNodeFromContext(childYogaNode);
 
     // Verifying that the Yoga node belongs to the ShadowNode.
-    react_native_assert(&childNode.yogaNode_ == childYogaNode);
+    react_native_assert(&childNodePtr->yogaNode_ == childYogaNode);
 
     if (childYogaNode->getHasNewLayout()) {
       childYogaNode->setHasNewLayout(false);
@@ -1370,6 +1372,33 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
       // We must copy layout metrics from Yoga node only once (when the parent
       // node exclusively ownes the child node).
       react_native_assert(YGNodeGetOwner(childYogaNode) == &yogaNode_);
+
+      /*
+       * The last line of defence for structural sharing: a child that is
+       * still SEALED here is shared with a committed tree, and writing its
+       * metrics would mutate that tree — an `Attempt to mutate a sealed
+       * object` abort in Debug, and in Release (where the seal is compiled
+       * out) silently corrupted old-generation metrics. The contract that is
+       * supposed to prevent this — Yoga's clone-node callback plus
+       * `configureYogaTree`'s ownership adoption — recognises foreign
+       * children BY their yoga owner, and interleaved generations (a React
+       * commit racing a state-progression commit, as an image `onLoad`
+       * handler's setState produces) can launder a shared child through an
+       * owner-resetting detach so that it arrives here wearing this parent's
+       * ownership. Clone it in place, exactly as the callback would have,
+       * and lay out the clone. Debug-only by construction — `getSealed()` is
+       * constant `true` in Release, where `cloneChildInPlace` on every child
+       * would be pure churn, and the abort this guards against is also
+       * Debug-only; the ownership adoption above remains the primary
+       * mechanism in both modes.
+       */
+      if (childNodePtr->getSealed() && !this->getSealed()) {
+        auto& clonedChild = cloneChildInPlace(childIndex);
+        childYogaNode = &clonedChild.yogaNode_;
+        childYogaNode->setHasNewLayout(false);
+        childNodePtr = &clonedChild;
+      }
+      auto& childNode = *childNodePtr;
 
       // We are about to mutate layout metrics of the node.
       childNode.ensureUnsealed();
