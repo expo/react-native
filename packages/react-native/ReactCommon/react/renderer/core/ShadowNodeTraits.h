@@ -108,6 +108,15 @@ class ShadowNodeTraits {
     // dependency.
     InlineText = 1 << 16,
 
+    // The node is an inline *replaced* element (an <img>-like attachment): it flows
+    // inside the current text run and is positioned by the owning View's
+    // attachment-layout pass, and it is NEVER blockified — where an inline text
+    // element becomes its own flex item in a flex container, a replaced element
+    // stays in the run. Stronger than InlineText, and set alongside it. Checking
+    // this trait instead of the component name "img" is what lets a provider back
+    // the element with any component (e.g. expo-image) under any name.
+    InlineReplaced = 1 << 17,
+
     // The node itself consumes the inherited text cascade: a paragraph (which
     // folds it under its own TextProps) or an anonymous IFC box (which
     // measures and paints bare-text runs from it). Set by those classes'

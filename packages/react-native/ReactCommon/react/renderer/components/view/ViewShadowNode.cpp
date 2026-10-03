@@ -349,7 +349,8 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     return;
   }
 
-  // Clone-and-position each atomic inline (non-Yoga children) at its exact
+  // Clone-and-position each atomic inline (non-Yoga children), such as the
+  // replaced `<img>` and atomic `display: 'inline'` elements, at its exact
   // offset within the run. The run box resolves each attachment's frame via
   // its line layout; the attachment is placed at the box origin plus that
   // frame, so it sits in its line and follows wrapping, like an atomic inline
@@ -393,8 +394,7 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     for (const auto& runChild : attachmentCandidates) {
       const auto* layoutable =
           dynamic_cast<const LayoutableShadowNode*>(runChild.get());
-      if (layoutable == nullptr ||
-          !YogaLayoutableShadowNode::isAtomicInline(*runChild)) {
+      if (layoutable == nullptr) {
         continue;
       }
 
@@ -405,6 +405,20 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
       if (auto it = placementsByFamily.find(&runChild->getFamily());
           it != placementsByFamily.end()) {
         attachmentFrame = it->second;
+      }
+
+      // Treat a reported placement as proof that this candidate is an
+      // attachment, since the line layout measured it into the run. A backing
+      // component need not declare the traits: the expo-image `<img>` carries
+      // neither InlineReplaced nor an inline display, and gating on them would
+      // drop the frame the run reserved for it and mount the picture at the
+      // line's start. The traits decide only for candidates the layout did
+      // not place.
+      if (attachmentFrame == nullptr &&
+          !runChild->getTraits().check(
+              ShadowNodeTraits::Trait::InlineReplaced) &&
+          !YogaLayoutableShadowNode::isAtomicInline(*runChild)) {
+        continue;
       }
 
       auto attachmentSize = attachmentFrame != nullptr &&

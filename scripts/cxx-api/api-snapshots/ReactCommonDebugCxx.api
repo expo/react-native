@@ -1224,6 +1224,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   FormsView,
   Hidden,
   InheritanceBoundary,
+  InlineReplaced,
   InlineText,
   KeyboardFocusable,
   LeafYogaNode,

@@ -1200,6 +1200,9 @@ interface RCTImageURLLoaderRequest : public NSObject {
   public virtual void cancel();
 }
 
+interface RCTImgComponentView : public RCTImageComponentView {
+}
+
 interface RCTInputAccessoryComponentView : public RCTViewComponentView {
 }
 
@@ -4648,6 +4651,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   FormsView,
   Hidden,
   InheritanceBoundary,
+  InlineReplaced,
   InlineText,
   KeyboardFocusable,
   LeafYogaNode,

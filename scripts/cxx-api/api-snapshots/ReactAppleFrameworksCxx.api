@@ -1223,6 +1223,9 @@ interface RCTImageURLLoaderRequest : public NSObject {
   public virtual void cancel();
 }
 
+interface RCTImgComponentView : public RCTImageComponentView {
+}
+
 interface RCTInputAccessoryComponentView : public RCTViewComponentView {
 }
 
@@ -3226,6 +3229,7 @@ struct facebook::hermes::ISetEventLoopControl : public facebook::jsi::ICast {
 const char facebook::react::ElementBoxComponentName[];
 const char facebook::react::ImageComponentName[];
 const char facebook::react::ImageManagerKey[];
+const char facebook::react::ImgTagComponentName[];
 const char facebook::react::InlineContentComponentName[];
 const char facebook::react::ModalHostViewComponentName[];
 const char facebook::react::ParagraphComponentName[];
@@ -4690,6 +4694,20 @@ class facebook::react::ImageTelemetry {
   public facebook::react::TelemetryTimePoint getWillRequestUrlTime() const;
 }
 
+class facebook::react::ImgTagComponentDescriptor : public facebook::react::ConcreteComponentDescriptor<facebook::react::ImgTagShadowNode> {
+  public ImgTagComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters);
+  public virtual void adopt(facebook::react::ShadowNode& shadowNode) const override;
+}
+
+class facebook::react::ImgTagShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ImgTagComponentName, facebook::react::ImageProps, facebook::react::ImageEventEmitter, facebook::react::ImageState> {
+  public ImgTagShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ImgTagShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public static facebook::react::ImageState initialStateData(const facebook::react::Props::Shared&, const facebook::react::ShadowNodeFamily::Shared&, const facebook::react::ComponentDescriptor&);
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual void layout(facebook::react::LayoutContext layoutContext) override;
+  public void setImageManager(const std::shared_ptr<facebook::react::ImageManager>& imageManager);
+}
+
 class facebook::react::InlineContentShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::InlineContentComponentName, facebook::react::YogaLayoutableShadowNode, facebook::react::ViewProps>, public facebook::react::InlineTextContentAccessor {
   public InlineContentShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public InlineContentShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
@@ -5965,6 +5983,7 @@ enum facebook::react::ShadowNodeTraits::Trait : int32_t {
   FormsView,
   Hidden,
   InheritanceBoundary,
+  InlineReplaced,
   InlineText,
   KeyboardFocusable,
   LeafYogaNode,

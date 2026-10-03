@@ -1140,7 +1140,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
           } catch (e: ArrayIndexOutOfBoundsException) {
             continue
           }
-      // An atomic inline — an inline-block or an inline-flex — is an
+      // An atomic inline — an <img>, an inline-block, an inline-flex — is an
       // attachment in the run AND a real mounted child view sitting on top of
       // it. Claiming the point here would intercept the touch before that child
       // ever sees it, so a tap on the box resolved to this View instead of to

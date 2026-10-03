@@ -140,6 +140,12 @@ static bool inheritableTextPropsDiffer(
 // predicates below.
 static bool isInlineLevelBox(const ShadowNode& child);
 
+// Whether the author's own `display` makes `child` block-level regardless of
+// its UA default (css-display-3 §2's blockification, from the other
+// direction): `display: 'block'` on an element whose trait says inline takes
+// it out of inline flow.
+static bool authorDisplayBlockifies(const ShadowNode& child);
+
 YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     const ShadowNodeFragment& fragment,
     const ShadowNodeFamily::Shared& family,
@@ -663,6 +669,26 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       static_cast<const YogaStylableProps&>(*props_).displayBlock;
 
   for (size_t i = 0; i < getChildren().size(); i++) {
+    // An inline *replaced* element (e.g. <img>) is layoutable but flows inside
+    // the current run as an attachment, never as a block Yoga child. It still
+    // mounts (differ-driven) and is positioned by the owning View's
+    // attachment-layout pass.
+    //
+    // In a BLOCK container only. A flex container blockifies its inline-level
+    // children into flex items (css-flexbox-1 §4, css-display-3 §2.7), so an
+    // <img> in a flex row is an ordinary item that honours `gap` and
+    // `alignItems`. The trait states the element's UA default, not an
+    // unconditional fate: an author `display: 'block'` blockifies an inline
+    // replaced element out of inline flow (css-display-3 §2), and it lays out
+    // as an ordinary block-level Yoga child below — which is also what lets
+    // <img>'s box-chrome composite fill its wrapper's content box by flex.
+    if (inlineLayoutEnabled && containerIsBlock &&
+        getChildren()[i]->getTraits().check(
+            ShadowNodeTraits::Trait::InlineReplaced) &&
+        !authorDisplayBlockifies(*getChildren()[i])) {
+      appendToInlineRun(i);
+      continue;
+    }
     if (auto yogaLayoutableChild =
             YogaLayoutableShadowNode::asYogaLayoutable(getChildren()[i])) {
       if (inlineLayoutEnabled && containerIsBlock &&
@@ -807,6 +833,12 @@ bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   return child.getTraits().check(ShadowNodeTraits::Trait::InlineText);
 }
 
+static bool authorDisplayBlockifies(const ShadowNode& child) {
+  const auto* props =
+      dynamic_cast<const YogaStylableProps*>(child.getProps().get());
+  return props != nullptr && props->displayBlock;
+}
+
 bool YogaLayoutableShadowNode::isAtomicInline(const ShadowNode& child) {
   return isInlineLevelBox(child) && !isInlineFlowContent(child);
 }
@@ -838,10 +870,10 @@ bool YogaLayoutableShadowNode::isInlineFlowContent(const ShadowNode& child) {
   }
   for (const auto& grandChild : child.getChildren()) {
     // Inline-level content flows: text and inline elements (trait) and nested
-    // inline boxes — span-like or atomic. Block-level content inside an inline
-    // box would require block-in-inline splitting (CSS2 §9.2.1.1); such boxes
-    // — and ones with absolutely-positioned children — fall back to atomic
-    // inline.
+    // inline boxes — span-like or atomic (a span containing an <img> flows on
+    // web). Block-level content inside an inline box would require
+    // block-in-inline splitting (CSS2 §9.2.1.1); such boxes — and ones with
+    // absolutely-positioned children — fall back to atomic inline.
     if (!isInlineTextContent(*grandChild) && !isInlineLevelBox(*grandChild)) {
       return false;
     }
@@ -1134,8 +1166,8 @@ void YogaLayoutableShadowNode::configureYogaTree(
   }
 
   // An anonymous IFC box is a Yoga LEAF: the inline content it wraps —
-  // including atomic inlines like `inline-block` — hangs off it as SHADOW
-  // children, never as Yoga children. The loop above walks
+  // including atomic inlines like `inline-block` and `<img>` — hangs off it as
+  // SHADOW children, never as Yoga children. The loop above walks
   // `yogaLayoutableChildren_`, so without this the cascade stopped dead at the
   // anonymous box and an atomic inline's text fell back to the default font,
   // rendering visibly smaller than the text around it.

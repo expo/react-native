@@ -21,10 +21,11 @@ class ShadowNodeFamily;
 struct LayoutContext;
 
 /*
- * The placement of an atomic inline within an anonymous IFC box: the
- * attachment's family (stable across clones, so the owning View can match it
- * back to its own child) and the attachment frame relative to the box's
- * content origin, as resolved by the line layout.
+ * The placement of an atomic inline, such as an inline replaced element
+ * (`<img>`), within an anonymous IFC box: the attachment's family (stable
+ * across clones, so the owning View can match it back to its own child) and
+ * the attachment frame relative to the box's content origin, as resolved by
+ * the line layout.
  */
 struct InlineAttachmentPlacement {
   const ShadowNodeFamily *family;
