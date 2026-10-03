@@ -66,6 +66,7 @@ import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
+import com.facebook.react.views.text.DefaultStyleValuesUtil
 import com.facebook.react.views.text.internal.span.CanvasEffectSpan
 import com.facebook.react.views.text.internal.span.ReactTagSpan
 import com.facebook.react.views.text.internal.span.TextInlineViewPlaceholderSpan
@@ -691,6 +692,11 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (nativeForegroundMap != null) {
       applyNativeForeground(nativeForegroundMap)
     }
+    // Resolve the text color again, since a light/dark switch changes it
+    canvasTextColor = null
+    if (textRunLayouts != null) {
+      invalidate()
+    }
   }
 
   internal fun applyNativeBackground(map: ReadableMap?) {
@@ -1019,6 +1025,13 @@ public open class ReactViewGroup public constructor(context: Context?) :
   private var nextTextRunToDraw = 0
 
   /**
+   * The theme's primary text color, which text with no color of its own draws in (CSS's
+   * CanvasText). Resolved at draw time and dropped on a configuration change, so switching between
+   * light and dark appearance repaints the runs.
+   */
+  private var canvasTextColor: Int? = null
+
+  /**
    * A single laid-out text run: an Android [Layout] positioned at [left]/[top] in pixels.
    * [documentOrder] is the number of mounted child views that precede the run, so it can be painted
    * in the correct z-order relative to those children.
@@ -1039,6 +1052,15 @@ public open class ReactViewGroup public constructor(context: Context?) :
     canvas.save()
     canvas.translate(run.left, run.top)
     val layout = run.layout
+    val textColor =
+        canvasTextColor
+            ?: DefaultStyleValuesUtil.getTextColorPrimary(context)?.defaultColor?.also {
+              canvasTextColor = it
+            }
+    if (textColor != null) {
+      // A fragment that states a color carries it as a span over this
+      layout.paint.color = textColor
+    }
     // Text-decoration (underline/strikethrough) and text shadow are CanvasEffectSpans: they are not
     // drawn by Layout.draw but painted around it — onPreDraw before, onDraw after — exactly as
     // PreparedLayoutTextView does for a normal <Text>. Without this pass decorated text in a run

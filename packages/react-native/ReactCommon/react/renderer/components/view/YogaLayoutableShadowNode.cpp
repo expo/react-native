@@ -79,6 +79,13 @@ const std::shared_ptr<const TextAttributes>&
 YogaLayoutableShadowNode::defaultCascadeTextAttributes() {
   static const auto instance = [] {
     auto initial = TextAttributes::defaultTextAttributes();
+    // `color`'s initial value is `CanvasText` (css-color-4 §3.1): the colour
+    // the platform draws text in by default, which follows the appearance.
+    // Left unset so each platform resolves it where it draws — `labelColor` on
+    // iOS, the theme's `textColorPrimary` on Android — instead of freezing a
+    // colour here. `<Text>` does not start from these values: its own
+    // defaults keep React Native's black.
+    initial.foregroundColor = {};
     return std::make_shared<const TextAttributes>(std::move(initial));
   }();
   return instance;
