@@ -61,6 +61,8 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   textTransform = textAttributes.textTransform.has_value()
       ? textAttributes.textTransform
       : textTransform;
+  whiteSpace = textAttributes.whiteSpace.has_value() ? textAttributes.whiteSpace
+                                                     : whiteSpace;
 
   // Paragraph Styles
   lineHeight = !std::isnan(textAttributes.lineHeight)
@@ -148,6 +150,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              accessibilityRole,
              role,
              textTransform,
+             whiteSpace,
              textEffects) ==
       std::tie(
              rhs.foregroundColor,
@@ -173,6 +176,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              rhs.accessibilityRole,
              rhs.role,
              rhs.textTransform,
+             rhs.whiteSpace,
              rhs.textEffects) &&
       floatEquality(maxFontSizeMultiplier, rhs.maxFontSizeMultiplier) &&
       floatEquality(opacity, rhs.opacity) &&
