@@ -705,12 +705,14 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       }
       // Box-generation rules for run contiguity (each verified against
       // Safari): a `display:'none'` child generates NO box and never
-      // interrupts inline content. An absolutely-positioned child is
+      // interrupts inline content — the surrounding text runs stay contiguous
+      // in both block and flex containers. An absolutely-positioned child is
       // out-of-flow: in a block container it does not interrupt the IFC
       // (CSS2 §9.2.1.1 anonymous boxes form around in-flow block-level boxes
-      // only). Either way the child remains an ordinary Yoga child
-      // (Display::None is skipped by layout; absolute children are positioned
-      // by absolute layout), only the run flush is skipped.
+      // only), but in a flex container it does separate text-run sequences
+      // (css-flexbox-1 §4). Either way the child remains an ordinary Yoga
+      // child (Display::None is skipped by layout; absolute children are
+      // positioned by absolute layout), only the run flush is skipped.
       const auto& childStyle =
           static_cast<const YogaStylableProps&>(*yogaLayoutableChild->props_)
               .yogaStyle;
@@ -749,8 +751,23 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
             (newYogaChildNode.style() == oldYogaChildNode.style());
       }
     } else if (inlineLayoutEnabled && isInlineTextContent(*getChildren()[i])) {
-      // Text always joins the current run
-      appendToInlineRun(i);
+      const auto& child = getChildren()[i];
+      const std::string_view childComponentName{child->getComponentName()};
+      if (containerIsBlock || childComponentName == "#text" ||
+          child->getTraits().check(ShadowNodeTraits::Trait::InlineReplaced)) {
+        // Text always joins the current run; in block containers inline
+        // *elements* join it too (single inline formatting context,
+        // CSS2 §9.2.1.1). An inline replaced element that reaches this branch
+        // is not Yoga-layoutable, so it can only flow in the run as an
+        // attachment.
+        appendToInlineRun(i);
+      } else {
+        // Inline text *element* in a flex container: blockified into its own
+        // anonymous item, exactly as on web (css-flexbox-1 §4).
+        flushInlineRun();
+        appendToInlineRun(i);
+        flushInlineRun();
+      }
     }
   }
   flushInlineRun();
@@ -828,8 +845,11 @@ static bool isInlineLevelBox(const ShadowNode& child) {
 
 bool YogaLayoutableShadowNode::isInlineTextContent(const ShadowNode& child) {
   // Inline-level text content joins a text run rather than becoming its own
-  // block/flex item. Identified by the InlineText trait, which #text sets,
-  // so that components/view needs no components/text include.
+  // block/flex item. Identified by the InlineText trait — set by #text, Text,
+  // every inline text intrinsic (<b>/<i>/<span>/<u>/… and the unknown fallback,
+  // all TextShadowNode subclasses), and the inline replaced <img> — so a new
+  // intrinsic flows inline with no change here, and components/view needs no
+  // components/text include.
   return child.getTraits().check(ShadowNodeTraits::Trait::InlineText);
 }
 
@@ -906,12 +926,14 @@ void YogaLayoutableShadowNode::appendAnonymousTextContentChild(
     boxStyle.setAlignSelf(yoga::Align::Stretch);
     box->yogaNode_.setStyle(boxStyle);
   } else {
-    // In a FLEX container this box is an anonymous flex item (css-flexbox-1
+    // In a FLEX container this box is an anonymous flex item (a text-run
+    // sequence, or a single blockified inline text element — css-flexbox-1
     // §4), and a flex item's `flex-shrink` initial value is 1 (§7.3). React
     // Native's own default is 0, and text carries no Yoga style to say
-    // otherwise, so without this the item could never yield: a
-    // long run beside a fixed-width sibling in a flex row would overflow and
-    // clip at the row's edge where every browser wraps its text.
+    // otherwise (TextProps is not YogaStylable), so without this the item
+    // could never yield: a long run beside a fixed-width sibling in a flex row
+    // would overflow and clip at the row's edge where every browser wraps its
+    // text.
     auto boxStyle = box->yogaNode_.style();
     boxStyle.setFlexShrink(yoga::FloatOptional{1.0f});
     box->yogaNode_.setStyle(boxStyle);

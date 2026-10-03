@@ -103,9 +103,11 @@ class ShadowNodeTraits {
 
     // The node is inline-level text content: it participates in a text run rather
     // than becoming its own block/flex item when it is a child of a View's anonymous
-    // inline formatting context. Set by #text nodes. Checking this trait instead of
-    // a component name avoids a components/view → components/text include
-    // dependency.
+    // inline formatting context. Set by #text nodes and every inline text element
+    // (Text and the intrinsics <b>/<i>/<span>/<u>/… and the unknown fallback via
+    // TextShadowNode, plus the inline replaced <img>). Checking this trait — instead
+    // of a hardcoded component-name list — lets any new intrinsic flow inline with no
+    // core change, and avoids a components/view → components/text include dependency.
     InlineText = 1 << 16,
 
     // The node is an inline *replaced* element (an <img>-like attachment): it flows
