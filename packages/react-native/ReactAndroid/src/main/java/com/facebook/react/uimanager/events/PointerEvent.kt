@@ -156,6 +156,13 @@ internal class PointerEvent private constructor() : Event<PointerEvent>() {
     // https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent
     // Client refers to upper left edge of the content area (viewport)
     // We define the viewport to be ReactRootView
+    //
+    // DOM-CSS-LIMITATION(client-coordinates-are-not-rect-coordinates):
+    // `getBoundingClientRect()` does NOT use the same origin — it is relative
+    // to the screen — so on Android these two disagree by wherever the root
+    // view sits. They agree on iOS only because the root view is at the window
+    // origin there, which is what keeps this invisible. `screenX`/`screenY`
+    // below DO match the rects.
     val eventCoords = checkNotNull(eventState.eventCoordinatesByPointerId[pointerId])
     val clientX = toDIPFromPixel(eventCoords[0]).toDouble()
     val clientY = toDIPFromPixel(eventCoords[1]).toDouble()
