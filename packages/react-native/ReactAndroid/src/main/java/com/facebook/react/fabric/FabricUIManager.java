@@ -658,7 +658,8 @@ public class FabricUIManager
       float maxWidth,
       float minHeight,
       float maxHeight,
-      @Nullable float[] attachmentsPositions) {
+      @Nullable float[] attachmentsPositions,
+      @Nullable float[] floatExclusionsDip) {
 
     ViewManager<?, ?> textViewManager = mViewManagerRegistry.get(ReactTextViewManager.REACT_CLASS);
 
@@ -675,6 +676,7 @@ public class FabricUIManager
             ? (ReactTextViewManagerCallback) textViewManager
             : null,
         attachmentsPositions,
+        floatExclusionsDip,
         mTextEffectRegistry);
   }
 
