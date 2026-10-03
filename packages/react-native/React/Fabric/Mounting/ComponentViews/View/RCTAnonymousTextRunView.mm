@@ -75,6 +75,22 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   self.frame = containerBounds;
 }
 
+// The content of -drawRect: resolves DYNAMIC colors against the trait
+// collection current at draw time, and UIKit has no way to know that: it
+// re-invalidates layer-backed PROPERTIES on appearance changes, never
+// custom-drawn content. Without this override the first appearance-flipped
+// render pass — most reliably iOS's app-switcher snapshotting, which
+// re-renders the hierarchy under BOTH styles — bakes wrong-appearance text
+// into the layer, and it STAYS baked after the app foregrounds: dark text
+// on a dark background.
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection
+{
+  [super traitCollectionDidChange:previousTraitCollection];
+  if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+    [self setNeedsDisplay];
+  }
+}
+
 - (RCTTextLayoutManager *)nativeTextLayoutManager
 {
   auto textLayoutManager = _layoutManager.lock();

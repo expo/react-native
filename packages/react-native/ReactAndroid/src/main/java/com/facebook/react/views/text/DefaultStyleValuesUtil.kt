@@ -41,6 +41,14 @@ public object DefaultStyleValuesUtil {
   public fun getDefaultTextColor(context: Context): ColorStateList? =
       getDefaultTextAttribute(context, android.R.attr.textColor)
 
+  /**
+   * The theme's primary text colour: what a TextView draws text in when nothing states a colour,
+   * and what CSS calls CanvasText.
+   */
+  @JvmStatic
+  public fun getTextColorPrimary(context: Context): ColorStateList? =
+      getDefaultTextAttribute(context, android.R.attr.textColorPrimary)
+
   @JvmStatic
   public fun getTextColorSecondary(context: Context): ColorStateList? =
       getDefaultTextAttribute(context, android.R.attr.textColorSecondary)
