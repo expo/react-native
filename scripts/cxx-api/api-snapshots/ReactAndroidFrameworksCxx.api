@@ -401,6 +401,7 @@ static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_CACHE_I
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_FRAGMENTS;
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_HASH;
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_STRING;
+static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_ATOMIC_INLINE_BASELINE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_HEIGHT;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_IS_ATTACHMENT;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_REACT_TAG;

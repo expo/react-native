@@ -15,9 +15,17 @@ import android.text.style.ReplacementSpan
 /**
  * TextInlineViewPlaceholderSpan is a span for inlined views that are inside <Text></Text>. It
  * computes its size based on the input size. It contains no draw logic, just positioning logic.
+ *
+ * @param baselineFromTop where the box's OWN baseline sits, measured from its top (CSS2 §10.8.1).
+ *   Equal to `height` for a box with no line boxes of its own, which is the synthesized bottom-edge
+ *   baseline. A box with text in it sits that text's baseline on the surrounding line's.
  */
-internal class TextInlineViewPlaceholderSpan(val reactTag: Int, val width: Int, val height: Int) :
-    ReplacementSpan(), ReactSpan {
+internal class TextInlineViewPlaceholderSpan(
+    val reactTag: Int,
+    val width: Int,
+    val height: Int,
+    val baselineFromTop: Int = height,
+) : ReplacementSpan(), ReactSpan {
   override fun getSize(
       paint: Paint,
       text: CharSequence?,
@@ -27,10 +35,12 @@ internal class TextInlineViewPlaceholderSpan(val reactTag: Int, val width: Int, 
   ): Int {
     // NOTE: This getSize code is copied from DynamicDrawableSpan and modified to not use a Drawable
     if (fm != null) {
-      fm.ascent = -height
-      fm.descent = 0
+      // The box's own baseline goes on the line's, so it reaches
+      // `baselineFromTop` above and whatever remains below.
+      fm.ascent = -baselineFromTop
+      fm.descent = height - baselineFromTop
       fm.top = fm.ascent
-      fm.bottom = 0
+      fm.bottom = fm.descent
     }
     return width
   }
