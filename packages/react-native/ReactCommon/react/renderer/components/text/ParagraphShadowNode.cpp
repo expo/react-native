@@ -7,6 +7,8 @@
 
 #include "ParagraphShadowNode.h"
 
+#include <react/renderer/components/text/InlineElementMetrics.h>
+
 #include <cmath>
 
 #include <react/debug/react_native_assert.h>
@@ -186,8 +188,14 @@ Content ParagraphShadowNode::getContentWithMeasuredAttachments(
       continue;
     }
 
-    auto size =
-        laytableShadowNode->measure(layoutContext, localLayoutConstraints);
+    // A measurement root takes its min/max from the constraints, not from
+    // its own style — see `constraintsHonoringOwnBounds` for the bug that
+    // is. The zeroed minimum above stays right for the RUN; the attachment's
+    // own stated bounds must survive it.
+    auto size = laytableShadowNode->measure(
+        layoutContext,
+        constraintsHonoringOwnBounds(
+            *attachment.shadowNode, localLayoutConstraints));
 
     // Rounding to *next* value on the pixel grid.
     size.width += 0.01f;
