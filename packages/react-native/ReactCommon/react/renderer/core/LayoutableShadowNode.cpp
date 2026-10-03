@@ -216,6 +216,10 @@ LayoutMetrics LayoutableShadowNode::getLayoutMetrics() const {
   return layoutMetrics_;
 }
 
+LayoutMetrics LayoutableShadowNode::getMountedLayoutMetrics() const {
+  return getLayoutMetrics();
+}
+
 void LayoutableShadowNode::setLayoutMetrics(LayoutMetrics layoutMetrics) {
   if (layoutMetrics_ == layoutMetrics) {
     return;

@@ -269,9 +269,12 @@ void collapseWhitespace(AttributedString& attributedString) {
   }
 
   // Drop fragments emptied by collapsing so the run stays canonical and
-  // `isEmpty()` reports true for a run that reduced to nothing.
+  // `isEmpty()` reports true for a run that reduced to nothing. An element
+  // that was empty to begin with is not one of those: its fragment carries no
+  // text on purpose, and it is the only record that the element has a box.
   std::erase_if(fragments, [](const AttributedString::Fragment& fragment) {
-    return !fragment.isAttachment() && fragment.string.empty();
+    return !fragment.isAttachment() && !fragment.isEmptyElement &&
+        fragment.string.empty();
   });
 }
 
@@ -403,6 +406,45 @@ Float InlineContentShadowNode::lineBaseline(
   return 0;
 }
 
+AttributedString InlineContentShadowNode::getContentAttributedString(
+    Float fontSizeMultiplier) const {
+  auto textAttributes = baseTextAttributes();
+  // Mirror `measureContent`: the published string must be the SAME value
+  // measurement produced — multiplier included — or the platform layout
+  // caches keyed by content can never hit.
+  textAttributes.fontSizeMultiplier = fontSizeMultiplier;
+  auto attributedString = AttributedString{};
+  auto attachments = BaseTextShadowNode::Attachments{};
+
+  BaseTextShadowNode::buildAttributedString(
+      textAttributes,
+      *this,
+      attributedString,
+      attachments,
+      *defaultCascadeTextAttributes());
+  // Reserve each atomic inline's box so the painted run offsets the
+  // surrounding glyphs past it, matching the measured layout. The boxes are
+  // never Yoga-laid-out in place (their owning View lays out clones), so their
+  // own layout metrics are zero here — they are measured instead, exactly as
+  // `measureContent` does, using the box's own pixel scale. The inline axis is
+  // bounded by the run's own final width: layout is done on this path.
+  auto layoutContext = LayoutContext{};
+  layoutContext.pointScaleFactor = getLayoutMetrics().pointScaleFactor;
+  const auto runWidth = getLayoutMetrics().frame.size.width;
+  measureAtomicInlines(
+      attributedString,
+      attachments,
+      layoutContext,
+      LayoutConstraints{
+          .minimumSize = {0, 0},
+          .maximumSize = {
+              runWidth > 0 ? runWidth : std::numeric_limits<Float>::infinity(),
+              std::numeric_limits<Float>::infinity()}});
+  collapseWhitespace(attributedString);
+  attributedString.setBaseTextAttributes(textAttributes);
+  return attributedString;
+}
+
 std::vector<InlineAttachmentPlacement>
 InlineContentShadowNode::getInlineAttachmentPlacements(
     const LayoutContext& layoutContext) const {
@@ -476,13 +518,18 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
   return placements;
 }
 
-AttributedString InlineContentShadowNode::getContentAttributedString(
-    Float fontSizeMultiplier) const {
+std::vector<PendingInlineElementMetrics>
+InlineContentShadowNode::stampInlineElementMetrics(
+    const LayoutContext& layoutContext,
+    Point contentOrigin,
+    const LayoutMetrics& ownerLayoutMetrics) const {
+  if (textLayoutManager_ == nullptr) {
+    return {};
+  }
+
   auto textAttributes = baseTextAttributes();
-  // Mirror `measureContent`: the published string must be the SAME value
-  // measurement produced — multiplier included — or the platform layout
-  // caches keyed by content can never hit.
-  textAttributes.fontSizeMultiplier = fontSizeMultiplier;
+  textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
+
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
   BaseTextShadowNode::buildAttributedString(
@@ -491,27 +538,55 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
       attributedString,
       attachments,
       *defaultCascadeTextAttributes());
-  // Reserve each atomic inline's box so the painted run offsets the
-  // surrounding glyphs past it, matching the measured layout. The boxes are
-  // never Yoga-laid-out in place (their owning View lays out clones), so their
-  // own layout metrics are zero here — they are measured instead, exactly as
-  // `measureContent` does, using the box's own pixel scale. The inline axis is
-  // bounded by the run's own final width: layout is done on this path.
-  auto layoutContext = LayoutContext{};
-  layoutContext.pointScaleFactor = getLayoutMetrics().pointScaleFactor;
-  const auto runWidth = getLayoutMetrics().frame.size.width;
+  if (attributedString.isEmpty()) {
+    return {};
+  }
+
+  // The rects have to come from the SAME string the run measured and painted,
+  // or the elements are located in a layout nobody sees. Two steps make it so:
+  //
+  //  - `measureAtomicInlines` gives each atomic inline (an `<img>`, an
+  //    `inline-block`, an `inline-flex`) its size. Without it the attachment
+  //    character occupies no advance, so every element after one would report
+  //    a box shifted left by that box's width.
+  //  - `collapseWhitespace` changes the string, and therefore every character
+  //    offset the rects are queried at.
+  const auto boxSize = getLayoutMetrics().frame.size;
+  auto attachmentLayoutContext = layoutContext;
   measureAtomicInlines(
       attributedString,
       attachments,
-      layoutContext,
-      LayoutConstraints{
-          .minimumSize = {0, 0},
-          .maximumSize = {
-              runWidth > 0 ? runWidth : std::numeric_limits<Float>::infinity(),
-              std::numeric_limits<Float>::infinity()}});
+      attachmentLayoutContext,
+      LayoutConstraints{.minimumSize = {0, 0}, .maximumSize = boxSize});
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
-  return attributedString;
+
+  // Skip the layout below when the run carries no inline element: the rects
+  // cost a full text layout of the run, and their only consumer is the
+  // per-element box built from them.
+  if (!facebook::react::hasStampableInlineElements(*this, attributedString)) {
+    return {};
+  }
+
+  // Lay the run out at the size it was actually given, so the rects reflect
+  // the wrapping the user sees. (`boxSize` is read above, for the attachments.)
+  TextLayoutContext textLayoutContext{
+      .pointScaleFactor = layoutContext.pointScaleFactor,
+      .surfaceId = getSurfaceId(),
+      .needsFragmentRects = true,
+  };
+  const auto measurement = textLayoutManager_->measure(
+      AttributedStringBox{attributedString},
+      ParagraphAttributes{},
+      textLayoutContext,
+      LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
+
+  return facebook::react::stampInlineElementMetrics(
+      *this,
+      attributedString,
+      measurement.fragmentRects,
+      contentOrigin,
+      ownerLayoutMetrics);
 }
 
 /*

@@ -126,6 +126,19 @@ void BaseTextShadowNode::buildAttributedString(
           outAttachments,
           initialTextAttributes);
 
+      // An element with no text of its own still has a box on the line
+      // (CSSOM-View §4), and the only way to report one is to have a fragment
+      // for it. Empty, so it changes no measurement; flagged, so the passes
+      // that discard empty fragments leave it alone.
+      if (firstIndex == outAttributedString.getFragments().size()) {
+        auto emptyFragment = AttributedString::Fragment{};
+        emptyFragment.textAttributes = localTextAttributes;
+        emptyFragment.parentShadowView =
+            shadowViewFromShadowNode(*textShadowNode);
+        emptyFragment.isEmptyElement = true;
+        outAttributedString.appendFragment(std::move(emptyFragment));
+      }
+
       if (!inlineBox.isEmpty()) {
         auto& fragments = outAttributedString.getFragments();
         if (firstIndex < fragments.size()) {
