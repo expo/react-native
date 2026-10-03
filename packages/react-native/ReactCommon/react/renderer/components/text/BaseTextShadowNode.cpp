@@ -17,6 +17,10 @@
 #include <react/renderer/dom/NodeNameProvider.h>
 #include <react/renderer/mounting/ShadowView.h>
 
+#include <limits>
+#include <optional>
+#include <string_view>
+
 namespace facebook::react {
 
 // The `#text` node's component name and DOM `nodeName`. Never resolved from
@@ -31,6 +35,49 @@ inline ShadowView shadowViewFromShadowNode(const ShadowNode& shadowNode) {
   shadowView.props = nullptr;
   shadowView.state = nullptr;
   return shadowView;
+}
+
+/*
+ * The inline box of a span-like `display: inline` View: its margin, border
+ * and padding, as a text element's `inlineBox` records them. No colours: the
+ * View is mounted over its fragments and paints its own background and
+ * borders, so the text must not paint them again. A percentage is not
+ * resolved, as nothing here knows the containing block's width.
+ */
+static InlineBoxDecorations inlineBoxOfView(
+    const yoga::Style& style,
+    std::optional<LayoutDirection> layoutDirection) {
+  const auto direction = layoutDirection == LayoutDirection::RightToLeft
+      ? yoga::Direction::RTL
+      : yoga::Direction::LTR;
+  const bool rightToLeft = direction == yoga::Direction::RTL;
+  const auto row = yoga::FlexDirection::Row;
+  const auto column = yoga::FlexDirection::Column;
+  const float unknownWidth = std::numeric_limits<float>::quiet_NaN();
+  InlineBoxDecorations box{};
+  const Float marginStart =
+      style.computeInlineStartMargin(row, direction, unknownWidth);
+  const Float marginEnd =
+      style.computeInlineEndMargin(row, direction, unknownWidth);
+  const Float borderStart = style.computeInlineStartBorder(row, direction);
+  const Float borderEnd = style.computeInlineEndBorder(row, direction);
+  const Float paddingStart =
+      style.computeInlineStartPadding(row, direction, unknownWidth);
+  const Float paddingEnd =
+      style.computeInlineEndPadding(row, direction, unknownWidth);
+  box.margin.left = rightToLeft ? marginEnd : marginStart;
+  box.margin.right = rightToLeft ? marginStart : marginEnd;
+  box.borderWidth.left = rightToLeft ? borderEnd : borderStart;
+  box.borderWidth.right = rightToLeft ? borderStart : borderEnd;
+  box.padding.left = rightToLeft ? paddingEnd : paddingStart;
+  box.padding.right = rightToLeft ? paddingStart : paddingEnd;
+  box.borderWidth.top = style.computeFlexStartBorder(column, direction);
+  box.borderWidth.bottom = style.computeFlexEndBorder(column, direction);
+  box.padding.top =
+      style.computeFlexStartPadding(column, direction, unknownWidth);
+  box.padding.bottom =
+      style.computeFlexEndPadding(column, direction, unknownWidth);
+  return box;
 }
 
 void BaseTextShadowNode::buildAttributedString(
@@ -178,7 +225,9 @@ void BaseTextShadowNode::buildAttributedString(
     // children join the surrounding run with its inheritable text props
     // applied, exactly like a <span> (css-display; Safari-pinned). Sized or
     // non-inline-content inline boxes fall through to the atomic attachment
-    // branch below.
+    // branch below. Fragments created inside carry this element as their
+    // `parentShadowView`, so touches resolve to its emitter like
+    // <span onPress>.
     if (YogaLayoutableShadowNode::isInlineFlowContent(*childNode)) {
       auto localTextAttributes = baseTextAttributes;
       if (const auto* baseViewProps = viewPropsOf(*childNode)) {
@@ -192,12 +241,28 @@ void BaseTextShadowNode::buildAttributedString(
         }
         baseViewProps->applyInheritedTextAttributes(localTextAttributes);
       }
+      const auto firstIndex = outAttributedString.getFragments().size();
       buildAttributedString(
           localTextAttributes,
           *childNode,
           outAttributedString,
           outAttachments,
           initialTextAttributes);
+      // Its inline-axis margin, border and padding add to the advance at its
+      // edges as a text element's do (CSS2 §10.6.1)
+      if (const auto* layoutable =
+              YogaLayoutableShadowNode::asYogaLayoutable(*childNode)) {
+        const auto inlineBox = inlineBoxOfView(
+            layoutable->getYogaStyle(), localTextAttributes.layoutDirection);
+        auto& fragments = outAttributedString.getFragments();
+        if (!inlineBox.isEmpty() && firstIndex < fragments.size()) {
+          for (auto i = firstIndex; i < fragments.size(); i++) {
+            fragments[i].inlineBox = inlineBox;
+          }
+          fragments[firstIndex].isInlineBoxStart = true;
+          fragments.back().isInlineBoxEnd = true;
+        }
+      }
       continue;
     }
 

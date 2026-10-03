@@ -150,6 +150,16 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   }
 
   /*
+   * The style Yoga lays this node out with: its props' `yogaStyle` with the
+   * flow-relative spellings (`paddingInline`, `marginBlock`, …) applied, which
+   * `yogaStyle` alone does not hold (see `applyAliasedProps`).
+   */
+  const yoga::Style &getYogaStyle() const
+  {
+    return yogaNode_.style();
+  }
+
+  /*
    * True when `child` is inline-level content (a text node or an inline text
    * element) that participates in anonymous box generation under this node.
    */
