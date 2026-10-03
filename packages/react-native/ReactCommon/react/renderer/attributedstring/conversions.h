@@ -1340,6 +1340,9 @@ constexpr static MapBuffer::Key TA_KEY_FONT_STYLE = 7;
 constexpr static MapBuffer::Key TA_KEY_FONT_VARIANT = 8;
 constexpr static MapBuffer::Key TA_KEY_ALLOW_FONT_SCALING = 9;
 constexpr static MapBuffer::Key TA_KEY_LETTER_SPACING = 10;
+// The numeric baseline shift (points; positive raises) — symbolic list
+// markers centre their ink with it. Must match TextAttributeProps.kt.
+constexpr static MapBuffer::Key TA_KEY_BASELINE_SHIFT = 33;
 constexpr static MapBuffer::Key TA_KEY_LINE_HEIGHT = 11;
 constexpr static MapBuffer::Key TA_KEY_ALIGNMENT = 12;
 constexpr static MapBuffer::Key TA_KEY_BEST_WRITING_DIRECTION = 13;
@@ -1528,6 +1531,9 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   }
   if (!std::isnan(textAttributes.letterSpacing)) {
     builder.putDouble(TA_KEY_LETTER_SPACING, textAttributes.letterSpacing);
+  }
+  if (!std::isnan(textAttributes.baselineShift)) {
+    builder.putDouble(TA_KEY_BASELINE_SHIFT, textAttributes.baselineShift);
   }
   if (!std::isnan(textAttributes.lineHeight)) {
     builder.putDouble(TA_KEY_LINE_HEIGHT, textAttributes.lineHeight);

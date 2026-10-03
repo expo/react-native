@@ -58,6 +58,9 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   letterSpacing = !std::isnan(textAttributes.letterSpacing)
       ? textAttributes.letterSpacing
       : letterSpacing;
+  baselineShift = !std::isnan(textAttributes.baselineShift)
+      ? textAttributes.baselineShift
+      : baselineShift;
   textTransform = textAttributes.textTransform.has_value()
       ? textAttributes.textTransform
       : textTransform;
@@ -183,6 +186,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
       floatEquality(fontSize, rhs.fontSize) &&
       floatEquality(fontSizeMultiplier, rhs.fontSizeMultiplier) &&
       floatEquality(letterSpacing, rhs.letterSpacing) &&
+      floatEquality(baselineShift, rhs.baselineShift) &&
       floatEquality(lineHeight, rhs.lineHeight) &&
       floatEquality(textShadowRadius, rhs.textShadowRadius);
 }

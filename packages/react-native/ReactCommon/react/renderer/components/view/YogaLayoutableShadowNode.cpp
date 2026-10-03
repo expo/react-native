@@ -14,7 +14,9 @@
 #include <react/debug/react_native_assert.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/BaseViewProps.h>
+#include <react/renderer/components/view/ElementBoxShadowNode.h>
 #include <react/renderer/components/view/LayoutConformanceShadowNode.h>
+#include <react/renderer/components/view/ListStyle.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/ViewShadowNode.h>
 #include <react/renderer/components/view/conversions.h>
@@ -22,6 +24,7 @@
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/debug/DebugStringConvertibleItem.h>
+#include <react/renderer/dom/NodeNameProvider.h>
 #include <react/utils/FloatComparison.h>
 #include <yoga/Yoga.h>
 #include <algorithm>
@@ -330,7 +333,7 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     }
 
     // Still force a reconfigure so the next pass re-runs the full cascade
-    // over the rebuilt boxes.
+    // over the rebuilt boxes and reassigns list markers and depths.
     yogaTreeHasBeenConfigured_ = false;
   }
 
@@ -1060,6 +1063,113 @@ void YogaLayoutableShadowNode::updateYogaProps() {
   return result;
 }
 
+namespace {
+
+/*
+ * The DOM tag a node reports, or empty for one that does not carry a name.
+ */
+std::string domNameOf(const ShadowNode& node) {
+  const auto* provider =
+      dynamic_cast<const NodeNameProvider*>(node.getProps().get());
+  return provider != nullptr ? provider->domNodeName() : std::string{};
+}
+
+/*
+ * The anonymous IFC box a list item wraps its inline content in, or nullptr if
+ * it has none (an item whose content is all block-level, say).
+ */
+YogaLayoutableShadowNode* markerBoxOf(const YogaLayoutableShadowNode& item) {
+  // The anonymous IFC box is a Yoga child, never a shadow-tree child, so this
+  // walks the layoutable children rather than `getChildren()`.
+  for (const auto& child : item.getYogaLayoutableChildren()) {
+    if (child->getTraits().check(ShadowNodeTraits::Trait::AnonymousBox)) {
+      return const_cast<YogaLayoutableShadowNode*>(child.get());
+    }
+  }
+  return nullptr;
+}
+
+ListMarkerSink* markerSinkOf(const YogaLayoutableShadowNode& item) {
+  return dynamic_cast<ListMarkerSink*>(markerBoxOf(item));
+}
+
+} // namespace
+
+/*
+ * Generates a list item's marker (css-lists-3 §3). This runs on the list
+ * CONTAINER, not the item, for one reason: a marker's text depends on the
+ * item's position among its siblings, and a shadow node has no parent pointer,
+ * so an item cannot count itself. The container has its children in order.
+ *
+ * It runs before layout, so the marker is part of what the item measures.
+ */
+std::optional<ListMarker> YogaLayoutableShadowNode::nextListMarkerIfChanged(
+    const YogaLayoutableShadowNode& child) {
+  if (domNameOf(child) != "li") {
+    return std::nullopt;
+  }
+
+  const auto* sink = markerSinkOf(child);
+  if (sink == nullptr) {
+    // Nothing to put a marker on: the item has no inline content of its own.
+    return std::nullopt;
+  }
+
+  const auto ordinal = listContext_.nextOrdinal++;
+  auto marker = ListMarker{
+      .text = listMarkerText(listContext_.type, ordinal),
+      .outside = listContext_.position == ListStylePosition::Outside,
+      .symbolic = isSymbolicListStyleType(listContext_.type)};
+
+  if (sink->getListMarker() == marker) {
+    return std::nullopt;
+  }
+  return marker;
+}
+
+void YogaLayoutableShadowNode::assignListMarker(
+    YogaLayoutableShadowNode& item,
+    const ListMarker& marker) {
+  auto* box = markerBoxOf(item);
+  dynamic_cast<ListMarkerSink&>(*box).setListMarker(marker);
+  // The item lays its marker out, measuring an `inside` one with its content
+  // and publishing an `outside` one beside it, so Yoga's cached layout for the
+  // box is stale the moment the marker changes.
+  box->yogaNode_.markDirtyAndPropagate();
+}
+
+/*
+ * Reads the list properties off this node's own props, once per layout, so the
+ * per-child work above is a lookup rather than a parse.
+ */
+void YogaLayoutableShadowNode::prepareListContext(int depth) {
+  listContext_ = ListContext{};
+  const auto* boxProps = dynamic_cast<const ElementBoxProps*>(getProps().get());
+  if (boxProps == nullptr) {
+    return;
+  }
+  const auto name = boxProps->domNodeName();
+  const auto ordered = name == "ol";
+  // `<menu>` is a list of commands and the HTML Standard renders it exactly
+  // as `<ul>` (html.css groups them for both margins and the disc marker).
+  if (!ordered && name != "ul" && name != "menu") {
+    return;
+  }
+
+  listContext_.isList = true;
+  // An unordered list with no authored type takes the UA bullet for its depth
+  // — disc, then circle, then square — which is how `ul ul { … }` in a UA
+  // stylesheet behaves without needing an ancestor walk.
+  const auto fallback =
+      ordered ? ListStyleType::Decimal : nestedBulletForDepth(depth);
+  listContext_.type =
+      listStyleTypeFromString(boxProps->listStyleTypeValue, fallback);
+  listContext_.position = listStylePositionFromString(
+      boxProps->listStylePositionValue, ListStylePosition::Outside);
+  // `<ol start>` seeds the counter; unordered lists always count from 1.
+  listContext_.nextOrdinal = ordered ? boxProps->start : 1;
+}
+
 void YogaLayoutableShadowNode::configureYogaTree(
     float pointScaleFactor,
     Float fontSizeMultiplier,
@@ -1072,6 +1182,8 @@ void YogaLayoutableShadowNode::configureYogaTree(
     updateYogaChildren();
     ensureConsistency();
   }
+
+  prepareListContext(listDepth_);
 
   // Set state on our own Yoga node
   YGErrata errata = resolveErrata(defaultErrata);
@@ -1162,6 +1274,9 @@ void YogaLayoutableShadowNode::configureYogaTree(
       if (childObservesCascade) {
         mutableChild.receivedTextAttributes_ = cascadeForChild;
       }
+      // Nesting depth, so a nested `<ul>` can take the next UA bullet without
+      // walking ancestors it has no pointer to.
+      mutableChild.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
       // An anonymous IFC box measures and paints from the cascade. A cascade
       // change that does not alter size (e.g. `color`) leaves Yoga's cached
       // layout valid, so the box would never be revisited and its containing
@@ -1182,6 +1297,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
       if (childObservesCascade) {
         clonedChild.receivedTextAttributes_ = cascadeForChild;
       }
+      clonedChild.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
       clonedChild.configureYogaTree(
           pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);
     }
@@ -1208,6 +1324,38 @@ void YogaLayoutableShadowNode::configureYogaTree(
               ShadowNodeTraits::Trait::TextCascadeConsumer)) {
         mutableChild.setInheritedCascade(effectiveCascade);
       }
+    }
+  }
+
+  // Markers are assigned in their own pass, once every child is configured:
+  // the anonymous box a marker attaches to is created during the child's own
+  // configuration, and the loop above deliberately skips children whose
+  // configuration is unchanged — which would drop items out of the count.
+  //
+  // A marker changes while its item does not when the list's style changes or
+  // an item before it comes or goes, so the item can be one the loop above
+  // skipped, and not this node's to write. The new marker then goes on a
+  // clone, configured as the loop configures one.
+  if (listContext_.isList) {
+    for (size_t i = 0; i < yogaLayoutableChildren_.size(); i++) {
+      const auto& child = *yogaLayoutableChildren_[i];
+      const auto marker = nextListMarkerIfChanged(child);
+      if (!marker) {
+        continue;
+      }
+      if (doesOwn(child)) {
+        assignListMarker(const_cast<YogaLayoutableShadowNode&>(child), *marker);
+      } else {
+        auto& clonedChild = cloneChildInPlace(i);
+        clonedChild.listDepth_ = listDepth_ + 1;
+        clonedChild.configureYogaTree(
+            pointScaleFactor, fontSizeMultiplier, errata, swapLeftAndRight);
+        assignListMarker(clonedChild, *marker);
+      }
+      // Yoga reaches the item only through a dirty list, and nothing else need
+      // dirty it: `list-style-type` is not a Yoga style, and a clone starts out
+      // dirty, so dirtying what measures its marker stops at the item.
+      yogaNode_.markDirtyAndPropagate();
     }
   }
 }

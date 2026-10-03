@@ -317,12 +317,51 @@ void AbstractViewShadowNode<concreteComponentName, ViewPropsT>::
     }
     const auto documentOrder =
         i < paintPositions.size() ? paintPositions[i] : static_cast<int>(i);
+    const auto contentFrame = box->getLayoutMetrics().frame;
+
+    // An `outside` list marker (css-lists-3 §3.2) is painted rather than
+    // measured with the content, which is what lets the content hang past it:
+    // it sits in the gutter the list's `padding-inline-start` reserves, to the
+    // inline-start side of the content box, so every line of the item —
+    // continuations included — starts at the content edge.
+    const auto marker = contentAccessor->getOutsideMarker();
+    if (marker.present) {
+      // Sit the marker's glyphs on the content's first-line baseline rather
+      // than top-aligning the boxes, because a symbolic marker renders at
+      // kSymbolicMarkerFontScale and its own line is far shorter than the
+      // content's. The content baseline (`LayoutableShadowNode::baseline`)
+      // already includes the box's baseline-shift reserve, so nothing else is
+      // added. When either baseline is unavailable, top-align the boxes.
+      Float markerY = contentFrame.origin.y;
+      if (marker.baseline > 0) {
+        if (const auto* layoutable =
+                dynamic_cast<const LayoutableShadowNode*>(box.get())) {
+          const auto contentBaseline =
+              layoutable->baseline(LayoutContext{}, contentFrame.size);
+          if (contentBaseline > 0) {
+            markerY = contentFrame.origin.y + contentBaseline - marker.baseline;
+          }
+        }
+      }
+      textRuns.push_back(
+          ViewState::TextRun{
+              .attributedString = marker.attributedString,
+              .frame =
+                  Rect{
+                      .origin =
+                          {contentFrame.origin.x - marker.size.width, markerY},
+                      .size = marker.size},
+              .documentOrder = documentOrder});
+    }
+
     textRuns.push_back(
         ViewState::TextRun{
             .attributedString =
                 contentAccessor->getContentAttributedString(fontSizeMultiplier),
-            .frame = box->getLayoutMetrics().frame,
+            .frame = contentFrame,
             .documentOrder = documentOrder,
+            // Leave the marker run above untagged: it shares this box's tag
+            // and would collide in the run-layout handoff registry
             .runTag = box->getTag()});
   }
 

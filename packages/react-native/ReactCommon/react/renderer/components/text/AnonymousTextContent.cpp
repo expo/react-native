@@ -116,6 +116,10 @@ std::shared_ptr<YogaLayoutableShadowNode> createAnonymousTextContent(
       },
       family);
 
+  // The marker is NOT decided here: it depends on the item's position among
+  // its siblings, which only the list container knows. The container assigns
+  // it in `configureYogaTree`, before layout.
+
   return std::static_pointer_cast<YogaLayoutableShadowNode>(shadowNode);
 }
 
