@@ -70,6 +70,9 @@ type ____LayoutStyle_Internal = Readonly<{
     | 'none'
     | 'flex'
     | 'block'
+    // A block container that establishes a block formatting context of its
+    // own (css-display-3 §2), which keeps its children's margins inside it
+    | 'flow-root'
     | 'inline'
     // Inline-level boxes that establish a formatting context of their own
     // (css-display-3 §2): inline-outer with flex or flow-root inner. Both are
