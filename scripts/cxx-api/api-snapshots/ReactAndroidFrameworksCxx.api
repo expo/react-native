@@ -393,6 +393,7 @@ constexpr facebook::react::ReactNativeVersionType facebook::react::ReactNativeVe
 constexpr facebook::react::Tag facebook::react::kNoTag;
 constexpr float facebook::react::kDefaultEpsilon;
 constexpr uint32_t facebook::react::INITIAL_BUCKETS_SIZE;
+constexpr uint32_t facebook::react::kRendererAbiVersion;
 static const facebook::react::LayoutMetrics facebook::react::EmptyLayoutMetrics;
 static const facebook::react::TelemetryTimePoint facebook::react::kTelemetryUndefinedTimePoint;
 static constexpr auto facebook::react::kPropNameLengthHardCap;
@@ -707,6 +708,7 @@ bool facebook::react::isHermesBytecodeBundle(const facebook::react::BundleHeader
 bool facebook::react::isZero(facebook::react::Float n);
 bool facebook::react::preservesNewlines(facebook::react::WhiteSpace whiteSpace);
 bool facebook::react::preservesSpaces(facebook::react::WhiteSpace whiteSpace);
+bool facebook::react::rendererAbiMatchesHeaders(uint32_t headerVersion = facebook::react::kRendererAbiVersion);
 bool facebook::react::wrapsText(facebook::react::WhiteSpace whiteSpace);
 const char* facebook::react::stringForScriptTag(const facebook::react::ScriptTag& tag);
 const facebook::react::BaseViewProps* facebook::react::viewPropsOf(const facebook::react::ShadowNode& node);
@@ -880,8 +882,10 @@ uint8_t facebook::react::alphaFromColor(facebook::react::SharedColor color) noex
 uint8_t facebook::react::blueFromColor(facebook::react::SharedColor color) noexcept;
 uint8_t facebook::react::greenFromColor(facebook::react::SharedColor color) noexcept;
 uint8_t facebook::react::redFromColor(facebook::react::SharedColor color) noexcept;
+uint32_t facebook::react::rendererAbiVersionOfLibrary();
 void facebook::react::FBReactNativeSpec_registerComponentDescriptorsFromCodegen(std::shared_ptr<const facebook::react::ComponentDescriptorProviderRegistry> registry);
 void facebook::react::addDynamicToJArray(jni::alias_ref<jni::JArrayClass<jobject>> jarray, jint index, const folly::dynamic& dyn);
+void facebook::react::assertRendererAbiMatchesHeaders(uint32_t headerVersion = facebook::react::kRendererAbiVersion);
 void facebook::react::bindNativeLogger(facebook::jsi::Runtime& runtime, facebook::react::Logger logger);
 void facebook::react::bindNativePerformanceNow(facebook::jsi::Runtime& runtime);
 void facebook::react::cloneProp(facebook::react::BaseViewProps& viewProps, const facebook::react::AnimatedPropBase& animatedProp);
