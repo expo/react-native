@@ -722,6 +722,7 @@ class facebook::react::AttributedString::Fragment {
   public Float atomicInlineBaseline;
   public Float leadingInlineSpace() const;
   public Float trailingInlineSpace() const;
+  public bool forcedBreak;
   public bool isAttachment() const;
   public bool isContentEqual(const facebook::react::AttributedString::Fragment& rhs) const;
   public bool isInlineBoxEnd;
