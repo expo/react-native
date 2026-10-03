@@ -10393,8 +10393,8 @@ __DEV__ &&
               b: {
                 var keepChildren = !current;
                 _type2 = reactPrivateInterface.diffAttributePayloads(
-                  _type2,
-                  newProps,
+                  applyUAStyle(_type2, renderLanes.canonical.viewConfig),
+                  applyUAStyle(newProps, renderLanes.canonical.viewConfig),
                   renderLanes.canonical.viewConfig.validAttributes
                 );
                 renderLanes.canonical.currentProps = newProps;
@@ -10440,7 +10440,7 @@ __DEV__ &&
                   newProps[keepChildren]
                 );
             keepChildren = reactPrivateInterface.createAttributePayload(
-              newProps,
+              applyUAStyle(newProps, _type2),
               _type2.validAttributes
             );
             // Generic seam: a view config may opt into recording its authored
@@ -10454,7 +10454,7 @@ __DEV__ &&
             current = {
               node: createNode(
                 renderLanes,
-                _type2.uiViewClassName,
+                (_type2.resolveUIViewClassName ? _type2.resolveUIViewClassName(newProps) : _type2.uiViewClassName),
                 current.containerTag,
                 keepChildren,
                 workInProgress
@@ -17270,6 +17270,21 @@ __DEV__ &&
     function resolveEventTimeStamp() {
       var event = global.event;
       return event && event !== schedulerEvent ? event.timeStamp : -1.1;
+    }
+    function applyUAStyle(props, viewConfig) {
+      // The user-agent origin of the cascade: the element's UA style sits
+      // *beneath* the author's, so an author declaration always wins simply by
+      // being later in the array. Applied here rather than in author code, the
+      // way a browser consults its own stylesheet.
+      //
+      // Applied on both sides of an update diff as well as at creation — a diff
+      // between two unmerged props objects would drop the UA value the moment
+      // an author removed the property that had been overriding it.
+      var uaStyle = viewConfig && viewConfig.uaStyle;
+      if (!uaStyle || props == null) return props;
+      var merged = Object.assign({}, props);
+      merged.style = props.style == null ? uaStyle : [uaStyle, props.style];
+      return merged;
     }
     function cloneHiddenInstance(instance) {
       var node = instance.node,

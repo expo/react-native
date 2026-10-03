@@ -113,7 +113,7 @@ enum class TextAlignment : uint8_t {
   End // Aligned to the end side of the paragraph direction.
 };
 
-enum class TextAlignmentVertical {
+enum class TextAlignmentVertical : uint8_t {
   Auto,
   Top,
   Bottom,
