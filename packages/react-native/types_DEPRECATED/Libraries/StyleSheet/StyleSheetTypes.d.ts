@@ -454,6 +454,36 @@ export type BackgroundRepeatValue = {
  */
 export interface ViewStyle extends FlexStyle, ShadowStyleIOS, TransformsStyle {
   backfaceVisibility?: 'visible' | 'hidden' | undefined;
+  /**
+   * `white-space` (css-text-3 §3): how white space and newlines in text
+   * children are processed. `normal` collapses runs of spaces and turns
+   * newlines into spaces; `pre` and `pre-wrap` preserve both; `pre-line`
+   * preserves newlines but collapses spaces; `nowrap` collapses and does not
+   * wrap.
+   *
+   * `break-spaces` is accepted and **behaves as `pre-wrap`**. The two differ
+   * only in what happens to a run of preserved spaces sitting at a wrap
+   * point: `pre-wrap` lets it hang past the edge, `break-spaces` measures it
+   * so it wraps like any other character. Hanging is what both platform text
+   * engines do and neither exposes a knob for it — deciding otherwise means
+   * participating in line breaking, which TextKit and Android's `Layout` do
+   * not expose. The two are identical unless a space run is long enough to
+   * outrun the line.
+   *
+   * Applies to Views and to the text inside them. It has NO effect on
+   * `<Text>`, on either platform: `<Text>` already preserves whitespace and
+   * newlines as authored, and has no collapsing pass for `pre` to turn off.
+   * Accepted on a `<Text>` style only because a TextStyle is a ViewStyle; it
+   * is ignored.
+   */
+  whiteSpace?:
+    | 'normal'
+    | 'pre'
+    | 'pre-wrap'
+    | 'pre-line'
+    | 'nowrap'
+    | 'break-spaces'
+    | undefined;
   backgroundColor?: ColorValue | undefined;
   borderBlockColor?: ColorValue | undefined;
   borderBlockEndColor?: ColorValue | undefined;

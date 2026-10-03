@@ -207,6 +207,21 @@ const directEventTypes = {
 };
 
 const validAttributesForNonEventProps = {
+  // Inheritable text attributes (gated natively behind enableStringChildren;
+  // inert otherwise). Mirrors the CSS inherited text-property set.
+  color: colorAttribute,
+  fontSize: true,
+  fontFamily: true,
+  fontWeight: true,
+  fontStyle: true,
+  fontVariant: true,
+  letterSpacing: true,
+  lineHeight: true,
+  textAlign: true,
+  textTransform: true,
+  // `white-space`: inherited like the rest of this group.
+  whiteSpace: true,
+
   // @ReactProps from BaseViewManager
   backgroundColor: colorAttribute,
   transform: true,
