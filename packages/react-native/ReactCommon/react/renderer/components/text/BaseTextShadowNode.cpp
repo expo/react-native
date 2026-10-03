@@ -35,7 +35,8 @@ void BaseTextShadowNode::buildAttributedString(
     const TextAttributes& baseTextAttributes,
     const ShadowNode& parentNode,
     AttributedString& outAttributedString,
-    Attachments& outAttachments) {
+    Attachments& outAttachments,
+    const TextAttributes& initialTextAttributes) {
   bool lastFragmentWasRawText = false;
   for (const auto& childNode : parentNode.getChildren()) {
     // Character data: the first-class `#text` node.
@@ -66,13 +67,23 @@ void BaseTextShadowNode::buildAttributedString(
     auto textShadowNode = dynamic_cast<const TextShadowNode*>(childNode.get());
     if (textShadowNode != nullptr) {
       auto localTextAttributes = baseTextAttributes;
+      if (textShadowNode->getConcreteProps().cascadeResetAll) {
+        // `all: 'initial'` on an inline element: restart from the formatting
+        // root's initial values, keeping the layout-context fields that are not
+        // cascade values.
+        auto reset = initialTextAttributes;
+        reset.fontSizeMultiplier = localTextAttributes.fontSizeMultiplier;
+        reset.layoutDirection = localTextAttributes.layoutDirection;
+        localTextAttributes = reset;
+      }
       localTextAttributes.apply(
           textShadowNode->getConcreteProps().textAttributes);
       buildAttributedString(
           localTextAttributes,
           *textShadowNode,
           outAttributedString,
-          outAttachments);
+          outAttachments,
+          initialTextAttributes);
       continue;
     }
 
@@ -90,7 +101,8 @@ void BaseTextShadowNode::buildAttributedString(
           localTextAttributes,
           *textEffectNode,
           outAttributedString,
-          outAttachments);
+          outAttachments,
+          initialTextAttributes);
       continue;
     }
 
@@ -102,10 +114,22 @@ void BaseTextShadowNode::buildAttributedString(
     if (YogaLayoutableShadowNode::isInlineFlowContent(*childNode)) {
       auto localTextAttributes = baseTextAttributes;
       if (const auto* baseViewProps = viewPropsOf(*childNode)) {
+        if (baseViewProps->isInheritanceBoundary(childNode->getTraits().check(
+                ShadowNodeTraits::Trait::UACascadeBoundary))) {
+          // The same `all` reset for a span-like inline View.
+          auto reset = initialTextAttributes;
+          reset.fontSizeMultiplier = localTextAttributes.fontSizeMultiplier;
+          reset.layoutDirection = localTextAttributes.layoutDirection;
+          localTextAttributes = reset;
+        }
         baseViewProps->applyInheritedTextAttributes(localTextAttributes);
       }
       buildAttributedString(
-          localTextAttributes, *childNode, outAttributedString, outAttachments);
+          localTextAttributes,
+          *childNode,
+          outAttributedString,
+          outAttachments,
+          initialTextAttributes);
       continue;
     }
 
