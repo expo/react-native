@@ -419,6 +419,75 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   react_native_expect(false);
 }
 
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::FloatSide &result)
+{
+  result = yoga::FloatSide::None;
+  react_native_expect(value.hasType<std::string>());
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  auto stringValue = (std::string)value;
+  if (stringValue == "none") {
+    return;
+  }
+  // The logical sides are kept AS logical. Flattening them here would need
+  // the resolved direction, which is a layout result and inherits, so a
+  // float's own props cannot carry it; `calculateBlockLayout` resolves them
+  // where the direction is known.
+  if (stringValue == "left") {
+    result = yoga::FloatSide::Left;
+    return;
+  }
+  if (stringValue == "right") {
+    result = yoga::FloatSide::Right;
+    return;
+  }
+  if (stringValue == "inline-start") {
+    result = yoga::FloatSide::InlineStart;
+    return;
+  }
+  if (stringValue == "inline-end") {
+    result = yoga::FloatSide::InlineEnd;
+    return;
+  }
+  LOG(ERROR) << "Could not parse yoga::FloatSide: " << stringValue;
+}
+
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, yoga::Clear &result)
+{
+  result = yoga::Clear::None;
+  react_native_expect(value.hasType<std::string>());
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+  auto stringValue = (std::string)value;
+  if (stringValue == "none") {
+    return;
+  }
+  if (stringValue == "left") {
+    result = yoga::Clear::Left;
+    return;
+  }
+  if (stringValue == "right") {
+    result = yoga::Clear::Right;
+    return;
+  }
+  // Logical, resolved against the direction in `calculateBlockLayout`.
+  if (stringValue == "inline-start") {
+    result = yoga::Clear::InlineStart;
+    return;
+  }
+  if (stringValue == "inline-end") {
+    result = yoga::Clear::InlineEnd;
+    return;
+  }
+  if (stringValue == "both") {
+    result = yoga::Clear::Both;
+    return;
+  }
+  LOG(ERROR) << "Could not parse yoga::Clear: " << stringValue;
+}
+
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, yoga::Display &result)
 {
   result = yoga::Display::Flex;
