@@ -18,7 +18,8 @@
  * The test environment lays lines out on a deterministic grid: a line's strut
  * is the default font size plus 6 tall with a fifth of it below the baseline,
  * an atomic inline with no line boxes of its own sits on the baseline by its
- * bottom edge (CSS2 §10.8.1), and boxes wrap by width.
+ * bottom edge (CSS2 §10.8.1), and boxes wrap by width. The default font size
+ * is the platform's, so the strut is measured rather than assumed.
  */
 
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
@@ -34,13 +35,15 @@ import ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/React
 
 type Rect = {x: number, y: number, width: number, height: number};
 
-const DEFAULT_FONT_SIZE = 14;
-// How far a line's strut hangs below its baseline
-const STRUT_DESCENT = (DEFAULT_FONT_SIZE + 6) * 0.2;
-
 // Rounds a length to the 1/3pt pixel grid layout snaps to in this environment
 function pixels(value: number): number {
   return Math.round(value * 3) / 3;
+}
+
+// A box that measures its own text rounds its size UP to the grid, so the
+// text is never cut short
+function pixelsUp(value: number): number {
+  return Math.ceil(value * 3 - 1e-4) / 3;
 }
 
 function rectOf(ref: {current: HostInstance | null}): Rect {
@@ -73,6 +76,20 @@ function render(element: React.MixedElement): void {
   });
 }
 
+// How far a line's strut hangs below its baseline. A line holding nothing
+// taller than its strut is the strut's height.
+let STRUT_DESCENT = 0;
+
+beforeAll(() => {
+  const container = createRef<HostInstance>();
+  render(
+    <View ref={container} style={{display: 'block', width: 300}}>
+      <View style={{display: 'inline-block', width: 10, height: 1}} />
+    </View>,
+  );
+  STRUT_DESCENT = rectOf(container).height * 0.2;
+});
+
 describe('atomic inlines in a block container', () => {
   it('sit side by side on one line', () => {
     const container = createRef<HostInstance>();
@@ -99,7 +116,10 @@ describe('atomic inlines in a block container', () => {
     ]);
     // The boxes' bottoms sit on the baseline and the strut's descent hangs
     // below it, so the line is that much taller than the boxes
-    expect(rectOf(container).height).toBeCloseTo(pixels(30 + STRUT_DESCENT), 3);
+    expect(rectOf(container).height).toBeCloseTo(
+      pixelsUp(30 + STRUT_DESCENT),
+      3,
+    );
   });
 
   it('wrap onto the next line when the line is full', () => {

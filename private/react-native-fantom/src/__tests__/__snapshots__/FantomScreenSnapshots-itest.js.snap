@@ -2,7 +2,7 @@
 
 exports[`Fantom screen snapshots captures the default New App Screen 1`] = `
 Object {
-  "hash": "5597b8c0ba6b4d0b508b6cfb6b311b4ed637534357438c68e6515ec27144118c",
+  "hash": "bfda879a2dc33a12b0424c05d68008410fcd32e01ee73575e07b25e4170cfa57",
   "type": "Screenshot",
 }
 `;
