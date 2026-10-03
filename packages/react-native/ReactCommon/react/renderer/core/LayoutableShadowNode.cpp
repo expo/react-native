@@ -266,8 +266,20 @@ Size LayoutableShadowNode::measure(
 
 Float LayoutableShadowNode::baseline(
     const LayoutContext& /*layoutContext*/,
-    Size /*size*/) const {
-  return 0;
+    Size size) const {
+  // CSS2 §10.8.1's fallback: a box with no in-flow line boxes to align to —
+  // which includes every replaced element — is aligned by its bottom margin
+  // edge. So the default is the bottom of the box, not zero.
+  //
+  // Zero would mean "the baseline is the box's TOP", which drops an atomic
+  // inline a full box-height below the line, because `InlineContentShadowNode`
+  // reports this value to the text engine as the atomic inline's baseline.
+  //
+  // Nodes that genuinely have a baseline of their own, such as Paragraph and
+  // the text inputs, override this. Yoga only
+  // asks nodes carrying `BaselineYogaNode`, and every one of those overrides
+  // it, so this default is reached solely through the atomic-inline path.
+  return size.height;
 }
 
 std::shared_ptr<const ShadowNode> LayoutableShadowNode::findNodeAtPoint(

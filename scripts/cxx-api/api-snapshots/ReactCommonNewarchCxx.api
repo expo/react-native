@@ -71,6 +71,7 @@ struct facebook::hermes::ISetEventLoopControl : public facebook::jsi::ICast {
 }
 
 
+const char facebook::react::InlineContentComponentName[];
 const char facebook::react::ViewComponentName[];
 const facebook::react::EventTag facebook::react::EMPTY_EVENT_TAG;
 constexpr facebook::react::ReactNativeVersionType facebook::react::ReactNativeVersion;
@@ -166,6 +167,7 @@ facebook::jsi::Value facebook::react::createPromiseAsJSIValue(facebook::jsi::Run
 facebook::react::ColorComponents facebook::react::colorComponentsFromColor(facebook::react::SharedColor color);
 facebook::react::ColorSpace facebook::react::getDefaultColorSpace();
 facebook::react::DisplayType facebook::react::displayTypeFromYGDisplay(YGDisplay display);
+facebook::react::LayoutConstraints facebook::react::constraintsHonoringOwnBounds(const facebook::react::ShadowNode& node, facebook::react::LayoutConstraints constraints);
 facebook::react::LayoutMetrics facebook::react::layoutMetricsFromYogaNode(facebook::yoga::Node& yogaNode);
 facebook::react::Rect facebook::react::insetBy(const facebook::react::Rect& rect, const facebook::react::EdgeInsets& insets) noexcept;
 facebook::react::Rect facebook::react::outsetBy(const facebook::react::Rect& rect, const facebook::react::EdgeInsets& outsets) noexcept;
@@ -233,6 +235,7 @@ uint8_t facebook::react::alphaFromColor(facebook::react::SharedColor color) noex
 uint8_t facebook::react::blueFromColor(facebook::react::SharedColor color) noexcept;
 uint8_t facebook::react::greenFromColor(facebook::react::SharedColor color) noexcept;
 uint8_t facebook::react::redFromColor(facebook::react::SharedColor color) noexcept;
+void facebook::react::ensureAnonymousTextContentFactoryInstalled(const facebook::react::ComponentDescriptorParameters& parameters);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, YGValue& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::AccessibilityAction& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::AccessibilityLabelledBy& result);
@@ -783,6 +786,22 @@ class facebook::react::ImageTelemetry {
   public facebook::react::TelemetryTimePoint getWillRequestUrlTime() const;
 }
 
+class facebook::react::InlineContentShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::InlineContentComponentName, facebook::react::YogaLayoutableShadowNode, facebook::react::ViewProps>, public facebook::react::InlineTextContentAccessor {
+  public InlineContentShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public InlineContentShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public facebook::react::TextAttributes baseTextAttributes() const;
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
+  public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
+  public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const override;
+  public void setTextLayoutManager(std::shared_ptr<const TextLayoutManager> textLayoutManager);
+}
+
+class facebook::react::InlineTextContentAccessor {
+  public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const = 0;
+  public virtual ~InlineTextContentAccessor() = default;
+}
+
 class facebook::react::InstanceHandle {
   public InstanceHandle(facebook::jsi::Runtime& runtime, const facebook::jsi::Value& instanceHandle, facebook::react::Tag tag);
   public facebook::jsi::Value getInstanceHandle(facebook::jsi::Runtime& runtime) const;
@@ -1100,6 +1119,7 @@ class facebook::react::ShadowNodeTraits {
 }
 
 enum facebook::react::ShadowNodeTraits::Trait : int32_t {
+  AnonymousBox,
   BaselineYogaNode,
   ChildrenAreShared,
   ChildrenFormStackingContext,
@@ -1209,6 +1229,7 @@ class facebook::react::ViewComponentDescriptor : public facebook::react::Concret
 class facebook::react::ViewShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ViewComponentName, facebook::react::ViewProps, facebook::react::ViewEventEmitter> {
   public ViewShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public ViewShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public virtual void layout(facebook::react::LayoutContext layoutContext) override;
 }
 
 class facebook::react::YogaLayoutableShadowNode : public facebook::react::LayoutableShadowNode {
@@ -1217,9 +1238,16 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   protected virtual bool shouldNewRevisionDirtyMeasurement(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment) const;
   public YogaLayoutableShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public YogaLayoutableShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public const facebook::react::YogaLayoutableShadowNode::ListOfShared& getYogaLayoutableChildren() const;
+  public const std::vector<std::shared_ptr<facebook::react::YogaLayoutableShadowNode>>& getAnonymousTextContentChildren() const;
   public facebook::react::Rect getContentBounds() const;
+  public static bool isAtomicInline(const facebook::react::ShadowNode& child);
+  public static bool isInlineFlowContent(const facebook::react::ShadowNode& child);
   public static const facebook::react::YogaLayoutableShadowNode* asYogaLayoutable(const facebook::react::ShadowNode& node);
+  public static facebook::react::YogaLayoutableShadowNode::AnonymousTextContentFactory getAnonymousTextContentFactory();
   public static std::shared_ptr<const facebook::react::YogaLayoutableShadowNode> asYogaLayoutable(const std::shared_ptr<const facebook::react::ShadowNode>& node);
+  public static void setAnonymousTextContentFactory(facebook::react::YogaLayoutableShadowNode::AnonymousTextContentFactory factory);
+  public using AnonymousTextContentFactory = std::shared_ptr<facebook::react::YogaLayoutableShadowNode>(*)(std::vector<std::shared_ptr<const facebook::react::ShadowNode>> runChildren, const facebook::react::ShadowNode& containerShadowNode);
   public using ListOfShared = std::vector<facebook::react::YogaLayoutableShadowNode::Shared>;
   public using Shared = std::shared_ptr<const facebook::react::YogaLayoutableShadowNode>;
   public virtual bool getIsLayoutClean() const override;
@@ -1820,6 +1848,11 @@ struct facebook::react::FloatExclusion {
   public Float leftInset;
   public Float rightInset;
   public bool operator==(const facebook::react::FloatExclusion& other) const = default;
+}
+
+struct facebook::react::InlineAttachmentPlacement {
+  public const facebook::react::ShadowNodeFamily* family;
+  public facebook::react::Rect frame;
 }
 
 struct facebook::react::LayoutConstraints {

@@ -94,6 +94,13 @@ class ShadowNodeTraits {
     // version of React Native.
     DirtyYogaNode = 1 << 14,
 
+    // The node is an anonymous box generated at the layout level (e.g. the
+    // inline formatting context wrapping a View's inline-level children). Such
+    // nodes exist only in the box tree: they never join the shadow tree's
+    // children lists and must not claim family parentage of the DOM children
+    // they lay out.
+    AnonymousBox = 1 << 15,
+
     // The node IS a YogaLayoutableShadowNode. Layout code downcasts child
     // ShadowNodes per child, per pass; the trait plus a static_cast answers
     // the same question as an RTTI dynamic_cast without walking the class

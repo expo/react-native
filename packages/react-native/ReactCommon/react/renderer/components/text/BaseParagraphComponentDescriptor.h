@@ -11,6 +11,7 @@
 
 #include <React/RendererCore.h>
 #include <React/Utils.h>
+#include <react/renderer/components/text/AnonymousTextContent.h>
 #include <react/renderer/textlayoutmanager/TextLayoutManager.h>
 
 namespace facebook::react {
@@ -24,6 +25,9 @@ class BaseParagraphComponentDescriptor : public ConcreteComponentDescriptor<Shad
       : ConcreteComponentDescriptor<ShadowNodeT>(parameters),
         textLayoutManager_(getManagerByName<TextLayoutManager>(this->contextContainer_, TextLayoutManagerKey))
   {
+    // Every app registers the paragraph, so this is a reliable install point
+    // for the anonymous boxes that lay out inline-level Views.
+    ensureAnonymousTextContentFactoryInstalled(parameters);
   }
 
   ComponentName getComponentName() const override
