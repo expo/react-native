@@ -395,6 +395,13 @@ void YogaLayoutableShadowNode::updateYogaProps() {
   auto& props = static_cast<const YogaStylableProps&>(*props_);
   auto styleResult = applyAliasedProps(props.yogaStyle, props);
 
+  if (props.displayBlock && ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
+    // A CSS block container: block-level children stack in the block
+    // direction with block sizing rather than as flex items. The algorithm
+    // lives in Yoga's `calculateBlockLayout`.
+    styleResult.setDisplay(yoga::Display::Block);
+  }
+
   // Resetting `dirty` flag only if `yogaStyle` portion of `Props` was
   // changed.
   if (!YGNodeIsDirty(&yogaNode_) && (styleResult != yogaNode_.style())) {
