@@ -1141,6 +1141,10 @@ constexpr static MapBuffer::Key FR_KEY_IS_ATTACHMENT = 2;
 constexpr static MapBuffer::Key FR_KEY_WIDTH = 3;
 constexpr static MapBuffer::Key FR_KEY_HEIGHT = 4;
 constexpr static MapBuffer::Key FR_KEY_TEXT_ATTRIBUTES = 5;
+// An attachment's own baseline, measured from the box's top (CSS2 §10.8.1), so
+// the platform can sit that baseline on the line's instead of dropping the
+// box's bottom onto it.
+constexpr static MapBuffer::Key FR_KEY_ATOMIC_INLINE_BASELINE = 6;
 
 // constants for Text Attributes serialization
 constexpr static MapBuffer::Key TA_KEY_FOREGROUND_COLOR = 0;
@@ -1415,6 +1419,9 @@ inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
   }
   auto textAttributesMap = toMapBuffer(fragment.textAttributes);
   builder.putMapBuffer(FR_KEY_TEXT_ATTRIBUTES, textAttributesMap);
+  if (fragment.isAttachment()) {
+    builder.putDouble(FR_KEY_ATOMIC_INLINE_BASELINE, fragment.atomicInlineBaseline);
+  }
 
   return builder.build();
 }
