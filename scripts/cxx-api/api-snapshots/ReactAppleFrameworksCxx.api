@@ -6566,6 +6566,8 @@ class facebook::react::YogaStylableProps : public facebook::react::Props {
   public YogaStylableProps(const facebook::react::PropsParserContext& context, const facebook::react::YogaStylableProps& sourceProps, const facebook::react::RawProps& rawProps, const std::function<bool(const std::string&)>& filterObjectKeys = nullptr);
   public bool displayBlock;
   public bool displayFlowRoot;
+  public bool displayInline;
+  public bool displayInlineAtomic;
   public facebook::yoga::Style yogaStyle;
   public facebook::yoga::Style::Length insetBlockEnd;
   public facebook::yoga::Style::Length insetBlockStart;
