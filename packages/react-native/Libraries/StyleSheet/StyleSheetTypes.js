@@ -858,6 +858,38 @@ type ____BlendMode_Internal =
   | 'luminosity'
   | 'plus-lighter';
 
+/**
+ * The properties CSS calls *inherited*: they are set on an element and apply to
+ * every descendant that does not override them.
+ *
+ * They live on the VIEW style rather than the text style because that is where
+ * they are set. `<View style={{fontSize: 20}}>` styles the text inside it, which
+ * is the whole point of an inherited property, and `BaseViewProps` reads exactly
+ * this list off any view. A `<Text>` still has them, because a TextStyle is a
+ * ViewStyle.
+ *
+ * Keep this list in step with the `inherited*` props in `BaseViewProps.h`; a
+ * property here that the native side does not read is silently ignored.
+ */
+export type ____InheritableTextStyle_Internal = Readonly<{
+  color?: ____ColorValue_Internal,
+  fontFamily?: string,
+  fontSize?: number,
+  fontStyle?: 'normal' | 'italic',
+  /**
+   * Specifies font weight. The values 'normal' and 'bold' are supported
+   * for most fonts. Not all fonts have a variant for each of the numeric
+   * values, in that case the closest one is chosen.
+   */
+  fontWeight?: ____FontWeight_Internal,
+  fontVariant?: ____FontVariantArray_Internal | string,
+  letterSpacing?: number,
+  lineHeight?: number,
+  textAlign?:
+    'auto' | 'left' | 'right' | 'center' | 'justify' | 'start' | 'end',
+  textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase',
+}>;
+
 export type ____ViewStyle_InternalBase = Readonly<{
   backfaceVisibility?: 'visible' | 'hidden',
   backgroundColor?: ____ColorValue_Internal,
@@ -929,9 +961,41 @@ export type ____ViewStyle_InternalBase = Readonly<{
   backgroundRepeat?: ReadonlyArray<BackgroundRepeatValue> | string,
   experimental_backgroundRepeat?: ReadonlyArray<BackgroundRepeatValue> | string,
   isolation?: 'auto' | 'isolate',
+  /**
+   * `white-space` (css-text-3 §3). A shorthand over three independent
+   * behaviours — whether segment breaks survive, whether runs of spaces and
+   * tabs survive, and whether a line that does not fit wraps:
+   *
+   *     value          newlines    spaces/tabs   wraps
+   *     normal         collapse    collapse      yes
+   *     pre            preserve    preserve      no
+   *     nowrap         collapse    collapse      no
+   *     pre-wrap       preserve    preserve      yes
+   *     pre-line       preserve    collapse      yes
+   *     break-spaces   preserve    preserve      yes
+   *
+   * `break-spaces` behaves as `pre-wrap`; they differ only in whether a run of
+   * preserved spaces at a wrap point hangs past the edge or wraps, and hanging
+   * is what both platform text engines do.
+   *
+   * Applies to Views and to the text inside them. It has NO effect on
+   * `<Text>`, on either platform: `<Text>` already preserves whitespace and
+   * newlines as authored, and has no collapsing pass for `pre` to turn off.
+   * Only the no-wrapping half would mean anything there, and it is not
+   * implemented rather than implemented on one platform. A `<Text>` style
+   * still accepts it, because a TextStyle is a ViewStyle, and there it is
+   * ignored.
+   *
+   * Declared here, on the VIEW style, for that reason: it applies to the block
+   * container, and `BaseViewProps` reads it as an inherited property
+   * alongside `lineHeight` and `textAlign`.
+   */
+  whiteSpace?:
+    'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',
 }>;
 
 export type ____ViewStyle_InternalCore = Readonly<{
+  ...$Exact<____InheritableTextStyle_Internal>,
   ...$Exact<____LayoutStyle_Internal>,
   ...$Exact<____ShadowStyle_Internal>,
   ...$Exact<____TransformStyle_Internal>,
@@ -1035,7 +1099,6 @@ export type ____FontVariationSettings_Internal =
   string | Readonly<{[axis: string]: number}>;
 
 type ____TextStyle_InternalBase = Readonly<{
-  color?: ____ColorValue_Internal,
   /**
    * Controls how wrapped text contributes its width to layout. `longest-line`
    * uses the width of the longest rendered line instead of the wrapping
@@ -1044,16 +1107,6 @@ type ____TextStyle_InternalBase = Readonly<{
    * @default `'auto'`
    */
   experimental_textWidthMode?: 'auto' | 'longest-line',
-  fontFamily?: string,
-  fontSize?: number,
-  fontStyle?: 'normal' | 'italic',
-  /**
-   * Specifies font weight. The values 'normal' and 'bold' are supported
-   * for most fonts. Not all fonts have a variant for each of the numeric
-   * values, in that case the closest one is chosen.
-   */
-  fontWeight?: ____FontWeight_Internal,
-  fontVariant?: ____FontVariantArray_Internal | string,
   /**
    * Specifies OpenType font variation axis values using CSS syntax or an
    * object keyed by four-character axis tags. An empty string or object resets
@@ -1067,17 +1120,12 @@ type ____TextStyle_InternalBase = Readonly<{
   }>,
   textShadowRadius?: number,
   textShadowColor?: ____ColorValue_Internal,
-  letterSpacing?: number,
-  lineHeight?: number,
-  textAlign?:
-    'auto' | 'left' | 'right' | 'center' | 'justify' | 'start' | 'end',
   textAlignVertical?: 'auto' | 'top' | 'bottom' | 'center',
   includeFontPadding?: boolean,
   textDecorationLine?:
     'none' | 'underline' | 'line-through' | 'underline line-through',
   textDecorationStyle?: 'solid' | 'double' | 'dotted' | 'dashed' | 'wavy',
   textDecorationColor?: ____ColorValue_Internal,
-  textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase',
   userSelect?: 'auto' | 'text' | 'none' | 'contain' | 'all',
   verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
   writingDirection?: 'auto' | 'ltr' | 'rtl',

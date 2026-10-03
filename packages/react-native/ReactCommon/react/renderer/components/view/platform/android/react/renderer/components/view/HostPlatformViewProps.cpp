@@ -22,8 +22,14 @@ HostPlatformViewProps::HostPlatformViewProps(
     const PropsParserContext& context,
     const HostPlatformViewProps& sourceProps,
     const RawProps& rawProps,
-    const std::function<bool(const std::string&)>& filterObjectKeys)
-    : BaseViewProps(context, sourceProps, rawProps, filterObjectKeys),
+    const std::function<bool(const std::string&)>& filterObjectKeys,
+    bool parseInheritedTextProps)
+    : BaseViewProps(
+          context,
+          sourceProps,
+          rawProps,
+          filterObjectKeys,
+          parseInheritedTextProps),
       elevation(convertRawProp(
           context,
           rawProps,

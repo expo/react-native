@@ -9,6 +9,10 @@
 
 #include <react/cxxstableapi/UmbrellaGuard.h>
 
+#include <limits>
+
+#include <react/renderer/attributedstring/TextAttributes.h>
+#include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/components/view/primitives.h>
@@ -37,16 +41,75 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
       const PropsParserContext &context,
       const BaseViewProps &sourceProps,
       const RawProps &rawProps,
-      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr);
+      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr,
+      // Text-vocabulary props (ParagraphProps) pass false: their BaseTextProps
+      // parse already probes the same style keys into `textAttributes`, and
+      // probing them here too would parse every <Text> style twice.
+      bool parseInheritedTextProps = true);
 
   void
   setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
 
+ private:
+  // Tag for the delegated constructor below. The public constructor reads
+  // `enableStringChildren` ONCE and forwards the answer; this one takes it as
+  // a plain bool.
+  //
+  // The flag is read once rather than at each of the eleven probe sites: the
+  // getter is a cross-module call that ends in a sequentially-consistent
+  // atomic load, it does not inline, and it is paid whether the flag is on or
+  // off.
+  struct ResolvedFlag {};
+
+  BaseViewProps(
+      const PropsParserContext &context,
+      const BaseViewProps &sourceProps,
+      const RawProps &rawProps,
+      const std::function<bool(const std::string &)> &filterObjectKeys,
+      bool parseInheritedTextProps,
+      bool stringChildrenEnabled,
+      ResolvedFlag);
+
+ public:
 #pragma mark - Props
 
   // Color
   Float opacity{1.0};
   SharedColor backgroundColor{};
+
+  // Inheritable text attributes, which descendant text content inherits when
+  // enableStringChildren is on. Keys mirror the CSS inherited text-property
+  // set. Parsed here on every View, and inert unless the flag is on.
+  SharedColor inheritedColor{};
+  Float inheritedFontSize{std::numeric_limits<Float>::quiet_NaN()};
+  std::string inheritedFontFamily{""};
+  std::optional<FontWeight> inheritedFontWeight{};
+  std::optional<FontStyle> inheritedFontStyle{};
+  std::optional<FontVariant> inheritedFontVariant{};
+  Float inheritedLetterSpacing{std::numeric_limits<Float>::quiet_NaN()};
+  Float inheritedLineHeight{std::numeric_limits<Float>::quiet_NaN()};
+  std::optional<TextAlignment> inheritedTextAlign{};
+  std::optional<TextTransform> inheritedTextTransform{};
+  // `white-space`, inherited like the rest of these: a View sets it and
+  // every run inside keeps it.
+  std::optional<WhiteSpace> inheritedWhiteSpace{};
+
+  /*
+   * Whether ANY inheritable text prop above is set — computed once at parse.
+   * The cascade's hot paths (the clone-path differ, the per-configure fold)
+   * run for every View on every commit, and for the overwhelming majority the
+   * answer is "nothing to do"; this bit is that answer in one load.
+   */
+  bool hasInheritedTextProps{false};
+
+  bool computeHasInheritedTextProps() const;
+
+  /*
+   * Folds the set inheritable text props above into `textAttributes`: the
+   * single place that decides what a View passes on to the text that
+   * inherits from it.
+   */
+  void applyInheritedTextAttributes(TextAttributes &textAttributes) const;
 
   // Borders
   CascadedBorderRadii borderRadii{};
