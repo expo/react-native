@@ -28,8 +28,16 @@ internal class ReactUnderlineSpan(
 ) : CanvasEffectSpan(), ReactSpan {
 
   override fun onDraw(start: Int, end: Int, canvas: Canvas, layout: Layout) {
-    drawSpannedDecoration(start, end, canvas, layout, color, style) { _, baseline, thickness ->
-      baseline + thickness + 1f
+    drawSpannedDecoration(start, end, canvas, layout, color, style) { paint, baseline, thickness ->
+      // The face's own underline position (positive = below the baseline),
+      // not an invented constant — the platform's underlines sit there. Our
+      // dotted rule is round-capped, so half its thickness rides above the
+      // stroke's centre: the dots hugged the descenders when the centre sat
+      // at the type's position, and centring a half-thickness lower keeps
+      // the dot TOPS at the face's rule position.
+      val rulePosition =
+          if (android.os.Build.VERSION.SDK_INT >= 29) paint.underlinePosition else thickness
+      baseline + maxOf(rulePosition, thickness) + thickness / 2f + 0.5f
     }
   }
 }
