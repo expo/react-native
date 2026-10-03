@@ -37,6 +37,12 @@ export function createViewConfig(
       PlatformBaseViewConfig.validAttributes,
       partialViewConfig.validAttributes,
     ),
+    // This function rebuilds the config from a fixed set of keys rather than
+    // spreading, so anything not listed here is silently dropped. Opt-in flags
+    // have to be carried through explicitly.
+    recordNodeName: partialViewConfig.recordNodeName,
+    resolveUIViewClassName: partialViewConfig.resolveUIViewClassName,
+    uaStyle: partialViewConfig.uaStyle,
   };
 }
 

@@ -10443,6 +10443,14 @@ __DEV__ &&
               newProps,
               _type2.validAttributes
             );
+            // Generic seam: a view config may opt into recording its authored
+            // JSX type as a `nodeName` prop (recordNodeName). Intrinsic-component
+            // modules use this so a tag preserves its name for DOM APIs (e.g.
+            // HTMLUnknownElement) without the renderer knowing any component.
+            if (_type2.recordNodeName)
+              keepChildren = Object.assign({}, keepChildren, {
+                nodeName: workInProgress.type
+              });
             current = {
               node: createNode(
                 renderLanes,
