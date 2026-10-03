@@ -34,6 +34,7 @@
 #include <react/utils/ContextContainer.h>
 #include <react/utils/RunLoopObserverManager.h>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -169,13 +170,31 @@ void TesterAppDelegate::loadScript(
     const std::string& bundlePath,
     const std::string& sourcePath) {
   LOG(INFO) << "Loading script: " << bundlePath << " source " << sourcePath;
-  reactHost_->loadScript(bundlePath, sourcePath);
+  // `loadScript` reports failure by returning false. Ignoring it did not make
+  // the failure go away, it just moved it: `runtime_` stayed null and the next
+  // thing to touch it segfaulted, with nothing on stdout or stderr to say why.
+  if (!reactHost_->loadScript(bundlePath, sourcePath)) {
+    throw std::runtime_error(
+        "Failed to load the JS bundle from '" + bundlePath +
+        "'. The file could not be read or did not evaluate; see the preceding "
+        "log line for the underlying error.");
+  }
 
   reactHost_->runOnRuntimeScheduler(
       [this](jsi::Runtime& runtime) { runtime_ = &runtime; });
 
   // Run JS code to copy out pointer to the runtime to `runtime_`.
   flushMessageQueue();
+
+  // The assignment above happens on the runtime scheduler, so it is only
+  // guaranteed to have run once the queue is flushed. If it somehow did not,
+  // say so here rather than leaving a null pointer for a later caller.
+  if (runtime_ == nullptr) {
+    throw std::runtime_error(
+        "The JS bundle at '" + bundlePath +
+        "' loaded, but the runtime was never handed back, so there is nothing "
+        "to run the tests on.");
+  }
 }
 
 void TesterAppDelegate::loadScriptAndRunTests(
