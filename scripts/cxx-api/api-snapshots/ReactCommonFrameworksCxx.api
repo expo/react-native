@@ -391,6 +391,7 @@ std::string facebook::react::toString(const facebook::react::TextDecorationLineT
 std::string facebook::react::toString(const facebook::react::TextDecorationStyle& textDecorationStyle);
 std::string facebook::react::toString(const facebook::react::TextTransform& textTransform);
 std::string facebook::react::toString(const facebook::react::TextWidthMode& textWidthMode);
+std::string facebook::react::toString(const facebook::react::WhiteSpace& whiteSpace);
 std::string facebook::react::toString(const facebook::react::WordBreak& wordBreak);
 std::string facebook::react::toString(const facebook::react::WritingDirection& writingDirection);
 std::string facebook::react::toString(double doubleValue, char suffix);
@@ -513,6 +514,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::TextAlignmentVertical& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::TextWidthMode& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ValueUnit& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::WhiteSpace& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::BoxSizing& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::Clear& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::yoga::FloatSide& result);
@@ -851,7 +853,10 @@ class facebook::react::BaseViewEventEmitter : public facebook::react::TouchEvent
 
 class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps, public facebook::react::AccessibilityProps {
   public BaseViewProps() = default;
-  public BaseViewProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseViewProps& sourceProps, const facebook::react::RawProps& rawProps, const std::function<bool(const std::string&)>& filterObjectKeys = nullptr);
+  public BaseViewProps(const facebook::react::PropsParserContext& context, const facebook::react::BaseViewProps& sourceProps, const facebook::react::RawProps& rawProps, const std::function<bool(const std::string&)>& filterObjectKeys = nullptr, bool parseInheritedTextProps = true);
+  public Float inheritedFontSize;
+  public Float inheritedLetterSpacing;
+  public Float inheritedLineHeight;
   public Float opacity;
   public Float outlineOffset;
   public Float outlineWidth;
@@ -859,7 +864,9 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public Float shadowRadius;
   public bool collapsable;
   public bool collapsableChildren;
+  public bool computeHasInheritedTextProps() const;
   public bool getClipsContentToBounds() const;
+  public bool hasInheritedTextProps;
   public bool onLayout;
   public bool onSafeAreaInsetsChange;
   public bool removeClippedSubviews;
@@ -878,6 +885,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::OutlineStyle outlineStyle;
   public facebook::react::PointerEventsMode pointerEvents;
   public facebook::react::SharedColor backgroundColor;
+  public facebook::react::SharedColor inheritedColor;
   public facebook::react::SharedColor outlineColor;
   public facebook::react::SharedColor shadowColor;
   public facebook::react::Size shadowOffset;
@@ -886,13 +894,21 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::TransformOrigin transformOrigin;
   public facebook::react::ViewEvents events;
   public static facebook::react::Transform resolveTransform(const facebook::react::Size& frameSize, const facebook::react::Transform& transform, const facebook::react::TransformOrigin& transformOrigin);
+  public std::optional<facebook::react::FontStyle> inheritedFontStyle;
+  public std::optional<facebook::react::FontVariant> inheritedFontVariant;
+  public std::optional<facebook::react::FontWeight> inheritedFontWeight;
+  public std::optional<facebook::react::TextAlignment> inheritedTextAlign;
+  public std::optional<facebook::react::TextTransform> inheritedTextTransform;
+  public std::optional<facebook::react::WhiteSpace> inheritedWhiteSpace;
   public std::optional<int> zIndex;
+  public std::string inheritedFontFamily;
   public std::vector<facebook::react::BackgroundImage> backgroundImage;
   public std::vector<facebook::react::BackgroundPosition> backgroundPosition;
   public std::vector<facebook::react::BackgroundRepeat> backgroundRepeat;
   public std::vector<facebook::react::BackgroundSize> backgroundSize;
   public std::vector<facebook::react::BoxShadow> boxShadow;
   public std::vector<facebook::react::FilterFunction> filter;
+  public void applyInheritedTextAttributes(facebook::react::TextAttributes& textAttributes) const;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
 
@@ -1244,7 +1260,7 @@ class facebook::react::HighResTimeStamp {
 
 class facebook::react::HostPlatformViewProps : public facebook::react::BaseViewProps {
   public HostPlatformViewProps() = default;
-  public HostPlatformViewProps(const facebook::react::PropsParserContext& context, const facebook::react::HostPlatformViewProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public HostPlatformViewProps(const facebook::react::PropsParserContext& context, const facebook::react::HostPlatformViewProps& sourceProps, const facebook::react::RawProps& rawProps, const std::function<bool(const std::string&)>& filterObjectKeys = nullptr, bool parseInheritedTextProps = true);
   public bool focusable;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
