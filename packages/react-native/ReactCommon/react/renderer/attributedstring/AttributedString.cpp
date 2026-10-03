@@ -67,7 +67,10 @@ bool Fragment::isContentEqual(const Fragment& rhs) const {
 
 void AttributedString::appendFragment(Fragment&& fragment) {
   ensureUnsealed();
-  if (!fragment.string.empty()) {
+  // Empty fragments are dropped because they are nothing — except for the one
+  // that is empty on purpose: an inline element with no text still has a box
+  // on the line (CSSOM-View §4), and this fragment is the only record of it.
+  if (!fragment.string.empty() || fragment.isEmptyElement) {
     fragments_.push_back(std::move(fragment));
   }
 }

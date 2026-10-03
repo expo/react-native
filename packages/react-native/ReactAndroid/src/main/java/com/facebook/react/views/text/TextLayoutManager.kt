@@ -101,6 +101,9 @@ internal object TextLayoutManager {
   const val FR_KEY_INLINE_BOX: Int = 7
   const val FR_KEY_IS_INLINE_BOX_START: Int = 8
   const val FR_KEY_IS_INLINE_BOX_END: Int = 9
+  // An inline element that contributed no text of its own — `<span></span>`.
+  // Its fragment is empty on purpose and still has a box on the line.
+  const val FR_KEY_IS_EMPTY_ELEMENT: Int = 10
 
   const val IB_KEY_MARGIN_LEFT: Int = 0
   const val IB_KEY_MARGIN_RIGHT: Int = 1
@@ -441,6 +444,30 @@ internal object TextLayoutManager {
         border = PixelUtil.toPixelFromDIP(box.getDouble(IB_KEY_BORDER_LEFT_WIDTH)),
         padding = PixelUtil.toPixelFromDIP(box.getDouble(IB_KEY_PADDING_LEFT)),
     )
+  }
+
+  /**
+   * How far a fragment's border box extends above and below the line box, in
+   * pixels. The mirror of `AttributedString::Fragment::blockAxisBoxEdges`.
+   *
+   * Unlike the inline-axis edges this is NOT gated on the element's first or
+   * last fragment: a wrapped inline is one box per line and
+   * `box-decoration-break: slice` (CSS §8.6, the initial value) draws the
+   * block-axis padding and border on every one of them.
+   *
+   * Margin is excluded — this is the border box.
+   */
+  private fun blockAxisBoxEdges(fragment: MapBuffer): Pair<Float, Float> {
+    if (!fragment.contains(FR_KEY_INLINE_BOX)) {
+      return 0f to 0f
+    }
+    val box = fragment.getMapBuffer(FR_KEY_INLINE_BOX)
+    return PixelUtil.toPixelFromDIP(
+        box.getDouble(IB_KEY_PADDING_TOP) + box.getDouble(IB_KEY_BORDER_TOP_WIDTH)
+    ) to
+        PixelUtil.toPixelFromDIP(
+            box.getDouble(IB_KEY_PADDING_BOTTOM) + box.getDouble(IB_KEY_BORDER_BOTTOM_WIDTH)
+        )
   }
 
   private fun trailingInlineSpace(fragment: MapBuffer): InlineReserve {
@@ -2080,6 +2107,184 @@ internal object TextLayoutManager {
           textEffectRegistry,
       )
 
+  /**
+   * Returns the laid-out rect of each fragment of [attributedString], as a flat
+   * array of `[x, y, width, height]` per fragment in fragment order.
+   *
+   * This is what lets an inline element (`<b>`, `<span>`, a nested `<Text>`)
+   * report a real box from `getBoundingClientRect()`: the containing
+   * Paragraph/View unions the rects of the fragments belonging to an element
+   * and stamps the result onto it.
+   *
+   * A fragment spanning several lines reports the union of its line pieces —
+   * the same box the web reports for a wrapped inline element.
+   *
+   * Called only when a string actually has multiple fragments (i.e. contains
+   * inline elements), so plain text pays nothing for it.
+   */
+  /**
+   * The last offset on a line whose horizontal position Android will measure.
+   *
+   * `Layout.getHorizontal` drops a line's trailing line break before measuring
+   * within it, so an offset that sits just past one — where a fragment ending
+   * in `\n` puts it — is refused with "offset should be less than line limit".
+   * The break carries no advance, so the position asked for is the one at the
+   * end of the line's text anyway.
+   */
+  private fun measurableEndOfLine(layout: Layout, line: Int): Int {
+    val lineEnd = layout.getLineEnd(line)
+    return if (lineEnd > layout.getLineStart(line) && layout.text[lineEnd - 1] == '\n') {
+      lineEnd - 1
+    } else {
+      lineEnd
+    }
+  }
+
+  @JvmStatic
+  @OptIn(UnstableReactNativeAPI::class)
+  fun measureFragmentRects(
+      assets: AssetManager,
+      attributedString: MapBuffer,
+      paragraphAttributes: MapBuffer,
+      width: Float,
+      widthYogaMeasureMode: YogaMeasureMode,
+      height: Float,
+      heightYogaMeasureMode: YogaMeasureMode,
+      floatExclusionsDip: FloatArray? = null,
+  ): FloatArray {
+    if (!attributedString.contains(AS_KEY_FRAGMENTS)) {
+      return FloatArray(0)
+    }
+    val fragments = attributedString.getMapBuffer(AS_KEY_FRAGMENTS)
+    if (fragments.count == 0) {
+      return FloatArray(0)
+    }
+
+    val layout =
+        createLayoutForMeasurement(
+            assets,
+            0,
+            attributedString,
+            paragraphAttributes,
+            width,
+            widthYogaMeasureMode,
+            height,
+            heightYogaMeasureMode,
+            null,
+            null,
+            floatExclusionsDip,
+        )
+
+    val rects = FloatArray(fragments.count * 4)
+    val text = layout.text
+    var offset = 0
+    var index = 0
+    // The attachment-preceded reserve placement shifts where the start pen
+    // sits — see the border-box correction below.
+    var previousWasAttachment = false
+    for (fragment in fragments) {
+      val fragmentText = fragment.mapBufferValue.getString(FR_KEY_STRING)
+      // An attachment is represented by a single placeholder character.
+      val length = fragmentText.length
+      val start = offset
+      val end = (offset + length).coerceAtMost(text.length)
+      offset += length
+      val followsAttachment = previousWasAttachment
+      previousWasAttachment =
+          fragment.mapBufferValue.contains(FR_KEY_IS_ATTACHMENT) &&
+              fragment.mapBufferValue.getBoolean(FR_KEY_IS_ATTACHMENT)
+
+      if (length == 0) {
+        // An inline element with no text of its own still has a box: zero wide,
+        // on the line it sits on, as tall as that line (CSSOM-View §4). There
+        // are no glyphs to measure, so it is built from the line the element's
+        // position falls in and the caret position within it.
+        val isEmptyElement =
+            fragment.mapBufferValue.contains(FR_KEY_IS_EMPTY_ELEMENT) &&
+                fragment.mapBufferValue.getBoolean(FR_KEY_IS_EMPTY_ELEMENT)
+        if (isEmptyElement && text.isNotEmpty()) {
+          val at = start.coerceAtMost(text.length)
+          val line = layout.getLineForOffset(at.coerceAtMost(text.length - 1))
+          // Pixels here, points on the C++ side, like every other rect below.
+          rects[index] =
+              layout.getPrimaryHorizontal(at.coerceAtMost(measurableEndOfLine(layout, line)))
+                  .pxToDp()
+          rects[index + 1] = layout.getLineTop(line).toFloat().pxToDp()
+          rects[index + 2] = 0f
+          rects[index + 3] =
+              (layout.getLineBottom(line) - layout.getLineTop(line)).toFloat().pxToDp()
+        }
+        index += 4
+        continue
+      }
+      if (start >= text.length) {
+        index += 4
+        continue
+      }
+
+      val firstLine = layout.getLineForOffset(start)
+      val lastLine = layout.getLineForOffset(end - 1)
+
+      // Horizontal extent: the fragment's own edges on its first and last
+      // line, widened to the full line box for any line it spans entirely —
+      // which is what makes a wrapped element's union match the web's.
+      var left: Float
+      var right: Float
+      if (firstLine == lastLine) {
+        val startX =
+            layout.getPrimaryHorizontal(start.coerceAtMost(measurableEndOfLine(layout, firstLine)))
+        val endX =
+            layout.getPrimaryHorizontal(end.coerceAtMost(measurableEndOfLine(layout, lastLine)))
+        left = minOf(startX, endX)
+        right = maxOf(startX, endX)
+      } else {
+        left = layout.getLineLeft(firstLine)
+        right = layout.getLineRight(firstLine)
+        for (line in firstLine..lastLine) {
+          left = minOf(left, layout.getLineLeft(line))
+          right = maxOf(right, layout.getLineRight(line))
+        }
+      }
+
+      // An element's box is its *border* box. Pen positions include every
+      // consumed reserved advance (THE INLINE RESERVE MODEL, documented on
+      // InlineBoxSpacingSpan): at the element's start offset the pen sits at
+      // its CONTENT left edge — the leading reserve was consumed by the
+      // preceding character, outermost part first — and at its end offset at
+      // the MARGIN's outer right edge. So the border box runs from
+      // `left - (border + padding)` to `right - margin`. The one exception is
+      // an element that follows an attachment: its leading reserve rides its
+      // own first character ahead of the glyph, so the start pen sits at the
+      // margin's outer LEFT edge and the border box starts `margin` inside it.
+      val leadingReserve = leadingInlineSpace(fragment.mapBufferValue)
+      if (followsAttachment) {
+        left += leadingReserve.margin
+      } else {
+        left -= leadingReserve.border + leadingReserve.padding
+      }
+      if (firstLine == lastLine) {
+        right -= trailingInlineSpace(fragment.mapBufferValue).margin
+      }
+
+      // Block-axis padding and borders belong to the border box the element
+      // reports, even though CSS2 §10.6.1 has them overflow the line box
+      // instead of growing it — so they are never inside the line extents.
+      val (blockTop, blockBottom) = blockAxisBoxEdges(fragment.mapBufferValue)
+      val top = layout.getLineTop(firstLine).toFloat() - blockTop
+      val bottom = layout.getLineBottom(lastLine).toFloat() + blockBottom
+
+      // `Layout` works in pixels; the C++ side consumes these as points, like
+      // the attachment positions right below.
+      rects[index] = left.pxToDp()
+      rects[index + 1] = top.pxToDp()
+      rects[index + 2] = (right - left).pxToDp()
+      rects[index + 3] = (bottom - top).pxToDp()
+      index += 4
+    }
+
+    return rects
+  }
+
   @JvmStatic
   @OptIn(UnstableReactNativeAPI::class)
   fun measureText(
@@ -2131,6 +2336,10 @@ internal object TextLayoutManager {
 
     val text = layout.text as Spanned
 
+    if (text.isEmpty()) {
+      return emptyRunMeasurement(width, widthYogaMeasureMode, height, heightYogaMeasureMode)
+    }
+
     val calculatedLineCount = calculateLineCount(layout, maximumNumberOfLines)
     val calculatedWidth =
         calculateWidth(layout, text, width, widthYogaMeasureMode, calculatedLineCount)
@@ -2180,6 +2389,11 @@ internal object TextLayoutManager {
     val layout = preparedLayout.layout
     val text = layout.text as Spanned
     val maximumNumberOfLines = preparedLayout.maximumNumberOfLines
+
+    if (text.isEmpty()) {
+      val size = emptyRunMeasurement(width, widthYogaMeasureMode, height, heightYogaMeasureMode)
+      return floatArrayOf(YogaMeasureOutput.getWidth(size), YogaMeasureOutput.getHeight(size))
+    }
 
     val calculatedLineCount = calculateLineCount(layout, maximumNumberOfLines)
     val calculatedWidth =
@@ -2291,6 +2505,23 @@ internal object TextLayoutManager {
 
     return layout.width.toFloat()
   }
+
+  /**
+   * The measurement of a run with no characters: no line box (CSS 2 §9.4.2), so nothing unless the
+   * caller fixed a dimension. iOS's measurer returns a zero size for an empty string before it lays
+   * anything out; StaticLayout lays "" out as one line of the paint's font metrics, which is where
+   * an empty `<span>` beside its `<div>` got a line of height on this platform alone.
+   */
+  private fun emptyRunMeasurement(
+      width: Float,
+      widthYogaMeasureMode: YogaMeasureMode,
+      height: Float,
+      heightYogaMeasureMode: YogaMeasureMode,
+  ): Long =
+      YogaMeasureOutput.make(
+          (if (widthYogaMeasureMode == YogaMeasureMode.EXACTLY) width else 0f).pxToDp(),
+          (if (heightYogaMeasureMode == YogaMeasureMode.EXACTLY) height else 0f).pxToDp(),
+      )
 
   private fun calculateHeight(
       layout: Layout,

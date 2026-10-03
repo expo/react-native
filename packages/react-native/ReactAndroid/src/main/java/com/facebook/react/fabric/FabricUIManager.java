@@ -680,6 +680,33 @@ public class FabricUIManager
         mTextEffectRegistry);
   }
 
+  /**
+   * Per-fragment rects for {@code attributedString}, as a flat array of {x, y, width, height} per
+   * fragment. Lets an inline element (&lt;b&gt;, &lt;span&gt;, a nested &lt;Text&gt;) report a real
+   * box from getBoundingClientRect(); see TextLayoutManager#measureFragmentRects.
+   */
+  @AnyThread
+  @ThreadConfined(ANY)
+  public float[] measureFragmentRects(
+      ReadableMapBuffer attributedString,
+      ReadableMapBuffer paragraphAttributes,
+      float minWidth,
+      float maxWidth,
+      float minHeight,
+      float maxHeight,
+      @Nullable float[] floatExclusionsDip) {
+    return TextLayoutManager.measureFragmentRects(
+        mReactApplicationContext.getAssets(),
+        attributedString,
+        paragraphAttributes,
+        getYogaSize(minWidth, maxWidth),
+        getYogaMeasureMode(minWidth, maxWidth),
+        getYogaSize(minHeight, maxHeight),
+        getYogaMeasureMode(minHeight, maxHeight),
+        floatExclusionsDip);
+  }
+
+
   @AnyThread
   @ThreadConfined(ANY)
   @UnstableReactNativeAPI

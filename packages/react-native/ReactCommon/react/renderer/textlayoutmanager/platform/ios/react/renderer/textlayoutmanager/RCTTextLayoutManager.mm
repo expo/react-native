@@ -330,6 +330,106 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
   return cachedRunTextStorage(attributedString, width);
 }
 
+- (std::vector<facebook::react::Rect>)getFragmentRectsWithAttributedString:(AttributedString)attributedString
+                                                       paragraphAttributes:(ParagraphAttributes)paragraphAttributes
+                                                                      size:(CGSize)size
+                                                                exclusions:
+                                                                    (const std::vector<FloatExclusion> &)exclusions
+{
+  std::vector<facebook::react::Rect> rects;
+  const auto &fragments = attributedString.getFragments();
+  if (fragments.empty()) {
+    return rects;
+  }
+
+  NSAttributedString *nsAttributedString = [self _nsAttributedStringFromAttributedString:attributedString];
+  NSTextStorage *textStorage = [self _textStorageAndLayoutManagerWithAttributesString:nsAttributedString
+                                                                  paragraphAttributes:paragraphAttributes
+                                                                                 size:size
+                                                                           exclusions:exclusions];
+  NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
+  NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
+  [layoutManager ensureLayoutForTextContainer:textContainer];
+
+  rects.reserve(fragments.size());
+
+  // Fragments are appended to the attributed string in order, so their
+  // character ranges tile it. Lengths are counted in UTF-16 units (what
+  // NSAttributedString indexes by), and an attachment occupies exactly the
+  // one attachment character.
+  NSUInteger location = 0;
+  for (const auto &fragment : fragments) {
+    NSUInteger length;
+    if (fragment.isAttachment()) {
+      length = 1;
+    } else {
+      NSString *fragmentText = [NSString stringWithUTF8String:fragment.string.c_str()];
+      length = fragmentText != nil ? fragmentText.length : 0;
+    }
+    if (length == 0 && fragment.isEmptyElement && textStorage.length > 0) {
+      // An inline element with no text of its own. The web gives it a
+      // zero-width box on the line it sits on (CSSOM-View §4), and a
+      // zero-length glyph range returns nothing at all — so the box is built
+      // from the line fragment it lands in and the caret position within it.
+      NSUInteger charIndex = MIN(location, textStorage.length - 1);
+      NSUInteger glyphIndex = [layoutManager glyphIndexForCharacterAtIndex:charIndex];
+      CGRect lineRect = [layoutManager lineFragmentRectForGlyphAtIndex:glyphIndex effectiveRange:NULL];
+      CGFloat x;
+      if (location >= textStorage.length) {
+        // Nothing follows: the caret sits after the last glyph, not before it.
+        CGRect last = [layoutManager boundingRectForGlyphRange:NSMakeRange(glyphIndex, 1)
+                                               inTextContainer:textContainer];
+        x = CGRectGetMaxX(last);
+      } else {
+        x = lineRect.origin.x + [layoutManager locationForGlyphAtIndex:glyphIndex].x;
+      }
+      rects.push_back(
+          facebook::react::Rect{
+              .origin = {.x = (Float)x, .y = (Float)lineRect.origin.y},
+              .size = {.width = 0, .height = (Float)lineRect.size.height}});
+      continue;
+    }
+    if (length == 0 || location + length > textStorage.length) {
+      rects.push_back(facebook::react::Rect{});
+      location += length;
+      continue;
+    }
+
+    NSRange characterRange = NSMakeRange(location, length);
+    NSRange glyphRange = [layoutManager glyphRangeForCharacterRange:characterRange actualCharacterRange:nullptr];
+    // `boundingRectForGlyphRange:` already unions the pieces of a range that
+    // wraps across lines, which is exactly the box the web reports.
+    CGRect boundingRect = [layoutManager boundingRectForGlyphRange:glyphRange inTextContainer:textContainer];
+
+    // An element's box is its *border* box, so it includes the inline-axis
+    // space reserved as kerning. The trailing space is kerning on the element's own
+    // last character and is already inside `boundingRect`; the leading space
+    // is kerning on the *preceding* character (no spacer character is ever
+    // injected — see RCTApplyInlineBoxSpacing), so it sits just outside and
+    // has to be added back here.
+    CGFloat leading = fragment.leadingInlineSpace();
+    boundingRect.origin.x -= leading;
+    boundingRect.size.width += leading;
+
+    // Block-axis padding and borders are part of the border box too. They
+    // deliberately do NOT grow the line box (CSS2 §10.6.1 — they overflow it),
+    // so the glyph bounds TextKit returns never include them, but the element
+    // still reports them as its own box.
+    const auto blockAxis = fragment.blockAxisBoxEdges();
+    boundingRect.origin.y -= blockAxis.top;
+    boundingRect.size.height += blockAxis.top + blockAxis.bottom;
+
+    rects.push_back(
+        facebook::react::Rect{
+            .origin = {.x = (Float)boundingRect.origin.x, .y = (Float)boundingRect.origin.y},
+            .size = {.width = (Float)boundingRect.size.width, .height = (Float)boundingRect.size.height}});
+
+    location += length;
+  }
+
+  return rects;
+}
+
 - (CGRect)drawingFrameForAttributedString:(const AttributedString &)attributedString
                       paragraphAttributes:(ParagraphAttributes)paragraphAttributes
                                     frame:(CGRect)frame
