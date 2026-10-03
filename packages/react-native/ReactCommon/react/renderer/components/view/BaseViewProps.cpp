@@ -330,6 +330,16 @@ BaseViewProps::BaseViewProps(
           (Float)3)),
       cursor(
           convertRawProp(context, rawProps, "cursor", sourceProps.cursor, {})),
+      // Only meaningful when a View paints its own text, so it costs nothing
+      // to parse when that cannot happen.
+      userSelect(
+          stringChildrenEnabled ? convertRawProp(
+                                      context,
+                                      rawProps,
+                                      "userSelect",
+                                      sourceProps.userSelect,
+                                      {})
+                                : sourceProps.userSelect),
       boxShadow(convertRawProp(
           context,
           rawProps,
@@ -581,6 +591,7 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(collapsableChildren);
     RAW_SET_PROP_SWITCH_CASE_BASIC(removeClippedSubviews);
     RAW_SET_PROP_SWITCH_CASE_BASIC(cursor);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(userSelect);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineColor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineOffset);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineStyle);
