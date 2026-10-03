@@ -83,6 +83,9 @@ internal object TextLayoutManager {
   const val AS_KEY_FRAGMENTS: Int = 2
   const val AS_KEY_CACHE_ID: Int = 3
   const val AS_KEY_BASE_ATTRIBUTES: Int = 4
+  // The owning anonymous run box's tag; present only on text-run content.
+  // Keys the measure->mount layout handoff.
+  const val AS_KEY_RUN_TAG: Int = 5
 
   // constants for Fragment serialization
   const val FR_KEY_STRING: Int = 0
@@ -1662,7 +1665,13 @@ internal object TextLayoutManager {
     } else {
       val baseTextAttributes =
           TextAttributeProps.fromMapBuffer(attributedString.getMapBuffer(AS_KEY_BASE_ATTRIBUTES))
-      paint = scratchPaintWithAttributes(baseTextAttributes, assets, fontWeightAdjustment)
+      val scratch = scratchPaintWithAttributes(baseTextAttributes, assets, fontWeightAdjustment)
+      // A run-tagged layout outlives the measurement (the run handoff parks
+      // it for mounting), and Layout retains its paint — it cannot share the
+      // thread-local scratch paint the next measurement will mutate.
+      paint =
+          if (attributedString.contains(AS_KEY_RUN_TAG)) TextPaint().apply { set(scratch) }
+          else scratch
     }
 
     return createLayout(
@@ -2102,6 +2111,18 @@ internal object TextLayoutManager {
             textEffectRegistry,
             floatExclusionsDip,
         )
+
+    if (attributedString.contains(AS_KEY_RUN_TAG)) {
+      // Park this run's layout for the mounting layer: the alternative is
+      // rebuilding the identical spannable + layout on the UI thread at
+      // mount.
+      RunLayoutHandoff.store(
+          attributedString.getInt(AS_KEY_RUN_TAG),
+          attributedString,
+          layout,
+          PixelUtil.getDisplayMetricDensity(),
+      )
+    }
 
     val maximumNumberOfLines =
         if (paragraphAttributes.contains(PA_KEY_MAX_NUMBER_OF_LINES))

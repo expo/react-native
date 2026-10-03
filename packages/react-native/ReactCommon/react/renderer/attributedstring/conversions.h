@@ -1284,6 +1284,9 @@ constexpr static MapBuffer::Key AS_KEY_STRING = 1;
 constexpr static MapBuffer::Key AS_KEY_FRAGMENTS = 2;
 constexpr static MapBuffer::Key AS_KEY_CACHE_ID = 3;
 constexpr static MapBuffer::Key AS_KEY_BASE_ATTRIBUTES = 4;
+// The owning anonymous run box's tag, present only on text-run content. It keys
+// the measure->mount layout handoff.
+constexpr static MapBuffer::Key AS_KEY_RUN_TAG = 5;
 
 // constants for Fragment serialization
 constexpr static MapBuffer::Key FR_KEY_STRING = 0;
@@ -1653,7 +1656,14 @@ inline MapBuffer toMapBuffer(const AttributedString::Fragment &fragment)
   return builder.build();
 }
 
-inline MapBuffer toMapBuffer(const AttributedString &attributedString)
+/*
+ * `runTag`: when the string is the content of an anonymous text-run box, the
+ * box's tag, written as AS_KEY_RUN_TAG. It keys the measure->mount layout
+ * handoff; both the measurement path and the ViewState run serialization must
+ * pass it so the two buffers stay byte-comparable for the mount-side content
+ * check.
+ */
+inline MapBuffer toMapBuffer(const AttributedString &attributedString, Tag runTag = 0)
 {
   auto fragmentsBuilder = MapBufferBuilder();
 
@@ -1670,6 +1680,9 @@ inline MapBuffer toMapBuffer(const AttributedString &attributedString)
   builder.putMapBuffer(AS_KEY_BASE_ATTRIBUTES, toMapBuffer(attributedString.getBaseTextAttributes()));
   auto fragmentsMap = fragmentsBuilder.build();
   builder.putMapBuffer(AS_KEY_FRAGMENTS, fragmentsMap);
+  if (runTag != 0) {
+    builder.putInt(AS_KEY_RUN_TAG, runTag);
+  }
   return builder.build();
 }
 

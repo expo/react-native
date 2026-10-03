@@ -33,6 +33,7 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.UiThreadUtil.assertOnUiThread
 import com.facebook.react.bridge.UiThreadUtil.runOnUiThread
 import com.facebook.react.common.ReactConstants.TAG
+import com.facebook.react.common.mapbuffer.MapBuffer
 import com.facebook.react.config.ReactFeatureFlags
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.touch.OnInterceptTouchEventListener
@@ -208,8 +209,10 @@ public open class ReactViewGroup public constructor(context: Context?) :
     childrenRemovedWhileTransitioning = null
     nativeBackgroundMap = null
     nativeForegroundMap = null
-    // A recycled view must not paint the previous occupant's text runs.
+    // A recycled view must not paint (or dedupe against) the previous
+    // occupant's text runs.
     textRunLayouts = null
+    mountedTextRunsState = null
   }
 
   internal open fun recycleView() {
@@ -1024,6 +1027,14 @@ public open class ReactViewGroup public constructor(context: Context?) :
    */
   private var textRunLayouts: List<TextRunLayout>? = null
   private var nextTextRunToDraw = 0
+
+  /**
+   * The serialized ViewState the current [textRunLayouts] were built from. Fabric can deliver the
+   * same state more than once (initial mount plus the state-update mount item of the very commit
+   * that computed the runs); comparing against this lets `updateState` keep the mounted layouts
+   * instead of rebuilding identical ones on the UI thread.
+   */
+  @JvmField internal var mountedTextRunsState: MapBuffer? = null
 
   /**
    * The theme's primary text color, which text with no color of its own draws in (CSS's

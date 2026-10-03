@@ -129,7 +129,13 @@ TextMeasurement doMeasure(
   // TODO: This is suss, and not at the right layer
   maximumSize.height = std::numeric_limits<Float>::infinity();
 
-  auto attributedStringMap = toMapBuffer(attributedString);
+  // The run tag rides inside the attributed-string buffer: it tells the Java
+  // side to park the layout it builds for this measurement so the mounting
+  // layer can reuse it instead of rebuilding on the UI thread, and it keeps
+  // this buffer byte-identical to the ViewState run serialization for the
+  // mount-side content check (run-layout-reuse-plan.md).
+  auto attributedStringMap =
+      toMapBuffer(attributedString, layoutContext.runTag);
   auto paragraphAttributesMap = toMapBuffer(paragraphAttributes);
 
   auto size = measureText(
@@ -219,9 +225,15 @@ TextMeasurement TextLayoutManager::measure(
     return measurement;
   };
 
+  // A run-tagged measure must actually reach Java even for repeated content:
+  // its side effect — parking the built layout for the mounting layer — is
+  // the point. A measure-cache hit here would skip the parking and force the
+  // mount to rebuild the layout on the UI thread; redoing the build on this
+  // (background) thread instead is the cheaper side of that trade.
   auto measurement =
       (ReactNativeFeatureFlags::disableTextLayoutManagerCacheAndroid() ||
-       ReactNativeFeatureFlags::enablePreparedTextLayout())
+       ReactNativeFeatureFlags::enablePreparedTextLayout() ||
+       layoutContext.runTag != 0)
       ? measureText()
       : textMeasureCache_.get(
             {.attributedString = attributedString,
