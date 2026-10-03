@@ -7,7 +7,10 @@
 
 package com.facebook.react.views.view
 
+import android.graphics.Paint
 import android.graphics.Rect
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.view.View
 import com.facebook.common.logging.FLog
 import com.facebook.react.bridge.Dynamic
@@ -25,7 +28,9 @@ import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PointerEvents
 import com.facebook.react.uimanager.ReactAxOrderHelper
+import com.facebook.react.uimanager.ReactStylesDiffMap
 import com.facebook.react.uimanager.Spacing
+import com.facebook.react.uimanager.StateWrapper
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.ViewProps
@@ -38,6 +43,8 @@ import com.facebook.react.uimanager.style.BackgroundSize
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
+import com.facebook.react.views.text.TextLayoutManager
+import kotlin.math.ceil
 
 /** View manager for AndroidViews (plain React Views). */
 @ReactModule(name = ReactViewManager.REACT_CLASS)
@@ -467,6 +474,60 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
 
   public override fun createViewInstance(context: ThemedReactContext): ReactViewGroup =
       ReactViewGroup(context)
+
+  /**
+   * Paints the View's anonymous inline formatting contexts. The native `ViewState` carries the
+   * laid-out text runs as a MapBuffer (see `ViewState::getMapBuffer`); here each run's attributed
+   * string becomes a [StaticLayout] positioned at the run's frame, handed to the [ReactViewGroup]
+   * to draw. Empty for Views with no text children.
+   */
+  override fun updateState(
+      view: ReactViewGroup,
+      props: ReactStylesDiffMap,
+      stateWrapper: StateWrapper,
+  ): Any? {
+    val state = stateWrapper.stateDataMapBuffer
+    // ViewState MapBuffer keys (mirror ViewState.getMapBuffer): 0 = list of runs; per run,
+    // 0 = attributed string, 1..3 = left/top/width (dips), 5 = document order.
+    if (state == null || !state.contains(0)) {
+      view.setTextRunLayouts(null)
+      return null
+    }
+    val runMapBuffers = state.getMapBufferList(0)
+    if (runMapBuffers.isEmpty()) {
+      view.setTextRunLayouts(null)
+      return null
+    }
+    val assets = view.context.assets
+    val runs = ArrayList<ReactViewGroup.TextRunLayout>(runMapBuffers.size)
+    for (runMb in runMapBuffers) {
+      val attributedString = runMb.getMapBuffer(0)
+      // Pixel-align the run origin at the last SHARED moment: dp -> px is where density makes
+      // nearly every coordinate fractional, and TextRunLayout.left/top feed BOTH drawing
+      // (canvas.translate) and touch mapping (touchX - run.left), so rounding here keeps them
+      // consistent by construction — the same principle as the iOS containerFrame accessor.
+      // Integral canvas translation puts hinted glyphs on the pixel grid and keeps 1px decorations
+      // from anti-aliasing into a blurry 2px band at a fractional baseline.
+      val left = Math.round(runMb.getDouble(1).dpToPx()).toFloat()
+      val top = Math.round(runMb.getDouble(2).dpToPx()).toFloat()
+      val width = runMb.getDouble(3).dpToPx()
+      val documentOrder = runMb.getInt(5)
+      val spannable = TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
+      val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+      val layout =
+          StaticLayout.Builder.obtain(
+                  spannable,
+                  0,
+                  spannable.length,
+                  paint,
+                  ceil(width.toDouble()).toInt(),
+              )
+              .build()
+      runs.add(ReactViewGroup.TextRunLayout(layout, left, top, documentOrder))
+    }
+    view.setTextRunLayouts(runs)
+    return null
+  }
 
   override fun getCommandsMap(): MutableMap<String, Int> =
       mutableMapOf(HOTSPOT_UPDATE_KEY to CMD_HOTSPOT_UPDATE, "setPressed" to CMD_SET_PRESSED)
