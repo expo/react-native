@@ -756,6 +756,9 @@ dependencies {
   compileOnly(project(":packages:react-native:ReactAndroid:hermes-engine"))
 
   implementation(libs.androidx.collection)
+  // Fresco reads a HEIF's EXIF orientation through ExifInterface but doesn't
+  // declare it, so without it the first HEIC image throws NoClassDefFoundError
+  implementation(libs.androidx.exifinterface)
 
   testImplementation(libs.junit)
   testImplementation(libs.assertj)
