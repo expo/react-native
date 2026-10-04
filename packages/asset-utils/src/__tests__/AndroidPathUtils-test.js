@@ -72,9 +72,28 @@ describe('getAndroidResourceFolderName', () => {
     expect(getAndroidResourceFolderName(NON_DRAWABLE_ASSET, 1)).toBe('raw');
     expect(getAndroidResourceFolderName(NON_DRAWABLE_ASSET, 1.25)).toBe('raw');
   });
+
+  test.each(['heic', 'heif'])(
+    'keeps %s images out of drawable resources rejected by AAPT',
+    type => {
+      expect(getAndroidResourceFolderName({...DRAWABLE_ASSET, type}, 1)).toBe(
+        'raw',
+      );
+    },
+  );
 });
 
 describe('getAndroidResourceIdentifier', () => {
+  test('distinguishes raw assets with the same basename and different formats', () => {
+    const asset = {httpServerLocation: '/assets/color', name: 'pq'};
+    expect(getAndroidResourceIdentifier({...asset, type: 'heic'})).toBe(
+      'color_pq_heic',
+    );
+    expect(getAndroidResourceIdentifier({...asset, type: 'avif'})).toBe(
+      'color_pq_avif',
+    );
+  });
+
   test('encodes folder structure in the resource name', () => {
     expect(
       getAndroidResourceIdentifier({

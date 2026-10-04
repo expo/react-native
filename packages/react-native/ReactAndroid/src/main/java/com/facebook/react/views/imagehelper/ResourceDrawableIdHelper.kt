@@ -43,7 +43,13 @@ public object ResourceDrawableIdHelper {
   }
 
   private fun addDrawableId(context: Context, normalizedName: String): Int {
-    val newId = context.resources.getIdentifier(normalizedName, "drawable", context.packageName)
+    // Formats such as HEIC can be decoded at runtime but AAPT rejects them in drawable folders.
+    // Metro bundles those images as raw resources, preserving their original bytes.
+    val drawableId =
+        context.resources.getIdentifier(normalizedName, "drawable", context.packageName)
+    val newId =
+        if (drawableId != 0) drawableId
+        else context.resources.getIdentifier(normalizedName, "raw", context.packageName)
     resourceDrawableIdMap[normalizedName] = newId
     return newId
   }
