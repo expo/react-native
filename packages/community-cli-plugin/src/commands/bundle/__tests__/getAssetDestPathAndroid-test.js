@@ -72,7 +72,7 @@ describe('getAssetDestPathAndroid', () => {
     };
 
     expect(getAssetDestPathAndroid(asset, 1)).toBe(
-      path.normalize('raw/app_test_video.mp4'),
+      path.normalize('raw/app_test_video_mp4.mp4'),
     );
   });
 

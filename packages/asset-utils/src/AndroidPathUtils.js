@@ -47,11 +47,11 @@ function getAndroidAssetSuffix(scale /*: number */) /*: string */ {
   throw new Error('no such scale ' + scale.toString());
 }
 
+// Only formats accepted by AAPT belong in drawable folders. Other decodable
+// formats, including HEIC and HEIF, must be packaged as raw resources.
 // See https://developer.android.com/guide/topics/resources/drawable-resource.html
 const drawableFileTypes /*: Set<string> */ = new Set([
   'gif',
-  'heic',
-  'heif',
   'jpeg',
   'jpg',
   'ktx',
@@ -74,7 +74,13 @@ function getAndroidResourceFolderName(
 function getAndroidResourceIdentifier(
   asset /*: PackagerAsset */,
 ) /*: string */ {
-  return (getBasePath(asset) + '/' + asset.name)
+  // Android ignores the extension when assigning a resource ID. Raw formats
+  // share one folder, so keep their types in the name (for example PQ HEIC
+  // and AVIF fixtures with the same basename).
+  const name = drawableFileTypes.has(asset.type)
+    ? asset.name
+    : `${asset.name}_${asset.type}`;
+  return (getBasePath(asset) + '/' + name)
     .toLowerCase()
     .replace(/\//g, '_') // Encode folder structure in file name
     .replace(/([^a-z0-9_])/g, '') // Remove illegal chars
