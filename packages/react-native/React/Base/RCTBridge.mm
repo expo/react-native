@@ -62,6 +62,7 @@ NSSet<NSString *> *getCoreModuleClasses(void)
       @"RCTAlertManager",
       @"RCTAppearance",
       @"RCTAppState",
+      @"RCTDisplayCapabilities",
       @"RCTClipboard",
       @"RCTDeviceInfo",
       @"RCTDevLoadingView",

@@ -34,6 +34,7 @@ Class RCTActionSheetManagerCls(void) __attribute__((used));
 Class RCTAlertManagerCls(void) __attribute__((used));
 Class RCTAppStateCls(void) __attribute__((used));
 Class RCTAppearanceCls(void) __attribute__((used));
+Class RCTDisplayCapabilitiesCls(void) __attribute__((used));
 Class RCTClipboardCls(void) __attribute__((used));
 Class RCTDevLoadingViewCls(void) __attribute__((used));
 Class RCTDevMenuCls(void) __attribute__((used));
