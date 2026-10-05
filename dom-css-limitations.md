@@ -133,6 +133,12 @@ the two wrongs available. `autocorrect` on its own is exact on both platforms;
 it is only the combination `spellcheck="false" autocorrect="on"` that Android
 cannot express.
 
+**`android-no-spellcheck-on-email-or-url`** — same file
+Related and from the same predicate: `isSuggestionsEnabled()` also returns
+false for any variation other than the plain text ones, so an
+`<input type="email">` or `type="url"` is never spell-checked on Android. HTML
+lists both among the types a user agent *should* consider checkable.
+
 A platform wall, like the entry above it: the predicate is `TextView`'s and
 takes no argument. Nothing to schedule.
 
@@ -196,7 +202,6 @@ complete. The check now runs both ways, so an unindexed marker fails a test
 rather than going quiet.
 
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
-- `android-img-is-a-plain-view` — limitation, `ReactAndroid/src/main/java/com/facebook/react/fabric/mounting/mountitems/FabricNameComponentMapping.kt`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
