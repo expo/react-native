@@ -195,6 +195,11 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   value, but backgrounds, borders and text are SDR layers, so they draw no
   brighter than white. Deferred: an EDR fill layer, governed by
   `dynamic-range-limit`.
+- **`DOM-CSS-LIMITATION(gradient-interpolation-needs-percent-stops)` — a
+  gradient with a length stop or a hint interpolates in sRGB.** Neither
+  platform's shader interpolates in a chosen space, so the stretches are
+  expanded into computed stops, which can only be placed between percentages.
+  A `10px` position or a transition hint leaves the gradient to the platform.
 
 ## Performance
 
