@@ -17,6 +17,8 @@ import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
+import android.os.Build
+import androidx.annotation.ColorLong
 import androidx.annotation.RequiresApi
 import com.facebook.react.uimanager.FilterHelper
 import com.facebook.react.uimanager.PixelUtil.dpToPx
@@ -38,6 +40,9 @@ private const val BLUR_RADIUS_SIGMA_SCALE = 0.5f
 internal class OutsetBoxShadowDrawable(
     private val context: Context,
     private val shadowColor: Int,
+    // The color in its own color space, painted where the OS can; `shadowColor` is its sRGB
+    // approximation
+    @ColorLong private val shadowColorLong: Long? = null,
     private val offsetX: Float,
     private val offsetY: Float,
     private val blurRadius: Float,
@@ -51,6 +56,9 @@ internal class OutsetBoxShadowDrawable(
   private val shadowPaint =
       Paint().apply {
         color = shadowColor
+        if (shadowColorLong != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          setColor(shadowColorLong)
+        }
         val convertedBlurRadius = FilterHelper.sigmaToRadius(blurRadius * BLUR_RADIUS_SIGMA_SCALE)
         if (convertedBlurRadius > 0) {
           maskFilter = BlurMaskFilter(convertedBlurRadius, BlurMaskFilter.Blur.NORMAL)

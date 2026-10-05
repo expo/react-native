@@ -17,6 +17,8 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
+import android.os.Build
+import androidx.annotation.ColorLong
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.style.BorderInsets
@@ -45,12 +47,33 @@ internal class BackgroundDrawable(
 
   var backgroundColor: Int = Color.TRANSPARENT
     set(value) {
-      if (field != value) {
+      if (field != value || backgroundColorLong != null) {
         field = value
+        backgroundColorLong = null
         backgroundPaint.color = value
         invalidateSelf()
       }
     }
+
+  /**
+   * The background in its own space, for a color an integer can't hold; [backgroundColor] holds
+   * its sRGB approximation, and setting it clears this
+   */
+  @ColorLong
+  var backgroundColorLong: Long? = null
+    private set
+
+  fun setBackgroundColorLong(@ColorLong color: Long) {
+    if (backgroundColorLong == color) {
+      return
+    }
+    backgroundColor = Color.toArgb(color)
+    backgroundColorLong = color
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      backgroundPaint.setColor(color)
+    }
+    invalidateSelf()
+  }
 
   private var backgroundRect: RectF = RectF()
   private var backgroundRenderPath: Path? = null
