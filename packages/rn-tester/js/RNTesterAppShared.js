@@ -12,6 +12,7 @@ import type {ContentInsets} from './components/RNTesterTabsIOSNativeComponent';
 import type {RNTesterModuleInfo, ScreenTypes} from './types/RNTesterTypes';
 
 import ReportFullyDrawnView from '../ReportFullyDrawnView/ReportFullyDrawnView';
+import {TopLayerHost} from './astryx/overlay/TopLayer';
 import RNTesterModuleContainer from './components/RNTesterModuleContainer';
 import RNTesterModuleList from './components/RNTesterModuleList';
 import RNTesterNavBar, {navBarHeight} from './components/RNTesterNavbar';
@@ -344,55 +345,67 @@ const RNTesterApp = ({
   if (Platform.OS === 'ios') {
     return (
       <RNTesterThemeContext.Provider value={theme}>
-        <RNTesterTabsIOS
-          style={styles.container}
-          tabs={IOS_TABS}
-          selectedTab={screen ?? Screens.COMPONENTS}
-          tabBarHidden={shouldHideChrome}
-          onTabPress={event => {
-            const tab = IOS_TABS.find(t => t.key === event.nativeEvent.key);
-            if (tab != null) {
-              handleNavBarPress({screen: tab.key});
-            }
-          }}
-          onContentInsetsChange={event => setContentInsets(event.nativeEvent)}>
-          <View
-            style={StyleSheet.compose(styles.container, {
-              backgroundColor: theme.GroupedBackgroundColor,
-              paddingLeft: contentInsets.left,
-              paddingRight: contentInsets.right,
-              paddingBottom: contentInsets.bottom,
-            })}>
+        <TopLayerHost>
+          <RNTesterTabsIOS
+            style={styles.container}
+            tabs={IOS_TABS}
+            selectedTab={screen ?? Screens.COMPONENTS}
+            tabBarHidden={shouldHideChrome}
+            onTabPress={event => {
+              const tab = IOS_TABS.find(t => t.key === event.nativeEvent.key);
+              if (tab != null) {
+                handleNavBarPress({screen: tab.key});
+              }
+            }}
+            onContentInsetsChange={event =>
+              setContentInsets(event.nativeEvent)
+            }>
             <View
-              style={{
-                backgroundColor: theme.SystemBackgroundColor,
-                paddingTop: contentInsets.top,
-              }}>
-              {titleBar}
+              style={StyleSheet.compose(styles.container, {
+                backgroundColor: theme.GroupedBackgroundColor,
+                paddingLeft: contentInsets.left,
+                paddingRight: contentInsets.right,
+                paddingBottom: contentInsets.bottom,
+              })}>
+              <View
+                style={{
+                  backgroundColor: theme.SystemBackgroundColor,
+                  paddingTop: contentInsets.top,
+                }}>
+                {titleBar}
+              </View>
+              <View style={styles.container}>{content}</View>
             </View>
-            <View style={styles.container}>{content}</View>
-          </View>
-        </RNTesterTabsIOS>
-        <ReportFullyDrawnView />
+          </RNTesterTabsIOS>
+          <ReportFullyDrawnView />
+        </TopLayerHost>
       </RNTesterThemeContext.Provider>
     );
   }
 
   return (
     <RNTesterThemeContext.Provider value={theme}>
-      {Platform.OS === 'android' ? <StatusBar barStyle="dark-content" /> : null}
-      {titleBar}
-      {content}
-      {!shouldHideChrome && (
-        <View style={styles.bottomNavbar}>
-          <RNTesterNavBar
-            screen={screen || Screens.COMPONENTS}
-            isExamplePageOpen={!!activeModule}
-            handleNavBarPress={handleNavBarPress}
-          />
-        </View>
-      )}
-      <ReportFullyDrawnView />
+      {/* The top layer is document-level on the web: an overlay paints above
+          everything and positions against the VIEWPORT, not against whatever
+          box happens to host it. Mounting it at the app root is what makes
+          `showModal()`'s centring mean the screen's centre. */}
+      <TopLayerHost>
+        {Platform.OS === 'android' ? (
+          <StatusBar barStyle="dark-content" />
+        ) : null}
+        {titleBar}
+        {content}
+        {!shouldHideChrome && (
+          <View style={styles.bottomNavbar}>
+            <RNTesterNavBar
+              screen={screen || Screens.COMPONENTS}
+              isExamplePageOpen={!!activeModule}
+              handleNavBarPress={handleNavBarPress}
+            />
+          </View>
+        )}
+        <ReportFullyDrawnView />
+      </TopLayerHost>
     </RNTesterThemeContext.Provider>
   );
 };
