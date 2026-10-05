@@ -2064,6 +2064,11 @@ class facebook::react::ElementColorInputShadowNode : public facebook::react::Con
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext&, const facebook::react::LayoutConstraints& layoutConstraints) const override;
 }
 
+class facebook::react::ElementControlMetricsBinding : public facebook::jni::JavaClass<facebook::react::ElementControlMetricsBinding> {
+  public static constexpr auto kJavaDescriptor;
+  public static void registerNatives();
+}
+
 class facebook::react::ElementControlSizeState {
   public ElementControlSizeState() = default;
   public ElementControlSizeState(const facebook::react::ElementControlSizeState&, folly::dynamic data);
