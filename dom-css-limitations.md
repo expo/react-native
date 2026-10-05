@@ -208,6 +208,11 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   `oklch(0.7 0.1 none)` keeps the other end's hue. Here `none` is 0 from
   parsing on, so it turns from hue 0. Deferred: it needs the parsed value to
   keep which channels are missing.
+- **`DOM-CSS-LIMITATION(hdr-colors-draw-at-sdr-white)` — an HDR color draws
+  at SDR white.** `rec2100-pq` and values above 1 in a linear space keep their
+  value, but backgrounds, borders and text are SDR layers, so they draw no
+  brighter than white. Deferred: an EDR fill layer, governed by
+  `dynamic-range-limit`.
 
 ## Performance
 
@@ -282,7 +287,9 @@ had a marker, but forty-eight markers had no entry, and the file still read as
 complete. The check now runs both ways, so an unindexed marker fails a test
 rather than going quiet.
 
+- `action-sheet-tints-are-srgb` — limitation, `packages/react-native/Libraries/ActionSheetIOS/ActionSheetIOS.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
+- `animated-colors-interpolate-in-srgb` — limitation, `packages/react-native/Libraries/Animated/nodes/AnimatedInterpolation.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
