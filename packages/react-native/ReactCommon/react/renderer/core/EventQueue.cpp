@@ -90,6 +90,10 @@ void EventQueue::experimental_flushSync(Tag tag) const {
   eventBeat_->requestSynchronous(tag);
 }
 
+void EventQueue::experimental_flushSyncNow() const {
+  eventBeat_->flushSynchronouslyNow();
+}
+
 void EventQueue::onBeat(jsi::Runtime& runtime) const {
   flushStateUpdates();
   flushEvents(runtime);
