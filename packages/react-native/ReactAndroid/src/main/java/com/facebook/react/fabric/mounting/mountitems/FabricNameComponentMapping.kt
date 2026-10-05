@@ -21,17 +21,27 @@ internal object FabricNameComponentMapping {
           "SelectableParagraph" to "RCTSelectableText",
           "Text" to "RCTText",
           "RawText" to "RCTRawText",
-          // DOM-CSS-LIMITATION(android-img-is-a-plain-view): <img> mounts as a
-          // plain View rather than RCTImageView, which expects a different
-          // `source` shape, so it lays out but draws nothing on Android
+          // Intrinsic DOM elements (expo-intrinsics).
+          // The box-backed flavor an element is swapped onto when its display
+          // generates a box (ElementBoxShadowNode.h). A plain view: everything
+          // that distinguishes it is layout, not drawing.
           "element-box" to "RCTView",
-          "img" to "RCTView",
-          // Inline elements draw nothing themselves, but `TextShadowNode` sets
-          // `FormsView` on Android and every inline element is one, so they are
-          // preallocated like a nested <Text> and need a ViewManager; without
-          // this entry preallocation throws "Can't find ViewManager". Every
-          // unregistered tag resolves to this one component, so one entry covers
-          // them all.
+          // <img> shares `ImageShadowNode` in C++ (see `ImgTagComponentName`), so it
+          // mounts the same view the framework's own <Image> does; its view config
+          // sends `source` as a list because `RCTImageView.setSource` takes a
+          // `ReadableArray`
+          "img" to "RCTImageView",
+          // The inline text intrinsics. Their content is absorbed into the
+          // container's text runs and the mounted view draws nothing — but Android
+          // still needs one, because `TextShadowNode` sets `FormsView` under
+          // `#ifdef ANDROID` and every intrinsic is a `TextShadowNode` subclass, so
+          // they are preallocated exactly like a nested <Text>. Without a mapping
+          // that preallocation throws "Can't find ViewManager 'b'" and the whole
+          // surface red-boxes. They therefore map where "Text" maps.
+          //
+          // This list is closed even though any lowercase tag is valid JSX: every
+          // unregistered tag resolves to the single "unknown" component (see
+          // the element catalog), which is why one entry covers all of them.
           "inline-text" to "RCTText",
           "ActivityIndicatorView" to "AndroidProgressBar",
           "ShimmeringView" to "RKShimmeringView",
