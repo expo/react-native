@@ -35,10 +35,10 @@ import org.robolectric.RobolectricTestRunner
  * text placed *before* an absolutely-positioned box showed through the box instead of being hidden
  * under it (the demo's "UNDER"/"OVER" case).
  *
- * Renders a [ReactViewGroup] with one opaque box child covering the whole area and one text run, and
- * asserts real pixels (Robolectric native graphics): a run with documentOrder 0 (before the box) is
- * occluded; a run with documentOrder 1 (after the box) is visible. The run paints a solid black
- * block via a [ReplacementSpan] so the assertion does not depend on font glyph rasterization.
+ * Renders a [ReactViewGroup] with one opaque box child covering the whole area and one text run,
+ * and asserts real pixels (Robolectric native graphics): a run with documentOrder 0 (before the
+ * box) is occluded; a run with documentOrder 1 (after the box) is visible. The run paints a solid
+ * black block via a [ReplacementSpan] so the assertion does not depend on font glyph rasterization.
  *
  * With the pre-fix behavior (all runs drawn after all children) the documentOrder-0 case would
  * incorrectly show the run, failing [textRunBeforeBlockChildIsPaintedUnderIt].
@@ -67,6 +67,69 @@ class ReactViewGroupTextRunPaintOrderTest {
     assertThat(hasRunInk(render(documentOrder = 1))).isTrue()
   }
 
+  @Test
+  fun accessibilityHostDoesNotChangeReactChildIndices() {
+    val rvg = ReactViewGroup(context)
+    val box = View(context)
+    rvg.addView(box)
+    val manager = ReactViewManager()
+
+    rvg.setTextRunLayouts(
+        listOf(
+            ReactViewGroup.TextRunLayout(
+                solidBlackRunLayout(),
+                0f,
+                0f,
+                0,
+                listOf(accessibilityItem()),
+            )
+        )
+    )
+
+    assertThat(rvg.childCount).isEqualTo(2) // React child + private host.
+    assertThat(manager.getChildCount(rvg)).isEqualTo(1)
+    assertThat(manager.getChildAt(rvg, 0)).isSameAs(box)
+
+    rvg.setTextRunLayouts(null)
+    assertThat(rvg.childCount).isEqualTo(1)
+    assertThat(manager.getChildCount(rvg)).isEqualTo(1)
+  }
+
+  @Test
+  fun legacyRunWithoutSemanticPayloadDoesNotCreateAccessibilityHost() {
+    val rvg = ReactViewGroup(context)
+    rvg.setTextRunLayouts(listOf(ReactViewGroup.TextRunLayout(solidBlackRunLayout(), 0f, 0f, 0)))
+
+    assertThat(rvg.childCount).isZero()
+  }
+
+  @Test
+  fun accessibilityHostStaysOutsideClippingChildManagement() {
+    val rvg = ReactViewGroup(context)
+    val box = View(context)
+    rvg.addView(box)
+    rvg.setTextRunLayouts(
+        listOf(
+            ReactViewGroup.TextRunLayout(
+                solidBlackRunLayout(),
+                0f,
+                0f,
+                0,
+                listOf(accessibilityItem()),
+            )
+        )
+    )
+    val manager = ReactViewManager()
+
+    manager.setRemoveClippedSubviews(rvg, true)
+    assertThat(manager.getChildCount(rvg)).isEqualTo(1)
+    assertThat(manager.getChildAt(rvg, 0)).isSameAs(box)
+
+    manager.removeAllViews(rvg)
+    assertThat(manager.getChildCount(rvg)).isZero()
+    assertThat(rvg.childCount).isEqualTo(1) // Private accessibility host remains.
+  }
+
   private fun render(documentOrder: Int): Bitmap {
     val rvg = ReactViewGroup(context)
 
@@ -76,7 +139,8 @@ class ReactViewGroupTextRunPaintOrderTest {
     measureAndLayout(box)
 
     rvg.setTextRunLayouts(
-        listOf(ReactViewGroup.TextRunLayout(solidBlackRunLayout(), 0f, 0f, documentOrder)))
+        listOf(ReactViewGroup.TextRunLayout(solidBlackRunLayout(), 0f, 0f, documentOrder))
+    )
 
     measureAndLayout(rvg)
     return createBitmap(size, size).also { rvg.draw(Canvas(it)) }
@@ -94,15 +158,39 @@ class ReactViewGroupTextRunPaintOrderTest {
     return StaticLayout.Builder.obtain(text, 0, text.length, TextPaint(), size).build()
   }
 
+  private fun accessibilityItem(): InlineAccessibilityItem =
+      InlineAccessibilityItem(
+          kind = 0,
+          tag = 0,
+          label = "hello",
+          role = "text",
+          hint = "",
+          language = "",
+          disabled = false,
+          selected = false,
+          checked = 3,
+          fragmentIndices = intArrayOf(0),
+          liveRegion = 0,
+          busy = false,
+          expanded = null,
+          valueMin = null,
+          valueMax = null,
+          valueNow = null,
+          valueText = null,
+          actions = emptyList(),
+      )
+
   /** True if any pixel is black-ish (the run) rather than red (the box) or transparent. */
   private fun hasRunInk(bitmap: Bitmap): Boolean {
     for (y in 0 until bitmap.height) {
       for (x in 0 until bitmap.width) {
         val color = bitmap[x, y]
-        if (Color.alpha(color) != 0 &&
-            Color.red(color) < 80 &&
-            Color.green(color) < 80 &&
-            Color.blue(color) < 80) {
+        if (
+            Color.alpha(color) != 0 &&
+                Color.red(color) < 80 &&
+                Color.green(color) < 80 &&
+                Color.blue(color) < 80
+        ) {
           return true
         }
       }
@@ -137,7 +225,13 @@ class ReactViewGroupTextRunPaintOrderTest {
         bottom: Int,
         paint: Paint,
     ) {
-      canvas.drawRect(x, top.toFloat(), x + size, bottom.toFloat(), Paint().apply { color = Color.BLACK })
+      canvas.drawRect(
+          x,
+          top.toFloat(),
+          x + size,
+          bottom.toFloat(),
+          Paint().apply { color = Color.BLACK },
+      )
     }
   }
 }

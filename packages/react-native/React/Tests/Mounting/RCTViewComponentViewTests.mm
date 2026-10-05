@@ -417,6 +417,17 @@ static RCTViewComponentView *makeViewWithOutlineStyle(OutlineStyle outlineStyle)
   XCTAssertTrue(
       CGRectEqualToRect(frameB, runFrame), @"paint geometry must not depend on when layout metrics are applied");
   XCTAssertTrue(CGRectEqualToRect(frameA, frameB), @"update order must not change the run geometry");
+
+  // The run is not an extra semantic stop: the owning view presents its leaves.
+  // Bare text produces exactly one static-text leaf with the authored content.
+  NSArray *runViews = [viewA valueForKey:@"_textRunViews"];
+  XCTAssertEqual([runViews.firstObject accessibilityElements].count, 0u);
+  NSArray<UIAccessibilityElement *> *elements = [viewA accessibilityElements];
+  XCTAssertEqual(elements.count, 1u);
+  XCTAssertEqualObjects(elements.firstObject.accessibilityLabel, @"hello");
+  XCTAssertTrue(elements.firstObject.accessibilityTraits & UIAccessibilityTraitStaticText);
+  XCTAssertEqual(elements.firstObject.accessibilityContainer, viewA);
+  XCTAssertEqualObjects([runViews.firstObject accessibilityLabel], @"hello");
 }
 
 @end
