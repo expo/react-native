@@ -224,6 +224,13 @@ const validAttributesForNonEventProps = {
   textTransform: true,
   // `white-space`: inherited like the rest of this group.
   whiteSpace: true,
+  // `transition` (css-transitions-1). Delivered as the four longhands and
+  // zipped in the renderer, which is also where the animation runs — these
+  // never reach JavaScript again once set.
+  transitionProperty: true,
+  transitionDuration: true,
+  transitionDelay: true,
+  transitionTimingFunction: true,
 
   // @ReactProps from BaseViewManager
   backgroundColor: colorAttribute,
