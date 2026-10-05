@@ -97,10 +97,15 @@ class InlineContentShadowNode final
   TextAttributes baseTextAttributes() const
   {
     auto textAttributes = *inheritedCascade_;
-    textAttributes.layoutDirection = YGNodeLayoutGetDirection(&yogaNode_) == YGDirectionRTL
-        ? LayoutDirection::RightToLeft
-        : LayoutDirection::LeftToRight;
+    textAttributes.layoutDirection = resolvedLayoutDirection();
     return textAttributes;
+  }
+
+  /* The run's direction, as laid out. */
+  LayoutDirection resolvedLayoutDirection() const
+  {
+    return YGNodeLayoutGetDirection(&yogaNode_) == YGDirectionRTL ? LayoutDirection::RightToLeft
+                                                                  : LayoutDirection::LeftToRight;
   }
 
   /*
@@ -138,8 +143,30 @@ class InlineContentShadowNode final
      */
     std::optional<LayoutDirection> layoutDirection;
     bool hasAttachments;
+    /*
+     * The per-fragment rects this string measured to, so stamping inline
+     * elements does not lay the run out a second time. They live here rather
+     * than in a cache of their own because they describe this exact string,
+     * so the string and its rects are invalidated together.
+     *
+     * `rectsAvailableWidth` is the width they were measured under (the input
+     * that decides where fragments land) and NaN when none were taken.
+     */
+    Float rectsAvailableWidth;
+    std::vector<Rect> fragmentRects;
     AttributedString attributedString; // valid only when !hasAttachments
   };
+
+  /*
+   * Writes the content memo. One writer, so the string and the rects that
+   * describe it cannot be stored or invalidated apart.
+   */
+  void memoize(
+      const TextAttributes &textAttributes,
+      const AttributedString &attributedString,
+      bool hasAttachments,
+      const std::vector<Rect> &fragmentRects,
+      Float rectsAvailableWidth) const;
 
   /*
    * Whether a memoized build is still the one the current inputs would
@@ -155,6 +182,20 @@ class InlineContentShadowNode final
     const auto wanted = textAttributes.fontSizeMultiplier;
     return (cached == wanted || (std::isnan(cached) && std::isnan(wanted))) &&
         cachedContent_->layoutDirection == textAttributes.layoutDirection;
+  }
+
+  /*
+   * The same check given the two scalars the memo's validity depends on, so a
+   * memo hit does not first build a whole `TextAttributes`.
+   */
+  bool cachedContentMatches(Float fontSizeMultiplier, LayoutDirection layoutDirection) const
+  {
+    if (cachedContent_ == nullptr) {
+      return false;
+    }
+    const auto cached = cachedContent_->fontSizeMultiplier;
+    return (cached == fontSizeMultiplier || (std::isnan(cached) && std::isnan(fontSizeMultiplier))) &&
+        cachedContent_->layoutDirection == layoutDirection;
   }
   mutable std::shared_ptr<const CachedContent> cachedContent_;
 
@@ -236,6 +277,17 @@ class InlineContentShadowNode final
       const LayoutMetrics &ownerLayoutMetrics) const override;
 
  private:
+  /*
+   * The measure-and-stamp half of `stampInlineElementMetrics`, given a
+   * finished string, so the memoized string can be used directly instead of
+   * repeating the fold, attachment measurement and white-space collapsing.
+   */
+  std::vector<PendingInlineElementMetrics> stampFromString(
+      const AttributedString &attributedString,
+      const LayoutContext &layoutContext,
+      Point contentOrigin,
+      const LayoutMetrics &ownerLayoutMetrics) const;
+
   // The baseline of the run's first or last line.
   Float lineBaseline(const LayoutContext &layoutContext, Size size, bool lastLine) const;
 

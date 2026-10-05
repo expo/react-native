@@ -33,6 +33,7 @@
 #include <react/renderer/components/text/BaseTextProps.h>
 #include <react/renderer/components/text/BaseTextShadowNode.h>
 #include <react/renderer/components/text/TextShadowNode.h>
+#include <react/renderer/components/text/WhiteSpaceConstraints.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutContext.h>
@@ -216,10 +217,27 @@ void collapseWhitespace(AttributedString& attributedString) {
   // (collapsed) space, so consecutive whitespace — even across fragments —
   // yields a single space.
   bool pendingCollapse = true;
+  // Which fragment, if any, currently ends in a space this pass emitted.
+  //
+  // css-text-3 §4.1.1 removes a collapsible space next to a segment break, and
+  // the break may arrive in a LATER fragment than the space — `a ` followed by
+  // an inline element starting with a newline. The break can only take the
+  // space back if it knows where it went, so the emitting fragment is recorded
+  // here rather than being reachable only from inside the fragment that
+  // emitted it.
+  //
+  // An index, not a pointer or iterator: fragments are erased at the end of
+  // this function, and an index says plainly that nothing is inserted while
+  // the loop runs.
+  constexpr size_t kNoTrailingSpace = static_cast<size_t>(-1);
+  size_t trailingSpaceFragment = kNoTrailingSpace;
+  size_t fragmentIndex = 0;
   for (auto& fragment : fragments) {
+    const size_t thisFragment = fragmentIndex++;
     if (fragment.isAttachment()) {
       // A replaced element is an opaque, non-whitespace box.
       pendingCollapse = false;
+      trailingSpaceFragment = kNoTrailingSpace;
       continue;
     }
     auto whiteSpace =
@@ -231,6 +249,7 @@ void collapseWhitespace(AttributedString& attributedString) {
       // is cleared so a following normal-whitespace run does not treat the
       // preserved text as if it had ended in a collapsed space.
       pendingCollapse = false;
+      trailingSpaceFragment = kNoTrailingSpace;
       continue;
     }
     if (fragment.forcedBreak) {
@@ -239,6 +258,7 @@ void collapseWhitespace(AttributedString& attributedString) {
       // sits at the start of a new line and is dropped, which is what leaving
       // `pendingCollapse` set does.
       pendingCollapse = true;
+      trailingSpaceFragment = kNoTrailingSpace;
       continue;
     }
     const bool keepNewlines = preservesNewlines(whiteSpace);
@@ -312,6 +332,11 @@ void collapseWhitespace(AttributedString& attributedString) {
               matched--;
             }
           }
+        } else if (trailingSpaceFragment != kNoTrailingSpace) {
+          // The space is in an earlier fragment, already finalized. Taking it
+          // from there is the same removal, reaching one fragment back.
+          fragments[trailingSpaceFragment].string.pop_back();
+          trailingSpaceFragment = kNoTrailingSpace;
         }
         // emit('\n')
         if (!materialized) {
@@ -370,6 +395,15 @@ void collapseWhitespace(AttributedString& attributedString) {
       // characters were dropped. Truncate in place — no allocation.
       fragment.string.resize(matched);
     }
+
+    // Where a collapsed space ended up, for a segment break in a later
+    // fragment to take back. `pendingCollapse` distinguishes a space this pass
+    // emitted from one a preserving mode left alone; after a segment break it
+    // is also set, which the character check excludes.
+    trailingSpaceFragment = (pendingCollapse && !fragment.string.empty() &&
+                             fragment.string.back() == ' ')
+        ? thisFragment
+        : kNoTrailingSpace;
   }
 
   // Trailing edge: at most one collapsed space can remain at the end; strip it
@@ -502,7 +536,7 @@ void InlineContentShadowNode::appendListMarkerIfNeeded(
     // visibly low. See kSymbolicMarkerFontScale/-BaselineShiftEm.
     Float base = !std::isnan(marker.textAttributes.fontSize)
         ? marker.textAttributes.fontSize
-        : TextAttributes::defaultTextAttributes().fontSize;
+        : TextAttributes::initialFontSize();
     marker.string = listMarker_.text;
     marker.textAttributes.fontSize = base * kSymbolicMarkerFontScale;
     marker.textAttributes.baselineShift = base * kSymbolicMarkerBaselineShiftEm;
@@ -559,7 +593,7 @@ InlineContentShadowNode::getOutsideMarker() const {
     // once the caller right-aligns the whole thing to the content edge.
     Float base = !std::isnan(fragment.textAttributes.fontSize)
         ? fragment.textAttributes.fontSize
-        : TextAttributes::defaultTextAttributes().fontSize;
+        : TextAttributes::initialFontSize();
     fragment.string = listMarker_.text;
     auto gap = AttributedString::Fragment{};
     gap.textAttributes = fragment.textAttributes;
@@ -675,23 +709,25 @@ Float InlineContentShadowNode::lineBaseline(
     // the baseline whenever the line box is not exactly ascent+descent tall.
     // The bottom minus the descender is where the line's baseline actually is.
     const auto& line = lastLine ? lines.back() : lines.front();
-    return line.frame.origin.y + line.frame.size.height -
-        std::abs(line.descender);
+    // Plus the box's baseline-shift reserve: the first line sits that far
+    // below the box top (measureContent).
+    return attributedString.baselineShiftInkOverflow().top +
+        line.frame.origin.y + line.frame.size.height - std::abs(line.descender);
   }
   return 0;
 }
 
 AttributedString InlineContentShadowNode::getContentAttributedString(
     Float fontSizeMultiplier) const {
+  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments &&
+      cachedContentMatches(fontSizeMultiplier, resolvedLayoutDirection())) {
+    return cachedContent_->attributedString;
+  }
   auto textAttributes = baseTextAttributes();
   // Mirror `measureContent`: the published string must be the SAME value
   // measurement produced — multiplier included — or the platform layout
   // caches keyed by content can never hit.
   textAttributes.fontSizeMultiplier = fontSizeMultiplier;
-  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments &&
-      cachedContentMatches(textAttributes)) {
-    return cachedContent_->attributedString;
-  }
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
 
@@ -722,12 +758,7 @@ AttributedString InlineContentShadowNode::getContentAttributedString(
               std::numeric_limits<Float>::infinity()}});
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
-  cachedContent_ = std::make_shared<const CachedContent>(CachedContent{
-      .fontSizeMultiplier = textAttributes.fontSizeMultiplier,
-      .layoutDirection = textAttributes.layoutDirection,
-      .hasAttachments = !attachments.empty(),
-      .attributedString =
-          attachments.empty() ? attributedString : AttributedString{}});
+  memoize(textAttributes, attributedString, !attachments.empty(), {}, {});
   return attributedString;
 }
 
@@ -979,20 +1010,43 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
       .pointScaleFactor = layoutContext.pointScaleFactor,
       .surfaceId = getSurfaceId(),
   };
+  // Lay the run out under the same constraints it was measured with. This is
+  // the pass that decides where each atomic inline lands, so laying it out
+  // against the box's own width while the measure used an unbounded one would
+  // wrap the elements of a `nowrap` run inside a container one line tall.
   auto measurement = textLayoutManager_->measure(
       AttributedStringBox{attributedString},
       ParagraphAttributes{},
       textLayoutContext,
-      LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
+      constraintsForWhiteSpace(
+          textAttributes.whiteSpace,
+          LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize}));
 
   // `measurement.attachments` is parallel to the attachment fragments in the
-  // measured string, which preserves the order of `attachments`.
+  // measured string, which preserves the order of `attachments`. The box
+  // reserves baseline-shift ink at its top (measureContent), so everything
+  // the text layout placed shifts down by that reserve.
+  const auto placementShiftInk = attributedString.baselineShiftInkOverflow();
+  /*
+   * Limitation: the frames come from the platform text layout manager, which
+   * places the attachment characters in logical order. Under
+   * `direction: 'rtl'` the run is right-aligned but its boxes are not
+   * reversed, where css-writing-modes-4 §2 puts the first box against the
+   * right edge and the next one to its left. In a 300pt container with 40 and
+   * 60pt boxes, Safari places them at 260 and 200 and both platforms at 200
+   * and 240.
+   *
+   * The reorder belongs to the platform engine and would follow from setting
+   * the paragraph's base writing direction on the attributed string. That is
+   * the same string `<Text>` uses, so it changes the base writing direction of
+   * every paragraph and cannot be made for inline runs alone.
+   */
   auto count = std::min(attachments.size(), measurement.attachments.size());
   placements.reserve(count);
   for (size_t i = 0; i < count; ++i) {
-    placements.push_back(
-        {&attachments[i].shadowNode->getFamily(),
-         measurement.attachments[i].frame});
+    auto frame = measurement.attachments[i].frame;
+    frame.origin.y += placementShiftInk.top;
+    placements.push_back({&attachments[i].shadowNode->getFamily(), frame});
   }
   return placements;
 }
@@ -1006,9 +1060,26 @@ InlineContentShadowNode::stampInlineElementMetrics(
     return {};
   }
 
+  // The memo already holds the finished string — folded, attachment-measured,
+  // whitespace-collapsed and based — and it is the string the run measured
+  // and painted, which is exactly the one the rects have to come from. Only
+  // attachment-free content is memoized, so the rebuild below still runs for
+  // a run containing an <img>.
+  if (cachedContent_ != nullptr && !cachedContent_->hasAttachments &&
+      cachedContentMatches(
+          layoutContext.fontSizeMultiplier, resolvedLayoutDirection())) {
+    if (cachedContent_->attributedString.isEmpty()) {
+      return {};
+    }
+    return stampFromString(
+        cachedContent_->attributedString,
+        layoutContext,
+        contentOrigin,
+        ownerLayoutMetrics);
+  }
+
   auto textAttributes = baseTextAttributes();
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
-
   auto attributedString = AttributedString{};
   auto attachments = BaseTextShadowNode::Attachments{};
   appendListMarkerIfNeeded(attributedString, textAttributes);
@@ -1041,6 +1112,16 @@ InlineContentShadowNode::stampInlineElementMetrics(
   collapseWhitespace(attributedString);
   attributedString.setBaseTextAttributes(textAttributes);
 
+  return stampFromString(
+      attributedString, layoutContext, contentOrigin, ownerLayoutMetrics);
+}
+
+std::vector<PendingInlineElementMetrics>
+InlineContentShadowNode::stampFromString(
+    const AttributedString& attributedString,
+    const LayoutContext& layoutContext,
+    Point contentOrigin,
+    const LayoutMetrics& ownerLayoutMetrics) const {
   // Skip the layout below when the run carries no inline element: the rects
   // cost a full text layout of the run, and their only consumer is the
   // per-element box built from them.
@@ -1049,44 +1130,66 @@ InlineContentShadowNode::stampInlineElementMetrics(
   }
 
   // Lay the run out at the size it was actually given, so the rects reflect
-  // the wrapping the user sees. (`boxSize` is read above, for the attachments.)
+  // the wrapping the user sees.
+  const auto boxSize = getLayoutMetrics().frame.size;
   TextLayoutContext textLayoutContext{
       .pointScaleFactor = layoutContext.pointScaleFactor,
       .surfaceId = getSurfaceId(),
       .needsFragmentRects = true,
   };
-  const auto measurement = textLayoutManager_->measure(
-      AttributedStringBox{attributedString},
-      ParagraphAttributes{},
-      textLayoutContext,
+  // Use the SAME constraints the measure pass used. `nowrap` and `pre` give
+  // the line breaker unbounded width there (constraintsForWhiteSpace), and
+  // placing the run against the box's own width instead would break it where
+  // the measure did not, so the container would report one line while the
+  // elements in it sat on several.
+  const auto placementConstraints = constraintsForWhiteSpace(
+      attributedString.getBaseTextAttributes().whiteSpace,
       LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
 
+  // Reuse the rects the measurement pass produced under that width, which is
+  // what decides where fragments land, instead of laying the run out again
+  std::vector<Rect> rects;
+  if (cachedContent_ != nullptr && !cachedContent_->fragmentRects.empty() &&
+      cachedContent_->rectsAvailableWidth ==
+          placementConstraints.maximumSize.width &&
+      cachedContentMatches(
+          layoutContext.fontSizeMultiplier, resolvedLayoutDirection())) {
+    rects = cachedContent_->fragmentRects;
+  } else {
+    rects = textLayoutManager_
+                ->measure(
+                    AttributedStringBox{attributedString},
+                    ParagraphAttributes{},
+                    textLayoutContext,
+                    placementConstraints)
+                .fragmentRects;
+  }
+
+  // Fragment rects come from the text layout; the box's baseline-shift
+  // reserve (measureContent) sits above them.
+  auto shiftedRects = rects;
+  const auto stampShiftInk = attributedString.baselineShiftInkOverflow();
+  for (auto& rect : shiftedRects) {
+    rect.origin.y += stampShiftInk.top;
+  }
   return facebook::react::stampInlineElementMetrics(
-      *this,
-      attributedString,
-      measurement.fragmentRects,
-      contentOrigin,
-      ownerLayoutMetrics);
+      *this, attributedString, shiftedRects, contentOrigin, ownerLayoutMetrics);
 }
 
-/*
- * The constraints text is laid out under, given its `white-space`.
- *
- * `pre` and `nowrap` do not wrap (css-text-3 §3), so the line breaker must be
- * given unbounded width — otherwise a long line silently folds and the
- * preserved whitespace is the only half of `pre` that works. The resulting box
- * is wider than its container, which is exactly what the web does: `pre` text
- * overflows rather than reflows.
- */
-static LayoutConstraints constraintsForWhiteSpace(
+void InlineContentShadowNode::memoize(
     const TextAttributes& textAttributes,
-    const LayoutConstraints& layoutConstraints) {
-  if (wrapsText(textAttributes.whiteSpace.value_or(WhiteSpace::Normal))) {
-    return layoutConstraints;
-  }
-  auto unwrapped = layoutConstraints;
-  unwrapped.maximumSize.width = std::numeric_limits<Float>::infinity();
-  return unwrapped;
+    const AttributedString& attributedString,
+    bool hasAttachments,
+    const std::vector<Rect>& fragmentRects,
+    Float rectsAvailableWidth) const {
+  cachedContent_ = std::make_shared<const CachedContent>(CachedContent{
+      .fontSizeMultiplier = textAttributes.fontSizeMultiplier,
+      .layoutDirection = textAttributes.layoutDirection,
+      .hasAttachments = hasAttachments,
+      .rectsAvailableWidth = rectsAvailableWidth,
+      .fragmentRects = fragmentRects,
+      .attributedString =
+          hasAttachments ? AttributedString{} : attributedString});
 }
 
 Size InlineContentShadowNode::measureContent(
@@ -1096,6 +1199,8 @@ Size InlineContentShadowNode::measureContent(
   textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
 
   auto attributedString = AttributedString{};
+  bool rebuilt = false;
+  bool rebuiltAttachments = false;
   if (cachedContent_ != nullptr && !cachedContent_->hasAttachments &&
       cachedContentMatches(textAttributes)) {
     attributedString = cachedContent_->attributedString;
@@ -1112,15 +1217,14 @@ Size InlineContentShadowNode::measureContent(
         attributedString, attachments, layoutContext, layoutConstraints);
     collapseWhitespace(attributedString);
     attributedString.setBaseTextAttributes(textAttributes);
-    cachedContent_ = std::make_shared<const CachedContent>(CachedContent{
-        .fontSizeMultiplier = textAttributes.fontSizeMultiplier,
-        .layoutDirection = textAttributes.layoutDirection,
-        .hasAttachments = !attachments.empty(),
-        .attributedString =
-            attachments.empty() ? attributedString : AttributedString{}});
+    rebuiltAttachments = !attachments.empty();
+    rebuilt = true;
   }
 
   if (attributedString.isEmpty()) {
+    if (rebuilt) {
+      memoize(textAttributes, attributedString, rebuiltAttachments, {}, {});
+    }
     return layoutConstraints.clamp({0, 0});
   }
 
@@ -1134,13 +1238,44 @@ Size InlineContentShadowNode::measureContent(
       .runTag = getTag(),
   };
 
-  return textLayoutManager_
-      ->measure(
-          AttributedStringBox{attributedString},
-          ParagraphAttributes{},
-          textLayoutContext,
-          constraintsForWhiteSpace(textAttributes, layoutConstraints))
-      .size;
+  // Ask for the per-fragment rects here when there is something to stamp. The
+  // stamping pass needs them and would otherwise lay the whole run out a
+  // second time; the platform can produce them from the layout it is building
+  // anyway.
+  const auto stampable =
+      facebook::react::hasStampableInlineElements(*this, attributedString);
+  textLayoutContext.needsFragmentRects = stampable;
+
+  const auto measureConstraints =
+      constraintsForWhiteSpace(textAttributes.whiteSpace, layoutConstraints);
+  const auto measurement = textLayoutManager_->measure(
+      AttributedStringBox{attributedString},
+      ParagraphAttributes{},
+      textLayoutContext,
+      measureConstraints);
+  auto size = measurement.size;
+
+  // Memoized only now, so the rects the layout produced are stored with the
+  // string they describe. Writing the string earlier and the rects later would
+  // put them in two caches that can be invalidated apart.
+  if (rebuilt) {
+    memoize(
+        textAttributes,
+        attributedString,
+        rebuiltAttachments,
+        measurement.fragmentRects,
+        measureConstraints.maximumSize.width);
+  }
+
+  // Baseline-shifted ink (<sup>/<sub>) paints past the LINE box by design, to
+  // keep the line rhythm, but it must not escape the RUN'S box, where ink past
+  // the box's top would paint over whatever sits above the run. The box
+  // reserves it at its edges; the paint and placement passes shift content
+  // down by the same top share (they recompute it from the same string, so
+  // the two sides cannot disagree).
+  const auto shiftInk = attributedString.baselineShiftInkOverflow();
+  size.height += shiftInk.top + shiftInk.bottom;
+  return size;
 }
 
 } // namespace facebook::react
