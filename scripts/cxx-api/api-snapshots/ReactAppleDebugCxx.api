@@ -3242,6 +3242,7 @@ constexpr float facebook::react::kSymbolicMarkerBaselineShiftEm;
 constexpr float facebook::react::kSymbolicMarkerFontScale;
 constexpr int facebook::react::kSymbolicMarkerGapSpaces;
 constexpr size_t facebook::react::kDynamicTypeRampCount;
+constexpr std::array<facebook::react::ColorSpaceDescription, 30> facebook::react::kColorSpaces;
 constexpr uint32_t facebook::react::INITIAL_BUCKETS_SIZE;
 constexpr uint32_t facebook::react::kRendererAbiVersion;
 static const facebook::react::LayoutMetrics facebook::react::EmptyLayoutMetrics;
@@ -3368,7 +3369,9 @@ bool facebook::react::elementStatesBlockPadding(const facebook::react::YogaStyla
 bool facebook::react::elementStatesInlinePadding(const facebook::react::YogaStylableProps& props);
 bool facebook::react::hasStampableInlineElements(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString);
 bool facebook::react::hostPlatformColorIsColorMeaningful(facebook::react::Color color) noexcept;
+bool facebook::react::hostPlatformColorIsColorSpaceColor(const facebook::react::Color& color);
 bool facebook::react::isColorMeaningful(const facebook::react::SharedColor& color) noexcept;
+bool facebook::react::isColorSpaceColor(const facebook::react::SharedColor& color);
 bool facebook::react::isSymbolicListStyleType(facebook::react::ListStyleType type);
 bool facebook::react::isZero(facebook::react::Float n);
 bool facebook::react::preservesNewlines(facebook::react::WhiteSpace whiteSpace);
@@ -3377,6 +3380,7 @@ bool facebook::react::rendererAbiMatchesHeaders(uint32_t headerVersion = faceboo
 bool facebook::react::selectsText(facebook::react::UserSelect userSelect);
 bool facebook::react::wrapsText(facebook::react::WhiteSpace whiteSpace);
 const facebook::react::BaseViewProps* facebook::react::viewPropsOf(const facebook::react::ShadowNode& node);
+const facebook::react::ColorSpaceDescription* facebook::react::describeColorSpace(facebook::react::ColorSpace space);
 const facebook::react::Transition* facebook::react::findTransition(const facebook::react::Transitions& transitions, facebook::react::TransitionProperty property);
 const std::string& facebook::react::elementFileInputDefaultTitle();
 const std::string& facebook::react::elementSelectProbeTitle();
@@ -3384,11 +3388,15 @@ constexpr auto facebook::react::to_underlying(auto e) noexcept;
 constexpr char facebook::react::toLower(char c);
 constexpr uint32_t facebook::react::fnv1aLowercase(std::string_view string);
 facebook::jsi::Value facebook::react::createPromiseAsJSIValue(facebook::jsi::Runtime& rt, facebook::react::PromiseSetupFunctionType&& func);
+facebook::react::Color facebook::react::hostPlatformColorFromColorSpaceValue(const facebook::react::ColorSpaceValue& value);
 facebook::react::Color facebook::react::hostPlatformColorFromComponents(facebook::react::ColorComponents components);
 facebook::react::Color facebook::react::hostPlatformColorFromRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+facebook::react::Color facebook::react::hostPlatformColorFromTransientColorSpaceValue(const facebook::react::ColorSpaceValue& value);
 facebook::react::ColorComponents facebook::react::colorComponentsFromColor(facebook::react::SharedColor color);
 facebook::react::ColorComponents facebook::react::colorComponentsFromHostPlatformColor(facebook::react::Color color);
+facebook::react::ColorModel facebook::react::colorModelOf(facebook::react::ColorSpace space);
 facebook::react::ColorSpace facebook::react::getDefaultColorSpace();
+facebook::react::ColorSpaceValue facebook::react::interpolateInOKLab(const facebook::react::ColorComponents& from, const facebook::react::ColorComponents& to, float progress);
 facebook::react::DisplayType facebook::react::displayTypeFromYGDisplay(YGDisplay display);
 facebook::react::ElementControlMetrics facebook::react::elementControlMetrics();
 facebook::react::Float facebook::react::elementControlBaseline(facebook::react::Size size, facebook::react::Float contentTop, facebook::react::Float contentBottom, facebook::react::Float probeHeight, facebook::react::Float probeBaseline);
@@ -3407,8 +3415,10 @@ facebook::react::Rect facebook::react::insetBy(const facebook::react::Rect& rect
 facebook::react::Rect facebook::react::outsetBy(const facebook::react::Rect& rect, const facebook::react::EdgeInsets& outsets) noexcept;
 facebook::react::SharedColor facebook::react::blackColor();
 facebook::react::SharedColor facebook::react::clearColor();
+facebook::react::SharedColor facebook::react::colorFromColorSpaceValue(const facebook::react::ColorSpaceValue& value);
 facebook::react::SharedColor facebook::react::colorFromComponents(facebook::react::ColorComponents components);
 facebook::react::SharedColor facebook::react::colorFromRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+facebook::react::SharedColor facebook::react::colorFromTransientColorSpaceValue(const facebook::react::ColorSpaceValue& value);
 facebook::react::SharedColor facebook::react::parsePlatformColor(const facebook::react::ContextContainer& contextContainer, int32_t surfaceId, const facebook::react::RawValue& value);
 facebook::react::SharedColor facebook::react::whiteColor();
 facebook::react::Size facebook::react::elementControlMeasuredSize(const facebook::react::ElementControlSizeState& reported, facebook::react::Size startupFallback, const facebook::react::LayoutConstraints& layoutConstraints);
@@ -3429,10 +3439,13 @@ int facebook::react::toInt(const facebook::react::DisplayType& displayType);
 int facebook::react::toInt(const facebook::react::LayoutDirection& layoutDirection);
 std::optional<facebook::react::BlendMode> facebook::react::blendModeFromString(std::string_view blendModeName);
 std::optional<facebook::react::CSSAnimation> facebook::react::buildAnimation(const std::string& keyframesJson, const std::string& duration, const std::string& delay, const std::string& timingFunction, const std::string& iterationCount, const std::string& direction, const std::string& fillMode);
+std::optional<facebook::react::ColorComponents> facebook::react::toClippedSRGB(const facebook::react::ColorSpaceValue& value);
+std::optional<facebook::react::ColorSpace> facebook::react::colorSpaceFromName(std::string_view name);
 std::optional<facebook::react::FilterType> facebook::react::filterTypeFromString(std::string_view filterName);
 std::optional<facebook::react::Float> facebook::react::optionalFloatFromYogaValue(const facebook::yoga::Style::Length& length, std::optional<facebook::react::Float> base = {});
 std::optional<facebook::react::Isolation> facebook::react::isolationFromString(std::string_view isolationSetting);
 std::optional<facebook::react::TransitionProperty> facebook::react::parseTransitionProperty(const std::string& value);
+std::optional<std::array<float, 3>> facebook::react::toExtendedLinearSRGB(const facebook::react::ColorSpaceValue& value);
 std::shared_ptr<facebook::react::ShadowNode> facebook::react::cloneWithLayoutMetrics(const facebook::react::ShadowNode& node, const facebook::react::LayoutMetricsByFamily& byFamily);
 std::string facebook::react::listMarkerText(facebook::react::ListStyleType type, int ordinal);
 std::string facebook::react::toString(const double& value);
@@ -5704,8 +5717,43 @@ enum facebook::react::BorderStyle : uint8_t {
   Solid,
 }
 
+enum facebook::react::ColorModel {
+  LCH,
+  Lab,
+  RGB,
+  XYZ,
+}
+
 enum facebook::react::ColorSpace {
+  A98RGB,
+  ACES,
+  ACEScg,
+  DCIP3,
   DisplayP3,
+  DisplayP3HLG,
+  DisplayP3Linear,
+  DisplayP3PQ,
+  GrayGamma22,
+  GrayLinear,
+  LCH,
+  Lab,
+  NTSC1953,
+  OKLCH,
+  OKLab,
+  ProPhotoRGB,
+  Rec709,
+  Rec709HLG,
+  Rec709PQ,
+  Rec2020,
+  Rec2020Linear,
+  Rec2020SRGBTransfer,
+  Rec2100HLG,
+  Rec2100Linear,
+  Rec2100PQ,
+  SMPTEC,
+  SRGBLinear,
+  XYZD50,
+  XYZD65,
   sRGB,
 }
 
@@ -6395,8 +6443,10 @@ struct facebook::react::CancelableEventDecision {
 
 struct facebook::react::Color {
   public Color(const facebook::react::ColorComponents& components);
+  public Color(const facebook::react::ColorSpaceValue& value);
   public Color(const facebook::react::DynamicColor& dynamicColor);
   public Color(int32_t color);
+  public bool isColorSpaceColor() const;
   public bool operator!=(const facebook::react::Color& other) const;
   public bool operator==(const facebook::react::Color& other) const;
   public constexpr Color();
@@ -6404,6 +6454,7 @@ struct facebook::react::Color {
   public float getChannel(int channelId) const;
   public int32_t getColor() const;
   public operator int32_t() const;
+  public static facebook::react::Color createDynamicColor(const facebook::react::Color& light, const facebook::react::Color& dark, const facebook::react::Color& highContrastLight, const facebook::react::Color& highContrastDark);
   public static facebook::react::Color createSemanticColor(std::vector<std::string>& semanticItems);
   public std::shared_ptr<void> getUIColor() const;
   public std::size_t getUIColorHash() const;
@@ -6415,6 +6466,19 @@ struct facebook::react::ColorComponents {
   public float blue;
   public float green;
   public float red;
+}
+
+struct facebook::react::ColorSpaceDescription {
+  public facebook::react::ColorModel model;
+  public facebook::react::ColorSpace space;
+  public std::string_view name;
+}
+
+struct facebook::react::ColorSpaceValue {
+  public bool operator==(const facebook::react::ColorSpaceValue& other) const = default;
+  public facebook::react::ColorSpace space;
+  public float alpha;
+  public std::array<float, 3> channels;
 }
 
 struct facebook::react::ColorStop {
@@ -8403,6 +8467,35 @@ struct facebook::react::detail::GridTrackScanner {
   public std::string_view peekToken();
   public void skipWhitespace();
 }
+
+
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kD50ToD65;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kLMSToLinearSRGB;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kLMSToOKLab;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kLinearA98RGBToXYZD65;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kLinearDisplayP3ToXYZD65;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kLinearProPhotoToXYZD50;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kLinearRec2020ToXYZD65;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kLinearSRGBToLMS;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kLinearSRGBToXYZD65;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kOKLabToLMS;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::colorspace::kXYZD65ToLinearSRGB;
+constexpr facebook::react::colorspace::Vector3 facebook::react::colorspace::kD50White;
+using facebook::react::colorspace::Matrix3 = std::array<facebook::react::colorspace::Vector3, 3>;
+using facebook::react::colorspace::Vector3 = std::array<double, 3>;
+double facebook::react::colorspace::a98ToLinear(double value);
+double facebook::react::colorspace::hlgToLinear(double value);
+double facebook::react::colorspace::linearToSRGB(double value);
+double facebook::react::colorspace::pqToLinear(double value);
+double facebook::react::colorspace::proPhotoToLinear(double value);
+double facebook::react::colorspace::rec2020ToLinear(double value);
+double facebook::react::colorspace::srgbToLinear(double value);
+facebook::react::colorspace::Vector3 facebook::react::colorspace::applyTransfer(const facebook::react::colorspace::Vector3& v, double(*)(double) transfer);
+facebook::react::colorspace::Vector3 facebook::react::colorspace::labToXYZD50(const facebook::react::colorspace::Vector3& lab);
+facebook::react::colorspace::Vector3 facebook::react::colorspace::linearSRGBToOKLab(const facebook::react::colorspace::Vector3& linear);
+facebook::react::colorspace::Vector3 facebook::react::colorspace::multiply(const facebook::react::colorspace::Matrix3& m, const facebook::react::colorspace::Vector3& v);
+facebook::react::colorspace::Vector3 facebook::react::colorspace::oklabToLinearSRGB(const facebook::react::colorspace::Vector3& oklab);
+facebook::react::colorspace::Vector3 facebook::react::colorspace::polarToRectangular(const facebook::react::colorspace::Vector3& lch);
 
 
 facebook::jsi::Value facebook::react::TurboModuleConvertUtils::convertObjCObjectToJSIValue(facebook::jsi::Runtime& runtime, id value);
