@@ -27,6 +27,7 @@
     "postinstall": "node ./scripts/link-expo.js"
   },
   "dependencies": {
+    "@expo/ui": "58.0.26",
     "@react-native/new-app-screen": "0.87.0-main",
     "@react-native/popup-menu-android": "0.87.0-main",
     "flow-enums-runtime": "^0.0.6",
