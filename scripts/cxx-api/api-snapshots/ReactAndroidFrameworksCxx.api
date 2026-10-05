@@ -2863,7 +2863,9 @@ class facebook::react::ImgTagShadowNode : public facebook::react::ConcreteViewSh
   public ImgTagShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public static facebook::react::ImageState initialStateData(const facebook::react::Props::Shared&, const facebook::react::ShadowNodeFamily::Shared&, const facebook::react::ComponentDescriptor&);
   public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual const std::shared_ptr<const facebook::react::TextAttributes>* getStoredCascade() const override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
+  public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
   public void setImageManager(const std::shared_ptr<facebook::react::ImageManager>& imageManager);
 }
 
