@@ -12,16 +12,13 @@
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 
 const {OS} = require('../../Utilities/Platform').default;
+const processBackgroundImage = require('../processBackgroundImage').default;
+const processColor = require('../processColor').default;
 const Fantom = require('@react-native/fantom');
 const React = require('react');
 const {View} = require('react-native');
-const processColor = require('../processColor').default;
 
-/*
- * What a view's background mounts as on this test host, which draws 8-bit
- * sRGB only: a color in another space is converted by CSS's arithmetic and
- * clipped to sRGB
- */
+// This host draws 8-bit sRGB: a color in another space is converted and clipped
 function mountedBackground(color: string): ?string {
   const root = Fantom.createRoot();
   Fantom.runTask(() => {
@@ -131,5 +128,65 @@ describe('the native side of color spaces', () => {
 
   it('keeps integer colors sRGB', () => {
     expect(mountedBackground('#ff0000')).toBe('rgba(255, 0, 0, 1)');
+  });
+});
+
+describe('gradients in a color space', () => {
+  function stops(gradient: string): $FlowFixMe {
+    const [parsed] = processBackgroundImage(gradient) as $FlowFixMe;
+    return parsed?.colorStops;
+  }
+
+  it('leaves a gradient of legacy colors to the platform', () => {
+    expect(stops('linear-gradient(to right, red, blue)')).toEqual([
+      {color: processColor('red'), position: null},
+      {color: processColor('blue'), position: null},
+    ]);
+  });
+
+  it('expands a gradient written `in <space>` into computed stops', () => {
+    const expanded = stops(
+      'linear-gradient(in oklab to right, #0000ff, #ffff00)',
+    );
+    // The two authored stops and 15 between them
+    expect(expanded.length).toBe(17);
+    expect(expanded[0]).toEqual({
+      color: processColor('#0000ff'),
+      position: '0%',
+    });
+    expect(expanded[16]).toEqual({
+      color: processColor('#ffff00'),
+      position: '100%',
+    });
+    expect(expanded[8].position).toBe('50%');
+    expect(expanded[8].color.space).toBe('srgb-linear');
+  });
+
+  it('keeps the direction beside the method, in either order', () => {
+    const [before] = processBackgroundImage(
+      'linear-gradient(in oklch to bottom, red, blue)',
+    ) as $FlowFixMe;
+    const [after] = processBackgroundImage(
+      'linear-gradient(to bottom in oklch, red, blue)',
+    ) as $FlowFixMe;
+    expect(before.direction).toEqual(after.direction);
+    expect(before.colorStops).toEqual(after.colorStops);
+  });
+
+  it('interpolates in Oklab when a stop is a color in its own space', () => {
+    const expanded = stops(
+      'linear-gradient(color(display-p3 1 0 0), color(display-p3 0 1 0))',
+    );
+    expect(expanded.length).toBe(17);
+  });
+
+  it('invalidates the gradient for an unknown space, as the web does', () => {
+    expect(
+      processBackgroundImage('linear-gradient(in nowhere, red, blue)'),
+    ).toEqual([]);
+  });
+
+  it('leaves a gradient with a length position to the platform', () => {
+    expect(stops('linear-gradient(in oklab, red 10px, blue)').length).toBe(2);
   });
 });
