@@ -251,6 +251,12 @@ category UIImage(React) {
   public @property (assign) NSInteger reactDecodedImageBytes;
 }
 
+category UITextField(EXPCaretPreservingTextInput) {
+}
+
+category UITextView(EXPCaretPreservingTextInput) {
+}
+
 category UIView(ComponentViewProtocol) {
   public virtual facebook::react::Props::Shared props();
   public virtual static std::vector<facebook::react::ComponentDescriptorProvider> supplementalComponentDescriptorProviders();
@@ -335,6 +341,43 @@ interface CommonHostMetadata : public NSObject {
   public @property (strong) NSString* deviceName;
   public @property (strong) NSString* platform;
   public @property (strong) NSString* reactNativeVersion;
+}
+
+interface EXPElementButtonComponentView : public RCTViewComponentView {
+}
+
+interface EXPElementCheckboxComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementColorInputComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementControlComponentView : public RCTViewComponentView {
+  public @property (strong) UIView* elementControl;
+}
+
+interface EXPElementDateInputComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementFileInputComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementProgressComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementRadioComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementRangeComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementSelectComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementTextAreaComponentView : public EXPElementControlComponentView {
+}
+
+interface EXPElementTextInputComponentView : public EXPElementControlComponentView {
 }
 
 interface EventEmitterCallbackWrapper : public NSObject {
@@ -2127,6 +2170,14 @@ interface TraceUpdateTuple : public NSObject {
 
 interface _RCTTypedModuleConstants<StructType> : public NSDictionary <NSString, id> {
   public virtual static instancetype newWithUnsafeDictionary:(NSDictionary<NSString*, id>* dictionary);
+}
+
+protocol EXPCaretPreservingTextInput : public UITextInput {
+  public @property (copy) NSString* text;
+}
+
+protocol EXPElementDragOwnership : public NSObject {
+  public virtual BOOL elementOwnsDragGesture();
 }
 
 protocol NativeAccessibilityInfoSpec : public RCTBridgeModule, public RCTTurboModule {
