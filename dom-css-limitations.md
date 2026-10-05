@@ -141,6 +141,7 @@ Each remaining marker, with the file that carries it.
 
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
+- `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
 - `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `container-query-is-a-media-query` — deviation, `packages/rn-tester/js/astryx/css/__tests__/parse-test.js`

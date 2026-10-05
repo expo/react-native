@@ -72,6 +72,17 @@ struct facebook::hermes::ISetEventLoopControl : public facebook::jsi::ICast {
 
 
 const char facebook::react::ElementBoxComponentName[];
+const char facebook::react::ElementButtonComponentName[];
+const char facebook::react::ElementCheckboxComponentName[];
+const char facebook::react::ElementColorInputComponentName[];
+const char facebook::react::ElementDateInputComponentName[];
+const char facebook::react::ElementFileInputComponentName[];
+const char facebook::react::ElementProgressComponentName[];
+const char facebook::react::ElementRadioComponentName[];
+const char facebook::react::ElementRangeComponentName[];
+const char facebook::react::ElementSelectComponentName[];
+const char facebook::react::ElementTextAreaComponentName[];
+const char facebook::react::ElementTextInputComponentName[];
 const char facebook::react::ImageComponentName[];
 const char facebook::react::ImageManagerKey[];
 const char facebook::react::ImgTagComponentName[];
@@ -92,6 +103,7 @@ constexpr char* const facebook::react::TextLayoutManagerKey;
 constexpr facebook::react::ReactNativeVersionType facebook::react::ReactNativeVersion;
 constexpr facebook::react::Tag facebook::react::kNoTag;
 constexpr float facebook::react::kDefaultEpsilon;
+constexpr float facebook::react::kElementSelectMinTouchWidth;
 constexpr float facebook::react::kSymbolicMarkerBaselineShiftEm;
 constexpr float facebook::react::kSymbolicMarkerFontScale;
 constexpr int facebook::react::kSymbolicMarkerGapSpaces;
@@ -155,6 +167,19 @@ using facebook::react::DispatchEvent = std::function<void(const facebook::react:
 using facebook::react::EdgeInsets = facebook::react::RectangleEdges<Float>;
 using facebook::react::ElementBoxComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementBoxShadowNode>;
 using facebook::react::ElementBoxShadowNode = facebook::react::AbstractViewShadowNode<facebook::react::ElementBoxComponentName, facebook::react::ElementBoxProps>;
+using facebook::react::ElementCheckboxComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementCheckboxShadowNode>;
+using facebook::react::ElementCheckboxShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ElementCheckboxComponentName, facebook::react::ElementCheckboxProps, facebook::react::ElementCheckboxEventEmitter>;
+using facebook::react::ElementColorInputComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementColorInputShadowNode>;
+using facebook::react::ElementDateInputComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementDateInputShadowNode>;
+using facebook::react::ElementFileInputComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementFileInputShadowNode>;
+using facebook::react::ElementProgressComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementProgressShadowNode>;
+using facebook::react::ElementProgressShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ElementProgressComponentName, facebook::react::ElementProgressProps, facebook::react::ViewEventEmitter>;
+using facebook::react::ElementRadioComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementRadioShadowNode>;
+using facebook::react::ElementRadioShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ElementRadioComponentName, facebook::react::ElementRadioProps, facebook::react::ElementCheckboxEventEmitter>;
+using facebook::react::ElementRangeComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementRangeShadowNode>;
+using facebook::react::ElementRangeShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ElementRangeComponentName, facebook::react::ElementRangeProps, facebook::react::ElementRangeEventEmitter>;
+using facebook::react::ElementSelectComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementSelectShadowNode>;
+using facebook::react::ElementTextInputComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ElementTextInputShadowNode>;
 using facebook::react::EndResult = NativeAnimatedTurboModuleEndResult<bool, std::optional<double>, std::optional<double>>;
 using facebook::react::EventEmitterListener = facebook::react::EventListenerT<facebook::react::Tag, const std::string&, const facebook::react::EventPayload&>;
 using facebook::react::EventEmitterListenerContainer = facebook::react::EventListenerContainerT<facebook::react::Tag, const std::string&, const facebook::react::EventPayload&>;
@@ -312,6 +337,7 @@ concept facebook::react::TextLayoutManagerWithPreparedTextLayout = requires(
     textLayoutManager.measurePreparedLayout(preparedTextLayout, layoutContext, layoutConstraints)
   } -> std::same_as<facebook::react::TextMeasurement>;
 };
+Float facebook::react::elementControlBaseline(facebook::react::Size size, Float contentTop, Float contentBottom, Float probeHeight, Float probeBaseline);
 Float facebook::react::floatFromYogaFloat(float value);
 Float facebook::react::floatFromYogaOptionalFloat(facebook::yoga::FloatOptional value);
 Float facebook::react::parseTransitionTime(const std::string& value);
@@ -322,6 +348,8 @@ bool facebook::react::areAttributedStringsEquivalentDisplayWise(const facebook::
 bool facebook::react::areAttributedStringsEquivalentLayoutWise(const facebook::react::AttributedString& lhs, const facebook::react::AttributedString& rhs);
 bool facebook::react::areBorderRadiiCircular(const facebook::react::BorderRadii& borderRadii);
 bool facebook::react::areTextAttributesEquivalentLayoutWise(const facebook::react::TextAttributes& lhs, const facebook::react::TextAttributes& rhs);
+bool facebook::react::elementStatesBlockPadding(const facebook::react::YogaStylableProps& props);
+bool facebook::react::elementStatesInlinePadding(const facebook::react::YogaStylableProps& props);
 bool facebook::react::hasStampableInlineElements(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString);
 bool facebook::react::isColorMeaningful(const facebook::react::SharedColor& color) noexcept;
 bool facebook::react::isHermesBytecodeBundle(const facebook::react::BundleHeader& header);
@@ -335,6 +363,8 @@ bool facebook::react::wrapsText(facebook::react::WhiteSpace whiteSpace);
 const char* facebook::react::stringForScriptTag(const facebook::react::ScriptTag& tag);
 const facebook::react::BaseViewProps* facebook::react::viewPropsOf(const facebook::react::ShadowNode& node);
 const facebook::react::Transition* facebook::react::findTransition(const facebook::react::Transitions& transitions, facebook::react::TransitionProperty property);
+const std::string& facebook::react::elementFileInputDefaultTitle();
+const std::string& facebook::react::elementSelectProbeTitle();
 constexpr auto facebook::react::to_underlying(auto e) noexcept;
 constexpr bool facebook::react::iequals(std::string_view a, std::string_view b);
 constexpr char facebook::react::toLower(char c);
@@ -347,6 +377,7 @@ facebook::react::ColorComponents facebook::react::colorComponentsFromColor(faceb
 facebook::react::ColorSpace facebook::react::getDefaultColorSpace();
 facebook::react::ComponentRegistryFactory facebook::react::getDefaultComponentRegistryFactory();
 facebook::react::DisplayType facebook::react::displayTypeFromYGDisplay(YGDisplay display);
+facebook::react::ElementControlMetrics facebook::react::elementControlMetrics();
 facebook::react::InlineBoxProps facebook::react::parseInlineBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
 facebook::react::LayoutConstraints facebook::react::constraintsForWhiteSpace(const std::optional<facebook::react::WhiteSpace>& whiteSpace, const facebook::react::LayoutConstraints& layoutConstraints);
 facebook::react::LayoutConstraints facebook::react::constraintsHonoringOwnBounds(const facebook::react::ShadowNode& node, facebook::react::LayoutConstraints constraints);
@@ -365,6 +396,7 @@ facebook::react::SharedColor facebook::react::clearColor();
 facebook::react::SharedColor facebook::react::colorFromComponents(facebook::react::ColorComponents components);
 facebook::react::SharedColor facebook::react::colorFromRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 facebook::react::SharedColor facebook::react::whiteColor();
+facebook::react::Size facebook::react::elementControlMeasuredSize(const facebook::react::ElementControlSizeState& reported, facebook::react::Size startupFallback, const facebook::react::LayoutConstraints& layoutConstraints);
 facebook::react::Size facebook::react::yogaMeassureToSize(int64_t value);
 facebook::react::SurfaceId facebook::react::getNextRootViewTag() noexcept;
 facebook::react::TransitionTimingFunction facebook::react::parseTransitionTimingFunction(const std::string& value);
@@ -501,6 +533,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext& co
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ContentInsetAdjustmentBehavior& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::Cursor& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::DynamicTypeRamp& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::ElementSelectOption& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::EllipsizeMode& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::FontStyle& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::FontVariant& result);
@@ -575,6 +608,7 @@ void facebook::react::parseUnprocessedFontVariantString(const std::string& value
 void facebook::react::parseUnprocessedTransformOriginString(const std::string& value, facebook::react::TransformOrigin& result);
 void facebook::react::registerCxxModuleToGlobalModuleMap(std::string name, std::function<std::shared_ptr<facebook::react::TurboModule>(std::shared_ptr<facebook::react::CallInvoker> jsInvoker)> moduleProviderFunc);
 void facebook::react::setDefaultColorSpace(facebook::react::ColorSpace newColorSpace);
+void facebook::react::setElementControlMetrics(const facebook::react::ElementControlMetrics& metrics);
 void facebook::react::setTouchPayloadOnObject(facebook::jsi::Object& object, facebook::jsi::Runtime& runtime, const facebook::react::BaseTouch& touch);
 bool facebook::react::operator==(const facebook::react::AttributedStringBox& lhs, const facebook::react::AttributedStringBox& rhs);
 bool facebook::react::operator==(const facebook::react::LayoutConstraints& lhs, const facebook::react::LayoutConstraints& rhs);
@@ -1195,6 +1229,266 @@ class facebook::react::ElementBoxProps : public facebook::react::HostPlatformVie
   public std::string listStyleTypeValue;
   public std::string nodeName;
   public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementButtonComponentDescriptor : public facebook::react::ConcreteComponentDescriptor<facebook::react::ElementButtonShadowNode> {
+  protected virtual void adopt(facebook::react::ShadowNode& shadowNode) const override;
+  public ElementButtonComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters, facebook::react::RawPropsParser&& rawPropsParser = {});
+}
+
+class facebook::react::ElementButtonEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementPressChange(bool pressed) const;
+}
+
+class facebook::react::ElementButtonProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementButtonProps() = default;
+  public ElementButtonProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementButtonProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool accessibleAuthored;
+  public bool authorStatesPressFeedback;
+  public bool disabled;
+  public bool hasAuthorChrome;
+  public bool traitsAuthored;
+  public std::string buttonStyle;
+  public std::string nodeName;
+  public std::string touchAction;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementButtonShadowNode : public facebook::react::AbstractViewShadowNode<facebook::react::ElementButtonComponentName, facebook::react::ElementButtonProps, facebook::react::ElementButtonEventEmitter> {
+  public ElementButtonShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ElementButtonShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public void applyPlatformChrome();
+}
+
+class facebook::react::ElementCheckboxEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementChange(bool checked) const;
+}
+
+class facebook::react::ElementCheckboxProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementCheckboxProps() = default;
+  public ElementCheckboxProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementCheckboxProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool checked;
+  public bool disabled;
+  public std::string nodeName;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementColorInputEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementChange(const std::string& value) const;
+  public void onElementInput(const std::string& value) const;
+}
+
+class facebook::react::ElementColorInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementColorInputProps() = default;
+  public ElementColorInputProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementColorInputProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool disabled;
+  public std::string nodeName;
+  public std::string value;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementColorInputShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ElementColorInputComponentName, facebook::react::ElementColorInputProps, facebook::react::ElementColorInputEventEmitter> {
+  public ElementColorInputShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ElementColorInputShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext&, const facebook::react::LayoutConstraints& layoutConstraints) const override;
+}
+
+class facebook::react::ElementControlSizeState {
+  public Float height;
+  public Float width;
+}
+
+class facebook::react::ElementDateInputEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementChange(const std::string& value) const;
+  public void onElementInput(const std::string& value) const;
+}
+
+class facebook::react::ElementDateInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementDateInputProps() = default;
+  public ElementDateInputProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementDateInputProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool disabled;
+  public bool hasValue;
+  public bool showsDate() const;
+  public bool showsTime() const;
+  public std::string maximum;
+  public std::string minimum;
+  public std::string nodeName;
+  public std::string type;
+  public std::string value;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementDateInputShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ElementDateInputComponentName, facebook::react::ElementDateInputProps, facebook::react::ElementDateInputEventEmitter, facebook::react::ElementControlSizeState> {
+  public ElementDateInputShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ElementDateInputShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual Float baseline(const facebook::react::LayoutContext&, facebook::react::Size size) const override;
+  public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext&, const facebook::react::LayoutConstraints& layoutConstraints) const override;
+}
+
+class facebook::react::ElementFileInputEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementChange(const std::vector<facebook::react::ElementFileDescriptor>& files) const;
+}
+
+class facebook::react::ElementFileInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementFileInputProps() = default;
+  public ElementFileInputProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementFileInputProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool disabled;
+  public bool multiple;
+  public std::string accept;
+  public std::string nodeName;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementFileInputShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ElementFileInputComponentName, facebook::react::ElementFileInputProps, facebook::react::ElementFileInputEventEmitter, facebook::react::ElementControlSizeState> {
+  public ElementFileInputShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ElementFileInputShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext&, const facebook::react::LayoutConstraints& layoutConstraints) const override;
+}
+
+class facebook::react::ElementProgressProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementProgressProps() = default;
+  public ElementProgressProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementProgressProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool disabled;
+  public bool hasValue;
+  public bool isIndeterminate() const;
+  public double fraction() const;
+  public double maximum;
+  public double minimum;
+  public double value;
+  public std::string nodeName;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementRadioProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementRadioProps() = default;
+  public ElementRadioProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementRadioProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool checked;
+  public bool disabled;
+  public std::string name;
+  public std::string nodeName;
+  public std::string value;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementRangeEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementChange(double value) const;
+  public void onElementInput(double value) const;
+}
+
+class facebook::react::ElementRangeProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementRangeProps() = default;
+  public ElementRangeProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementRangeProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool disabled;
+  public double clampedValue() const;
+  public double maximum;
+  public double minimum;
+  public double step;
+  public double value;
+  public std::string nodeName;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementSelectEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementChange(const std::string& value, int index) const;
+}
+
+class facebook::react::ElementSelectProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementSelectProps() = default;
+  public ElementSelectProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementSelectProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool disabled;
+  public bool hasValue;
+  public int selectedIndex() const;
+  public std::string nodeName;
+  public std::string value;
+  public std::vector<facebook::react::ElementSelectOption> options;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementSelectShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ElementSelectComponentName, facebook::react::ElementSelectProps, facebook::react::ElementSelectEventEmitter> {
+  public ElementSelectShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ElementSelectShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+  public using LabelWidthMeasurer = std::function<Float(const std::string&, Float, Float)>;
+  public virtual Float baseline(const facebook::react::LayoutContext&, facebook::react::Size size) const override;
+  public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
+  public void setLabelWidthMeasurer(facebook::react::ElementSelectShadowNode::LabelWidthMeasurer measurer);
+}
+
+class facebook::react::ElementTextAreaComponentDescriptor : public facebook::react::ConcreteComponentDescriptor<facebook::react::ElementTextAreaShadowNode> {
+  protected virtual void adopt(facebook::react::ShadowNode& shadowNode) const override;
+  public ElementTextAreaComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters, facebook::react::RawPropsParser&& rawPropsParser = {});
+}
+
+class facebook::react::ElementTextAreaProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementTextAreaProps() = default;
+  public ElementTextAreaProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementTextAreaProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool autoCorrect;
+  public bool autoFocus;
+  public bool disabled;
+  public bool hasValue;
+  public bool readOnly;
+  public bool spellCheck;
+  public int maxLength;
+  public int mostRecentEventCount;
+  public int rows;
+  public std::string defaultValue;
+  public std::string nodeName;
+  public std::string placeholder;
+  public std::string value;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementTextAreaShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ElementTextAreaComponentName, facebook::react::ElementTextAreaProps, facebook::react::ElementTextInputEventEmitter> {
+  public ElementTextAreaShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ElementTextAreaShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext&, const facebook::react::LayoutConstraints& layoutConstraints) const override;
+  public void applyPlatformPadding();
+}
+
+class facebook::react::ElementTextInputEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onElementBeforeInput(const std::string& proposedValue, const std::shared_ptr<facebook::react::CancelableEventDecision>& decision) const;
+  public void onElementBlur() const;
+  public void onElementChange(const std::string& value) const;
+  public void onElementFocus() const;
+  public void onElementInput(const std::string& value, int eventCount) const;
+  public void onElementSelectionChange(int start, int end) const;
+  public void onElementSubmit(const std::string& value) const;
+}
+
+class facebook::react::ElementTextInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+  public ElementTextInputProps() = default;
+  public ElementTextInputProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementTextInputProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool autoCorrect;
+  public bool autoFocus;
+  public bool disabled;
+  public bool hasBeforeInput;
+  public bool hasValue;
+  public bool isSecure() const;
+  public bool readOnly;
+  public bool spellCheck;
+  public int maxLength;
+  public int mostRecentEventCount;
+  public std::string autoComplete;
+  public std::string defaultValue;
+  public std::string enterKeyHint;
+  public std::string inputMode;
+  public std::string nodeName;
+  public std::string placeholder;
+  public std::string type;
+  public std::string value;
+  public virtual std::string domNodeName() const override;
+}
+
+class facebook::react::ElementTextInputShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ElementTextInputComponentName, facebook::react::ElementTextInputProps, facebook::react::ElementTextInputEventEmitter, facebook::react::ElementControlSizeState> {
+  public ElementTextInputShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ElementTextInputShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual Float baseline(const facebook::react::LayoutContext&, facebook::react::Size size) const override;
+  public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext&, const facebook::react::LayoutConstraints& layoutConstraints) const override;
 }
 
 class facebook::react::Error {
@@ -4870,6 +5164,52 @@ struct facebook::react::DynamicPointerEvent : public facebook::react::DynamicEve
   public const std::optional<std::vector<facebook::react::Tag>>& getHitPathForEventListener() const;
 }
 
+struct facebook::react::ElementControlMetrics {
+  public Float buttonPaddingBlock;
+  public Float buttonPaddingInline;
+  public Float buttonPressedContentAlpha;
+  public Float colorWellHeight;
+  public Float colorWellWidth;
+  public Float datePickerBaseline;
+  public Float datePickerDefaultHeight;
+  public Float datePickerDefaultWidth;
+  public Float dateTimePickerBaseline;
+  public Float dateTimePickerDefaultHeight;
+  public Float dateTimePickerDefaultWidth;
+  public Float fileDefaultHeight;
+  public Float fileDefaultWidth;
+  public Float selectBaseline;
+  public Float selectBlockSize;
+  public Float selectChromeInline;
+  public Float selectLabelFontSize;
+  public Float selectProbeIntrinsicWidth;
+  public Float textAreaInsetBlock;
+  public Float textAreaLineBox;
+  public Float textAreaPaddingBottom;
+  public Float textAreaPaddingTop;
+  public Float textFieldBaseline;
+  public Float textFieldDefaultHeight;
+  public Float textFieldDefaultWidth;
+  public Float timePickerBaseline;
+  public Float timePickerDefaultHeight;
+  public Float timePickerDefaultWidth;
+}
+
+struct facebook::react::ElementFileDescriptor {
+  public double size;
+  public std::string name;
+  public std::string type;
+  public std::string uri;
+}
+
+struct facebook::react::ElementSelectOption {
+  public bool disabled;
+  public bool operator!=(const facebook::react::ElementSelectOption& rhs) const;
+  public bool operator==(const facebook::react::ElementSelectOption& rhs) const;
+  public std::string label;
+  public std::string value;
+}
+
 struct facebook::react::EventAnimationDriverKey {
   public bool operator==(const facebook::react::EventAnimationDriverKey& rhs) const noexcept;
   public facebook::react::Tag viewTag;
@@ -5597,8 +5937,8 @@ class facebook::react::ConcreteViewShadowNode : public facebook::react::Concrete
   public virtual facebook::react::Transform getTransform() const override;
 }
 
-template <const char* concreteComponentName, typename ViewPropsT = facebook::react::ViewProps>
-class facebook::react::AbstractViewShadowNode : public facebook::react::ConcreteViewShadowNode<concreteComponentName, ViewPropsT, facebook::react::ViewEventEmitter, facebook::react::ViewState> {
+template <const char* concreteComponentName, typename ViewPropsT = facebook::react::ViewProps, typename ViewEventEmitterT = facebook::react::ViewEventEmitter>
+class facebook::react::AbstractViewShadowNode : public facebook::react::ConcreteViewShadowNode<concreteComponentName, ViewPropsT, ViewEventEmitterT, facebook::react::ViewState> {
   public AbstractViewShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public AbstractViewShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public virtual Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
@@ -6652,6 +6992,11 @@ std::vector<facebook::react::ComponentDescriptorProvider> facebook::react::dom::
 std::vector<std::shared_ptr<const facebook::react::ShadowNode>> facebook::react::dom::getChildNodes(const facebook::react::RootShadowNode::Shared& currentRevision, const facebook::react::ShadowNode& shadowNode);
 uint_fast16_t facebook::react::dom::compareDocumentPosition(const facebook::react::RootShadowNode::Shared& currentRevision, const facebook::react::ShadowNode& shadowNode, const facebook::react::ShadowNode& otherShadowNode);
 void facebook::react::dom::addAllElementDescriptors(const facebook::react::ComponentDescriptorProviderRegistry& registry);
+
+class facebook::react::dom::ElementSelectMeasuredComponentDescriptor : public facebook::react::ConcreteComponentDescriptor<facebook::react::ElementSelectShadowNode> {
+  protected virtual void adopt(facebook::react::ShadowNode& shadowNode) const override;
+  public ElementSelectMeasuredComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters);
+}
 
 struct facebook::react::dom::DOMBorderWidthRounded {
   public int bottom;
