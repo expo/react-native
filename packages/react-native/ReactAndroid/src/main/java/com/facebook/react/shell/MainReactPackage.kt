@@ -62,6 +62,18 @@ import com.facebook.react.views.text.ReactTextViewManager
 import com.facebook.react.views.text.SelectableTextViewManager
 import com.facebook.react.views.textinput.ReactTextInputManager
 import com.facebook.react.views.unimplementedview.ReactUnimplementedViewManager
+import com.facebook.react.views.view.ElementButtonViewManager
+import com.facebook.react.views.view.ElementControlMetricsProbe
+import com.facebook.react.views.view.ElementCheckboxViewManager
+import com.facebook.react.views.view.ElementRangeViewManager
+import com.facebook.react.views.view.ElementColorInputViewManager
+import com.facebook.react.views.view.ElementDateInputViewManager
+import com.facebook.react.views.view.ElementFileInputViewManager
+import com.facebook.react.views.view.ElementProgressViewManager
+import com.facebook.react.views.view.ElementRadioViewManager
+import com.facebook.react.views.view.ElementSelectViewManager
+import com.facebook.react.views.view.ElementTextAreaViewManager
+import com.facebook.react.views.view.ElementTextInputViewManager
 import com.facebook.react.views.view.ReactViewManager
 import com.facebook.react.views.virtual.view.ReactVirtualViewManager
 
@@ -158,6 +170,32 @@ constructor(private val config: MainPackageConfig? = null) :
           else ReactTextViewManager(),
           SelectableTextViewManager(),
           ReactViewManager(),
+          // The interactive flavor of the generic box: `<button>` and the other
+          // pressable elements, whose press state comes from Android's own touch
+          // dispatch rather than the JS responder system.
+          ElementButtonViewManager(),
+          // `<input type="range">`: a real SeekBar, which claims its own drag inside a scroll
+          // container the way the platform intends.
+          ElementRangeViewManager(),
+          // `<input type="checkbox">`: Android's own CheckBox.
+          ElementCheckboxViewManager(),
+          // `<input>` in its textual forms: a real EditText, with the platform's selection handles,
+          // IME behaviour and autofill.
+          ElementTextInputViewManager(),
+          // `<textarea>`: the same EditText, told to be multi-line.
+          ElementTextAreaViewManager(),
+          // `<progress>` and `<meter>`: a real ProgressBar.
+          ElementProgressViewManager(),
+          // `<select>`: the platform's own dropdown.
+          ElementSelectViewManager(),
+          // `<input type="radio">`: Android's own RadioButton.
+          ElementRadioViewManager(),
+          // `<input type="date">` and friends: the platform's own picker dialogs.
+          ElementDateInputViewManager(),
+          // `<input type="color">`: a swatch grid, because Android has no system picker.
+          ElementColorInputViewManager(),
+          // `<input type="file">`: the Storage Access Framework picker.
+          ElementFileInputViewManager(),
           ReactVirtualViewManager(),
           ReactUnimplementedViewManager(),
       )
@@ -202,6 +240,28 @@ constructor(private val config: MainPackageConfig? = null) :
               },
           SelectableTextViewManager.REACT_CLASS to
               ModuleSpec.viewManagerSpec { SelectableTextViewManager() },
+          ElementButtonViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementButtonViewManager() },
+          ElementRangeViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementRangeViewManager() },
+          ElementCheckboxViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementCheckboxViewManager() },
+          ElementTextInputViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementTextInputViewManager() },
+          ElementTextAreaViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementTextAreaViewManager() },
+          ElementProgressViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementProgressViewManager() },
+          ElementSelectViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementSelectViewManager() },
+          ElementRadioViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementRadioViewManager() },
+          ElementDateInputViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementDateInputViewManager() },
+          ElementColorInputViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementColorInputViewManager() },
+          ElementFileInputViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ElementFileInputViewManager() },
           ReactViewManager.REACT_CLASS to ModuleSpec.viewManagerSpec { ReactViewManager() },
           ReactVirtualViewManager.REACT_CLASS to
               ModuleSpec.viewManagerSpec { ReactVirtualViewManager() },
@@ -212,8 +272,16 @@ constructor(private val config: MainPackageConfig? = null) :
   public override fun getViewManagers(reactContext: ReactApplicationContext): List<ModuleSpec> =
       viewManagersMap.values.toList()
 
-  override fun getViewManagerNames(reactContext: ReactApplicationContext): Collection<String> =
-      viewManagersMap.keys
+  override fun getViewManagerNames(reactContext: ReactApplicationContext): Collection<String> {
+    /*
+     * The form elements are sized from their real controls; ask those before any layout can.
+     * HERE, because this package creates its view managers on demand — `createViewManager` runs
+     * when a component first MOUNTS, which is after its first layout — and the names are what the
+     * registry asks for up front.
+     */
+    ElementControlMetricsProbe.prewarm(reactContext)
+    return viewManagersMap.keys
+  }
 
   override fun createViewManager(
       reactContext: ReactApplicationContext,

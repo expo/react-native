@@ -8,6 +8,7 @@
 #include <fbjni/fbjni.h>
 
 #include "ComponentFactory.h"
+#include "ElementControlMetricsBinding.h"
 #include "EventBeatManager.h"
 #include "EventEmitterWrapper.h"
 #include "FabricUIManagerBinding.h"
@@ -21,6 +22,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* /*unused*/) {
     facebook::react::FabricUIManagerBinding::registerNatives();
     facebook::react::StateWrapperImpl::registerNatives();
     facebook::react::ComponentFactory::registerNatives();
+    facebook::react::ElementControlMetricsBinding::registerNatives();
     facebook::react::SurfaceHandlerBinding::registerNatives();
   });
 }
