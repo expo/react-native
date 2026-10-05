@@ -1,0 +1,20 @@
+{
+  "ignore_dirs": [
+    "packages/react-native/ReactAndroid/build",
+    "packages/react-native/ReactAndroid/.cxx",
+    "packages/rn-tester/Pods",
+    "packages/rn-tester/build",
+    "packages/rn-tester/android/app/build",
+    "packages/rn-tester/android/app/.cxx",
+    "private/react-native-fantom/build",
+    "packages/react-native/ReactAndroid/hermes-engine/build",
+    "node_modules/.cache",
+    "packages/react-native/node_modules/.cache",
+    "packages/rn-tester/node_modules/.cache",
+    "node_modules/expo",
+    "node_modules/expo-image",
+    "node_modules/expo-modules-core",
+    "node_modules/expo-modules-autolinking",
+    "node_modules/@expo"
+  ]
+}

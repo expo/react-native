@@ -23,7 +23,8 @@
     "e2e-build-android": "../../gradlew :packages:rn-tester:android:app:installRelease -PreactNativeArchitectures=arm64-v8a",
     "e2e-build-ios": "./scripts/maestro-build-ios.sh",
     "e2e-test-android": "maestro test .maestro/ -e APP_ID=com.facebook.react.uiapp",
-    "e2e-test-ios": "./scripts/maestro-test-ios.sh"
+    "e2e-test-ios": "./scripts/maestro-test-ios.sh",
+    "postinstall": "node ./scripts/link-expo.js"
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.87.0-main",
@@ -37,7 +38,12 @@
   },
   "peerDependencies": {
     "react": "19.3.0",
-    "react-native": "1000.0.0"
+    "react-native": "1000.0.0",
+    "expo-image": "*",
+    "expo-modules-core": "*"
+  },
+  "peerDependenciesMeta": {
+    "//": "Peer, not regular, dependencies: scripts/link-expo.js links these from the sibling expo checkout (see there for why Yarn cannot), and Expo's autolinking walks peer dependencies, which is how their pods reach the Podfile."
   },
   "codegenConfig": {
     "name": "AppSpecs",
