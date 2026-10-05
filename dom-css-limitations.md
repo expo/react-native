@@ -11,9 +11,30 @@ grep -rn "DOM-CSS-LIMITATION(" packages/react-native --include=*.js \
 That command is the source of truth. This file is an index of what those
 markers say and why, for reading before you go looking.
 
+It indexes MARKED divergences, and now indexes all of them — a check runs in
+both directions, so neither an entry without a marker nor a marker without an
+entry survives. It did not always: the check only ran one way, and the file
+read as complete while forty-eight markers had no row at all.
+
+A divergence nobody marked is still invisible to that command and to this file,
+and no check can find one — there is nothing to grep for. Two were found by
+reading in one sitting (`abbr-underline-is-unconditional` and one since fixed,
+both explained in a comment and neither marked), so treat this as complete for
+what is marked, not for what exists.
+
 The convention: `DOM-CSS-LIMITATION(slug)` in a comment beside the code, then
 a sentence on what does not work and what it would take. Adding a limitation
 means adding a marker; the slug is what ties it to the row below.
+
+**Priority.** A limitation is not automatically a defect waiting to be fixed.
+Three kinds appear here and it is worth telling them apart:
+
+- **Platform walls** — the OS offers no way to express it. Nothing to schedule.
+- **Deliberate** — a `DOM-CSS-DEVIATION`, chosen because the native behaviour
+  is the better answer. Not a gap at all.
+- **Deferred** — implementable, understood, and not currently wanted. Marked
+  *lower priority* below. These are the ones where "we know, and we chose the
+  order" is the whole story; nothing about them is fundamental or permanent.
 
 ---
 
@@ -42,15 +63,27 @@ object at that point. Matching that needs a remount signal the reconciler does
 not have. Static display — the overwhelming case, and all of Astryx — is
 correct.
 
-**`no-grid`** — `ReactCommon/.../components/view/conversions.h`
-`display: grid` and `inline-grid` are not handled and fall through to a parse
-error. Yoga has no grid engine, so this is a feature to build rather than a
-value to map. Astryx uses it in ~22 places.
+DEFERRED, and architectural rather than hard: closing it means the reconciler
+telling the host when a display change crosses that boundary, which is an
+upstream React concern rather than something this fork decides alone.
+
+**`rem-root-is-the-unstylable-surface-root`** — `Libraries/Text/__tests__/RelativeFontSize-itest.js`
+`rem` resolves against the surface root — the node the layout walk starts from
+— and everything an app renders is already a child of it. So an app has no way
+to state the root's font size the way a page styles `<html>`, and `rem` is the
+platform's body size for the life of the surface. The native lever for moving
+all text at once is the user's own text-size setting, which arrives as
+`fontSizeMultiplier` and scales resolved sizes after the fact rather than
+through this base.
 
 **`no-box-decoration-break-clone`** — `.../ios/.../RCTTextLayoutManager.mm`
 A wrapped inline box paints with `box-decoration-break: slice` (the CSS
 default) — leading edge on the first fragment, trailing on the last. `clone`,
 which repeats both edges on every fragment, is not implemented.
+
+DEFERRED and small: the fragment loop already knows which fragment is first
+and last, so `clone` is a branch there rather than new machinery. It is a rare
+value and nothing here has asked for it.
 
 ## User-agent styles
 
@@ -60,22 +93,48 @@ All in `packages/expo-intrinsics/src/uaStyles.js`.
 font-relative units, so the sheet stores points computed against a 16px root.
 They therefore do not track the user's font size the way the web does.
 
-**`no-native-form-widgets`** — `<button>` and friends get layout defaults but
-no platform-drawn appearance. Design systems that restyle controls completely
-(Astryx does) are unaffected.
-
-**`no-link-state`** — `<a>` gets no colour or underline, because those depend
-on `:link`/`:visited`, which need history state that does not exist here.
+DEFERRED, and the same missing capability as `no-author-facing-em-lengths` and
+the shim's `rem-fixed-root` and `unitless-line-height-needs-local-font-size`.
+One channel — a relative length that survives to where a font size is known —
+closes all four. Worth counting as one piece of work rather than four.
 
 **`no-quirks-mode`** — no `quirks.css` equivalent, there being no quirks mode
 to be compatible with. Listed so its absence reads as deliberate.
 
+**`physical-edge-does-not-claim-flow-relative`** — an author's `paddingLeft`
+does not cancel the sheet's `paddingInlineStart`, though a browser's would in
+a left-to-right box.
+
+`boxEdges.js` stops the sheet outranking an author's box reset: a user-agent
+declaration whose edges the author has ENTIRELY claimed is dropped before the
+two layers meet, so `padding: 0` cancels `<ol>`'s marker gutter the way it does
+on the web. It runs before a direction is resolved, so it cannot know that
+`left` and `inlineStart` are the same edge here and different ones in a
+right-to-left list, and it treats them as different throughout.
+
+The under-claim is the safe side of that: it leaves a sheet declaration
+standing rather than dropping one the author never replaced. Closing it needs
+the resolved direction at merge time, which is the same missing channel as the
+RTL items — DEFERRED with them.
+
 ## Platform
 
-**`android-img-is-a-plain-view`** — `ReactAndroid/src/main/java/com/facebook/react/fabric/mounting/mountitems/FabricNameComponentMapping.kt`
-`<img>` mounts as a plain View on Android rather than `RCTImageView`, which
-expects a different `source` shape — so an `<img>` lays out but draws nothing
-there. iOS renders it through the Image machinery.
+**`android-spellcheck-implies-autocorrect`** — `.../views/view/ElementTextInputView.kt`
+HTML defines `spellcheck` and `autocorrect` as separate attributes: one marks
+mistakes, the other rewrites them (§6.8.5 and §6.8.8). iOS has a trait for each
+— `spellCheckingType` and `autocorrectionType` — so "underline my mistakes but
+do not rewrite them" is expressible there. Android has one flag for both:
+`TextView.isSuggestionsEnabled()` returns false the moment
+`TYPE_TEXT_FLAG_NO_SUGGESTIONS` is set, and that single predicate gates the
+spell checker *and* the IME's suggestion strip. So on Android
+`spellcheck="false"` takes autocorrection with it. Honouring the attribute the
+author actually named, and turning off more than they asked, is the lesser of
+the two wrongs available. `autocorrect` on its own is exact on both platforms;
+it is only the combination `spellcheck="false" autocorrect="on"` that Android
+cannot express.
+
+A platform wall, like the entry above it: the predicate is `TextView`'s and
+takes no argument. Nothing to schedule.
 
 ## Performance
 
@@ -89,25 +148,18 @@ a real screen first. Background in `element-model-design.md`.
 
 ---
 
-## Every other marked divergence
+## CSS Grid
 
-Each remaining marker, with the file that carries it.
-
-- `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
-- `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
-- `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
-- `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
-- `display-on-inline-text-elements` — limitation, `packages/rn-tester/js/astryx/radix/toggles.js`
-- `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
-- `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
-- `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
-- `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
-- `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
-- `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
-- `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
-- `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
-- `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
-- `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
+- **`grid-auto-flow` is fully implemented** — `row`, `column`, and either with
+  `dense`. Column flow runs the row algorithm in transposed space rather than
+  duplicating it: every axis-specific read is swapped on the way in and the
+  resulting placements swapped back on the way out, so nothing in between knows
+  which flow it is running.
+- **`grid-template-areas` is implemented; NAMED GRID LINES are not.** An item
+  is placed by area name (`gridArea: 'header'`) or by line number, but a track
+  list cannot declare `[names]` and `grid-column: main-start / main-end` will
+  not resolve.
+- **`subgrid` is not implemented.**
 
 ---
 
@@ -127,3 +179,55 @@ Recorded because each has been mistaken for a bug at least once:
   `frontier` fails identically under a clean-snapshot protocol. Note that the
   runner **rewrites snapshots on failure**, so re-running masks it and
   invalidates any comparison made afterwards — restore them first.
+
+---
+
+## Every other marked divergence
+
+The rows above carry the reasoning for the ones worth reading before you go
+looking. These are the rest of what `DOM-CSS-LIMITATION(` and
+`DOM-CSS-DEVIATION(` currently match, so the file indexes all of them rather
+than a subset. Each marker explains itself at the code; this table is how you
+find it.
+
+It was written because the consistency check only ran one way — every entry
+had a marker, but forty-eight markers had no entry, and the file still read as
+complete. The check now runs both ways, so an unindexed marker fails a test
+rather than going quiet.
+
+- `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
+- `android-img-is-a-plain-view` — limitation, `ReactAndroid/src/main/java/com/facebook/react/fabric/mounting/mountitems/FabricNameComponentMapping.kt`
+- `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
+- `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
+- `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `checkable-line-centering` — deviation, `packages/expo-intrinsics/__tests__/CheckableLineCentering-itest.js`
+- `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
+- `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
+- `display-on-inline-text-elements` — limitation, `packages/rn-tester/js/astryx/radix/toggles.js`
+- `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
+- `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
+- `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
+- `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
+- `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
+- `no-font-on-a-control` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPElementTextAreaComponentView.mm`
+- `no-generic-font-families` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
+- `no-grid` — limitation, `ReactCommon/react/renderer/components/view/conversions.h`
+- `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
+- `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
+- `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
+- `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `press-dim-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
+- `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`
+- `rtl-inline-run-not-reordered` — limitation, `ReactCommon/react/renderer/components/text/InlineContentShadowNode.cpp`
+- `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
+- `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
+- `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
+- `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
+- `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
