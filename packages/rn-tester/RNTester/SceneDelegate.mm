@@ -11,6 +11,7 @@
 #import "NativeExampleViews/UpdatePropertiesExampleView.h"
 
 #import <React/RCTBundleURLProvider.h>
+#import <React/RCTConstants.h>
 #import <React/RCTDefines.h>
 #import <React/RCTLinkingManager.h>
 #import <React/RCTSurfaceHostingProxyRootView.h>
@@ -30,6 +31,10 @@
 #import <React/RCTDevMenu.h>
 #endif
 
+#import <RNTesterFeatureFlags/RNTesterFeatureFlags.h>
+
+#import <memory>
+
 static NSString *const kBundlePath = @"js/RNTesterApp.ios";
 
 @implementation SceneDelegate
@@ -39,8 +44,21 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
   NSMutableDictionary *initProps = [NSMutableDictionary dictionary];
   NSString *routeUri = [[NSUserDefaults standardUserDefaults] stringForKey:@"route"];
   if (routeUri != nil) {
-    NSString *example = [NSString stringWithFormat:@"rntester://example/%@Example", routeUri];
-    initProps[@"exampleFromAppetizeParams"] = example;
+    // `-route Grid` opens the module; `-route Grid/autofill` opens one example
+    // within it. The "Example" suffix belongs to the MODULE key only, so it is
+    // appended to the first path segment rather than to the whole string —
+    // otherwise an example key would come out as "…/autofillExample" and fail
+    // to resolve. This is what makes a single example addressable for
+    // screenshots without driving the UI.
+    NSRange separator = [routeUri rangeOfString:@"/"];
+    if (separator.location == NSNotFound) {
+      initProps[@"exampleFromAppetizeParams"] = [NSString stringWithFormat:@"rntester://example/%@Example", routeUri];
+    } else {
+      NSString *moduleKey = [routeUri substringToIndex:separator.location];
+      NSString *exampleKey = [routeUri substringFromIndex:separator.location + 1];
+      initProps[@"exampleFromAppetizeParams"] =
+          [NSString stringWithFormat:@"rntester://example/%@Example/%@", moduleKey, exampleKey];
+    }
   }
   return [initProps copy];
 }
@@ -57,7 +75,19 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
   self.dependencyProvider = [[RCTAppDependencyProvider alloc] init];
 #endif
 
+  // Enable W3C Pointer Events so DOM-style pointer/click events (and the DOM
+  // event/target APIs) dispatch — required for text children's inline elements
+  // to handle click events like the web (text-children demo).
+  RCTSetDispatchW3CPointerEvents(YES);
+
   self.reactNativeFactory = [[RCTReactNativeFactory alloc] initWithDelegate:self releaseLevel:[self releaseLevel]];
+
+  // The factory just installed the OSS-Stable feature-flag provider (a plain
+  // `override` here — before or after — would throw on double-override), so
+  // replace it via the sanctioned escape hatch with our subclass that also
+  // enables the native Yoga block formatting context for the demo. Runs
+  // before startReactNative below, which is what starts reading flags.
+  RNTesterOverrideFeatureFlags();
 
   auto *windowScene = (UIWindowScene *)scene;
   self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
@@ -86,11 +116,6 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
   return RCTReleaseLevel::Stable;
 }
 
-- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts
-{
-  [RCTLinkingManager scene:scene openURLContexts:URLContexts];
-}
-
 - (void)scene:(UIScene *)scene continueUserActivity:(NSUserActivity *)userActivity
 {
   [RCTLinkingManager scene:scene continueUserActivity:userActivity];
@@ -114,7 +139,13 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
 
 - (NSURL *)bundleURL
 {
+#if DEBUG
   return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:kBundlePath];
+#else
+  // Release: load the embedded bundle; RNTester's default always points at
+  // Metro, which does not exist for a release benchmark build.
+  return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
+#endif
 }
 
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const std::string &)name
