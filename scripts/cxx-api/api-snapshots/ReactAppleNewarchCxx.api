@@ -3644,6 +3644,24 @@ struct facebook::react::BaseViewProps::CssMotion {
   public std::string transitionTimingFunctionRaw;
 }
 
+class facebook::react::CSSTransitions : public facebook::react::UIManagerCommitHook {
+  public CSSTransitions(facebook::react::UIManager& uiManager);
+  public std::shared_ptr<facebook::react::CSSTransitionsTrace> trace() const;
+  public virtual facebook::react::RootShadowNode::Unshared shadowTreeWillCommit(const facebook::react::ShadowTree& shadowTree, const facebook::react::RootShadowNode::Shared& oldRootShadowNode, const facebook::react::RootShadowNode::Unshared& newRootShadowNode, const facebook::react::ShadowTreeCommitOptions& commitOptions) noexcept override;
+  public virtual void commitHookWasRegistered(const facebook::react::UIManager& uiManager) noexcept override;
+  public virtual void commitHookWasUnregistered(const facebook::react::UIManager& uiManager) noexcept override;
+  public void frame(double nowMs);
+  public void setAnimationBackend(std::weak_ptr<facebook::react::UIManagerAnimationBackend> animationBackend);
+  public ~CSSTransitions() noexcept override;
+}
+
+class facebook::react::CSSTransitionsTrace {
+  public static constexpr long long kHourMs;
+  public static std::shared_ptr<facebook::react::CSSTransitionsTrace>& shared();
+  public std::vector<std::string> drain();
+  public void log(std::string line);
+}
+
 class facebook::react::CallInvoker {
   public virtual void invokeAsync(facebook::react::CallFunc&& func) noexcept = 0;
   public virtual void invokeAsync(facebook::react::SchedulerPriority, facebook::react::CallFunc&& func) noexcept;
@@ -6155,6 +6173,17 @@ struct facebook::react::Rect {
   public void unionInPlace(const facebook::react::Rect& rect) noexcept;
 }
 
+struct facebook::react::RunningTransition {
+  public bool awaitingFirstFrame;
+  public double delay;
+  public double duration;
+  public double startTime;
+  public facebook::react::TransitionProperty property;
+  public facebook::react::TransitionTimingFunction timingFunction;
+  public facebook::react::TransitionValue from;
+  public facebook::react::TransitionValue to;
+}
+
 struct facebook::react::ShadowNodeFamilyFragment {
   public const facebook::react::SurfaceId surfaceId;
   public const facebook::react::Tag tag;
@@ -6281,6 +6310,12 @@ struct facebook::react::TransitionTimingFunction {
   public int32_t stepCount;
 }
 
+struct facebook::react::TransitionValue {
+  public facebook::react::Float number;
+  public facebook::react::SharedColor color;
+  public facebook::react::Transform transform;
+}
+
 struct facebook::react::ValueUnit {
   public constexpr ValueUnit() = default;
   public constexpr ValueUnit(float v, facebook::react::UnitType u);
@@ -6340,6 +6375,14 @@ enum facebook::react::ViewEvents::Offset : std::size_t {
   TouchEnd,
   TouchMove,
   TouchStart,
+}
+
+struct facebook::react::ViewTransitions {
+  public bool needsSize;
+  public facebook::react::Size size;
+  public facebook::react::Tag tag;
+  public std::shared_ptr<const facebook::react::ShadowNodeFamily> family;
+  public std::vector<facebook::react::RunningTransition> running;
 }
 
 template <const char* concreteComponentName, typename ViewPropsT = facebook::react::ViewProps, typename ViewEventEmitterT = facebook::react::ViewEventEmitter, typename StateDataT = facebook::react::StateData>
