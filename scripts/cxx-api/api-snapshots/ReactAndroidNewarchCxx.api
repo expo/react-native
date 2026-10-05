@@ -920,6 +920,7 @@ class facebook::react::AttributedString : public facebook::react::Sealable, publ
   public const facebook::react::AttributedString::Fragments& getFragments() const;
   public const facebook::react::TextAttributes& getBaseTextAttributes() const;
   public facebook::react::AttributedString::Fragments& getFragments();
+  public facebook::react::RectangleEdges<facebook::react::Float> baselineShiftInkOverflow() const;
   public facebook::react::RectangleEdges<facebook::react::Float> inlineBoxBlockAxisOverflow() const;
   public std::string getString() const;
   public using Fragments = std::vector<facebook::react::AttributedString::Fragment>;
@@ -1651,7 +1652,9 @@ class facebook::react::InlineContentShadowNode : public facebook::react::Concret
   public InlineContentShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public InlineContentShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public bool cachedContentMatches(const facebook::react::TextAttributes& textAttributes) const;
+  public bool cachedContentMatches(facebook::react::Float fontSizeMultiplier, facebook::react::LayoutDirection layoutDirection) const;
   public bool listMarkerEquals(const facebook::react::ListMarker& other) const;
+  public facebook::react::LayoutDirection resolvedLayoutDirection() const;
   public facebook::react::TextAttributes baseTextAttributes() const;
   public mutable std::shared_ptr<const facebook::react::InlineContentShadowNode::CachedContent> cachedContent_;
   public static facebook::react::ShadowNodeTraits BaseTraits();
@@ -1669,6 +1672,7 @@ class facebook::react::InlineContentShadowNode : public facebook::react::Concret
   public virtual std::vector<facebook::react::PendingInlineElementMetrics> stampInlineElementMetrics(const facebook::react::LayoutContext& layoutContext, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics) const override;
   public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
   public virtual void setListMarker(facebook::react::ListMarker listMarker) override;
+  public void memoize(const facebook::react::TextAttributes& textAttributes, const facebook::react::AttributedString& attributedString, bool hasAttachments, const std::vector<facebook::react::Rect>& fragmentRects, facebook::react::Float rectsAvailableWidth) const;
   public void setTextLayoutManager(std::shared_ptr<const facebook::react::TextLayoutManager> textLayoutManager);
 }
 
@@ -1676,7 +1680,9 @@ struct facebook::react::InlineContentShadowNode::CachedContent {
   public bool hasAttachments;
   public facebook::react::AttributedString attributedString;
   public facebook::react::Float fontSizeMultiplier;
+  public facebook::react::Float rectsAvailableWidth;
   public std::optional<facebook::react::LayoutDirection> layoutDirection;
+  public std::vector<facebook::react::Rect> fragmentRects;
 }
 
 class facebook::react::InlineTagProps : public facebook::react::TextProps, public facebook::react::AccessibilityProps, public facebook::react::NodeNameProvider {
@@ -2665,18 +2671,22 @@ class facebook::react::TextAttributes : public facebook::react::DebugStringConve
   public bool operator==(const facebook::react::TextAttributes& rhs) const;
   public facebook::react::Float baselineShift;
   public facebook::react::Float fontSize;
+  public facebook::react::Float fontSizeEm;
   public facebook::react::Float fontSizeMultiplier;
+  public facebook::react::Float fontSizeRem;
   public facebook::react::Float letterSpacing;
   public facebook::react::Float lineHeight;
   public facebook::react::Float maxFontSizeMultiplier;
   public facebook::react::Float opacity;
   public facebook::react::Float textShadowRadius;
+  public facebook::react::Float uaFontSizeEm;
   public facebook::react::SharedColor backgroundColor;
   public facebook::react::SharedColor foregroundColor;
   public facebook::react::SharedColor textDecorationColor;
   public facebook::react::SharedColor textShadowColor;
   public static facebook::react::Float initialFontSize();
   public static facebook::react::TextAttributes defaultTextAttributes();
+  public static std::optional<facebook::react::Float> resolveFontSize(facebook::react::Float declaredFontSize, facebook::react::Float declaredFontSizeEm, facebook::react::Float declaredFontSizeRem, facebook::react::Float userAgentFontSizeEm, bool platformSuppliesSize, facebook::react::Float inheritedFontSize);
   public std::optional<bool> allowFontScaling;
   public std::optional<bool> isHighlighted;
   public std::optional<bool> isPressable;
@@ -2694,6 +2704,7 @@ class facebook::react::TextAttributes : public facebook::react::DebugStringConve
   public std::optional<facebook::react::TextDecorationLineType> textDecorationLineType;
   public std::optional<facebook::react::TextDecorationStyle> textDecorationStyle;
   public std::optional<facebook::react::TextTransform> textTransform;
+  public std::optional<facebook::react::TextVerticalAlign> verticalAlign;
   public std::optional<facebook::react::WhiteSpace> whiteSpace;
   public std::optional<facebook::react::WritingDirection> baseWritingDirection;
   public std::optional<std::string> fontVariationSettings;
@@ -3588,6 +3599,12 @@ enum facebook::react::TextTransform : uint8_t {
   None,
   Unset,
   Uppercase,
+}
+
+enum facebook::react::TextVerticalAlign : uint8_t {
+  Baseline,
+  Sub,
+  Super,
 }
 
 enum facebook::react::TextWidthMode {

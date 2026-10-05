@@ -33,6 +33,24 @@ struct TextEffectInfo {
   bool operator==(const TextEffectInfo &) const = default;
 };
 
+/*
+ * `vertical-align` as it applies to TEXT, which is a different thing from the
+ * box-level `AtomicInlineVerticalAlign` next door: that one places a whole
+ * atomic inline on a line, this one shifts glyphs off the baseline within a
+ * run.
+ *
+ * Deliberately an enum rather than an offset in points. Both platforms have
+ * first-class superscript support that derives the shift AND the size
+ * reduction from the font's own metrics — `NSSuperscriptAttributeName` on iOS,
+ * `SuperscriptSpan`/`SubscriptSpan` on Android. A hand-computed `0.33em` would
+ * be a guess that goes wrong on every font whose designer chose otherwise.
+ */
+enum class TextVerticalAlign : uint8_t {
+  Baseline,
+  Super,
+  Sub,
+};
+
 class TextAttributes;
 
 using SharedTextAttributes = std::shared_ptr<const TextAttributes>;
@@ -68,6 +86,68 @@ class TextAttributes : public DebugStringConvertible {
   // checks alignment.
   std::string fontFamily{""};
   Float fontSize{std::numeric_limits<Float>::quiet_NaN()};
+  /*
+   * A font size given in `em`: a multiple of the INHERITED font size, which is
+   * what `em` means in CSS (css-values-4 5.1.1). Resolved when this element's
+   * attributes are folded onto its parent's, because that is the only point
+   * where the inherited size is known. `rem` needs no such treatment — the
+   * root size is a constant the sheet can write directly.
+   */
+  Float fontSizeEm{std::numeric_limits<Float>::quiet_NaN()};
+  Float fontSizeRem{std::numeric_limits<Float>::quiet_NaN()};
+
+  /*
+   * The USER-AGENT sheet's `em` factor for this element's font size — the same
+   * value as `fontSizeEm` beside it, in a channel an author never writes.
+   *
+   * The split is the cascade's origins. The sheet gives `<pre>` and `<sup>`
+   * `font-size: 0.8125em` and `0.8333em`; an author writing
+   * `<sup style={{fontSize: 10}}>` states an AUTHOR-origin declaration, which
+   * beats a user-agent one (css-cascade-4 §6.1). Sharing one property makes
+   * that unexpressible — two values in one slot, with nothing to say which
+   * origin spoke.
+   */
+  Float uaFontSizeEm{std::numeric_limits<Float>::quiet_NaN()};
+
+  /*
+   * Decides one element's computed `font-size`, for every path that has to.
+   *
+   * There are two — a block container folds the cascade in
+   * `BaseViewProps::applyInheritedTextAttributes`, a text node in
+   * `TextAttributes::apply` — and they must reach the same answer, or one
+   * stylesheet means two things depending on which kind of element it lands on.
+   *
+   * The order is css-cascade-4 §6.1 — author origin over user-agent origin —
+   * and, within the author's, css-values-4 §5.1.1 for what each unit resolves
+   * against:
+   *
+   *   1. the author's `em`, against the INHERITED size;
+   *   2. the author's `rem`, against the ROOT's — which is font-size's INITIAL
+   *      value, and not a number this has to be told. React Native's root
+   *      element is the surface root, which no app-rendered element is and
+   *      which an app has no way to state a font size on
+   *      (`DOM-CSS-LIMITATION(rem-root-is-the-unstylable-surface-root)`), so
+   *      the root's computed size is the initial value for the life of the
+   *      surface and is not carried as a value;
+   *   3. the author's absolute `fontSize`;
+   *   4. a platform text role, which supersedes any user-agent size;
+   *   5. the user-agent sheet's `em`, against the inherited size;
+   *   6. nothing stated — inherit.
+   *
+   * Returns `nullopt` for (6), meaning leave the inherited size alone. For (4)
+   * it returns an engaged NaN, which means something quite different from "no
+   * size": it means ASK THE PLATFORM'S FONT, which carries the weight and the
+   * leading a number cannot express. Collapsing those two is how a role that
+   * failed to resolve once left text with no size at all, and surfaced far away
+   * as `FontSize should be a positive value`.
+   */
+  static std::optional<Float> resolveFontSize(
+      Float declaredFontSize,
+      Float declaredFontSizeEm,
+      Float declaredFontSizeRem,
+      Float userAgentFontSizeEm,
+      bool platformSuppliesSize,
+      Float inheritedFontSize);
   Float fontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   Float maxFontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   Float letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
@@ -96,6 +176,8 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<LineBreakMode> lineBreakMode{};
   // `white-space`. Inherited, so a container passes it to every run inside it.
   std::optional<WhiteSpace> whiteSpace{};
+  // `<sup>`/`<sub>`: a baseline shift the platform's text engine computes.
+  std::optional<TextVerticalAlign> verticalAlign{};
 
   // Decoration
   SharedColor textDecorationColor{};
