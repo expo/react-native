@@ -3122,6 +3122,7 @@ struct facebook::hermes::ISetEventLoopControl : public facebook::jsi::ICast {
 
 const char facebook::react::ElementBoxComponentName[];
 const char facebook::react::InlineContentComponentName[];
+const char facebook::react::InlineTextComponentName[];
 const char facebook::react::TextNodeComponentName[];
 const char facebook::react::ViewComponentName[];
 const facebook::react::EventTag facebook::react::EMPTY_EVENT_TAG;
@@ -3177,6 +3178,7 @@ using facebook::react::GradientDirection = std::variant<facebook::react::Float, 
 using facebook::react::HostPlatformTouch = facebook::react::BaseTouch;
 using facebook::react::HostPlatformViewEventEmitter = facebook::react::BaseViewEventEmitter;
 using facebook::react::ImageSources = std::vector<facebook::react::ImageSource>;
+using facebook::react::InlineTextComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::InlineTextShadowNode>;
 using facebook::react::ModalHostViewSupportedOrientationsMask = uint32_t;
 using facebook::react::NativeMethodCallFunc = std::function<void()>;
 using facebook::react::PromiseSetupFunctionType = std::function<void(facebook::jsi::Runtime& rt, std::shared_ptr<facebook::react::Promise>)>;
@@ -4050,6 +4052,13 @@ struct facebook::react::InlineContentShadowNode::CachedContent {
   public std::optional<facebook::react::LayoutDirection> layoutDirection;
 }
 
+class facebook::react::InlineTagProps : public facebook::react::TextProps, public facebook::react::NodeNameProvider {
+  public InlineTagProps() = default;
+  public InlineTagProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineTagProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public std::string nodeName;
+  public virtual std::string domNodeName() const override;
+}
+
 class facebook::react::InlineTextContentAccessor {
   public virtual facebook::react::AttributedString getContentAttributedString(facebook::react::Float fontSizeMultiplier) const = 0;
   public virtual facebook::react::InlineTextContentAccessor::OutsideMarker getOutsideMarker() const = 0;
@@ -4064,6 +4073,14 @@ struct facebook::react::InlineTextContentAccessor::OutsideMarker {
   public facebook::react::AttributedString attributedString;
   public facebook::react::Float baseline;
   public facebook::react::Size size;
+}
+
+class facebook::react::InlineTextProps : public facebook::react::InlineTagProps {
+  public InlineTextProps() = default;
+  public InlineTextProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineTagProps& sourceProps, const facebook::react::RawProps& rawProps);
+}
+
+class facebook::react::InlineTextShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::InlineTextComponentName, TextShadowNode, facebook::react::InlineTextProps, TextEventEmitter> {
 }
 
 class facebook::react::InputAccessoryEventEmitter : public facebook::react::BaseViewEventEmitter {
@@ -7485,6 +7502,11 @@ id facebook::react::TurboModuleConvertUtils::convertJSIValueToObjCObject(faceboo
 
 
 static const facebook::react::Color facebook::react::HostPlatformColor::UndefinedColor;
+
+
+std::vector<facebook::react::ComponentDescriptorProvider> facebook::react::dom::allElementProviders();
+std::vector<facebook::react::ComponentDescriptorProvider> facebook::react::dom::inlineTextElementProviders();
+void facebook::react::dom::addAllElementDescriptors(const facebook::react::ComponentDescriptorProviderRegistry& registry);
 
 
 template <typename JSReturnT, typename ReturnT>

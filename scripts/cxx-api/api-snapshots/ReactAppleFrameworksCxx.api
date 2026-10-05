@@ -3237,6 +3237,7 @@ const char facebook::react::ImageComponentName[];
 const char facebook::react::ImageManagerKey[];
 const char facebook::react::ImgTagComponentName[];
 const char facebook::react::InlineContentComponentName[];
+const char facebook::react::InlineTextComponentName[];
 const char facebook::react::ModalHostViewComponentName[];
 const char facebook::react::ParagraphComponentName[];
 const char facebook::react::RootComponentName[];
@@ -3340,6 +3341,7 @@ using facebook::react::GradientDirection = std::variant<facebook::react::Float, 
 using facebook::react::HostPlatformTouch = facebook::react::BaseTouch;
 using facebook::react::HostPlatformViewEventEmitter = facebook::react::BaseViewEventEmitter;
 using facebook::react::ImageSources = std::vector<facebook::react::ImageSource>;
+using facebook::react::InlineTextComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::InlineTextShadowNode>;
 using facebook::react::LayoutConformanceComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::LayoutConformanceShadowNode>;
 using facebook::react::LineMeasureCache = facebook::react::SimpleThreadSafeCache<facebook::react::LineMeasureCacheKey, facebook::react::LinesMeasurements, facebook::react::kSimpleThreadSafeCacheSizeCap>;
 using facebook::react::LinesMeasurements = std::vector<facebook::react::LineMeasurement>;
@@ -4769,6 +4771,13 @@ struct facebook::react::InlineContentShadowNode::CachedContent {
   public std::optional<facebook::react::LayoutDirection> layoutDirection;
 }
 
+class facebook::react::InlineTagProps : public facebook::react::TextProps, public facebook::react::NodeNameProvider {
+  public InlineTagProps() = default;
+  public InlineTagProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineTagProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public std::string nodeName;
+  public virtual std::string domNodeName() const override;
+}
+
 class facebook::react::InlineTextContentAccessor {
   public virtual facebook::react::AttributedString getContentAttributedString(facebook::react::Float fontSizeMultiplier) const = 0;
   public virtual facebook::react::InlineTextContentAccessor::OutsideMarker getOutsideMarker() const = 0;
@@ -4783,6 +4792,14 @@ struct facebook::react::InlineTextContentAccessor::OutsideMarker {
   public facebook::react::AttributedString attributedString;
   public facebook::react::Float baseline;
   public facebook::react::Size size;
+}
+
+class facebook::react::InlineTextProps : public facebook::react::InlineTagProps {
+  public InlineTextProps() = default;
+  public InlineTextProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineTagProps& sourceProps, const facebook::react::RawProps& rawProps);
+}
+
+class facebook::react::InlineTextShadowNode : public facebook::react::ConcreteShadowNode<facebook::react::InlineTextComponentName, facebook::react::TextShadowNode, facebook::react::InlineTextProps, facebook::react::TextEventEmitter> {
 }
 
 class facebook::react::InputAccessoryEventEmitter : public facebook::react::BaseViewEventEmitter {
@@ -11023,8 +11040,11 @@ std::shared_ptr<const facebook::react::ShadowNode> facebook::react::dom::getElem
 std::shared_ptr<const facebook::react::ShadowNode> facebook::react::dom::getParentNode(const facebook::react::RootShadowNode::Shared& currentRevision, const facebook::react::ShadowNode& shadowNode);
 std::string facebook::react::dom::getTagName(const facebook::react::ShadowNode& shadowNode);
 std::string facebook::react::dom::getTextContent(const facebook::react::RootShadowNode::Shared& currentRevision, const facebook::react::ShadowNode& shadowNode);
+std::vector<facebook::react::ComponentDescriptorProvider> facebook::react::dom::allElementProviders();
+std::vector<facebook::react::ComponentDescriptorProvider> facebook::react::dom::inlineTextElementProviders();
 std::vector<std::shared_ptr<const facebook::react::ShadowNode>> facebook::react::dom::getChildNodes(const facebook::react::RootShadowNode::Shared& currentRevision, const facebook::react::ShadowNode& shadowNode);
 uint_fast16_t facebook::react::dom::compareDocumentPosition(const facebook::react::RootShadowNode::Shared& currentRevision, const facebook::react::ShadowNode& shadowNode, const facebook::react::ShadowNode& otherShadowNode);
+void facebook::react::dom::addAllElementDescriptors(const facebook::react::ComponentDescriptorProviderRegistry& registry);
 
 struct facebook::react::dom::DOMBorderWidthRounded {
   public int bottom;
