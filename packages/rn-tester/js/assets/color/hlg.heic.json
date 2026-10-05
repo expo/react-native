@@ -1,0 +1,66 @@
+{
+  "bitsPerComponent" : 8,
+  "class" : "hdr",
+  "file" : "hlg.heic",
+  "id" : "F13",
+  "note" : "10-bit: SDR rendition 8-bit, kept in a deep plan reserved from the header's depth. HLG neutrals at 0, 25, 50, 75, 100% signal (75% is reference white); SDR: ImageIO's tone map",
+  "patches" : [
+    {
+      "h" : 64,
+      "source" : [
+        0,
+        0,
+        0
+      ],
+      "w" : 51,
+      "x" : 0,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "source" : [
+        0.25,
+        0.25,
+        0.25
+      ],
+      "w" : 51,
+      "x" : 51,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "source" : [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "w" : 51,
+      "x" : 102,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "source" : [
+        0.75,
+        0.75,
+        0.75
+      ],
+      "w" : 51,
+      "x" : 153,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "source" : [
+        1,
+        1,
+        1
+      ],
+      "w" : 52,
+      "x" : 204,
+      "y" : 0
+    }
+  ],
+  "space" : "display-p3",
+  "variant" : "deep"
+}
