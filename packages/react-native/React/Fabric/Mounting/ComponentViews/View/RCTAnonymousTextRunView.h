@@ -50,6 +50,13 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (facebook::react::SharedTouchEventEmitter)touchEventEmitterAtContainerPoint:(CGPoint)point;
 
+/**
+ * Discards the cached accessibility elements. Called when the run changes,
+ * because those elements are positioned on fragment rects that only the current
+ * text and layout can produce.
+ */
+- (void)invalidateAccessibilityElements;
+
 @end
 
 NS_ASSUME_NONNULL_END
