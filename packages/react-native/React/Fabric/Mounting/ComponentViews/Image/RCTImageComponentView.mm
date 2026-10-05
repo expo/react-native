@@ -23,9 +23,25 @@
 
 using namespace facebook::react;
 
+API_AVAILABLE(ios(17.0))
+static UIImageDynamicRange RCTImageDynamicRangeFromLimit(DynamicRangeLimit limit)
+{
+  switch (limit) {
+    case DynamicRangeLimit::Standard:
+      return UIImageDynamicRangeStandard;
+    case DynamicRangeLimit::Constrained:
+      return UIImageDynamicRangeConstrainedHigh;
+    case DynamicRangeLimit::NoLimit:
+      return UIImageDynamicRangeHigh;
+  }
+}
+
 @implementation RCTImageComponentView {
   ImageShadowNode::ConcreteState::Shared _state;
   std::shared_ptr<RCTImageResponseObserverProxy> _imageResponseObserverProxy;
+  // Whether `dynamicRangeLimit` has been applied since the view was made or
+  // recycled
+  BOOL _dynamicRangeLimitApplied;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -94,6 +110,18 @@ using namespace facebook::react;
   auto oldImageState = std::static_pointer_cast<const ImageShadowNode::ConcreteState>(_state);
   auto newImageState = std::static_pointer_cast<const ImageShadowNode::ConcreteState>(state);
 
+  // Set the first time even when unchanged: CSS's initial `no-limit` replaces
+  // the view's own default, which defers to the trait collection
+  if (ReactNativeFeatureFlags::enableColorSpaces()) {
+    const auto limit = newImageState->getData().getDynamicRangeLimit();
+    if (!_dynamicRangeLimitApplied || !oldImageState || oldImageState->getData().getDynamicRangeLimit() != limit) {
+      if (@available(iOS 17.0, *)) {
+        _imageView.preferredImageDynamicRange = RCTImageDynamicRangeFromLimit(limit);
+      }
+      _dynamicRangeLimitApplied = YES;
+    }
+  }
+
   bool havePreviousData = oldImageState && oldImageState->getData().getImageSource() != ImageSource{};
 
   if (!havePreviousData ||
@@ -139,6 +167,7 @@ using namespace facebook::react;
   [super prepareForRecycle];
   [self _setStateAndResubscribeImageResponseObserver:nullptr];
   _imageView.image = nil;
+  _dynamicRangeLimitApplied = NO;
 }
 
 #pragma mark - RCTImageResponseDelegate

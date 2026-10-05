@@ -22,6 +22,7 @@ import android.graphics.Shader.TileMode
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Build
 import com.facebook.common.internal.Supplier
 import com.facebook.common.references.CloseableReference
 import com.facebook.common.util.UriUtil
@@ -31,6 +32,7 @@ import com.facebook.datasource.IncreasingQualityDataSourceSupplier
 import com.facebook.drawee.backends.pipeline.Fresco
 import com.facebook.drawee.backends.pipeline.PipelineDraweeController
 import com.facebook.drawee.controller.AbstractDraweeControllerBuilder
+import com.facebook.drawee.controller.BaseControllerListener
 import com.facebook.drawee.controller.ControllerListener
 import com.facebook.drawee.controller.ForwardingControllerListener
 import com.facebook.drawee.drawable.AutoRotateDrawable
@@ -43,6 +45,7 @@ import com.facebook.imagepipeline.common.ResizeOptions
 import com.facebook.imagepipeline.common.RotationOptions
 import com.facebook.imagepipeline.core.DownsampleMode
 import com.facebook.imagepipeline.image.CloseableImage
+import com.facebook.imagepipeline.image.CloseableStaticBitmap
 import com.facebook.imagepipeline.image.ImageInfo
 import com.facebook.imagepipeline.postprocessors.IterativeBoxBlurPostProcessor
 import com.facebook.imagepipeline.request.BasePostprocessor
@@ -66,6 +69,7 @@ import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.UIManagerHelper
+import com.facebook.react.uimanager.WideColorGamut
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.util.RNLog
@@ -127,6 +131,42 @@ public class ReactImageView(
       isDirty = true
     }
   }
+
+  /**
+   * CSS Color HDR's `dynamic-range-limit`. The mode is the window's, so `constrained` draws as
+   * `no-limit`, and a `standard` picture beside an HDR one shares the window's headroom.
+   * DOM-CSS-LIMITATION(android-dynamic-range-is-per-window)
+   */
+  public var dynamicRangeLimit: String = "no-limit"
+    set(value) {
+      if (field != value) {
+        field = value
+        requestDynamicRangeIfNeeded()
+      }
+    }
+
+  // Whether the picture shown has a gain map, for a limit that arrives later
+  private var shownImageHasGainmap = false
+
+  private fun requestDynamicRangeIfNeeded() {
+    if (
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            shownImageHasGainmap &&
+            dynamicRangeLimit != "standard"
+    ) {
+      WideColorGamut.requestHighDynamicRange(this)
+    }
+  }
+
+  private val dynamicRangeListener: ControllerListener<ImageInfo> =
+      object : BaseControllerListener<ImageInfo>() {
+        override fun onFinalImageSet(id: String, imageInfo: ImageInfo?, animatable: Animatable?) {
+          shownImageHasGainmap =
+              Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                  (imageInfo as? CloseableStaticBitmap)?.underlyingBitmap?.hasGainmap() == true
+          requestDynamicRangeIfNeeded()
+        }
+      }
 
   public fun setShouldNotifyLoadEvents(shouldNotify: Boolean) {
     // Skip update if shouldNotify is already in sync with the download listener
@@ -604,16 +644,19 @@ public class ReactImageView(
 
     callerContext?.let { builder.setCallerContext(it) }
 
-    if (downloadListener != null && controllerForTesting != null) {
+    val listeners =
+        listOfNotNull(
+            downloadListener,
+            controllerForTesting,
+            dynamicRangeListener.takeIf { ReactNativeFeatureFlags.enableColorSpaces() },
+        )
+    if (listeners.size > 1) {
       val combinedListener: ForwardingControllerListener<ImageInfo> =
           ForwardingControllerListener<ImageInfo>()
-      combinedListener.addListener(downloadListener)
-      combinedListener.addListener(controllerForTesting)
+      listeners.forEach { combinedListener.addListener(it) }
       builder.setControllerListener(combinedListener)
-    } else if (controllerForTesting != null) {
-      builder.setControllerListener(controllerForTesting)
-    } else if (downloadListener != null) {
-      builder.setControllerListener(downloadListener)
+    } else if (listeners.size == 1) {
+      builder.setControllerListener(listeners[0])
     }
 
     if (downloadListener != null) {

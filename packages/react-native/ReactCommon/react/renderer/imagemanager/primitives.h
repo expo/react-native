@@ -18,6 +18,7 @@
 #include <React/RendererDebug.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/debug/flags.h>
+#include <react/renderer/graphics/DynamicRangeLimit.h>
 
 namespace facebook::react {
 

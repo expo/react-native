@@ -18,6 +18,7 @@
 #include <glog/logging.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
+#include <react/renderer/graphics/DynamicRangeLimit.h>
 
 #ifdef RN_SERIALIZABLE_STATE
 #include <yoga/Yoga.h>
@@ -26,6 +27,23 @@
 namespace facebook::react {
 
 #pragma mark - Color
+
+inline void fromRawValue(const PropsParserContext & /* context */, const RawValue &value, DynamicRangeLimit &result)
+{
+  result = DynamicRangeLimit::NoLimit;
+  if (!value.hasType<std::string>()) {
+    LOG(ERROR) << "Unsupported dynamicRangeLimit type";
+    return;
+  }
+  auto stringValue = (std::string)value;
+  if (stringValue == "standard") {
+    result = DynamicRangeLimit::Standard;
+  } else if (stringValue == "constrained") {
+    result = DynamicRangeLimit::Constrained;
+  } else if (stringValue != "no-limit") {
+    LOG(ERROR) << "Unsupported dynamicRangeLimit value: " << stringValue;
+  }
+}
 
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, SharedColor &result)
 {
