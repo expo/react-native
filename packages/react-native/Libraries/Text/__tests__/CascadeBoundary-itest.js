@@ -18,6 +18,8 @@ import * as React from 'react';
 import {createRef, useState} from 'react';
 import {Text, View} from 'react-native';
 
+import '@react-native/expo-intrinsics-poc';
+
 /*
  * Inheritance boundaries: CSS `all` (css-cascade-4 §3.2), scoped to the
  * inherited text set — the only cascading properties this renderer has.
@@ -191,6 +193,59 @@ test("<Text style={{all: 'unset'}}> removes the boundary and inherits", () => {
   expect(rectOf(optInRef).height).toBe(rectOf(controlRef).height);
 });
 
+test('a catalog <p> still inherits: DOM elements are web elements', () => {
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      <View collapsable={false} style={{color: 'red', display: 'block'}}>
+        <p>the DOM side keeps html.css semantics</p>
+      </View>,
+    );
+  });
+
+  expect(renderedColors(root)).toContain(RED);
+});
+
+test('a catalog <p> does not style a root <Text> inside it either', () => {
+  // The boundary is on the Text itself, so a <p style={{fontSize}}> ancestor
+  // must not reach it
+  const boundedRef = createRef<HostInstance>();
+  const controlRef = createRef<HostInstance>();
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      <>
+        <View collapsable={false} style={{display: 'block'}}>
+          <p style={{fontSize: 30}}>
+            <Text ref={boundedRef}>boundary probe</Text>
+          </p>
+        </View>
+        <Text ref={controlRef}>boundary probe</Text>
+      </>,
+    );
+  });
+
+  expect(rectOf(boundedRef).height).toBe(rectOf(controlRef).height);
+});
+
+test("an inline element inside a run can be a boundary: <span style={{all: 'initial'}}>", () => {
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      <View collapsable={false} style={{color: 'red', display: 'block'}}>
+        <span>red span</span>
+        <span style={{all: 'initial'}}>reset span</span>
+      </View>,
+    );
+  });
+
+  const colors = renderedColors(root);
+  // The un-reset sibling inherits red; the reset one carries no inherited
+  // color at all (a default-colored fragment omits the prop entirely).
+  expect(colors).toContain(`"${RED}","children":"red span"`);
+  expect(colors).not.toContain(`"${RED}","children":"reset span"`);
+});
+
 test('a nested <Text> can reset too: any element, one property', () => {
   // Fantom's deterministic text layout scales HEIGHTS with fontSize but not
   // character advances, so each case is its own single-line paragraph and the
@@ -354,4 +409,19 @@ test("a nested <Text style={{all: 'revert'}}> inherits: virtual text has no UA d
   expect(rectOf(revertParagraphRef).height).toBeGreaterThan(
     rectOf(defaultParagraphRef).height,
   );
+});
+
+test("an inline <span style={{all: 'revert'}}> inherits mid-run", () => {
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      <View collapsable={false} style={{color: 'red', display: 'block'}}>
+        <span style={{all: 'revert'}}>revert span</span>
+      </View>,
+    );
+  });
+
+  // Contrast with the all:'initial' span test above: reverting an inline
+  // element with no UA `all` declaration leaves the inherited red in force.
+  expect(renderedColors(root)).toContain(`"${RED}","children":"revert span"`);
 });

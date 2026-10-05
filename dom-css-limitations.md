@@ -98,3 +98,22 @@ Each remaining marker, with the file that carries it.
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
+
+---
+
+## Not limitations, though they look like ones
+
+Recorded because each has been mistaken for a bug at least once:
+
+- **Block-axis padding on an inline box does not grow the line box.** That is
+  CSS2 §10.6.1 — it overflows instead. The painting paths widen only their
+  drawing surface to avoid clipping it.
+- **`<b>` and `<strong>` render identically.** They are separate elements with
+  separate `tagName`s; identical rendering is what the UA sheet specifies.
+- **Fantom cannot observe a font-size change.** Its measurer is a fixed width
+  per character, so heading sizes must be checked on device — see
+  `packages/rn-tester/scripts/inline-metrics-verify.js`.
+- **12 LogBox Fantom suites fail.** Pre-existing upstream stale snapshots;
+  `frontier` fails identically under a clean-snapshot protocol. Note that the
+  runner **rewrites snapshots on failure**, so re-running masks it and
+  invalidates any comparison made afterwards — restore them first.
