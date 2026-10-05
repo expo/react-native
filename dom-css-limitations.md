@@ -19,6 +19,14 @@ means adding a marker; the slug is what ties it to the row below.
 
 ## Layout and box generation
 
+**`scope-limit-ignored`** — `packages/rn-tester/js/astryx/css/parse.js`
+
+`@scope (<root>) to (<limit>) { … }` scopes its rules under the root selector,
+`:scope` standing for the root itself, which is how a built Astryx theme
+declares its tokens on `[data-astryx-theme="…"]`. The limit is not applied: a
+scoped rule still reaches past a nested root (a second theme inside the
+first), and a `&` in a scoped selector is not resolved.
+
 **`clearance-on-an-empty-box`** — `yoga/algorithm/CalculateLayout.cpp`
 An empty box with `clear` still lets its margins collapse past it, so the
 content after it sits higher than in a browser. Boxes with content clear
