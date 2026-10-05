@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<10ffc40a255ca4382ae0b7b21a66355d>>
+ * @generated SignedSource<<86ab597a8fd3c4843aa580075cad0173>>
  * @flow strict
  * @noformat
  */
@@ -66,6 +66,7 @@ export type ReactNativeFeatureFlags = Readonly<{
   enableAndroidTextMeasurementOptimizations: Getter<boolean>,
   enableBridgelessArchitecture: Getter<boolean>,
   enableBufferedCallInvoker: Getter<boolean>,
+  enableColorSpaces: Getter<boolean>,
   enableCppPropsIteratorSetter: Getter<boolean>,
   enableCustomFocusSearchOnClippedElementsAndroid: Getter<boolean>,
   enableDestroyShadowTreeRevisionAsync: Getter<boolean>,
@@ -287,6 +288,10 @@ export const enableBridgelessArchitecture: Getter<boolean> = createNativeFlagGet
  * Route async CallInvoker work through the ReactInstance buffered runtime executor, so it is ordered against callable module calls and cannot run before the JS bundle has finished evaluating. invokeSync is unaffected.
  */
 export const enableBufferedCallInvoker: Getter<boolean> = createNativeFlagGetter('enableBufferedCallInvoker', true);
+/**
+ * Enables CSS Color 4 colors in their own color spaces (color(), lab(), lch(), oklab(), oklch(), and CSS Color HDR's rec2100 spaces): processColor passes them to native as objects, native draws them in the space the device resolves, and untagged integer colors are always sRGB.
+ */
+export const enableColorSpaces: Getter<boolean> = createNativeFlagGetter('enableColorSpaces', false);
 /**
  * Enable prop iterator setter-style construction of Props in C++ (this flag is not used in Java).
  */

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<2dd51d70b735ca62a6c67a34d6300a2b>>
+ * @generated SignedSource<<83d0b3775240fab120b481cf0e743585>>
  */
 
 /**
@@ -125,6 +125,11 @@ class ReactNativeFeatureFlags {
    * Route async CallInvoker work through the ReactInstance buffered runtime executor, so it is ordered against callable module calls and cannot run before the JS bundle has finished evaluating. invokeSync is unaffected.
    */
   RN_EXPORT static bool enableBufferedCallInvoker();
+
+  /**
+   * Enables CSS Color 4 colors in their own color spaces (color(), lab(), lch(), oklab(), oklch(), and CSS Color HDR's rec2100 spaces): processColor passes them to native as objects, native draws them in the space the device resolves, and untagged integer colors are always sRGB.
+   */
+  RN_EXPORT static bool enableColorSpaces();
 
   /**
    * Enable prop iterator setter-style construction of Props in C++ (this flag is not used in Java).

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<3aa1e0a770f4abac9f7effc1ac8d067c>>
+ * @generated SignedSource<<14d95aabdda2a72b795778d994c2ad93>>
  */
 
 /**
@@ -92,6 +92,10 @@ bool ReactNativeFeatureFlags::enableBridgelessArchitecture() {
 
 bool ReactNativeFeatureFlags::enableBufferedCallInvoker() {
   return getAccessor().enableBufferedCallInvoker();
+}
+
+bool ReactNativeFeatureFlags::enableColorSpaces() {
+  return getAccessor().enableColorSpaces();
 }
 
 bool ReactNativeFeatureFlags::enableCppPropsIteratorSetter() {

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<2c448a68efdb2adaa7cadc301dd2b83c>>
+ * @generated SignedSource<<2e9ddff36cffd7804674129c59480730>>
  */
 
 /**
@@ -127,6 +127,11 @@ bool NativeReactNativeFeatureFlags::enableBridgelessArchitecture(
 bool NativeReactNativeFeatureFlags::enableBufferedCallInvoker(
     jsi::Runtime& /*runtime*/) {
   return ReactNativeFeatureFlags::enableBufferedCallInvoker();
+}
+
+bool NativeReactNativeFeatureFlags::enableColorSpaces(
+    jsi::Runtime& /*runtime*/) {
+  return ReactNativeFeatureFlags::enableColorSpaces();
 }
 
 bool NativeReactNativeFeatureFlags::enableCppPropsIteratorSetter(

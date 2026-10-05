@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<8b524280d124ae47f4d5658afb4a890e>>
+ * @generated SignedSource<<92b93114e68ae117228d011bd5a5847d>>
  */
 
 /**
@@ -41,6 +41,7 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
   private var enableAndroidTextMeasurementOptimizationsCache: Boolean? = null
   private var enableBridgelessArchitectureCache: Boolean? = null
   private var enableBufferedCallInvokerCache: Boolean? = null
+  private var enableColorSpacesCache: Boolean? = null
   private var enableCppPropsIteratorSetterCache: Boolean? = null
   private var enableCustomFocusSearchOnClippedElementsAndroidCache: Boolean? = null
   private var enableDestroyShadowTreeRevisionAsyncCache: Boolean? = null
@@ -285,6 +286,16 @@ internal class ReactNativeFeatureFlagsLocalAccessor : ReactNativeFeatureFlagsAcc
       cached = currentProvider.enableBufferedCallInvoker()
       accessedFeatureFlags.add("enableBufferedCallInvoker")
       enableBufferedCallInvokerCache = cached
+    }
+    return cached
+  }
+
+  override fun enableColorSpaces(): Boolean {
+    var cached = enableColorSpacesCache
+    if (cached == null) {
+      cached = currentProvider.enableColorSpaces()
+      accessedFeatureFlags.add("enableColorSpaces")
+      enableColorSpacesCache = cached
     }
     return cached
   }

@@ -233,6 +233,17 @@ const definitions: FeatureFlagDefinitions = {
       },
       ossReleaseStage: 'none',
     },
+    enableColorSpaces: {
+      defaultValue: false,
+      metadata: {
+        dateAdded: '2026-10-03',
+        description:
+          "Enables CSS Color 4 colors in their own color spaces (color(), lab(), lch(), oklab(), oklch(), and CSS Color HDR's rec2100 spaces): processColor passes them to native as objects, native draws them in the space the device resolves, and untagged integer colors are always sRGB.",
+        expectedReleaseValue: true,
+        purpose: 'experimentation',
+      },
+      ossReleaseStage: 'none',
+    },
     enableCppPropsIteratorSetter: {
       dangerouslyExposeInPublicCppHeaders: true,
       defaultValue: false,

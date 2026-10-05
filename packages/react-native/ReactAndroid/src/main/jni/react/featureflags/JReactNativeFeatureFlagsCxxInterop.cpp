@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<07bbcea1e6961720e41077ce138cc9e5>>
+ * @generated SignedSource<<80a5ac2b9e1452985cf495e70a946b9b>>
  */
 
 /**
@@ -138,6 +138,12 @@ class ReactNativeFeatureFlagsJavaProvider
   bool enableBufferedCallInvoker() override {
     static const auto method =
         getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableBufferedCallInvoker");
+    return method(javaProvider_);
+  }
+
+  bool enableColorSpaces() override {
+    static const auto method =
+        getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableColorSpaces");
     return method(javaProvider_);
   }
 
@@ -692,6 +698,11 @@ bool JReactNativeFeatureFlagsCxxInterop::enableBufferedCallInvoker(
   return ReactNativeFeatureFlags::enableBufferedCallInvoker();
 }
 
+bool JReactNativeFeatureFlagsCxxInterop::enableColorSpaces(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
+  return ReactNativeFeatureFlags::enableColorSpaces();
+}
+
 bool JReactNativeFeatureFlagsCxxInterop::enableCppPropsIteratorSetter(
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
   return ReactNativeFeatureFlags::enableCppPropsIteratorSetter();
@@ -1159,6 +1170,9 @@ void JReactNativeFeatureFlagsCxxInterop::registerNatives() {
       makeNativeMethod(
         "enableBufferedCallInvoker",
         JReactNativeFeatureFlagsCxxInterop::enableBufferedCallInvoker),
+      makeNativeMethod(
+        "enableColorSpaces",
+        JReactNativeFeatureFlagsCxxInterop::enableColorSpaces),
       makeNativeMethod(
         "enableCppPropsIteratorSetter",
         JReactNativeFeatureFlagsCxxInterop::enableCppPropsIteratorSetter),

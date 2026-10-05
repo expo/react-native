@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<d9c3769c2950d07d66eb3d2db7b7ff34>>
+ * @generated SignedSource<<190cc551159bbe3b4dea7c4714cbccb1>>
  */
 
 /**
@@ -56,6 +56,8 @@ public open class ReactNativeFeatureFlagsDefaults : ReactNativeFeatureFlagsProvi
   override fun enableBridgelessArchitecture(): Boolean = true
 
   override fun enableBufferedCallInvoker(): Boolean = true
+
+  override fun enableColorSpaces(): Boolean = false
 
   override fun enableCppPropsIteratorSetter(): Boolean = false
 

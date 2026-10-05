@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<2a6ace18084ed65e56bc36f83ea0ca77>>
+ * @generated SignedSource<<7b5213143d3e108e3af788a570138284>>
  */
 
 /**
@@ -95,6 +95,10 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
 
   bool enableBufferedCallInvoker() override {
     return true;
+  }
+
+  bool enableColorSpaces() override {
+    return false;
   }
 
   bool enableCppPropsIteratorSetter() override {

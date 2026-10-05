@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<e63d5341c752e4ae10e38b5b15cb4aef>>
+ * @generated SignedSource<<3706711269f9a0e94bd1ed8c189e8d9a>>
  */
 
 /**
@@ -51,6 +51,7 @@ class ReactNativeFeatureFlagsAccessor {
   bool enableAndroidTextMeasurementOptimizations();
   bool enableBridgelessArchitecture();
   bool enableBufferedCallInvoker();
+  bool enableColorSpaces();
   bool enableCppPropsIteratorSetter();
   bool enableCustomFocusSearchOnClippedElementsAndroid();
   bool enableDestroyShadowTreeRevisionAsync();
@@ -139,7 +140,7 @@ class ReactNativeFeatureFlagsAccessor {
   std::unique_ptr<ReactNativeFeatureFlagsProvider> currentProvider_;
   bool wasOverridden_;
 
-  std::array<std::atomic<const char*>, 94> accessedFeatureFlags_;
+  std::array<std::atomic<const char*>, 95> accessedFeatureFlags_;
 
   std::atomic<std::optional<bool>> commonTestFlag_;
   std::atomic<std::optional<bool>> cdpInteractionMetricsEnabled_;
@@ -158,6 +159,7 @@ class ReactNativeFeatureFlagsAccessor {
   std::atomic<std::optional<bool>> enableAndroidTextMeasurementOptimizations_;
   std::atomic<std::optional<bool>> enableBridgelessArchitecture_;
   std::atomic<std::optional<bool>> enableBufferedCallInvoker_;
+  std::atomic<std::optional<bool>> enableColorSpaces_;
   std::atomic<std::optional<bool>> enableCppPropsIteratorSetter_;
   std::atomic<std::optional<bool>> enableCustomFocusSearchOnClippedElementsAndroid_;
   std::atomic<std::optional<bool>> enableDestroyShadowTreeRevisionAsync_;
