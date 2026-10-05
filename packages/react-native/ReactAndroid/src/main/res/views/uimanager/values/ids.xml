@@ -85,4 +85,6 @@
 
   <!-- tag is used to store important_for_interaction state -->
   <item type="id" name="important_for_interaction"/>
+  <!-- tag is used to store the view's own `dynamic-range-limit`, which bounds how bright its HDR colors draw -->
+  <item type="id" name="dynamic_range_limit"/>
 </resources>

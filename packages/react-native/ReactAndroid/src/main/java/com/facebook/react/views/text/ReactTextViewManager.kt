@@ -48,7 +48,6 @@ import com.facebook.react.uimanager.style.BorderStyle.Companion.fromString
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.views.text.DefaultStyleValuesUtil.getDefaultTextColorHighlight
 import com.facebook.react.views.text.ReactTypefaceUtils.getFontWeightAdjustment
-import com.facebook.react.views.text.internal.span.ReactForegroundColorSpan
 import com.facebook.react.views.view.ImportantForInteractionHelper
 import java.util.HashMap
 
@@ -102,9 +101,7 @@ public constructor(
       val update = extraData as ReactTextUpdate
       val spanned: Spanned = update.text
       view.setText(update)
-      if (ReactForegroundColorSpan.hasColorLong(spanned)) {
-        WideColorGamut.request(view)
-      }
+      WideColorGamut.request(view, spanned)
 
       // If this text view contains any clickable spans, set a view tag and reset the accessibility
       // delegate so that these can be picked up by the accessibility system.

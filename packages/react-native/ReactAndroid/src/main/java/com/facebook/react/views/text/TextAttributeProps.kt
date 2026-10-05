@@ -85,8 +85,8 @@ public class TextAttributeProps private constructor() {
 
   /**
    * `super`, `sub`, or null. Applied as a [android.text.style.SuperscriptSpan] or
-   * [android.text.style.SubscriptSpan], which take the shift from the font's own
-   * metrics — the counterpart of CoreText's superscript attribute on iOS.
+   * [android.text.style.SubscriptSpan], which take the shift from the font's own metrics — the
+   * counterpart of CoreText's superscript attribute on iOS.
    */
   public var verticalAlign: String? = null
 
@@ -208,12 +208,10 @@ public class TextAttributeProps private constructor() {
     this.fontSize = fontSizeLocal.toInt()
   }
 
-  /**
-   * The foreground color as a color long in its own color space, for a color written in one; [color]
-   * holds its sRGB approximation
-   */
-  @ColorLong
-  public var colorLong: Long? = null
+  /** The foreground color in its own space; [color] holds its sRGB approximation */
+  @ColorLong public var colorLong: Long? = null
+  // The effective `dynamic-range-limit` the text inherits; null with color spaces off
+  public var dynamicRangeLimit: String? = null
     private set
 
   public var color: Int? = null
@@ -438,6 +436,8 @@ public class TextAttributeProps private constructor() {
     public const val TA_KEY_TEXT_ROLE: Int = 34
     // The foreground color in its own color space; must match conversions.h
     public const val TA_KEY_FOREGROUND_COLOR_SPACE: Int = 36
+    // The effective dynamic-range-limit the text inherits; must match conversions.h
+    public const val TA_KEY_DYNAMIC_RANGE_LIMIT: Int = 37
     private const val CS_KEY_SPACE: Int = 0
     private const val CS_KEY_CHANNEL_0: Int = 1
     private const val CS_KEY_CHANNEL_1: Int = 2
@@ -457,6 +457,7 @@ public class TextAttributeProps private constructor() {
           color.getDouble(CS_KEY_ALPHA).toFloat(),
       )
     }
+
     public const val TA_KEY_FONT_SIZE_MULTIPLIER: Int = 5
     public const val TA_KEY_FONT_WEIGHT: Int = 6
     public const val TA_KEY_FONT_STYLE: Int = 7
@@ -516,7 +517,15 @@ public class TextAttributeProps private constructor() {
         val entry = iterator.next()
         when (entry.key) {
           TA_KEY_FOREGROUND_COLOR -> result.color = entry.intValue
-          TA_KEY_FOREGROUND_COLOR_SPACE -> result.colorLong = colorLongFromMapBuffer(entry.mapBufferValue)
+          TA_KEY_FOREGROUND_COLOR_SPACE ->
+              result.colorLong = colorLongFromMapBuffer(entry.mapBufferValue)
+          TA_KEY_DYNAMIC_RANGE_LIMIT ->
+              result.dynamicRangeLimit =
+                  when (entry.intValue) {
+                    1 -> "constrained"
+                    2 -> "standard"
+                    else -> "no-limit"
+                  }
           TA_KEY_BACKGROUND_COLOR -> result.backgroundColor = entry.intValue
           TA_KEY_OPACITY -> result.opacity = entry.doubleValue.toFloat()
           TA_KEY_FONT_FAMILY -> result.fontFamily = entry.stringValue

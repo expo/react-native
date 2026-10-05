@@ -11,14 +11,14 @@
 
 #include <react/renderer/graphics/ColorComponents.h>
 #include <react/renderer/graphics/ColorSpaceValue.h>
+#include <react/utils/hash_combine.h>
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
 #include <vector>
-#include <react/utils/hash_combine.h>
-#include <cmath>
-#include <cstdint>
 
 #ifdef RN_SERIALIZABLE_STATE
 #include <folly/dynamic.h>
@@ -170,15 +170,26 @@ inline Color hostPlatformColorFromColorSpaceValue(const ColorSpaceValue &value)
   return color;
 }
 
-/*
- * A color that exists for one frame, such as a transition's: its sRGB
- * approximation only, so frames don't fill `ColorSpaceValues`.
- * DOM-CSS-LIMITATION(android-transition-frames-are-srgb)
- */
+// The sRGB approximation only, so a transition's frames don't fill the table.
+// DOM-CSS-LIMITATION(android-transition-frames-are-srgb)
 inline Color hostPlatformColorFromTransientColorSpaceValue(const ColorSpaceValue &value)
 {
   auto components = toClippedSRGB(value);
   return components.has_value() ? hostPlatformColorFromComponents(*components) : HostPlatformColor::UndefinedColor;
+}
+
+// HDR by CSS's arithmetic, or a dashed space, which only the platform can
+// judge (`WideColorGamut`): either way the View consumes `dynamic-range-limit`
+inline bool isHighDynamicRangeColor(const Color &color)
+{
+  if (color.colorSpaceValueIndex == 0) {
+    return false;
+  }
+  auto value = ColorSpaceValues::get(color.colorSpaceValueIndex);
+  if (!value.has_value()) {
+    return false;
+  }
+  return isHighDynamicRange(*value) || !toExtendedLinearSRGB(*value).has_value();
 }
 
 inline ColorComponents colorComponentsFromHostPlatformColor(Color color)

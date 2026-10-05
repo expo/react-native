@@ -852,35 +852,40 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
       yogaLayoutableChildren_.size() == YGNodeGetChildCount(&yogaNode_));
 
   yogaNode_.setDirty(!isClean);
-  // Element-tree cascade dependents: a node has cascade dependents when some
-  // consumer below it — a paragraph or an anonymous IFC box — actually
-  // inherits through it. A child that is an inheritance boundary contributes
-  // nothing: its subtree restarts from the defaults and cannot observe this
-  // node's cascade. When the bit is unset, an inheritable-prop change here
-  // dirties nothing and the cascade never walks in.
-  if (ReactNativeFeatureFlags::enableStringChildren()) {
-    bool hasDependents = !anonymousTextContentChildren_.empty();
-    if (!hasDependents) {
-      for (const auto& child : yogaLayoutableChildren_) {
-        const auto childTraits = child->getTraits();
-        if (childTraits.check(ShadowNodeTraits::Trait::InheritanceBoundary)) {
-          continue;
-        }
-        if (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
-            childTraits.check(
-                ShadowNodeTraits::Trait::ResolvesRelativeLength) ||
-            childTraits.check(
-                ShadowNodeTraits::Trait::SubtreeHasCascadeDependents)) {
-          hasDependents = true;
-          break;
-        }
+  updateCascadeDependentsTrait();
+}
+
+/*
+ * A node has cascade dependents when a consumer below it — a paragraph, an
+ * anonymous IFC box, a picture or a View with an HDR color — inherits through
+ * it; a child that is an inheritance boundary contributes nothing. When the
+ * bit is unset, an inheritable-prop change here dirties nothing and the
+ * cascade never walks in.
+ */
+void YogaLayoutableShadowNode::updateCascadeDependentsTrait() {
+  if (!ReactNativeFeatureFlags::enableStringChildren()) {
+    return;
+  }
+  bool hasDependents = !anonymousTextContentChildren_.empty();
+  if (!hasDependents) {
+    for (const auto& child : yogaLayoutableChildren_) {
+      const auto childTraits = child->getTraits();
+      if (childTraits.check(ShadowNodeTraits::Trait::InheritanceBoundary)) {
+        continue;
+      }
+      if (childTraits.check(ShadowNodeTraits::Trait::TextCascadeConsumer) ||
+          childTraits.check(ShadowNodeTraits::Trait::ResolvesRelativeLength) ||
+          childTraits.check(
+              ShadowNodeTraits::Trait::SubtreeHasCascadeDependents)) {
+        hasDependents = true;
+        break;
       }
     }
-    if (hasDependents) {
-      traits_.set(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
-    } else {
-      traits_.unset(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
-    }
+  }
+  if (hasDependents) {
+    traits_.set(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
+  } else {
+    traits_.unset(ShadowNodeTraits::Trait::SubtreeHasCascadeDependents);
   }
 }
 

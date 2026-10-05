@@ -55,6 +55,11 @@ class AbstractViewShadowNode
     initialize();
   }
 
+  // A View with an HDR color consumes `dynamic-range-limit` and publishes the
+  // effective value in its state; it reads `receivedCascade()` rather than
+  // storing a copy, so the node stays within its size budget
+  void setInheritedCascade(const std::shared_ptr<const TextAttributes> &cascade) override;
+
   /*
    * Told when a child arrives, because the constructor is too early to ask.
    *
@@ -129,6 +134,11 @@ class AbstractViewShadowNode
    * the mounting layer to paint. A View without runs keeps a null state.
    */
   void updateTextRunStateIfNeeded(Float fontSizeMultiplier);
+
+  // The element's own, else the cascade's, else CSS's initial; empty for a
+  // View with no HDR color
+  std::optional<DynamicRangeLimit> effectiveDynamicRangeLimit() const;
+  void updateDynamicRangeLimitStateIfNeeded();
 };
 
 /*

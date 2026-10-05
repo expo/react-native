@@ -14,17 +14,17 @@ import android.text.style.ForegroundColorSpan
 import androidx.annotation.ColorLong
 
 /**
- * Wraps [ForegroundColorSpan] as a [ReactSpan]. A color written in its own color space also
- * carries its color long, which the paint takes where the OS can draw one; [getForegroundColor]
- * stays its sRGB approximation for everything that reads the integer.
+ * Wraps [ForegroundColorSpan] as a [ReactSpan]. A color in its own space also carries its color
+ * long, which the paint takes where the OS can; [getForegroundColor] stays its sRGB approximation.
  */
 internal class ReactForegroundColorSpan(
     color: Int,
     @ColorLong val colorLong: Long? = null,
+    // The `dynamic-range-limit` the text inherits; null with color spaces off
+    val dynamicRangeLimit: String? = null,
 ) : ForegroundColorSpan(color), ReactSpan {
 
   internal companion object {
-    // Whether the text draws a color written in its own color space
     fun hasColorLong(text: CharSequence): Boolean =
         text is Spanned &&
             text.getSpans(0, text.length, ReactForegroundColorSpan::class.java).any {

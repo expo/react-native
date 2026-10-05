@@ -65,6 +65,10 @@ folly::dynamic RenderOutput::renderView(
     if (view.state != nullptr) {
       if (const auto* viewState =
               dynamic_cast<const ConcreteState<ViewState>*>(view.state.get())) {
+        if (viewState->getData().dynamicRangeLimit.has_value()) {
+          props["dynamicRangeLimit"] =
+              toString(*viewState->getData().dynamicRangeLimit);
+        }
         for (const auto& run : viewState->getData().textRuns) {
           for (const auto& fragment :
                renderAttributedString(view.tag, run.attributedString)) {

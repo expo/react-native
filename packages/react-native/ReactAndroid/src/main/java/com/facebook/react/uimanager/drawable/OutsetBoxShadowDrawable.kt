@@ -40,9 +40,8 @@ private const val BLUR_RADIUS_SIGMA_SCALE = 0.5f
 internal class OutsetBoxShadowDrawable(
     private val context: Context,
     private val shadowColor: Int,
-    // The color in its own color space, painted where the OS can; `shadowColor` is its sRGB
-    // approximation
-    @ColorLong private val shadowColorLong: Long? = null,
+    // The color in its own space; `shadowColor` is its sRGB approximation
+    @ColorLong internal val shadowColorLong: Long? = null,
     private val offsetX: Float,
     private val offsetY: Float,
     private val blurRadius: Float,

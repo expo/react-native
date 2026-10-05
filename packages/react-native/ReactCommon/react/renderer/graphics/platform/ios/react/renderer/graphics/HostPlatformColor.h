@@ -29,12 +29,15 @@ struct Color {
   Color(int32_t color);
   Color(const DynamicColor &dynamicColor);
   Color(const ColorComponents &components);
-  // A color in its own space, in the CGColorSpace the OS resolves for it
   Color(const ColorSpaceValue &value);
-  // Whether the color was written in its own color space rather than as sRGB
   bool isColorSpaceColor() const
   {
     return uiColor_ != nullptr && (uiColorHashValue_ & kColorSpaceColorBit) != 0;
+  }
+  // Any channel above 1 in linear Rec. 2020, decided when the color was made
+  bool isHighDynamicRange() const
+  {
+    return uiColor_ != nullptr && (uiColorHashValue_ & kHighDynamicRangeBit) != 0;
   }
   Color() : uiColor_(nullptr) {};
   int32_t getColor() const;
@@ -72,19 +75,20 @@ struct Color {
  private:
   Color(std::shared_ptr<void> uiColor);
   std::shared_ptr<void> uiColor_;
-  // The color's hash, whose top bit says whether it is a color space color:
-  // kept in the hash so that the struct, which every color prop holds, doesn't
-  // grow, and so that two colors that differ only in it aren't equal
+  // Its top two bits say color-space color and HDR, so the struct doesn't
+  // grow and colors differing only in them compare unequal
   std::size_t uiColorHashValue_;
   static constexpr std::size_t kColorSpaceColorBit = std::size_t{1} << (sizeof(std::size_t) * 8 - 1);
+  static constexpr std::size_t kHighDynamicRangeBit = std::size_t{1} << (sizeof(std::size_t) * 8 - 2);
 };
 
-/*
- * The OS's color space for `space`, asked once per space and kept: null when
- * this device's OS has no such space. Defined in HostPlatformColor.mm.
- */
+// Null where this OS has no such space
 CGColorSpaceRef _Nullable platformColorSpaceFor(ColorSpace space);
 
+inline bool isHighDynamicRangeColor(const Color &color)
+{
+  return color.isHighDynamicRange();
+}
 
 namespace HostPlatformColor {
 

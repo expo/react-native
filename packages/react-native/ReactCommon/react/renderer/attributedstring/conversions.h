@@ -14,12 +14,13 @@
 // The accessibility conversions, not the `<React/View.h>` umbrella: the view
 // module includes this header for its text runs, and the umbrella would include
 // the view module back before it is complete
-#include <react/renderer/components/view/accessibilityPropsConversions.h>
+#include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/featureflags/ReactNativePublicFeatureFlags.h>
 #include <react/renderer/attributedstring/AttributedString.h>
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/attributedstring/primitives.h>
+#include <react/renderer/components/view/accessibilityPropsConversions.h>
 #include <react/renderer/css/CSSFontVariant.h>
 #include <react/renderer/css/CSSValueParser.h>
 #include <unordered_map>
@@ -639,6 +640,7 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
     // exposes a knob for it, so this behaves as `pre-wrap` — identical unless
     // a space run is long enough to outrun the line. Closing the gap means
     // breaking lines ourselves rather than asking the platform.
+    // DOM-CSS-LIMITATION(white-space-break-spaces-hangs)
     if (string == "break-spaces") {
       result = WhiteSpace::BreakSpaces;
       return;
@@ -1310,12 +1312,12 @@ constexpr static MapBuffer::Key TA_KEY_BASELINE_SHIFT = 33;
  * Must match `TA_KEY_TEXT_ROLE` in TextAttributeProps.kt.
  */
 constexpr static MapBuffer::Key TA_KEY_TEXT_ROLE = 34;
-/*
- * The foreground color as written in its own color space, beside its sRGB
- * approximation in TA_KEY_FOREGROUND_COLOR, so Android can draw it in that
- * space: a map of CS_KEY_* entries. Must match TextAttributeProps.kt.
- */
+// The foreground color in its own space (a map of CS_KEY_* entries), beside
+// its sRGB approximation; must match TextAttributeProps.kt
 constexpr static MapBuffer::Key TA_KEY_FOREGROUND_COLOR_SPACE = 36;
+// The effective `dynamic-range-limit`, in the enum's order; must match
+// TextAttributeProps.kt
+constexpr static MapBuffer::Key TA_KEY_DYNAMIC_RANGE_LIMIT = 37;
 constexpr static MapBuffer::Key CS_KEY_SPACE = 0;
 constexpr static MapBuffer::Key CS_KEY_CHANNEL_0 = 1;
 constexpr static MapBuffer::Key CS_KEY_CHANNEL_1 = 2;
@@ -1480,6 +1482,11 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
         builder.putMapBuffer(TA_KEY_FOREGROUND_COLOR_SPACE, colorBuilder.build());
       }
     }
+  }
+  if (ReactNativeFeatureFlags::enableColorSpaces()) {
+    builder.putInt(
+        TA_KEY_DYNAMIC_RANGE_LIMIT,
+        static_cast<int32_t>(textAttributes.dynamicRangeLimit.value_or(DynamicRangeLimit::NoLimit)));
   }
   if (textAttributes.backgroundColor) {
     builder.putInt(TA_KEY_BACKGROUND_COLOR, toAndroidRepr(textAttributes.backgroundColor));

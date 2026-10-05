@@ -129,6 +129,7 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
 
     view.setTag(R.id.use_hardware_layer, null);
     view.setTag(R.id.filter, null);
+    view.setTag(R.id.dynamic_range_limit, null);
     view.setTag(R.id.mix_blend_mode, null);
     LayerEffectsHelper.apply(view, null, null);
 
@@ -249,6 +250,17 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
   @ReactProp(name = ViewProps.FILTER, customType = "Filter")
   public void setFilter(@NonNull T view, @Nullable ReadableArray filter) {
     view.setTag(R.id.filter, filter);
+  }
+
+  /**
+   * The view's own `dynamic-range-limit`; the effective, inherited one arrives through the state of
+   * a view that draws an HDR color.
+   */
+  @ReactProp(name = "dynamicRangeLimit")
+  public void setDynamicRangeLimit(@NonNull T view, @Nullable String dynamicRangeLimit) {
+    view.setTag(R.id.dynamic_range_limit, dynamicRangeLimit);
+    // The colors may have arrived first, under the previous limit
+    BackgroundStyleApplicator.requestDynamicRangeForColors(view);
   }
 
   @ReactProp(name = ViewProps.MIX_BLEND_MODE)

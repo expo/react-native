@@ -366,6 +366,52 @@ function BorderTable() {
   );
 }
 
+/*
+ * Colors brighter than SDR white: twice white's luminance in linear sRGB, and
+ * a PQ gray at about 1000 nits. Each is drawn under no limit, then under
+ * `standard`, which keeps it at SDR white; on an SDR display all four are
+ * white. The limit is the box's own.
+ */
+const HDR_COLORS = [
+  ['srgb-linear 2 2 2', 'color(srgb-linear 2 2 2)'],
+  ['rec2100-pq 0.75', 'color(rec2100-pq 0.75 0.75 0.75)'],
+  ['rec2100-linear 4 0 0', 'color(rec2100-linear 4 0 0)'],
+];
+
+function HdrColorTable() {
+  return (
+    <View style={styles.hdrTable}>
+      <View />
+      {['no-limit', 'standard'].map(title => (
+        <View key={title}>
+          <Text style={styles.columnTitle}>{title}</Text>
+        </View>
+      ))}
+      <View />
+      {HDR_COLORS.flatMap(([label, color]) => [
+        <View key={label}>
+          <Text style={styles.name}>{label}</Text>
+        </View>,
+        <View
+          key={`${label} no-limit`}
+          ref={target(`hdr ${label}`, [{at: [0.5, 0.5]}])}
+          testID={`hdr-color-${label}`}
+          style={[styles.hdrBox, {backgroundColor: color}]}
+        />,
+        <View
+          key={`${label} standard`}
+          testID={`hdr-color-standard-${label}`}
+          style={[
+            styles.hdrBox,
+            {backgroundColor: color, dynamicRangeLimit: 'standard'},
+          ]}
+        />,
+        <View key={`${label} gap`} />,
+      ])}
+    </View>
+  );
+}
+
 const GRADIENTS = [
   ['legacy sRGB', 'linear-gradient(to right, #0000ff, #ffff00)'],
   ['in srgb', 'linear-gradient(in srgb to right, #0000ff, #ffff00)'],
@@ -540,6 +586,12 @@ function Gallery() {
         </Section>
 
         <Section
+          title="HDR colors"
+          legend="Brighter than white, where the display has headroom: no limit, then dynamic-range-limit: standard. On an SDR screen every box is white.">
+          <HdrColorTable />
+        </Section>
+
+        <Section
           title="Gradients"
           legend="Blue to yellow in each interpolation space. sRGB's midpoint is gray; Oklab's is lighter; Oklch's goes round the hue wheel.">
           <GradientTable />
@@ -707,6 +759,31 @@ const styles = StyleSheet.create({
   },
   rounded: {
     borderRadius: 12,
+  },
+  hdrTable: {
+    display: 'grid',
+    gridTemplateColumns: '128px repeat(2, minmax(0, 1fr)) 24px',
+    columnGap: 8,
+    rowGap: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  hdrBox: {
+    height: 40,
+    borderWidth: 1,
+    borderColor: SEPARATOR_COLOR,
+  },
+  mixedBorder: {
+    borderColor: 'color(display-p3 1 0 0)',
+    borderTopColor: 'rgb(0 0 255)',
+  },
+  answerRows: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) 100px',
+    columnGap: 8,
+    rowGap: 4,
+    alignItems: 'center',
+    marginTop: 8,
   },
   labelledRows: {
     display: 'grid',
