@@ -261,6 +261,7 @@ rather than going quiet.
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
+- `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
@@ -279,3 +280,4 @@ rather than going quiet.
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`

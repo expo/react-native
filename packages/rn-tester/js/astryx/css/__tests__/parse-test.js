@@ -93,6 +93,7 @@ describe('compileSelector', () => {
     expect(sel.unsupported).toBe(false);
     expect(sel.parts).toHaveLength(1);
     expect(sel.parts[0].compound.classes).toEqual(['rounded-md']);
+    // The class column of the packed specificity tuple; see `compileSelector`.
     // eslint-disable-next-line no-bitwise
     expect(sel.specificity).toBe(1 << 10);
   });
