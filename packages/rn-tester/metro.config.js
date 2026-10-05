@@ -51,6 +51,20 @@ const config = {
     // The vendored Astryx sources (js/astryx/vendor) import '@stylexjs/stylex'
     // verbatim; resolve it to the RN StyleX runtime so they run unmodified.
     resolveRequest: (context, moduleName, platform) => {
+      if (moduleName.startsWith('@radix-ui/')) {
+        const radixName = moduleName.slice('@radix-ui/'.length);
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(
+            __dirname,
+            'js',
+            'astryx',
+            'radix',
+            'pkg',
+            radixName + '.js',
+          ),
+        };
+      }
       // Astryx 0.5.0's `Layer/useLayer` imports `createPortal`. react-dom is
       // banned here — these components are meant to run on the renderer, not
       // on the web — and the branch that calls it is unreachable anyway, since
