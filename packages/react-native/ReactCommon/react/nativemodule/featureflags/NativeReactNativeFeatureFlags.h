@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<ab7d1c093c48cbf789474ed30d56944c>>
+ * @generated SignedSource<<bbce8e932aa5d63d75f2eaf0821f599b>>
  */
 
 /**
@@ -73,6 +73,8 @@ class NativeReactNativeFeatureFlags
   bool enableAsyncDiskCacheCheckInMultiSourceImageAndroid(jsi::Runtime& runtime);
 
   bool enableBridgelessArchitecture(jsi::Runtime& runtime);
+
+  bool enableColorSpaces(jsi::Runtime& runtime);
 
   bool enableCppPropsIteratorSetter(jsi::Runtime& runtime);
 
