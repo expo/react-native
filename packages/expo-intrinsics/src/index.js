@@ -28,11 +28,24 @@ import {createViewConfig} from 'react-native/Libraries/NativeComponent/ViewConfi
 import {type ViewConfig} from 'react-native/Libraries/Renderer/shims/ReactNativeTypes';
 import {setFallbackViewConfigResolver} from 'react-native/Libraries/Renderer/shims/ReactNativeViewConfigRegistry';
 
+/*
+ * The accessibility attributes below are declared on BOTH platforms because the inline element's
+ * semantics are decided once, in the shared C++ model (`InlineAccessibilityContent`), and a prop
+ * the view config does not list never reaches it. Each platform's base config lists only its own
+ * half: `accessibilityLanguage` and `accessibilityElementsHidden` are iOS-only there, and
+ * `accessibilityLiveRegion` and `importantForAccessibility` Android-only. So a live-region
+ * `<span>` was a stop of its own on Android and folded into the text around it on iOS, and a
+ * `<span accessibilityLanguage>` the other way round, from the same tree.
+ */
 const inlineTagViewConfig = {
   validAttributes: {
     isHighlighted: true,
     isPressable: true,
     maxFontSizeMultiplier: true,
+    accessibilityElementsHidden: true,
+    accessibilityLanguage: true,
+    accessibilityLiveRegion: true,
+    importantForAccessibility: true,
   },
 } as const;
 

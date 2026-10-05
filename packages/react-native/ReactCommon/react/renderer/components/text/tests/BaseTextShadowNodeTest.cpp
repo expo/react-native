@@ -10,6 +10,9 @@
 
 #include <gtest/gtest.h>
 #include <react/renderer/attributedstring/conversions.h>
+#include <react/renderer/components/text/InlineContentShadowNode.h>
+#include <react/renderer/components/text/InlineTextTagShadowNodes.h>
+#include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/RawPropsParser.h>
 #include <react/renderer/core/RawValue.h>
 #include <react/renderer/element/Element.h>
@@ -177,6 +180,159 @@ TEST(
 
   EXPECT_EQ(attributes.fontWeight, FontWeight::Weight400);
   EXPECT_EQ(attributes.fontVariationSettings, "'wght' 650");
+}
+
+namespace {
+
+// Builds anonymous inline content directly. In the app the View's layout
+// synthesizes these boxes (AnonymousTextContent.cpp); here the model is
+// computed from the same content string the run publishes.
+ComponentBuilder inlineContentComponentBuilder() {
+  ComponentDescriptorProviderRegistry componentDescriptorProviderRegistry{};
+  auto componentDescriptorRegistry =
+      componentDescriptorProviderRegistry.createComponentDescriptorRegistry(
+          ComponentDescriptorParameters{
+              .eventDispatcher = EventDispatcher::Shared{},
+              .contextContainer = nullptr,
+              .flavor = nullptr});
+  componentDescriptorProviderRegistry.add(
+      concreteComponentDescriptorProvider<
+          ConcreteComponentDescriptor<InlineContentShadowNode>>());
+  componentDescriptorProviderRegistry.add(
+      concreteComponentDescriptorProvider<InlineTextComponentDescriptor>());
+  componentDescriptorProviderRegistry.add(
+      concreteComponentDescriptorProvider<TextNodeComponentDescriptor>());
+  return ComponentBuilder{componentDescriptorRegistry};
+}
+
+InlineAccessibilityContent accessibilityContentOf(
+    const InlineContentShadowNode& shadowNode) {
+  return shadowNode.getInlineAccessibilityContent(
+      shadowNode.getContentAttributedString(1));
+}
+
+} // namespace
+
+TEST(BaseTextShadowNodeTest, inlineAccessibilityFlattensPresentationalTags) {
+  auto builder = inlineContentComponentBuilder();
+  auto shadowNode = builder.build(
+      Element<InlineContentShadowNode>().children({
+          rawTextElement("Read "),
+          Element<InlineTextShadowNode>()
+              .props([]() {
+                auto props = std::make_shared<InlineTextProps>();
+                props->nodeName = "b";
+                return props;
+              })
+              .children({rawTextElement("carefully")}),
+          rawTextElement("."),
+      }));
+
+  const auto content = accessibilityContentOf(*shadowNode);
+
+  ASSERT_EQ(content.elements.size(), 1);
+  EXPECT_EQ(
+      content.elements[0].kind, InlineAccessibilityElement::Kind::StaticText);
+  EXPECT_EQ(content.elements[0].label, "Read carefully.");
+}
+
+TEST(BaseTextShadowNodeTest, inlineAccessibilityPreservesSemanticOrder) {
+  auto builder = inlineContentComponentBuilder();
+  auto shadowNode = builder.build(
+      Element<InlineContentShadowNode>().children({
+          rawTextElement("Read "),
+          Element<InlineTextShadowNode>()
+              .props([]() {
+                auto props = std::make_shared<InlineTextProps>();
+                props->nodeName = "a";
+                props->accessibilityLabel = "terms and conditions";
+                return props;
+              })
+              .children({rawTextElement("terms")}),
+          rawTextElement(" first."),
+      }));
+
+  const auto content = accessibilityContentOf(*shadowNode);
+
+  ASSERT_EQ(content.elements.size(), 3);
+  EXPECT_EQ(content.elements[0].label, "Read ");
+  EXPECT_EQ(content.elements[1].label, "terms and conditions");
+  EXPECT_EQ(content.elements[1].role, "link");
+  EXPECT_EQ(
+      content.elements[1].kind, InlineAccessibilityElement::Kind::Element);
+  EXPECT_NE(content.elements[1].tag, 0);
+  EXPECT_EQ(content.elements[2].label, " first.");
+}
+
+TEST(BaseTextShadowNodeTest, inlineAccessibilityOmitsHiddenSemanticContent) {
+  auto builder = inlineContentComponentBuilder();
+  auto shadowNode = builder.build(
+      Element<InlineContentShadowNode>().children({
+          rawTextElement("Visible "),
+          Element<InlineTextShadowNode>()
+              .props([]() {
+                auto props = std::make_shared<InlineTextProps>();
+                props->accessible = true;
+                props->accessibilityElementsHidden = true;
+                return props;
+              })
+              .children({rawTextElement("secret")}),
+          rawTextElement(" text"),
+      }));
+
+  const auto content = accessibilityContentOf(*shadowNode);
+
+  ASSERT_EQ(content.elements.size(), 1);
+  EXPECT_EQ(content.elements[0].label, "Visible  text");
+}
+
+TEST(
+    BaseTextShadowNodeTest,
+    inlineAccessibilityLanguageAndLiveRegionAreBoundaries) {
+  // A span with semantics of its own is a leaf of its own on every platform:
+  // the language a reader speaks it in, and the updates it announces, belong to
+  // exactly its text
+  auto builder = inlineContentComponentBuilder();
+  auto shadowNode = builder.build(
+      Element<InlineContentShadowNode>().children({
+          rawTextElement("Status: "),
+          Element<InlineTextShadowNode>()
+              .props([]() {
+                auto props = std::make_shared<InlineTextProps>();
+                props->nodeName = "span";
+                props->accessibilityLiveRegion =
+                    AccessibilityLiveRegion::Polite;
+                return props;
+              })
+              .children({rawTextElement("0 updates")}),
+          rawTextElement(" and "),
+          Element<InlineTextShadowNode>()
+              .props([]() {
+                auto props = std::make_shared<InlineTextProps>();
+                props->nodeName = "span";
+                props->accessibilityLanguage = "ar-SA";
+                return props;
+              })
+              .children({rawTextElement("marhaba")}),
+      }));
+
+  const auto content = accessibilityContentOf(*shadowNode);
+
+  ASSERT_EQ(content.elements.size(), 4);
+  EXPECT_EQ(content.elements[0].label, "Status: ");
+  EXPECT_EQ(
+      content.elements[1].kind, InlineAccessibilityElement::Kind::Element);
+  EXPECT_EQ(content.elements[1].label, "0 updates");
+  EXPECT_EQ(content.elements[1].liveRegion, AccessibilityLiveRegion::Polite);
+  EXPECT_EQ(content.elements[2].label, " and ");
+  EXPECT_EQ(
+      content.elements[3].kind, InlineAccessibilityElement::Kind::Element);
+  EXPECT_EQ(content.elements[3].label, "marhaba");
+  EXPECT_EQ(content.elements[3].language, "ar-SA");
+  EXPECT_TRUE(content.attachmentTags.empty());
+  for (const auto& element : content.elements) {
+    EXPECT_TRUE(element.attachmentTags.empty());
+  }
 }
 
 } // namespace facebook::react
