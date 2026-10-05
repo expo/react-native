@@ -138,7 +138,8 @@ static bool inheritableTextPropsDiffer(
       a.inheritedTextAlign != b.inheritedTextAlign ||
       a.inheritedTextTransform != b.inheritedTextTransform ||
       a.inheritedWhiteSpace != b.inheritedWhiteSpace ||
-      a.inheritedDynamicTypeRamp != b.inheritedDynamicTypeRamp) {
+      a.inheritedDynamicTypeRamp != b.inheritedDynamicTypeRamp ||
+      a.inheritedDynamicRangeLimit != b.inheritedDynamicRangeLimit) {
     return true;
   }
   // NaN-aware compares for the optional-by-NaN Float props.
@@ -1473,7 +1474,29 @@ void YogaLayoutableShadowNode::configureYogaTree(
       continue;
     }
 
-    if (doesOwn(child)) {
+    /*
+     * Two different questions, and both have to be yes.
+     *
+     * `doesOwn` asks whether the child is in this node's LAYOUT tree, which is
+     * all a Yoga owner pointer can answer. Whether the child is exclusively
+     * OURS — safe to write through a `const_cast` — is a fact about the shadow
+     * revision, and the node itself is the only thing that knows it.
+     *
+     * Asking only the first is how a published node got mutated here: a cloned
+     * container adopts its unchanged children into its Yoga tree, so the owner
+     * pointer says yes while those children are still the sealed ones the
+     * committed revision is holding. `receivedTextAttributes_`, `listDepth_`
+     * and `markDirtyAndPropagate()` all landed in shared state, and the
+     * recursion below then aborted on the assert — in debug. In release
+     * nothing was sealed at all and it simply corrupted quietly.
+     *
+     * Published means someone else may hold it, so the else-branch clones,
+     * which is what
+     * copy-on-write is for. It cannot race: an unpublished node is unreachable
+     * by any other commit, because a commit reaches nodes only through a
+     * published revision and everything in one is published.
+     */
+    if (doesOwn(child) && !child.isPublished()) {
       auto& mutableChild = const_cast<YogaLayoutableShadowNode&>(child);
       if (childObservesCascade) {
         mutableChild.receivedTextAttributes_ = cascadeForChild;
@@ -1526,21 +1549,20 @@ void YogaLayoutableShadowNode::configureYogaTree(
   // `yogaLayoutableChildren_`, so without this the cascade stopped dead at the
   // anonymous box and an atomic inline's text fell back to the default font,
   // rendering visibly smaller than the text around it.
+  //
+  // A child a committed revision still holds is left untouched; it takes the
+  // cascade on the clone its containing View's attachment layout makes of it
+  // (`layoutInlineAttachments`).
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       getTraits().check(ShadowNodeTraits::Trait::AnonymousBox)) {
     for (const auto& child : getChildren()) {
       auto* layoutableChild =
           YogaLayoutableShadowNode::asYogaLayoutable(*child);
-      if (layoutableChild == nullptr) {
+      if (layoutableChild == nullptr || layoutableChild->isPublished()) {
         continue;
       }
-      auto& mutableChild =
-          const_cast<YogaLayoutableShadowNode&>(*layoutableChild);
-      mutableChild.receivedTextAttributes_ = effectiveCascade;
-      if (mutableChild.getTraits().check(
-              ShadowNodeTraits::Trait::TextCascadeConsumer)) {
-        mutableChild.setInheritedCascade(effectiveCascade);
-      }
+      const_cast<YogaLayoutableShadowNode&>(*layoutableChild)
+          .receiveCascade(effectiveCascade);
     }
   }
 
@@ -1560,7 +1582,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
       if (!marker) {
         continue;
       }
-      if (doesOwn(child)) {
+      if (doesOwn(child) && !child.isPublished()) {
         assignListMarker(const_cast<YogaLayoutableShadowNode&>(child), *marker);
       } else {
         auto& clonedChild = cloneChildInPlace(i);
@@ -1601,6 +1623,15 @@ YGErrata YogaLayoutableShadowNode::resolveErrata(YGErrata defaultErrata) const {
   }
 
   return defaultErrata;
+}
+
+void YogaLayoutableShadowNode::receiveCascade(
+    const std::shared_ptr<const TextAttributes>& cascade) {
+  ensureUnsealed();
+  receivedTextAttributes_ = cascade;
+  if (getTraits().check(ShadowNodeTraits::Trait::TextCascadeConsumer)) {
+    setInheritedCascade(cascade);
+  }
 }
 
 YogaLayoutableShadowNode& YogaLayoutableShadowNode::cloneChildInPlace(
@@ -1877,13 +1908,10 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
        * handler's setState produces) can launder a shared child through an
        * owner-resetting detach so that it arrives here wearing this parent's
        * ownership. Clone it in place, exactly as the callback would have,
-       * and lay out the clone. Debug-only by construction — `getSealed()` is
-       * constant `true` in Release, where `cloneChildInPlace` on every child
-       * would be pure churn, and the abort this guards against is also
-       * Debug-only; the ownership adoption above remains the primary
-       * mechanism in both modes.
+       * and lay out the clone. `isPublished()`, not the seal: a release
+       * build has no seal.
        */
-      if (childNodePtr->getSealed() && !this->getSealed()) {
+      if (childNodePtr->isPublished() && !this->isPublished()) {
         auto& clonedChild = cloneChildInPlace(childIndex);
         childYogaNode = &clonedChild.yogaNode_;
         childYogaNode->setHasNewLayout(false);

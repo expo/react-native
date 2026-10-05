@@ -24,6 +24,7 @@
 // view module includes this header for text inheritance, and the umbrella
 // would include the view module back before it is complete
 #include <react/renderer/components/view/AccessibilityPrimitives.h>
+#include <react/renderer/graphics/DynamicRangeLimit.h>
 
 namespace facebook::react {
 
@@ -178,6 +179,9 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<WhiteSpace> whiteSpace{};
   // `<sup>`/`<sub>`: a baseline shift the platform's text engine computes.
   std::optional<TextVerticalAlign> verticalAlign{};
+  // `dynamic-range-limit`: not a text property, but this bag is the element
+  // tree's one inheritance channel; empty until an ancestor states one
+  std::optional<DynamicRangeLimit> dynamicRangeLimit{};
 
   // Decoration
   SharedColor textDecorationColor{};
@@ -289,6 +293,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.allowFontScaling,
         textAttributes.textTransform,
         textAttributes.whiteSpace,
+        textAttributes.dynamicRangeLimit,
         textAttributes.alignment,
         textAttributes.baseWritingDirection,
         textAttributes.lineBreakStrategy,

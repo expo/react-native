@@ -444,6 +444,7 @@ std::string facebook::react::toString(const facebook::react::AccessibilityRole& 
 std::string facebook::react::toString(const facebook::react::AttributedString::Range& range);
 std::string facebook::react::toString(const facebook::react::BlendMode& blendMode);
 std::string facebook::react::toString(const facebook::react::DisplayType& displayType);
+std::string facebook::react::toString(const facebook::react::DynamicRangeLimit& limit);
 std::string facebook::react::toString(const facebook::react::DynamicTypeRamp& dynamicTypeRamp);
 std::string facebook::react::toString(const facebook::react::EllipsizeMode& ellipsisMode);
 std::string facebook::react::toString(const facebook::react::FilterType& filterType);
@@ -588,6 +589,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext& co
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::AccessibilityValue& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::BlendMode& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::CornerInsets& result);
+void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::DynamicRangeLimit& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::EdgeInsets& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ImageResizeMode& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, facebook::react::ImageSource& result);
@@ -1009,6 +1011,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public facebook::react::UserSelect userSelect;
   public facebook::react::ViewEvents events;
   public static facebook::react::Transform resolveTransform(const facebook::react::Size& frameSize, const facebook::react::Transform& transform, const facebook::react::TransformOrigin& transformOrigin);
+  public std::optional<facebook::react::DynamicRangeLimit> inheritedDynamicRangeLimit;
   public std::optional<facebook::react::DynamicTypeRamp> inheritedDynamicTypeRamp;
   public std::optional<facebook::react::FontStyle> inheritedFontStyle;
   public std::optional<facebook::react::FontVariant> inheritedFontVariant;
@@ -1771,6 +1774,7 @@ class facebook::react::ImageProps : public facebook::react::HostPlatformViewProp
   public facebook::react::SharedColor overlayColor;
   public std::optional<Float> fadeDuration;
   public std::optional<bool> progressiveRenderingEnabled;
+  public std::optional<facebook::react::DynamicRangeLimit> dynamicRangeLimit;
   public std::optional<facebook::react::SharedColor> tintColor;
   public std::string resizeMethod;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
@@ -1824,7 +1828,9 @@ class facebook::react::ImageShadowNode : public facebook::react::ConcreteViewSha
   public ImageShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
   public static facebook::react::ImageState initialStateData(const facebook::react::Props::Shared& props, const facebook::react::ShadowNodeFamily::Shared&, const facebook::react::ComponentDescriptor& componentDescriptor);
   public static facebook::react::ShadowNodeTraits BaseTraits();
+  public virtual const std::shared_ptr<const facebook::react::TextAttributes>* getStoredCascade() const override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
+  public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
   public void setImageManager(const std::shared_ptr<facebook::react::ImageManager>& imageManager);
 }
 
@@ -1855,9 +1861,11 @@ enum facebook::react::ImageSource::Type {
 }
 
 class facebook::react::ImageState {
-  public ImageState(const facebook::react::ImageSource& imageSource, facebook::react::ImageRequest imageRequest, const ImageRequestParams& imageRequestParams);
+  public ImageState(const facebook::react::ImageSource& imageSource, facebook::react::ImageRequest imageRequest, const ImageRequestParams& imageRequestParams, facebook::react::DynamicRangeLimit dynamicRangeLimit = facebook::react::DynamicRangeLimit::NoLimit);
+  public ImageState(const facebook::react::ImageState& previousState, facebook::react::DynamicRangeLimit dynamicRangeLimit);
   public const ImageRequestParams& getImageRequestParams() const;
   public const facebook::react::ImageRequest& getImageRequest() const;
+  public facebook::react::DynamicRangeLimit getDynamicRangeLimit() const;
   public facebook::react::ImageSource getImageSource() const;
 }
 
@@ -2774,6 +2782,7 @@ class facebook::react::ShadowNode : public facebook::react::Sealable, public fac
   public ShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
   public ShadowNode(const facebook::react::ShadowNodeFragment& fragment, facebook::react::ShadowNodeFamily::Shared family, facebook::react::ShadowNodeTraits traits);
   public bool getHasBeenPromoted() const;
+  public bool isPublished() const;
   public const facebook::react::ComponentDescriptor& getComponentDescriptor() const;
   public const facebook::react::Props::Shared& getProps() const;
   public const facebook::react::ShadowNodeFamily& getFamily() const;
@@ -2804,6 +2813,7 @@ class facebook::react::ShadowNode : public facebook::react::Sealable, public fac
   public virtual void appendChild(const std::shared_ptr<const facebook::react::ShadowNode>& child);
   public virtual void completeClone(const facebook::react::ShadowNode&, const facebook::react::ShadowNodeFragment&);
   public virtual void replaceChild(const facebook::react::ShadowNode& oldChild, const std::shared_ptr<const facebook::react::ShadowNode>& newChild, size_t suggestedIndex = std::numeric_limits<size_t>::max());
+  public virtual void sealOwnedContentRecursive() const;
   public void sealRecursive() const;
   public void setMounted(bool mounted) const;
   public void setRuntimeShadowNodeReference(const std::shared_ptr<facebook::react::ShadowNodeWrapper>& runtimeShadowNodeReference) const;
@@ -3054,6 +3064,7 @@ class facebook::react::TextAttributes : public facebook::react::DebugStringConve
   public std::optional<bool> isHighlighted;
   public std::optional<bool> isPressable;
   public std::optional<facebook::react::AccessibilityRole> accessibilityRole;
+  public std::optional<facebook::react::DynamicRangeLimit> dynamicRangeLimit;
   public std::optional<facebook::react::DynamicTypeRamp> dynamicTypeRamp;
   public std::optional<facebook::react::FontStyle> fontStyle;
   public std::optional<facebook::react::FontVariant> fontVariant;
@@ -3492,9 +3503,11 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
   public virtual void layoutTree(facebook::react::LayoutContext layoutContext, facebook::react::LayoutConstraints layoutConstraints) override;
   public virtual void replaceChild(const facebook::react::ShadowNode& oldChild, const std::shared_ptr<const facebook::react::ShadowNode>& newChild, size_t suggestedIndex = SIZE_MAX) override;
+  public virtual void sealOwnedContentRecursive() const override;
   public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>&);
   public void enableMeasurement();
   public void prepareListContext(int depth);
+  public void receiveCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade);
   public void setPadding(facebook::react::RectangleEdges<Float> padding) const;
   public void setPositionType(YGPositionType positionType) const;
   public void setSize(facebook::react::Size size) const;
@@ -4093,6 +4106,12 @@ enum facebook::react::DisplayType {
   Flex,
   Grid,
   None,
+}
+
+enum facebook::react::DynamicRangeLimit : uint8_t {
+  Constrained,
+  NoLimit,
+  Standard,
 }
 
 enum facebook::react::DynamicTypeRamp : uint8_t {
