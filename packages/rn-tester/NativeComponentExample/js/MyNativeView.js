@@ -118,7 +118,7 @@ export default function MyNativeView(props: {}): React.Node {
       <Text style={{color: 'red'}}>Fabric View</Text>
       <RNTMyNativeView
         ref={ref}
-        style={{flex: 1}}
+        style={{height: 200}}
         opacity={opacity}
         values={arrayValues}
         onIntArrayChanged={event => {
@@ -139,7 +139,7 @@ export default function MyNativeView(props: {}): React.Node {
       <Text style={{color: 'red'}}>Legacy View</Text>
       <RNTMyLegacyNativeView
         ref={legacyRef}
-        style={{flex: 1}}
+        style={{height: 200}}
         opacity={opacity}
         onColorChanged={event => {
           const normalizedHue =

@@ -223,65 +223,68 @@ function BenchRunner({onDone}) {
   // saying so requires measuring it.
   const heightsRef = useRef({});
 
-  const onTierLayout = useCallback(event => {
-    if (startRef.current === 0) {
-      return;
-    }
-    const elapsed = global.performance.now() - startRef.current;
-    const laidOut = event?.nativeEvent?.layout?.height;
-    if (laidOut != null) {
-      heightsRef.current[TIERS[tierIndex][0]] = laidOut;
-    }
-    startRef.current = 0;
-    if (round >= WARMUP) {
-      samplesRef.current[tierIndex].push(elapsed);
-    }
+  const onTierLayout = useCallback(
+    event => {
+      if (startRef.current === 0) {
+        return;
+      }
+      const elapsed = global.performance.now() - startRef.current;
+      const laidOut = event?.nativeEvent?.layout?.height;
+      if (laidOut != null) {
+        heightsRef.current[TIERS[tierIndex][0]] = laidOut;
+      }
+      startRef.current = 0;
+      if (round >= WARMUP) {
+        samplesRef.current[tierIndex].push(elapsed);
+      }
 
-    const lastSlot = slot + 1 >= TIERS.length;
-    const nextRound = lastSlot ? round + 1 : round;
-    const nextSlot = lastSlot ? 0 : slot + 1;
+      const lastSlot = slot + 1 >= TIERS.length;
+      const nextRound = lastSlot ? round + 1 : round;
+      const nextSlot = lastSlot ? 0 : slot + 1;
 
-    if (lastSlot) {
-      setResults(() => {
-        const next = {};
+      if (lastSlot) {
+        setResults(() => {
+          const next = {};
+          for (let t = 0; t < TIERS.length; t++) {
+            if (samplesRef.current[t].length > 0) {
+              next[TIERS[t][0]] = median(samplesRef.current[t]);
+            }
+          }
+          return next;
+        });
+        setSpreads(() => {
+          const next = {};
+          for (let t = 0; t < TIERS.length; t++) {
+            if (samplesRef.current[t].length > 0) {
+              next[TIERS[t][0]] = spreadPercent(samplesRef.current[t]);
+            }
+          }
+          return next;
+        });
+        // Second half of the sampled session against the first: a run still
+        // riding the warm-up curve, or one being throttled, says so here rather
+        // than quietly reporting a confident-looking median.
+        const perTier = [];
         for (let t = 0; t < TIERS.length; t++) {
-          if (samplesRef.current[t].length > 0) {
-            next[TIERS[t][0]] = median(samplesRef.current[t]);
+          const s = samplesRef.current[t];
+          if (s.length >= 4) {
+            const half = Math.floor(s.length / 2);
+            const first = median(s.slice(0, half));
+            const second = median(s.slice(half));
+            if (first > 0) {
+              perTier.push(((second - first) / first) * 100);
+            }
           }
         }
-        return next;
-      });
-      setSpreads(() => {
-        const next = {};
-        for (let t = 0; t < TIERS.length; t++) {
-          if (samplesRef.current[t].length > 0) {
-            next[TIERS[t][0]] = spreadPercent(samplesRef.current[t]);
-          }
-        }
-        return next;
-      });
-      // Second half of the sampled session against the first: a run still
-      // riding the warm-up curve, or one being throttled, says so here rather
-      // than quietly reporting a confident-looking median.
-      const perTier = [];
-      for (let t = 0; t < TIERS.length; t++) {
-        const s = samplesRef.current[t];
-        if (s.length >= 4) {
-          const half = Math.floor(s.length / 2);
-          const first = median(s.slice(0, half));
-          const second = median(s.slice(half));
-          if (first > 0) {
-            perTier.push(((second - first) / first) * 100);
-          }
+        if (perTier.length > 0) {
+          setDrift(perTier.reduce((a, b) => a + b, 0) / perTier.length);
         }
       }
-      if (perTier.length > 0) {
-        setDrift(perTier.reduce((a, b) => a + b, 0) / perTier.length);
-      }
-    }
 
-    scheduleNext(nextRound, nextSlot);
-  }, [round, slot, tierIndex, scheduleNext]);
+      scheduleNext(nextRound, nextSlot);
+    },
+    [round, slot, tierIndex, scheduleNext],
+  );
 
   useEffect(() => {
     scheduleNext(0, 0);
@@ -339,11 +342,14 @@ function BenchRunner({onDone}) {
           if (value == null) {
             return null;
           }
-          const marginal = floor == null || name === TIERS[0][0] ? null : value - floor;
+          const marginal =
+            floor == null || name === TIERS[0][0] ? null : value - floor;
           return (
             <Text key={name} style={{lineHeight: 22}}>
               {`${name}: ${value.toFixed(1)}ms` +
-                (marginal == null ? '' : ` (marginal ${marginal.toFixed(1)}ms)`) +
+                (marginal == null
+                  ? ''
+                  : ` (marginal ${marginal.toFixed(1)}ms)`) +
                 ` ±${(spreads[name] ?? 0).toFixed(0)}%`}
             </Text>
           );

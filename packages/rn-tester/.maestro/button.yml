@@ -6,11 +6,15 @@ appId: ${APP_ID} # iOS: com.meta.RNTester.localDevelopment | Android: com.facebo
 - extendedWaitUntil:
     visible: 'Components'
     timeout: 30000
-- scrollUntilVisible:
-    element:
-      id: 'Button'
-    direction: DOWN
-    speed: 40
+- runFlow: ./helpers/search.yml
+- inputText: 'Button'
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 3000
 - tapOn:
     id: 'Button'
 - tapOn:

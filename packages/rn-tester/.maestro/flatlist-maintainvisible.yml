@@ -17,13 +17,7 @@ tags:
     timeout: 3000
 # Find test
 - assertVisible: 'Components'
-- scrollUntilVisible:
-    element:
-      id: 'FlatList'
-    direction: DOWN
-    speed: 40
-- tapOn:
-    id: 'FlatList'
+- runFlow: ./helpers/open-flatlist.yml
 - scrollUntilVisible:
     element:
       id: 'maintainVisibleContentPosition'
@@ -94,13 +88,7 @@ tags:
 ---
 - launchApp
 - assertVisible: 'Components'
-- scrollUntilVisible:
-    element:
-      id: 'FlatList'
-    direction: DOWN
-    speed: 40
-- tapOn:
-    id: 'FlatList'
+- runFlow: ./helpers/open-flatlist.yml
 - scrollUntilVisible:
     element:
       id: 'maintainVisibleContentPosition'

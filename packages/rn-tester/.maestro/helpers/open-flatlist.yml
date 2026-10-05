@@ -1,0 +1,20 @@
+appId: ${APP_ID}
+---
+# Open the list without an Android search keyboard resizing the test viewport.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - openLink: rntester://example/FlatListExample
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      # Search avoids scrolling past the growing HTML-elements catalog.
+      - runFlow: ./search.yml
+      - inputText:
+          text: 'FlatList'
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - tapOn:
+          id: 'FlatList'
