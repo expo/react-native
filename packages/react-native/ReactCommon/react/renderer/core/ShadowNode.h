@@ -172,6 +172,23 @@ class ShadowNode : public Sealable, public DebugStringConvertible, public jsi::N
 
   void sealRecursive() const;
 
+  /*
+   * Whether this node has been published to a revision; ask before mutating a
+   * node you did not create. See `isPublished_`.
+   */
+  bool isPublished() const
+  {
+    return isPublished_.load(std::memory_order_relaxed);
+  }
+
+  /*
+   * Seals content this node owns but does not keep in `children_`: an element
+   * with inline content owns anonymous boxes invisible to the differ, mounting
+   * and the DOM APIs, and `sealRecursive` walks only `children_`. Overridden
+   * where such content exists, or copy-on-write would exempt those nodes.
+   */
+  virtual void sealOwnedContentRecursive() const {}
+
   const ShadowNodeFamily &getFamily() const;
 
   ShadowNodeFamily::Shared getFamilyShared() const;
@@ -271,6 +288,21 @@ class ShadowNode : public Sealable, public DebugStringConvertible, public jsi::N
    * intents and purposes it should be treated as mounted.
    */
   mutable std::atomic<bool> hasBeenMounted_{false};
+
+  /*
+   * Whether this node has been published to a revision, so anyone other than its
+   * creator may hold it. The authority for copy-on-write, kept out of `Sealable`
+   * because `seal()` compiles away outside debug and the Yoga owner pointer
+   * answers a different question ("is this in my layout tree"). Set in
+   * `sealRecursive` at publish inside the shadow tree's exclusive lock and never
+   * reversed, so `!isPublished()` means exclusively mine without a race: a
+   * commit reaches nodes only through a published revision. The rule is "clone
+   * if not owned", never "check then mutate". Relaxed, since the revision is
+   * handed between threads through that lock. Free: it sits in the padding
+   * `hasBeenMounted_` leaves before `traits_`; `ViewShadowNode` has a 1088-byte
+   * budget asserted in `ViewShadowNode.cpp`.
+   */
+  mutable std::atomic<bool> isPublished_{false};
 
   static Props::Shared propsForClonedShadowNode(const ShadowNode &sourceShadowNode, const Props::Shared &props);
 

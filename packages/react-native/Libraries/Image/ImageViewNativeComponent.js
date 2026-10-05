@@ -105,6 +105,7 @@ export const __INTERNAL_VIEW_CONFIG: PartialViewConfig =
           borderBottomRightRadius: true,
           borderTopRightRadius: true,
           loadingIndicatorSrc: true,
+          dynamicRangeLimit: true,
         },
       }
     : {
@@ -142,6 +143,7 @@ export const __INTERNAL_VIEW_CONFIG: PartialViewConfig =
           resizeMode: true,
           source: true,
           tintColor: colorAttribute,
+          dynamicRangeLimit: true,
           ...ConditionallyIgnoredEventHandlers({
             onLoadStart: true,
             onLoad: true,

@@ -30,12 +30,16 @@ extern const char ImageComponentName[];
 class ImageShadowNode final
     : public ConcreteViewShadowNode<ImageComponentName, ImageProps, ImageEventEmitter, ImageState> {
  public:
-  using ConcreteViewShadowNode::ConcreteViewShadowNode;
+  ImageShadowNode(const ShadowNodeFragment &fragment, const ShadowNodeFamily::Shared &family, ShadowNodeTraits traits);
+
+  ImageShadowNode(const ShadowNode &sourceShadowNode, const ShadowNodeFragment &fragment);
 
   static ShadowNodeTraits BaseTraits()
   {
     auto traits = ConcreteViewShadowNode::BaseTraits();
     traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
+    // For `dynamic-range-limit`
+    traits.set(ShadowNodeTraits::Trait::TextCascadeConsumer);
     return traits;
   }
 
@@ -55,6 +59,15 @@ class ImageShadowNode final
 
 #pragma mark - LayoutableShadowNode
 
+  // Republishes the state when the effective limit changes, since a
+  // container's limit can change without this node's layout changing
+  void setInheritedCascade(const std::shared_ptr<const TextAttributes> &cascade) override;
+
+  const std::shared_ptr<const TextAttributes> *getStoredCascade() const override
+  {
+    return &inheritedCascade_;
+  }
+
   void layout(LayoutContext layoutContext) override;
 
  private:
@@ -63,6 +76,11 @@ class ImageShadowNode final
   std::shared_ptr<ImageManager> imageManager_;
 
   void updateStateIfNeeded();
+
+  std::shared_ptr<const TextAttributes> inheritedCascade_{};
+
+  // Its own, else the inherited one, else CSS's initial `no-limit`
+  DynamicRangeLimit effectiveDynamicRangeLimit() const;
 };
 
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)

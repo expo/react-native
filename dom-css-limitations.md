@@ -200,6 +200,11 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   platform's shader interpolates in a chosen space, so the stretches are
   expanded into computed stops, which can only be placed between percentages.
   A `10px` position or a transition hint leaves the gradient to the platform.
+- **`DOM-CSS-LIMITATION(android-dynamic-range-is-per-window)` — Android's HDR
+  is the window's.** A window shows HDR only in its HDR color mode, and its
+  headroom is one value, so `constrained` draws as `no-limit`, and a
+  `standard` picture beside an HDR one shares the window's headroom. Platform
+  wall.
 
 ## Performance
 

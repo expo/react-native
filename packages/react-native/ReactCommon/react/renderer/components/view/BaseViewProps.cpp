@@ -235,6 +235,19 @@ BaseViewProps::BaseViewProps(
                     sourceProps.inheritedWhiteSpace,
                     {})
               : sourceProps.inheritedWhiteSpace),
+      // Under the color spaces flag too: a View's own limit bounds its HDR
+      // colors
+      inheritedDynamicRangeLimit(
+          parseInheritedTextProps &&
+                  (stringChildrenEnabled ||
+                   ReactNativeFeatureFlags::enableColorSpaces())
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "dynamicRangeLimit",
+                    sourceProps.inheritedDynamicRangeLimit,
+                    {})
+              : sourceProps.inheritedDynamicRangeLimit),
       uaMarginBlockEm(convertRawProp(
           context,
           rawProps,
@@ -647,7 +660,8 @@ bool BaseViewProps::computeHasInheritedTextProps() const {
       inheritedFontStyle.has_value() || inheritedFontVariant.has_value() ||
       !std::isnan(inheritedLetterSpacing) || !std::isnan(inheritedLineHeight) ||
       inheritedTextAlign.has_value() || inheritedTextTransform.has_value() ||
-      inheritedWhiteSpace.has_value() || inheritedDynamicTypeRamp.has_value();
+      inheritedWhiteSpace.has_value() || inheritedDynamicTypeRamp.has_value() ||
+      inheritedDynamicRangeLimit.has_value();
 }
 
 // Sets an inheritable text prop, as the constructor does only when
@@ -702,6 +716,17 @@ void BaseViewProps::setProp(
     INHERITED_TEXT_PROP_SET_CASE(inheritedTextTransform, "textTransform");
     INHERITED_TEXT_PROP_SET_CASE(inheritedWhiteSpace, "whiteSpace");
     INHERITED_TEXT_PROP_SET_CASE(inheritedDynamicTypeRamp, "dynamicTypeRamp");
+    case CONSTEXPR_RAW_PROPS_KEY_HASH("dynamicRangeLimit"):
+      if (ReactNativeFeatureFlags::enableStringChildren() ||
+          ReactNativeFeatureFlags::enableColorSpaces()) {
+        fromRawValue(
+            context,
+            value,
+            inheritedDynamicRangeLimit,
+            defaults.inheritedDynamicRangeLimit);
+        hasInheritedTextProps = computeHasInheritedTextProps();
+      }
+      return;
     RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockEm);
     RAW_SET_PROP_SWITCH_CASE_BASIC(uaMarginBlockRem);
     RAW_SET_PROP_SWITCH_CASE_BASIC(uaFontSizeEm);
@@ -1027,6 +1052,9 @@ void BaseViewProps::applyInheritedTextAttributes(
   }
   if (inheritedWhiteSpace) {
     textAttributes.whiteSpace = inheritedWhiteSpace;
+  }
+  if (inheritedDynamicRangeLimit) {
+    textAttributes.dynamicRangeLimit = inheritedDynamicRangeLimit;
   }
 }
 

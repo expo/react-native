@@ -7,6 +7,8 @@
 
 #include "RenderOutput.h"
 #include <react/debug/react_native_assert.h>
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/image/ImageState.h>
 #include <react/renderer/components/text/ParagraphState.h>
 #include <react/renderer/components/view/ViewState.h>
 #include <react/renderer/core/ConcreteState.h>
@@ -73,6 +75,18 @@ folly::dynamic RenderOutput::renderView(
     }
     for (const auto& child : view.children) {
       element["children"].push_back(renderView(*child, options));
+    }
+  }
+
+  // The effective limit reaches the platform through the state, so that is
+  // what is shown. With the flag off nothing reads it.
+  if (view.state != nullptr) {
+    if (const auto* imageState =
+            dynamic_cast<const ConcreteState<ImageState>*>(view.state.get())) {
+      if (ReactNativeFeatureFlags::enableColorSpaces()) {
+        props["dynamicRangeLimit"] =
+            toString(imageState->getData().getDynamicRangeLimit());
+      }
     }
   }
 

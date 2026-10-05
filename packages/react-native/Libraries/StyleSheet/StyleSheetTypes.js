@@ -984,6 +984,11 @@ type ____BlendMode_Internal =
  */
 export type ____InheritableTextStyle_Internal = Readonly<{
   /**
+   * CSS Color HDR's `dynamic-range-limit`: how bright HDR content may draw.
+   * Inherited. With `enableColorSpaces`.
+   */
+  dynamicRangeLimit?: 'no-limit' | 'constrained' | 'standard',
+  /**
    * The CSS-wide shorthand that resets the properties above.
    *
    * Scoped to the inherited properties, which is why it lives with them:
@@ -1426,6 +1431,7 @@ export type ____DangerouslyImpreciseStyle_InternalCore = Readonly<{
   objectFit?: 'cover' | 'contain' | 'fill' | 'scale-down' | 'none',
   tintColor?: ____ColorValue_Internal,
   overlayColor?: ColorValue,
+  dynamicRangeLimit?: 'no-limit' | 'constrained' | 'standard',
 }>;
 
 export type ____DangerouslyImpreciseStyle_Internal = Readonly<{
