@@ -61,6 +61,62 @@ const config = {
       // (js/astryx/radix).
       // The vendored shadcn sources (js/shadcn/ui) import their world by the
       // upstream names; each resolves to the fork's implementation.
+      // @expo/ui imports three symbols from 'expo' — requireNativeView,
+      // requireNativeModule and installOnUIRuntime — all of which the `expo`
+      // package merely re-exports from expo-modules-core. The tester
+      // deliberately does not depend on `expo` itself (the Podfile excludes it,
+      // because it drags in Expo's AppDelegate/factory pod), so the import
+      // resolves to a shim over the module that actually defines them. It has
+      // to be a shim rather than expo-modules-core directly, because one of the
+      // three is exported under a different name there; see the file.
+      // A handful of tester screens import React Native internals by deep path
+      // (`react-native/src/private/featureflags/...`, `.../webapis/geometry/...`,
+      // `.../components/switch/specs/...`). The package's `exports` map has no
+      // `./src/*` entry — deliberately, since these are private — so Metro warns
+      // and falls back to file-based resolution on every bundle. Resolving them
+      // here says where the files are without widening React Native's public
+      // surface, which is the part that should not change.
+      if (moduleName.startsWith('react-native/src/')) {
+        return context.resolveRequest(
+          context,
+          path.resolve(
+            __dirname,
+            '../react-native',
+            moduleName.slice('react-native/'.length),
+          ),
+          platform,
+        );
+      }
+      if (moduleName === 'expo') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/expo-package-shim.js'),
+        };
+      }
+      // expo-modules-core is *linked* from the expo checkout, so Metro resolves
+      // its imports by walking up from there — into a pnpm store with no
+      // hoisted @babel/runtime — and never consults this repo's copy. Babel's
+      // transform of that source emits helper requires, so without this the
+      // bundle fails on `@babel/runtime/helpers/*` before reaching any Expo
+      // code. Point them at the repo's own @babel/runtime.
+      // Scoped to importers inside that checkout on purpose: redirecting every
+      // caller would also re-point React Native's own helper imports at this
+      // exact file, changing which interop shape they get, and the app dies on
+      // its first render with "undefined is not a function".
+      if (
+        moduleName.startsWith('@babel/runtime/') &&
+        context.originModulePath != null &&
+        context.originModulePath.includes(
+          `${path.sep}Developer${path.sep}expo${path.sep}`,
+        )
+      ) {
+        return {
+          type: 'sourceFile',
+          filePath: require.resolve(moduleName, {
+            paths: [path.resolve(__dirname, '../..')],
+          }),
+        };
+      }
       if (moduleName === '@/lib/utils') {
         return {
           type: 'sourceFile',
