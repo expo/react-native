@@ -242,6 +242,23 @@ function Gallery() {
         <div style={{...LABEL, marginTop: 12}} testID="img-backing">
           {'<img>'} is backed by {imgBacking()}
         </div>
+        <p
+          style={{
+            fontSize: 12,
+            color: SECONDARY_COLOR,
+            margin: 0,
+            marginTop: 10,
+          }}>
+          Limitations of {'<img>'} for now: backed by expo-image (an app with
+          the Expo runtime), on iOS the PQ and HLG HEIC pictures don't decode,
+          Display P3 is clipped to sRGB, dynamic-range-limit is ignored, and a
+          picture named from the asset catalog is missed in a release build.
+          RNTester pins the framework's image view instead, so this screen shows
+          that view's behavior; with expo-image, judge pictures in the CSS
+          gallery, which draws them through the core Image. Sampling, from the
+          development menu, reads a picture's drawn color only on the framework
+          view.
+        </p>
       </div>
       <div
         style={{
