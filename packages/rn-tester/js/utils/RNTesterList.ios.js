@@ -187,6 +187,13 @@ const Components: Array<RNTesterModuleInfo> = [
 
 const APIs: Array<RNTesterModuleInfo> = (
   [
+    // The renderer's CSS transitions and animations
+    {
+      key: 'CSSTransitionsExample',
+      module: require('../examples/CSSTransitions/CSSTransitionsExample')
+        .default,
+      category: 'UI',
+    },
     {
       key: 'AccessibilityExample',
       module: require('../examples/Accessibility/AccessibilityExample'),

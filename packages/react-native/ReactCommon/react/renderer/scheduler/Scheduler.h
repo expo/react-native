@@ -19,6 +19,7 @@
 #include <React/RendererCore.h>
 #include <React/RuntimeExecutor.h>
 #include <React/Utils.h>
+#include <react/renderer/animationbackend/CSSTransitions.h>
 #include <react/renderer/mounting/MountingOverrideDelegate.h>
 #include <react/renderer/scheduler/InspectorData.h>
 #include <react/renderer/scheduler/SchedulerDelegate.h>
@@ -128,6 +129,8 @@ class Scheduler final : public UIManagerDelegate {
   SharedComponentDescriptorRegistry componentDescriptorRegistry_;
   RuntimeExecutor runtimeExecutor_;
   std::shared_ptr<UIManager> uiManager_;
+  // Owned so it outlives the commit-hook registration it makes on UIManager.
+  std::unique_ptr<CSSTransitions> cssTransitions_;
 
   std::vector<std::shared_ptr<UIManagerCommitHook>> commitHooks_;
 
