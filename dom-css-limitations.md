@@ -226,6 +226,20 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   platform's shader interpolates in a chosen space, so the stretches are
   expanded into computed stops, which can only be placed between percentages.
   A `10px` position or a transition hint leaves the gradient to the platform.
+- **`DOM-CSS-LIMITATION(media-pointer-is-the-touchscreen)` — `matchMedia`
+  knows only the touchscreen on iOS and Android.** `pointer` and `hover`
+  answer `coarse` and `none`, and `any-pointer` and `any-hover` answer the
+  same, so an iPad's trackpad, a mouse or a stylus beside the touchscreen
+  isn't reported. Deferred: asking UIKit and Android's input devices.
+- **`DOM-CSS-LIMITATION(media-queries-take-no-escapes)` — a media query's
+  CSS escapes aren't decoded.** `scr\65 en` is not `screen`, so a query
+  spelling a name with escapes is unknown or invalid. Deferred: CSS Syntax's
+  escape handling in the media query tokenizer.
+- **`DOM-CSS-LIMITATION(reduced-motion-is-known-after-the-first-read)` —
+  `prefers-reduced-motion` is `no-preference` until the OS answers.** React
+  Native asks for the setting asynchronously, so a query read before the
+  answer arrives allows motion; a list whose answer then changes fires
+  `change`. Deferred: a synchronous read of the setting.
 - **`DOM-CSS-LIMITATION(android-dynamic-range-is-per-window)` — Android's HDR
   is the window's.** A window shows HDR only in its HDR color mode, and its
   headroom is one value, so `constrained` draws as `no-limit`, and a
@@ -308,6 +322,7 @@ rather than going quiet.
 - `action-sheet-tints-are-srgb` — limitation, `packages/react-native/Libraries/ActionSheetIOS/ActionSheetIOS.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
 - `android-color-table-is-finite` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
+- `android-needs-the-platforms-color-space` — limitation, `packages/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/display/DisplayCapabilitiesModule.kt`
 - `android-text-and-outline-colors-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/attributedstring/conversions.h`
 - `android-transition-frames-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
 - `animated-colors-interpolate-in-srgb` — limitation, `packages/react-native/Libraries/Animated/nodes/AnimatedInterpolation.js`
