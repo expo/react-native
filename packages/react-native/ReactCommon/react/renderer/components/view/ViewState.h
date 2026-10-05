@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <react/renderer/attributedstring/AttributedString.h>
+#include <react/renderer/components/view/InlineAccessibilityContent.h>
 #include <react/renderer/core/ReactPrimitives.h>
 #include <react/renderer/graphics/Rect.h>
 
@@ -31,6 +32,7 @@ class ViewState final {
  public:
   struct TextRun {
     AttributedString attributedString;
+    InlineAccessibilityContent accessibilityContent;
     Rect frame;
 
     /*
@@ -50,8 +52,8 @@ class ViewState final {
 
     bool operator==(const TextRun &other) const
     {
-      return attributedString == other.attributedString && frame == other.frame &&
-          documentOrder == other.documentOrder && runTag == other.runTag;
+      return attributedString == other.attributedString && accessibilityContent == other.accessibilityContent &&
+          frame == other.frame && documentOrder == other.documentOrder && runTag == other.runTag;
     }
     bool operator!=(const TextRun &other) const
     {
@@ -99,7 +101,15 @@ class ViewState final {
    *   0 attributedString (standard AttributedString MapBuffer, consumed by
    *     TextLayoutManager.getOrCreateSpannableForText),
    *   1..4 frame left/top/width/height in dips,
-   *   5 documentOrder (paint order relative to mounted child views).
+   *   5 documentOrder (paint order relative to mounted child views),
+   *   6 list of accessibility leaves (`InlineAccessibilityContent`), each:
+   *     0 kind, 1 tag, 2 label, 3 role, 4 hint, 5 language, 6 disabled,
+   *     7 selected, 8 checked, 9 fragment indices, 10 live region, 11 busy,
+   *     12 expanded (0 unset, 1 collapsed, 2 expanded), 13..15 value
+   *     min/max/now and 16 value text when set, 17 actions (0 name, 1 label),
+   *     18 attachment tags the leaf presents,
+   *   7 tags of every inline attachment the run lays out.
+   *     Both read by ReactViewManager.readInlineAccessibilityItems.
    */
   MapBuffer getMapBuffer() const;
 #endif
