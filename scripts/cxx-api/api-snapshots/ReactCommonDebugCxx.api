@@ -118,6 +118,7 @@ using facebook::react::HostPlatformTouch = facebook::react::BaseTouch;
 using facebook::react::HostPlatformViewEventEmitter = facebook::react::BaseViewEventEmitter;
 using facebook::react::ImageSources = std::vector<facebook::react::ImageSource>;
 using facebook::react::InlineTextComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::InlineTextShadowNode>;
+using facebook::react::LayoutMetricsByFamily = std::unordered_map<const facebook::react::ShadowNodeFamily*, facebook::react::LayoutMetrics>;
 using facebook::react::NativeMethodCallFunc = std::function<void()>;
 using facebook::react::PromiseSetupFunctionType = std::function<void(facebook::jsi::Runtime& rt, std::shared_ptr<facebook::react::Promise>)>;
 using facebook::react::RawPropsPropNameHash = uint32_t;
@@ -191,6 +192,7 @@ facebook::react::ColorComponents facebook::react::colorComponentsFromColor(faceb
 facebook::react::ColorSpace facebook::react::getDefaultColorSpace();
 facebook::react::DisplayType facebook::react::displayTypeFromYGDisplay(YGDisplay display);
 facebook::react::InlineBoxProps facebook::react::parseInlineBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
+facebook::react::LayoutConstraints facebook::react::constraintsForWhiteSpace(const std::optional<facebook::react::WhiteSpace>& whiteSpace, const facebook::react::LayoutConstraints& layoutConstraints);
 facebook::react::LayoutConstraints facebook::react::constraintsHonoringOwnBounds(const facebook::react::ShadowNode& node, facebook::react::LayoutConstraints constraints);
 facebook::react::LayoutMetrics facebook::react::layoutMetricsFromYogaNode(facebook::yoga::Node& yogaNode);
 facebook::react::ListStylePosition facebook::react::listStylePositionFromString(const std::string& value, facebook::react::ListStylePosition fallback);
@@ -219,6 +221,7 @@ std::optional<facebook::react::CSSAnimation> facebook::react::buildAnimation(con
 std::optional<facebook::react::FilterType> facebook::react::filterTypeFromString(std::string_view filterName);
 std::optional<facebook::react::Isolation> facebook::react::isolationFromString(std::string_view isolationSetting);
 std::optional<facebook::react::TransitionProperty> facebook::react::parseTransitionProperty(const std::string& value);
+std::shared_ptr<facebook::react::ShadowNode> facebook::react::cloneWithLayoutMetrics(const facebook::react::ShadowNode& node, const facebook::react::LayoutMetricsByFamily& byFamily);
 std::string facebook::react::listMarkerText(facebook::react::ListStyleType type, int ordinal);
 std::string facebook::react::toString(const double& value);
 std::string facebook::react::toString(const facebook::react::AccessibilityRole& accessibilityRole);
@@ -428,6 +431,7 @@ class facebook::react::AttributedString::Fragment {
   public facebook::react::TextAttributes textAttributes;
   public static std::string AttachmentCharacter();
   public std::string string;
+  public uint8_t atomicInlineVerticalAlign;
 }
 
 class facebook::react::AttributedString::Range {
@@ -1545,12 +1549,16 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public const facebook::yoga::Style& getYogaStyle() const;
   public const std::vector<size_t>& getAnonymousTextContentChildIndices() const;
   public const std::vector<std::shared_ptr<facebook::react::YogaLayoutableShadowNode>>& getAnonymousTextContentChildren() const;
+  public facebook::react::Rect alignedInlineRunFrame(facebook::react::YogaLayoutableShadowNode& box, const facebook::react::LayoutContext& layoutContext) const;
   public facebook::react::Rect getContentBounds() const;
+  public facebook::react::YogaLayoutableShadowNode* elidedInlineRun() const;
   public facebook::react::YogaLayoutableShadowNode::ListContext listContext_;
   public int listDepth_;
   public static bool isAtomicInline(const facebook::react::ShadowNode& child);
   public static bool isInlineFlowContent(const facebook::react::ShadowNode& child);
+  public static bool isInlineLevelContent(const facebook::react::ShadowNode& child);
   public static bool isInlineTextContent(const facebook::react::ShadowNode& child);
+  public static bool isTransparentInlineBox(const facebook::react::ShadowNode& child);
   public static const facebook::react::YogaLayoutableShadowNode* asYogaLayoutable(const facebook::react::ShadowNode& node);
   public static const std::shared_ptr<const facebook::react::TextAttributes>& defaultCascadeTextAttributes();
   public static facebook::react::YogaLayoutableShadowNode::AnonymousTextContentFactory getAnonymousTextContentFactory();
@@ -1558,11 +1566,14 @@ class facebook::react::YogaLayoutableShadowNode : public facebook::react::Layout
   public static void assignListMarker(facebook::react::YogaLayoutableShadowNode& item, const facebook::react::ListMarker& marker);
   public static void setAnonymousTextContentFactory(facebook::react::YogaLayoutableShadowNode::AnonymousTextContentFactory factory);
   public std::optional<facebook::react::ListMarker> nextListMarkerIfChanged(const facebook::react::YogaLayoutableShadowNode& child);
+  public std::vector<facebook::react::FloatExclusion> floatExclusions() const;
   public using AnonymousTextContentFactory = std::shared_ptr<facebook::react::YogaLayoutableShadowNode>(*)(std::vector<std::shared_ptr<const facebook::react::ShadowNode>> runChildren, const facebook::react::ShadowNode& containerShadowNode);
   public using ListOfShared = std::vector<facebook::react::YogaLayoutableShadowNode::Shared>;
   public using Shared = std::shared_ptr<const facebook::react::YogaLayoutableShadowNode>;
+  public virtual Float baseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual bool getIsLayoutClean() const override;
   public virtual const std::shared_ptr<const facebook::react::TextAttributes>* getStoredCascade() const;
+  public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
   public virtual void appendChild(const std::shared_ptr<const facebook::react::ShadowNode>& child) override;
   public virtual void completeClone(const facebook::react::ShadowNode&, const facebook::react::ShadowNodeFragment&) override;
   public virtual void dirtyLayout() override;
@@ -1593,6 +1604,7 @@ class facebook::react::YogaStylableProps : public facebook::react::Props {
   public bool displayFlowRoot;
   public bool displayInline;
   public bool displayInlineAtomic;
+  public facebook::react::AtomicInlineVerticalAlign verticalAlign;
   public facebook::yoga::Style yogaStyle;
   public facebook::yoga::Style::Length insetBlockEnd;
   public facebook::yoga::Style::Length insetBlockStart;
@@ -1696,6 +1708,13 @@ enum facebook::react::AnimationFillMode {
   Both,
   Forwards,
   None,
+}
+
+enum facebook::react::AtomicInlineVerticalAlign : uint8_t {
+  Baseline,
+  Bottom,
+  Middle,
+  Top,
 }
 
 enum facebook::react::BackfaceVisibility : uint8_t {

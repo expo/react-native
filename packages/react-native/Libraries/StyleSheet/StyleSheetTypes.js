@@ -89,6 +89,13 @@ type ____LayoutStyle_Internal = Readonly<{
    */
   float?: 'none' | 'left' | 'right' | 'inline-start' | 'inline-end',
 
+  /** Where an inline-level box sits against the line it is on (CSS2 §10.8.1).
+   *  It belongs here rather than with the text properties because it places a
+   *  BOX: an `inline-block` View, or an HTML element backed by one, is aligned
+   *  by it exactly as a `<Text>` is.
+   */
+  verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
+
   /** `clear` places a box below any preceding floats on the given side(s)
    *  (CSS2 §9.5.2). Honored inside `display:'block'` containers only.
    */
@@ -1173,7 +1180,6 @@ type ____TextStyle_InternalBase = Readonly<{
   textDecorationStyle?: 'solid' | 'double' | 'dotted' | 'dashed' | 'wavy',
   textDecorationColor?: ____ColorValue_Internal,
   userSelect?: 'auto' | 'text' | 'none' | 'contain' | 'all',
-  verticalAlign?: 'auto' | 'top' | 'bottom' | 'middle',
   writingDirection?: 'auto' | 'ltr' | 'rtl',
 }>;
 
