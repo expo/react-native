@@ -1,10 +1,17 @@
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
-      <item name="android:textColor">@color/text_color</item>
-      <item name="android:textColorSecondary">@color/text_color_secondary</item>
-    </style>
+    <!-- Base application theme.
+
+         Material3 rather than AppCompat, deliberately: the HTML form elements
+         draw platform chrome from the theme's Material colour roles
+         (?attr/colorPrimary, ?attr/colorSecondaryContainer, ...), and this is
+         also what a NEW Android app is themed with — which is the fidelity bar
+         the elements are held to. DayNight keeps dark mode.
+
+         The two text-colour overrides that used to live here are gone: they
+         were an AppCompat-era adjustment, and overriding the theme's own text
+         colours under Material3 would misstate exactly the roles the elements
+         now read. -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar" />
 
 </resources>
