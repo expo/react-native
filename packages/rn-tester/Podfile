@@ -59,6 +59,7 @@ def pods(target_name, options = {})
   pod 'MyNativeView', :path => "NativeComponentExample"
   pod 'RNTesterTabsIOS', :path => "RNTesterTabsIOS"
   pod 'NativeCxxModuleExample', :path => "NativeCxxModuleExample"
+  pod 'RNTesterFeatureFlags', :path => "FeatureFlags"
 end
 
 target 'RNTester' do
