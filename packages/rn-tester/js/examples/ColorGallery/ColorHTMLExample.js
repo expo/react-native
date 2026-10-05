@@ -26,7 +26,7 @@ import {
   sampleAll,
   target,
 } from './colorGalleryData';
-import '@react-native/expo-intrinsics-poc';
+import {setImgBacking} from '@react-native/expo-intrinsics-poc';
 import * as React from 'react';
 import {useEffect, useRef, useState} from 'react';
 import {DevSettings, ScrollView} from 'react-native';
@@ -39,6 +39,10 @@ const SECONDARY_COLOR = '#555555';
 const SEPARATOR_COLOR = '#d1d1d6';
 const CARD_COLOR = '#f2f2f7';
 const GROUPED_PAGE_COLOR = PAPER_COLOR;
+
+// The framework's image view: expo-image doesn't decode every fixture or read
+// `dynamic-range-limit`. Before any `<img>` renders.
+setImgBacking('framework');
 
 const LIMITS = ['no-limit', 'constrained', 'standard'];
 
@@ -238,6 +242,23 @@ function Gallery() {
         <div style={{...LABEL, marginTop: 12}} testID="img-backing">
           {'<img>'} is backed by {imgBacking()}
         </div>
+        <p
+          style={{
+            fontSize: 12,
+            color: SECONDARY_COLOR,
+            margin: 0,
+            marginTop: 10,
+          }}>
+          Limitations of {'<img>'} for now: backed by expo-image (an app with
+          the Expo runtime), on iOS the PQ and HLG HEIC pictures don't decode,
+          Display P3 is clipped to sRGB, dynamic-range-limit is ignored, and a
+          picture named from the asset catalog is missed in a release build.
+          RNTester pins the framework's image view instead, so this screen shows
+          that view's behavior; with expo-image, judge pictures in the CSS
+          gallery, which draws them through the core Image. Sampling, from the
+          development menu, reads a picture's drawn color only on the framework
+          view.
+        </p>
       </div>
       <div
         style={{
