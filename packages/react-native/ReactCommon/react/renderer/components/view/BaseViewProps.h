@@ -14,6 +14,7 @@
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityProps.h>
+#include <react/renderer/components/view/TransitionPrimitives.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/LayoutMetrics.h>
@@ -137,6 +138,41 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
         return uaDeclaresBoundary;
     }
     return uaDeclaresBoundary;
+  }
+
+  /*
+   * What `transition` declares on this view, side-allocated:
+   * empty on nearly every view, and hundreds of bytes inline. The raw
+   * longhands are kept because a props clone carries only the keys that
+   * changed, so an update re-parses from them. Null means none declared.
+   */
+  struct CssMotion {
+    std::string transitionPropertyRaw{};
+    std::string transitionDurationRaw{};
+    std::string transitionDelayRaw{};
+    std::string transitionTimingFunctionRaw{};
+    Transitions transitions{};
+
+    bool isEmpty() const
+    {
+      return transitionPropertyRaw.empty() && transitionDurationRaw.empty() && transitionDelayRaw.empty() &&
+          transitionTimingFunctionRaw.empty();
+    }
+
+    bool rawsEqual(const CssMotion &other) const
+    {
+      return transitionPropertyRaw == other.transitionPropertyRaw &&
+          transitionDurationRaw == other.transitionDurationRaw && transitionDelayRaw == other.transitionDelayRaw &&
+          transitionTimingFunctionRaw == other.transitionTimingFunctionRaw;
+    }
+  };
+
+  std::shared_ptr<const CssMotion> cssMotion{};
+
+  const Transitions &transitions() const
+  {
+    static const Transitions kNone{};
+    return cssMotion == nullptr ? kNone : cssMotion->transitions;
   }
 
   /*
