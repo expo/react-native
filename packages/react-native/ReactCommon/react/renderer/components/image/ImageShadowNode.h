@@ -102,12 +102,16 @@ extern const char ImgTagComponentName[];
 class ImgTagShadowNode final
     : public ConcreteViewShadowNode<ImgTagComponentName, ImageProps, ImageEventEmitter, ImageState> {
  public:
-  using ConcreteViewShadowNode::ConcreteViewShadowNode;
+  ImgTagShadowNode(const ShadowNodeFragment &fragment, const ShadowNodeFamily::Shared &family, ShadowNodeTraits traits);
+
+  ImgTagShadowNode(const ShadowNode &sourceShadowNode, const ShadowNodeFragment &fragment);
 
   static ShadowNodeTraits BaseTraits()
   {
     auto traits = ConcreteViewShadowNode::BaseTraits();
     traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
+    // For `dynamic-range-limit`
+    traits.set(ShadowNodeTraits::Trait::TextCascadeConsumer);
     // The intrinsic <img> is an inline *replaced* element: it flows inline in a
     // View's IFC (InlineText) and is never blockified (InlineReplaced). Layout
     // checks the traits, not the name — any component that sets these behaves
@@ -128,6 +132,15 @@ class ImgTagShadowNode final
     return {imageSource, {imageSource, nullptr}, {}};
   }
 
+  // Republishes the state when the effective limit changes, since a
+  // container's limit can change without this node's layout changing
+  void setInheritedCascade(const std::shared_ptr<const TextAttributes> &cascade) override;
+
+  const std::shared_ptr<const TextAttributes> *getStoredCascade() const override
+  {
+    return &inheritedCascade_;
+  }
+
   void layout(LayoutContext layoutContext) override;
 
  private:
@@ -136,6 +149,11 @@ class ImgTagShadowNode final
   std::shared_ptr<ImageManager> imageManager_;
 
   void updateStateIfNeeded();
+
+  std::shared_ptr<const TextAttributes> inheritedCascade_{};
+
+  // Its own, else the inherited one, else CSS's initial `no-limit`
+  DynamicRangeLimit effectiveDynamicRangeLimit() const;
 };
 
 class ImgTagComponentDescriptor final : public ConcreteComponentDescriptor<ImgTagShadowNode> {
