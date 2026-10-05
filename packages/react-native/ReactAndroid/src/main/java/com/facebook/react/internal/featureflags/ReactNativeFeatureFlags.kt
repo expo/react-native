@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<e110927abc94c0204a89c76e2e288b0d>>
+ * @generated SignedSource<<7e3139b60b10173ae75f2f41181a53ea>>
  */
 
 /**
@@ -143,6 +143,12 @@ public object ReactNativeFeatureFlags {
    */
   @JvmStatic
   public fun enableBridgelessArchitecture(): Boolean = accessor.enableBridgelessArchitecture()
+
+  /**
+   * Enables CSS Color 4 colors in their own color spaces (color(), lab(), lch(), oklab(), oklch(), and CSS Color HDR's rec2100 spaces): processColor passes them to native as objects, native draws them in the space the device resolves, and untagged integer colors are always sRGB.
+   */
+  @JvmStatic
+  public fun enableColorSpaces(): Boolean = accessor.enableColorSpaces()
 
   /**
    * Enable prop iterator setter-style construction of Props in C++ (this flag is not used in Java).

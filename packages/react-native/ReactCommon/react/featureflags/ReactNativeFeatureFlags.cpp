@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<81e678e0dffed6186fb867582e25dcec>>
+ * @generated SignedSource<<c6c234b461b8cbfe09d8a02716abe492>>
  */
 
 /**
@@ -100,6 +100,10 @@ bool ReactNativeFeatureFlags::enableAsyncDiskCacheCheckInMultiSourceImageAndroid
 
 bool ReactNativeFeatureFlags::enableBridgelessArchitecture() {
   return getAccessor().enableBridgelessArchitecture();
+}
+
+bool ReactNativeFeatureFlags::enableColorSpaces() {
+  return getAccessor().enableColorSpaces();
 }
 
 bool ReactNativeFeatureFlags::enableCppPropsIteratorSetter() {
