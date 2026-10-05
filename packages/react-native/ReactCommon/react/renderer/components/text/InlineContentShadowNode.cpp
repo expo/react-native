@@ -318,6 +318,15 @@ void measureAtomicInlines(
         ? layoutable->baseline(layoutContext, size)
         : layoutable->lastLineBaseline(layoutContext, size);
 
+    // Where the box asked to sit on the line. Read here, with the box's props
+    // in hand, and carried on the fragment because the engine that places it
+    // sees only fragments.
+    if (const auto* yogaStylable = dynamic_cast<const YogaStylableProps*>(
+            attachment.shadowNode->getProps().get())) {
+      fragments[attachment.fragmentIndex].atomicInlineVerticalAlign =
+          static_cast<uint8_t>(yogaStylable->verticalAlign);
+    }
+
     // An atomic inline box's inline-axis margins add to the advance it
     // occupies on the line (CSS2 §10.8): the reserved box is the MARGIN box,
     // not the border box `measure()` returns. Block-axis margins deliberately
@@ -751,7 +760,10 @@ InlineContentShadowNode::stampInlineElementMetrics(
       AttributedStringBox{attributedString},
       ParagraphAttributes{},
       textLayoutContext,
-      LayoutConstraints{.minimumSize = boxSize, .maximumSize = boxSize});
+      LayoutConstraints{
+          .minimumSize = boxSize,
+          .maximumSize = boxSize,
+          .floatExclusions = floatExclusions()});
 
   return facebook::react::stampInlineElementMetrics(
       *this,

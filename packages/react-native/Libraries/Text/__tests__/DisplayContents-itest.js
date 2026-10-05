@@ -91,9 +91,41 @@ describe('display: contents', () => {
     expect(box.height).toBe(20);
   });
 
-  // Generating no box does not stop the element inheriting to its children
-  // (css-display-3 §3.1). The absolute height keeps the comparison from
-  // passing because neither side applied the size.
+  // <span> is inline-level whatever its `display` says and joins a run without
+  // `display: contents` being consulted; a block-level <div> that generates no
+  // box must not interrupt the line either
+  it('a block-level contents box does not interrupt the line', () => {
+    const box = rectOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <div> tag
+      <div ref={ref} style={{alignSelf: 'flex-start'}}>
+        {'aa'}
+        {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+        <div style={{display: 'contents'}}>{'bb'}</div>
+      </div>
+    ));
+    expect(box.width).toBe(40);
+    expect(box.height).toBe(20);
+  });
+
+  it('nested contents boxes are transparent all the way down', () => {
+    const box = rectOf(ref => (
+      // $FlowExpectedError[not-a-component] intrinsic <div> tag
+      <div ref={ref} style={{alignSelf: 'flex-start'}}>
+        {'aa'}
+        {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+        <div style={{display: 'contents'}}>
+          {/* $FlowExpectedError[not-a-component] intrinsic <div> tag */}
+          <div style={{display: 'contents'}}>{'bb'}</div>
+        </div>
+      </div>
+    ));
+    expect(box.width).toBe(40);
+    expect(box.height).toBe(20);
+  });
+
+  // Generating no box does not stop inheritance (css-display-3 §3.1). The
+  // absolute height keeps the comparison from passing because neither side
+  // applied the size.
   it('a contents box styles the text it wraps, like an inline box', () => {
     const viaContents = rectOf(ref => (
       // $FlowExpectedError[not-a-component] intrinsic <div> tag
