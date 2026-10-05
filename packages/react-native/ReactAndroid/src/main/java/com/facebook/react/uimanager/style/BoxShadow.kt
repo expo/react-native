@@ -9,6 +9,7 @@ package com.facebook.react.uimanager.style
 
 import android.content.Context
 import androidx.annotation.ColorInt
+import androidx.annotation.ColorLong
 import com.facebook.react.bridge.ColorPropConverter
 import com.facebook.react.bridge.JSApplicationCausedNativeException
 import com.facebook.react.bridge.ReadableMap
@@ -26,6 +27,7 @@ import com.facebook.react.bridge.ReadableType
  * @property blurRadius The blur radius of the shadow, or null for no blur
  * @property spreadDistance The spread distance of the shadow, or null for no spread
  * @property inset Whether the shadow is inset (inner shadow), or null for outer shadow
+ * @property colorLong The color in its own color space, or null for an sRGB color
  */
 public data class BoxShadow(
     val offsetX: Float,
@@ -34,6 +36,8 @@ public data class BoxShadow(
     val blurRadius: Float? = null,
     val spreadDistance: Float? = null,
     val inset: Boolean? = null,
+    /** [color] in its own space. Last, so positional construction keeps its meaning. */
+    @param:ColorLong val colorLong: Long? = null,
 ) {
   public companion object {
     /**
@@ -63,6 +67,12 @@ public data class BoxShadow(
               else -> throw JSApplicationCausedNativeException("Unsupported color type $type")
             }
           } else null
+      val colorLong =
+          if (boxShadow.hasKey("color") && boxShadow.getType("color") == ReadableType.Map) {
+            ColorPropConverter.getColorLong(boxShadow.getMap("color"), context)?.takeUnless {
+              ColorPropConverter.isIntegerColor(it)
+            }
+          } else null
       val blurRadius =
           if (boxShadow.hasKey("blurRadius")) boxShadow.getDouble("blurRadius").toFloat() else null
       val spreadDistance =
@@ -74,6 +84,7 @@ public data class BoxShadow(
           offsetX = offsetX,
           offsetY = offsetY,
           color = color,
+          colorLong = colorLong,
           blurRadius = blurRadius,
           spreadDistance = spreadDistance,
           inset = inset,

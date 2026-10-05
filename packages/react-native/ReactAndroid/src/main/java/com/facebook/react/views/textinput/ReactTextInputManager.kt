@@ -27,6 +27,7 @@ import android.view.View.OnFocusChangeListener
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
+import androidx.annotation.ColorLong
 import androidx.autofill.HintConstants
 import androidx.core.content.ContextCompat
 import com.facebook.common.logging.FLog
@@ -38,6 +39,7 @@ import com.facebook.react.bridge.ReadableType
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.common.mapbuffer.MapBuffer
 import com.facebook.react.module.annotations.ReactModule
+import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderRadius
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderStyle
@@ -888,6 +890,11 @@ public open class ReactTextInputManager public constructor() :
           ],
       customType = "Color",
   )
+  public fun setBorderColorLong(view: ReactEditText, index: Int, @ColorLong color: Long?) {
+    BackgroundStyleApplicator.setBorderColorLong(view, LogicalEdge.ALL, color)
+  }
+
+  /** The border color as an integer. [setBorderColorLong] receives the prop. */
   public fun setBorderColor(view: ReactEditText, index: Int, color: Int?) {
     setBorderColor(view, LogicalEdge.ALL, color)
   }

@@ -17,6 +17,7 @@ import androidx.annotation.ColorLong
 import androidx.core.content.res.ResourcesCompat
 import com.facebook.common.logging.FLog
 import com.facebook.react.common.ReactConstants
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 
 public object ColorPropConverter {
 
@@ -43,6 +44,14 @@ public object ColorPropConverter {
     checkNotNull(context)
 
     if (value is ReadableMap) {
+      if (value.hasKey("space") && ReactNativeFeatureFlags.enableColorSpaces()) {
+        // No space for it on this device: no color, as for an invalid color
+        FLog.w(
+            ReactConstants.TAG,
+            "ColorValue: the color space `${value.getString("space")}` isn't available on this device, so the color isn't drawn.",
+        )
+        return null
+      }
       if (value.hasKey("space")) {
         val r = (value.getDouble("r").toFloat() * 255).toInt()
         val g = (value.getDouble("g").toFloat() * 255).toInt()
@@ -93,6 +102,16 @@ public object ColorPropConverter {
     checkNotNull(context)
 
     if (value is ReadableMap) {
+      if (
+          supportWideGamut() && value.hasKey("space") && ReactNativeFeatureFlags.enableColorSpaces()
+      ) {
+        val colorLong =
+            ColorSpaceColors.toColorLong(value)
+                ?: throw JSApplicationCausedNativeException(
+                    "ColorValue: the color space `${value.getString("space")}` isn't available on this device.",
+                )
+        return Color.valueOf(colorLong)
+      }
       if (supportWideGamut() && value.hasKey("space")) {
         val rawColorSpace = value.getString("space")
         val isDisplayP3 = rawColorSpace == "display-p3"
@@ -134,6 +153,35 @@ public object ColorPropConverter {
 
     throw JSApplicationCausedNativeException("ColorValue: the value must be a number or Object.")
   }
+
+  /**
+   * The color as a color long in its own space; an integer or resource color as the sRGB color
+   * long. Null for no color, or a space this device can't show.
+   */
+  @JvmStatic
+  @ColorLong
+  public fun getColorLong(value: Any?, context: Context): Long? {
+    if (value == null) {
+      return null
+    }
+    if (value is Double) {
+      // The sRGB color long encoding: the ARGB integer in the high 32 bits
+      return value.toInt().toLong() shl 32
+    }
+    return try {
+      if (supportWideGamut()) {
+        getColorInstance(value, context)?.pack()
+      } else {
+        getColorInteger(value, context)?.let { it.toLong() shl 32 }
+      }
+    } catch (e: JSApplicationCausedNativeException) {
+      FLog.w(ReactConstants.TAG, e, "Error converting ColorValue")
+      null
+    }
+  }
+
+  /** Whether the color long is exactly an 8-bit sRGB color */
+  @JvmStatic public fun isIntegerColor(@ColorLong color: Long): Boolean = (color and 0x3fL) == 0L
 
   @JvmStatic
   @Throws(JSApplicationCausedNativeException::class)
@@ -238,8 +286,10 @@ public object ColorPropConverter {
        * else is resolved through its resource id, which is what turns a
        * ColorStateList into the colour for its default state.
        */
-      if (outValue.type >= TypedValue.TYPE_FIRST_COLOR_INT &&
-          outValue.type <= TypedValue.TYPE_LAST_COLOR_INT) {
+      if (
+          outValue.type >= TypedValue.TYPE_FIRST_COLOR_INT &&
+              outValue.type <= TypedValue.TYPE_LAST_COLOR_INT
+      ) {
         return outValue.data
       }
       if (outValue.resourceId != 0) {

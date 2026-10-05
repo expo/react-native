@@ -297,6 +297,9 @@ rather than going quiet.
 
 - `action-sheet-tints-are-srgb` — limitation, `packages/react-native/Libraries/ActionSheetIOS/ActionSheetIOS.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
+- `android-color-table-is-finite` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
+- `android-text-and-outline-colors-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/attributedstring/conversions.h`
+- `android-transition-frames-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
 - `animated-colors-interpolate-in-srgb` — limitation, `packages/react-native/Libraries/Animated/nodes/AnimatedInterpolation.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
