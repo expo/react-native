@@ -47,14 +47,9 @@ ImageShadowNode::ImageShadowNode(
 void ImageShadowNode::setInheritedCascade(
     const std::shared_ptr<const TextAttributes>& cascade) {
   inheritedCascade_ = cascade;
-  // The configure pass runs on the revision being laid out, before `layout`,
-  // and `layout` is skipped for a node whose own layout didn't change; a
-  // container's new limit has to reach the picture either way. A picture the
-  // pass reaches without cloning (an atomic inline hanging off an anonymous
-  // box) is published, shared with the previous revision, so it keeps the
-  // cascade but publishes nothing until its next revision. Asked of the
-  // node itself rather than its seal, which a release build doesn't keep.
-  // DOM-CSS-LIMITATION(inline-image-limit-waits-for-its-next-revision)
+  // `layout` is skipped for a node whose own layout didn't change, so a
+  // container's new limit has to reach the picture here. `isPublished()`, not
+  // the seal: a release build has no seal.
   if (imageManager_ != nullptr && !isPublished() &&
       ReactNativeFeatureFlags::enableColorSpaces()) {
     updateStateIfNeeded();

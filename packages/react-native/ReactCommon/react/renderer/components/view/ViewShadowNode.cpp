@@ -1016,11 +1016,23 @@ void AbstractViewShadowNode<
     // An inline box mounts as a view at the frame stamped on it, so a
     // candidate inside one is placed relative to that frame: `parentOrigin` is
     // where the candidate's parent sits in this View's coordinate space.
+    //
+    // The cascade a candidate inherits is the box's with each inline box's
+    // inheritable props folded in on the way down; it is handed to the clone
+    // made below, the node this revision mounts.
     struct AttachmentCandidate {
       std::shared_ptr<const ShadowNode> node;
       Point parentOrigin;
+      std::shared_ptr<const TextAttributes> cascade;
     };
     std::vector<AttachmentCandidate> attachmentCandidates;
+    const auto* layoutableBox =
+        YogaLayoutableShadowNode::asYogaLayoutable(*box);
+    const auto* storedCascade =
+        layoutableBox != nullptr ? layoutableBox->getStoredCascade() : nullptr;
+    const auto boxCascade = storedCascade != nullptr && *storedCascade != nullptr
+        ? *storedCascade
+        : YogaLayoutableShadowNode::defaultCascadeTextAttributes();
     const auto flowsIntoThisRun = [](const ShadowNode& node) {
       if (node.getTraits().check(ShadowNodeTraits::Trait::InlineReplaced) ||
           YogaLayoutableShadowNode::isAtomicInline(node)) {
@@ -1036,11 +1048,23 @@ void AbstractViewShadowNode<
           "an inline box cannot both flow its contents and be an atomic inline");
       return flows;
     };
-    const std::function<void(const ShadowNode&, Point)> collectCandidates =
-        [&](const ShadowNode& parent, Point parentOrigin) {
+    const std::function<void(
+        const ShadowNode&, Point, const std::shared_ptr<const TextAttributes>&)>
+        collectCandidates = [&](const ShadowNode& parent,
+                                Point parentOrigin,
+                                const std::shared_ptr<const TextAttributes>&
+                                    cascade) {
           for (const auto& child : parent.getChildren()) {
             if (flowsIntoThisRun(*child)) {
               auto childOrigin = parentOrigin;
+              auto childCascade = cascade;
+              if (const auto* childViewProps = viewPropsOf(*child);
+                  childViewProps != nullptr &&
+                  childViewProps->hasInheritedTextProps) {
+                auto next = std::make_shared<TextAttributes>(*cascade);
+                childViewProps->applyInheritedTextAttributes(*next);
+                childCascade = std::move(next);
+              }
               // Only a box with a frame offsets its contents; a `#text` node
               // has no frame for the mounting layer to compose. Prefer the
               // origin stamped on this pass, and fall back to the node for an
@@ -1054,13 +1078,13 @@ void AbstractViewShadowNode<
                 childOrigin.x += origin.x;
                 childOrigin.y += origin.y;
               }
-              collectCandidates(*child, childOrigin);
+              collectCandidates(*child, childOrigin, childCascade);
             } else {
-              attachmentCandidates.push_back({child, parentOrigin});
+              attachmentCandidates.push_back({child, parentOrigin, cascade});
             }
           }
         };
-    collectCandidates(*box, Point{0, 0});
+    collectCandidates(*box, Point{0, 0}, boxCascade);
 
     // One attachment can be looked up per candidate; a linear scan per
     // candidate is O(attachments²) in an attachment-heavy run.
@@ -1070,7 +1094,7 @@ void AbstractViewShadowNode<
       placementsByFamily.emplace(placement.family, &placement.frame);
     }
 
-    for (const auto& [runChild, parentOrigin] : attachmentCandidates) {
+    for (const auto& [runChild, parentOrigin, cascade] : attachmentCandidates) {
       const auto* layoutable =
           dynamic_cast<const LayoutableShadowNode*>(runChild.get());
       if (layoutable == nullptr) {
@@ -1128,6 +1152,11 @@ void AbstractViewShadowNode<
             auto cloned = oldShadowNode.clone({});
             auto& clonedLayoutable =
                 dynamic_cast<LayoutableShadowNode&>(*cloned);
+            // Before its layout configures it from what it received
+            if (auto* clonedYogaLayoutable =
+                    dynamic_cast<YogaLayoutableShadowNode*>(cloned.get())) {
+              clonedYogaLayoutable->receiveCascade(cascade);
+            }
             clonedLayoutable.layoutTree(
                 layoutContext,
                 LayoutConstraints{
