@@ -158,6 +158,11 @@ dependencies {
 
   testImplementation(libs.junit)
   implementation(libs.androidx.profileinstaller)
+  // Material 3, for the app THEME: the HTML elements resolve their chrome from
+  // the theme's Material colour roles (?attr/colorPrimary and friends), which
+  // only exist under a Material theme. The framework code depends on the
+  // attributes by name, never on this library's classes.
+  implementation("com.google.android.material:material:1.13.0")
 }
 
 android {
