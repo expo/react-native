@@ -641,6 +641,7 @@ uint32_t facebook::react::rendererAbiVersionOfLibrary();
 void facebook::react::FBReactNativeSpec_registerComponentDescriptorsFromCodegen(std::shared_ptr<const facebook::react::ComponentDescriptorProviderRegistry> registry);
 void facebook::react::addDynamicToJArray(jni::alias_ref<jni::JArrayClass<jobject>> jarray, jint index, const folly::dynamic& dyn);
 void facebook::react::assertRendererAbiMatchesHeaders(uint32_t headerVersion = facebook::react::kRendererAbiVersion);
+void facebook::react::decorateCancelablePayload(facebook::jsi::Runtime& runtime, facebook::jsi::Object& payload, const std::shared_ptr<facebook::react::CancelableEventDecision>& decision);
 void facebook::react::ensureAnonymousTextContentFactoryInstalled(const facebook::react::ComponentDescriptorParameters& parameters);
 void facebook::react::ensureThreadDurationJNIEnvAttached();
 void facebook::react::fromRawValue(const facebook::react::ContextContainer& contextContainer, int32_t surfaceId, const facebook::react::RawValue& value, facebook::react::SharedColor& result);
@@ -1276,6 +1277,7 @@ class facebook::react::EventBeat {
   protected facebook::react::EventBeat::BeatCallback beatCallback_;
   protected mutable std::atomic<bool> isEventBeatRequested_;
   protected std::function<void()> induceCallback_;
+  protected std::function<void(facebook::jsi::Runtime&)> makeBeat() const;
   protected std::shared_ptr<facebook::react::EventBeat::OwnerBox> ownerBox_;
   protected void induce() const;
   public EventBeat(const facebook::react::EventBeat& other) = delete;
@@ -1286,6 +1288,7 @@ class facebook::react::EventBeat {
   public virtual void request() const;
   public virtual void requestSynchronous(facebook::react::Tag tag) const;
   public virtual ~EventBeat() = default;
+  public void flushSynchronouslyNow() const;
   public void requestSynchronous() const;
   public void setBeatCallback(facebook::react::EventBeat::BeatCallback beatCallback);
 }
@@ -1344,6 +1347,7 @@ class facebook::react::EventEmitter {
 class facebook::react::EventEmitterWrapper : public jni::HybridClass<facebook::react::EventEmitterWrapper> {
   public EventEmitterWrapper(facebook::react::SharedEventEmitter eventEmitter);
   public facebook::react::SharedEventEmitter eventEmitter;
+  public jni::local_ref<jstring> dispatchCancelableEventSynchronously(std::string eventName, facebook::react::NativeMap* params, jlong eventTimestamp);
   public static constexpr char* const kJavaDescriptor;
   public static void registerNatives();
   public void dispatchEvent(std::string eventName, facebook::react::NativeMap* payload, int category, jlong eventTimestamp);
@@ -3815,6 +3819,12 @@ struct facebook::react::CSSAnimation {
   public facebook::react::Float iterations;
   public facebook::react::TransitionTimingFunction timingFunction;
   public std::vector<facebook::react::AnimationKeyframe> keyframes;
+}
+
+struct facebook::react::CancelableEventDecision {
+  public bool defaultPrevented;
+  public bool hasReplacement;
+  public std::string replacement;
 }
 
 struct facebook::react::Color {
