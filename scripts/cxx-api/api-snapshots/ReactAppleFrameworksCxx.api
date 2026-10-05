@@ -1159,6 +1159,7 @@ interface RCTFileRequestHandler : public NSObject <RCTURLRequestHandler, RCTInva
 }
 
 interface RCTFont : public NSObject {
+  public virtual static NSString* firstAvailableFontFamily:(NSString* fontFamily);
   public virtual static UIFont* updateFont:withFamily:(UIFont* font, NSString* family);
   public virtual static UIFont* updateFont:withFamily:size:weight:style:variant:scaleMultiplier:(UIFont* font, NSString* family, NSNumber* size, NSString* weight, NSString* style, NSArray<NSString*>* variant, CGFloat scaleMultiplier);
   public virtual static UIFont* updateFont:withSize:(UIFont* font, NSNumber* size);
