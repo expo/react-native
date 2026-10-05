@@ -18,12 +18,6 @@
  */
 
 import {
-  CARD_COLOR,
-  LABEL_COLOR,
-  SECONDARY_COLOR,
-  SEPARATOR_COLOR,
-} from '../HTMLElements/themed';
-import {
   CSS_SPACES,
   DASHED_SPACES,
   HDR_PICTURES,
@@ -45,14 +39,18 @@ import {
   processColor,
 } from 'react-native';
 
+// Paper white and fixed ink in both modes: every color is judged against
+// plain SDR white
+const PAPER_COLOR = '#ffffff';
+const LABEL_COLOR = '#000000';
+const SECONDARY_COLOR = '#555555';
+const SEPARATOR_COLOR = '#d1d1d6';
+const CARD_COLOR = '#f2f2f7';
+const GROUPED_PAGE_COLOR = PAPER_COLOR;
+
 const LIMITS = ['no-limit', 'constrained', 'standard'];
 
-/*
- * What this display can show, asked through the web's own APIs: each media
- * query's answer now, kept current by its change event, and whether a few
- * colors are supported here. The dashed space is the one answer that differs
- * by device.
- */
+// Each query's answer, kept current by its change event
 const MEDIA_QUERIES = [
   '(color-gamut: srgb)',
   '(color-gamut: p3)',
@@ -178,41 +176,43 @@ function SpaceTable({rows}) {
   );
 }
 
+// Three 44-point buttons: the selected one filled, the others outlined
 function Segmented({choices, value, onChange, testIDPrefix}) {
   return (
-    <View
-      style={[
-        styles.segmented,
-        {gridTemplateColumns: `repeat(${choices.length}, minmax(0, 1fr))`},
-      ]}>
-      {choices.map(choice => (
-        <Pressable
-          key={choice}
-          testID={`${testIDPrefix}-${choice}`}
-          onPress={() => onChange(choice)}
-          style={[
-            styles.segment,
-            {backgroundColor: choice === value ? '#1f6feb' : CARD_COLOR},
-          ]}>
-          <Text
-            style={[
-              styles.segmentText,
-              {color: choice === value ? '#ffffff' : LABEL_COLOR},
+    <View style={styles.segmented}>
+      {choices.map(choice => {
+        const selected = choice === value;
+        return (
+          <Pressable
+            key={choice}
+            testID={`${testIDPrefix}-${choice}`}
+            accessibilityRole="button"
+            accessibilityState={{selected}}
+            onPress={() => onChange(choice)}
+            style={({pressed}) => [
+              styles.segment,
+              {
+                backgroundColor: selected ? '#1f6feb' : CARD_COLOR,
+                borderColor: selected ? '#1f6feb' : SEPARATOR_COLOR,
+                opacity: pressed ? 0.6 : 1,
+              },
             ]}>
-            {choice}
-          </Text>
-        </Pressable>
-      ))}
+            <Text
+              style={[
+                styles.segmentText,
+                {color: selected ? '#ffffff' : LABEL_COLOR},
+              ]}>
+              {choice}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
-/*
- * Two pictures a row, their labels a row above them, so a label that wraps
- * to two lines moves its row rather than its picture. The chosen
- * dynamic-range-limit is set on the container and inherited by the pictures.
- */
-function Pictures({limit}) {
+// Labels a row above their pictures, so a wrapped label moves only its row
+function Pictures() {
   const cells = [];
   for (let i = 0; i < PICTURES.length; i += 2) {
     const pair = PICTURES.slice(i, i + 2);
@@ -243,10 +243,8 @@ function Pictures({limit}) {
       );
     }
   }
-  // The limit is set once, on the container: every picture inside inherits it
-  return (
-    <View style={[styles.twoUp, {dynamicRangeLimit: limit}]}>{cells}</View>
-  );
+  // The screen's limit reaches the pictures by inheritance
+  return <View style={styles.twoUp}>{cells}</View>;
 }
 
 // Each HDR picture under the three limits, a column each
@@ -257,6 +255,15 @@ function HdrTable() {
         <View key={`title ${limit}`}>
           <Text style={styles.columnTitle}>{limit}</Text>
         </View>
+      ))}
+      <View key="label white" style={styles.spanningLabel}>
+        <Text style={styles.pictureLabel}>paper white, for comparison</Text>
+      </View>
+      {LIMITS.map(limit => (
+        <View
+          key={`white ${limit}`}
+          style={{height: 32, backgroundColor: '#ffffff'}}
+        />
       ))}
       {HDR_PICTURES.flatMap(picture => [
         <View key={`label ${picture.file}`} style={styles.spanningLabel}>
@@ -286,20 +293,24 @@ const SHADOWS = [
 function ShadowTable() {
   return (
     <View style={styles.shadowTable}>
+      <View />
+      {['sRGB', 'Display P3'].map(title => (
+        <View key={title}>
+          <Text style={styles.columnTitle}>{title}</Text>
+        </View>
+      ))}
       {SHADOWS.flatMap(([label, srgb, p3]) => [
         <View key={label}>
           <Text style={styles.name}>{label}</Text>
         </View>,
         <View key={`${label} srgb`} style={styles.shadowCell}>
           <View style={[styles.shadowBox, {boxShadow: `0 6px 16px ${srgb}`}]} />
-          <Text style={styles.note}>sRGB</Text>
         </View>,
         <View key={`${label} p3`} style={styles.shadowCell}>
           <View
             testID={`p3-shadow-${label}`}
             style={[styles.shadowBox, {boxShadow: `0 6px 16px ${p3}`}]}
           />
-          <Text style={styles.note}>Display P3</Text>
         </View>,
       ])}
     </View>
@@ -366,37 +377,98 @@ function BorderTable() {
   );
 }
 
-/*
- * Colors brighter than SDR white: twice white's luminance in linear sRGB, and
- * a PQ gray at about 1000 nits. Each is drawn under no limit, then under
- * `standard`, which keeps it at SDR white; on an SDR display all four are
- * white. The limit is the box's own.
- */
+// Colors brighter than SDR white, each under all three limits, stated on the
+// box itself so the row is independent of the screen's control
 const HDR_COLORS = [
   ['srgb-linear 2 2 2', 'color(srgb-linear 2 2 2)'],
   ['rec2100-pq 0.75', 'color(rec2100-pq 0.75 0.75 0.75)'],
   ['rec2100-linear 4 0 0', 'color(rec2100-linear 4 0 0)'],
 ];
 
+// Four times SDR white, painted every way a view can paint a color
+const HDR_FOUR = 'color(rec2100-linear 4 4 4)';
+const HDR_PAINTS = [
+  'text',
+  'text shadow',
+  'border',
+  'border, two widths',
+  'box shadow',
+];
+
+function HdrPaint({kind}: {kind: string}) {
+  switch (kind) {
+    case 'text':
+      return <Text style={[styles.hdrText, {color: HDR_FOUR}]}>HDR</Text>;
+    case 'text shadow':
+      return (
+        <Text
+          style={[
+            styles.hdrText,
+            {
+              color: '#ffffff',
+              textShadowColor: HDR_FOUR,
+              textShadowOffset: {width: 3, height: 3},
+              textShadowRadius: 3,
+            },
+          ]}>
+          HDR
+        </Text>
+      );
+    case 'border':
+      return <View style={[styles.hdrBorder, {borderColor: HDR_FOUR}]} />;
+    case 'border, two widths':
+      return (
+        <View
+          style={[
+            styles.hdrBorder,
+            {borderColor: HDR_FOUR, borderLeftWidth: 8, borderRightWidth: 8},
+          ]}
+        />
+      );
+    default:
+      return (
+        <View
+          style={[styles.hdrShadow, {boxShadow: `0 0 10px 4px ${HDR_FOUR}`}]}
+        />
+      );
+  }
+}
+
 function HdrColorTable() {
   return (
     <View style={styles.hdrTable}>
       <View />
-      {['no-limit', 'standard'].map(title => (
+      {['white', 'no-limit', 'constrained', 'standard'].map(title => (
         <View key={title}>
           <Text style={styles.columnTitle}>{title}</Text>
         </View>
       ))}
-      <View />
       {HDR_COLORS.flatMap(([label, color]) => [
         <View key={label}>
           <Text style={styles.name}>{label}</Text>
         </View>,
+        // The SDR ceiling beside each HDR box
+        <View
+          key={`${label} white`}
+          testID={`hdr-white-${label}`}
+          style={[styles.hdrBox, {backgroundColor: '#ffffff'}]}
+        />,
         <View
           key={`${label} no-limit`}
           ref={target(`hdr ${label}`, [{at: [0.5, 0.5]}])}
           testID={`hdr-color-${label}`}
-          style={[styles.hdrBox, {backgroundColor: color}]}
+          style={[
+            styles.hdrBox,
+            {backgroundColor: color, dynamicRangeLimit: 'no-limit'},
+          ]}
+        />,
+        <View
+          key={`${label} constrained`}
+          testID={`hdr-color-constrained-${label}`}
+          style={[
+            styles.hdrBox,
+            {backgroundColor: color, dynamicRangeLimit: 'constrained'},
+          ]}
         />,
         <View
           key={`${label} standard`}
@@ -406,10 +478,64 @@ function HdrColorTable() {
             {backgroundColor: color, dynamicRangeLimit: 'standard'},
           ]}
         />,
-        <View key={`${label} gap`} />,
+      ])}
+      {HDR_PAINTS.flatMap(kind => [
+        <View key={kind}>
+          <Text style={styles.name}>{kind}</Text>
+          <Text style={styles.note}>rec2100-linear 4 4 4</Text>
+        </View>,
+        <View key={`${kind} white`} style={styles.hdrPaintCell}>
+          <HdrPaintWhite kind={kind} />
+        </View>,
+        ...LIMITS.map(limit => (
+          <View
+            key={`${kind} ${limit}`}
+            testID={`hdr-paint-${limit}-${kind}`}
+            style={[styles.hdrPaintCell, {dynamicRangeLimit: limit}]}>
+            <HdrPaint kind={kind} />
+          </View>
+        )),
       ])}
     </View>
   );
+}
+
+// The SDR ceiling for each paint: the same paint in plain white
+function HdrPaintWhite({kind}: {kind: string}) {
+  switch (kind) {
+    case 'text':
+      return <Text style={[styles.hdrText, {color: '#ffffff'}]}>HDR</Text>;
+    case 'text shadow':
+      return (
+        <Text
+          style={[
+            styles.hdrText,
+            {
+              color: '#ffffff',
+              textShadowColor: '#ffffff',
+              textShadowOffset: {width: 3, height: 3},
+              textShadowRadius: 3,
+            },
+          ]}>
+          HDR
+        </Text>
+      );
+    case 'border':
+      return <View style={[styles.hdrBorder, {borderColor: '#ffffff'}]} />;
+    case 'border, two widths':
+      return (
+        <View
+          style={[
+            styles.hdrBorder,
+            {borderColor: '#ffffff', borderLeftWidth: 8, borderRightWidth: 8},
+          ]}
+        />
+      );
+    default:
+      return (
+        <View style={[styles.hdrShadow, {boxShadow: '0 0 10px 4px #ffffff'}]} />
+      );
+  }
 }
 
 const GRADIENTS = [
@@ -462,8 +588,9 @@ function TransitionTable() {
     <View>
       <Pressable
         testID="transition-toggle"
+        accessibilityRole="button"
         onPress={() => setOn(value => !value)}
-        style={styles.button}>
+        style={({pressed}) => [styles.button, pressed && styles.buttonPressed]}>
         <Text style={styles.buttonText}>
           {on ? 'Transition back' : 'Transition'}
         </Text>
@@ -490,10 +617,11 @@ function TransitionTable() {
   );
 }
 
-function Section({title, legend, children}) {
+function Section({title, expect, legend, children}) {
   return (
     <View>
       <Text style={styles.section}>{title}</Text>
+      {expect != null && <Text style={styles.expect}>{expect}</Text>}
       {legend != null && <Text style={styles.legend}>{legend}</Text>}
       {children}
     </View>
@@ -520,18 +648,22 @@ function Gallery() {
     <ScrollView
       testID="gallery"
       ref={scrollRef}
+      style={{backgroundColor: PAPER_COLOR}}
+      // The limit control stays at the top while the pictures scroll under it
+      stickyHeaderIndices={[1]}
       onContentSizeChange={(width, height) => {
         contentHeight.current = height;
       }}>
-      <View style={styles.page}>
+      <View style={styles.screenTop}>
         <Text style={styles.intro}>
           Every CSS color space and platform profile, drawn by React Native's
           core components. A row that isn't parsed draws nothing; a dashed space
           this device doesn't provide draws nothing too.
         </Text>
-
-        <Text style={styles.label}>
-          dynamic-range-limit of the pictures: {limit}
+      </View>
+      <View style={styles.stickyBar}>
+        <Text style={styles.stickyLabel}>
+          dynamic-range-limit of the screen: {limit}
         </Text>
         <Segmented
           choices={LIMITS}
@@ -541,24 +673,28 @@ function Gallery() {
         />
         <Section
           title="This display · matchMedia and CSS.supports"
+          expect="Expect: answers for this screen; the bar changes nothing here."
           legend="What the OS says this screen can show, through the web's own APIs. On a P3 phone the second row matches; on an HDR one the fourth does. The dashed spaces answer per device.">
           <DisplayTable />
         </Section>
 
         <Section
           title="CSS color spaces"
+          expect="Expect: wider spaces more vivid on a P3 screen; the rec2100 rows follow the bar — brighter than paper under no-limit, white under standard."
           legend="Each row: red · green · blue · mid · white in that color space (HDR rows: as noted). More saturated than srgb means a wider gamut, visible on a P3 display.">
           <SpaceTable rows={CSS_SPACES} />
         </Section>
 
         <Section
           title="Platform profiles · color(--name …)"
+          expect="Expect: a row draws only where the OS has the space; its PQ and HLG rows follow the bar like the rec2100 rows."
           legend="Color spaces the OS may ship beyond CSS's, by their standards' names. Whether each one draws depends on the device and OS.">
           <SpaceTable rows={DASHED_SPACES} />
         </Section>
 
         <Section
           title="Text"
+          expect="Expect: the Display P3 red redder on a P3 screen; the bar changes nothing."
           legend="The same red as text: sRGB, then Display P3 (redder on a P3 display).">
           <Text style={[styles.sample, {color: 'red'}]}>sRGB red text</Text>
           <Text
@@ -575,42 +711,49 @@ function Gallery() {
 
         <Section
           title="Shadows"
-          legend="Each pair: the sRGB color, then the Display P3 one (more vivid on a P3 display).">
+          expect="Expect: the Display P3 shadow more vivid; the bar changes nothing."
+          legend="Each row: the sRGB color, then the Display P3 one (more vivid on a P3 display).">
           <ShadowTable />
         </Section>
 
         <Section
           title="Borders"
+          expect="Expect: the Display P3 border more vivid; the bar changes nothing."
           legend="Each row: the sRGB color, then the Display P3 one with square and with round corners (more vivid on a P3 display).">
           <BorderTable />
         </Section>
 
         <Section
           title="HDR colors"
-          legend="Brighter than white, where the display has headroom: no limit, then dynamic-range-limit: standard. On an SDR screen every box is white.">
+          expect="Expect: brighter than paper under no-limit, less under constrained, paper-white under standard; each cell states its own limit, so the bar changes nothing here."
+          legend="Each row: the paint in plain white, then the color under its own dynamic-range-limit: no-limit, constrained and standard, independent of the bar above, as the pictures' three-up is. The first rows are backgrounds; the rest paint four times SDR white as text, as a text shadow behind white text, as a border, as a border with sides of two widths and as a box shadow. On an SDR screen every white is the same white.">
           <HdrColorTable />
         </Section>
 
         <Section
           title="Gradients"
+          expect="Expect: a different midpoint per space; the bar changes nothing."
           legend="Blue to yellow in each interpolation space. sRGB's midpoint is gray; Oklab's is lighter; Oklch's goes round the hue wheel.">
           <GradientTable />
         </Section>
 
         <Section
           title="Transitions"
+          expect="Expect: the Oklab transition keeps its midpoint light; the bar changes nothing."
           legend="Two seconds, linear. Legacy colors move in sRGB; a color in its own space moves in Oklab, so its midpoint stays light and saturated.">
           <TransitionTable />
         </Section>
 
         <Section
           title="Image profiles · Image"
+          expect="Expect: every picture draws; the HDR ones follow the bar — no-limit brightest, standard like SDR."
           legend="One picture per embedded profile, format and depth, through the framework's image view.">
-          <Pictures limit={limit} />
+          <Pictures />
         </Section>
 
         <Section
           title="HDR under each limit, side by side"
+          expect="Expect: brightest on the left, SDR on the right; each column states its own limit, so the bar changes nothing here."
           legend="Left to right: no-limit, constrained, standard. On an HDR display the bright patches step down left to right; on SDR all three match.">
           <HdrTable />
         </Section>
@@ -620,8 +763,26 @@ function Gallery() {
 }
 
 const styles = StyleSheet.create({
-  page: {
+  screenTop: {
     padding: 16,
+    paddingBottom: 4,
+  },
+  stickyBar: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 10,
+    backgroundColor: GROUPED_PAGE_COLOR,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: SEPARATOR_COLOR,
+  },
+  stickyLabel: {
+    fontFamily: 'Menlo',
+    fontSize: 11,
+    color: SECONDARY_COLOR,
+    marginBottom: 6,
+  },
+  screen: {
+    paddingHorizontal: 16,
     paddingBottom: 48,
   },
   intro: {
@@ -633,6 +794,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: LABEL_COLOR,
     marginTop: 24,
+  },
+  expect: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: LABEL_COLOR,
+    marginTop: 2,
   },
   legend: {
     fontSize: 12,
@@ -668,30 +835,37 @@ const styles = StyleSheet.create({
     borderColor: SEPARATOR_COLOR,
   },
   segmented: {
-    display: 'grid',
-    borderRadius: 9,
-    overflow: 'hidden',
-    marginTop: 8,
+    flexDirection: 'row',
+    gap: 8,
   },
   segment: {
-    paddingVertical: 6,
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   segmentText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
   },
   button: {
     marginTop: 10,
-    paddingVertical: 6,
+    minHeight: 44,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    borderRadius: 9,
-    backgroundColor: CARD_COLOR,
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#1f6feb',
+  },
+  buttonPressed: {
+    opacity: 0.6,
   },
   buttonText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
-    color: LABEL_COLOR,
+    color: '#ffffff',
   },
   twoUp: {
     display: 'grid',
@@ -732,7 +906,7 @@ const styles = StyleSheet.create({
     gridTemplateColumns: '48px minmax(0, 1fr) minmax(0, 1fr)',
     alignItems: 'center',
     rowGap: 20,
-    paddingTop: 14,
+    paddingTop: 8,
   },
   shadowCell: {
     alignItems: 'center',
@@ -762,7 +936,7 @@ const styles = StyleSheet.create({
   },
   hdrTable: {
     display: 'grid',
-    gridTemplateColumns: '128px repeat(2, minmax(0, 1fr)) 24px',
+    gridTemplateColumns: '128px repeat(4, minmax(0, 1fr))',
     columnGap: 8,
     rowGap: 8,
     alignItems: 'center',
@@ -772,6 +946,27 @@ const styles = StyleSheet.create({
     height: 40,
     borderWidth: 1,
     borderColor: SEPARATOR_COLOR,
+  },
+  hdrPaintCell: {
+    height: 40,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hdrText: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  hdrBorder: {
+    width: '80%',
+    height: 22,
+    borderWidth: 4,
+    borderStyle: 'solid',
+  },
+  hdrShadow: {
+    width: '50%',
+    height: 12,
+    backgroundColor: '#000000',
   },
   mixedBorder: {
     borderColor: 'color(display-p3 1 0 0)',
