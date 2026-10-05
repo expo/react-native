@@ -105,6 +105,7 @@ Each remaining marker, with the file that carries it.
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
+- `stylex-is-a-layer` — deviation, `packages/rn-tester/js/astryx/css/match.js`
 
 ---
 
