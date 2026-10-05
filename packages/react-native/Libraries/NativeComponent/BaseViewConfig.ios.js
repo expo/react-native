@@ -319,6 +319,8 @@ const validAttributesForNonEventProps = {
   filter: filterAttribute,
   boxShadow: boxShadowAttribute,
   mixBlendMode: true,
+  // A style the native view manager reads as a prop
+  dynamicRangeLimit: true,
   isolation: true,
 
   borderTopWidth: true,

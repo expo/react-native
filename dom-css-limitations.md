@@ -216,16 +216,59 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   `oklch(0.7 0.1 none)` keeps the other end's hue. Here `none` is 0 from
   parsing on, so it turns from hue 0. Deferred: it needs the parsed value to
   keep which channels are missing.
-- **`DOM-CSS-LIMITATION(hdr-colors-draw-at-sdr-white)` — an HDR color draws
-  at SDR white.** `rec2100-pq` and values above 1 in a linear space keep their
-  value, but backgrounds, borders and text are SDR layers, so they draw no
-  brighter than white. Deferred: an EDR fill layer, governed by
-  `dynamic-range-limit`.
+- **`DOM-CSS-LIMITATION(hdr-drawn-borders-draw-at-sdr-white-on-ios)` — on
+  iOS a drawn border, and an inset box shadow, stay at SDR white.**
+  Backgrounds, gradients and the uniform solid border of a view that clips
+  (`overflow: hidden`) are layer colors Core Animation composites in extended
+  range when the layer asks; text, a text shadow and an outer box shadow are
+  drawn into half-float stores tagged with their headroom, which Core
+  Animation maps to the limit under tone mapping "if supported". Any other
+  border (a view that does not clip, differing edges or styles) goes through
+  an 8-bit border image, and an inset shadow is a layer shadow, whose color
+  Core Animation never maps, so an HDR color there is clipped to SDR white.
+  Android paints every color long into the window, whose HDR mode covers them
+  all.
 - **`DOM-CSS-LIMITATION(gradient-interpolation-needs-percent-stops)` — a
   gradient with a length stop or a hint interpolates in sRGB.** Neither
   platform's shader interpolates in a chosen space, so the stretches are
   expanded into computed stops, which can only be placed between percentages.
   A `10px` position or a transition hint leaves the gradient to the platform.
+- **`DOM-CSS-LIMITATION(android-text-and-outline-colors-are-srgb)` — on
+  Android, text decoration, text shadow, text background, outline, and an
+  image's border, overlay and tint colors draw their sRGB approximation.**
+  Backgrounds, borders, box shadows, gradients and text foregrounds paint
+  color longs; these others still cross the bridge as integers. Deferred:
+  color longs through the text MapBuffer's remaining color keys and the
+  image and outline setters.
+- **`DOM-CSS-LIMITATION(android-transition-frames-are-srgb)` — on Android a
+  transition's frames between wide colors draw their sRGB approximation.**
+  A frame's color is read from the 8-bit value, since interning every frame
+  would fill the color table; the end state is the exact color. Deferred: a
+  rotating table for transient colors.
+- **`DOM-CSS-LIMITATION(android-color-table-is-finite)` — Android keeps at
+  most 65,535 distinct wide colors per process.** Each color in its own space
+  is interned by value in a table a `Color` indexes with 16 bits, and the
+  table is never reclaimed; the 65,536th new color draws its sRGB
+  approximation. Deferred: reclamation, or owned overflow storage.
+- **`DOM-CSS-LIMITATION(android-needs-the-platforms-color-space)` — on
+  Android a color in its own space draws only where the OS has that space.**
+  Android 8 brought color spaces; before it, and for a predefined space the
+  OS doesn't name, the color draws nothing rather than CSS's arithmetic.
+  `CSS.supports` says so for the device. Deferred: CSS's arithmetic in
+  Kotlin, as the C++ and JS sides have it.
+- **`DOM-CSS-LIMITATION(inline-image-limit-waits-for-its-next-revision)` —
+  an inline `<img>` takes an inherited `dynamic-range-limit` change at its
+  next revision.** The cascade reaches an atomic inline through its anonymous
+  box without cloning it, so the already-published node stores the cascade
+  but can't publish state until something else clones it. Deferred: cloning atomic
+  inlines in the configure pass.
+- **`DOM-CSS-LIMITATION(animated-colors-interpolate-in-srgb)` — `Animated`
+  interpolates a color in its own space as its sRGB approximation.** The
+  animated node mixes 8-bit sRGB channels. Deferred: CSS Color 4 §12
+  interpolation in the animated node, as transitions have.
+- **`DOM-CSS-LIMITATION(action-sheet-tints-are-srgb)` — `ActionSheetIOS`'s
+  tints are sRGB.** Its native module takes integers, so a color in its own
+  space goes as its sRGB approximation. Platform wall as the module stands.
 - **`DOM-CSS-LIMITATION(media-pointer-is-the-touchscreen)` — `matchMedia`
   knows only the touchscreen on iOS and Android.** `pointer` and `hover`
   answer `coarse` and `none`, and `any-pointer` and `any-hover` answer the
@@ -319,13 +362,7 @@ had a marker, but forty-eight markers had no entry, and the file still read as
 complete. The check now runs both ways, so an unindexed marker fails a test
 rather than going quiet.
 
-- `action-sheet-tints-are-srgb` — limitation, `packages/react-native/Libraries/ActionSheetIOS/ActionSheetIOS.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
-- `android-color-table-is-finite` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
-- `android-needs-the-platforms-color-space` — limitation, `packages/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/display/DisplayCapabilitiesModule.kt`
-- `android-text-and-outline-colors-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/attributedstring/conversions.h`
-- `android-transition-frames-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
-- `animated-colors-interpolate-in-srgb` — limitation, `packages/react-native/Libraries/Animated/nodes/AnimatedInterpolation.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
@@ -341,7 +378,7 @@ rather than going quiet.
 - `grid-min-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
-- `inline-image-limit-waits-for-its-next-revision` — limitation, `packages/react-native/ReactCommon/react/renderer/components/image/ImageShadowNode.cpp`
+- `ios-17-constrained-is-no-limit` — limitation, `packages/react-native/React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
@@ -365,3 +402,4 @@ rather than going quiet.
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
+- `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`

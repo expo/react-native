@@ -39,6 +39,7 @@
 #import <react/renderer/components/view/ViewState.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
+#import <react/renderer/graphics/HostPlatformColor.h>
 #import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
 #import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
 #import <react/renderer/textlayoutmanager/TextLayoutManager.h>
@@ -135,6 +136,12 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
 @implementation RCTViewComponentView {
   UIColor *_backgroundColor;
   CALayer *_backgroundColorLayer;
+  // Whether the layer was last asked for extended range, so a view that loses
+  // its HDR color is set back
+  BOOL _layerWantsExtendedDynamicRange;
+  // The effective `dynamic-range-limit` from the shadow node's state; empty
+  // for a view with no HDR color
+  std::optional<DynamicRangeLimit> _stateDynamicRangeLimit;
   __weak CALayer *_borderLayer;
   CALayer *_outlineLayer;
   NSMutableArray<CALayer *> *_boxShadowLayers;
@@ -476,6 +483,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 
   const auto &data = viewState->getData();
 
+  // Re-asks the layer for its range in `invalidateLayer`, with the border as
+  // it is drawn
+  if (data.dynamicRangeLimit != _stateDynamicRangeLimit) {
+    _stateDynamicRangeLimit = data.dynamicRangeLimit;
+    _needsInvalidateLayer = YES;
+  }
+
   // Remove surplus run views when the run count shrinks (incl. to zero).
   while (_textRunViews.count > data.textRuns.size()) {
     [_textRunViews.lastObject removeFromSuperview];
@@ -509,9 +523,10 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     // interleave differently across mount, re-paint and recycle reuse, so
     // "insert the chrome at index 0 once" does not survive: a run attached in
     // a later state update appends above it in one ordering and below it in
-    // another, and a label under opaque chrome is invisible. Reasserting after
-    // every attach makes the z-order a stated invariant rather than an
-    // accident of ordering.
+    // another. Found as a `<button>`'s label compositing UNDER its opaque
+    // filled chrome — invisible — while translucent gray chrome let labels
+    // show through and *look* correct. Reasserting after every attach makes
+    // the z-order a stated invariant rather than an accident of ordering.
     if (self.hasHostChromeSubviews) {
       for (UIView *subview in self.currentContainerView.subviews) {
         if ([self isHostChromeSubview:subview]) {
@@ -955,6 +970,11 @@ static CGRect RCTUntransformedFrame(UIView *view)
   // `backgroundColor`
   if (oldViewProps.backgroundColor != newViewProps.backgroundColor) {
     self.backgroundColor = RCTUIColorFromSharedColor(newViewProps.backgroundColor);
+    needsInvalidateLayer = YES;
+  }
+
+  // `dynamicRangeLimit`: the layer's range is decided in `invalidateLayer`
+  if (oldViewProps.inheritedDynamicRangeLimit != newViewProps.inheritedDynamicRangeLimit) {
     needsInvalidateLayer = YES;
   }
 
@@ -1534,9 +1554,17 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   }
   [_backgroundColorLayer removeFromSuperlayer];
   _backgroundColorLayer = nil;
-  // The plain background too, not only its layer object, or a view recycled
-  // out of an author-styled `<button style={{backgroundColor}}>` keeps drawing
-  // that author's colour under the next button's platform chrome
+  // The layer survives recycling, so its range goes back with the memo
+  if (_layerWantsExtendedDynamicRange) {
+    [self _updateDynamicRangeOfLayer:self.layer withBackgroundColor:SharedColor{} borderColor:SharedColor{}];
+  }
+  _layerWantsExtendedDynamicRange = NO;
+  _stateDynamicRangeLimit = std::nullopt;
+  // The plain background too, not only its layer object: a view recycled out
+  // of an author-styled `<button style={{backgroundColor}}>` kept drawing that
+  // author's colour under the next button's platform chrome. Verified exactly
+  // that way: a form's Reset button showed the "Filled" demo's blue through
+  // its gray capsule after navigating between the two screens.
   _backgroundColor = nil;
   self.layer.backgroundColor = nil;
   [_borderLayer removeFromSuperlayer];
@@ -1856,6 +1884,113 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   return effectiveContentView;
 }
 
+/*
+ * The range the layer's own colors need: extended where either is brighter
+ * than SDR white and the limit allows. `preferredDynamicRange` activates EDR
+ * only for a CGColor with a headroom tag, which a PQ color carries
+ * (`UIColorFromColorSpaceValue`); tone mapping is the OS's.
+ */
+- (void)_updateDynamicRangeOfLayer:(CALayer *)layer
+               withBackgroundColor:(const SharedColor &)backgroundColor
+                       borderColor:(const SharedColor &)borderColor
+{
+  if (!ReactNativeFeatureFlags::enableColorSpaces()) {
+    return;
+  }
+  const bool bright = (backgroundColor && isHighDynamicRangeColor(*backgroundColor)) ||
+      (borderColor && isHighDynamicRangeColor(*borderColor));
+  if (!bright && !_layerWantsExtendedDynamicRange) {
+    return;
+  }
+  _layerWantsExtendedDynamicRange = bright;
+  [self rct_applyDynamicRange:bright headroom:0 toLayer:layer drawn:NO];
+  if (_backgroundColorLayer != nil) {
+    [self rct_applyDynamicRange:bright headroom:0 toLayer:_backgroundColorLayer drawn:NO];
+  }
+}
+
+- (void)rct_applyDynamicRange:(BOOL)bright headroom:(CGFloat)headroom toLayer:(CALayer *)layer drawn:(BOOL)drawn
+{
+  // The element's own declaration first, then what the cascade gave it
+  const auto limit = _props->inheritedDynamicRangeLimit.has_value()
+      ? *_props->inheritedDynamicRangeLimit
+      : _stateDynamicRangeLimit.value_or(DynamicRangeLimit::NoLimit);
+  [self rct_applyDynamicRange:bright headroom:headroom limit:limit toLayer:layer drawn:drawn];
+}
+
+- (void)rct_applyDynamicRange:(BOOL)bright
+                     headroom:(CGFloat)headroom
+                        limit:(DynamicRangeLimit)limit
+                      toLayer:(CALayer *)layer
+                        drawn:(BOOL)drawn
+{
+  if (!ReactNativeFeatureFlags::enableColorSpaces()) {
+    return;
+  }
+  if (drawn) {
+    // Only a store this made half float goes back to eight bits
+    CALayerContentsFormat format = bright ? kCAContentsFormatRGBA16Float : kCAContentsFormatRGBA8Uint;
+    if (layer.contentsFormat != format && (bright || [layer.contentsFormat isEqual:kCAContentsFormatRGBA16Float])) {
+      layer.contentsFormat = format;
+    }
+  }
+  if (@available(iOS 26.0, *)) {
+    CADynamicRange range = CADynamicRangeAutomatic;
+    if (bright) {
+      switch (limit) {
+        case DynamicRangeLimit::Standard:
+          range = CADynamicRangeStandard;
+          break;
+        case DynamicRangeLimit::Constrained:
+          range = CADynamicRangeConstrainedHigh;
+          break;
+        case DynamicRangeLimit::NoLimit:
+          range = CADynamicRangeHigh;
+          break;
+      }
+    }
+    layer.preferredDynamicRange = range;
+    if (drawn) {
+      // A drawn store carries no color-space headroom of its own, so it is tagged with the peak it draws
+      layer.contentsHeadroom = bright ? headroom : 0;
+    }
+  } else if (@available(iOS 17.0, *)) {
+    // One switch: `constrained` draws as `no-limit` before iOS 26
+    // DOM-CSS-LIMITATION(ios-17-constrained-is-no-limit)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    layer.wantsExtendedDynamicRangeContent = bright && limit != DynamicRangeLimit::Standard;
+#pragma clang diagnostic pop
+  }
+  if (@available(iOS 18.0, *)) {
+    // Core Animation maps extended-range contents (a drawn store, a gradient's stops) to the layer's range only
+    // under `ifSupported`; a flat color needs no mapping
+    const BOOL extendedContents = drawn || [layer isKindOfClass:[CAGradientLayer class]];
+    if (extendedContents) {
+      layer.toneMapMode = bright ? CAToneMapModeIfSupported : CAToneMapModeAutomatic;
+    }
+  }
+}
+
+static BOOL RCTGradientHasHighDynamicRangeStop(const BackgroundImage &backgroundImage)
+{
+  const std::vector<ColorStop> *stops = nullptr;
+  if (std::holds_alternative<LinearGradient>(backgroundImage)) {
+    stops = &std::get<LinearGradient>(backgroundImage).colorStops;
+  } else if (std::holds_alternative<RadialGradient>(backgroundImage)) {
+    stops = &std::get<RadialGradient>(backgroundImage).colorStops;
+  }
+  if (stops == nullptr) {
+    return NO;
+  }
+  for (const auto &stop : *stops) {
+    if (stop.color && isHighDynamicRangeColor(*stop.color)) {
+      return YES;
+    }
+  }
+  return NO;
+}
+
 - (void)invalidateLayer
 {
   CALayer *layer = self.effectiveContentView.layer;
@@ -1953,6 +2088,13 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     _backgroundColorLayer.backgroundColor = backgroundColor.CGColor;
     [_backgroundColorLayer removeAllAnimations];
   }
+
+  // Core Animation composites a layer's background and border colors itself;
+  // a border drawn per edge goes through an 8-bit image and stays SDR
+  // DOM-CSS-LIMITATION(hdr-drawn-borders-draw-at-sdr-white-on-ios)
+  [self _updateDynamicRangeOfLayer:layer
+             withBackgroundColor:_props->backgroundColor
+                     borderColor:useCoreAnimationBorderRendering ? borderMetrics.borderColors.left : SharedColor{}];
 
   // borders
   if (useCoreAnimationBorderRendering) {
@@ -2138,6 +2280,10 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
       }
 
       if (gradientLayer != nil) {
+        [self rct_applyDynamicRange:RCTGradientHasHighDynamicRangeStop(backgroundImage)
+                           headroom:0
+                            toLayer:gradientLayer
+                              drawn:NO];
         CALayer *backgroundImageLayer =
             [RCTBackgroundImageUtils createBackgroundImageLayerWithSize:backgroundPositioningArea
                                                            paintingArea:backgroundPaintingArea
@@ -2172,6 +2318,12 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
           RCTUIEdgeInsetsFromEdgeInsets(borderMetrics.borderWidths),
           self.layer.bounds.size);
       shadowLayer.zPosition = _borderLayer.zPosition;
+      // An HDR outer shadow is a drawn store (`RCTGetBoxShadowLayer`); the rest are layer shadows
+      const BOOL brightShadow = it->color && isHighDynamicRangeColor(*it->color);
+      [self rct_applyDynamicRange:brightShadow
+                         headroom:brightShadow ? CGColorHeadroom(RCTUIColorFromSharedColor(it->color).CGColor) : 0
+                          toLayer:shadowLayer
+                            drawn:brightShadow && !it->inset];
       [layer addSublayer:shadowLayer];
       [_boxShadowLayers addObject:shadowLayer];
     }
@@ -2278,8 +2430,8 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
  * mounted children, in document order.
  *
  * Only an explicit order does this. Left to UIKit, the run views and the mounted children are
- * sibling containers read one after another, which reads an inline `<button>` or `<img>`, a mounted
- * child laid out inside the sentence, after the whole paragraph instead of where it stands.
+ * sibling containers read one after another, so an inline `<button>` or `<img>` — a mounted child
+ * laid out inside the sentence — was read after the whole paragraph instead of where it stands.
  * Each run's `InlineAccessibilityContent` already lists its attachments at their positions, so it
  * is the single source of that order: an attachment's mounted view is presented where its element
  * stands and nowhere else, which is also what keeps it from being announced twice.

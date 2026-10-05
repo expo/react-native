@@ -12,6 +12,7 @@
 #include <react/renderer/attributedstring/AttributedString.h>
 #include <react/renderer/components/view/InlineAccessibilityContent.h>
 #include <react/renderer/core/ReactPrimitives.h>
+#include <react/renderer/graphics/DynamicRangeLimit.h>
 #include <react/renderer/graphics/Rect.h>
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -71,9 +72,17 @@ class ViewState final {
    */
   std::weak_ptr<const TextLayoutManager> layoutManager;
 
+  // The effective `dynamic-range-limit` of a View with an HDR color, for the
+  // mounting layer to bound the layer's or the window's range with; empty for
+  // a View without one
+  std::optional<DynamicRangeLimit> dynamicRangeLimit{};
+
   ViewState() = default;
-  ViewState(std::vector<TextRun> textRuns, std::weak_ptr<const TextLayoutManager> layoutManager)
-      : textRuns(std::move(textRuns)), layoutManager(std::move(layoutManager))
+  ViewState(
+      std::vector<TextRun> textRuns,
+      std::weak_ptr<const TextLayoutManager> layoutManager,
+      std::optional<DynamicRangeLimit> dynamicRangeLimit = std::nullopt)
+      : textRuns(std::move(textRuns)), layoutManager(std::move(layoutManager)), dynamicRangeLimit(dynamicRangeLimit)
   {
   }
 
@@ -86,7 +95,9 @@ class ViewState final {
    * `getMapBuffer`, not through this dynamic payload.
    */
   ViewState(const ViewState &previousState, folly::dynamic /*data*/)
-      : textRuns(previousState.textRuns), layoutManager(previousState.layoutManager)
+      : textRuns(previousState.textRuns),
+        layoutManager(previousState.layoutManager),
+        dynamicRangeLimit(previousState.dynamicRangeLimit)
   {
   }
 
@@ -113,6 +124,9 @@ class ViewState final {
    *   7 tags of every inline attachment the run lays out.
    *     Both read by ReactViewManager.readInlineAccessibilityItems.
    */
+  // Top-level key 1: the effective `dynamic-range-limit`, in the enum's order
+  constexpr static MapBuffer::Key VS_KEY_DYNAMIC_RANGE_LIMIT = 1;
+
   MapBuffer getMapBuffer() const
   {
     std::vector<MapBuffer> runs;
@@ -183,6 +197,9 @@ class ViewState final {
     }
     auto builder = MapBufferBuilder();
     builder.putMapBufferList(0, runs);
+    if (dynamicRangeLimit.has_value()) {
+      builder.putInt(VS_KEY_DYNAMIC_RANGE_LIMIT, static_cast<int32_t>(*dynamicRangeLimit));
+    }
     return builder.build();
   }
 #endif

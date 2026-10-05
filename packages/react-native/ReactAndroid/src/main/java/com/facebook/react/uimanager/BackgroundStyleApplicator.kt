@@ -89,7 +89,28 @@ public object BackgroundStyleApplicator {
       return
     }
     ensureBackgroundDrawable(view).setBackgroundColorLong(color)
-    WideColorGamut.request(view)
+    WideColorGamut.request(view, color)
+  }
+
+  /**
+   * Asks again for the window mode the view's colors need, for a `dynamic-range-limit` that
+   * arrives after them. A window never leaves a mode, so a tighter limit changes nothing.
+   * DOM-CSS-LIMITATION(android-dynamic-range-is-per-window)
+   */
+  @JvmStatic
+  public fun requestDynamicRangeForColors(view: View) {
+    val composite = getCompositeBackgroundDrawable(view) ?: return
+    composite.background?.backgroundColorLong?.let { WideColorGamut.request(view, it) }
+    composite.border?.colorLongs()?.forEach { WideColorGamut.request(view, it) }
+    composite.outerShadows.forEach { shadow ->
+      (shadow as? OutsetBoxShadowDrawable)?.shadowColorLong?.let { WideColorGamut.request(view, it) }
+    }
+    composite.innerShadows.forEach { shadow ->
+      (shadow as? InsetBoxShadowDrawable)?.shadowColorLong?.let { WideColorGamut.request(view, it) }
+    }
+    composite.backgroundImage?.backgroundImageLayers?.forEach { layer ->
+      layer.colorLongs().forEach { WideColorGamut.request(view, it) }
+    }
   }
 
   /**
@@ -104,6 +125,9 @@ public object BackgroundStyleApplicator {
       backgroundImageLayers: List<BackgroundImageLayer>?,
   ) {
     ensureBackgroundImageDrawable(view).backgroundImageLayers = backgroundImageLayers
+    backgroundImageLayers?.forEach { layer ->
+      layer.colorLongs().forEach { WideColorGamut.request(view, it) }
+    }
   }
 
   @JvmStatic
@@ -212,7 +236,7 @@ public object BackgroundStyleApplicator {
       return
     }
     ensureBorderDrawable(view).setBorderColorLong(edge, color)
-    WideColorGamut.request(view)
+    WideColorGamut.request(view, color)
   }
 
   /**
@@ -415,9 +439,7 @@ public object BackgroundStyleApplicator {
      * https://drafts.csswg.org/css-backgrounds/#shadow-layers
      */
     for (boxShadow in shadows) {
-      if (boxShadow.colorLong != null) {
-        WideColorGamut.request(view)
-      }
+      boxShadow.colorLong?.let { WideColorGamut.request(view, it) }
       val offsetX = boxShadow.offsetX
       val offsetY = boxShadow.offsetY
       val color = boxShadow.color ?: Color.BLACK
