@@ -9,13 +9,7 @@ tags:
 - waitForAnimationToEnd:
     timeout: 3000
 - assertVisible: 'Components'
-- scrollUntilVisible:
-    element:
-      id: 'FlatList'
-    direction: DOWN
-    speed: 40
-- tapOn:
-    id: 'FlatList'
+- runFlow: ./helpers/open-flatlist.yml
 - scrollUntilVisible:
     element:
       id: 'maintainVisibleContentPosition'

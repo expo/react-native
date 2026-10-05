@@ -6,13 +6,7 @@ appId: ${APP_ID} # iOS: com.meta.RNTester.localDevelopment | Android: com.facebo
 - extendedWaitUntil:
     visible: 'Components'
     timeout: 30000
-- scrollUntilVisible:
-    element:
-      id: 'Flatlist'
-    direction: DOWN
-    speed: 40
-- tapOn:
-    id: 'Flatlist'
+- runFlow: ./helpers/open-flatlist.yml
 - tapOn:
     id: 'Basic'
 - assertVisible:

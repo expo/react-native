@@ -12,22 +12,40 @@ appId: ${APP_ID} # iOS: com.meta.RNTester.localDevelopment | Android: com.facebo
 - tapOn: 'Change Background'
 - assertVisible:
     text: 'HSBA: h: 0, s: 1, b: 1, a: 255'
-- assertVisible:
-    text: '> Interop Layer Measurements <'
+- scrollUntilVisible:
+    element:
+      text: '> Interop Layer Measurements <'
+    direction: DOWN
+    speed: 40
+- scrollUntilVisible:
+    element:
+      text: 'measure x: 0, y: 0, width: 0, height: 0'
+    direction: DOWN
+    speed: 40
 - assertVisible:
     text: 'measure x: 0, y: 0, width: 0, height: 0'
 - tapOn: 'Console.log Measure'
+- assertVisible:
+    text: 'measure x: .*, y: .*, width: [1-9][0-9.]*, height: [1-9][0-9.]*'
 - assertNotVisible:
     text: 'measure x: 0, y: 0, width: 0, height: 0'
 - assertNotVisible:
     text: 'InWindow x: 0, y: 0, width: 0, height: 0'
 - assertNotVisible:
     text: 'InLayout x: 0, y: 0, width: 0, height: 0'
-- assertVisible: 'Legacy Style Event Fired 0 times'
+- scrollUntilVisible:
+    element:
+      text: 'Legacy Style Event Fired 0 times'
+    direction: DOWN
+    speed: 40
 - tapOn:
     text: 'Fire Legacy Style Event'
     repeat: 10
 - assertVisible: 'Legacy Style Event Fired 10 times'
-- assertVisible: 'Opacity: 1.0'
+- scrollUntilVisible:
+    element:
+      text: 'Opacity: 1.0'
+    direction: UP
+    speed: 40
 - tapOn: 'Set Opacity'
 - assertVisible: 'Opacity: 0.8'

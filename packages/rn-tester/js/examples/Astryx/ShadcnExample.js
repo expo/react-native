@@ -69,9 +69,9 @@ installStylesheet(tailwindCss);
 // resolved through cn().
 const TOUCH = 'min-h-11 min-w-11';
 // A SWITCH or CHECKBOX must NOT grow: its size is its design (44x24 and
-// 16x16, measured against Safari). Their touch target grows instead of their
-// box, which is what hitSlop is for, and what a web page would do with a
-// padded <label>.
+// 16x16, measured against Safari), and 44pt square would change its shape.
+// Their touch target grows instead of their box — which is what hitSlop is
+// for, and what a web page would do with a padded <label>.
 //
 // hitSlop is clipped by ancestor bounds: UIKit stops descending as soon as a
 // point falls outside a parent, so slop hanging outside the row is slop that
@@ -307,7 +307,13 @@ function TabsSection(): React.Node {
   <TabsContent value="password">Password settings panel.</TabsContent>
 </Tabs>`}>
       <Tabs defaultValue="account">
-        <TabsList>
+        {/* `h-auto` because the triggers carry a 44pt minimum: shadcn's list is
+            a fixed `h-10` (40pt), and a 44pt child inside it is centred and
+            overflows the muted background by 2pt top and bottom — correctly,
+            and identically in a browser, but it reads as a control falling out
+            of its container. The container is what should grow when the target
+            does; padding then puts the pill back inside it. */}
+        <TabsList className="h-auto">
           <TabsTrigger className={TOUCH} value="account">
             Account
           </TabsTrigger>
@@ -423,9 +429,11 @@ function AccordionSection(): React.Node {
       {/*
        * `text-foreground` because the accordion is the one component here that
        * INHERITS its colour instead of setting one. On the web it inherits from
-       * `body`, which shadcn's base layer gives `bg-background text-foreground`;
-       * that layer is not installed here, because its preflight reset fights
-       * the user-agent styles.
+       * `body`, which shadcn's base layer gives `bg-background text-foreground`
+       * — and that layer is deliberately not installed here, because its
+       * preflight reset fights the user-agent styles. So the trigger fell back
+       * to a colour that does not follow the scheme, and in dark mode it was
+       * dark text on a dark page: the rows were there, and invisible.
        */}
       <Accordion className="text-foreground" type="single" collapsible={true}>
         <AccordionItem value="a">
@@ -451,12 +459,14 @@ function AccordionSection(): React.Node {
 
 /*
  * shadcn's base layer applies `bg-background text-foreground` to <body>. There
- * is no <body> here, so the screen root carries the half that matters: the
- * components that INHERIT their text colour (`outline` and `ghost` buttons,
- * the form labels, the dialog trigger) would otherwise take the platform's
- * default instead of the theme's. Preflight's `button { color: inherit }` is
- * the other half; it cancels the user-agent colour, and this supplies what
- * replaces it.
+ * is no <body> here, so the screen root carries the half that matters.
+ *
+ * A component that states its own text colour is fine without it; the ones
+ * that INHERIT — `outline` and `ghost` buttons, the form labels, the dialog
+ * trigger — would fall back to the platform's default instead of the theme's,
+ * and in dark mode that is dark text on a dark page. Preflight's
+ * `button { color: inherit }` is the other half; it
+ * cancels the user-agent colour, and this supplies what replaces it.
  */
 function Themed({children}: {children: React.Node}): React.Node {
   /* $FlowExpectedError[not-a-component] intrinsic <div> tag */
