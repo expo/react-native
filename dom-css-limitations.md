@@ -19,6 +19,16 @@ means adding a marker; the slug is what ties it to the row below.
 
 ## Layout and box generation
 
+**`stylex-is-a-layer`** — `packages/rn-tester/js/astryx/jsx-runtime.js`, `css/match.js`
+
+A StyleX style is taken for what it is on the web, a rule in the `astryx-base`
+cascade layer (Astryx's theme orders `reset, astryx-base, astryx-theme`). A
+stylesheet rule in a layer above it, or unlayered, beats it, as the theme's
+`.astryx-heading[data-level="1"]` does on the web; a rule in that layer or
+below sits under it; an inline `style` beats them all. A sheet that orders no
+`astryx-base` layer leaves every rule under StyleX, whatever its specificity,
+which is what StyleX's specificity bump does on the web.
+
 **`scope-limit-ignored`** — `packages/rn-tester/js/astryx/css/parse.js`
 
 `@scope (<root>) to (<limit>) { … }` scopes its rules under the root selector,
@@ -129,6 +139,8 @@ a real screen first. Background in `element-model-design.md`.
 
 Each remaining marker, with the file that carries it.
 
+- `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
+- `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
 - `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `container-query-is-a-media-query` — deviation, `packages/rn-tester/js/astryx/css/__tests__/parse-test.js`
@@ -137,7 +149,9 @@ Each remaining marker, with the file that carries it.
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
-- `stylex-is-a-layer` — deviation, `packages/rn-tester/js/astryx/css/match.js`
+- `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
+- `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
+- `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 
 ---
