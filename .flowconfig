@@ -1,4 +1,15 @@
 [ignore]
+; The local expo checkout, linked into node_modules for the DOM-elements PoC
+; (expo-modules-core, expo-image). Nothing here imports their JS — the catalog
+; names native components, not packages — and following the symlinks would pull
+; the entire pnpm store of that repo into the crawl.
+**/Developer/expo/**
+; The same packages through their node_modules symlinks: flow does not
+; canonicalize before matching, so both spellings need ignoring.
+node_modules/expo/**
+node_modules/expo-image/**
+node_modules/expo-modules-core/**
+node_modules/expo-modules-autolinking/**
 
 ; The Fantom runner's per-test Metro bundle cache: gigabytes of generated
 ; multi-megabyte bundles that grow with every suite run. Parsing them is what
