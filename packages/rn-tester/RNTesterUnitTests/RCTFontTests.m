@@ -98,6 +98,39 @@
   }
 }
 
+- (void)testFamilyList
+{
+  // A font-family list as CSS writes it: the first family the device has
+  {
+    UIFont *expected = [UIFont fontWithName:@"HelveticaNeue" size:14];
+    UIFont *result = [RCTConvert UIFont:@{@"fontFamily" : @"Figtree Nowhere, 'Helvetica Neue', sans-serif"}];
+    RCTAssertEqualFonts(expected, result);
+  }
+  // A generic family stands for the platform's own face
+  {
+    UIFont *expected = [UIFont systemFontOfSize:14];
+    UIFont *result = [RCTConvert UIFont:@{@"fontFamily" : @"Figtree Nowhere, sans-serif"}];
+    RCTAssertEqualFonts(expected, result);
+  }
+  // A `ui-*` generic is the system font in that design
+  {
+    UIFont *expected = [UIFont monospacedSystemFontOfSize:14 weight:UIFontWeightRegular];
+    UIFont *result = [RCTConvert UIFont:@{@"fontFamily" : @"ui-monospace, monospace"}];
+    RCTAssertEqualFonts(expected, result);
+  }
+  {
+    UIFont *expected = [UIFont fontWithName:@"Menlo-Regular" size:14];
+    UIFont *result = [RCTConvert UIFont:@{@"fontFamily" : @"monospace"}];
+    RCTAssertEqualFonts(expected, result);
+  }
+  // Nothing available: the first name, reported as unrecognized as before
+  {
+    UIFont *expected = [UIFont systemFontOfSize:14];
+    UIFont *result = [RCTConvert UIFont:@{@"fontFamily" : @"Figtree Nowhere, Also Nowhere"}];
+    RCTAssertEqualFonts(expected, result);
+  }
+}
+
 - (void)testStyle
 {
   {

@@ -186,6 +186,110 @@ static NSArray<NSString *> *fontNamesForFamilyName(NSString *familyName)
   return names;
 }
 
+/**
+ * The family a CSS generic family name stands for on this platform, or nil for
+ * a name that is not one. `sans-serif` and the system aliases are the system
+ * font; the others are the faces iOS ships for the purpose.
+ */
+static NSString *RCTPlatformFamilyForGeneric(NSString *name, NSString *systemFamily)
+{
+  static NSDictionary<NSString *, NSString *> *faces;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    faces = @{
+      @"monospace" : @"Menlo",
+      @"serif" : @"Times New Roman",
+      @"cursive" : @"Snell Roundhand",
+      @"fantasy" : @"Papyrus",
+    };
+  });
+  NSString *key = name.lowercaseString;
+  if ([key isEqualToString:@"sans-serif"] || [key isEqualToString:@"ui-sans-serif"] ||
+      [key isEqualToString:@"system-ui"] || [key isEqualToString:@"-apple-system"] ||
+      [key isEqualToString:@"blinkmacsystemfont"]) {
+    return systemFamily;
+  }
+  // The system designs: the text layout manager's lookup turns these into a
+  // descriptor design, so they pass through as written
+  if ([key isEqualToString:@"ui-serif"] || [key isEqualToString:@"ui-rounded"] ||
+      [key isEqualToString:@"ui-monospace"]) {
+    return name;
+  }
+  return faces[key];
+}
+
+/**
+ * A `font-family` value as CSS writes it — a list of families, the first one the
+ * device has winning (css-fonts-4 §2.1), generic families among them standing
+ * for the platform's own — reduced to the one family name the lookup below
+ * takes. A list is read per family, whole: the web's per-character fallback,
+ * where a glyph the first family lacks comes from the next, is the text
+ * system's own, which handles it as it always has. A value with no comma is a
+ * family or font name as before, a generic family resolved the same way.
+ */
+static NSString *RCTFirstAvailableFontFamily(NSString *value, NSString *systemFamily)
+{
+  if (value == nil) {
+    return nil;
+  }
+  NSArray<NSString *> *candidates = [value componentsSeparatedByString:@","];
+  NSMutableCharacterSet *trimmed = [[NSCharacterSet whitespaceAndNewlineCharacterSet] mutableCopy];
+  [trimmed addCharactersInString:@"\"'"];
+  NSString *first = nil;
+  for (NSString *raw in candidates) {
+    NSString *name = [raw stringByTrimmingCharactersInSet:trimmed];
+    if (name.length == 0) {
+      continue;
+    }
+    if (first == nil) {
+      first = name;
+    }
+    NSString *generic = RCTPlatformFamilyForGeneric(name, systemFamily);
+    if (generic != nil) {
+      return generic;
+    }
+    if (fontNamesForFamilyName(name).count > 0 || [UIFont fontWithName:name size:12] != nil) {
+      return name;
+    }
+  }
+  // Nothing available: the first name, whose absence the lookup reports as it did
+  return first ?: value;
+}
+
+/**
+ * The system design a `ui-*` generic family names (css-fonts-4 §2.1.3), or
+ * nil: `ui-serif`, `ui-rounded` and `ui-monospace` are the system font in
+ * that design rather than families of their own.
+ */
+static UIFontDescriptorSystemDesign RCTSystemDesignForFamily(NSString *familyName)
+{
+  NSString *key = familyName.lowercaseString;
+  if ([key isEqualToString:@"ui-serif"]) {
+    return UIFontDescriptorSystemDesignSerif;
+  }
+  if ([key isEqualToString:@"ui-rounded"]) {
+    return UIFontDescriptorSystemDesignRounded;
+  }
+  if ([key isEqualToString:@"ui-monospace"]) {
+    return UIFontDescriptorSystemDesignMonospaced;
+  }
+  return nil;
+}
+
+@implementation RCTFont (FontFamilyList)
+
++ (NSString *)firstAvailableFontFamily:(NSString *)fontFamily
+{
+  static NSString *systemFamily;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    systemFamily = [UIFont systemFontOfSize:14].familyName;
+  });
+  return RCTFirstAvailableFontFamily(fontFamily, systemFamily);
+}
+
+@end
+
 @implementation RCTConvert (RCTFont)
 
 + (UIFont *)UIFont:(id)json
@@ -423,7 +527,7 @@ RCT_ARRAY_CONVERTER(RCTFontVariantDescriptor)
   if (scaleMultiplier > 0.0 && scaleMultiplier != 1.0) {
     fontSize = round(fontSize * scaleMultiplier);
   }
-  familyName = [RCTConvert NSString:family] ?: familyName;
+  familyName = [RCTFont firstAvailableFontFamily:[RCTConvert NSString:family]] ?: familyName;
   isItalic = style ? [RCTConvert RCTFontStyle:style] : isItalic;
   fontWeight = weight ? [RCTConvert RCTFontWeight:weight] : fontWeight;
   isCondensed = isCondensed || [familyName isEqualToString:@"SystemCondensed"];
@@ -432,12 +536,20 @@ RCT_ARRAY_CONVERTER(RCTFontVariantDescriptor)
 
   // Handle system font as special case. This ensures that we preserve
   // the specific metrics of the standard system font as closely as possible.
-  if ([familyName isEqual:defaultFontFamily] || [familyName isEqualToString:@"System"] ||
+  // A `ui-*` generic family is the system font in a design.
+  UIFontDescriptorSystemDesign design = RCTSystemDesignForFamily(familyName);
+  if (design != nil || [familyName isEqual:defaultFontFamily] || [familyName isEqualToString:@"System"] ||
       [familyName isEqualToString:@"SystemCondensed"]) {
     font = cachedSystemFont(fontSize, fontWeight);
     if (font) {
       didFindFont = YES;
 
+      if (design != nil) {
+        UIFontDescriptor *designed = [[font fontDescriptor] fontDescriptorWithDesign:design];
+        if (designed != nil) {
+          font = [UIFont fontWithDescriptor:designed size:fontSize];
+        }
+      }
       if (isItalic || isCondensed) {
         UIFontDescriptor *fontDescriptor = [font fontDescriptor];
         UIFontDescriptorSymbolicTraits symbolicTraits = fontDescriptor.symbolicTraits;

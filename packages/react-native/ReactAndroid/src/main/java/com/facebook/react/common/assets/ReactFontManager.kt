@@ -13,6 +13,7 @@ import android.graphics.Typeface
 import android.os.Build
 import android.util.Log
 import android.util.SparseArray
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.res.ResourcesCompat
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.common.build.ReactBuildConfig
@@ -64,19 +65,73 @@ public class ReactFontManager {
       typefaceStyle: TypefaceStyle,
       assetManager: AssetManager?,
   ): Typeface {
-    if (customTypefaceCache.containsKey(fontFamilyName)) {
+    val family = firstAvailableFontFamily(fontFamilyName, assetManager)
+    if (customTypefaceCache.containsKey(family)) {
       // Apply `typefaceStyle` because custom fonts configure variants using `app:fontStyle` and
       // `app:fontWeight` in their resource XML configuration file.
-      return typefaceStyle.apply(customTypefaceCache[fontFamilyName])
+      return typefaceStyle.apply(customTypefaceCache[family])
     }
 
-    val assetFontFamily = fontCache.getOrPut(fontFamilyName) { AssetFontFamily() }
+    val assetFontFamily = fontCache.getOrPut(family) { AssetFontFamily() }
     val style = typefaceStyle.nearestStyle
     return assetFontFamily.getTypefaceForStyle(style)
-        ?: createAssetTypeface(fontFamilyName, style, assetManager).also {
+        ?: createAssetTypeface(family, style, assetManager).also {
           assetFontFamily.setTypefaceForStyle(style, it)
         }
   }
+
+  /**
+   * A `font-family` value as CSS writes it, a list of families with the first one the device has
+   * winning (css-fonts-4 §2.1), generic families among them standing for the platform's own,
+   * reduced to the one family name the lookup takes. A family is "had" when it was registered,
+   * ships in the app's font assets, or the platform knows it by name; a value with no comma is a
+   * family name as before. The web's per-character fallback, where a glyph the first family lacks
+   * comes from the next, is the text system's own.
+   */
+  @VisibleForTesting
+  internal fun firstAvailableFontFamily(list: String, assetManager: AssetManager?): String {
+    if (!list.contains(',')) {
+      return GENERIC_FAMILIES[list.lowercase()] ?: list
+    }
+    var first: String? = null
+    for (raw in list.split(',')) {
+      val name = raw.trim().trim('"', '\'')
+      if (name.isEmpty()) {
+        continue
+      }
+      if (first == null) {
+        first = name
+      }
+      GENERIC_FAMILIES[name.lowercase()]?.let {
+        return it
+      }
+      if (customTypefaceCache.containsKey(name) || fontCache.containsKey(name) ||
+          hasAssetFont(name, assetManager) || isPlatformFamily(name)) {
+        return name
+      }
+    }
+    // Nothing available: the first name, whose absence the lookup reports as it did
+    return first ?: list
+  }
+
+  private fun hasAssetFont(fontFamilyName: String, assetManager: AssetManager?): Boolean {
+    if (assetManager == null) {
+      return false
+    }
+    for (fileExtension in FILE_EXTENSIONS) {
+      try {
+        assetManager.open("$FONTS_ASSET_PATH$fontFamilyName$fileExtension").close()
+        return true
+      } catch (e: java.io.IOException) {
+        continue
+      }
+    }
+    return false
+  }
+
+  /** Whether the platform knows a family by name: an unknown one creates the default typeface */
+  private fun isPlatformFamily(fontFamilyName: String): Boolean =
+      Typeface.create(fontFamilyName, Typeface.NORMAL) != Typeface.defaultFromStyle(Typeface.NORMAL)
 
   /*
    * This method allows you to load custom fonts from res/font folder as provided font family name.
@@ -166,6 +221,22 @@ public class ReactFontManager {
     private const val FONTS_ASSET_PATH = "fonts/"
     // Android's default font family.
     private const val DEFAULT_FAMILY = "sans-serif"
+    // What a CSS generic family stands for on this platform (the names Typeface knows)
+    private val GENERIC_FAMILIES =
+        mapOf(
+            "sans-serif" to "sans-serif",
+            "ui-sans-serif" to "sans-serif",
+            "system-ui" to "sans-serif",
+            "ui-rounded" to "sans-serif",
+            "-apple-system" to "sans-serif",
+            "blinkmacsystemfont" to "sans-serif",
+            "serif" to "serif",
+            "ui-serif" to "serif",
+            "monospace" to "monospace",
+            "ui-monospace" to "monospace",
+            "cursive" to "cursive",
+            "fantasy" to "sans-serif",
+        )
 
     private val _instance = ReactFontManager()
 
