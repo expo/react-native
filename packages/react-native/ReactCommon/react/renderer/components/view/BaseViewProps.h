@@ -25,6 +25,7 @@
 #include <react/renderer/graphics/BackgroundRepeat.h>
 #include <react/renderer/graphics/BackgroundSize.h>
 #include <react/renderer/graphics/BlendMode.h>
+#include <react/renderer/graphics/DynamicRangeLimit.h>
 #include <react/renderer/graphics/BoxShadow.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Filter.h>
@@ -129,6 +130,10 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // `white-space`, inherited like the rest of these: a View sets it and
   // every run inside keeps it.
   std::optional<WhiteSpace> inheritedWhiteSpace{};
+  // `dynamic-range-limit` (CSS Color HDR), inherited: carried by the text
+  // cascade, the element tree's one inheritance channel, and read by pictures
+  // and HDR colors rather than text
+  std::optional<DynamicRangeLimit> inheritedDynamicRangeLimit{};
 
   /*
    * # The user-agent origin

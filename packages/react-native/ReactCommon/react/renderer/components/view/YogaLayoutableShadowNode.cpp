@@ -138,7 +138,8 @@ static bool inheritableTextPropsDiffer(
       a.inheritedTextAlign != b.inheritedTextAlign ||
       a.inheritedTextTransform != b.inheritedTextTransform ||
       a.inheritedWhiteSpace != b.inheritedWhiteSpace ||
-      a.inheritedDynamicTypeRamp != b.inheritedDynamicTypeRamp) {
+      a.inheritedDynamicTypeRamp != b.inheritedDynamicTypeRamp ||
+      a.inheritedDynamicRangeLimit != b.inheritedDynamicRangeLimit) {
     return true;
   }
   // NaN-aware compares for the optional-by-NaN Float props.

@@ -16,7 +16,8 @@ import android.view.View
 import com.facebook.react.bridge.ReactContext
 
 /**
- * Puts a window into wide color gamut mode once it shows a color in a wide color space.
+ * Puts a window into wide color gamut mode once it shows a color in a wide color space, and into
+ * HDR mode once it shows an HDR picture.
  *
  * On iOS every view is color-matched to the screen, so a Display P3 color shows as P3 with
  * nothing asked. An Android window instead composes into one surface whose color mode the app
@@ -43,6 +44,23 @@ internal object WideColorGamut {
       return
     }
     window.colorMode = ActivityInfo.COLOR_MODE_WIDE_COLOR_GAMUT
+  }
+
+  /** HDR mode includes wide gamut */
+  fun requestHighDynamicRange(view: View) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      return
+    }
+    val activity = findActivity(view.context) ?: return
+    val window = activity.window ?: return
+    if (window.colorMode == ActivityInfo.COLOR_MODE_HDR) {
+      return
+    }
+    @Suppress("DEPRECATION") val display = view.display ?: activity.windowManager.defaultDisplay
+    if (display == null || !display.isHdr) {
+      return
+    }
+    window.colorMode = ActivityInfo.COLOR_MODE_HDR
   }
 
   private fun findActivity(context: Context): Activity? {

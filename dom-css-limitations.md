@@ -226,6 +226,11 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   platform's shader interpolates in a chosen space, so the stretches are
   expanded into computed stops, which can only be placed between percentages.
   A `10px` position or a transition hint leaves the gradient to the platform.
+- **`DOM-CSS-LIMITATION(android-dynamic-range-is-per-window)` — Android's HDR
+  is the window's.** A window shows HDR only in its HDR color mode, and its
+  headroom is one value, so `constrained` draws as `no-limit`, and a
+  `standard` picture beside an HDR one shares the window's headroom. Platform
+  wall.
 
 ## Performance
 
@@ -321,6 +326,7 @@ rather than going quiet.
 - `grid-min-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `inline-image-limit-waits-for-its-next-revision` — limitation, `packages/react-native/ReactCommon/react/renderer/components/image/ImageShadowNode.cpp`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`

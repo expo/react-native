@@ -21,7 +21,9 @@ import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
+import com.facebook.react.uimanager.ReactStylesDiffMap
 import com.facebook.react.uimanager.SimpleViewManager
+import com.facebook.react.uimanager.StateWrapper
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewProps
 import com.facebook.react.uimanager.annotations.ReactProp
@@ -283,12 +285,35 @@ public constructor(
         put(eventNameForType(ImageLoadEvent.ON_LOAD_END), mapOf(REGISTRATION_NAME to ON_LOAD_END))
       }
 
+  /**
+   * The effective `dynamic-range-limit` (the picture's own, else inherited) is decided by the
+   * shadow node and arrives through the state
+   */
+  public override fun updateState(
+      view: ReactImageView,
+      props: ReactStylesDiffMap,
+      stateWrapper: StateWrapper,
+  ): Any? {
+    val state = stateWrapper.stateDataMapBuffer
+    if (state != null && state.contains(STATE_KEY_DYNAMIC_RANGE_LIMIT)) {
+      view.dynamicRangeLimit =
+          when (state.getInt(STATE_KEY_DYNAMIC_RANGE_LIMIT)) {
+            1 -> "constrained"
+            2 -> "standard"
+            else -> "no-limit"
+          }
+    }
+    return null
+  }
+
   protected override fun onAfterUpdateTransaction(view: ReactImageView) {
     super.onAfterUpdateTransaction(view)
     view.maybeUpdateView()
   }
 
   public companion object {
+    // `ImageState::IS_KEY_DYNAMIC_RANGE_LIMIT`; the value is the C++ enum's order
+    private const val STATE_KEY_DYNAMIC_RANGE_LIMIT: Int = 0
     public const val REACT_CLASS: String = "RCTImageView"
 
     private const val REGISTRATION_NAME: String = "registrationName"
