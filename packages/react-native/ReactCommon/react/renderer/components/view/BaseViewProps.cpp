@@ -235,12 +235,11 @@ BaseViewProps::BaseViewProps(
                     sourceProps.inheritedWhiteSpace,
                     {})
               : sourceProps.inheritedWhiteSpace),
-      // Under the color spaces flag too: a View's own limit bounds its HDR
-      // colors
+      // Under the color spaces flag too, and for a paragraph, which skips the
+      // inherited text props: a view's own limit bounds its HDR colors
       inheritedDynamicRangeLimit(
-          parseInheritedTextProps &&
-                  (stringChildrenEnabled ||
-                   ReactNativeFeatureFlags::enableColorSpaces())
+          (parseInheritedTextProps && stringChildrenEnabled) ||
+                  ReactNativeFeatureFlags::enableColorSpaces()
               ? convertRawProp(
                     context,
                     rawProps,

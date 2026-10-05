@@ -7,9 +7,13 @@
 
 #import "RCTBoxShadow.h"
 
+#import <CoreImage/CoreImage.h>
+
 #import <React/RCTConversions.h>
 
+#import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/graphics/Color.h>
+#import <react/renderer/graphics/HostPlatformColor.h>
 
 #import <math.h>
 
@@ -155,6 +159,93 @@ static CALayer *RCTGetInsetBoxShadowLayer(
   return shadowLayer;
 }
 
+// Core Animation never maps a layer shadow's color to the layer's range, so an outer shadow past SDR white is
+// drawn here into a half-float store, which Core Animation does map: the offset shape is filled in the shadow's
+// color, blurred, and kept outside the border box
+static CALayer *RCTGetDrawnOutsetBoxShadowLayer(const BoxShadow &shadow, RCTCornerRadii cornerRadii, CGSize layerSize)
+{
+  // How far past the box the shadow reaches: its offset, spread and three deviations of blur
+  const CGFloat reach = ceil(
+      fmax(fabs(shadow.offsetX), fabs(shadow.offsetY)) + fabs(shadow.spreadDistance) + 1.5 * shadow.blurRadius + 1);
+  CALayer *shadowLayer = [CALayer layer];
+  shadowLayer.frame = CGRectMake(-reach, -reach, layerSize.width + 2 * reach, layerSize.height + 2 * reach);
+  shadowLayer.contentsScale = [UIScreen mainScreen].scale;
+
+  const CGFloat scale = shadowLayer.contentsScale;
+  const size_t width = (size_t)ceil(shadowLayer.bounds.size.width * scale);
+  const size_t height = (size_t)ceil(shadowLayer.bounds.size.height * scale);
+  if (width == 0 || height == 0) {
+    return shadowLayer;
+  }
+  static CGColorSpaceRef extendedLinear = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearSRGB);
+  CGContextRef context = CGBitmapContextCreate(
+      nullptr,
+      width,
+      height,
+      16,
+      0,
+      extendedLinear,
+      kCGImageAlphaPremultipliedLast | kCGBitmapFloatComponents | kCGBitmapByteOrder16Little);
+  if (context == nullptr) {
+    return RCTGetOutsetBoxShadowLayer(shadow, cornerRadii, layerSize);
+  }
+  CGContextScaleCTM(context, scale, scale);
+  // Flip to UIKit's coordinates, with the box at (reach, reach)
+  CGContextTranslateCTM(context, 0, shadowLayer.bounds.size.height);
+  CGContextScaleCTM(context, 1, -1);
+  CGContextTranslateCTM(context, reach, reach);
+
+  const CGRect bounds = CGRectMake(0, 0, layerSize.width, layerSize.height);
+  CGPathRef boxPath = RCTPathCreateWithRoundedRect(bounds, RCTGetCornerInsets(cornerRadii, UIEdgeInsetsZero), nil, NO);
+  CGMutablePathRef outside = CGPathCreateMutable();
+  CGPathAddRect(outside, nullptr, CGRectInfinite);
+  CGPathAddPath(outside, nullptr, boxPath);
+  CGContextAddPath(context, outside);
+  CGContextEOClip(context);
+
+  const RCTCornerInsets shadowCornerInsets =
+      RCTGetCornerInsets(cornerRadiiForBoxShadow(cornerRadii, shadow.spreadDistance), UIEdgeInsetsZero);
+  CGRect shadowRect = CGRectInset(bounds, -shadow.spreadDistance, -shadow.spreadDistance);
+  shadowRect = CGRectOffset(shadowRect, shadow.offsetX, shadow.offsetY);
+  CGPathRef shapePath = RCTPathCreateWithRoundedRect(shadowRect, shadowCornerInsets, nil, NO);
+  // Outside the border box only the shadow shows, so the shape is filled in the shadow's color
+  CGContextSetFillColorWithColor(context, colorRefFromSharedColor(shadow.color));
+  CGContextAddPath(context, shapePath);
+  CGContextFillPath(context);
+
+  CGImageRef image = CGBitmapContextCreateImage(context);
+  if (shadow.blurRadius > 0) {
+    // A Core Image blur keeps the half-float values, where a Core Graphics shadow would clip them
+    static CIContext *blurContext = [CIContext contextWithOptions:@{
+      kCIContextWorkingFormat : @(kCIFormatRGBAh),
+      kCIContextWorkingColorSpace : (__bridge id)extendedLinear,
+    }];
+    CIImage *source = [CIImage imageWithCGImage:image];
+    CIImage *blurred = [[source imageByClampingToExtent] imageByApplyingGaussianBlurWithSigma:shadow.blurRadius / 2];
+    CGImageRef blurredImage = [blurContext createCGImage:[blurred imageByCroppingToRect:source.extent]
+                                                fromRect:source.extent
+                                                  format:kCIFormatRGBAh
+                                              colorSpace:extendedLinear];
+    if (blurredImage != nullptr) {
+      // The blur spreads into the border box, where only the box shows, so the blurred shadow is drawn back
+      // through the same clip. The clip lives in device space, so the image is drawn with an identity CTM.
+      CGContextClearRect(context, CGRectInset(bounds, -reach, -reach));
+      CGContextConcatCTM(context, CGAffineTransformInvert(CGContextGetCTM(context)));
+      CGContextDrawImage(context, CGRectMake(0, 0, width, height), blurredImage);
+      CGImageRelease(blurredImage);
+      CGImageRelease(image);
+      image = CGBitmapContextCreateImage(context);
+    }
+  }
+  shadowLayer.contents = (__bridge id)image;
+  CGImageRelease(image);
+  CGContextRelease(context);
+  CGPathRelease(shapePath);
+  CGPathRelease(outside);
+  CGPathRelease(boxPath);
+  return shadowLayer;
+}
+
 CALayer *RCTGetBoxShadowLayer(
     const facebook::react::BoxShadow &shadow,
     RCTCornerRadii cornerRadii,
@@ -163,6 +254,8 @@ CALayer *RCTGetBoxShadowLayer(
 {
   if (shadow.inset) {
     return RCTGetInsetBoxShadowLayer(shadow, cornerRadii, edgeInsets, layerSize);
+  } else if (ReactNativeFeatureFlags::enableColorSpaces() && shadow.color && isHighDynamicRangeColor(*shadow.color)) {
+    return RCTGetDrawnOutsetBoxShadowLayer(shadow, cornerRadii, layerSize);
   } else {
     return RCTGetOutsetBoxShadowLayer(shadow, cornerRadii, layerSize);
   }

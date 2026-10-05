@@ -94,4 +94,7 @@
 
   <!-- tag marks that BaseViewManager installed the no-op touch listener -->
   <item type="id" name="noop_touch_listener"/>
+
+  <!-- tag is used to store the view's own `dynamic-range-limit`, which bounds how bright its HDR colors draw -->
+  <item type="id" name="dynamic_range_limit"/>
 </resources>

@@ -34,7 +34,6 @@ import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
-import com.facebook.react.views.text.internal.span.ReactForegroundColorSpan
 import com.facebook.react.views.view.ImportantForInteractionHelper
 import java.util.HashMap
 
@@ -77,9 +76,7 @@ internal class PreparedLayoutTextViewManager :
     SystraceSection("PreparedLayoutTextViewManager.updateExtraData").use { _ ->
       val preparedLayout = extraData as PreparedLayout
       view.preparedLayout = preparedLayout
-      if (ReactForegroundColorSpan.hasColorLong(preparedLayout.layout.text)) {
-        WideColorGamut.request(view)
-      }
+      WideColorGamut.request(view, preparedLayout.layout.text)
 
       val text = preparedLayout.layout.text
       if (text is Spanned) {
