@@ -30,6 +30,24 @@
 #import <React/RCTDevMenu.h>
 #endif
 
+// Expo modules, for the DOM element catalog's SDK-backed elements (<img> is
+// expo-image). The tester bootstraps the module runtime itself in
+// host:didInitializeRuntime: below — the four lines Expo's own app delegate
+// would run — so it needs none of Expo's AppDelegate machinery.
+#if __has_include("ExpoModulesCore-Swift.h") || __has_include(<ExpoModulesCore/ExpoModulesCore-Swift.h>)
+#define RNTESTER_USE_EXPO_MODULES 1
+#import <ExpoModulesCore/EXHostWrapper.h>
+#import <ExpoModulesCore/EXRuntime.h>
+#if __has_include(<ExpoModulesCore/ExpoModulesCore-Swift.h>)
+#import <ExpoModulesCore/ExpoModulesCore-Swift.h>
+#else
+#import "ExpoModulesCore-Swift.h"
+#endif
+#else
+#define RNTESTER_USE_EXPO_MODULES 0
+#warning "RNTester: ExpoModulesCore headers not found — expo-backed elements will use fallbacks"
+#endif
+
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/featureflags/ReactNativeFeatureFlagsOverridesOSSStable.h>
 
@@ -148,6 +166,22 @@ class RNTesterFeatureFlagsOverrides : public facebook::react::ReactNativeFeature
   return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
 #endif
 }
+
+#if RNTESTER_USE_EXPO_MODULES
+// [JS thread] Forwarded by RCTReactNativeFactory from the RCTHost. Creates the
+// Expo AppContext, injects `global.expo`, and registers the modules the
+// generated ExpoModulesProvider lists — after this, an element whose view
+// config names an Expo view (the catalog's <img> → expo-image) resolves like
+// any other component.
+- (void)host:(RCTHost *)host didInitializeRuntime:(facebook::jsi::Runtime &)runtime
+{
+  static EXAppContext *appContext;
+  appContext = [EXAppContext new];
+  appContext._runtime = [[EXRuntime alloc] initWithRuntime:runtime];
+  [appContext setHostWrapper:[[EXHostWrapper alloc] initWithHost:host]];
+  [appContext registerNativeModules];
+}
+#endif
 
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const std::string &)name
                                                       jsInvoker:(std::shared_ptr<facebook::react::CallInvoker>)jsInvoker
