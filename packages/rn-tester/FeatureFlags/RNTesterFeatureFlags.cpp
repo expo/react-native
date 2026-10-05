@@ -36,6 +36,14 @@ class RNTesterFeatureFlagsOverrides
   bool cxxNativeAnimatedEnabled() override {
     return true;
   }
+
+  // The DOM element catalog's own elements recognize presses with real platform
+  // gesture recognizers rather than the JS responder system, so an enclosing
+  // scroll view claiming the gesture cancels the press in UIKit's arbitration
+  // instead of after a round trip through JavaScript.
+  bool enableNativeGestureRecognizers() override {
+    return true;
+  }
 };
 
 } // namespace
