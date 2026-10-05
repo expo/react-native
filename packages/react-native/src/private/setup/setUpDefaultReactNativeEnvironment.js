@@ -32,6 +32,7 @@ export default function setUpDefaultReactNativeEnvironment(
   require('../../../Libraries/Core/setUpXHR');
   require('../../../Libraries/Core/setUpAlert');
   require('../../../Libraries/Core/setUpNavigator');
+  require('../../../Libraries/Core/setUpCSS');
   require('../../../Libraries/Core/setUpBatchedBridge');
   require('../../../Libraries/Core/setUpSegmentFetcher');
   if (__DEV__ && enableDeveloperTools) {
