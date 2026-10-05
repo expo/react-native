@@ -40,6 +40,16 @@ RCT_EXTERN RCTFontWeight RCTGetFontWeight(UIFont *font);
        scaleMultiplier:(CGFloat)scaleMultiplier;
 
 + (UIFont *)updateFont:(UIFont *)font withFamily:(NSString *)family;
+
+/**
+ * A `font-family` value as CSS writes it — a list of families, the first one
+ * the device has winning, generic families among them standing for the
+ * platform's own — reduced to the one family name a lookup takes. A value with
+ * no comma is a family or font name as before, a generic family resolved the
+ * same way; `ui-serif`, `ui-rounded` and `ui-monospace` come back as written,
+ * being system designs rather than families.
+ */
++ (NSString *)firstAvailableFontFamily:(NSString *)fontFamily;
 + (UIFont *)updateFont:(UIFont *)font withSize:(NSNumber *)size;
 + (UIFont *)updateFont:(UIFont *)font withWeight:(NSString *)weight;
 + (UIFont *)updateFont:(UIFont *)font withStyle:(NSString *)style;

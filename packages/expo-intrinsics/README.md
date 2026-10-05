@@ -68,12 +68,51 @@ Possible, but we would want to see it justified first — at least a few
 significant apps needing it. Long unbroken strings are usually better handled
 with `overflow-wrap` than by hand-placing break opportunities.
 
+### `canvas` — out of scope, because Skia is better at it
+
+`canvas` is not provided and is not planned. The element is a bitmap surface plus
+an imperative 2D drawing API, and React Native already has a far better answer:
+**react-native-skia**, which is a real GPU-backed drawing surface with a
+declarative React API, shaders and animation integration.
+
+Implementing `canvas` would mean reimplementing a weaker drawing stack in order
+to reach an API that authors would then want to escape. The element earns its
+place on the web because it is the *only* drawing surface; here it is not.
+
+### Image maps (`map`, `area`) — out of scope
+
+`map` and `area` define clickable regions over an image. They are effectively
+unused on mobile — the interaction they describe (precise clicks on sub-regions
+of a static image) is a desktop pointer idiom, and the accessible, responsive
+answer is positioned elements over the image, which this catalog already
+supports.
+
 ### Elements whose absence is a work item, not a decision
 
-Form controls (`input`, `textarea`, `select`, `option`, `form`, `fieldset`,
-`progress`, `meter`), media and embedded content (`video`, `audio`, `canvas`,
-`iframe`, `svg`, `picture`), and the interactive elements (`details`, `summary`,
-`dialog`) are not here yet.
+Form controls (`input`, `textarea`, `select`, `option`, `optgroup`, `datalist`,
+`progress`, `meter`), media and embedded content (`video`, `audio`, `iframe`,
+`svg`, `picture`, `source`, `track`), the interactive elements (`details`,
+`summary`, `dialog`), and document metadata (`title`, `meta`, `link` — see
+below) are not here yet.
+
+Note also that `a`, `button` and `label` *are* registered, but only as
+inline-text aliases: they lay out and style correctly and have **no press
+behaviour**. They belong on this list in substance until they are backed by a
+real control and a real gesture path.
+
+### Document metadata (`title`, `meta`, `link`) — planned, and the model is React 19
+
+React 19 makes these renderable *anywhere* in the tree on web and hoists them
+into the document head. That is the semantics to match here, rather than
+inventing a React Native-specific metadata API.
+
+There is already a consumer to learn from: `expo-router/head` accepts literal
+`<title>` and `<meta>` children, but it never renders them — it filters
+`children` by `child.type` and reads their props, mapping them on iOS to an
+`NSUserActivity` (Handoff, Spotlight keywords), while its Android
+implementation returns `null`. Making these real hoisting elements would let
+that API be built *on* the catalog rather than beside it, and would give Android
+an implementation instead of a no-op.
 
 These are the ones that matter most, and they are a different kind of work from
 the rest of the catalog: they should use the **native platform control** — real
