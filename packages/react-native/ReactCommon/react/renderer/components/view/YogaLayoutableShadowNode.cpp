@@ -1459,21 +1459,20 @@ void YogaLayoutableShadowNode::configureYogaTree(
   // `yogaLayoutableChildren_`, so without this the cascade stopped dead at the
   // anonymous box and an atomic inline's text fell back to the default font,
   // rendering visibly smaller than the text around it.
+  //
+  // A child a committed revision still holds is left untouched; it takes the
+  // cascade on the clone its containing View's attachment layout makes of it
+  // (`layoutInlineAttachments`).
   if (ReactNativeFeatureFlags::enableStringChildren() &&
       getTraits().check(ShadowNodeTraits::Trait::AnonymousBox)) {
     for (const auto& child : getChildren()) {
       auto* layoutableChild =
           YogaLayoutableShadowNode::asYogaLayoutable(*child);
-      if (layoutableChild == nullptr) {
+      if (layoutableChild == nullptr || layoutableChild->isPublished()) {
         continue;
       }
-      auto& mutableChild =
-          const_cast<YogaLayoutableShadowNode&>(*layoutableChild);
-      mutableChild.receivedTextAttributes_ = effectiveCascade;
-      if (mutableChild.getTraits().check(
-              ShadowNodeTraits::Trait::TextCascadeConsumer)) {
-        mutableChild.setInheritedCascade(effectiveCascade);
-      }
+      const_cast<YogaLayoutableShadowNode&>(*layoutableChild)
+          .receiveCascade(effectiveCascade);
     }
   }
 
@@ -1517,6 +1516,15 @@ YGErrata YogaLayoutableShadowNode::resolveErrata(YGErrata defaultErrata) const {
   }
 
   return defaultErrata;
+}
+
+void YogaLayoutableShadowNode::receiveCascade(
+    const std::shared_ptr<const TextAttributes>& cascade) {
+  ensureUnsealed();
+  receivedTextAttributes_ = cascade;
+  if (getTraits().check(ShadowNodeTraits::Trait::TextCascadeConsumer)) {
+    setInheritedCascade(cascade);
+  }
 }
 
 YogaLayoutableShadowNode& YogaLayoutableShadowNode::cloneChildInPlace(
@@ -1735,13 +1743,10 @@ void YogaLayoutableShadowNode::layout(LayoutContext layoutContext) {
        * handler's setState produces) can launder a shared child through an
        * owner-resetting detach so that it arrives here wearing this parent's
        * ownership. Clone it in place, exactly as the callback would have,
-       * and lay out the clone. Debug-only by construction — `getSealed()` is
-       * constant `true` in Release, where `cloneChildInPlace` on every child
-       * would be pure churn, and the abort this guards against is also
-       * Debug-only; the ownership adoption above remains the primary
-       * mechanism in both modes.
+       * and lay out the clone. `isPublished()`, not the seal: a release
+       * build has no seal.
        */
-      if (childNodePtr->getSealed() && !this->getSealed()) {
+      if (childNodePtr->isPublished() && !this->isPublished()) {
         auto& clonedChild = cloneChildInPlace(childIndex);
         childYogaNode = &clonedChild.yogaNode_;
         childYogaNode->setHasNewLayout(false);

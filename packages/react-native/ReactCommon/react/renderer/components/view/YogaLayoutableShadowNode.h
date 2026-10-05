@@ -268,14 +268,14 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
     return nullptr;
   }
 
+  // Hands this node the cascade it inherits, as the configure pass does for a
+  // child it owns: for a node reached outside that pass, such as an atomic
+  // inline cloned by its containing View's attachment layout
+  void receiveCascade(const std::shared_ptr<const TextAttributes> &cascade);
+
  protected:
-  /*
-   * The cascade this node received from its parent: what its children
-   * inherit before its own inheritable props are folded in. A View that
-   * consumes one inherited value (`dynamic-range-limit` for an HDR color)
-   * reads it from here rather than storing a copy, since every View pays
-   * for a member.
-   */
+  // What this node's children inherit before its own inheritable props are
+  // folded in
   const std::shared_ptr<const TextAttributes> &receivedCascade() const
   {
     return receivedTextAttributes_;
