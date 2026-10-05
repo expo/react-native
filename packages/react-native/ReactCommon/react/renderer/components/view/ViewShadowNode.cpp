@@ -63,7 +63,7 @@ static_assert(
     sizeof(ViewShadowNode) <= 1096,
     "ViewShadowNode grew past its memory budget");
 static_assert(
-    sizeof(TextAttributes) <= 208,
+    sizeof(TextAttributes) <= 224,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
     sizeof(ViewProps) <= 1392,
@@ -75,8 +75,13 @@ static_assert(
     "ViewShadowNode grew past its memory budget");
 static_assert(
     // Sized for the numeric `baselineShift`, which symbolic list markers use
-    // to centre their ink and which `vertical-align: <length>` will also use
-    sizeof(TextAttributes) <= 328,
+    // to centre their ink and which `vertical-align: <length>` will also use,
+    // and for the em and rem font sizes and `vertical-align` (`fontSizeEm`,
+    // `fontSizeRem`, `uaFontSizeEm`, `verticalAlign`): three Floats and a
+    // one-byte optional enum, so that a size declared relative to the
+    // inherited or the root font size can be resolved where the cascade is.
+    // Measured on an iphonesimulator Release build.
+    sizeof(TextAttributes) <= 352,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
     sizeof(ViewProps) <= 1904,
