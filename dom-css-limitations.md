@@ -256,12 +256,6 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   OS doesn't name, the color draws nothing rather than CSS's arithmetic.
   `CSS.supports` says so for the device. Deferred: CSS's arithmetic in
   Kotlin, as the C++ and JS sides have it.
-- **`DOM-CSS-LIMITATION(inline-image-limit-waits-for-its-next-revision)` —
-  an inline `<img>` takes an inherited `dynamic-range-limit` change at its
-  next revision.** The cascade reaches an atomic inline through its anonymous
-  box without cloning it, so the already-published node stores the cascade
-  but can't publish state until something else clones it. Deferred: cloning atomic
-  inlines in the configure pass.
 - **`DOM-CSS-LIMITATION(animated-colors-interpolate-in-srgb)` — `Animated`
   interpolates a color in its own space as its sRGB approximation.** The
   animated node mixes 8-bit sRGB channels. Deferred: CSS Color 4 §12
@@ -291,7 +285,7 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
 
 ## Performance
 
-
+**`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`
 `yoga::Node` is held by value, so an element that generates *no* box — a
 span-like inline that folds into its parent's inline formatting context — still
 pays 744 bytes for a node it never uses. Making it lazy would make folding

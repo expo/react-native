@@ -171,6 +171,20 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Whether this container measures its own inline run, its single anonymous
    * box having been elided from the Yoga tree.
    */
+  /*
+   * The anonymous boxes are this node's own content, so they are published
+   * with it — see `ShadowNode::sealOwnedContentRecursive`. A box is not in
+   * `children_`, so without this it and everything under it (the text nodes
+   * and inline elements of the run) would never be sealed, and copy-on-write
+   * would treat them as writable for ever.
+   */
+  void sealOwnedContentRecursive() const override
+  {
+    for (const auto &box : anonymousTextContentChildren_) {
+      box->sealRecursive();
+    }
+  }
+
   bool measuresOwnInlineRun() const
   {
     return measuresOwnInlineRun_;
@@ -278,14 +292,14 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
     return nullptr;
   }
 
+  // Hands this node the cascade it inherits, as the configure pass does for a
+  // child it owns: for a node reached outside that pass, such as an atomic
+  // inline cloned by its containing View's attachment layout
+  void receiveCascade(const std::shared_ptr<const TextAttributes> &cascade);
+
  protected:
-  /*
-   * The cascade this node received from its parent: what its children
-   * inherit before its own inheritable props are folded in. A View that
-   * consumes one inherited value (`dynamic-range-limit` for an HDR color)
-   * reads it from here rather than storing a copy, since every View pays
-   * for a member.
-   */
+  // What this node's children inherit before its own inheritable props are
+  // folded in
   const std::shared_ptr<const TextAttributes> &receivedCascade() const
   {
     return receivedTextAttributes_;
@@ -307,9 +321,9 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Yoga node as `mutable` here to avoid `static_cast`ing the pointer to this
    * all the time.
    */
-  // Held by value, so an element that generates no box — a span-like inline
-  // that folds into its parent's inline formatting context — still carries a
-  // Yoga node it never uses.
+  // DOM-CSS-LIMITATION(eager-yoga-node): held by value, so an element that
+  // generates no box — a span-like inline that folds into its parent's inline
+  // formatting context — still carries a Yoga node it never uses.
   mutable yoga::Node yogaNode_;
 
  private:
