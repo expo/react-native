@@ -33,18 +33,31 @@ const config = {
     path.resolve(__dirname, '../react-native'),
     path.resolve(__dirname, '../virtualized-lists'),
     path.resolve(__dirname, '../react-native-popup-menu-android'),
+    path.resolve(__dirname, '../expo-intrinsics'),
     path.resolve(__dirname, '../react-native-test-library/apple'),
     path.resolve(__dirname, '../react-native-test-library/common'),
   ],
   transformer: {
-    // `.css` imports load as their text for the stylesheet engine
+    // `.css` imports load as raw text for the stylesheet engine
+    // (js/astryx/css); see css-transformer.js.
     babelTransformerPath: path.resolve(__dirname, 'css-transformer.js'),
   },
   resolver: {
-    sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'css'],
     blockList: [/..\/react-native\/sdks\/hermes/],
+    sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'css'],
     extraNodeModules: {
       'react-native': path.resolve(__dirname, '../react-native'),
+    },
+    // The vendored Astryx sources (js/astryx/vendor) import '@stylexjs/stylex'
+    // verbatim; resolve it to the RN StyleX runtime so they run unmodified.
+    resolveRequest: (context, moduleName, platform) => {
+      if (moduleName === '@stylexjs/stylex') {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/astryx/stylex-rn.js'),
+        };
+      }
+      return context.resolveRequest(context, moduleName, platform);
     },
   },
 };
