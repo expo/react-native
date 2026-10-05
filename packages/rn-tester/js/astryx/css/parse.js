@@ -47,15 +47,25 @@ export type ComplexSelector = {
   unsupported: boolean,
 };
 
+/**
+ * A `@container` prelude: the container it asks about, by name when named
+ * (the nearest ancestor container otherwise), and the size condition, which
+ * is written like a media condition.
+ */
+export type ContainerQuery = {name: string | null, condition: string};
+
 export type StyleRule = {
   type: 'style',
   selectors: Array<ComplexSelector>,
   // As authored, kebab-case property → value string; the consumer camel-cases
   // and resolves values
   declarations: {[string]: string},
+  // The root selector of every enclosing @scope block, outermost first
   scopeRoots: Array<string>,
   // The condition of every enclosing @media block, outermost first
   media: Array<string>,
+  // Every enclosing @container block, outermost first
+  containers: Array<ContainerQuery>,
   // Enclosing @layer names joined with '.'; null when unlayered
   layer: string | null,
   // Source order across every sheet, from the caller's running counter
@@ -417,6 +427,70 @@ function parseAttributeMatcher(inner: string): AttributeMatcher {
 }
 
 // One complex selector, no commas
+/**
+ * A selector with `:is()` or `:where()` over a list of compounds, written out
+ * as the selectors it stands for: `:where(img, video)` is `img` and `video`,
+ * `:where([a]) > :where(*)` is `[a] > *`, and two lists multiply. Astryx's
+ * reset sheet is written this way throughout. The matcher takes one compound
+ * per position, so the list is expanded here rather than matched as an
+ * alternation; `:is()` keeps the specificity of the compound it expands to,
+ * where the web takes the most specific argument, and `:where()` adds its
+ * argument's specificity where the web adds none — a difference only between
+ * two sheet rules on one element, which the reset's zero-specificity rules
+ * never contest. A list whose arguments are complex selectors (`:is(.dark *)`)
+ * is left for `parseCompound`, which knows the one form the matcher handles.
+ */
+function expandSelectorLists(raw: string): Array<string> {
+  const results: Array<string> = [];
+  const expand = (sel: string, budget: number): void => {
+    const start = Math.max(sel.lastIndexOf(':is('), sel.lastIndexOf(':where('));
+    if (start === -1 || budget <= 0) {
+      results.push(sel);
+      return;
+    }
+    const open = sel.indexOf('(', start);
+    let depth = 0;
+    let close = -1;
+    for (let i = open; i < sel.length; i++) {
+      if (sel[i] === '(') {
+        depth++;
+      } else if (sel[i] === ')') {
+        depth--;
+        if (depth === 0) {
+          close = i;
+          break;
+        }
+      }
+    }
+    if (close === -1) {
+      results.push(sel);
+      return;
+    }
+    const args = splitTopLevel(sel.slice(open + 1, close), ',')
+      .map(a => a.trim())
+      .filter(a => a !== '');
+    const simple = args.every(a => !/[\s>+~]/.test(a));
+    if (!simple) {
+      results.push(sel);
+      return;
+    }
+    for (const arg of args) {
+      // `*` is the universal selector, which is nothing in a compound
+      const piece = arg === '*' ? '' : arg;
+      const before = sel.slice(0, start);
+      const rest = sel.slice(close + 1);
+      // Keep a bare `*` when the list was the whole compound, as in `> *`
+      const expanded =
+        piece === '' && !/[^\s>+~]$/.test(before) && !/^[^\s>+~]/.test(rest)
+          ? before + '*' + rest
+          : before + piece + rest;
+      expand(expanded, budget - 1);
+    }
+  };
+  expand(raw, 8);
+  return results;
+}
+
 export function compileSelector(raw: string): ComplexSelector {
   // Tokenize at the top level only: the space in `:is(.dark *)` is not a
   // combinator
@@ -544,6 +618,7 @@ function parseDeclarations(body: string): {[string]: string} {
 
 type ParseContext = {
   media: Array<string>,
+  containers: Array<ContainerQuery>,
   scopeRoots: Array<string>,
   layer: string | null,
   sheet: Stylesheet,
@@ -559,6 +634,7 @@ export function parseStylesheet(
   const sheet: Stylesheet = {rules: [], keyframes: [], layerOrder: []};
   parseBlockContents(stripComments(css), {
     media: [],
+    containers: [],
     scopeRoots: [],
     layer: null,
     sheet,
@@ -590,6 +666,7 @@ function parseBlockContents(css: string, ctx: ParseContext): void {
       .map(s => s.trim())
       .filter(s => s !== '')
       .map(s => scopeSelector(s, ctx.scopeRoots))
+      .flatMap(expandSelectorLists)
       .map(compileSelector);
     const declarations = parseDeclarations(body);
     if (selectors.length > 0 && Object.keys(declarations).length > 0) {
@@ -599,6 +676,7 @@ function parseBlockContents(css: string, ctx: ParseContext): void {
         declarations,
         scopeRoots: ctx.scopeRoots.slice(),
         media: ctx.media.slice(),
+        containers: ctx.containers.slice(),
         layer: ctx.layer,
         order: ctx.counter.order++,
       });
@@ -634,6 +712,25 @@ function parseAtRule(css: string, at: number, ctx: ParseContext): number {
     ctx.media.push(prelude.slice('@media'.length).trim());
     parseBlockContents(body, ctx);
     ctx.media.pop();
+    return after;
+  }
+  if (prelude.startsWith('@container')) {
+    // DOM-CSS-DEVIATION(container-query-is-a-media-query): the size condition
+    // is answered over the window, the elements reporting no container size;
+    // on a phone the containers that carry these queries (a gallery, a login
+    // panel) span the window, so the window's width is the one the query
+    // would see. The container itself is required, as on the web: the rule
+    // applies only under an ancestor that declares `container-type`, and the
+    // one of that name when the query names one (css/match.js).
+    const args = prelude.slice('@container'.length).trim();
+    const paren = args.indexOf('(');
+    const name = (paren === -1 ? args : args.slice(0, paren)).trim();
+    ctx.containers.push({
+      name: name === '' ? null : name,
+      condition: paren === -1 ? '' : args.slice(paren).trim(),
+    });
+    parseBlockContents(body, ctx);
+    ctx.containers.pop();
     return after;
   }
   if (prelude.startsWith('@supports')) {
