@@ -20,8 +20,8 @@ import kotlin.math.sin
  * Colors in their own color space, as `processColor` passes them: `{space, alpha}` plus the
  * channels CSS's relative color syntax names (`r g b`, `l a b`, `l c h` or `x y z`). Each space is
  * the platform's own [ColorSpace], asked for by name at run time; a space CSS defines that the OS
- * lacks is built from one it has, and Lab, and Oklab where the OS lacks it, go by CSS's
- * arithmetic. [Color.pack] tags the color with its space; the platform converts it where it draws.
+ * lacks is built from one it has, and Lab, and Oklab where the OS lacks it, go by CSS's arithmetic.
+ * [Color.pack] tags the color with its space; the platform converts it where it draws.
  */
 @RequiresApi(Build.VERSION_CODES.O)
 internal object ColorSpaceColors {
@@ -148,7 +148,8 @@ internal object ColorSpaceColors {
     val f1 = (l + 16.0) / 116.0
     val f0 = a / 500.0 + f1
     val f2 = f1 - b / 200.0
-    val x = (if (f0 * f0 * f0 > epsilon) f0 * f0 * f0 else (116 * f0 - 16) / kappa) * (0.3457 / 0.3585)
+    val x =
+        (if (f0 * f0 * f0 > epsilon) f0 * f0 * f0 else (116 * f0 - 16) / kappa) * (0.3457 / 0.3585)
     val y = if (l > kappa * epsilon) f1 * f1 * f1 else l / kappa
     val z =
         (if (f2 * f2 * f2 > epsilon) f2 * f2 * f2 else (116 * f2 - 16) / kappa) *
@@ -220,8 +221,9 @@ internal object ColorSpaceColors {
     }
   }
 
-  // The same primaries and white point with a linear transfer, over the extended range the
-  // platform's own extended spaces use, so a value above 1 or below 0 survives the conversion
+  // The same primaries and white point with a linear transfer, over the platform's extended
+  // range; a channel beyond it clips.
+  // DOM-CSS-LIMITATION(android-linear-channels-stop-at-the-extended-range)
   private fun linearOf(name: String): ColorSpace? {
     val rgb = colorSpace(name) as? ColorSpace.Rgb ?: return null
     return ColorSpace.Rgb(
