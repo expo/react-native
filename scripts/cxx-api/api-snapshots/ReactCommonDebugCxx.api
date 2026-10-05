@@ -972,6 +972,7 @@ class facebook::react::InlineContentShadowNode : public facebook::react::Concret
   public virtual const facebook::react::ListMarker& getListMarker() const override;
   public virtual const std::shared_ptr<const facebook::react::TextAttributes>* getStoredCascade() const override;
   public virtual facebook::react::AttributedString getContentAttributedString(Float fontSizeMultiplier) const override;
+  public virtual facebook::react::InlineAccessibilityContent getInlineAccessibilityContent(const facebook::react::AttributedString& attributedString) const override;
   public virtual facebook::react::InlineTextContentAccessor::OutsideMarker getOutsideMarker() const override;
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext& layoutContext, const facebook::react::LayoutConstraints& layoutConstraints) const override;
   public virtual std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const override;
@@ -989,15 +990,17 @@ struct facebook::react::InlineContentShadowNode::CachedContent {
   public std::optional<facebook::react::LayoutDirection> layoutDirection;
 }
 
-class facebook::react::InlineTagProps : public facebook::react::TextProps, public facebook::react::NodeNameProvider {
+class facebook::react::InlineTagProps : public facebook::react::TextProps, public facebook::react::AccessibilityProps, public facebook::react::NodeNameProvider {
   public InlineTagProps() = default;
   public InlineTagProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineTagProps& sourceProps, const facebook::react::RawProps& rawProps);
   public std::string nodeName;
   public virtual std::string domNodeName() const override;
+  public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
 
 class facebook::react::InlineTextContentAccessor {
   public virtual facebook::react::AttributedString getContentAttributedString(Float fontSizeMultiplier) const = 0;
+  public virtual facebook::react::InlineAccessibilityContent getInlineAccessibilityContent(const facebook::react::AttributedString& attributedString) const = 0;
   public virtual facebook::react::InlineTextContentAccessor::OutsideMarker getOutsideMarker() const = 0;
   public virtual std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const = 0;
   public virtual std::vector<facebook::react::InlineAttachmentPlacement> getInlineAttachmentPlacements(const facebook::react::LayoutContext& layoutContext) const = 0;
@@ -1534,6 +1537,7 @@ struct facebook::react::ViewState::TextRun {
   public bool operator!=(const facebook::react::ViewState::TextRun& other) const;
   public bool operator==(const facebook::react::ViewState::TextRun& other) const;
   public facebook::react::AttributedString attributedString;
+  public facebook::react::InlineAccessibilityContent accessibilityContent;
   public facebook::react::Rect frame;
   public facebook::react::Tag runTag;
   public int documentOrder;
@@ -2477,6 +2481,39 @@ struct facebook::react::FloatExclusion {
   public Float leftInset;
   public Float rightInset;
   public bool operator==(const facebook::react::FloatExclusion& other) const = default;
+}
+
+struct facebook::react::InlineAccessibilityContent {
+  public bool operator==(const facebook::react::InlineAccessibilityContent& other) const;
+  public std::vector<facebook::react::InlineAccessibilityElement> elements;
+  public std::vector<facebook::react::Tag> attachmentTags;
+}
+
+struct facebook::react::InlineAccessibilityElement {
+  public bool disabled;
+  public bool onAccessibilityAction;
+  public bool onAccessibilityTap;
+  public bool operator==(const facebook::react::InlineAccessibilityElement& other) const;
+  public facebook::react::AccessibilityLiveRegion liveRegion;
+  public facebook::react::AccessibilityState state;
+  public facebook::react::AccessibilityTraits traits;
+  public facebook::react::AccessibilityValue value;
+  public facebook::react::EventEmitter::Shared eventEmitter;
+  public facebook::react::InlineAccessibilityElement::Kind kind;
+  public facebook::react::Tag tag;
+  public std::string hint;
+  public std::string label;
+  public std::string language;
+  public std::string role;
+  public std::vector<facebook::react::AccessibilityAction> actions;
+  public std::vector<facebook::react::Tag> attachmentTags;
+  public std::vector<size_t> fragmentIndices;
+}
+
+enum facebook::react::InlineAccessibilityElement::Kind {
+  Attachment,
+  Element,
+  StaticText,
 }
 
 struct facebook::react::InlineAttachmentPlacement {
