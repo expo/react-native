@@ -671,6 +671,8 @@ function Gallery() {
           onChange={setLimit}
           testIDPrefix="limit"
         />
+      </View>
+      <View style={[styles.screen, {dynamicRangeLimit: limit}]}>
         <Section
           title="This display · matchMedia and CSS.supports"
           expect="Expect: answers for this screen; the bar changes nothing here."

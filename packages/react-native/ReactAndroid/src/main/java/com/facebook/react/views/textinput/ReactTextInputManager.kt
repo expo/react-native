@@ -502,6 +502,8 @@ public open class ReactTextInputManager public constructor() :
     view.setSelectTextOnFocus(selectTextOnFocus)
   }
 
+  // An editable text's color stays an integer.
+  // DOM-CSS-LIMITATION(android-textinput-colors-are-srgb)
   @ReactProp(name = ViewProps.COLOR, customType = "Color")
   public fun setColor(view: ReactEditText, color: Int?) {
     if (color == null) {

@@ -78,16 +78,16 @@ internal object ColorStopUtils {
    * @return A list of processed color stops with all positions resolved
    */
   /**
-   * Every stop as a color long, where at least one stop is in its own color space and the OS
-   * has the color-long shader constructors (Android 10); null otherwise, so the shader takes
-   * integers as before. A hint's generated stops are sRGB integers, as the register declares.
+   * Every stop as a color long, where any stop is in its own space and the OS has the color-long
+   * shader constructors; null otherwise. A hint's generated stops are sRGB.
    */
   fun colorLongsOrNull(stops: List<ProcessedColorStop>): LongArray? {
+    // DOM-CSS-LIMITATION(android-paints-are-srgb-before-api-29)
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || stops.none { it.colorLong != null }) {
       return null
     }
-    // A shader takes every stop in one color space: extended sRGB, which holds a wide value and
-    // interpolates in sRGB's own encoding, as CSS's legacy gradients do
+    // A shader takes every stop in one space: extended sRGB holds a wide value and interpolates
+    // as CSS's legacy gradients do
     val space = ColorSpace.get(ColorSpace.Named.EXTENDED_SRGB)
     return LongArray(stops.size) { i ->
       // An sRGB color long holds its ARGB integer in the high 32 bits

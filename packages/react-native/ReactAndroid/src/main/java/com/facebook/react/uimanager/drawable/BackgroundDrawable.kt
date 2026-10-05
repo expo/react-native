@@ -56,8 +56,8 @@ internal class BackgroundDrawable(
     }
 
   /**
-   * The background in its own space, for a color an integer can't hold; [backgroundColor] holds
-   * its sRGB approximation, and setting it clears this
+   * The background in its own space, for a color an integer can't hold; [backgroundColor] holds its
+   * sRGB approximation, and setting it clears this
    */
   @ColorLong
   var backgroundColorLong: Long? = null
@@ -69,6 +69,8 @@ internal class BackgroundDrawable(
     }
     backgroundColor = Color.toArgb(color)
     backgroundColorLong = color
+    // `Paint` takes a color long from Android 10
+    // DOM-CSS-LIMITATION(android-paints-are-srgb-before-api-29)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       backgroundPaint.setColor(color)
     }

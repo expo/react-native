@@ -217,7 +217,27 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   most 65,535 distinct wide colors per process.** Each color in its own space
   is interned by value in a table a `Color` indexes with 16 bits, and the
   table is never reclaimed; the 65,536th new color draws its sRGB
-  approximation. Deferred: reclamation, or owned overflow storage.
+  approximation on the paths that read the C++ `Color`, and a View with such
+  a color is no longer counted as HDR there, so it consumes no
+  `dynamic-range-limit`: the Kotlin side, which still receives the raw color,
+  then waits for a limit that never comes and asks for wide gamut only.
+  Deferred: reclamation, or owned overflow storage.
+- **`DOM-CSS-LIMITATION(android-textinput-colors-are-srgb)` — on Android an
+  editable text's `color` draws its sRGB approximation.** `TextInput`'s
+  color setter takes an integer and asks for no window mode. Deferred: a
+  color long through `ReactEditText`, as `<Text>` has.
+- **`DOM-CSS-LIMITATION(android-paints-are-srgb-before-api-29)` — on Android
+  8 and 9 a wide color draws its sRGB approximation.** Those versions have
+  color spaces and color longs, so the spaces are reported available, but
+  `Paint` and the shader constructors take a color long only from Android
+  10; before that backgrounds, borders, shadows, gradients and text
+  foregrounds paint the integer. Platform wall.
+- **`DOM-CSS-LIMITATION(android-linear-channels-stop-at-the-extended-range)`
+  — on Android a channel of a linear space (`srgb-linear`,
+  `display-p3-linear`, `rec2100-linear`) is held within −0.5 to 7.499.**
+  That is the range of the platform's extended spaces, which the constructed
+  linear spaces share and the conversions clamp to; `color(rec2100-linear 10
+  10 10)` draws as 7.499. Platform wall, as the spaces stand.
 - **`DOM-CSS-LIMITATION(android-needs-the-platforms-color-space)` — on
   Android a color in its own space draws only where the OS has that space.**
   Android 8 brought color spaces; before it, and for a predefined space the
@@ -240,6 +260,10 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   headroom is one value, so `constrained` draws as `no-limit`, and a
   `standard` picture beside an HDR one shares the window's headroom. Platform
   wall.
+- **`DOM-CSS-LIMITATION(ios-17-constrained-is-no-limit)` — on iOS 17 to 25
+  `constrained` draws as `no-limit` for an HDR color.** Those versions have
+  one layer switch, `wantsExtendedDynamicRangeContent`; iOS 26's
+  `preferredDynamicRange` names all three limits. Platform wall.
 
 ## Performance
 
