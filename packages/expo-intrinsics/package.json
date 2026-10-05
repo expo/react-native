@@ -1,0 +1,8 @@
+{
+  "name": "@react-native/expo-intrinsics-poc",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Proof of concept: an HTML element defined by a provider outside react-native.",
+  "main": "src/index.js",
+  "license": "MIT"
+}
