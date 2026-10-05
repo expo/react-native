@@ -52,6 +52,13 @@ A wrapped inline box paints with `box-decoration-break: slice` (the CSS
 default) — leading edge on the first fragment, trailing on the last. `clone`,
 which repeats both edges on every fragment, is not implemented.
 
+## Platform
+
+**`android-img-is-a-plain-view`** — `ReactAndroid/src/main/java/com/facebook/react/fabric/mounting/mountitems/FabricNameComponentMapping.kt`
+`<img>` mounts as a plain View on Android rather than `RCTImageView`, which
+expects a different `source` shape — so an `<img>` lays out but draws nothing
+there. iOS renders it through the Image machinery.
+
 ## Performance
 
 **`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`

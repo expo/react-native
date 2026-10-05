@@ -17,6 +17,7 @@
 #include <react/renderer/components/safeareaview/SafeAreaViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/AndroidHorizontalScrollContentViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
+#include <react/renderer/components/text/DomElementsRegistry.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/SelectableParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
@@ -87,6 +88,8 @@ void addCoreComponents(
           LayoutConformanceComponentDescriptor>());
   providerRegistry->add(
       concreteComponentDescriptorProvider<VirtualViewComponentDescriptor>());
+  // The mounting half is FabricNameComponentMapping
+  dom::addAllElementDescriptors(*providerRegistry);
 }
 
 } // namespace facebook::react::CoreComponentsRegistry
