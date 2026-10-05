@@ -300,6 +300,7 @@ rather than going quiet.
 - `action-sheet-tints-are-srgb` — limitation, `packages/react-native/Libraries/ActionSheetIOS/ActionSheetIOS.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
 - `android-color-table-is-finite` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
+- `android-needs-the-platforms-color-space` — limitation, `packages/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/display/DisplayCapabilitiesModule.kt`
 - `android-text-and-outline-colors-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/attributedstring/conversions.h`
 - `android-transition-frames-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
 - `animated-colors-interpolate-in-srgb` — limitation, `packages/react-native/Libraries/Animated/nodes/AnimatedInterpolation.js`
@@ -324,6 +325,7 @@ rather than going quiet.
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
 - `link-title-is-not-idn-decoded` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPTextLinkInteraction.mm`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `media-queries-have-no-or-and-no-nesting` — limitation, `packages/react-native/Libraries/Utilities/matchMedia.js`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
 - `no-font-on-a-control` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPElementTextAreaComponentView.mm`

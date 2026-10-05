@@ -39,6 +39,9 @@ Class RCTCoreModulesClassProvider(const char *name)
   if (name == "Appearance"sv) {
     return RCTAppearanceCls();
   }
+  if (name == "DisplayCapabilities"sv) {
+    return RCTDisplayCapabilitiesCls();
+  }
 
   if (name == "Clipboard"sv) {
     return RCTClipboardCls();
