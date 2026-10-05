@@ -289,6 +289,7 @@ const ReactNativeStyleAttributes: {[key: string]: AnyAttributeType, ...} = {
   experimental_textWidthMode: true,
   fontFamily: true,
   fontSize: true,
+  fontSizeEm: true,
   fontStyle: true,
   fontVariant: fontVariantAttribute,
   fontVariationSettings: fontVariationSettingsAttribute,
