@@ -51,6 +51,24 @@ NS_ASSUME_NONNULL_BEGIN
 - (facebook::react::SharedTouchEventEmitter)touchEventEmitterAtContainerPoint:(CGPoint)point;
 
 /**
+ * Takes a new run from the owning View's state, announcing any live-region
+ * leaf whose text changed since the previous run.
+ */
+- (void)updateRun:(const facebook::react::ViewState::TextRun &)run;
+
+/**
+ * This run's accessibility leaves, one per element of its `InlineAccessibilityContent` and in
+ * that order, made for `container`: the view that presents them, interleaved with its mounted
+ * children.
+ *
+ * An `Attachment` element is `NSNull` here, because its mounted view is the leaf and only the
+ * container can resolve that view; every other element is a `UIAccessibilityElement` whose
+ * `accessibilityContainer` is `container` and whose frame is placed on the text engine's fragment
+ * rects, the same layout that paints the run.
+ */
+- (NSArray *)accessibilityLeavesInContainer:(id)container;
+
+/**
  * Discards the cached accessibility elements. Called when the run changes,
  * because those elements are positioned on fragment rects that only the current
  * text and layout can produce.

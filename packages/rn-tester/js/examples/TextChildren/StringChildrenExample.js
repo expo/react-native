@@ -112,6 +112,64 @@ function WhitespaceVerifyCase(): React.Node {
   );
 }
 
+/*
+ * Inline semantics for VoiceOver/TalkBack: a presentational `<b>` stays inside
+ * the static text around it, while the link and the button are stops of their
+ * own. The link prevents its navigation and counts activations instead, so
+ * activating it from a screen reader is visible on screen.
+ */
+function AccessibilityReadingOrderDemo(): React.Node {
+  const [activations, setActivations] = useState(0);
+  return (
+    <View style={{display: 'block', fontSize: BASE_FONT_SIZE, lineHeight: 28}}>
+      Read {/* $FlowExpectedError[not-a-component] intrinsic inline element */}
+      <b>the</b>{' '}
+      {/* $FlowExpectedError[not-a-component] intrinsic inline element */}
+      <a
+        accessibilityLabel="terms and conditions"
+        href="https://example.com/terms"
+        onClick={(event: $FlowFixMe) => {
+          event.preventDefault();
+          setActivations(value => value + 1);
+        }}>
+        terms
+      </a>
+      , then{' '}
+      {/* $FlowExpectedError[not-a-component] intrinsic inline element */}
+      <button accessibilityState={{disabled: true}} onClick={() => {}}>
+        accept
+      </button>{' '}
+      {/* $FlowExpectedError[not-a-component] intrinsic inline element */}
+      <img
+        alt="React Native logo"
+        source={{uri: 'https://reactnative.dev/img/tiny_logo.png'}}
+        style={{width: 20, height: 20}}
+      />
+      . The link was activated {String(activations)} times.
+    </View>
+  );
+}
+
+function AccessibilityDynamicDemo(): React.Node {
+  const [count, setCount] = useState(0);
+  return (
+    <View style={{display: 'block', fontSize: BASE_FONT_SIZE}}>
+      Status:{' '}
+      {/* $FlowExpectedError[not-a-component] intrinsic inline element */}
+      <span accessibilityLiveRegion="polite">{String(count)} updates</span>
+      {' — '}
+      {/* $FlowExpectedError[not-a-component] intrinsic inline element */}
+      <button
+        accessibilityActions={[{name: 'increment', label: 'Increment'}]}
+        accessibilityLabel="Increment update count"
+        onAccessibilityAction={() => setCount(value => value + 1)}
+        onClick={() => setCount(value => value + 1)}>
+        increment
+      </button>
+    </View>
+  );
+}
+
 export default {
   title: 'String Children',
   category: 'Basic',
@@ -361,6 +419,52 @@ export default {
             '<View>{on ? "a string child you can toggle" : null}</View>'
           }>
           <ToggleStringChild />
+        </DemoContent>
+      ),
+    },
+    {
+      title: 'Platform Quality: semantic inline reading order',
+      description:
+        'With VoiceOver/TalkBack, formatting stays inside adjacent static text while links, buttons, and images become separate ordered stops. There is no duplicate whole-sentence stop and no object-replacement character.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            "<View style={{display: 'block'}}>Read <b>the</b> <a href>terms</a>, then <button>accept</button> <img />.</View>"
+          }>
+          <AccessibilityReadingOrderDemo />
+        </DemoContent>
+      ),
+    },
+    {
+      title: 'Platform Quality: updates, language, wrapping, RTL',
+      description:
+        'Exercises semantic invalidation and geometry under updates, a polite live region, per-leaf language, wrapped text, and right-to-left layout.',
+      render: (): React.Node => (
+        <DemoContent
+          code={
+            '<span accessibilityLiveRegion="polite">updates</span>\n' +
+            '<span accessibilityLanguage="fr-FR">bonjour</span>'
+          }>
+          <AccessibilityDynamicDemo />
+          <View
+            style={{
+              display: 'block',
+              fontSize: BASE_FONT_SIZE,
+              marginTop: 12,
+              maxWidth: 230,
+              direction: 'rtl',
+            }}>
+            {/* $FlowExpectedError[not-a-component] intrinsic inline element */}
+            <span accessibilityLanguage="ar-SA">مرحبا بالعالم</span>
+            {' — wrapped static text — '}
+            {/* $FlowExpectedError[not-a-component] intrinsic inline element */}
+            <a
+              accessibilityLabel="رابط تجريبي"
+              href="https://example.com/ar"
+              onClick={(event: $FlowFixMe) => event.preventDefault()}>
+              رابط
+            </a>
+          </View>
         </DemoContent>
       ),
     },
