@@ -48,6 +48,7 @@ import Fieldset from './Fieldset';
 import Form from './Form';
 import {LEVELS as HEADING_LEVELS, makeHeading} from './Heading';
 import Img from './Img';
+import {imgIsExpoImage} from './imgBacking';
 import Input from './Input';
 import Label from './Label';
 import {LIST_TAGS, makeList} from './List';
@@ -143,13 +144,9 @@ registerInlineTag('span');
 // §3.C) — it flows inside a bare-text IFC as an inline attachment, positioned
 // by the owning View's attachment-layout pass.
 //
-// Which native component backs it depends on the host. When the Expo runtime is
-// present, <img> is expo-image — the SDK's image component, with its caching,
-// format support and SwiftUI awareness — and this is the catalog's first
-// SDK-backed element. Elsewhere (Fantom, bare hosts) it falls back to the
-// framework's Image machinery. Resolved lazily at first render, by which time
-// the native runtime is up; layout treats both the same way, through the
-// InlineText + InlineReplaced traits their shadow nodes declare.
+// expo-image where the Expo runtime is present, unless the app pinned the
+// framework view (`setImgBacking`); resolved at first render, when the native
+// runtime is up. Layout treats both the same, through InlineText + InlineReplaced.
 // Registered under its own host name because the tag `img` is a *component*
 // (Img.js): `src`, `srcset`, `alt` and `object-fit` are translations rather than
 // renames, so they are done in JavaScript and the box below is what it renders.
@@ -160,7 +157,9 @@ registerFrameworkElement('element-img', () => {
   // $FlowFixMe[unclear-type] the Expo runtime global has no static type here.
   // $FlowFixMe[prop-missing] `expo` is installed by expo-modules-core at runtime.
   const expoRuntime: any = globalThis.expo;
-  const expoViewConfig = expoRuntime?.getViewConfig?.('ExpoImage');
+  const expoViewConfig = imgIsExpoImage()
+    ? expoRuntime?.getViewConfig?.('ExpoImage')
+    : null;
   if (expoViewConfig != null) {
     return createViewConfig({
       ...expoViewConfig,
@@ -1515,3 +1514,4 @@ setFallbackViewConfigResolver(name =>
 // The provider entry point: a library defines namespaced elements — see
 // ElementRegistry for the precedence rules.
 export {defineReactElement} from './ElementRegistry';
+export {setImgBacking, getImgBacking, imgIsExpoImage} from './imgBacking';

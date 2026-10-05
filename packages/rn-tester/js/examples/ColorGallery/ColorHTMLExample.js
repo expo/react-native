@@ -26,7 +26,7 @@ import {
   sampleAll,
   target,
 } from './colorGalleryData';
-import '@react-native/expo-intrinsics-poc';
+import {setImgBacking} from '@react-native/expo-intrinsics-poc';
 import * as React from 'react';
 import {useEffect, useRef, useState} from 'react';
 import {DevSettings, ScrollView} from 'react-native';
@@ -39,6 +39,10 @@ const SECONDARY_COLOR = '#555555';
 const SEPARATOR_COLOR = '#d1d1d6';
 const CARD_COLOR = '#f2f2f7';
 const GROUPED_PAGE_COLOR = PAPER_COLOR;
+
+// The framework's image view: expo-image doesn't decode every fixture or read
+// `dynamic-range-limit`. Before any `<img>` renders.
+setImgBacking('framework');
 
 const LIMITS = ['no-limit', 'constrained', 'standard'];
 

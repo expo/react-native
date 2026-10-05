@@ -18,6 +18,7 @@
  */
 
 import {sample} from '../../../NativeModuleExample/NativeScreenshotManager';
+import {imgIsExpoImage} from '@react-native/expo-intrinsics-poc';
 import {Dimensions, Image, Platform} from 'react-native';
 
 const rgb = (space, mid = '0.5 0.5 0.5') => [
@@ -303,20 +304,13 @@ const HDR_FILES = new Set([
 ]);
 const HDR_PICTURES = PICTURES.filter(p => HDR_FILES.has(p.file));
 
-// Which image view backs `<img>` here, by the same probe the element uses,
-// asked at render because the Expo runtime installs itself after this module
-// loads
+// Asked at render: the Expo runtime installs itself after this module loads
 const imgBacking = (): string =>
-  global.expo?.getViewConfig?.('ExpoImage') != null
-    ? 'expo-image'
-    : 'the framework image view';
+  imgIsExpoImage() ? 'expo-image' : 'the framework image view';
 
-/*
- * Each fixture's expected patches, in exact2's JSON: a patch is a rectangle
- * in the picture's own pixels and its value in extended linear sRGB. The
- * oriented fixtures give their patches in unrotated coordinates, so they are
- * left out of sampling.
- */
+// A patch is a rectangle in the picture's own pixels with its expected value
+// in extended linear sRGB; the oriented fixtures give unrotated coordinates,
+// so they aren't sampled
 const EXPECTATIONS = {
   'srgb-ramp.png': require('../../assets/color/srgb-ramp.png.json'),
   'untagged.png': require('../../assets/color/untagged.png.json'),
