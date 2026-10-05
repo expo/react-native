@@ -22,6 +22,7 @@ exports.examples = [
   {
     title: 'New Architecture Renderer',
     description: 'Click to change background and opacity',
+    scrollable: true,
     render(): React.MixedElement {
       return (
         <>

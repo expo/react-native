@@ -49,7 +49,7 @@ function getSampleLegacyModule() {
   return module;
 }
 
-function stringify(obj: unknown): string {
+function stringify(obj: unknown, indent?: number): string {
   function replacer(_: string, value: unknown) {
     if (value instanceof Object && !(value instanceof Array)) {
       /* $FlowFixMe[constant-condition] Error discovered during Constant
@@ -68,7 +68,7 @@ function stringify(obj: unknown): string {
   }
 
   // Change this to don't use replaceAll
-  return (JSON.stringify(obj, replacer) || '').replace(/"/g, "'");
+  return (JSON.stringify(obj, replacer, indent) || '').replace(/"/g, "'");
 }
 
 class SampleLegacyModuleExample extends React.Component<{}, State> {
@@ -201,9 +201,14 @@ class SampleLegacyModuleExample extends React.Component<{}, State> {
   _renderResult(name: string): React.Node {
     const result = this.state.testResults[name] || {};
     return (
-      <View style={styles.result}>
-        <RNTesterText testID={name + '-result'} style={[styles.value]}>
-          {stringify(result.value)}
+      <View
+        accessible={true}
+        accessibilityLabel={stringify(result.value)}
+        accessibilityHint={result.type}
+        testID={name + '-result'}
+        style={styles.result}>
+        <RNTesterText style={[styles.value]}>
+          {stringify(result.value, 2)}
         </RNTesterText>
         <RNTesterText style={[styles.type]}>{result.type}</RNTesterText>
       </View>
