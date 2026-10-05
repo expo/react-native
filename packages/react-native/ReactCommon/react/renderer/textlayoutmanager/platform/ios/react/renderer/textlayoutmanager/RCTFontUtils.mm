@@ -389,6 +389,8 @@ UIFont *RCTFontWithFontProperties(RCTFontProperties fontProperties)
 {
   RCTFontProperties defaultFontProperties = RCTDefaultFontProperties();
   fontProperties = RCTResolveFontProperties(fontProperties, defaultFontProperties);
+  // A `font-family` list, or a generic family, as CSS writes it; see RCTFont.h
+  fontProperties.family = [RCTFont firstAvailableFontFamily:fontProperties.family];
 
   assert(!isnan(fontProperties.sizeMultiplier));
   CGFloat effectiveFontSize = fontProperties.sizeMultiplier * fontProperties.size;

@@ -147,7 +147,7 @@ closes all four. Worth counting as one piece of work rather than four.
 **`no-quirks-mode`** — no `quirks.css` equivalent, there being no quirks mode
 to be compatible with. Listed so its absence reads as deliberate.
 
-
+**`physical-edge-does-not-claim-flow-relative`** — an author's `paddingLeft`
 does not cancel the sheet's `paddingInlineStart`, though a browser's would in
 a left-to-right box.
 
@@ -250,19 +250,30 @@ rather than going quiet.
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
+- `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `checkable-line-centering` — deviation, `packages/expo-intrinsics/__tests__/CheckableLineCentering-itest.js`
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
 - `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `container-query-is-a-media-query` — deviation, `packages/rn-tester/js/astryx/css/__tests__/parse-test.js`
 - `display-on-inline-text-elements` — limitation, `packages/rn-tester/js/astryx/radix/toggles.js`
+- `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
+- `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
+- `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
+- `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
 - `no-font-on-a-control` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPElementTextAreaComponentView.mm`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
-- `no-link-state` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
-- `no-native-form-widgets` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
+- `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
+- `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
 - `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `press-dim-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
 - `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`
 - `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
 - `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
