@@ -1,0 +1,48 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow strict
+ */
+
+export type RGBColorSpaceValue = {
+  readonly space: string,
+  readonly r: number,
+  readonly g: number,
+  readonly b: number,
+  readonly alpha: number,
+};
+
+export type LabColorSpaceValue = {
+  readonly space: 'lab' | 'oklab',
+  readonly l: number,
+  readonly a: number,
+  readonly b: number,
+  readonly alpha: number,
+};
+
+export type LchColorSpaceValue = {
+  readonly space: 'lch' | 'oklch',
+  readonly l: number,
+  readonly c: number,
+  readonly h: number,
+  readonly alpha: number,
+};
+
+export type XYZColorSpaceValue = {
+  readonly space: 'xyz-d50' | 'xyz-d65',
+  readonly x: number,
+  readonly y: number,
+  readonly z: number,
+  readonly alpha: number,
+};
+
+export type ColorSpaceValue =
+  | RGBColorSpaceValue
+  | LabColorSpaceValue
+  | LchColorSpaceValue
+  | XYZColorSpaceValue;
+
+declare module.exports: (color: ?(string | number)) => null | ColorSpaceValue;
