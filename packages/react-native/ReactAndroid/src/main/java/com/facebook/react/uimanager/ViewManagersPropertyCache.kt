@@ -17,6 +17,7 @@ import com.facebook.react.bridge.DynamicFromObject
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.facebook.react.uimanager.annotations.ReactPropGroup
 import com.facebook.yoga.YogaValue
@@ -318,6 +319,26 @@ internal object ViewManagersPropertyCache {
     }
   }
 
+  // A color as a color long; an integer color becomes the sRGB color long it equals
+  private class ColorLongPropSetter : PropSetter {
+
+    constructor(prop: ReactProp, setter: Method) : super(prop, "mixed", setter)
+
+    constructor(
+        prop: ReactPropGroup,
+        setter: Method,
+        index: Int,
+    ) : super(prop, "mixed", setter, index)
+
+    override fun getValueOrDefault(value: Any?, context: Context): Any? =
+        if (ReactNativeFeatureFlags.enableColorSpaces()) {
+          ColorPropConverter.getColorLong(value, context)
+        } else {
+          // Exactly what the integer setter got, including its exception for an invalid color
+          value?.let { ColorPropConverter.getColor(it, context)?.toLong()?.shl(32) }
+        }
+  }
+
   @JvmStatic
   internal fun getNativePropsForView(
       viewManagerTopClass: Class<out ViewManager<*, *>>,
@@ -422,6 +443,14 @@ internal object ViewManagersPropertyCache {
             } else {
               BoxedIntPropSetter(annotation, method)
             }
+        Long::class.javaObjectType ->
+            if ("Color" == annotation.customType) {
+              ColorLongPropSetter(annotation, method)
+            } else {
+              throw RuntimeException(
+                  "A Long prop must be a color (customType = \"Color\"): ${method.declaringClass.name}#${method.name}",
+              )
+            }
         ReadableArray::class.java -> ArrayPropSetter(annotation, method)
         ReadableMap::class.java -> MapPropSetter(annotation, method)
         YogaValue::class.java -> DimensionPropSetter(annotation, method)
@@ -468,6 +497,15 @@ internal object ViewManagersPropertyCache {
                 } else {
                   BoxedIntPropSetter(annotation, method, i)
                 }
+          }
+      Long::class.javaObjectType ->
+          for (i in names.indices) {
+            if ("Color" != annotation.customType) {
+              throw RuntimeException(
+                  "A Long prop must be a color (customType = \"Color\"): ${method.declaringClass.name}#${method.name}",
+              )
+            }
+            props[names[i]] = ColorLongPropSetter(annotation, method, i)
           }
       else ->
           throw RuntimeException(

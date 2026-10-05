@@ -8,11 +8,14 @@
 package com.facebook.react.uimanager.style
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.LinearGradient as AndroidLinearGradient
 import android.graphics.Shader
+import android.os.Build
 import com.facebook.react.bridge.ColorPropConverter
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.uimanager.LengthPercentage
 import kotlin.math.atan
 import kotlin.math.sqrt
@@ -71,13 +74,24 @@ internal class LinearGradient(val direction: Direction, val colorStops: List<Col
                         }
                         else -> colorStop.getInt("color")
                       }
+                  val colorLong: Long? =
+                      if (
+                          color != null &&
+                              colorStop.getType("color") == ReadableType.Map &&
+                              ReactNativeFeatureFlags.enableColorSpaces()
+                      ) {
+                        ColorPropConverter.getColorLong(colorStop.getMap("color"), context)
+                            ?.takeUnless { ColorPropConverter.isIntegerColor(it) }
+                      } else {
+                        null
+                      }
                   val colorStopPosition =
                       if (colorStop.hasKey("position") && !colorStop.isNull("position")) {
                         LengthPercentage.setFromDynamic(colorStop.getDynamic("position"))
                       } else {
                         null
                       }
-                  stops.add(ColorStop(color, colorStopPosition))
+                  stops.add(ColorStop(color, colorStopPosition, colorLong))
                 }
                 stops
               }
@@ -152,6 +166,18 @@ internal class LinearGradient(val direction: Direction, val colorStops: List<Col
         colors[i] = color
         positions[i] = colorStop.position
       }
+    }
+    val colorLongs = ColorStopUtils.colorLongsOrNull(finalStops)
+    if (colorLongs != null) {
+      return AndroidLinearGradient(
+          startPoint[0],
+          startPoint[1],
+          endPoint[0],
+          endPoint[1],
+          colorLongs,
+          positions,
+          Shader.TileMode.CLAMP,
+      )
     }
     return AndroidLinearGradient(
         startPoint[0],

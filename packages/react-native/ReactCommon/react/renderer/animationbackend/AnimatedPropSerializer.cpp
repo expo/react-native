@@ -7,6 +7,7 @@
 
 #include <react/renderer/graphics/Transform.h>
 #include <react/renderer/graphics/TransformUtils.h>
+#include <array>
 #include <stdexcept>
 #include "AnimatedPropsSerializer.h"
 
@@ -91,18 +92,51 @@ void packTransformOrigin(
   dyn.insert("transformOrigin", originArray);
 }
 
+// The integer, or where the host keeps the color in its space (Android) the
+// object `processColor` passed
+folly::dynamic colorToDynamic(const SharedColor& color) {
+  auto value = colorSpaceValueOf(color);
+  if (!value.has_value()) {
+    return static_cast<int32_t>(*color);
+  }
+  const auto* description = describeColorSpace(value->space);
+  if (description == nullptr) {
+    return static_cast<int32_t>(*color);
+  }
+  std::array<const char*, 3> names{"r", "g", "b"};
+  switch (description->model) {
+    case ColorModel::Lab:
+      names = {"l", "a", "b"};
+      break;
+    case ColorModel::LCH:
+      names = {"l", "c", "h"};
+      break;
+    case ColorModel::XYZ:
+      names = {"x", "y", "z"};
+      break;
+    case ColorModel::RGB:
+      break;
+  }
+  folly::dynamic object = folly::dynamic::object(
+      "space", std::string(description->name))("alpha", value->alpha);
+  for (size_t index = 0; index < names.size(); index++) {
+    object[names[index]] = value->channels[index];
+  }
+  return object;
+}
+
 void packBackgroundColor(
     folly::dynamic& dyn,
     const AnimatedPropBase& animatedProp) {
   const auto& backgroundColor = get<SharedColor>(animatedProp);
-  dyn.insert("backgroundColor", static_cast<int32_t>(*backgroundColor));
+  dyn.insert("backgroundColor", colorToDynamic(backgroundColor));
 }
 
 void packShadowColor(
     folly::dynamic& dyn,
     const AnimatedPropBase& animatedProp) {
   const auto& shadowColor = get<SharedColor>(animatedProp);
-  dyn.insert("shadowColor", static_cast<int32_t>(*shadowColor));
+  dyn.insert("shadowColor", colorToDynamic(shadowColor));
 }
 
 void packShadowOffset(
@@ -132,7 +166,7 @@ void packBorderColorEdge(
     const std::string& propName,
     const std::optional<SharedColor>& colorValue) {
   if (colorValue.has_value() && colorValue.value()) {
-    dyn.insert(propName, static_cast<int32_t>(*colorValue.value()));
+    dyn.insert(propName, colorToDynamic(colorValue.value()));
   }
 }
 
@@ -149,7 +183,7 @@ void packBorderColor(
   packBorderColorEdge(dyn, "borderEndColor", borderColors.end);
 
   if (borderColors.all.has_value() && borderColors.all.value()) {
-    dyn.insert("borderColor", static_cast<int32_t>(*borderColors.all.value()));
+    dyn.insert("borderColor", colorToDynamic(borderColors.all.value()));
   }
 }
 
@@ -179,7 +213,7 @@ void packOutlineColor(
     folly::dynamic& dyn,
     const AnimatedPropBase& animatedProp) {
   const auto& outlineColor = get<SharedColor>(animatedProp);
-  dyn.insert("outlineColor", static_cast<int32_t>(*outlineColor));
+  dyn.insert("outlineColor", colorToDynamic(outlineColor));
 }
 
 void packOutlineOffset(
@@ -469,7 +503,7 @@ void packBoxShadow(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
     shadowObj["spreadDistance"] = shadow.spreadDistance;
     shadowObj["inset"] = shadow.inset;
     if (shadow.color) {
-      shadowObj["color"] = static_cast<int32_t>(*shadow.color);
+      shadowObj["color"] = colorToDynamic(shadow.color);
     }
     shadowArray.push_back(shadowObj);
   }

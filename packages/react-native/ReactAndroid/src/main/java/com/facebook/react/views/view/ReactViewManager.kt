@@ -15,6 +15,8 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.view.View
 import com.facebook.common.logging.FLog
+import androidx.annotation.ColorLong
+import com.facebook.react.bridge.ColorPropConverter
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.DynamicFromObject
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException
@@ -411,6 +413,23 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
           ],
       customType = "Color",
   )
+  public fun setBorderColorLong(view: ReactViewGroup, index: Int, @ColorLong color: Long?) {
+    if (color == null || ColorPropConverter.isIntegerColor(color)) {
+      // An sRGB color long holds its ARGB integer in the high 32 bits
+      setBorderColor(view, index, color?.let { (it ushr 32).toInt() })
+    } else {
+      BackgroundStyleApplicator.setBorderColorLong(
+          view,
+          LogicalEdge.fromSpacingType(SPACING_TYPES[index]),
+          color,
+      )
+    }
+  }
+
+  /**
+   * An sRGB border color still goes through here, so a manager that overrides it sees every color
+   * an integer holds
+   */
   public open fun setBorderColor(view: ReactViewGroup, index: Int, color: Int?) {
     BackgroundStyleApplicator.setBorderColor(
         view,
