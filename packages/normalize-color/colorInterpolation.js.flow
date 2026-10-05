@@ -1,0 +1,43 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow strict
+ */
+
+import type {ColorSpaceValue, RGBColorSpaceValue} from './colorSpaces';
+
+export type InterpolationMethod = {
+  readonly space: string,
+  readonly hue: 'shorter' | 'longer' | 'increasing' | 'decreasing' | string,
+};
+
+/**
+ * A color in its own space as the 8-bit sRGB integer nearest it; an integer
+ * as it is; null for a space CSS doesn't define.
+ */
+declare export function approximateSRGB(
+  color: number | ColorSpaceValue | null | void,
+): number | null;
+
+declare export function parseInterpolationMethod(
+  words: ReadonlyArray<string>,
+):
+  | null
+  | {readonly error: true}
+  | {
+      readonly error?: void,
+      readonly method: InterpolationMethod,
+      readonly rest: Array<string>,
+    };
+
+declare export function interpolateColor(
+  from: unknown,
+  to: unknown,
+  progress: number,
+  method: InterpolationMethod,
+): null | RGBColorSpaceValue;
+
+export type {ColorSpaceValue};
