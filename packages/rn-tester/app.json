@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "RNTester",
+    "slug": "rntester",
+    "owner": "ide",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "ios": {
+      "bundleIdentifier": "dev.expo.rntester",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "dev.expo.rntester"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "69676d4b-c391-477c-9b33-e4d56b5e33af"
+      }
+    }
+  }
+}

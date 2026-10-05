@@ -8,6 +8,10 @@
  * @format
  */
 
+// eslint resolves at runtime but not for Flow: this config runs in haste mode,
+// which does not index `node_modules`. Both codes are needed — one for the
+// resolution, one for the untyped module behind it.
+// $FlowFixMe[cannot-resolve-module]
 // $FlowFixMe[untyped-import] - Flow lib is not configured.
 import {ESLint} from 'eslint';
 import path from 'node:path';

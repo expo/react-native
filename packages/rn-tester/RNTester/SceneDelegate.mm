@@ -31,11 +31,61 @@
 #import <React/RCTDevMenu.h>
 #endif
 
+// Expo modules, for the DOM element catalog's SDK-backed elements (<img> is
+// expo-image). The tester bootstraps the module runtime itself in
+// host:didInitializeRuntime: below — the lines Expo's own ExpoReactNativeFactory
+// would run — so it needs none of Expo's AppDelegate machinery.
+#if __has_include("ExpoModulesCore-Swift.h") || __has_include(<ExpoModulesCore/ExpoModulesCore-Swift.h>)
+#define RNTESTER_USE_EXPO_MODULES 1
+#import <ExpoModulesCore/EXHostWrapper.h>
+#import <ExpoModulesCore/EXAppDefines.h>
+#import <ExpoModulesCore/EXReactSchedulerDispatch.h>
+#import <react/renderer/runtimescheduler/RuntimeSchedulerBinding.h>
+#if __has_include(<ExpoModulesCore/ExpoModulesCore-Swift.h>)
+#import <ExpoModulesCore/ExpoModulesCore-Swift.h>
+#else
+#import "ExpoModulesCore-Swift.h"
+#endif
+#else
+#define RNTESTER_USE_EXPO_MODULES 0
+#warning "RNTester: ExpoModulesCore headers not found — expo-backed elements will use fallbacks"
+#endif
+
 #import <RNTesterFeatureFlags/RNTesterFeatureFlags.h>
 
 #import <memory>
 
 static NSString *const kBundlePath = @"js/RNTesterApp.ios";
+
+#if RNTESTER_USE_EXPO_MODULES
+// Expo's EXAppDefinesLoader, which is in the `expo` pod this app leaves out: the
+// build's defines, loaded when the binary loads, before an Expo module reads them.
+// An Expo SwiftUI view reads APP_RCT_DEV when it is created.
+@interface RNTesterExpoAppDefinesLoader : NSObject
+@end
+
+@implementation RNTesterExpoAppDefinesLoader
+
++ (void)load
+{
+  [EXAppDefines load:@{
+#if DEBUG
+    @"APP_DEBUG" : @(YES),
+#else
+    @"APP_DEBUG" : @(NO),
+#endif
+    @"APP_RCT_DEBUG" : @(RCT_DEBUG),
+    @"APP_RCT_DEV" : @(RCT_DEV),
+#if RCT_NEW_ARCH_ENABLED
+    @"APP_NEW_ARCH_ENABLED" : @(YES),
+#else
+    @"APP_NEW_ARCH_ENABLED" : @(NO),
+#endif
+  }];
+}
+
+@end
+#endif
 
 @implementation SceneDelegate
 
@@ -147,6 +197,29 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
   return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
 #endif
 }
+
+#if RNTESTER_USE_EXPO_MODULES
+// [JS thread] Forwarded by RCTReactNativeFactory from the RCTHost. Creates the
+// Expo AppContext, injects `global.expo`, and registers the modules the
+// generated ExpoModulesProvider lists — after this, an element whose view
+// config names an Expo view (the catalog's <img> → expo-image) resolves like
+// any other component.
+- (void)host:(RCTHost *)host didInitializeRuntime:(facebook::jsi::Runtime &)runtime
+{
+  static EXAppContext *appContext;
+  appContext = [EXAppContext new];
+  // Expo modules dispatch onto the JS thread through React's runtime scheduler,
+  // which the handle references weakly, so a task sent after a reload is dropped.
+  auto binding = facebook::react::RuntimeSchedulerBinding::getBinding(runtime);
+  auto scheduler = binding ? binding->getRuntimeScheduler() : nullptr;
+  void *schedulerHandle = expo::createReactSchedulerHandle(scheduler);
+  [appContext setRuntime:&runtime
+               scheduler:schedulerHandle
+                dispatch:schedulerHandle ? reinterpret_cast<const void *>(&expo::dispatchOnReactScheduler) : nullptr];
+  [appContext setHostWrapper:[[EXHostWrapper alloc] initWithHost:host]];
+  [appContext registerNativeModules];
+}
+#endif
 
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const std::string &)name
                                                       jsInvoker:(std::shared_ptr<facebook::react::CallInvoker>)jsInvoker
