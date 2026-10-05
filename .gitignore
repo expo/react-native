@@ -111,6 +111,10 @@ package-lock.json
 .ruby-version
 /**/.ruby-version
 vendor/
+# ...except the vendored Astryx slice, which the rn-tester demo imports
+# directly. Without this the demo cannot build from a fresh clone: the code
+# references files no checkout would produce.
+!packages/rn-tester/js/astryx/vendor/
 
 # iOS / CocoaPods
 /private/helloworld/ios/build/
