@@ -29,6 +29,33 @@ static BOOL CGColorsAreEqual(CGColorRef color1, CGColorRef color2)
 
 @implementation RCTConvert_NSColorTests
 
+/*
+ * The semantic colours the user-agent stylesheet ships.
+ *
+ * The DOM elements theme by naming a platform colour rather than stating a
+ * value, so an element follows light and dark without being asked. Kept in step
+ * with the names `expo-intrinsics/src/uaStyles.js` uses. That side asserts the
+ * stylesheet hands these exact names down (`ThemedDefaults-itest`); this side
+ * asserts UIKit accepts them.
+ *
+ * Neither half is sufficient alone: a stylesheet test would pass on a name
+ * UIKit rejects, and this test would not notice the stylesheet asking for a
+ * different one. A rejected name is not a crash: it resolves to nil and the
+ * text draws with no colour at all.
+ */
+- (void)testUserAgentStylesheetSemanticColorsResolve
+{
+  for (NSString *name in @[ @"labelColor" ]) {
+    id json = RCTJSONParse([NSString stringWithFormat:@"{ \"semantic\": \"%@\" }", name], nil);
+    UIColor *value = [RCTConvert UIColor:json];
+    XCTAssertNotNil(value, @"%@ resolved to nil", name);
+  }
+  // Named explicitly as well as in the loop, so the expectation is a value
+  // rather than merely "something".
+  id labelJson = RCTJSONParse(@"{ \"semantic\": \"labelColor\" }", nil);
+  XCTAssertEqualObjects([RCTConvert UIColor:labelJson], [UIColor labelColor]);
+}
+
 - (void)testColor
 {
   id json = RCTJSONParse(@"{ \"semantic\": \"lightTextColor\" }", nil);
@@ -131,6 +158,15 @@ static NSArray<NSNumber *> *UIColorAsNSUInt(UIColor *color)
 
 - (void)testGenerateFallbacks
 {
+  // Pinned to light before the first colour is read: every value below is a
+  // dynamic colour that resolves against the current trait collection
+  id savedTraitCollection = [UITraitCollection currentTraitCollection];
+  [self addTeardownBlock:^{
+    [UITraitCollection setCurrentTraitCollection:savedTraitCollection];
+  }];
+  [UITraitCollection
+      setCurrentTraitCollection:[UITraitCollection traitCollectionWithUserInterfaceStyle:UIUserInterfaceStyleLight]];
+
   NSDictionary<NSString *, NSArray<NSNumber *> *> *semanticColors = @{
     // https://developer.apple.com/documentation/uikit/uicolor/ui_element_colors
     // Label Colors
@@ -172,13 +208,6 @@ static NSArray<NSNumber *> *UIColorAsNSUInt(UIColor *color)
     @"clearColor" : UIColorAsNSUInt(UIColor.clearColor),
   };
 
-  id savedTraitCollection = nil;
-
-  savedTraitCollection = [UITraitCollection currentTraitCollection];
-
-  [UITraitCollection
-      setCurrentTraitCollection:[UITraitCollection traitCollectionWithUserInterfaceStyle:UIUserInterfaceStyleLight]];
-
   for (NSString *semanticColor in semanticColors) {
     id json = RCTJSONParse([NSString stringWithFormat:@"{ \"semantic\": \"%@\" }", semanticColor], nil);
     UIColor *value = [RCTConvert UIColor:json];
@@ -197,13 +226,13 @@ static NSArray<NSNumber *> *UIColorAsNSUInt(UIColor *color)
     NSUInteger blue2 = rgba[2] * 255;
     NSUInteger alpha2 = rgba[3] * 255;
 
-    XCTAssertEqual(red1, red2);
-    XCTAssertEqual(green1, green2);
-    XCTAssertEqual(blue1, blue2);
-    XCTAssertEqual(alpha1, alpha2);
+    // Named, so a failure says WHICH colour and which channel rather than just
+    // that two numbers differ.
+    XCTAssertEqual(red1, red2, @"%@ red (light appearance)", semanticColor);
+    XCTAssertEqual(green1, green2, @"%@ green (light appearance)", semanticColor);
+    XCTAssertEqual(blue1, blue2, @"%@ blue (light appearance)", semanticColor);
+    XCTAssertEqual(alpha1, alpha2, @"%@ alpha (light appearance)", semanticColor);
   }
-
-  [UITraitCollection setCurrentTraitCollection:savedTraitCollection];
 }
 
 @end
