@@ -11,6 +11,7 @@
 import type {ProcessedColorValue} from './processColor';
 import type {NativeColorValue} from './StyleSheet';
 
+import * as ReactNativeFeatureFlags from '../../src/private/featureflags/ReactNativeFeatureFlags';
 import parsePlatformColorArgs from './parsePlatformColorArgs';
 
 /** The actual type of the opaque NativeColorValue on Android platform */
@@ -40,6 +41,15 @@ export const normalizeColorObject = (
   /* $FlowExpectedError[incompatible-type]
    * LocalNativeColorValue is the actual type of the opaque NativeColorValue on Android platform */
   if ('resource_paths' in (color as LocalNativeColorValue)) {
+    return color;
+  }
+  // A color in its own color space
+  if (
+    /* $FlowExpectedError[incompatible-type]
+     * LocalNativeColorValue is the actual type of the opaque NativeColorValue on Android platform */
+    'space' in (color as {...}) &&
+    ReactNativeFeatureFlags.enableColorSpaces()
+  ) {
     return color;
   }
   return null;
