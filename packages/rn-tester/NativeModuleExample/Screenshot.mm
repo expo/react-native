@@ -82,4 +82,68 @@ RCT_EXPORT_METHOD(
   }];
 }
 
+/**
+ * Reads the key window's pixels at `points` (`[x, y]` in window points) as
+ * premultiplied extended linear sRGB floats, which a PNG screenshot, 8-bit
+ * sRGB, can't: a Display P3 red reads about 1.22, -0.04, -0.02.
+ */
+RCT_EXPORT_METHOD(
+    sample : (NSArray *)points resolve : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)reject)
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    UIWindow *window = RCTKeyWindow();
+    if (window == nil) {
+      reject(RCTErrorUnspecified, @"There is no key window to sample.", nil);
+      return;
+    }
+    CGFloat scale = window.traitCollection.displayScale;
+    size_t width = (size_t)ceil(window.bounds.size.width * scale);
+    size_t height = (size_t)ceil(window.bounds.size.height * scale);
+    CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearSRGB);
+    CGContextRef context = CGBitmapContextCreate(
+        nullptr,
+        width,
+        height,
+        32,
+        width * 16,
+        space,
+        (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapFloatComponents | kCGBitmapByteOrder32Host);
+    CGColorSpaceRelease(space);
+    if (context == nullptr) {
+      reject(RCTErrorUnspecified, @"Could not create an extended-range context to sample into.", nil);
+      return;
+    }
+    // UIKit's origin is top-left; `renderInContext:` color-matches into the
+    // context's space
+    CGContextTranslateCTM(context, 0, height);
+    CGContextScaleCTM(context, scale, -scale);
+    [window.layer renderInContext:context];
+
+    const float *pixels = (const float *)CGBitmapContextGetData(context);
+    NSMutableArray *values = [NSMutableArray arrayWithCapacity:points.count];
+    for (id item in points) {
+      // The module's argument conversion empties an `NSArray<NSArray<NSNumber *> *>`
+      NSArray *point = [item isKindOfClass:[NSArray class]] ? item : nil;
+      long x = point.count < 2 ? -1 : lround([point[0] doubleValue] * scale);
+      long y = point.count < 2 ? -1 : lround([point[1] doubleValue] * scale);
+      if (x < 0 || y < 0 || x >= (long)width || y >= (long)height) {
+        [values addObject:[NSNull null]];
+        continue;
+      }
+      const float *pixel = pixels + ((size_t)y * width + (size_t)x) * 4;
+      [values addObject:@[ @(pixel[0]), @(pixel[1]), @(pixel[2]), @(pixel[3]) ]];
+    }
+    CGContextRelease(context);
+    resolve(@{
+      @"space" : @"srgb-linear",
+      @"values" : values,
+      @"window" : @{
+        @"width" : @(window.bounds.size.width),
+        @"height" : @(window.bounds.size.height),
+        @"scale" : @(scale),
+      },
+    });
+  });
+}
+
 @end

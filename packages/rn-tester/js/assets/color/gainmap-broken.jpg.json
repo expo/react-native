@@ -1,0 +1,12 @@
+{
+  "bitsPerComponent" : 8,
+  "class" : "wide",
+  "file" : "gainmap-broken.jpg",
+  "id" : "F18",
+  "note" : "the gain map image is cut off while the metadata still names it: shows the SDR base, never fails",
+  "patches" : [
+
+  ],
+  "space" : "display-p3",
+  "variant" : "own8"
+}
