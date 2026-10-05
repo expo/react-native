@@ -35,6 +35,11 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'UI',
   },
   {
+    key: 'ColorSpacesExample',
+    module: require('../examples/ColorGallery/ColorSpacesExample').default,
+    category: 'UI',
+  },
+  {
     key: 'AstryxExample',
     module: require('../examples/Astryx/AstryxExample').default,
     category: 'UI',
