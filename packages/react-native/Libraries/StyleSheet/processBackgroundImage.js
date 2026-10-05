@@ -17,8 +17,16 @@ import type {
   RadialGradientShape,
   RadialGradientSize,
 } from './StyleSheetTypes';
+import type {InterpolationMethod} from '@react-native/normalize-colors/colorInterpolation';
+import type {RGBColorSpaceValue} from '@react-native/normalize-colors/colorSpaces';
+
+import * as ReactNativeFeatureFlags from '../../src/private/featureflags/ReactNativeFeatureFlags';
 
 const processColor = require('./processColor').default;
+const {
+  interpolateColor,
+  parseInterpolationMethod,
+} = require('@react-native/normalize-colors/colorInterpolation');
 
 // Pre-compiled regex patterns for performance - avoids regex compilation on each call
 const NEWLINE_REGEX = /\n/g;
@@ -265,18 +273,197 @@ function parseBackgroundImageCSSString(
     const bgImage = bgImageString.toLowerCase();
     const match = GRADIENT_REGEX.exec(bgImage);
     if (match) {
-      const [, type, gradientContent] = match;
+      const [, type, rawContent] = match;
+      const interpolation = extractInterpolationMethod(rawContent);
+      if (interpolation == null) {
+        // An invalid interpolation method invalidates the gradient. Same as web.
+        continue;
+      }
+      const gradientContent = interpolation.content;
       const isRadial = type.toLowerCase() === 'radial';
       const gradient = isRadial
         ? parseRadialGradientCSSString(gradientContent)
         : parseLinearGradientCSSString(gradientContent);
 
       if (gradient != null) {
-        gradients.push(gradient);
+        const colorStops = expandColorStops(
+          gradient.colorStops,
+          interpolation.method,
+        );
+        if (colorStops != null) {
+          // $FlowFixMe[incompatible-type] the gradient keeps its own type
+          gradients.push({...gradient, colorStops});
+        }
       }
     }
   }
   return gradients;
+}
+
+// Takes the `<color-interpolation-method>` out of a gradient's first argument
+// (CSS Images 4); null overall when the method is invalid
+function extractInterpolationMethod(content: string): ?{
+  content: string,
+  method: ?InterpolationMethod,
+} {
+  if (!ReactNativeFeatureFlags.enableColorSpaces()) {
+    return {content, method: null};
+  }
+  const parts = splitGradients(content);
+  if (parts.length === 0) {
+    return {content, method: null};
+  }
+  const words = parts[0].trim().split(WHITESPACE_SPLIT_REGEX);
+  const parsed = parseInterpolationMethod(words);
+  if (parsed == null) {
+    return {content, method: null};
+  }
+  if (parsed.error === true) {
+    return null;
+  }
+  const rest = parsed.rest.join(' ');
+  const remaining = rest === '' ? parts.slice(1) : [rest, ...parts.slice(1)];
+  return {content: remaining.join(', '), method: parsed.method};
+}
+
+// Stops drawn per stretch between two authored stops
+const INTERPOLATED_STOPS_PER_STRETCH = 16;
+
+/*
+ * Expands each stretch between two stops into stops computed in the
+ * gradient's interpolation space, which the platform shaders don't
+ * interpolate in. Without a method the space is Oklab when any stop is in
+ * its own space (CSS Color 4 §12.1), else the platform's sRGB.
+ */
+function expandColorStops(
+  colorStops: ReadonlyArray<{
+    color: ColorStopColor,
+    position: ColorStopPosition,
+  }>,
+  method: ?InterpolationMethod,
+): ?ReadonlyArray<{color: ColorStopColor, position: ColorStopPosition}> {
+  if (!ReactNativeFeatureFlags.enableColorSpaces()) {
+    return colorStops;
+  }
+  const hasColorSpaceStop = colorStops.some(
+    stop => stop.color != null && typeof stop.color === 'object',
+  );
+  const interpolation =
+    method ?? (hasColorSpaceStop ? {space: 'oklab', hue: 'shorter'} : null);
+  if (interpolation == null || colorStops.length < 2) {
+    return colorStops;
+  }
+  // New stops are placed between percentages only
+  // DOM-CSS-LIMITATION(gradient-interpolation-needs-percent-stops)
+  const positions = resolvePercentPositions(colorStops);
+  if (positions == null) {
+    return colorStops;
+  }
+  const colors = colorStops.map(stop => toInterpolatable(stop.color));
+  const expanded: Array<{color: ColorStopColor, position: ColorStopPosition}> =
+    [];
+  for (let i = 0; i < colorStops.length; i++) {
+    expanded.push({color: colorStops[i].color, position: `${positions[i]}%`});
+    if (i === colorStops.length - 1 || positions[i + 1] === positions[i]) {
+      continue;
+    }
+    for (let step = 1; step < INTERPOLATED_STOPS_PER_STRETCH; step++) {
+      const progress = step / INTERPOLATED_STOPS_PER_STRETCH;
+      const color = interpolateColor(
+        colors[i],
+        colors[i + 1],
+        progress,
+        interpolation,
+      );
+      if (color == null) {
+        // A stop CSS can't interpolate (a dashed space): the platform draws it
+        return colorStops;
+      }
+      expanded.push({
+        // $FlowFixMe[incompatible-type] a color space object on the wire
+        color: rounded(color),
+        position: `${positions[i] + (positions[i + 1] - positions[i]) * progress}%`,
+      });
+    }
+  }
+  return expanded;
+}
+
+// Rounded so a gradient drawn again computes the same colors
+function rounded(color: RGBColorSpaceValue): RGBColorSpaceValue {
+  const round = (value: number) => Math.round(value * 10000) / 10000;
+  return {
+    space: color.space,
+    r: round(color.r),
+    g: round(color.g),
+    b: round(color.b),
+    alpha: round(color.alpha),
+  };
+}
+
+// Every position as a percentage, with CSS Images 3 §3.5.3's fix-up; null
+// for a length position or a transition hint
+function resolvePercentPositions(
+  colorStops: ReadonlyArray<{
+    color: ColorStopColor,
+    position: ColorStopPosition,
+  }>,
+): ?Array<number> {
+  const positions: Array<?number> = [];
+  for (const stop of colorStops) {
+    if (stop.color == null) {
+      return null;
+    }
+    if (stop.position == null) {
+      positions.push(null);
+    } else if (
+      typeof stop.position === 'string' &&
+      stop.position.endsWith('%')
+    ) {
+      positions.push(parseFloat(stop.position));
+    } else {
+      return null;
+    }
+  }
+  if (positions[0] == null) {
+    positions[0] = 0;
+  }
+  if (positions[positions.length - 1] == null) {
+    positions[positions.length - 1] = 100;
+  }
+  let max = positions[0] ?? 0;
+  for (let i = 1; i < positions.length; i++) {
+    const position = positions[i];
+    if (position != null) {
+      max = Math.max(max, position);
+      positions[i] = max;
+    }
+  }
+  for (let i = 1; i < positions.length; i++) {
+    if (positions[i] != null) {
+      continue;
+    }
+    let end = i;
+    while (positions[end] == null) {
+      end++;
+    }
+    const start = positions[i - 1] ?? 0;
+    const stop = positions[end] ?? 100;
+    for (let j = i; j < end; j++) {
+      positions[j] = start + ((stop - start) * (j - i + 1)) / (end - i + 1);
+    }
+  }
+  // Every position is a number now
+  return positions.map(position => position ?? 0);
+}
+
+// Back to `normalizeColor`'s 0xRRGGBBAA, which `processColor` rotated
+function toInterpolatable(color: ColorStopColor): unknown {
+  if (typeof color === 'number') {
+    // eslint-disable-next-line no-bitwise
+    return ((color << 8) | (color >>> 24)) >>> 0;
+  }
+  return color;
 }
 
 function parseRadialGradientCSSString(
