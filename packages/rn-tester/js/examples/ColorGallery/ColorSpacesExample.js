@@ -47,6 +47,99 @@ import {
 
 const LIMITS = ['no-limit', 'constrained', 'standard'];
 
+/*
+ * What this display can show, asked through the web's own APIs: each media
+ * query's answer now, kept current by its change event, and whether a few
+ * colors are supported here. The dashed space is the one answer that differs
+ * by device.
+ */
+const MEDIA_QUERIES = [
+  '(color-gamut: srgb)',
+  '(color-gamut: p3)',
+  '(color-gamut: rec2020)',
+  '(dynamic-range: high)',
+  '(prefers-color-scheme: dark)',
+];
+
+const SUPPORTS = [
+  ['color', 'color(display-p3 1 0 0)'],
+  ['color', 'oklch(0.7 0.25 145)'],
+  ['color', 'color(rec2100-pq 0.5 0.5 0.5)'],
+  ['color', 'color(--dci-p3 1 0 0)'],
+  ['color', 'color(--gray-linear 0.5)'],
+  ['dynamic-range-limit', 'constrained'],
+];
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() =>
+    global.matchMedia != null ? global.matchMedia(query).matches : null,
+  );
+  useEffect(() => {
+    if (global.matchMedia == null) {
+      return;
+    }
+    const list = global.matchMedia(query);
+    const onChange = event => setMatches(event.matches);
+    list.addEventListener('change', onChange);
+    setMatches(list.matches);
+    return () => list.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+
+function MediaQueryRow({query}) {
+  const matches = useMediaQuery(query);
+  return (
+    <>
+      <View>
+        <Text style={styles.rowLabel}>{query}</Text>
+      </View>
+      <View>
+        <Text
+          testID={`media-${query}`}
+          style={[styles.name, {color: matches ? '#34c759' : LABEL_COLOR}]}>
+          {matches == null ? 'no matchMedia' : matches ? 'matches' : 'no'}
+        </Text>
+      </View>
+    </>
+  );
+}
+
+function DisplayTable() {
+  return (
+    <View style={styles.answerRows}>
+      {MEDIA_QUERIES.map(query => (
+        <MediaQueryRow key={query} query={query} />
+      ))}
+      {SUPPORTS.map(([property, value]) => {
+        const supported =
+          global.CSS != null ? global.CSS.supports(property, value) : null;
+        return (
+          <React.Fragment key={`${property} ${value}`}>
+            <View>
+              <Text style={styles.rowLabel}>{`${property}: ${value}`}</Text>
+            </View>
+            <View>
+              <Text
+                testID={`supports-${value}`}
+                style={[
+                  styles.name,
+                  {color: supported ? '#34c759' : LABEL_COLOR},
+                ]}>
+                {supported == null
+                  ? 'no CSS.supports'
+                  : supported
+                    ? 'supported'
+                    : 'no'}
+              </Text>
+            </View>
+          </React.Fragment>
+        );
+      })}
+    </View>
+  );
+}
+
 function parses(color) {
   return processColor(color) != null;
 }
@@ -401,6 +494,12 @@ function Gallery() {
           testIDPrefix="limit"
         />
         <Section
+          title="This display · matchMedia and CSS.supports"
+          legend="What the OS says this screen can show, through the web's own APIs. On a P3 phone the second row matches; on an HDR one the fourth does. The dashed spaces answer per device.">
+          <DisplayTable />
+        </Section>
+
+        <Section
           title="CSS color spaces"
           legend="Each row: red · green · blue · mid · white in that color space (HDR rows: as noted). More saturated than srgb means a wider gamut, visible on a P3 display.">
           <SpaceTable rows={CSS_SPACES} />
@@ -608,10 +707,6 @@ const styles = StyleSheet.create({
   },
   rounded: {
     borderRadius: 12,
-  },
-  mixedBorder: {
-    borderColor: 'color(display-p3 1 0 0)',
-    borderTopColor: 'rgb(0 0 255)',
   },
   labelledRows: {
     display: 'grid',

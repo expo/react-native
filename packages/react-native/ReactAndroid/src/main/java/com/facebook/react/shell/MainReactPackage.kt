@@ -24,6 +24,7 @@ import com.facebook.react.module.model.ReactModuleInfo.Companion.classIsTurboMod
 import com.facebook.react.module.model.ReactModuleInfoProvider
 import com.facebook.react.modules.accessibilityinfo.AccessibilityInfoModule
 import com.facebook.react.modules.appearance.AppearanceModule
+import com.facebook.react.modules.display.DisplayCapabilitiesModule
 import com.facebook.react.modules.appstate.AppStateModule
 import com.facebook.react.modules.blob.BlobModule
 import com.facebook.react.modules.blob.FileReaderModule
@@ -91,6 +92,7 @@ import com.facebook.react.views.virtual.view.ReactVirtualViewManager
             AppStateModule::class,
             BlobModule::class,
             DevLoadingModule::class,
+            DisplayCapabilitiesModule::class,
             FileReaderModule::class,
             ClipboardModule::class,
             DialogModule::class,
@@ -125,6 +127,7 @@ constructor(private val config: MainPackageConfig? = null) :
         AppStateModule.NAME -> AppStateModule(reactContext)
         BlobModule.NAME -> BlobModule(reactContext)
         DevLoadingModule.NAME -> DevLoadingModule(reactContext)
+        DisplayCapabilitiesModule.NAME -> DisplayCapabilitiesModule(reactContext)
         FileReaderModule.NAME -> FileReaderModule(reactContext)
         ClipboardModule.NAME -> ClipboardModule(reactContext)
         DialogModule.NAME -> DialogModule(reactContext)
@@ -333,6 +336,7 @@ constructor(private val config: MainPackageConfig? = null) :
                 AppStateModule::class.java,
                 BlobModule::class.java,
                 DevLoadingModule::class.java,
+                DisplayCapabilitiesModule::class.java,
                 FileReaderModule::class.java,
                 ClipboardModule::class.java,
                 DialogModule::class.java,

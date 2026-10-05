@@ -464,6 +464,12 @@ Color Color::createSemanticColor(std::vector<std::string> &semanticItems)
   return Color(wrapManagedObject(semanticColor));
 }
 
+
+CGColorSpaceRef _Nullable platformColorSpaceFor(ColorSpace space)
+{
+  return CGColorSpaceFor(space);
+}
+
 } // namespace facebook::react
 
 NS_ASSUME_NONNULL_END

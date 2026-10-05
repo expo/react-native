@@ -12,6 +12,7 @@
 #include <react/renderer/graphics/ColorComponents.h>
 #include <react/renderer/graphics/ColorSpaceValue.h>
 #include <react/utils/hash_combine.h>
+#include <CoreGraphics/CGColorSpace.h>
 #include <cmath>
 #include <optional>
 
@@ -77,6 +78,13 @@ struct Color {
   std::size_t uiColorHashValue_;
   static constexpr std::size_t kColorSpaceColorBit = std::size_t{1} << (sizeof(std::size_t) * 8 - 1);
 };
+
+/*
+ * The OS's color space for `space`, asked once per space and kept: null when
+ * this device's OS has no such space. Defined in HostPlatformColor.mm.
+ */
+CGColorSpaceRef _Nullable platformColorSpaceFor(ColorSpace space);
+
 
 namespace HostPlatformColor {
 
