@@ -11,6 +11,7 @@
 #import "NativeExampleViews/UpdatePropertiesExampleView.h"
 
 #import <React/RCTBundleURLProvider.h>
+#import <React/RCTConstants.h>
 #import <React/RCTDefines.h>
 #import <React/RCTLinkingManager.h>
 #import <ReactCommon/RCTSampleTurboModule.h>
@@ -29,7 +30,43 @@
 #import <React/RCTDevMenu.h>
 #endif
 
+#import <react/featureflags/ReactNativeFeatureFlags.h>
+#import <react/featureflags/ReactNativeFeatureFlagsOverridesOSSStable.h>
+
+#import <memory>
+
 static NSString *const kBundlePath = @"js/RNTesterApp.ios";
+
+namespace {
+
+// RNTester runs the native Yoga block formatting context (YGDisplayBlock)
+// instead of the flex emulation, so the demos exercise real block layout:
+// block-child stacking and sizing and CSS2 §8.3.1 margin collapsing. Subclasses
+// the OSS-Stable overrides (what `RCTReactNativeFactory` installs for this app)
+// so the standard stable flags are preserved.
+class RNTesterFeatureFlagsOverrides : public facebook::react::ReactNativeFeatureFlagsOverridesOSSStable {
+ public:
+  bool enableYogaDisplayBlock() override
+  {
+    return true;
+  }
+
+  // The shared C++ animation backend, which drives prop updates from a display
+  // link WITHOUT going through React's JavaScript pipeline. Both flags are
+  // needed: the backend itself, and the C++ Animated implementation that owns
+  // it. Upstream has these default-off with `expectedReleaseValue: true`.
+  bool useSharedAnimatedBackend() override
+  {
+    return true;
+  }
+
+  bool cxxNativeAnimatedEnabled() override
+  {
+    return true;
+  }
+};
+
+} // namespace
 
 @implementation SceneDelegate
 
@@ -56,7 +93,19 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
   self.dependencyProvider = [[RCTAppDependencyProvider alloc] init];
 #endif
 
+  // Enable W3C Pointer Events so DOM-style pointer/click events (and the DOM
+  // event/target APIs) dispatch — required for text children's inline elements
+  // to handle click events like the web (text-children demo).
+  RCTSetDispatchW3CPointerEvents(YES);
+
   self.reactNativeFactory = [[RCTReactNativeFactory alloc] initWithDelegate:self releaseLevel:[self releaseLevel]];
+
+  // The factory just installed the OSS-Stable feature-flag provider (a plain
+  // `override` here — before or after — would throw on double-override), so
+  // replace it via the sanctioned escape hatch with our subclass that also
+  // enables the native Yoga block formatting context for the demo. Runs
+  // before startReactNative below, which is what starts reading flags.
+  facebook::react::ReactNativeFeatureFlags::dangerouslyForceOverride(std::make_unique<RNTesterFeatureFlagsOverrides>());
 
   auto *windowScene = (UIWindowScene *)scene;
   self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
@@ -79,11 +128,6 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
   return RCTReleaseLevel::Stable;
 }
 
-- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts
-{
-  [RCTLinkingManager scene:scene openURLContexts:URLContexts];
-}
-
 - (void)scene:(UIScene *)scene continueUserActivity:(NSUserActivity *)userActivity
 {
   [RCTLinkingManager scene:scene continueUserActivity:userActivity];
@@ -96,7 +140,13 @@ static NSString *const kBundlePath = @"js/RNTesterApp.ios";
 
 - (NSURL *)bundleURL
 {
+#if DEBUG
   return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:kBundlePath];
+#else
+  // Release: load the embedded bundle; RNTester's default always points at
+  // Metro, which does not exist for a release benchmark build.
+  return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
+#endif
 }
 
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const std::string &)name
