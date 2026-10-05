@@ -21,6 +21,18 @@ internal object FabricNameComponentMapping {
           "SelectableParagraph" to "RCTSelectableText",
           "Text" to "RCTText",
           "RawText" to "RCTRawText",
+          // DOM-CSS-LIMITATION(android-img-is-a-plain-view): <img> mounts as a
+          // plain View rather than RCTImageView, which expects a different
+          // `source` shape, so it lays out but draws nothing on Android
+          "element-box" to "RCTView",
+          "img" to "RCTView",
+          // Inline elements draw nothing themselves, but `TextShadowNode` sets
+          // `FormsView` on Android and every inline element is one, so they are
+          // preallocated like a nested <Text> and need a ViewManager; without
+          // this entry preallocation throws "Can't find ViewManager". Every
+          // unregistered tag resolves to this one component, so one entry covers
+          // them all.
+          "inline-text" to "RCTText",
           "ActivityIndicatorView" to "AndroidProgressBar",
           "ShimmeringView" to "RKShimmeringView",
           "TemplateView" to "RCTTemplateView",

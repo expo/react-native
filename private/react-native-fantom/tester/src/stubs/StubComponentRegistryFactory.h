@@ -14,6 +14,7 @@
 #include <react/renderer/components/image/ImageComponentDescriptor.h>
 #include <react/renderer/components/modal/ModalHostViewComponentDescriptor.h>
 #include <react/renderer/components/scrollview/ScrollViewComponentDescriptor.h>
+#include <react/renderer/components/text/DomElementsRegistry.h>
 #include <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/SelectableParagraphComponentDescriptor.h>
 #include <react/renderer/components/text/TextComponentDescriptor.h>
@@ -46,6 +47,7 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory(std::shared_p
           concreteComponentDescriptorProvider<FantomTextInputComponentDescriptor<FantomSinglelineTextInputName>>());
       providerRegistry->add(
           concreteComponentDescriptorProvider<FantomTextInputComponentDescriptor<FantomMultilineTextInputName>>());
+      dom::addAllElementDescriptors(*providerRegistry);
       return providerRegistry;
     }();
     return providerRegistry->createComponentDescriptorRegistry(
