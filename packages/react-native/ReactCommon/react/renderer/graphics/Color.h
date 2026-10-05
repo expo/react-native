@@ -10,9 +10,11 @@
 #include <react/cxxstableapi/UmbrellaGuard.h>
 
 #include <react/renderer/graphics/ColorComponents.h>
+#include <react/renderer/graphics/ColorSpaceValue.h>
 #include <react/renderer/graphics/HostPlatformColor.h>
 
 #include <functional>
+#include <optional>
 #include <string>
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -68,6 +70,18 @@ class SharedColor {
 
 bool isColorMeaningful(const SharedColor &color) noexcept;
 SharedColor colorFromComponents(ColorComponents components);
+/*
+ * A color in its own color space, drawn in the space the platform resolves
+ * for it on this device, or converted by CSS's arithmetic where it has none.
+ * An empty color when the device can't show the space at all.
+ */
+SharedColor colorFromColorSpaceValue(const ColorSpaceValue &value);
+// The same, for a color that exists for one frame, such as a transition's,
+// which a host may keep less of
+SharedColor colorFromTransientColorSpaceValue(const ColorSpaceValue &value);
+// Whether the color was written in its own color space; false on hosts whose
+// colors are 8-bit sRGB
+bool isColorSpaceColor(const SharedColor &color);
 ColorComponents colorComponentsFromColor(SharedColor color);
 
 uint8_t alphaFromColor(SharedColor color) noexcept;
