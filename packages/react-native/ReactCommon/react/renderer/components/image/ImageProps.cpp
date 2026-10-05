@@ -102,6 +102,12 @@ ImageProps::ImageProps(
           rawProps,
           "progressiveRenderingEnabled",
           sourceProps.progressiveRenderingEnabled,
+          {})),
+      dynamicRangeLimit(convertRawProp(
+          context,
+          rawProps,
+          "dynamicRangeLimit",
+          sourceProps.dynamicRangeLimit,
           {})) {}
 
 void ImageProps::setProp(
@@ -131,6 +137,7 @@ void ImageProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(overlayColor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(fadeDuration);
     RAW_SET_PROP_SWITCH_CASE_BASIC(progressiveRenderingEnabled);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(dynamicRangeLimit);
   }
 }
 

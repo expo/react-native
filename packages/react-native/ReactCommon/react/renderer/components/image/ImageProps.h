@@ -44,6 +44,9 @@ class ImageProps final : public ViewProps {
   SharedColor overlayColor{};
   std::optional<Float> fadeDuration{};
   std::optional<bool> progressiveRenderingEnabled{};
+  // The picture's own `dynamic-range-limit`; `ImageShadowNode` publishes the
+  // effective one
+  std::optional<DynamicRangeLimit> dynamicRangeLimit{};
 
 #ifdef RN_SERIALIZABLE_STATE
   ComponentName getDiffPropsImplementationTarget() const override;

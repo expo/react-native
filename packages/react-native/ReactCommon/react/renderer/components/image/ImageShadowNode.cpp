@@ -24,6 +24,56 @@ const char ImageComponentName[] = "Image";
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 const char ImgTagComponentName[] = "img";
 
+ImageShadowNode::ImageShadowNode(
+    const ShadowNodeFragment& fragment,
+    const ShadowNodeFamily::Shared& family,
+    ShadowNodeTraits traits)
+    : ConcreteViewShadowNode(fragment, family, traits) {
+  // With the flag off a picture is an ordinary leaf
+  if (!ReactNativeFeatureFlags::enableColorSpaces()) {
+    traits_.unset(ShadowNodeTraits::Trait::TextCascadeConsumer);
+  }
+}
+
+ImageShadowNode::ImageShadowNode(
+    const ShadowNode& sourceShadowNode,
+    const ShadowNodeFragment& fragment)
+    : ConcreteViewShadowNode(sourceShadowNode, fragment) {
+  // Kept for a clone the configure pass skips (unchanged cascade)
+  inheritedCascade_ =
+      static_cast<const ImageShadowNode&>(sourceShadowNode).inheritedCascade_;
+}
+
+void ImageShadowNode::setInheritedCascade(
+    const std::shared_ptr<const TextAttributes>& cascade) {
+  inheritedCascade_ = cascade;
+  // The configure pass runs on the revision being laid out, before `layout`,
+  // and `layout` is skipped for a node whose own layout didn't change; a
+  // container's new limit has to reach the picture either way. A picture the
+  // pass reaches without cloning (an atomic inline hanging off an anonymous
+  // box) is published, shared with the previous revision, so it keeps the
+  // cascade but publishes nothing until its next revision. Asked of the
+  // node itself rather than its seal, which a release build doesn't keep.
+  // DOM-CSS-LIMITATION(inline-image-limit-waits-for-its-next-revision)
+  if (imageManager_ != nullptr && !isPublished() &&
+      ReactNativeFeatureFlags::enableColorSpaces()) {
+    updateStateIfNeeded();
+  }
+}
+
+DynamicRangeLimit ImageShadowNode::effectiveDynamicRangeLimit() const {
+  const auto& own = getConcreteProps().dynamicRangeLimit;
+  if (own.has_value()) {
+    return *own;
+  }
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      inheritedCascade_ != nullptr &&
+      inheritedCascade_->dynamicRangeLimit.has_value()) {
+    return *inheritedCascade_->dynamicRangeLimit;
+  }
+  return DynamicRangeLimit::NoLimit;
+}
+
 void ImageShadowNode::setImageManager(
     const std::shared_ptr<ImageManager>& imageManager) {
   ensureUnsealed();
@@ -79,8 +129,13 @@ void ImageShadowNode::updateStateIfNeeded() {
 #endif
   );
 
+  const auto dynamicRangeLimit = effectiveDynamicRangeLimit();
   if (oldImageSource == newImageSource &&
       oldImageRequestParams == newImageRequestParams) {
+    // The limit is paint-only, so a change to it alone keeps the request
+    if (savedState.getDynamicRangeLimit() != dynamicRangeLimit) {
+      setStateData(ImageState{savedState, dynamicRangeLimit});
+    }
     return;
   }
 
@@ -108,7 +163,8 @@ void ImageShadowNode::updateStateIfNeeded() {
       newImageSource,
       imageManager_->requestImage(
           newImageSource, getSurfaceId(), newImageRequestParams, getTag()),
-      newImageRequestParams};
+      newImageRequestParams,
+      dynamicRangeLimit};
   setStateData(std::move(state));
 }
 
