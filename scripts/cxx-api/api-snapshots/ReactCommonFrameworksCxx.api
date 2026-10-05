@@ -217,6 +217,7 @@ using facebook::react::TimerManagerDelegate = facebook::react::PlatformTimerRegi
 using facebook::react::Touch = facebook::react::HostPlatformTouch;
 using facebook::react::Touches = std::unordered_set<facebook::react::Touch, facebook::react::Touch::Hasher, facebook::react::Touch::Comparator>;
 using facebook::react::TraceSectionUnwrapped = facebook::react::DummyTraceSection;
+using facebook::react::Transitions = std::vector<facebook::react::Transition>;
 using facebook::react::TurboModuleProviderFunctionTypeWithRuntime = std::function<std::shared_ptr<facebook::react::TurboModule>(facebook::jsi::Runtime& runtime, const std::string& name)>;
 using facebook::react::UiTask = std::function<void()>;
 using facebook::react::ValueFactory = std::function<facebook::jsi::Value(facebook::jsi::Runtime& runtime)>;
@@ -312,6 +313,7 @@ concept facebook::react::TextLayoutManagerWithPreparedTextLayout = requires(
 };
 Float facebook::react::floatFromYogaFloat(float value);
 Float facebook::react::floatFromYogaOptionalFloat(facebook::yoga::FloatOptional value);
+Float facebook::react::parseTransitionTime(const std::string& value);
 YGDirection facebook::react::yogaDirectionFromLayoutDirection(facebook::react::LayoutDirection direction);
 bool facebook::react::areAttributedStringFragmentsEquivalentDisplayWise(const facebook::react::AttributedString::Fragment& lhs, const facebook::react::AttributedString::Fragment& rhs);
 bool facebook::react::areAttributedStringFragmentsEquivalentLayoutWise(const facebook::react::AttributedString::Fragment& lhs, const facebook::react::AttributedString::Fragment& rhs);
@@ -331,6 +333,7 @@ bool facebook::react::selectsText(facebook::react::UserSelect userSelect);
 bool facebook::react::wrapsText(facebook::react::WhiteSpace whiteSpace);
 const char* facebook::react::stringForScriptTag(const facebook::react::ScriptTag& tag);
 const facebook::react::BaseViewProps* facebook::react::viewPropsOf(const facebook::react::ShadowNode& node);
+const facebook::react::Transition* facebook::react::findTransition(const facebook::react::Transitions& transitions, facebook::react::TransitionProperty property);
 constexpr auto facebook::react::to_underlying(auto e) noexcept;
 constexpr bool facebook::react::iequals(std::string_view a, std::string_view b);
 constexpr char facebook::react::toLower(char c);
@@ -362,6 +365,8 @@ facebook::react::SharedColor facebook::react::colorFromRGBA(uint8_t r, uint8_t g
 facebook::react::SharedColor facebook::react::whiteColor();
 facebook::react::Size facebook::react::yogaMeassureToSize(int64_t value);
 facebook::react::SurfaceId facebook::react::getNextRootViewTag() noexcept;
+facebook::react::TransitionTimingFunction facebook::react::parseTransitionTimingFunction(const std::string& value);
+facebook::react::Transitions facebook::react::buildTransitions(const std::string& properties, const std::string& durations, const std::string& delays, const std::string& timingFunctions);
 facebook::react::TurboModuleMethodValueKind facebook::react::getTurboModuleMethodValueKind(facebook::jsi::Runtime& rt, const facebook::jsi::Value* value);
 facebook::react::ValueUnit facebook::react::toValueUnit(const facebook::react::RawValue& value);
 facebook::yoga::FloatOptional facebook::react::convertAspectRatio(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value);
@@ -381,6 +386,7 @@ std::optional<facebook::react::BlendMode> facebook::react::blendModeFromString(s
 std::optional<facebook::react::FilterType> facebook::react::filterTypeFromString(std::string_view filterName);
 std::optional<facebook::react::FontVariant> facebook::react::fontVariantFromCSSFontVariant(facebook::react::CSSFontVariant cssVariant);
 std::optional<facebook::react::Isolation> facebook::react::isolationFromString(std::string_view isolationSetting);
+std::optional<facebook::react::TransitionProperty> facebook::react::parseTransitionProperty(const std::string& value);
 std::string facebook::react::componentNameByReactViewName(std::string viewName);
 std::string facebook::react::listMarkerText(facebook::react::ListStyleType type, int ordinal);
 std::string facebook::react::toString(const double& value);
@@ -420,6 +426,7 @@ std::string facebook::react::toString(facebook::react::AccessibilityLiveRegion a
 std::string facebook::react::toString(facebook::react::PointerEventsMode value);
 std::unordered_map<std::string, std::function<std::shared_ptr<facebook::react::TurboModule>(std::shared_ptr<facebook::react::CallInvoker> jsInvoker)>>& facebook::react::globalExportedCxxTurboModuleMap();
 std::vector<facebook::react::PendingInlineElementMetrics> facebook::react::stampInlineElementMetrics(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString, const std::vector<facebook::react::Rect>& fragmentRects, facebook::react::Point contentOrigin, const facebook::react::LayoutMetrics& ownerLayoutMetrics);
+std::vector<std::string> facebook::react::splitTransitionList(const std::string& value);
 template <CSSKeywordSet KeywordT>
 constexpr std::optional<KeywordT> facebook::react::parseCSSKeyword(std::string_view ident);
 template <CSSMaybeCompoundDataType... AllowedTypesT>
@@ -907,6 +914,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public bool onSafeAreaInsetsChange;
   public bool removeClippedSubviews;
   public bool shouldRasterize;
+  public const facebook::react::Transitions& transitions() const;
   public facebook::react::BackfaceVisibility backfaceVisibility;
   public facebook::react::BaseViewProps::CascadeReset cascadeReset;
   public facebook::react::BlendMode mixBlendMode;
@@ -939,6 +947,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public std::optional<facebook::react::TextTransform> inheritedTextTransform;
   public std::optional<facebook::react::WhiteSpace> inheritedWhiteSpace;
   public std::optional<int> zIndex;
+  public std::shared_ptr<const facebook::react::BaseViewProps::CssMotion> cssMotion;
   public std::string inheritedFontFamily;
   public std::vector<facebook::react::BackgroundImage> backgroundImage;
   public std::vector<facebook::react::BackgroundPosition> backgroundPosition;
@@ -956,6 +965,16 @@ enum facebook::react::BaseViewProps::CascadeReset : uint8_t {
   None,
   Revert,
   Unset,
+}
+
+struct facebook::react::BaseViewProps::CssMotion {
+  public bool isEmpty() const;
+  public bool rawsEqual(const facebook::react::BaseViewProps::CssMotion& other) const;
+  public facebook::react::Transitions transitions;
+  public std::string transitionDelayRaw;
+  public std::string transitionDurationRaw;
+  public std::string transitionPropertyRaw;
+  public std::string transitionTimingFunctionRaw;
 }
 
 class facebook::react::BindingsInstaller {
@@ -4037,6 +4056,13 @@ enum facebook::react::ShadowTreeCommitStatus {
   Succeeded,
 }
 
+enum facebook::react::StepPosition {
+  JumpBoth,
+  JumpEnd,
+  JumpNone,
+  JumpStart,
+}
+
 enum facebook::react::SubmitBehavior {
   BlurAndSubmit,
   Default,
@@ -4110,6 +4136,14 @@ enum facebook::react::TransformOperationType : uint8_t {
   Scale,
   Skew,
   Translate,
+}
+
+enum facebook::react::TransitionProperty {
+  All,
+  BackgroundColor,
+  BorderColor,
+  Opacity,
+  Transform,
 }
 
 enum facebook::react::TurboModuleMethodValueKind {
@@ -5227,6 +5261,26 @@ struct facebook::react::TransformOrigin {
   public bool operator==(const facebook::react::TransformOrigin& other) const = default;
   public float z;
   public std::array<facebook::react::ValueUnit, 2> xy;
+}
+
+struct facebook::react::Transition {
+  public Float delay;
+  public Float duration;
+  public bool operator==(const facebook::react::Transition& other) const = default;
+  public facebook::react::TransitionProperty property;
+  public facebook::react::TransitionTimingFunction timingFunction;
+}
+
+struct facebook::react::TransitionTimingFunction {
+  public Float evaluate(Float linearProgress) const;
+  public Float x1;
+  public Float x2;
+  public Float y1;
+  public Float y2;
+  public bool isStep;
+  public bool operator==(const facebook::react::TransitionTimingFunction& other) const = default;
+  public facebook::react::StepPosition stepPosition;
+  public int32_t stepCount;
 }
 
 struct facebook::react::ValueUnit {

@@ -304,6 +304,13 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   // inheritance boundary — the cascade below it restarts from the initial
   // values, like the web's own reset.
   all: true,
+  // `transition` (css-transitions-1). Delivered as the four longhands and
+  // zipped in the renderer, which is also where the animation runs — these
+  // never reach JavaScript again once set.
+  transitionProperty: true,
+  transitionDuration: true,
+  transitionDelay: true,
+  transitionTimingFunction: true,
   userSelect: true,
   verticalAlign: true,
   writingDirection: true,
