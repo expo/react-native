@@ -57,6 +57,9 @@
         },
         "RNTesterTabsIOS": {
           "className": "RNTesterTabsIOSComponentView"
+        },
+        "AstryxVectorShape": {
+          "className": "AstryxVectorShapeComponentView"
         }
       }
     }

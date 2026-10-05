@@ -57,6 +57,17 @@ const config = {
           filePath: path.resolve(__dirname, 'js/astryx/stylex-rn.js'),
         };
       }
+      // The astryx directory compiles JSX against this runtime (see .babelrc)
+      // so intrinsic elements can inherit CSS custom properties.
+      if (
+        moduleName === 'astryx-jsx/jsx-runtime' ||
+        moduleName === 'astryx-jsx/jsx-dev-runtime'
+      ) {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/astryx/jsx-runtime.js'),
+        };
+      }
       return context.resolveRequest(context, moduleName, platform);
     },
   },
