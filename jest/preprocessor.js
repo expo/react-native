@@ -76,6 +76,52 @@ module.exports = {
       });
     }
 
+    // The Astryx layer and the vendored shadcn sources compile JSX against
+    // the astryx runtime (custom-property inheritance, stylesheet matching)
+    // — under Metro via rn-tester's .babelrc override; here the same
+    // transform runs as a pre-pass, leaving no JSX for the standard pipeline
+    // to re-handle. Mirrors metro.config.js/.babelrc.js.
+    // Scoped to the vendored shadcn tree only: the astryx runtime itself
+    // must NOT self-compile against its own jsx module (a module cycle jest
+    // cannot lazily break the way Metro does); astryx-layer tests exercise
+    // the runtime through direct jsx() calls instead.
+    const usesAstryxJsx =
+      /packages\/rn-tester\/js\/shadcn\//.test(file) ||
+      /packages\/rn-tester\/js\/astryx\/radix\//.test(file);
+    if (usesAstryxJsx) {
+      const prePass = babelTransformSync(src, {
+        filename: file,
+        babelrc: false,
+        configFile: false,
+        retainLines: true,
+        plugins: [
+          ...(file.endsWith('.tsx') || file.endsWith('.ts')
+            ? [
+                [
+                  require('@babel/plugin-transform-typescript'),
+                  {isTSX: file.endsWith('.tsx')},
+                ],
+              ]
+            : [
+                [
+                  require('babel-plugin-syntax-hermes-parser'),
+                  {parseLangTypes: 'flow'},
+                ],
+                // The output re-enters the standard pipeline; emitting plain
+                // JS (no Flow types) keeps that parse unambiguous.
+                [require('@babel/plugin-transform-flow-strip-types')],
+              ]),
+          [
+            require('@babel/plugin-transform-react-jsx'),
+            {runtime: 'automatic', importSource: 'astryx-jsx'},
+          ],
+        ],
+        sourceType: 'module',
+        ast: false,
+      });
+      src = prePass.code;
+    }
+
     let {ast} = transformer.transform({
       filename: file,
       options: {
