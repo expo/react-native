@@ -1,0 +1,75 @@
+{
+  "bitsPerComponent" : 16,
+  "class" : "deep",
+  "file" : "linear.exr",
+  "id" : "F14",
+  "note" : "linear float samples above 1: deep at 16-bit float, its precision kept and its light clipped to SDR white (it is not marked HDR, so nothing above 1 reaches the display)",
+  "patches" : [
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "source" : [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "w" : 64,
+      "x" : 0,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        1,
+        1,
+        1
+      ],
+      "source" : [
+        1,
+        1,
+        1
+      ],
+      "w" : 64,
+      "x" : 64,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        1,
+        1,
+        1
+      ],
+      "source" : [
+        2,
+        2,
+        2
+      ],
+      "w" : 64,
+      "x" : 128,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        1,
+        1,
+        1
+      ],
+      "source" : [
+        8,
+        8,
+        8
+      ],
+      "w" : 64,
+      "x" : 192,
+      "y" : 0
+    }
+  ],
+  "space" : "srgb-linear",
+  "variant" : "deep"
+}

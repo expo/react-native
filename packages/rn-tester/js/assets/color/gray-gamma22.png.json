@@ -1,0 +1,82 @@
+{
+  "bitsPerComponent" : 8,
+  "class" : "standard",
+  "file" : "gray-gamma22.png",
+  "id" : "F10",
+  "note" : "gray: stored as sRGB, the same colours in the layout Core Animation shares. Apple's Generic Gray Gamma 2.2 profile differs from a pure 2.2 power by up to 2.5 codes at 25% (measured 2026-10-03), so 4 codes",
+  "patches" : [
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        0,
+        0,
+        0
+      ],
+      "source" : [
+        0
+      ],
+      "w" : 51,
+      "x" : 0,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        0.047366,
+        0.047366,
+        0.047366
+      ],
+      "source" : [
+        0.25
+      ],
+      "w" : 51,
+      "x" : 51,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        0.217638,
+        0.217638,
+        0.217638
+      ],
+      "source" : [
+        0.5
+      ],
+      "w" : 51,
+      "x" : 102,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        0.531049,
+        0.531049,
+        0.531049
+      ],
+      "source" : [
+        0.75
+      ],
+      "w" : 51,
+      "x" : 153,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        1,
+        1,
+        1
+      ],
+      "source" : [
+        1
+      ],
+      "w" : 52,
+      "x" : 204,
+      "y" : 0
+    }
+  ],
+  "space" : "srgb",
+  "tolerance" : 4,
+  "variant" : "own8"
+}

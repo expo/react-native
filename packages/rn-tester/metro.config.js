@@ -49,6 +49,15 @@ const config = {
   resolver: {
     blockList: [/..\/react-native\/sdks\/hermes/],
     sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'css'],
+    // The color gallery's fixtures (js/assets/color) include formats Metro
+    // does not bundle by default: HEIC, AVIF, TIFF and OpenEXR
+    assetExts: [
+      ...getDefaultConfig(__dirname).resolver.assetExts,
+      'heic',
+      'avif',
+      'tif',
+      'exr',
+    ],
     extraNodeModules: {
       'react-native': path.resolve(__dirname, '../react-native'),
     },

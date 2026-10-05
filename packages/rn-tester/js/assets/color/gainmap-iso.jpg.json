@@ -1,0 +1,107 @@
+{
+  "bitsPerComponent" : 8,
+  "class" : "hdr",
+  "file" : "gainmap-iso.jpg",
+  "id" : "F11",
+  "note" : "ISO 21496-1 gain map, headroom 4; SDR base shown on an SDR display; HDR (stage 3) linear values as the patches say",
+  "patches" : [
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        0.18,
+        0.18,
+        0.18
+      ],
+      "source" : [
+        0.18,
+        0.18,
+        0.18
+      ],
+      "w" : 42,
+      "x" : 0,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        1,
+        1,
+        1
+      ],
+      "source" : [
+        1,
+        1,
+        1
+      ],
+      "w" : 42,
+      "x" : 42,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        2,
+        2,
+        2
+      ],
+      "source" : [
+        2,
+        2,
+        2
+      ],
+      "w" : 42,
+      "x" : 84,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        4,
+        4,
+        4
+      ],
+      "source" : [
+        4,
+        4,
+        4
+      ],
+      "w" : 42,
+      "x" : 126,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        1.179952,
+        0.166354,
+        0.074463
+      ],
+      "source" : [
+        1,
+        0.2,
+        0.1
+      ],
+      "w" : 42,
+      "x" : 168,
+      "y" : 0
+    },
+    {
+      "h" : 64,
+      "linearSRGB" : [
+        3.539856,
+        0.499063,
+        0.223388
+      ],
+      "source" : [
+        3,
+        0.6,
+        0.3
+      ],
+      "w" : 46,
+      "x" : 210,
+      "y" : 0
+    }
+  ],
+  "space" : "display-p3",
+  "variant" : "own8"
+}
