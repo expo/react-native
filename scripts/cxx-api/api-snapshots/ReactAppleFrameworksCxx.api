@@ -487,6 +487,11 @@ interface NativeDeviceInfoSpecBase : public NSObject {
   public virtual void setEventEmitterCallback:(EventEmitterCallbackWrapper* eventEmitterCallbackWrapper);
 }
 
+interface NativeDisplayCapabilitiesSpecBase : public NSObject {
+  protected facebook::react::EventEmitterCallback _eventEmitterCallback;
+  public virtual void setEventEmitterCallback:(EventEmitterCallbackWrapper* eventEmitterCallbackWrapper);
+}
+
 interface NativeExceptionsManagerSpecBase : public NSObject {
   protected facebook::react::EventEmitterCallback _eventEmitterCallback;
   public virtual void setEventEmitterCallback:(EventEmitterCallbackWrapper* eventEmitterCallbackWrapper);
@@ -1089,6 +1094,10 @@ interface RCTDeviceInfo : public NSObject <RCTBridgeModule> {
 }
 
 interface RCTDiffClampAnimatedNode : public RCTValueAnimatedNode {
+}
+
+interface RCTDisplayCapabilities : public RCTEventEmitter <RCTBridgeModule> {
+  public virtual instancetype init();
 }
 
 interface RCTDisplayLink : public NSObject {
@@ -2440,6 +2449,13 @@ protocol NativeDeviceInfoSpec : public NSObjectRCTBridgeModule, public RCTTurboM
   public virtual facebook::react::ModuleConstants<JS::NativeDeviceInfo::Constants> getConstants();
 }
 
+protocol NativeDisplayCapabilitiesSpec : public NSObjectRCTBridgeModule, public RCTTurboModule {
+  public virtual NSDictionary* getCapabilities();
+  public virtual NSNumber* isColorSpaceAvailable:(NSString* name);
+  public virtual void addListener:(NSString* eventName);
+  public virtual void removeListeners:(double count);
+}
+
 protocol NativeExceptionsManagerSpec : public NSObjectRCTBridgeModule, public RCTTurboModule {
   public virtual void dismissRedbox();
   public virtual void reportException:(JS::NativeExceptionsManager::ExceptionData& data);
@@ -3614,6 +3630,7 @@ concept facebook::react::TextLayoutManagerWithPreparedTextLayout = requires(
     textLayoutManager.measurePreparedLayout(preparedTextLayout, layoutContext, layoutConstraints)
   } -> std::same_as<facebook::react::TextMeasurement>;
 };
+CGColorSpaceRef _Nullable facebook::react::platformColorSpaceFor(facebook::react::ColorSpace space);
 NSArray<NSString*>* facebook::react::extractKeysFromFollyDynamic(const folly::dynamic& dyn);
 NSError* facebook::react::tryAndReturnError(const std::function<void()>& func);
 NSString* facebook::react::deriveSourceURL(NSURL* url);
@@ -5816,6 +5833,10 @@ class facebook::react::NativeDeviceEventManagerSpecJSI : public facebook::react:
 
 class facebook::react::NativeDeviceInfoSpecJSI : public facebook::react::ObjCTurboModule {
   public NativeDeviceInfoSpecJSI(const facebook::react::ObjCTurboModule::InitParams& params);
+}
+
+class facebook::react::NativeDisplayCapabilitiesSpecJSI : public facebook::react::ObjCTurboModule {
+  public NativeDisplayCapabilitiesSpecJSI(const facebook::react::ObjCTurboModule::InitParams& params);
 }
 
 class facebook::react::NativeExceptionsManagerSpecJSI : public facebook::react::ObjCTurboModule {
@@ -10344,6 +10365,13 @@ struct facebook::react::NativeBlobModuleConstants {
 }
 
 template <typename P0, typename P1>
+struct facebook::react::NativeDisplayCapabilitiesDisplayCapabilities {
+  public P0 colorGamut;
+  public P1 dynamicRange;
+  public bool operator==(const facebook::react::NativeDisplayCapabilitiesDisplayCapabilities& other) const;
+}
+
+template <typename P0, typename P1>
 struct facebook::react::NativeIdleCallbacksIdleDeadline {
   public P0 didTimeout;
   public P1 timeRemaining;
@@ -10541,6 +10569,12 @@ class facebook::react::NativeDeviceEventManagerCxxSpec : public facebook::react:
 template <typename T>
 class facebook::react::NativeDeviceInfoCxxSpec : public facebook::react::TurboModule {
   protected NativeDeviceInfoCxxSpec(std::shared_ptr<facebook::react::CallInvoker> jsInvoker);
+  public static constexpr std::string_view kModuleName;
+}
+
+template <typename T>
+class facebook::react::NativeDisplayCapabilitiesCxxSpec : public facebook::react::TurboModule {
+  protected NativeDisplayCapabilitiesCxxSpec(std::shared_ptr<facebook::react::CallInvoker> jsInvoker);
   public static constexpr std::string_view kModuleName;
 }
 
@@ -10868,6 +10902,13 @@ struct facebook::react::NativeDeviceInfoDimensionsPayloadBridging {
 
 template <typename T>
 struct facebook::react::NativeDeviceInfoDisplayMetricsBridging {
+  public static T fromJs(facebook::jsi::Runtime& rt, const facebook::jsi::Object& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+  public static T types;
+  public static facebook::jsi::Object toJs(facebook::jsi::Runtime& rt, const T& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+}
+
+template <typename T>
+struct facebook::react::NativeDisplayCapabilitiesDisplayCapabilitiesBridging {
   public static T fromJs(facebook::jsi::Runtime& rt, const facebook::jsi::Object& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
   public static T types;
   public static facebook::jsi::Object toJs(facebook::jsi::Runtime& rt, const T& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);

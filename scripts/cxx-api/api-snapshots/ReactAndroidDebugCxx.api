@@ -2539,6 +2539,10 @@ class facebook::react::NativeDialogManagerAndroidSpecJSI : public facebook::reac
   public NativeDialogManagerAndroidSpecJSI(const facebook::react::JavaTurboModule::InitParams& params);
 }
 
+class facebook::react::NativeDisplayCapabilitiesSpecJSI : public facebook::react::JavaTurboModule {
+  public NativeDisplayCapabilitiesSpecJSI(const facebook::react::JavaTurboModule::InitParams& params);
+}
+
 class facebook::react::NativeExceptionsManagerSpecJSI : public facebook::react::JavaTurboModule {
   public NativeExceptionsManagerSpecJSI(const facebook::react::JavaTurboModule::InitParams& params);
 }
@@ -5431,6 +5435,13 @@ struct facebook::react::NativeBlobModuleConstants {
 }
 
 template <typename P0, typename P1>
+struct facebook::react::NativeDisplayCapabilitiesDisplayCapabilities {
+  public P0 colorGamut;
+  public P1 dynamicRange;
+  public bool operator==(const facebook::react::NativeDisplayCapabilitiesDisplayCapabilities& other) const;
+}
+
+template <typename P0, typename P1>
 struct facebook::react::NativeIdleCallbacksIdleDeadline {
   public P0 didTimeout;
   public P1 timeRemaining;
@@ -5652,6 +5663,12 @@ class facebook::react::NativeDeviceInfoCxxSpec : public facebook::react::TurboMo
 template <typename T>
 class facebook::react::NativeDialogManagerAndroidCxxSpec : public facebook::react::TurboModule {
   protected NativeDialogManagerAndroidCxxSpec(std::shared_ptr<facebook::react::CallInvoker> jsInvoker);
+  public static constexpr std::string_view kModuleName;
+}
+
+template <typename T>
+class facebook::react::NativeDisplayCapabilitiesCxxSpec : public facebook::react::TurboModule {
+  protected NativeDisplayCapabilitiesCxxSpec(std::shared_ptr<facebook::react::CallInvoker> jsInvoker);
   public static constexpr std::string_view kModuleName;
 }
 
@@ -6048,6 +6065,15 @@ struct facebook::react::NativeDialogManagerAndroidDialogOptionsBridging {
   public static facebook::jsi::String buttonPositiveToJs(facebook::jsi::Runtime& rt, decltype(types.buttonPositive) value);
   public static facebook::jsi::String messageToJs(facebook::jsi::Runtime& rt, decltype(types.message) value);
   public static facebook::jsi::String titleToJs(facebook::jsi::Runtime& rt, decltype(types.title) value);
+}
+
+template <typename T>
+struct facebook::react::NativeDisplayCapabilitiesDisplayCapabilitiesBridging {
+  public static T fromJs(facebook::jsi::Runtime& rt, const facebook::jsi::Object& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+  public static T types;
+  public static facebook::jsi::Object toJs(facebook::jsi::Runtime& rt, const T& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+  public static facebook::jsi::String colorGamutToJs(facebook::jsi::Runtime& rt, decltype(types.colorGamut) value);
+  public static facebook::jsi::String dynamicRangeToJs(facebook::jsi::Runtime& rt, decltype(types.dynamicRange) value);
 }
 
 template <typename T>
