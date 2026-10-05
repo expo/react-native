@@ -8,6 +8,7 @@
 package com.facebook.react.views.scroll
 
 import android.graphics.Color
+import androidx.annotation.ColorLong
 import androidx.core.view.ViewCompat
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.ReadableArray
@@ -16,6 +17,7 @@ import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.RetryableMountingLayerException
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.module.annotations.ReactModule
+import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderRadius
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderStyle
@@ -344,6 +346,15 @@ constructor(private val fpsListener: FpsListener? = null) :
           ],
       customType = "Color",
   )
+  public fun setBorderColorLong(
+      view: ReactHorizontalScrollView,
+      @Suppress("UNUSED_PARAMETER") index: Int,
+      @ColorLong color: Long?,
+  ) {
+    BackgroundStyleApplicator.setBorderColorLong(view, LogicalEdge.ALL, color)
+  }
+
+  /** The border color as an integer. [setBorderColorLong] receives the prop. */
   public fun setBorderColor(
       view: ReactHorizontalScrollView,
       @Suppress("UNUSED_PARAMETER") index: Int,

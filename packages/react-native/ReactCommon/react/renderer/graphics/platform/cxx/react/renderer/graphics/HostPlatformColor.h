@@ -94,4 +94,9 @@ inline Color hostPlatformColorFromTransientColorSpaceValue(const ColorSpaceValue
   return hostPlatformColorFromColorSpaceValue(value);
 }
 
+inline std::optional<ColorSpaceValue> hostPlatformColorSpaceValueOf(const Color & /*color*/)
+{
+  return std::nullopt;
+}
+
 } // namespace facebook::react

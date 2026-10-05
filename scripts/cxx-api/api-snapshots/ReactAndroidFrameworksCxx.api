@@ -423,6 +423,11 @@ static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_FRAGMEN
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_HASH;
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_RUN_TAG;
 static constexpr facebook::react::MapBuffer::Key facebook::react::AS_KEY_STRING;
+static constexpr facebook::react::MapBuffer::Key facebook::react::CS_KEY_ALPHA;
+static constexpr facebook::react::MapBuffer::Key facebook::react::CS_KEY_CHANNEL_0;
+static constexpr facebook::react::MapBuffer::Key facebook::react::CS_KEY_CHANNEL_1;
+static constexpr facebook::react::MapBuffer::Key facebook::react::CS_KEY_CHANNEL_2;
+static constexpr facebook::react::MapBuffer::Key facebook::react::CS_KEY_SPACE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_ATOMIC_INLINE_BASELINE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_ATOMIC_INLINE_VERTICAL_ALIGN;
 static constexpr facebook::react::MapBuffer::Key facebook::react::FR_KEY_HEIGHT;
@@ -480,6 +485,7 @@ static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_FONT_VA
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_FONT_VARIATION_SETTINGS;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_FONT_WEIGHT;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_FOREGROUND_COLOR;
+static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_FOREGROUND_COLOR_SPACE;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_IS_HIGHLIGHTED;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_LAYOUT_DIRECTION;
 static constexpr facebook::react::MapBuffer::Key facebook::react::TA_KEY_LETTER_SPACING;
@@ -773,7 +779,7 @@ bool facebook::react::elementStatesBlockPadding(const facebook::react::YogaStyla
 bool facebook::react::elementStatesInlinePadding(const facebook::react::YogaStylableProps& props);
 bool facebook::react::hasStampableInlineElements(const facebook::react::ShadowNode& owner, const facebook::react::AttributedString& attributedString);
 bool facebook::react::hostPlatformColorIsColorMeaningful(facebook::react::Color color) noexcept;
-bool facebook::react::hostPlatformColorIsColorSpaceColor(const facebook::react::Color&);
+bool facebook::react::hostPlatformColorIsColorSpaceColor(const facebook::react::Color& color);
 bool facebook::react::isColorMeaningful(const facebook::react::SharedColor& color) noexcept;
 bool facebook::react::isColorSpaceColor(const facebook::react::SharedColor& color);
 bool facebook::react::isHermesBytecodeBundle(const facebook::react::BundleHeader& header);
@@ -889,6 +895,8 @@ std::optional<facebook::react::BlendMode> facebook::react::blendModeFromString(s
 std::optional<facebook::react::CSSAnimation> facebook::react::buildAnimation(const std::string& keyframesJson, const std::string& duration, const std::string& delay, const std::string& timingFunction, const std::string& iterationCount, const std::string& direction, const std::string& fillMode);
 std::optional<facebook::react::ColorComponents> facebook::react::toClippedSRGB(const facebook::react::ColorSpaceValue& value);
 std::optional<facebook::react::ColorSpace> facebook::react::colorSpaceFromName(std::string_view name);
+std::optional<facebook::react::ColorSpaceValue> facebook::react::colorSpaceValueOf(const facebook::react::SharedColor& color);
+std::optional<facebook::react::ColorSpaceValue> facebook::react::hostPlatformColorSpaceValueOf(const facebook::react::Color& color);
 std::optional<facebook::react::FilterType> facebook::react::filterTypeFromString(std::string_view filterName);
 std::optional<facebook::react::Float> facebook::react::optionalFloatFromYogaValue(const facebook::yoga::Style::Length& length, std::optional<facebook::react::Float> base = {});
 std::optional<facebook::react::FontVariant> facebook::react::fontVariantFromCSSFontVariant(facebook::react::CSSFontVariant cssVariant);
@@ -1891,6 +1899,12 @@ class facebook::react::CallbackWrapper : public facebook::react::LongLivedObject
   public static std::weak_ptr<facebook::react::CallbackWrapper> createWeak(facebook::jsi::Function&& callback, facebook::jsi::Runtime& runtime, std::shared_ptr<facebook::react::CallInvoker> jsInvoker);
   public std::shared_ptr<facebook::react::CallInvoker> jsInvokerPtr() noexcept;
   public void destroy();
+}
+
+class facebook::react::ColorSpaceValues {
+  public static constexpr size_t kCapacity;
+  public static std::optional<facebook::react::ColorSpaceValue> get(uint16_t indexPlusOne);
+  public static uint16_t intern(const facebook::react::ColorSpaceValue& value);
 }
 
 class facebook::react::ComponentDescriptor {
@@ -6874,6 +6888,7 @@ struct facebook::react::Color {
   public constexpr operator int32_t() const;
   public int32_t value;
   public operator folly::dynamic() const;
+  public uint16_t colorSpaceValueIndex;
 }
 
 struct facebook::react::ColorComponents {
