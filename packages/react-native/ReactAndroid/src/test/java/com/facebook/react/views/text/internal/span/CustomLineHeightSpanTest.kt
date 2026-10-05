@@ -239,7 +239,10 @@ class CustomLineHeightSpanTest {
   }
 
   @Test
-  fun withoutInlineViewsKeepsMergedMetrics() {
+  fun withoutInlineViewsTheLineStillGrowsForItsAtomicInline() {
+    // Without `inlineViews` the paint-carrying overload re-admits the
+    // placeholder's box after clamping to the line height, so the line reaches
+    // the top of the 80px box that sits on its baseline.
     val text = SpannableString("ab\uFFFC")
     val span = CustomLineHeightSpan(60f)
     text.setSpan(span, 0, 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -250,15 +253,90 @@ class CustomLineHeightSpanTest {
         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
     )
     val fm = inlineViewMetrics(height = 80)
-    val expected = inlineViewMetrics(height = 80)
 
     span.chooseHeight(text, 0, 3, 0, 0, fm, TextPaint())
-    span.chooseHeight(text, 0, 3, 0, 0, expected)
 
-    assertThat(fm.ascent).isEqualTo(expected.ascent)
-    assertThat(fm.descent).isEqualTo(expected.descent)
-    assertThat(fm.top).isEqualTo(expected.top)
-    assertThat(fm.bottom).isEqualTo(expected.bottom)
+    assertThat(fm.ascent).isEqualTo(-80)
+  }
+
+  @Test
+  fun tightLineHeightStillGrowsForAnAtomicInlineOnTheLine() {
+    // `line-height` is the strut, and the line box is the union of the strut
+    // and every inline-level box on the line (CSS2 §10.8): Safari grows only
+    // the line that carries a 56px box on a 24px line-height
+    val text = "gjpqy\u200B after"
+    val spannable = SpannableString(text)
+    spannable.setSpan(
+        CustomLineHeightSpan(24f),
+        0,
+        text.length,
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+    )
+    val boxIndex = text.indexOf('\u200B')
+    spannable.setSpan(
+        TextInlineViewPlaceholderSpan(reactTag = 1, width = 56, height = 56),
+        boxIndex,
+        boxIndex + 1,
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+    )
+
+    val layout =
+        StaticLayout.Builder.obtain(
+                spannable,
+                0,
+                spannable.length,
+                TextPaint().apply { textSize = 24f },
+                400,
+            )
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setIncludePad(true)
+            .setLineSpacing(0f, 1f)
+            .build()
+
+    val line = layout.getLineForOffset(boxIndex)
+    val lineHeightPx = layout.getLineBottom(line) - layout.getLineTop(line)
+    // The union: at least the box, sitting on the baseline, plus the strut's
+    // descent below it. Not exactly-56 — that would be the old substitution
+    // bug this span's placeholder partner fixed separately.
+    assertThat(lineHeightPx).isGreaterThanOrEqualTo(56)
+  }
+
+  @Test
+  fun aLineWithoutTheAtomicInlineStaysClamped() {
+    // The growth is per-line: only the line CARRYING the box escapes the
+    // clamp, exactly as in a browser.
+    val text = "first\ngjpqy\u200Bx"
+    val spannable = SpannableString(text)
+    spannable.setSpan(
+        CustomLineHeightSpan(24f),
+        0,
+        text.length,
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+    )
+    val boxIndex = text.indexOf('\u200B')
+    spannable.setSpan(
+        TextInlineViewPlaceholderSpan(reactTag = 1, width = 56, height = 56),
+        boxIndex,
+        boxIndex + 1,
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+    )
+    val layout =
+        StaticLayout.Builder.obtain(
+                spannable,
+                0,
+                spannable.length,
+                TextPaint().apply { textSize = 24f },
+                400,
+            )
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setIncludePad(true)
+            .setLineSpacing(0f, 1f)
+            .build()
+
+    assertThat(layout.getLineBottom(0) - layout.getLineTop(0)).isEqualTo(24)
+    val boxLine = layout.getLineForOffset(boxIndex)
+    assertThat(layout.getLineBottom(boxLine) - layout.getLineTop(boxLine))
+        .isGreaterThanOrEqualTo(56)
   }
 
   private fun textPaint(): TextPaint = TextPaint().apply { textSize = 24f }
