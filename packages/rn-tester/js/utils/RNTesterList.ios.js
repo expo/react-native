@@ -199,6 +199,11 @@ const APIs: Array<RNTesterModuleInfo> = (
   [
     // The renderer's CSS transitions and animations
     {
+      key: 'RadixExample',
+      module: require('../examples/Astryx/RadixExample').default,
+      category: 'UI',
+    },
+    {
       key: 'CSSStylesheetsExample',
       module: require('../examples/Astryx/CSSStylesheetsExample').default,
       category: 'UI',
