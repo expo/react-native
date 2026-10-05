@@ -219,6 +219,46 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   platform's shader interpolates in a chosen space, so the stretches are
   expanded into computed stops, which can only be placed between percentages.
   A `10px` position or a transition hint leaves the gradient to the platform.
+- **`DOM-CSS-LIMITATION(android-text-and-outline-colors-are-srgb)` — on
+  Android, text decoration, text shadow, text background, outline, and an
+  image's border, overlay and tint colors draw their sRGB approximation.**
+  Backgrounds, borders, box shadows, gradients and text foregrounds paint
+  color longs; these others still cross the bridge as integers. Deferred:
+  color longs through the text MapBuffer's remaining color keys and the
+  image and outline setters.
+- **`DOM-CSS-LIMITATION(android-transition-frames-are-srgb)` — on Android a
+  transition's frames between wide colors draw their sRGB approximation.**
+  A frame's color is read from the 8-bit value, since interning every frame
+  would fill the color table; the end state is the exact color. Deferred: a
+  rotating table for transient colors.
+- **`DOM-CSS-LIMITATION(android-color-table-is-finite)` — Android keeps at
+  most 65,535 distinct wide colors per process.** Each color in its own space
+  is interned by value in a table a `Color` indexes with 16 bits, and the
+  table is never reclaimed; the 65,536th new color draws its sRGB
+  approximation. Deferred: reclamation, or owned overflow storage.
+- **`DOM-CSS-LIMITATION(android-needs-the-platforms-color-space)` — on
+  Android a color in its own space draws only where the OS has that space.**
+  Android 8 brought color spaces; before it, and for a predefined space the
+  OS doesn't name, the color draws nothing rather than CSS's arithmetic.
+  `CSS.supports` says so for the device. Deferred: CSS's arithmetic in
+  Kotlin, as the C++ and JS sides have it.
+- **`DOM-CSS-LIMITATION(inline-image-limit-waits-for-its-next-revision)` —
+  an inline `<img>` takes an inherited `dynamic-range-limit` change at its
+  next revision.** The cascade reaches an atomic inline through its anonymous
+  box without cloning it, so the already-published node stores the cascade
+  but can't publish state until something else clones it. Deferred: cloning atomic
+  inlines in the configure pass.
+- **`DOM-CSS-LIMITATION(animated-colors-interpolate-in-srgb)` — `Animated`
+  interpolates a color in its own space as its sRGB approximation.** The
+  animated node mixes 8-bit sRGB channels. Deferred: CSS Color 4 §12
+  interpolation in the animated node, as transitions have.
+- **`DOM-CSS-LIMITATION(action-sheet-tints-are-srgb)` — `ActionSheetIOS`'s
+  tints are sRGB.** Its native module takes integers, so a color in its own
+  space goes as its sRGB approximation. Platform wall as the module stands.
+- **`DOM-CSS-LIMITATION(media-queries-have-no-or-and-no-nesting)` —
+  `matchMedia` parses `and`, commas and `not`, not `or` or nested
+  conditions.** A query using them is false. Deferred: the full Media
+  Queries 4 grammar.
 - **`DOM-CSS-LIMITATION(android-dynamic-range-is-per-window)` — Android's HDR
   is the window's.** A window shows HDR only in its HDR color mode, and its
   headroom is one value, so `constrained` draws as `no-limit`, and a
@@ -298,13 +338,7 @@ had a marker, but forty-eight markers had no entry, and the file still read as
 complete. The check now runs both ways, so an unindexed marker fails a test
 rather than going quiet.
 
-- `action-sheet-tints-are-srgb` — limitation, `packages/react-native/Libraries/ActionSheetIOS/ActionSheetIOS.js`
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
-- `android-color-table-is-finite` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
-- `android-needs-the-platforms-color-space` — limitation, `packages/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/display/DisplayCapabilitiesModule.kt`
-- `android-text-and-outline-colors-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/attributedstring/conversions.h`
-- `android-transition-frames-are-srgb` — limitation, `packages/react-native/ReactCommon/react/renderer/graphics/platform/android/react/renderer/graphics/HostPlatformColor.h`
-- `animated-colors-interpolate-in-srgb` — limitation, `packages/react-native/Libraries/Animated/nodes/AnimatedInterpolation.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
@@ -320,14 +354,12 @@ rather than going quiet.
 - `grid-min-content` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
-- `inline-image-limit-waits-for-its-next-revision` — limitation, `packages/react-native/ReactCommon/react/renderer/components/image/ImageShadowNode.cpp`
 - `ios-17-constrained-is-no-limit` — limitation, `packages/react-native/React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
 - `link-title-is-not-idn-decoded` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPTextLinkInteraction.mm`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
-- `media-queries-have-no-or-and-no-nesting` — limitation, `packages/react-native/Libraries/Utilities/matchMedia.js`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
 - `no-font-on-a-control` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPElementTextAreaComponentView.mm`
