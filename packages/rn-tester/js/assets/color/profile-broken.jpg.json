@@ -1,0 +1,12 @@
+{
+  "bitsPerComponent" : 8,
+  "class" : "standard",
+  "file" : "profile-broken.jpg",
+  "id" : "F19",
+  "note" : "the ICC tag count is corrupt: the profile is invalid, so the picture is sRGB (CSS Color 4 §10.1)",
+  "patches" : [
+
+  ],
+  "space" : "srgb",
+  "variant" : "own8"
+}

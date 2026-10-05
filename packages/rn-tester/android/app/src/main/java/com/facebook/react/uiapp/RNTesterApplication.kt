@@ -20,18 +20,18 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.ReactPackage
-import com.facebook.react.config.ReactFeatureFlags
-import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
-import com.facebook.react.internal.featureflags.ReactNativeNewArchitectureFeatureFlagsDefaults
 import com.facebook.react.ViewManagerOnDemandReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.common.assets.ReactFontManager
+import com.facebook.react.config.ReactFeatureFlags
 import com.facebook.react.defaults.DefaultReactHost
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
+import com.facebook.react.internal.featureflags.ReactNativeNewArchitectureFeatureFlagsDefaults
 import com.facebook.react.module.model.ReactModuleInfo
 import com.facebook.react.module.model.ReactModuleInfoProvider
-import com.facebook.react.uiapp.component.MyLegacyViewManager
 import com.facebook.react.uiapp.component.AstryxVectorShapeManager
+import com.facebook.react.uiapp.component.MyLegacyViewManager
 import com.facebook.react.uiapp.component.MyNativeViewManager
 import com.facebook.react.uiapp.component.ReportFullyDrawnViewManager
 import com.facebook.react.uimanager.ReactShadowNode
@@ -51,6 +51,7 @@ internal class RNTesterApplication : Application(), ReactApplication {
                         when (name) {
                           SampleTurboModule.NAME -> SampleTurboModule(reactContext)
                           SampleLegacyModule.NAME -> SampleLegacyModule(reactContext)
+                          ScreenshotManager.NAME -> ScreenshotManager(reactContext)
                           else -> null
                         }
 
@@ -73,6 +74,15 @@ internal class RNTesterApplication : Application(), ReactApplication {
                                   ReactModuleInfo(
                                       SampleLegacyModule.NAME,
                                       "SampleLegacyModule",
+                                      canOverrideExistingModule = false,
+                                      needsEagerInit = false,
+                                      isCxxModule = false,
+                                      isTurboModule = false,
+                                  ),
+                              ScreenshotManager.NAME to
+                                  ReactModuleInfo(
+                                      ScreenshotManager.NAME,
+                                      "ScreenshotManager",
                                       canOverrideExistingModule = false,
                                       needsEagerInit = false,
                                       isCxxModule = false,
@@ -174,6 +184,8 @@ internal class RNTesterApplication : Application(), ReactApplication {
               override fun useSharedAnimatedBackend(): Boolean = true
 
               override fun cxxNativeAnimatedEnabled(): Boolean = true
+
+              override fun enableColorSpaces(): Boolean = true
 
               // The DOM element catalog's elements track presses through
               // Android's own touch dispatch rather than the JS responder
