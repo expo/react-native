@@ -308,3 +308,7 @@ What the table says:
 - **What doesn't:** the 10-bit PQ HEIC and the HLG HEIC draw nothing, while the 8-bit P3 HEIC and the gain-map HEIC do. ImageIO decodes those files (exact2's stage 0 did), so the failure is in expo-image's path; it needs a look before HDR work.
 - **No CSS colour beyond the legacy forms parses**, the same as Android: every modern chip is empty, P3 text and shadows draw nothing or the default, and every `in <space>` gradient draws nothing.
 - **Not yet measured:** stored colour space and depth per picture, and which system colours are P3. Both need the extended-range sampler (V2), which is the first piece of apparatus to build.
+
+## 12. Review fold
+
+One adversarial review of the series by another model family (`color-spaces-and-hdr.review.codex.md`: codex, `gpt-6.1-sol` at xhigh, blind, from a brief with fourteen fear items), verdict NOT READY with 24 findings. Every finding is taken: 17 fixed, 3 fixed in part with the remainder declared, 4 recorded as limitations in `dom-css-limitations.md` (`android-transition-frames-are-srgb`, `android-color-table-is-finite`, `android-text-and-outline-colors-are-srgb`, the API snapshots). The two findings that changed a design decision: HDR is decided by the unit cube of linear Rec. 2020 rather than by luminance, so a saturated color brighter than any SDR display's can show draws in extended range; and `CSS.supports` asks the device about every space, since an Android older than 8 draws none of them. The fold is itemised at the end of the review file.
