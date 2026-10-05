@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<33727a36bcc9bdb32d8c68554c040b88>>
+ * @generated SignedSource<<6e99e13ab069c4282ce76e34f49a273f>>
  * @flow strict
  * @noformat
  */
@@ -68,6 +68,7 @@ export type ReactNativeFeatureFlags = Readonly<{
   enableAndroidTextMeasurementOptimizations: Getter<boolean>,
   enableAsyncDiskCacheCheckInMultiSourceImageAndroid: Getter<boolean>,
   enableBridgelessArchitecture: Getter<boolean>,
+  enableColorSpaces: Getter<boolean>,
   enableCppPropsIteratorSetter: Getter<boolean>,
   enableCustomFocusSearchOnClippedElementsAndroid: Getter<boolean>,
   enableDestroyShadowTreeRevisionAsync: Getter<boolean>,
@@ -302,6 +303,10 @@ export const enableAsyncDiskCacheCheckInMultiSourceImageAndroid: Getter<boolean>
  * Feature flag to enable the new bridgeless architecture.
  */
 export const enableBridgelessArchitecture: Getter<boolean> = createNativeFlagGetter('enableBridgelessArchitecture', true);
+/**
+ * Enables CSS Color 4 colors in their own color spaces (color(), lab(), lch(), oklab(), oklch(), and CSS Color HDR's rec2100 spaces): processColor passes them to native as objects, native draws them in the space the device resolves, and untagged integer colors are always sRGB.
+ */
+export const enableColorSpaces: Getter<boolean> = createNativeFlagGetter('enableColorSpaces', false);
 /**
  * Enable prop iterator setter-style construction of Props in C++ (this flag is not used in Java).
  */
