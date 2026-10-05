@@ -180,6 +180,17 @@ lists both among the types a user agent *should* consider checkable.
 A platform wall, like the entry above it: the predicate is `TextView`'s and
 takes no argument. Nothing to schedule.
 
+## Color
+
+Colors in their own color spaces and HDR, behind `enableColorSpaces`.
+
+- **`DOM-CSS-LIMITATION(missing-color-components-are-zero)` — `none` in a
+  color is 0, not missing.** CSS draws `none` as 0, and also lets it take the
+  other color's value when two colors interpolate (CSS Color 4 §12.2), so
+  `oklch(0.7 0.1 none)` keeps the other end's hue. Here `none` is 0 from
+  parsing on, so it turns from hue 0. Deferred: it needs the parsed value to
+  keep which channels are missing.
+
 ## Performance
 
 **`eager-yoga-node`** — `ReactCommon/.../components/view/YogaLayoutableShadowNode.h`

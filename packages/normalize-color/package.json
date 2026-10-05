@@ -17,6 +17,8 @@
   ],
   "bugs": "https://github.com/react/react-native/issues",
   "files": [
+    "colorSpaces.js",
+    "colorSpaces.js.flow",
     "index.js",
     "README.md",
     "!**/__docs__/**",
