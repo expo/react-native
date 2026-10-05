@@ -27,6 +27,7 @@ import com.facebook.react.defaults.DefaultReactHost
 import com.facebook.react.module.model.ReactModuleInfo
 import com.facebook.react.module.model.ReactModuleInfoProvider
 import com.facebook.react.uiapp.component.MyLegacyViewManager
+import com.facebook.react.uiapp.component.AstryxVectorShapeManager
 import com.facebook.react.uiapp.component.MyNativeViewManager
 import com.facebook.react.uiapp.component.ReportFullyDrawnViewManager
 import com.facebook.react.uimanager.ReactShadowNode
@@ -86,6 +87,7 @@ internal class RNTesterApplication : Application(), ReactApplication {
                             "RNTMyNativeView",
                             "RNTMyLegacyNativeView",
                             "RNTReportFullyDrawnView",
+                            "AstryxVectorShape",
                         )
 
                     override fun createViewManagers(
@@ -95,6 +97,7 @@ internal class RNTesterApplication : Application(), ReactApplication {
                             MyNativeViewManager(),
                             MyLegacyViewManager(reactContext),
                             ReportFullyDrawnViewManager(),
+                            AstryxVectorShapeManager(),
                         )
 
                     override fun createViewManager(
@@ -105,6 +108,7 @@ internal class RNTesterApplication : Application(), ReactApplication {
                           "RNTMyNativeView" -> MyNativeViewManager()
                           "RNTMyLegacyNativeView" -> MyLegacyViewManager(reactContext)
                           "RNTReportFullyDrawnView" -> ReportFullyDrawnViewManager()
+                          "AstryxVectorShape" -> AstryxVectorShapeManager()
                           else -> null
                         }
                   },
