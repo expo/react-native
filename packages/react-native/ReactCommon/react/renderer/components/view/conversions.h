@@ -553,6 +553,9 @@ void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value,
 
 void fromRawValue(const PropsParserContext &context, const RawValue &value, Transform &result);
 
+// Parses a CSS `transform` string, such as `"rotate(45deg) scale(2)"`
+void parseTransformString(const std::string &value, Transform &result);
+
 void fromRawValue(const PropsParserContext &context, const RawValue &value, TransformOrigin &result);
 
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, PointerEventsMode &result)

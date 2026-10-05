@@ -467,7 +467,7 @@ BaseViewProps::BaseViewProps(
           false)) {
   hasInheritedTextProps = computeHasInheritedTextProps();
 
-  // `transition`: nothing declared and none inherited keeps
+  // `transition` and `animation`: nothing declared and none inherited keeps
   // the pointer null; the same longhands as the source share its allocation;
   // anything else is parsed once here, not while a frame is interpolated
   {
@@ -488,6 +488,40 @@ BaseViewProps::BaseViewProps(
     motion.transitionTimingFunctionRaw =
         raw("transitionTimingFunction",
             inherited ? inherited->transitionTimingFunctionRaw : kEmpty);
+    motion.animationKeyframesRaw =
+        raw("animationKeyframes",
+            inherited ? inherited->animationKeyframesRaw : kEmpty);
+    motion.animationDurationRaw =
+        raw("animationDuration",
+            inherited ? inherited->animationDurationRaw : kEmpty);
+    motion.animationDelayRaw = raw(
+        "animationDelay", inherited ? inherited->animationDelayRaw : kEmpty);
+    motion.animationTimingFunctionRaw =
+        raw("animationTimingFunction",
+            inherited ? inherited->animationTimingFunctionRaw : kEmpty);
+    // `animation-iteration-count` is a number or `infinite`; read either
+    motion.animationIterationCountRaw = [&]() -> std::string {
+      const auto& fallback =
+          inherited ? inherited->animationIterationCountRaw : kEmpty;
+      const auto* value =
+          rawProps.at("animationIterationCount", nullptr, nullptr);
+      if (value == nullptr || !value->hasValue()) {
+        return fallback;
+      }
+      if (value->hasType<std::string>()) {
+        return (std::string)*value;
+      }
+      if (value->hasType<Float>()) {
+        return std::to_string((Float)*value);
+      }
+      return fallback;
+    }();
+    motion.animationDirectionRaw =
+        raw("animationDirection",
+            inherited ? inherited->animationDirectionRaw : kEmpty);
+    motion.animationFillModeRaw =
+        raw("animationFillMode",
+            inherited ? inherited->animationFillModeRaw : kEmpty);
 
     if (inherited != nullptr && motion.rawsEqual(*inherited)) {
       cssMotion = sourceProps.cssMotion;
@@ -497,6 +531,14 @@ BaseViewProps::BaseViewProps(
           motion.transitionDurationRaw,
           motion.transitionDelayRaw,
           motion.transitionTimingFunctionRaw);
+      motion.animation = buildAnimation(
+          motion.animationKeyframesRaw,
+          motion.animationDurationRaw,
+          motion.animationDelayRaw,
+          motion.animationTimingFunctionRaw,
+          motion.animationIterationCountRaw,
+          motion.animationDirectionRaw,
+          motion.animationFillModeRaw);
       cssMotion = std::make_shared<const CssMotion>(std::move(motion));
     }
   }

@@ -141,7 +141,7 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   }
 
   /*
-   * What `transition` declares on this view, side-allocated:
+   * What `transition` and `animation` declare on this view, side-allocated:
    * empty on nearly every view, and hundreds of bytes inline. The raw
    * longhands are kept because a props clone carries only the keys that
    * changed, so an update re-parses from them. Null means none declared.
@@ -153,17 +153,33 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
     std::string transitionTimingFunctionRaw{};
     Transitions transitions{};
 
+    std::string animationKeyframesRaw{};
+    std::string animationDurationRaw{};
+    std::string animationDelayRaw{};
+    std::string animationTimingFunctionRaw{};
+    std::string animationIterationCountRaw{};
+    std::string animationDirectionRaw{};
+    std::string animationFillModeRaw{};
+    std::optional<CSSAnimation> animation{};
+
     bool isEmpty() const
     {
       return transitionPropertyRaw.empty() && transitionDurationRaw.empty() && transitionDelayRaw.empty() &&
-          transitionTimingFunctionRaw.empty();
+          transitionTimingFunctionRaw.empty() && animationKeyframesRaw.empty() && animationDurationRaw.empty() &&
+          animationDelayRaw.empty() && animationTimingFunctionRaw.empty() && animationIterationCountRaw.empty() &&
+          animationDirectionRaw.empty() && animationFillModeRaw.empty();
     }
 
     bool rawsEqual(const CssMotion &other) const
     {
       return transitionPropertyRaw == other.transitionPropertyRaw &&
           transitionDurationRaw == other.transitionDurationRaw && transitionDelayRaw == other.transitionDelayRaw &&
-          transitionTimingFunctionRaw == other.transitionTimingFunctionRaw;
+          transitionTimingFunctionRaw == other.transitionTimingFunctionRaw &&
+          animationKeyframesRaw == other.animationKeyframesRaw && animationDurationRaw == other.animationDurationRaw &&
+          animationDelayRaw == other.animationDelayRaw &&
+          animationTimingFunctionRaw == other.animationTimingFunctionRaw &&
+          animationIterationCountRaw == other.animationIterationCountRaw &&
+          animationDirectionRaw == other.animationDirectionRaw && animationFillModeRaw == other.animationFillModeRaw;
     }
   };
 
@@ -173,6 +189,12 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   {
     static const Transitions kNone{};
     return cssMotion == nullptr ? kNone : cssMotion->transitions;
+  }
+
+  const std::optional<CSSAnimation> &animation() const
+  {
+    static const std::optional<CSSAnimation> kNone{};
+    return cssMotion == nullptr ? kNone : cssMotion->animation;
   }
 
   /*

@@ -170,6 +170,44 @@ struct Transition {
 
 using Transitions = std::vector<Transition>;
 
+// A keyframe (css-animations-1 §4): its offset and the properties it pins
+struct AnimationKeyframe {
+  Float offset{0.0f};
+  std::optional<Float> opacity{};
+  std::optional<int32_t> backgroundColor{};
+  std::optional<int32_t> borderColor{};
+  std::optional<Transform> transform{};
+
+  bool operator==(const AnimationKeyframe &other) const = default;
+};
+
+enum class AnimationDirection {
+  Normal,
+  Reverse,
+  Alternate,
+  AlternateReverse,
+};
+
+enum class AnimationFillMode {
+  None,
+  Forwards,
+  Backwards,
+  Both,
+};
+
+// A parsed `animation`; `iterations < 0` is `infinite`
+struct CSSAnimation {
+  std::vector<AnimationKeyframe> keyframes{};
+  Float duration{0.0f};
+  Float delay{0.0f};
+  Float iterations{1.0f};
+  AnimationDirection direction{AnimationDirection::Normal};
+  AnimationFillMode fillMode{AnimationFillMode::None};
+  TransitionTimingFunction timingFunction{};
+
+  bool operator==(const CSSAnimation &other) const = default;
+};
+
 // The entry for `property`: last wins, and an exact match beats `all`
 inline const Transition *findTransition(const Transitions &transitions, TransitionProperty property)
 {
