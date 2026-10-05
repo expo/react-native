@@ -135,6 +135,12 @@ const _getKeyAndValueFromCSSTransform: (
         );
       }
 
+      // Keep a percentage translation as a percentage, since it resolves
+      // against the element's own size in the renderer
+      if (unitOfMeasurement === '%' && key !== 'perspective') {
+        return {key, value: `${value}%`};
+      }
+
       return {key, value};
 
     default:
