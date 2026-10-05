@@ -10,6 +10,7 @@
 
 #import <MobileCoreServices/UTCoreTypes.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
+#import <react/renderer/components/text/DomElementsRegistry.h>
 #import <react/renderer/components/text/ParagraphComponentDescriptor.h>
 #import <react/renderer/components/text/ParagraphProps.h>
 #import <react/renderer/components/text/ParagraphState.h>
@@ -119,9 +120,12 @@ static BOOL RCTAttributedStringHasAttachments(const AttributedString &attributed
 
 + (std::vector<facebook::react::ComponentDescriptorProvider>)supplementalComponentDescriptorProviders
 {
-  return {
+  std::vector<facebook::react::ComponentDescriptorProvider> providers = {
       concreteComponentDescriptorProvider<TextNodeComponentDescriptor>(),
       concreteComponentDescriptorProvider<TextComponentDescriptor>()};
+  auto elements = facebook::react::dom::inlineTextElementProviders();
+  providers.insert(providers.end(), elements.begin(), elements.end());
+  return providers;
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps
