@@ -19,6 +19,7 @@
 #include <react/debug/react_native_assert.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
+#include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/core/Sealable.h>
 #include <react/renderer/core/ShadowNode.h>
@@ -90,6 +91,20 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
 
   void layout(LayoutContext layoutContext) override;
 
+  /*
+   * The floats intruding on this node's own content, in its coordinates.
+   *
+   * Placed by the block container that owns them and handed down through the
+   * layout results; a line box overlapping one of these shortens beside it
+   * (CSS2 §9.5). Empty for content no float reaches, which is almost all of
+   * it.
+   */
+  std::vector<FloatExclusion> floatExclusions() const;
+
+  Size measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const override;
+
+  Float baseline(const LayoutContext &layoutContext, Size size) const override;
+
   Rect getContentBounds() const;
 
   /*
@@ -110,6 +125,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
         ? std::static_pointer_cast<const YogaLayoutableShadowNode>(node)
         : nullptr;
   }
+
+  /*
+   * The content box this container's own inline run occupies, which is the
+   * whole content box unless `align-content` moved it (css-align-3 §5.3).
+   */
+  Rect alignedInlineRunFrame(YogaLayoutableShadowNode &box, const LayoutContext &layoutContext) const;
 
 #pragma mark - Anonymous inline formatting contexts
 
@@ -164,6 +185,27 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    */
   int listDepth_{0};
 
+  /*
+   * The anonymous box this container measures ITSELF, or nullptr when it has
+   * none — because it has no inline content, or because the content is mixed
+   * with block-level siblings and the box is an ordinary Yoga child.
+   *
+   * Every caller that has to treat an elided box specially asks here, so the
+   * rule lives in one place. The assertion states what elision means: exactly
+   * one box, and no Yoga children, because the container took the box's place
+   * in the Yoga tree.
+   */
+  YogaLayoutableShadowNode *elidedInlineRun() const
+  {
+    if (!measuresOwnInlineRun_) {
+      return nullptr;
+    }
+    react_native_assert(
+        anonymousTextContentChildren_.size() == 1 && yogaLayoutableChildren_.empty() &&
+        "a container measuring its own run has one box and no Yoga children");
+    return anonymousTextContentChildren_.size() == 1 ? anonymousTextContentChildren_[0].get() : nullptr;
+  }
+
   const std::vector<std::shared_ptr<YogaLayoutableShadowNode>> &getAnonymousTextContentChildren() const
   {
     return anonymousTextContentChildren_;
@@ -212,6 +254,34 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * `isAtomicInline`.
    */
   static bool isInlineFlowContent(const ShadowNode &child);
+
+  /*
+   * True when `child` is inline-level content of ANY kind: the union of the
+   * three predicates above.
+   *
+   * Inline-level content in this renderer comes in two unrelated shapes, and
+   * nothing in their representation makes them look alike:
+   *
+   *   - inline *text* content — `#text`, `<Text>`, `<span>`, `<a>`, `<b>`,
+   *     `<label>`: `TextShadowNode` subclasses carrying the `InlineText` trait;
+   *   - an inline-level *box* — `inline-block`, `inline-flex`, a sized
+   *     `display: inline` View: a Yoga node whose `displayInline` is set.
+   *
+   * A predicate that names only one of them is wrong in a way that is hard to
+   * see: the layout looks correct for every tree that happens to contain a
+   * text node, and collapses for trees that do not. A run made only of atomic
+   * inlines would be laid out as block children, and an `<img>` inside an
+   * `<a>` would never be placed. So the union has a name, and callers ask for
+   * it rather than assembling it from `isInlineTextContent(x) || ...`.
+   */
+  static bool isInlineLevelContent(const ShadowNode &child);
+
+  /*
+   * A `display:'contents'` box holding only inline-level content. It produces
+   * no box, so rather than interrupting a run it joins one as an inline flow
+   * box and its content lands on the line (css-display-3 §3.1).
+   */
+  static bool isTransparentInlineBox(const ShadowNode &child);
 
   /*
    * Cascade storage hooks. Only CONSUMER nodes — paragraphs and anonymous IFC
@@ -366,6 +436,13 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * `yogaLayoutableChildren_` and the Yoga node, never in `children_`.
    */
   std::vector<std::shared_ptr<YogaLayoutableShadowNode>> anonymousTextContentChildren_;
+
+  /*
+   * This container measures its own inline run: its single anonymous box is
+   * not a Yoga child, because a block container whose children are all inline
+   * needs no anonymous box (CSS2 §9.2.1.1).
+   */
+  bool measuresOwnInlineRun_{false};
 
   /*
    * Parallel to `anonymousTextContentChildren_`: the index of each run box's
