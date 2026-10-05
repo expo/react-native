@@ -36,6 +36,10 @@ const config = {
     path.resolve(__dirname, '../expo-intrinsics'),
     path.resolve(__dirname, '../react-native-test-library/apple'),
     path.resolve(__dirname, '../react-native-test-library/common'),
+    // The local expo checkout: expo-modules-core and expo-image are linked
+    // into node_modules from it, and
+    // their imports resolve through its pnpm store.
+    path.resolve(__dirname, '../../../expo'),
   ],
   transformer: {
     // `.css` imports load as raw text for the stylesheet engine
