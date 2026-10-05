@@ -17,6 +17,7 @@ import android.text.Spanned
 import android.text.TextUtils
 import android.text.util.Linkify
 import android.view.Gravity
+import androidx.annotation.ColorLong
 import com.facebook.common.logging.FLog
 import com.facebook.react.R
 import com.facebook.react.bridge.Dynamic
@@ -39,6 +40,7 @@ import com.facebook.react.uimanager.StateWrapper
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewDefaults
 import com.facebook.react.uimanager.ViewProps
+import com.facebook.react.uimanager.WideColorGamut
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.facebook.react.uimanager.annotations.ReactPropGroup
 import com.facebook.react.uimanager.style.BorderRadiusProp
@@ -46,6 +48,7 @@ import com.facebook.react.uimanager.style.BorderStyle.Companion.fromString
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.views.text.DefaultStyleValuesUtil.getDefaultTextColorHighlight
 import com.facebook.react.views.text.ReactTypefaceUtils.getFontWeightAdjustment
+import com.facebook.react.views.text.internal.span.ReactForegroundColorSpan
 import com.facebook.react.views.view.ImportantForInteractionHelper
 import java.util.HashMap
 
@@ -99,6 +102,9 @@ public constructor(
       val update = extraData as ReactTextUpdate
       val spanned: Spanned = update.text
       view.setText(update)
+      if (ReactForegroundColorSpan.hasColorLong(spanned)) {
+        WideColorGamut.request(view)
+      }
 
       // If this text view contains any clickable spans, set a view tag and reset the accessibility
       // delegate so that these can be picked up by the accessibility system.
@@ -400,6 +406,11 @@ public constructor(
           ],
       customType = "Color",
   )
+  public fun setBorderColorLong(view: ReactTextView, index: Int, @ColorLong color: Long?) {
+    BackgroundStyleApplicator.setBorderColorLong(view, LogicalEdge.values()[index], color)
+  }
+
+  /** The border color as an integer. [setBorderColorLong] receives the prop. */
   public fun setBorderColor(view: ReactTextView, index: Int, color: Int?) {
     BackgroundStyleApplicator.setBorderColor(view, LogicalEdge.values()[index], color)
   }

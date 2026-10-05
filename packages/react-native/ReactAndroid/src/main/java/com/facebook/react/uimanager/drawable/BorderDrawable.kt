@@ -22,11 +22,15 @@ import android.graphics.RectF
 import android.graphics.Region
 import android.graphics.drawable.Drawable
 import android.os.Build
+import androidx.annotation.ColorInt
+import androidx.annotation.ColorLong
+import com.facebook.react.bridge.ColorPropConverter
 import com.facebook.react.uimanager.FloatUtil.floatsEqual
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.Spacing
+import com.facebook.react.uimanager.style.BLACK_COLOR_LONG
 import com.facebook.react.uimanager.style.BorderColors
 import com.facebook.react.uimanager.style.BorderInsets
 import com.facebook.react.uimanager.style.BorderRadiusProp
@@ -45,9 +49,9 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 // 0.inv() == 0xFFFFFFFF, all bits set to 1.
-private const val ALL_BITS_SET = 0.inv()
+private const val ALL_BITS_SET = 0L.inv()
 // 0 == 0x00000000, all bits set to 0.
-private const val ALL_BITS_UNSET = 0
+private const val ALL_BITS_UNSET = 0L
 
 internal class BorderDrawable(
     private val context: Context,
@@ -139,10 +143,10 @@ internal class BorderDrawable(
   override fun getOpacity(): Int {
     val maxBorderAlpha =
         maxOf(
-            (Color.alpha(multiplyColorAlpha(computedBorderColors.left, borderAlpha))),
-            (Color.alpha(multiplyColorAlpha(computedBorderColors.top, borderAlpha))),
-            (Color.alpha(multiplyColorAlpha(computedBorderColors.right, borderAlpha))),
-            (Color.alpha(multiplyColorAlpha(computedBorderColors.bottom, borderAlpha))),
+            (Color.alpha(multiplyColorAlpha(argb(computedBorderColors.left), borderAlpha))),
+            (Color.alpha(multiplyColorAlpha(argb(computedBorderColors.top), borderAlpha))),
+            (Color.alpha(multiplyColorAlpha(argb(computedBorderColors.right), borderAlpha))),
+            (Color.alpha(multiplyColorAlpha(argb(computedBorderColors.bottom), borderAlpha))),
         )
 
     // If the highest alpha value of all border edges is 0, then the drawable is TRANSPARENT.
@@ -152,10 +156,10 @@ internal class BorderDrawable(
 
     val minBorderAlpha =
         minOf(
-            (Color.alpha(multiplyColorAlpha(computedBorderColors.left, borderAlpha))),
-            (Color.alpha(multiplyColorAlpha(computedBorderColors.top, borderAlpha))),
-            (Color.alpha(multiplyColorAlpha(computedBorderColors.right, borderAlpha))),
-            (Color.alpha(multiplyColorAlpha(computedBorderColors.bottom, borderAlpha))),
+            (Color.alpha(multiplyColorAlpha(argb(computedBorderColors.left), borderAlpha))),
+            (Color.alpha(multiplyColorAlpha(argb(computedBorderColors.top), borderAlpha))),
+            (Color.alpha(multiplyColorAlpha(argb(computedBorderColors.right), borderAlpha))),
+            (Color.alpha(multiplyColorAlpha(argb(computedBorderColors.bottom), borderAlpha))),
         )
 
     /*
@@ -217,7 +221,12 @@ internal class BorderDrawable(
     invalidateSelf()
   }
 
-  fun setBorderColor(position: LogicalEdge, color: Int?) {
+  fun setBorderColor(position: LogicalEdge, @ColorInt color: Int?) {
+    // An sRGB color long holds its ARGB integer in the high 32 bits
+    setBorderColorLong(position, color?.let { it.toLong() shl 32 })
+  }
+
+  fun setBorderColorLong(position: LogicalEdge, @ColorLong color: Long?) {
     borderColors = borderColors ?: BorderColors()
 
     borderColors?.edgeColors?.set(position.ordinal, color)
@@ -225,8 +234,14 @@ internal class BorderDrawable(
     invalidateSelf()
   }
 
+  /** The edge's color, or its sRGB approximation for a color an integer can't hold */
   fun getBorderColor(position: LogicalEdge): Int {
-    return borderColors?.edgeColors?.get(position.ordinal) ?: Color.BLACK
+    return argb(getBorderColorLong(position))
+  }
+
+  @ColorLong
+  private fun getBorderColorLong(position: LogicalEdge): Long {
+    return borderColors?.edgeColors?.get(position.ordinal) ?: BLACK_COLOR_LONG
   }
 
   private fun drawRectangularBorders(canvas: Canvas) {
@@ -254,12 +269,12 @@ internal class BorderDrawable(
               computedBorderColors.right,
               computedBorderColors.bottom,
           )
-      if (fastBorderColor != 0) {
-        if (Color.alpha(fastBorderColor) != 0) {
+      if (fastBorderColor != 0L) {
+        if (!isTransparent(fastBorderColor)) {
           // Border color is not transparent.
           val right = bounds.right
           val bottom = bounds.bottom
-          borderPaint.color = multiplyColorAlpha(fastBorderColor, borderAlpha)
+          setBorderPaintColor(fastBorderColor)
           borderPaint.style = Paint.Style.STROKE
           pathForSingleBorder = Path()
           if (borderLeft > 0) {
@@ -376,7 +391,7 @@ internal class BorderDrawable(
 
       // If it's a full and even border draw inner rect path with stroke
       val fullBorderWidth: Float = getFullBorderWidth()
-      val borderColor = getBorderColor(LogicalEdge.ALL)
+      val borderColor = getBorderColorLong(LogicalEdge.ALL)
 
       if (
           borderWidth.top == fullBorderWidth &&
@@ -389,7 +404,7 @@ internal class BorderDrawable(
               computedBorderColors.bottom == borderColor
       ) {
         if (fullBorderWidth > 0) {
-          borderPaint.color = multiplyColorAlpha(borderColor, borderAlpha)
+          setBorderPaintColor(borderColor)
           borderPaint.style = Paint.Style.STROKE
           borderPaint.strokeWidth = fullBorderWidth
           if (computedBorderRadius?.isUniform() == true) {
@@ -488,19 +503,14 @@ internal class BorderDrawable(
       borderTop: Int,
       borderRight: Int,
       borderBottom: Int,
-      colorLeft: Int,
-      colorTop: Int,
-      colorRight: Int,
-      colorBottom: Int,
-  ): Int {
+      @ColorLong colorLeft: Long,
+      @ColorLong colorTop: Long,
+      @ColorLong colorRight: Long,
+      @ColorLong colorBottom: Long,
+  ): Long {
     // If any of the border colors are translucent then we can't use the fast path.
-    if (
-        Color.alpha(colorLeft) < 255 ||
-            Color.alpha(colorTop) < 255 ||
-            Color.alpha(colorRight) < 255 ||
-            Color.alpha(colorBottom) < 255
-    ) {
-      return 0
+    if (!isOpaque(colorLeft) || !isOpaque(colorTop) || !isOpaque(colorRight) || !isOpaque(colorBottom)) {
+      return 0L
     }
 
     val andSmear =
@@ -513,12 +523,12 @@ internal class BorderDrawable(
             (if (borderTop > 0) colorTop else ALL_BITS_UNSET) or
             (if (borderRight > 0) colorRight else ALL_BITS_UNSET) or
             if (borderBottom > 0) colorBottom else ALL_BITS_UNSET)
-    return if (andSmear == orSmear) andSmear else 0
+    return if (andSmear == orSmear) andSmear else 0L
   }
 
   private fun drawQuadrilateral(
       canvas: Canvas,
-      fillColor: Int,
+      @ColorLong fillColor: Long,
       x1: Float,
       y1: Float,
       x2: Float,
@@ -528,7 +538,8 @@ internal class BorderDrawable(
       x4: Float,
       y4: Float,
   ) {
-    if (fillColor == Color.TRANSPARENT) {
+    // Transparent as an sRGB color long is 0
+    if (fillColor == 0L) {
       return
     }
 
@@ -536,7 +547,7 @@ internal class BorderDrawable(
       this.pathForBorder = Path()
     }
 
-    borderPaint.color = multiplyColorAlpha(fillColor, borderAlpha)
+    setBorderPaintColor(fillColor)
     this.pathForBorder?.reset()
     this.pathForBorder?.moveTo(x1, y1)
     this.pathForBorder?.lineTo(x2, y2)
@@ -692,10 +703,10 @@ internal class BorderDrawable(
 
     // Clip border ONLY if at least one edge is non-transparent
     if (
-        Color.alpha(computedBorderColors.left) != 0 ||
-            Color.alpha(computedBorderColors.top) != 0 ||
-            Color.alpha(computedBorderColors.right) != 0 ||
-            Color.alpha(computedBorderColors.bottom) != 0
+        !isTransparent(computedBorderColors.left) ||
+            !isTransparent(computedBorderColors.top) ||
+            !isTransparent(computedBorderColors.right) ||
+            !isTransparent(computedBorderColors.bottom)
     ) {
       innerClipTempRectForBorderRadius?.top =
           innerClipTempRectForBorderRadius?.top?.plus(borderWidth.top) ?: 0f
@@ -1077,6 +1088,48 @@ internal class BorderDrawable(
       }
     }
   }
+
+  /** Sets the paint's color, with its alpha multiplied by the drawable's */
+  private fun setBorderPaintColor(@ColorLong color: Long) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || ColorPropConverter.isIntegerColor(color)) {
+      borderPaint.color = multiplyColorAlpha(argb(color), borderAlpha)
+    } else if (borderAlpha == 255) {
+      borderPaint.setColor(color)
+    } else {
+      borderPaint.setColor(
+          Color.pack(
+              Color.red(color),
+              Color.green(color),
+              Color.blue(color),
+              Color.alpha(color) * borderAlpha / 255f,
+              Color.colorSpace(color),
+          )
+      )
+    }
+  }
+
+  /** The color as an ARGB integer; an sRGB approximation for a color in another space */
+  @ColorInt
+  private fun argb(@ColorLong color: Long): Int =
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ColorPropConverter.isIntegerColor(color)) {
+        Color.toArgb(color)
+      } else {
+        (color ushr 32).toInt()
+      }
+
+  private fun isOpaque(@ColorLong color: Long): Boolean =
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ColorPropConverter.isIntegerColor(color)) {
+        Color.alpha(color) == 1f
+      } else {
+        Color.alpha(argb(color)) == 255
+      }
+
+  private fun isTransparent(@ColorLong color: Long): Boolean =
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ColorPropConverter.isIntegerColor(color)) {
+        Color.alpha(color) == 0f
+      } else {
+        Color.alpha(argb(color)) == 0
+      }
 
   /**
    * Multiplies the color with the given alpha.

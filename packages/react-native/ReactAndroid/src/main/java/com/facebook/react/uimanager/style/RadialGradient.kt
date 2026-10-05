@@ -8,12 +8,15 @@
 package com.facebook.react.uimanager.style
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.RadialGradient as AndroidRadialGradient
 import android.graphics.Shader
+import android.os.Build
 import com.facebook.react.bridge.ColorPropConverter
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.uimanager.FloatUtil
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
@@ -127,13 +130,24 @@ internal class RadialGradient(
                         }
                         else -> colorStop.getInt("color")
                       }
+                  val colorLong: Long? =
+                      if (
+                          color != null &&
+                              colorStop.getType("color") == ReadableType.Map &&
+                              ReactNativeFeatureFlags.enableColorSpaces()
+                      ) {
+                        ColorPropConverter.getColorLong(colorStop.getMap("color"), context)
+                            ?.takeUnless { ColorPropConverter.isIntegerColor(it) }
+                      } else {
+                        null
+                      }
                   val colorStopPosition =
                       if (colorStop.hasKey("position") && !colorStop.isNull("position")) {
                         LengthPercentage.setFromDynamic(colorStop.getDynamic("position"))
                       } else {
                         null
                       }
-                  stops.add(ColorStop(color, colorStopPosition))
+                  stops.add(ColorStop(color, colorStopPosition, colorLong))
                 }
                 stops
               }
@@ -256,8 +270,20 @@ internal class RadialGradient(
     // max is used to handle 0 radius user input. Radius has to be a positive float
     val radius = max(radiusX, 0.00001f)
 
+    val colorLongs = ColorStopUtils.colorLongsOrNull(finalStops)
     val shader =
-        AndroidRadialGradient(centerX, centerY, radius, colors, positions, Shader.TileMode.CLAMP)
+        if (colorLongs != null) {
+          AndroidRadialGradient(
+              centerX,
+              centerY,
+              radius,
+              colorLongs,
+              positions,
+              Shader.TileMode.CLAMP,
+          )
+        } else {
+          AndroidRadialGradient(centerX, centerY, radius, colors, positions, Shader.TileMode.CLAMP)
+        }
 
     val isCircle = shape == Shape.CIRCLE
 

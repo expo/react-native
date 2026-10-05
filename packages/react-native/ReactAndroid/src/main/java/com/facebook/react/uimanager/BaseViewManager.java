@@ -17,11 +17,13 @@ import android.view.View.OnFocusChangeListener;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityEvent;
 import androidx.annotation.ColorInt;
+import androidx.annotation.ColorLong;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 import com.facebook.common.logging.FLog;
 import com.facebook.react.R;
+import com.facebook.react.bridge.ColorPropConverter;
 import com.facebook.react.bridge.Dynamic;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReadableArray;
@@ -224,12 +226,24 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     }
   }
 
-  @ReactProp(
-      name = ViewProps.BACKGROUND_COLOR,
-      defaultInt = Color.TRANSPARENT,
-      customType = "Color")
   public void setBackgroundColor(@NonNull T view, @ColorInt int backgroundColor) {
     BackgroundStyleApplicator.setBackgroundColor(view, backgroundColor);
+  }
+
+  /**
+   * An sRGB color still goes through {@link #setBackgroundColor(View, int)}, so a manager that
+   * overrides it sees every color an integer holds.
+   */
+  @ReactProp(name = ViewProps.BACKGROUND_COLOR, customType = "Color")
+  public void setBackgroundColor(@NonNull T view, @Nullable @ColorLong Long backgroundColor) {
+    if (backgroundColor == null) {
+      setBackgroundColor(view, Color.TRANSPARENT);
+    } else if (ColorPropConverter.isIntegerColor(backgroundColor)) {
+      // An sRGB color long holds its ARGB integer in the high 32 bits
+      setBackgroundColor(view, (int) (backgroundColor >>> 32));
+    } else {
+      BackgroundStyleApplicator.setBackgroundColorLong(view, backgroundColor);
+    }
   }
 
   @ReactProp(name = ViewProps.FILTER, customType = "Filter")

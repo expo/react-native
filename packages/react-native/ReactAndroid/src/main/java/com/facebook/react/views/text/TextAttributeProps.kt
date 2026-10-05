@@ -12,7 +12,9 @@ import android.text.Layout
 import android.text.TextUtils.TruncateAt
 import android.util.LayoutDirection
 import android.view.Gravity
+import androidx.annotation.ColorLong
 import com.facebook.common.logging.FLog
+import com.facebook.react.bridge.ColorSpaceColors
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.common.ReactConstants
@@ -205,6 +207,14 @@ public class TextAttributeProps private constructor() {
     }
     this.fontSize = fontSizeLocal.toInt()
   }
+
+  /**
+   * The foreground color as a color long in its own color space, for a color written in one; [color]
+   * holds its sRGB approximation
+   */
+  @ColorLong
+  public var colorLong: Long? = null
+    private set
 
   public var color: Int? = null
     private set(value) {
@@ -426,6 +436,27 @@ public class TextAttributeProps private constructor() {
      * theme by [MaterialTypeScale]. Must match `TA_KEY_TEXT_ROLE` in `conversions.h`.
      */
     public const val TA_KEY_TEXT_ROLE: Int = 34
+    // The foreground color in its own color space; must match conversions.h
+    public const val TA_KEY_FOREGROUND_COLOR_SPACE: Int = 36
+    private const val CS_KEY_SPACE: Int = 0
+    private const val CS_KEY_CHANNEL_0: Int = 1
+    private const val CS_KEY_CHANNEL_1: Int = 2
+    private const val CS_KEY_CHANNEL_2: Int = 3
+    private const val CS_KEY_ALPHA: Int = 4
+
+    @ColorLong
+    private fun colorLongFromMapBuffer(color: MapBuffer): Long? {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !color.contains(CS_KEY_SPACE)) {
+        return null
+      }
+      return ColorSpaceColors.toColorLong(
+          color.getString(CS_KEY_SPACE),
+          color.getDouble(CS_KEY_CHANNEL_0).toFloat(),
+          color.getDouble(CS_KEY_CHANNEL_1).toFloat(),
+          color.getDouble(CS_KEY_CHANNEL_2).toFloat(),
+          color.getDouble(CS_KEY_ALPHA).toFloat(),
+      )
+    }
     public const val TA_KEY_FONT_SIZE_MULTIPLIER: Int = 5
     public const val TA_KEY_FONT_WEIGHT: Int = 6
     public const val TA_KEY_FONT_STYLE: Int = 7
@@ -485,6 +516,7 @@ public class TextAttributeProps private constructor() {
         val entry = iterator.next()
         when (entry.key) {
           TA_KEY_FOREGROUND_COLOR -> result.color = entry.intValue
+          TA_KEY_FOREGROUND_COLOR_SPACE -> result.colorLong = colorLongFromMapBuffer(entry.mapBufferValue)
           TA_KEY_BACKGROUND_COLOR -> result.backgroundColor = entry.intValue
           TA_KEY_OPACITY -> result.opacity = entry.doubleValue.toFloat()
           TA_KEY_FONT_FAMILY -> result.fontFamily = entry.stringValue

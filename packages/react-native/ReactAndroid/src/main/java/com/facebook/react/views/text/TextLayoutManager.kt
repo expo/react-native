@@ -742,7 +742,7 @@ internal object TextLayoutManager {
         }
         if (textAttributes.isColorSet) {
           textAttributes.color
-              ?.let { ReactForegroundColorSpan(it) }
+              ?.let { ReactForegroundColorSpan(it, textAttributes.colorLong) }
               ?.let { SetSpanOperation(start, end, it) }
               ?.let { ops.add(it) }
         }
@@ -1092,7 +1092,7 @@ internal object TextLayoutManager {
 
         if (fragment.props.isColorSet) {
           spannable.setSpan(
-              fragment.props.color?.let { ReactForegroundColorSpan(it) },
+              fragment.props.color?.let { ReactForegroundColorSpan(it, fragment.props.colorLong) },
               start,
               end,
               spanFlags,

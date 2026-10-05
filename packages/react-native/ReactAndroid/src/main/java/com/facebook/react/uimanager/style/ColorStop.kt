@@ -7,6 +7,10 @@
 
 package com.facebook.react.uimanager.style
 
+import android.graphics.Color
+import android.graphics.ColorSpace
+import android.os.Build
+import androidx.annotation.ColorLong
 import androidx.core.graphics.ColorUtils
 import com.facebook.react.uimanager.FloatUtil
 import com.facebook.react.uimanager.LengthPercentage
@@ -27,7 +31,12 @@ import kotlin.math.ln
  * @property color The color value at this stop, or null for transition hints
  * @property position The position of this stop as a length or percentage, or null for auto
  */
-internal class ColorStop(var color: Int? = null, val position: LengthPercentage? = null)
+internal class ColorStop(
+    var color: Int? = null,
+    val position: LengthPercentage? = null,
+    /** The color in its own space; null for an sRGB color */
+    @ColorLong val colorLong: Long? = null,
+)
 
 /**
  * Represents a color stop after processing with resolved position.
@@ -39,7 +48,11 @@ internal class ColorStop(var color: Int? = null, val position: LengthPercentage?
  * @property color The resolved color value, or null during processing
  * @property position The resolved position as a fraction (0.0 to 1.0), or null during processing
  */
-internal class ProcessedColorStop(var color: Int? = null, val position: Float? = null)
+internal class ProcessedColorStop(
+    var color: Int? = null,
+    val position: Float? = null,
+    @ColorLong var colorLong: Long? = null,
+)
 
 /**
  * Utility object for processing gradient color stops according to CSS specification.
@@ -64,6 +77,25 @@ internal object ColorStopUtils {
    * @param gradientLineLength The length of the gradient line in pixels
    * @return A list of processed color stops with all positions resolved
    */
+  /**
+   * Every stop as a color long, where at least one stop is in its own color space and the OS
+   * has the color-long shader constructors (Android 10); null otherwise, so the shader takes
+   * integers as before. A hint's generated stops are sRGB integers, as the register declares.
+   */
+  fun colorLongsOrNull(stops: List<ProcessedColorStop>): LongArray? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || stops.none { it.colorLong != null }) {
+      return null
+    }
+    // A shader takes every stop in one color space: extended sRGB, which holds a wide value and
+    // interpolates in sRGB's own encoding, as CSS's legacy gradients do
+    val space = ColorSpace.get(ColorSpace.Named.EXTENDED_SRGB)
+    return LongArray(stops.size) { i ->
+      // An sRGB color long holds its ARGB integer in the high 32 bits
+      val color = stops[i].colorLong ?: ((stops[i].color ?: Color.TRANSPARENT).toLong() shl 32)
+      Color.convert(color, space)
+    }
+  }
+
   fun getFixedColorStops(
       colorStops: List<ColorStop>,
       gradientLineLength: Float,
@@ -96,7 +128,7 @@ internal object ColorStopUtils {
       // largest specified position of any color stop or transition hint before it.
       if (newPosition != null) {
         newPosition = maxOf(newPosition, maxPositionSoFar)
-        fixedColorStops[i] = ProcessedColorStop(colorStop.color, newPosition)
+        fixedColorStops[i] = ProcessedColorStop(colorStop.color, newPosition, colorStop.colorLong)
         maxPositionSoFar = newPosition
       } else {
         hasNullPositions = true
@@ -121,6 +153,7 @@ internal object ColorStopUtils {
                 ProcessedColorStop(
                     colorStops[lastDefinedIndex + j].color,
                     startPosition + increment * j,
+                    colorStops[lastDefinedIndex + j].colorLong,
                 )
           }
           lastDefinedIndex = i

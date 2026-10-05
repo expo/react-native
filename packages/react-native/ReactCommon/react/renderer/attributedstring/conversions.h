@@ -1310,6 +1310,17 @@ constexpr static MapBuffer::Key TA_KEY_BASELINE_SHIFT = 33;
  * Must match `TA_KEY_TEXT_ROLE` in TextAttributeProps.kt.
  */
 constexpr static MapBuffer::Key TA_KEY_TEXT_ROLE = 34;
+/*
+ * The foreground color as written in its own color space, beside its sRGB
+ * approximation in TA_KEY_FOREGROUND_COLOR, so Android can draw it in that
+ * space: a map of CS_KEY_* entries. Must match TextAttributeProps.kt.
+ */
+constexpr static MapBuffer::Key TA_KEY_FOREGROUND_COLOR_SPACE = 36;
+constexpr static MapBuffer::Key CS_KEY_SPACE = 0;
+constexpr static MapBuffer::Key CS_KEY_CHANNEL_0 = 1;
+constexpr static MapBuffer::Key CS_KEY_CHANNEL_1 = 2;
+constexpr static MapBuffer::Key CS_KEY_CHANNEL_2 = 3;
+constexpr static MapBuffer::Key CS_KEY_ALPHA = 4;
 constexpr static MapBuffer::Key TA_KEY_LINE_HEIGHT = 11;
 constexpr static MapBuffer::Key TA_KEY_ALIGNMENT = 12;
 constexpr static MapBuffer::Key TA_KEY_BEST_WRITING_DIRECTION = 13;
@@ -1457,6 +1468,18 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
   auto builder = MapBufferBuilder();
   if (textAttributes.foregroundColor) {
     builder.putInt(TA_KEY_FOREGROUND_COLOR, toAndroidRepr(textAttributes.foregroundColor));
+    if (auto colorSpaceValue = colorSpaceValueOf(textAttributes.foregroundColor)) {
+      const auto *description = describeColorSpace(colorSpaceValue->space);
+      if (description != nullptr) {
+        auto colorBuilder = MapBufferBuilder();
+        colorBuilder.putString(CS_KEY_SPACE, std::string(description->name));
+        colorBuilder.putDouble(CS_KEY_CHANNEL_0, colorSpaceValue->channels[0]);
+        colorBuilder.putDouble(CS_KEY_CHANNEL_1, colorSpaceValue->channels[1]);
+        colorBuilder.putDouble(CS_KEY_CHANNEL_2, colorSpaceValue->channels[2]);
+        colorBuilder.putDouble(CS_KEY_ALPHA, colorSpaceValue->alpha);
+        builder.putMapBuffer(TA_KEY_FOREGROUND_COLOR_SPACE, colorBuilder.build());
+      }
+    }
   }
   if (textAttributes.backgroundColor) {
     builder.putInt(TA_KEY_BACKGROUND_COLOR, toAndroidRepr(textAttributes.backgroundColor));
@@ -1522,6 +1545,8 @@ inline MapBuffer toMapBuffer(const TextAttributes &textAttributes)
 
   // Decoration
   if (textAttributes.textDecorationColor) {
+    // Decoration, shadow and background colors cross as integers.
+    // DOM-CSS-LIMITATION(android-text-and-outline-colors-are-srgb)
     builder.putInt(TA_KEY_TEXT_DECORATION_COLOR, toAndroidRepr(textAttributes.textDecorationColor));
   }
   if (textAttributes.textDecorationLineType.has_value()) {

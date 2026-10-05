@@ -13,6 +13,7 @@ import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.DynamicFromObject
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.yoga.YogaConstants
 
 /**
@@ -48,7 +49,17 @@ public abstract class BaseViewManagerDelegate<
           mViewManager.setAccessibilityValue(view, value as ReadableMap?)
 
       ViewProps.BACKGROUND_COLOR ->
-          mViewManager.setBackgroundColor(view, ColorPropConverter.getColor(value, view.context, 0))
+          if (ReactNativeFeatureFlags.enableColorSpaces()) {
+            mViewManager.setBackgroundColor(
+                view,
+                ColorPropConverter.getColorLong(value, view.context) ?: (0L shl 32),
+            )
+          } else {
+            mViewManager.setBackgroundColor(
+                view,
+                ColorPropConverter.getColor(value, view.context, 0),
+            )
+          }
 
       ViewProps.BORDER_RADIUS ->
           mViewManager.setBorderRadius(
