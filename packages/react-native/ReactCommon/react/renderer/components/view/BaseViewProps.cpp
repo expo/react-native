@@ -7,6 +7,8 @@
 
 #include "BaseViewProps.h"
 
+#include <react/renderer/components/view/TransitionConversions.h>
+
 #include <algorithm>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
@@ -95,12 +97,14 @@ BaseViewProps::BaseViewProps(
           "backgroundColor",
           sourceProps.backgroundColor,
           {})),
-      // The inheritable text props are gated per-field, IN PLACE: with
-      // `enableStringChildren` off they cost zero raw-prop probes
-      // (pay-for-what-you-use), and with it on the probes sit exactly here,
-      // in declaration order — RawPropsParser optimizes monotonic key
-      // access, and hoisting these probes after the later keys would make its
-      // index roll over per parse.
+      // The inheritable text props are read here, in declaration order, and
+      // only when the feature is on — so a View in an app that does not use it
+      // reads none of them.
+      //
+      // They have to be read in declaration order. `RawPropsParser` finds a
+      // key by advancing a cursor through its key list, so a key read in that
+      // order costs one step, while a key read out of order makes the cursor
+      // wrap the whole list.
       inheritedColor(
           parseInheritedTextProps && stringChildrenEnabled
               ? convertRawProp(
@@ -462,6 +466,40 @@ BaseViewProps::BaseViewProps(
           sourceProps.removeClippedSubviews,
           false)) {
   hasInheritedTextProps = computeHasInheritedTextProps();
+
+  // `transition`: nothing declared and none inherited keeps
+  // the pointer null; the same longhands as the source share its allocation;
+  // anything else is parsed once here, not while a frame is interpolated
+  {
+    const auto* inherited = sourceProps.cssMotion.get();
+    auto motion = CssMotion{};
+    const auto raw = [&](const char* name, const std::string& fallback) {
+      return convertRawProp(context, rawProps, name, fallback, std::string{});
+    };
+    static const std::string kEmpty{};
+    motion.transitionPropertyRaw =
+        raw("transitionProperty",
+            inherited ? inherited->transitionPropertyRaw : kEmpty);
+    motion.transitionDurationRaw =
+        raw("transitionDuration",
+            inherited ? inherited->transitionDurationRaw : kEmpty);
+    motion.transitionDelayRaw = raw(
+        "transitionDelay", inherited ? inherited->transitionDelayRaw : kEmpty);
+    motion.transitionTimingFunctionRaw =
+        raw("transitionTimingFunction",
+            inherited ? inherited->transitionTimingFunctionRaw : kEmpty);
+
+    if (inherited != nullptr && motion.rawsEqual(*inherited)) {
+      cssMotion = sourceProps.cssMotion;
+    } else if (!motion.isEmpty()) {
+      motion.transitions = buildTransitions(
+          motion.transitionPropertyRaw,
+          motion.transitionDurationRaw,
+          motion.transitionDelayRaw,
+          motion.transitionTimingFunctionRaw);
+      cssMotion = std::make_shared<const CssMotion>(std::move(motion));
+    }
+  }
 
   // `all` — parsed by hand: its value space here is tiny and a boundary is
   // structural enough that a malformed value should mean "no declaration".
