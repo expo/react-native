@@ -10,7 +10,10 @@
 #include <react/cxxstableapi/UmbrellaGuard.h>
 
 #include <react/renderer/graphics/ColorComponents.h>
+#include <react/renderer/graphics/ColorSpaceValue.h>
+#include <algorithm>
 #include <cmath>
+#include <optional>
 #include <cstdint>
 
 namespace facebook::react {
@@ -29,11 +32,26 @@ inline Color hostPlatformColorFromRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t 
 inline Color hostPlatformColorFromComponents(ColorComponents components)
 {
   float ratio = 255;
+  auto channel = [&](float value) { return static_cast<uint8_t>(std::round(std::clamp(value, 0.0f, 1.0f) * ratio)); };
   return hostPlatformColorFromRGBA(
-      static_cast<uint8_t>(std::round(components.red * ratio)),
-      static_cast<uint8_t>(std::round(components.green * ratio)),
-      static_cast<uint8_t>(std::round(components.blue * ratio)),
-      static_cast<uint8_t>(std::round(components.alpha * ratio)));
+      channel(components.red), channel(components.green), channel(components.blue), channel(components.alpha));
+}
+
+/*
+ * This host draws 8-bit sRGB only, so a color in another space is converted
+ * by CSS's arithmetic and clipped to sRGB, and a space CSS doesn't define
+ * can't be shown
+ */
+// An 8-bit host color keeps no color space, so it is always sRGB
+inline bool hostPlatformColorIsColorSpaceColor(const Color & /*color*/)
+{
+  return false;
+}
+
+inline Color hostPlatformColorFromColorSpaceValue(const ColorSpaceValue &value)
+{
+  auto components = toClippedSRGB(value);
+  return components.has_value() ? hostPlatformColorFromComponents(*components) : HostPlatformColor::UndefinedColor;
 }
 
 inline float alphaFromHostPlatformColor(Color color)
@@ -69,6 +87,11 @@ inline ColorComponents colorComponentsFromHostPlatformColor(Color color)
       .green = static_cast<float>(greenFromHostPlatformColor(color)) / ratio,
       .blue = static_cast<float>(blueFromHostPlatformColor(color)) / ratio,
       .alpha = static_cast<float>(alphaFromHostPlatformColor(color)) / ratio};
+}
+
+inline Color hostPlatformColorFromTransientColorSpaceValue(const ColorSpaceValue &value)
+{
+  return hostPlatformColorFromColorSpaceValue(value);
 }
 
 } // namespace facebook::react

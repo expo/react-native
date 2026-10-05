@@ -10,8 +10,10 @@
 #include <react/cxxstableapi/UmbrellaGuard.h>
 
 #include <react/renderer/graphics/ColorComponents.h>
+#include <react/renderer/graphics/ColorSpaceValue.h>
 #include <react/utils/hash_combine.h>
 #include <cmath>
+#include <optional>
 
 namespace facebook::react {
 
@@ -26,6 +28,13 @@ struct Color {
   Color(int32_t color);
   Color(const DynamicColor &dynamicColor);
   Color(const ColorComponents &components);
+  // A color in its own space, in the CGColorSpace the OS resolves for it
+  Color(const ColorSpaceValue &value);
+  // Whether the color was written in its own color space rather than as sRGB
+  bool isColorSpaceColor() const
+  {
+    return uiColor_ != nullptr && (uiColorHashValue_ & kColorSpaceColorBit) != 0;
+  }
   Color() : uiColor_(nullptr) {};
   int32_t getColor() const;
   std::size_t getUIColorHash() const;
@@ -35,6 +44,13 @@ struct Color {
   // reaching into getUIColor() must null-check it.
   static Color createSemanticColor(std::vector<std::string> &semanticItems);
 
+  // `DynamicColorIOS`: one of four colors by appearance and contrast
+  static Color createDynamicColor(
+      const Color &light,
+      const Color &dark,
+      const Color &highContrastLight,
+      const Color &highContrastDark);
+
   std::shared_ptr<void> getUIColor() const
   {
     return uiColor_;
@@ -42,16 +58,9 @@ struct Color {
 
   float getChannel(int channelId) const;
 
-  ColorComponents getColorComponents() const
-  {
-    float ratio = 255;
-    int32_t primitiveColor = getColor();
-    return ColorComponents{
-        .red = (float)((primitiveColor >> 16) & 0xff) / ratio,
-        .green = (float)((primitiveColor >> 8) & 0xff) / ratio,
-        .blue = (float)((primitiveColor >> 0) & 0xff) / ratio,
-        .alpha = (float)((primitiveColor >> 24) & 0xff) / ratio};
-  }
+  // Extended-range sRGB floats matched by Core Graphics with color spaces on;
+  // through the 8-bit integer otherwise
+  ColorComponents getColorComponents() const;
   bool operator==(const Color &other) const;
   bool operator!=(const Color &other) const;
   operator int32_t() const
@@ -62,7 +71,11 @@ struct Color {
  private:
   Color(std::shared_ptr<void> uiColor);
   std::shared_ptr<void> uiColor_;
+  // The color's hash, whose top bit says whether it is a color space color:
+  // kept in the hash so that the struct, which every color prop holds, doesn't
+  // grow, and so that two colors that differ only in it aren't equal
   std::size_t uiColorHashValue_;
+  static constexpr std::size_t kColorSpaceColorBit = std::size_t{1} << (sizeof(std::size_t) * 8 - 1);
 };
 
 namespace HostPlatformColor {
@@ -93,6 +106,16 @@ inline Color hostPlatformColorFromComponents(ColorComponents components)
   return Color(components);
 }
 
+inline Color hostPlatformColorFromColorSpaceValue(const ColorSpaceValue &value)
+{
+  return Color(value);
+}
+
+inline bool hostPlatformColorIsColorSpaceColor(const Color &color)
+{
+  return color.isColorSpaceColor();
+}
+
 inline ColorComponents colorComponentsFromHostPlatformColor(Color color)
 {
   return color.getColorComponents();
@@ -121,6 +144,11 @@ inline float blueFromHostPlatformColor(Color color)
 inline bool hostPlatformColorIsColorMeaningful(Color color) noexcept
 {
   return alphaFromHostPlatformColor(color) > 0;
+}
+
+inline Color hostPlatformColorFromTransientColorSpaceValue(const ColorSpaceValue &value)
+{
+  return hostPlatformColorFromColorSpaceValue(value);
 }
 
 } // namespace facebook::react

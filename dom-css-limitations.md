@@ -190,6 +190,11 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   `oklch(0.7 0.1 none)` keeps the other end's hue. Here `none` is 0 from
   parsing on, so it turns from hue 0. Deferred: it needs the parsed value to
   keep which channels are missing.
+- **`DOM-CSS-LIMITATION(hdr-colors-draw-at-sdr-white)` — an HDR color draws
+  at SDR white.** `rec2100-pq` and values above 1 in a linear space keep their
+  value, but backgrounds, borders and text are SDR layers, so they draw no
+  brighter than white. Deferred: an EDR fill layer, governed by
+  `dynamic-range-limit`.
 
 ## Performance
 

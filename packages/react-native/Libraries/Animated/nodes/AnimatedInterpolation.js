@@ -21,8 +21,10 @@ import NativeAnimatedHelper from '../../../src/private/animated/NativeAnimatedHe
 import {validateInterpolation} from '../../../src/private/animated/NativeAnimatedValidation';
 import normalizeColor from '../../StyleSheet/normalizeColor';
 import processColor from '../../StyleSheet/processColor';
+import Platform from '../../Utilities/Platform';
 import Easing from '../Easing';
 import AnimatedWithChildren from './AnimatedWithChildren';
+import {approximateSRGB} from '@react-native/normalize-colors/colorInterpolation';
 import invariant from 'invariant';
 
 type ExtrapolateType = 'extend' | 'identity' | 'clamp';
@@ -179,6 +181,13 @@ function interpolate(
   return result;
 }
 
+// 0xrrggbbaa, as normalize-colors gives it, to the integer the native side
+// reads: 0xaarrggbb, signed on Android, as `processColor` does
+function packNativeColor(color: number): number {
+  const packed = ((color << 24) | (color >>> 8)) >>> 0;
+  return Platform.OS === 'android' ? packed | 0x0 : packed;
+}
+
 const numericComponentRegex = /[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/g;
 
 // Maps string inputs an RGBA color or an array of numeric components
@@ -188,6 +197,15 @@ function mapStringToNumericComponents(
   | {isColor: true, components: [number, number, number, number]}
   | {isColor: false, components: ReadonlyArray<number | string>} {
   let normalizedColor = normalizeColor(input);
+  if (
+    normalizedColor != null &&
+    typeof normalizedColor === 'object' &&
+    typeof normalizedColor.space === 'string'
+  ) {
+    // The animated node mixes 8-bit sRGB channels
+    // DOM-CSS-LIMITATION(animated-colors-interpolate-in-srgb)
+    normalizedColor = approximateSRGB(normalizedColor);
+  }
   invariant(
     normalizedColor == null || typeof normalizedColor !== 'object',
     'PlatformColors are not supported',
@@ -535,9 +553,22 @@ export default class AnimatedInterpolation<
         if (typeof processedColor === 'number') {
           outputType = 'color';
           return processedColor;
-        } else {
-          return NativeAnimatedHelper.transformDataType(value);
         }
+        if (
+          processedColor != null &&
+          typeof processedColor === 'object' &&
+          typeof processedColor.space === 'string'
+        ) {
+          // The native node mixes 8-bit sRGB channels. A color whose space
+          // can't be converted is passed on as the native helper would.
+          // DOM-CSS-LIMITATION(animated-colors-interpolate-in-srgb)
+          const approximation = approximateSRGB(processedColor);
+          if (approximation != null) {
+            outputType = 'color';
+            return packNativeColor(approximation);
+          }
+        }
+        return NativeAnimatedHelper.transformDataType(value);
         // $FlowFixMe[unclear-type]
       }) as any;
     } else if (typeof outputRange[0] === 'object') {

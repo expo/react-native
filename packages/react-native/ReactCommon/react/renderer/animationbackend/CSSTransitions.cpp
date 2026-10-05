@@ -7,6 +7,8 @@
 
 #include "CSSTransitions.h"
 
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+
 #include <react/renderer/animationbackend/AnimatedPropsBuilder.h>
 #include <react/renderer/animationbackend/AnimatedPropsSerializer.h>
 #include <react/renderer/mounting/ShadowTree.h>
@@ -179,7 +181,8 @@ Float interpolateFloat(Float from, Float to, Float progress) {
 /*
  * Colours interpolate channel-wise in premultiplied sRGB, which is what a
  * browser does for a plain `background-color` transition. Premultiplied so a
- * fade to transparent does not travel through the wrong hue.
+ * fade to transparent does not travel through the wrong hue. When either end
+ * is a color in its own space, CSS Color 4 §12.1 makes the space Oklab.
  */
 SharedColor interpolateColor(
     const SharedColor& from,
@@ -187,6 +190,18 @@ SharedColor interpolateColor(
     Float progress) {
   auto fromComponents = colorComponentsFromColor(from);
   auto toComponents = colorComponentsFromColor(to);
+
+  if (ReactNativeFeatureFlags::enableColorSpaces() &&
+      (isColorSpaceColor(from) || isColorSpaceColor(to))) {
+    if (progress <= 0) {
+      return from;
+    }
+    if (progress >= 1) {
+      return to;
+    }
+    return colorFromTransientColorSpaceValue(interpolateInOKLab(
+        fromComponents, toComponents, static_cast<float>(progress)));
+  }
 
   const auto fromAlpha = fromComponents.alpha;
   const auto toAlpha = toComponents.alpha;
