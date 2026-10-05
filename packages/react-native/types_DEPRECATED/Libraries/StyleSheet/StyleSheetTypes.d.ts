@@ -471,6 +471,21 @@ export interface ViewStyle extends FlexStyle, ShadowStyleIOS, TransformsStyle {
   transitionDelay?: string | number | undefined;
   transitionTimingFunction?: string | undefined;
   /**
+   * `animation` (css-animations-1), run by the same renderer engine as
+   * transitions. `animationKeyframes` is a JSON string of pre-resolved stops
+   * (`[{offset, opacity?, backgroundColor?, borderColor?, transform?}, ...]`)
+   * — a CSS-in-JS style layer serializes its `@keyframes` rules into it.
+   * Animatable properties match the transitionable set.
+   */
+  animationKeyframes?: string | undefined;
+  animationDuration?: string | number | undefined;
+  animationDelay?: string | number | undefined;
+  animationTimingFunction?: string | undefined;
+  animationIterationCount?: string | number | undefined;
+  animationDirection?:
+    'normal' | 'reverse' | 'alternate' | 'alternate-reverse' | undefined;
+  animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both' | undefined;
+  /**
    * `white-space` (css-text-3 §3): how white space and newlines in text
    * children are processed. `normal` collapses runs of spaces and turns
    * newlines into spaces; `pre` and `pre-wrap` preserve both; `pre-line`

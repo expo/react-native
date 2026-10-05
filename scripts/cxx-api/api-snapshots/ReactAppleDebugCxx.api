@@ -3300,6 +3300,7 @@ float facebook::react::yogaFloatFromFloat(facebook::react::Float value);
 int facebook::react::toInt(const facebook::react::DisplayType& displayType);
 int facebook::react::toInt(const facebook::react::LayoutDirection& layoutDirection);
 std::optional<facebook::react::BlendMode> facebook::react::blendModeFromString(std::string_view blendModeName);
+std::optional<facebook::react::CSSAnimation> facebook::react::buildAnimation(const std::string& keyframesJson, const std::string& duration, const std::string& delay, const std::string& timingFunction, const std::string& iterationCount, const std::string& direction, const std::string& fillMode);
 std::optional<facebook::react::FilterType> facebook::react::filterTypeFromString(std::string_view filterName);
 std::optional<facebook::react::Float> facebook::react::optionalFloatFromYogaValue(const facebook::yoga::Style::Length& length, std::optional<facebook::react::Float> base = {});
 std::optional<facebook::react::Isolation> facebook::react::isolationFromString(std::string_view isolationSetting);
@@ -3412,6 +3413,7 @@ void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, c
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext&, const facebook::react::RawValue& value, std::vector<facebook::react::BackgroundSize>& result);
 void facebook::react::fromRawValueShared(const facebook::react::ContextContainer& contextContainer, int32_t surfaceId, const facebook::react::RawValue& value, facebook::react::SharedColor& result, facebook::react::parsePlatformColorFn parsePlatformColor);
 void facebook::react::fromString(const std::string& string, facebook::react::AccessibilityTraits& result);
+void facebook::react::parseTransformString(const std::string& value, facebook::react::Transform& result);
 void facebook::react::parseUnprocessedTransformOriginString(const std::string& value, facebook::react::TransformOrigin& result);
 void facebook::react::registerCxxModuleToGlobalModuleMap(std::string name, std::function<std::shared_ptr<facebook::react::TurboModule>(std::shared_ptr<facebook::react::CallInvoker> jsInvoker)> moduleProviderFunc);
 void facebook::react::setDefaultColorSpace(facebook::react::ColorSpace newColorSpace);
@@ -3581,6 +3583,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public bool removeClippedSubviews;
   public bool shouldRasterize;
   public const facebook::react::Transitions& transitions() const;
+  public const std::optional<facebook::react::CSSAnimation>& animation() const;
   public facebook::react::BackfaceVisibility backfaceVisibility;
   public facebook::react::BaseViewProps::CascadeReset cascadeReset;
   public facebook::react::BlendMode mixBlendMode;
@@ -3645,6 +3648,14 @@ struct facebook::react::BaseViewProps::CssMotion {
   public bool isEmpty() const;
   public bool rawsEqual(const facebook::react::BaseViewProps::CssMotion& other) const;
   public facebook::react::Transitions transitions;
+  public std::optional<facebook::react::CSSAnimation> animation;
+  public std::string animationDelayRaw;
+  public std::string animationDirectionRaw;
+  public std::string animationDurationRaw;
+  public std::string animationFillModeRaw;
+  public std::string animationIterationCountRaw;
+  public std::string animationKeyframesRaw;
+  public std::string animationTimingFunctionRaw;
   public std::string transitionDelayRaw;
   public std::string transitionDurationRaw;
   public std::string transitionPropertyRaw;
@@ -5166,6 +5177,20 @@ enum facebook::react::ActivityIndicatorViewSize {
   Small,
 }
 
+enum facebook::react::AnimationDirection {
+  Alternate,
+  AlternateReverse,
+  Normal,
+  Reverse,
+}
+
+enum facebook::react::AnimationFillMode {
+  Backwards,
+  Both,
+  Forwards,
+  None,
+}
+
 enum facebook::react::BackfaceVisibility : uint8_t {
   Auto,
   Hidden,
@@ -5770,6 +5795,15 @@ struct facebook::react::AccessibilityValue {
   public std::optional<std::string> text;
 }
 
+struct facebook::react::AnimationKeyframe {
+  public bool operator==(const facebook::react::AnimationKeyframe& other) const = default;
+  public facebook::react::Float offset;
+  public std::optional<facebook::react::Float> opacity;
+  public std::optional<facebook::react::Transform> transform;
+  public std::optional<int32_t> backgroundColor;
+  public std::optional<int32_t> borderColor;
+}
+
 struct facebook::react::BackgroundPosition {
   public BackgroundPosition();
   public bool operator==(const facebook::react::BackgroundPosition& other) const = default;
@@ -5867,6 +5901,17 @@ struct facebook::react::Bridging<uint32_t> {
 
 struct facebook::react::Bridging<void> {
   public static void fromJs(facebook::jsi::Runtime&, const facebook::jsi::Value&);
+}
+
+struct facebook::react::CSSAnimation {
+  public bool operator==(const facebook::react::CSSAnimation& other) const = default;
+  public facebook::react::AnimationDirection direction;
+  public facebook::react::AnimationFillMode fillMode;
+  public facebook::react::Float delay;
+  public facebook::react::Float duration;
+  public facebook::react::Float iterations;
+  public facebook::react::TransitionTimingFunction timingFunction;
+  public std::vector<facebook::react::AnimationKeyframe> keyframes;
 }
 
 struct facebook::react::Color {
@@ -6185,6 +6230,18 @@ struct facebook::react::Rect {
   public static facebook::react::Rect boundingRect(const facebook::react::Point& a, const facebook::react::Point& b, const facebook::react::Point& c, const facebook::react::Point& d) noexcept;
   public static facebook::react::Rect intersect(const facebook::react::Rect& rect1, const facebook::react::Rect& rect2);
   public void unionInPlace(const facebook::react::Rect& rect) noexcept;
+}
+
+struct facebook::react::RunningAnimation {
+  public bool awaitingFirstFrame;
+  public bool cancelled;
+  public bool needsSize;
+  public double startTime;
+  public facebook::react::CSSAnimation spec;
+  public facebook::react::Size size;
+  public facebook::react::Tag tag;
+  public std::shared_ptr<const facebook::react::ShadowNodeFamily> family;
+  public std::vector<std::pair<facebook::react::TransitionProperty, facebook::react::TransitionValue>> baseValues;
 }
 
 struct facebook::react::RunningTransition {

@@ -62,6 +62,24 @@ struct ViewTransitions {
 };
 
 /*
+ * One CSS animation on one view (css-animations-1): runs while a committed
+ * node carries it. The base values are the committed props without the
+ * animation, which `fill-mode: none` and cancellation revert to.
+ */
+struct RunningAnimation {
+  Tag tag{};
+  std::shared_ptr<const ShadowNodeFamily> family;
+  CSSAnimation spec{};
+  std::vector<std::pair<TransitionProperty, TransitionValue>> baseValues{};
+  bool awaitingFirstFrame{true};
+  double startTime{0.0};
+  bool needsSize{false};
+  Size size{};
+  // The node stopped carrying it: the next frame writes the base values once
+  bool cancelled{false};
+};
+
+/*
  * CSS transitions (css-transitions-1) in the renderer, off the JavaScript
  * thread: a commit hook diffs each view's old props against its new ones and
  * starts or re-aims transitions; the shared animation backend's frame
@@ -98,10 +116,12 @@ class CSSTransitions final : public UIManagerCommitHook {
 
  private:
   void diffNode(const ShadowNode &oldNode, const ShadowNode &newNode);
-  // A freshly mounted subtree: no transition starts, since there is no
-  // previous value
+  // A freshly mounted subtree: no transition starts (there is no previous
+  // value), but an animation does, since the node carries it
   void visitFreshNode(const ShadowNode &node);
   void noteTransitionableContent(const ViewProps *viewProps);
+  void syncAnimation(const ShadowNode &node);
+  void writeAnimationFrame(RunningAnimation &animation, double nowMs);
   // The laid-out size of a view, for percent transforms
   Size resolveViewSize(const ShadowNodeFamily &family);
   Size sizeFor(ViewTransitions &entry);
@@ -122,7 +142,7 @@ class CSSTransitions final : public UIManagerCommitHook {
   // Touched by the commit hook and the frame callback, on different threads
   std::mutex mutex_;
   std::unordered_map<Tag, ViewTransitions> transitions_;
-
+  std::unordered_map<Tag, RunningAnimation> animations_;
   double lastFrameTime_{0.0};
 };
 
