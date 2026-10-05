@@ -313,7 +313,143 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
   }
 
   if (fragment.children) {
-    updateYogaChildren();
+    /*
+     * A clone that REPLACES children rebuilds only those children.
+     *
+     * `cloneMultipleRecursive` copies the parent's children vector and swaps
+     * the one entry on the path to an animated node, so the new list has the
+     * same size and differs in a handful of places. `updateYogaChildren()`
+     * cannot know that: it scans every child for foreign yoga owners, detaches
+     * the whole list, and rebuilds it — three passes over every sibling to
+     * change one of them.
+     *
+     * Nothing notices until the siblings are many and the caller is an
+     * animation. `AnimationBackend` commits the shadow tree on EVERY FRAME, so
+     * a native-driven animation inside a large container pays those passes
+     * 120 times a second and its cost scales with how many siblings the
+     * animated node happens to have. Measured on a chat transcript holding
+     * 100,000 mounted rows: a 745ms send animation took 6,061ms, with
+     * `updateYogaChildren` accounting for 1,285 of the 1,336 samples inside
+     * the clone.
+     *
+     * A list that is the same length and differs only by replacement is
+     * exactly what `replaceChild` is for, and it keeps the yoga tree correct
+     * one child at a time. The scan is a plain pointer compare — no refcounts,
+     * no yoga work — so the fast path stays cheap even when it fails.
+     *
+     * Deliberately NOT taken when this node owns anonymous text boxes: those
+     * are generated FROM the children, so a replacement can change which runs
+     * exist and the full rebuild is the only thing that gets it right.
+     */
+    const auto& sourceNode =
+        static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode);
+    const auto& oldChildren = sourceNode.getChildren();
+    const auto& newChildren = getChildren();
+    bool replacedInPlace = false;
+    const bool inlineLayoutEnabled =
+        ReactNativeFeatureFlags::enableStringChildren() &&
+        getAnonymousTextContentFactory() != nullptr;
+    if (sourceNode.anonymousTextContentChildren_.empty() &&
+        !getTraits().check(ShadowNodeTraits::Trait::LeafYogaNode) &&
+        oldChildren.size() == newChildren.size() &&
+        // Indices into `children_` and `yogaLayoutableChildren_` only line up
+        // when nothing has been filtered out of the latter.
+        sourceNode.yogaLayoutableChildren_.size() == oldChildren.size() &&
+        sourceNode.yogaLayoutableChildren_.size() ==
+            YGNodeGetChildCount(&yogaNode_)) {
+      replacedInPlace = true;
+      for (size_t i = 0; i < newChildren.size(); i++) {
+        if (oldChildren[i] == newChildren[i]) {
+          continue;
+        }
+        // Both sides must be layoutable for `replaceChild` to keep the yoga
+        // list in step; anything else changes the SHAPE and wants the rebuild.
+        const auto* newLayoutable =
+            YogaLayoutableShadowNode::asYogaLayoutable(*newChildren[i]);
+        if (YogaLayoutableShadowNode::asYogaLayoutable(*oldChildren[i]) ==
+                nullptr ||
+            newLayoutable == nullptr) {
+          replacedInPlace = false;
+          break;
+        }
+        // Leave a child another node already owns to the rebuild, which
+        // clones it (`adoptYogaChild`). Commit branching and the shared
+        // animated backend both reach here with such a child, and adopting it
+        // in place failed the ownership assertion below.
+        if (YGNodeGetOwner(&newLayoutable->yogaNode_) != nullptr) {
+          replacedInPlace = false;
+          break;
+        }
+        // Leave a child that became inline-level, or stopped being one, to
+        // the rebuild, which builds the runs it joins or leaves. In place, a
+        // box restyled to `display: inline-flex` as its parent was cloned
+        // stayed a block child and filled its container's width.
+        if (inlineLayoutEnabled &&
+            isInlineLevelContent(*oldChildren[i]) !=
+                isInlineLevelContent(*newChildren[i])) {
+          replacedInPlace = false;
+          break;
+        }
+      }
+    }
+    if (replacedInPlace) {
+      /*
+       * The YOGA side only. `replaceChild` would route through
+       * `ShadowNode::replaceChild`, which calls `cloneChildrenIfShared()` and
+       * copies the whole children vector back — the very cost being avoided —
+       * to write a child that `children_` already holds, because it came in
+       * on the fragment.
+       */
+      yogaLayoutableChildren_ = sourceNode.yogaLayoutableChildren_;
+      for (size_t i = 0; i < newChildren.size(); i++) {
+        if (oldChildren[i] == newChildren[i]) {
+          continue;
+        }
+        auto& newLayoutable = const_cast<YogaLayoutableShadowNode&>(
+            *YogaLayoutableShadowNode::asYogaLayoutable(*newChildren[i]));
+        // A fresh clone owns no parent yet; anything else is a node from
+        // another tree and must not be adopted here.
+        react_native_assert(
+            YGNodeGetOwner(&newLayoutable.yogaNode_) == nullptr);
+        newLayoutable.yogaNode_.setOwner(&yogaNode_);
+        yogaNode_.replaceChild(&newLayoutable.yogaNode_, i);
+        yogaLayoutableChildren_[i] =
+            std::static_pointer_cast<const YogaLayoutableShadowNode>(
+                newChildren[i]);
+      }
+      /*
+       * DIRTY, because the child set changed.
+       *
+       * `updateYogaChildren()` is not "rebuild the list" — it recomputes
+       * everything this node derives from its children, and the list is only
+       * the first part. Its tail dirties the node, and yoga's own
+       * `setChildren`/`insertChild` dirty it on the way. `replaceChild` does
+       * not, so without this the parent is never laid out again: a newly
+       * mounted child has no size and no position and simply does not appear.
+       * Measured — the composer's send button stopped showing up at all, with
+       * every one of the 35 assertions in this file still satisfied, because
+       * nothing structural was wrong.
+       *
+       * The tail's OTHER work is safely skipped here, and only here, because
+       * this path replaces children without changing what they ARE:
+       * `FormsView`/`FormsStackingContext` and `measuresOwnInlineRun_` are
+       * decided by anonymous text boxes, which the guard above excludes;
+       * `SubtreeHasCascadeDependents` is recomputed below, since a child
+       * cloned with new props can change its traits.
+       */
+      /*
+       * UNCONDITIONALLY, and the attempt to be clever about it is instructive:
+       * dirtying only when this loop found a differing child put the bug
+       * straight back. Reaching here means the caller REPLACED the children
+       * list, and that is the fact worth acting on — whether this node's own
+       * comparison spotted a difference is a weaker question than the one the
+       * fragment already answered.
+       */
+      yogaNode_.setDirty(true);
+      updateCascadeDependentsTrait();
+    } else {
+      updateYogaChildren();
+    }
   } else if (!static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
                   .anonymousTextContentChildren_.empty()) {
     // Anonymous boxes are owned exclusively by one shadow-node revision:
