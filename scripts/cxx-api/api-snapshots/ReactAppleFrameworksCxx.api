@@ -626,6 +626,7 @@ interface RCTAnonymousTextRunView : public UIView {
   public facebook::react::ViewState::TextRun _run;
   public std::weak_ptr<const facebook::react::TextLayoutManager> _layoutManager;
   public virtual facebook::react::SharedTouchEventEmitter touchEventEmitterAtContainerPoint:(CGPoint point);
+  public virtual void invalidateAccessibilityElements();
   public virtual void setContainerBounds:(CGRect containerBounds);
 }
 
