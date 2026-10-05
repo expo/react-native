@@ -335,6 +335,12 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void receiveCascade(const std::shared_ptr<const TextAttributes> &cascade);
 
  protected:
+  // What this node's children inherit before its own inheritable props are
+  // folded in
+  const std::shared_ptr<const TextAttributes> &receivedCascade() const
+  {
+    return receivedTextAttributes_;
+  }
   /**
    * Subclasses which provide MeasurableYogaNode may override to signal that a
    * new ShadowNode revision does not need to invalidate existing measurements.
@@ -397,6 +403,9 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Replcaes a child with a mutable clone of itself, returning the clone.
    */
   YogaLayoutableShadowNode &cloneChildInPlace(size_t layoutableChildIndex);
+
+  // Sets `SubtreeHasCascadeDependents` from the children's traits
+  void updateCascadeDependentsTrait();
 
   static yoga::Config &initializeYogaConfig(yoga::Config &config, YGConfigConstRef previousConfig = nullptr);
   static YGNodeRef

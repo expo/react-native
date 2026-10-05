@@ -43,9 +43,8 @@ private val ZERO_RADII = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 internal class InsetBoxShadowDrawable(
     private val context: Context,
     private val shadowColor: Int,
-    // The color in its own color space, painted where the OS can; `shadowColor` is its sRGB
-    // approximation
-    @ColorLong private val shadowColorLong: Long? = null,
+    // The color in its own space; `shadowColor` is its sRGB approximation
+    @ColorLong internal val shadowColorLong: Long? = null,
     private val offsetX: Float,
     private val offsetY: Float,
     private val blurRadius: Float,
