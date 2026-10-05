@@ -71,6 +71,7 @@ import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
+import com.facebook.react.views.common.AutoFocusCandidate
 import com.facebook.react.views.text.ReactTextUpdate
 import com.facebook.react.views.text.ReactTypefaceUtils.applyStyles
 import com.facebook.react.views.text.ReactTypefaceUtils.getFontWeightAdjustment
@@ -141,9 +142,9 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
   internal var parsedFontVariationSettings: String? = null
     private set
 
-  private var autoFocus = false
+  // `autoFocus`, focused at the first draw if the field is being rendered then
+  private val autoFocusCandidate = AutoFocusCandidate(this) { requestFocusProgrammatically() }
   private var contextMenuHidden = false
-  private var didAttachToWindow = false
   private var selectTextOnFocus = false
   private var placeholder: String? = null
   internal var overflow = Overflow.VISIBLE
@@ -1050,12 +1051,6 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
 
     // Restore the selection since `setTextIsSelectable` changed it.
     maybeSetSelection(selectionStart, selectionEnd)
-
-    if (autoFocus && !didAttachToWindow) {
-      requestFocusProgrammatically()
-    }
-
-    didAttachToWindow = true
   }
 
   override fun setBackgroundColor(color: Int) {
@@ -1116,7 +1111,7 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
   }
 
   public fun setAutoFocus(autoFocus: Boolean) {
-    this.autoFocus = autoFocus
+    autoFocusCandidate.isRequested = autoFocus
   }
 
   public fun setSelectTextOnFocus(selectTextOnFocus: Boolean) {
