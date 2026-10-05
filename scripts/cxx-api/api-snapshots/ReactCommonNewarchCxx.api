@@ -274,6 +274,7 @@ uint8_t facebook::react::greenFromColor(facebook::react::SharedColor color) noex
 uint8_t facebook::react::redFromColor(facebook::react::SharedColor color) noexcept;
 uint32_t facebook::react::rendererAbiVersionOfLibrary();
 void facebook::react::assertRendererAbiMatchesHeaders(uint32_t headerVersion = facebook::react::kRendererAbiVersion);
+void facebook::react::decorateCancelablePayload(facebook::jsi::Runtime& runtime, facebook::jsi::Object& payload, const std::shared_ptr<facebook::react::CancelableEventDecision>& decision);
 void facebook::react::ensureAnonymousTextContentFactoryInstalled(const facebook::react::ComponentDescriptorParameters& parameters);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, YGValue& result);
 void facebook::react::fromRawValue(const facebook::react::PropsParserContext& context, const facebook::react::RawValue& value, facebook::react::AccessibilityAction& result);
@@ -682,6 +683,7 @@ class facebook::react::EventBeat {
   protected facebook::react::EventBeat::BeatCallback beatCallback_;
   protected mutable std::atomic<bool> isEventBeatRequested_;
   protected std::function<void()> induceCallback_;
+  protected std::function<void(facebook::jsi::Runtime&)> makeBeat() const;
   protected std::shared_ptr<facebook::react::EventBeat::OwnerBox> ownerBox_;
   protected void induce() const;
   public EventBeat(const facebook::react::EventBeat& other) = delete;
@@ -692,6 +694,7 @@ class facebook::react::EventBeat {
   public virtual void request() const;
   public virtual void requestSynchronous(facebook::react::Tag tag) const;
   public virtual ~EventBeat() = default;
+  public void flushSynchronouslyNow() const;
   public void requestSynchronous() const;
   public void setBeatCallback(facebook::react::EventBeat::BeatCallback beatCallback);
 }
@@ -2412,6 +2415,12 @@ struct facebook::react::CSSAnimation {
   public facebook::react::AnimationFillMode fillMode;
   public facebook::react::TransitionTimingFunction timingFunction;
   public std::vector<facebook::react::AnimationKeyframe> keyframes;
+}
+
+struct facebook::react::CancelableEventDecision {
+  public bool defaultPrevented;
+  public bool hasReplacement;
+  public std::string replacement;
 }
 
 struct facebook::react::ColorComponents {

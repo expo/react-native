@@ -66,6 +66,12 @@ class EventQueue {
    */
   void experimental_flushSync(Tag tag) const;
 
+  /*
+   * Flushes now, on the calling thread, returning only once JavaScript has
+   * handled what was queued — see `EventBeat::flushSynchronouslyNow`.
+   */
+  void experimental_flushSyncNow() const;
+
  protected:
   /*
    * Called on any enqueue operation.
