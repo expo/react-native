@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<4cebb4c722c34b49e835112ff91a7fe0>>
+ * @generated SignedSource<<3aa1e0a770f4abac9f7effc1ac8d067c>>
  */
 
 /**
@@ -204,6 +204,10 @@ bool ReactNativeFeatureFlags::enableMutationObserverByDefault() {
 
 bool ReactNativeFeatureFlags::enableNativeCSSParsing() {
   return getAccessor().enableNativeCSSParsing();
+}
+
+bool ReactNativeFeatureFlags::enableNativeGestureRecognizers() {
+  return getAccessor().enableNativeGestureRecognizers();
 }
 
 bool ReactNativeFeatureFlags::enablePreallocatedPropsDiffOnInsertAndroid() {
