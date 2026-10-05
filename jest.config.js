@@ -35,6 +35,20 @@ module.exports = {
       '<rootDir>/packages/react-native/src/setup-env.js',
     '^react-native/unstable-internals-do-not-use$':
       '<rootDir>/packages/react-native/src/unstable-internals-do-not-use.js',
+    // The vendored shadcn sources' world, mirrored from rn-tester's Metro
+    // aliases so the REAL components run under jest.
+    '^@/lib/utils$': '<rootDir>/packages/rn-tester/js/shadcn/lib/utils.js',
+    '^@/registry/default/ui/(.*)$':
+      '<rootDir>/packages/rn-tester/js/shadcn/ui/$1.tsx',
+    '^class-variance-authority$':
+      '<rootDir>/packages/rn-tester/js/shadcn/lib/cva.js',
+    '^lucide-react$': '<rootDir>/packages/rn-tester/js/shadcn/lib/lucide.js',
+    '^@radix-ui/react-(.*)$':
+      '<rootDir>/packages/rn-tester/js/astryx/radix/pkg/react-$1.js',
+    '^astryx-jsx/jsx-runtime$':
+      '<rootDir>/packages/rn-tester/js/astryx/jsx-runtime.js',
+    '^astryx-jsx/jsx-dev-runtime$':
+      '<rootDir>/packages/rn-tester/js/astryx/jsx-runtime.js',
   },
   setupFiles: ['./packages/jest-preset/jest/local-setup.js'],
   fakeTimers: {
