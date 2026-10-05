@@ -17,6 +17,7 @@ import android.view.View
 import com.facebook.common.logging.FLog
 import androidx.annotation.ColorLong
 import com.facebook.react.bridge.ColorPropConverter
+import com.facebook.react.R
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.DynamicFromObject
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException
@@ -58,6 +59,8 @@ import kotlin.math.ceil
 public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() {
 
   public companion object {
+    // `ViewState::VS_KEY_DYNAMIC_RANGE_LIMIT`
+    private const val STATE_KEY_DYNAMIC_RANGE_LIMIT: Int = 1
     public const val REACT_CLASS: String = ViewProps.VIEW_CLASS_NAME
 
     private val SPACING_TYPES =
@@ -513,7 +516,20 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
     val state = stateWrapper.stateDataMapBuffer
     // ViewState MapBuffer keys (mirror ViewState.getMapBuffer): 0 = list of runs; per run,
     // 0 = attributed string, 1..3 = left/top/width (dips), 5 = document order, 6 = accessibility
-    // leaves (see readInlineAccessibilityItems).
+    // leaves (see readInlineAccessibilityItems); 1 = the effective dynamic-range-limit of a view
+    // with an HDR color (the C++ enum's order), which bounds the window mode its colors ask for.
+    if (state != null && state.contains(STATE_KEY_DYNAMIC_RANGE_LIMIT)) {
+      val limit =
+          when (state.getInt(STATE_KEY_DYNAMIC_RANGE_LIMIT)) {
+            1 -> "constrained"
+            2 -> "standard"
+            else -> "no-limit"
+          }
+      if (view.getTag(R.id.dynamic_range_limit) != limit) {
+        view.setTag(R.id.dynamic_range_limit, limit)
+        BackgroundStyleApplicator.requestDynamicRangeForColors(view)
+      }
+    }
     if (state == null || !state.contains(0)) {
       view.mountedTextRunsState = null
       view.setTextRunLayouts(null)

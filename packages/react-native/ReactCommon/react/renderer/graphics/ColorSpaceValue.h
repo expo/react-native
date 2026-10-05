@@ -357,11 +357,31 @@ inline std::optional<std::array<float, 3>> toExtendedLinearSRGB(const ColorSpace
       static_cast<float>(linear[0]), static_cast<float>(linear[1]), static_cast<float>(linear[2])};
 }
 
-/**
- * The color as gamma-encoded sRGB components, clipped to sRGB's gamut: what
- * a host that can only draw sRGB shows. Empty where `toExtendedLinearSRGB`
- * is.
- */
+// XYZ-D65 to linear Rec. 2020 (ITU-R BT.2020), the inverse of
+// `kLinearRec2020ToXYZD65`
+inline constexpr colorspace::Matrix3 kXYZD65ToLinearRec2020{{
+    {1.7166511879712674, -0.35567078377639233, -0.25336628137365974},
+    {-0.6666843518324892, 1.6164812366349395, 0.015768545813911124},
+    {0.017639857445310783, -0.042770613257808524, 0.9421031212354739},
+}};
+
+// Whether any channel is above 1 in linear Rec. 2020, the widest standard
+// gamut: `srgb-linear 2 2 2` is, P3 red isn't. False for a dashed space.
+inline bool isHighDynamicRange(const ColorSpaceValue &value)
+{
+  auto linear = toExtendedLinearSRGB(value);
+  if (!linear.has_value()) {
+    return false;
+  }
+  using namespace colorspace;
+  const Vector3 srgb{(*linear)[0], (*linear)[1], (*linear)[2]};
+  const Vector3 rec2020 = multiply(kXYZD65ToLinearRec2020, multiply(kLinearSRGBToXYZD65, srgb));
+  // A hair above 1, so rounding in a conversion doesn't make an SDR white HDR
+  constexpr double threshold = 1.001;
+  return rec2020[0] > threshold || rec2020[1] > threshold || rec2020[2] > threshold;
+}
+
+// Gamma-encoded sRGB, clipped to its gamut; empty where `toExtendedLinearSRGB` is
 inline std::optional<ColorComponents> toClippedSRGB(const ColorSpaceValue &value)
 {
   auto linear = toExtendedLinearSRGB(value);

@@ -208,11 +208,12 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   `oklch(0.7 0.1 none)` keeps the other end's hue. Here `none` is 0 from
   parsing on, so it turns from hue 0. Deferred: it needs the parsed value to
   keep which channels are missing.
-- **`DOM-CSS-LIMITATION(hdr-colors-draw-at-sdr-white)` — an HDR color draws
-  at SDR white.** `rec2100-pq` and values above 1 in a linear space keep their
-  value, but backgrounds, borders and text are SDR layers, so they draw no
-  brighter than white. Deferred: an EDR fill layer, governed by
-  `dynamic-range-limit`.
+- **`DOM-CSS-LIMITATION(hdr-text-and-gradients-draw-at-sdr-white-on-ios)` —
+  on iOS only backgrounds and uniform borders draw brighter than white.**
+  Those are layer colors, which Core Animation composites in extended range
+  when the layer asks. Text, shadows, gradients and per-edge borders are drawn
+  into 8-bit bitmaps, so an HDR color there is clipped to SDR white. Android
+  paints every color long into the window, whose HDR mode covers them all.
 - **`DOM-CSS-LIMITATION(gradient-interpolation-needs-percent-stops)` — a
   gradient with a length stop or a hint interpolates in sRGB.** Neither
   platform's shader interpolates in a chosen space, so the stretches are
@@ -320,6 +321,7 @@ rather than going quiet.
 - `headings-use-the-platform-type-scale` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `hr-separator-color` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `inline-image-limit-waits-for-its-next-revision` — limitation, `packages/react-native/ReactCommon/react/renderer/components/image/ImageShadowNode.cpp`
+- `ios-17-constrained-is-no-limit` — limitation, `packages/react-native/React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `ios-links-are-not-underlined` — deviation, `packages/expo-intrinsics/src/index.js`
 - `label-activation` — deviation, `packages/rn-tester/js/examples/HTMLElements/HTMLFormsExample.js`
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
@@ -344,3 +346,4 @@ rather than going quiet.
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
+- `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`

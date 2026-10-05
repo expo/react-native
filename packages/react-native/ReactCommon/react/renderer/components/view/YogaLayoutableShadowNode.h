@@ -269,6 +269,17 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   }
 
  protected:
+  /*
+   * The cascade this node received from its parent: what its children
+   * inherit before its own inheritable props are folded in. A View that
+   * consumes one inherited value (`dynamic-range-limit` for an HDR color)
+   * reads it from here rather than storing a copy, since every View pays
+   * for a member.
+   */
+  const std::shared_ptr<const TextAttributes> &receivedCascade() const
+  {
+    return receivedTextAttributes_;
+  }
   /**
    * Subclasses which provide MeasurableYogaNode may override to signal that a
    * new ShadowNode revision does not need to invalidate existing measurements.
@@ -331,6 +342,9 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
    * Replcaes a child with a mutable clone of itself, returning the clone.
    */
   YogaLayoutableShadowNode &cloneChildInPlace(size_t layoutableChildIndex);
+
+  // Sets `SubtreeHasCascadeDependents` from the children's traits
+  void updateCascadeDependentsTrait();
 
   static yoga::Config &initializeYogaConfig(yoga::Config &config, YGConfigConstRef previousConfig = nullptr);
   static YGNodeRef

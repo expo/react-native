@@ -208,17 +208,54 @@ CGColorSpaceRef _Nullable CGColorSpaceFor(ColorSpace space)
   return colorSpace;
 }
 
+CGColorRef _Nullable CGColorFromColorSpaceValue(const ColorSpaceValue &value);
+bool CGColorIsHighDynamicRange(CGColorRef cgColor);
+
 /*
- * The color drawn in the OS's own space for it where the OS has one, else in
- * extended linear sRGB by CSS's arithmetic, which leaves it unclipped. Nil
- * for a space neither covers.
- *
- * DOM-CSS-LIMITATION(hdr-colors-draw-at-sdr-white): a color brighter than SDR
- * white (`rec2100-pq`, values above 1 in a linear space) keeps its value, but
- * the layers it fills are SDR, so it draws at SDR white. Drawing it brighter
- * needs an EDR layer for the fill and its `dynamic-range-limit`.
+ * An HDR color goes to Core Animation in BT.2100 PQ, whose headroom the OS knows (1.0 in a linear space is PQ's
+ * 203 cd/m², as CSS Color HDR has it): a layer's `preferredDynamicRange` acts only on a color with a headroom, and an
+ * extended-range color without one draws at whatever headroom other HDR layers on screen have.
  */
-UIColor *_Nullable UIColorFromColorSpaceValue(const ColorSpaceValue &value)
+UIColor *_Nullable UIColorFromColorSpaceValue(const ColorSpaceValue &value, bool &isHighDynamicRange)
+{
+  CGColorRef cgColor = CGColorFromColorSpaceValue(value);
+  if (cgColor == nullptr) {
+    isHighDynamicRange = false;
+    return nil;
+  }
+  isHighDynamicRange = CGColorIsHighDynamicRange(cgColor);
+  if (isHighDynamicRange && !CGColorSpaceUsesITUR_2100TF(CGColorGetColorSpace(cgColor))) {
+    static CGColorSpaceRef pq = CGColorSpaceCreateWithName(kCGColorSpaceITUR_2100_PQ);
+    CGColorRef hdrColor = CGColorCreateCopyByMatchingToColorSpace(pq, kCGRenderingIntentDefault, cgColor, nullptr);
+    if (hdrColor != nullptr) {
+      CGColorRelease(cgColor);
+      cgColor = hdrColor;
+    }
+  }
+  UIColor *color = [UIColor colorWithCGColor:cgColor];
+  CGColorRelease(cgColor);
+  return color;
+}
+
+// Any channel above 1 in linear Rec. 2020, the widest standard gamut, by the OS's conversion, so a dashed space is
+// answered too; a hair above 1, so rounding doesn't make white HDR
+bool CGColorIsHighDynamicRange(CGColorRef cgColor)
+{
+  static CGColorSpaceRef linearRec2020 = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearITUR_2020);
+  CGColorRef linear = CGColorCreateCopyByMatchingToColorSpace(linearRec2020, kCGRenderingIntentDefault, cgColor, nullptr);
+  if (linear == nullptr) {
+    return false;
+  }
+  constexpr CGFloat threshold = 1.001;
+  const CGFloat *components = CGColorGetComponents(linear);
+  const bool bright = CGColorGetNumberOfComponents(linear) >= 3 &&
+      (components[0] > threshold || components[1] > threshold || components[2] > threshold);
+  CGColorRelease(linear);
+  return bright;
+}
+
+// In the OS's own space where it has one, else in extended linear sRGB by CSS's arithmetic; null for neither
+CGColorRef _Nullable CGColorFromColorSpaceValue(const ColorSpaceValue &value)
 {
   CGColorSpaceRef colorSpace = CGColorSpaceFor(value.space);
   if (colorSpace != nullptr) {
@@ -228,24 +265,15 @@ UIColor *_Nullable UIColorFromColorSpaceValue(const ColorSpaceValue &value)
     if (count == 1) {
       components[1] = value.alpha;
     }
-    CGColorRef cgColor = CGColorCreate(colorSpace, components);
-    if (cgColor == nullptr) {
-      return nil;
-    }
-    UIColor *color = [UIColor colorWithCGColor:cgColor];
-    CGColorRelease(cgColor);
-    return color;
+    return CGColorCreate(colorSpace, components);
   }
   auto linear = toExtendedLinearSRGB(value);
   if (!linear.has_value()) {
-    return nil;
+    return nullptr;
   }
   static CGColorSpaceRef extendedLinearSRGB = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearSRGB);
   CGFloat components[4] = {(*linear)[0], (*linear)[1], (*linear)[2], value.alpha};
-  CGColorRef cgColor = CGColorCreate(extendedLinearSRGB, components);
-  UIColor *color = [UIColor colorWithCGColor:cgColor];
-  CGColorRelease(cgColor);
-  return color;
+  return CGColorCreate(extendedLinearSRGB, components);
 }
 
 int32_t ColorFromUIColorForSpecificTraitCollection(
@@ -323,7 +351,7 @@ std::size_t hashFromUIColor(const std::shared_ptr<void> &uiColor)
 Color::Color(int32_t color)
 {
   uiColor_ = wrapManagedObject(UIColorFromInt32(color));
-  uiColorHashValue_ = facebook::react::hash_combine(color, 0) & ~kColorSpaceColorBit;
+  uiColorHashValue_ = facebook::react::hash_combine(color, 0) & ~(kColorSpaceColorBit | kHighDynamicRangeBit);
 }
 
 Color::Color(const DynamicColor &dynamicColor)
@@ -335,7 +363,7 @@ Color::Color(const DynamicColor &dynamicColor)
       dynamicColor.highContrastDarkColor,
       dynamicColor.highContrastLightColor,
       0);
-  uiColorHashValue_ &= ~kColorSpaceColorBit;
+  uiColorHashValue_ &= ~(kColorSpaceColorBit | kHighDynamicRangeBit);
 }
 
 Color::Color(const ColorComponents &components)
@@ -343,16 +371,18 @@ Color::Color(const ColorComponents &components)
   uiColor_ = wrapManagedObject(UIColorFromComponentsColor(components));
   uiColorHashValue_ = facebook::react::hash_combine(
       ColorFromColorComponents(components), components.colorSpace == ColorSpace::DisplayP3);
-  uiColorHashValue_ &= ~kColorSpaceColorBit;
+  uiColorHashValue_ &= ~(kColorSpaceColorBit | kHighDynamicRangeBit);
 }
 
 Color::Color(const ColorSpaceValue &value)
 {
-  UIColor *color = UIColorFromColorSpaceValue(value);
+  bool highDynamicRange = false;
+  UIColor *color = UIColorFromColorSpaceValue(value, highDynamicRange);
   uiColor_ = color != nil ? wrapManagedObject(color) : nullptr;
-  uiColorHashValue_ = facebook::react::hash_combine(
-                          static_cast<int>(value.space), value.channels[0], value.channels[1], value.channels[2], value.alpha) |
-      kColorSpaceColorBit;
+  uiColorHashValue_ = (facebook::react::hash_combine(
+                           static_cast<int>(value.space), value.channels[0], value.channels[1], value.channels[2], value.alpha) &
+                       ~(kColorSpaceColorBit | kHighDynamicRangeBit)) |
+      kColorSpaceColorBit | (highDynamicRange ? kHighDynamicRangeBit : 0);
 }
 
 ColorComponents Color::getColorComponents() const
@@ -378,7 +408,7 @@ Color::Color(std::shared_ptr<void> uiColor)
   UIColor *color = ((UIColor *)unwrapManagedObject(uiColor));
   if (color != nullptr) {
     auto colorHash = hashFromUIColor(uiColor);
-    uiColorHashValue_ = colorHash & ~kColorSpaceColorBit;
+    uiColorHashValue_ = colorHash & ~(kColorSpaceColorBit | kHighDynamicRangeBit);
   }
   uiColor_ = std::move(uiColor);
 }
@@ -450,6 +480,10 @@ Color Color::createDynamicColor(
       facebook::react::hash_combine(hashOf(light), hashOf(dark), hashOf(highContrastLight), hashOf(highContrastDark));
   result.uiColorHashValue_ = anyColorSpaceColor ? result.uiColorHashValue_ | kColorSpaceColorBit
                                                 : result.uiColorHashValue_ & ~kColorSpaceColorBit;
+  bool anyHighDynamicRange = light.isHighDynamicRange() || dark.isHighDynamicRange() ||
+      highContrastLight.isHighDynamicRange() || highContrastDark.isHighDynamicRange();
+  result.uiColorHashValue_ = anyHighDynamicRange ? result.uiColorHashValue_ | kHighDynamicRangeBit
+                                                 : result.uiColorHashValue_ & ~kHighDynamicRangeBit;
   return result;
 }
 

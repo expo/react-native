@@ -10,6 +10,7 @@
 #include "CloneWithLayoutMetrics.h"
 
 #include <react/renderer/components/view/ViewPropsOf.h>
+#include <variant>
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
@@ -51,6 +52,55 @@
 #endif
 
 namespace facebook::react {
+
+namespace {
+
+// Background, border edges, box shadows and gradient stops: on Android every
+// one asks for the window's mode under the limit
+bool hasHighDynamicRangeColor(const ViewProps& viewProps) {
+  if (viewProps.backgroundColor &&
+      isHighDynamicRangeColor(*viewProps.backgroundColor)) {
+    return true;
+  }
+  for (const auto& shadow : viewProps.boxShadow) {
+    if (shadow.color && isHighDynamicRangeColor(*shadow.color)) {
+      return true;
+    }
+  }
+  for (const auto& image : viewProps.backgroundImage) {
+    const auto& stops = std::visit(
+        [](const auto& gradient) -> const std::vector<ColorStop>& {
+          return gradient.colorStops;
+        },
+        image);
+    for (const auto& stop : stops) {
+      if (stop.color && isHighDynamicRangeColor(*stop.color)) {
+        return true;
+      }
+    }
+  }
+  const auto& borders = viewProps.borderColors;
+  for (const auto* edge :
+       {&borders.all,
+        &borders.left,
+        &borders.top,
+        &borders.right,
+        &borders.bottom,
+        &borders.start,
+        &borders.end,
+        &borders.horizontal,
+        &borders.vertical,
+        &borders.block,
+        &borders.blockStart,
+        &borders.blockEnd}) {
+    if (edge->has_value() && **edge && isHighDynamicRangeColor(***edge)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace
 
 namespace {
 /*
@@ -244,6 +294,15 @@ void AbstractViewShadowNode<
     ViewPropsT,
     ViewEventEmitterT>::initialize() noexcept {
   auto& viewProps = static_cast<const ViewProps&>(*this->props_);
+
+  // Only a View with an HDR color consumes the cascade, so no other View adds
+  // dependents to its ancestors
+  if (ReactNativeFeatureFlags::enableColorSpaces() &&
+      hasHighDynamicRangeColor(viewProps)) {
+    this->traits_.set(ShadowNodeTraits::Trait::TextCascadeConsumer);
+  } else {
+    this->traits_.unset(ShadowNodeTraits::Trait::TextCascadeConsumer);
+  }
 
   auto hasBorder = [&]() {
     for (auto edge : yoga::ordinals<yoga::Edge>()) {
@@ -580,6 +639,76 @@ void AbstractViewShadowNode<
   YogaLayoutableShadowNode::layout(layoutContext);
   layoutInlineAttachments(layoutContext);
   updateTextRunStateIfNeeded(layoutContext.fontSizeMultiplier);
+  updateDynamicRangeLimitStateIfNeeded();
+}
+
+template <
+    const char* concreteComponentName,
+    typename ViewPropsT,
+    typename ViewEventEmitterT>
+void AbstractViewShadowNode<
+    concreteComponentName,
+    ViewPropsT,
+    ViewEventEmitterT>::
+    setInheritedCascade(const std::shared_ptr<const TextAttributes>& /*cascade*/) {
+  // `layout` is skipped for a node whose own layout didn't change, so a
+  // container's new limit has to reach the color here. `isPublished()`, not
+  // the seal: a release build has no seal.
+  if (!this->isPublished()) {
+    updateDynamicRangeLimitStateIfNeeded();
+  }
+}
+
+template <
+    const char* concreteComponentName,
+    typename ViewPropsT,
+    typename ViewEventEmitterT>
+std::optional<DynamicRangeLimit> AbstractViewShadowNode<
+    concreteComponentName,
+    ViewPropsT,
+    ViewEventEmitterT>::effectiveDynamicRangeLimit() const {
+  if (!this->getTraits().check(ShadowNodeTraits::Trait::TextCascadeConsumer)) {
+    return std::nullopt;
+  }
+  const auto& viewProps = static_cast<const ViewProps&>(*this->props_);
+  if (viewProps.inheritedDynamicRangeLimit.has_value()) {
+    return viewProps.inheritedDynamicRangeLimit;
+  }
+  const auto& received = this->receivedCascade();
+  if (ReactNativeFeatureFlags::enableStringChildren() && received != nullptr &&
+      received->dynamicRangeLimit.has_value()) {
+    return received->dynamicRangeLimit;
+  }
+  return DynamicRangeLimit::NoLimit;
+}
+
+template <
+    const char* concreteComponentName,
+    typename ViewPropsT,
+    typename ViewEventEmitterT>
+void AbstractViewShadowNode<
+    concreteComponentName,
+    ViewPropsT,
+    ViewEventEmitterT>::updateDynamicRangeLimitStateIfNeeded() {
+  const auto limit = effectiveDynamicRangeLimit();
+  // A View with no HDR color and no text runs stays stateless
+  if (!limit.has_value() && this->state_ == nullptr) {
+    return;
+  }
+  if (this->state_ == nullptr) {
+    this->ensureUnsealed();
+    this->state_ = std::make_shared<const ConcreteState<ViewState>>(
+        std::make_shared<const ViewState>(ViewState({}, {}, limit)),
+        this->getFamilyShared());
+    return;
+  }
+  const auto& current = this->getStateData();
+  if (current.dynamicRangeLimit == limit) {
+    return;
+  }
+  this->ensureUnsealed();
+  this->setStateData(
+      ViewState(current.textRuns, current.layoutManager, limit));
 }
 
 namespace {
@@ -786,12 +915,16 @@ void AbstractViewShadowNode<
     // seeded from the family like `createInitialState` would (there is no
     // prior state to chain from).
     this->state_ = std::make_shared<const ConcreteState<ViewState>>(
-        std::make_shared<const ViewState>(
-            ViewState(std::move(textRuns), std::move(layoutManager))),
+        std::make_shared<const ViewState>(ViewState(
+            std::move(textRuns),
+            std::move(layoutManager),
+            effectiveDynamicRangeLimit())),
         this->getFamilyShared());
   } else if (this->getStateData().textRuns != textRuns) {
-    this->setStateData(
-        ViewState(std::move(textRuns), std::move(layoutManager)));
+    this->setStateData(ViewState(
+        std::move(textRuns),
+        std::move(layoutManager),
+        this->getStateData().dynamicRangeLimit));
   }
 }
 
