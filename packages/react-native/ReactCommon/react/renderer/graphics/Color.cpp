@@ -38,6 +38,18 @@ SharedColor colorFromComponents(ColorComponents components) {
   return {hostPlatformColorFromComponents(components)};
 }
 
+SharedColor colorFromColorSpaceValue(const ColorSpaceValue& value) {
+  return hostPlatformColorFromColorSpaceValue(value);
+}
+
+SharedColor colorFromTransientColorSpaceValue(const ColorSpaceValue& value) {
+  return hostPlatformColorFromTransientColorSpaceValue(value);
+}
+
+bool isColorSpaceColor(const SharedColor& color) {
+  return color && hostPlatformColorIsColorSpaceColor(*color);
+}
+
 // Read Color components in [0, 1] range
 ColorComponents colorComponentsFromColor(SharedColor sharedColor) {
   return colorComponentsFromHostPlatformColor(*sharedColor);

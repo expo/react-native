@@ -7,6 +7,8 @@
 
 #import "PlatformColorParser.h"
 
+#import <react/featureflags/ReactNativeFeatureFlags.h>
+
 #import <react/renderer/core/RawValue.h>
 #import <react/renderer/css/CSSColor.h>
 #import <react/renderer/css/CSSValueParser.h>
@@ -46,6 +48,12 @@ inline facebook::react::SharedColor RCTPlatformColorComponentsFromDynamicItems(
     fromRawValue(contextContainer, surfaceId, dynamicItems.at("highContrastDark"), highContrastDarkSharedColor);
   }
 
+  if (ReactNativeFeatureFlags::enableColorSpaces()) {
+    // Each appearance keeps its own color, in its own space and precision
+    return SharedColor(
+        Color::createDynamicColor(
+            *lightSharedColor, *darkSharedColor, *highContrastLightSharedColor, *highContrastDarkSharedColor));
+  }
   Color color = Color(
       DynamicColor{
           .lightColor = (*lightSharedColor).getColor(),

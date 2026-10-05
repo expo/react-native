@@ -11,6 +11,7 @@
 import type {ProcessedColorValue} from './processColor';
 import type {ColorValue, NativeColorValue} from './StyleSheet';
 
+import * as ReactNativeFeatureFlags from '../../src/private/featureflags/ReactNativeFeatureFlags';
 import parsePlatformColorArgs from './parsePlatformColorArgs';
 
 /** The actual type of the opaque NativeColorValue on iOS platform */
@@ -64,6 +65,12 @@ const _normalizeColorObject = (
 ): ?LocalNativeColorValue => {
   if ('semantic' in color) {
     // an ios semantic color
+    return color;
+  } else if (
+    'space' in (color as {...}) &&
+    ReactNativeFeatureFlags.enableColorSpaces()
+  ) {
+    // a color in its own color space
     return color;
   } else if ('dynamic' in color && color.dynamic !== undefined) {
     const normalizeColor = require('./normalizeColor').default;

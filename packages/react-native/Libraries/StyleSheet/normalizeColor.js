@@ -13,7 +13,9 @@
 import type {ProcessedColorValue} from './processColor';
 import type {ColorValue} from './StyleSheet';
 
+import * as ReactNativeFeatureFlags from '../../src/private/featureflags/ReactNativeFeatureFlags';
 import _normalizeColor from '@react-native/normalize-colors';
+import normalizeColorSpace from '@react-native/normalize-colors/colorSpaces';
 
 function normalizeColor(
   color: ?(ColorValue | ProcessedColorValue),
@@ -27,7 +29,17 @@ function normalizeColor(
   }
 
   if (typeof color === 'string' || typeof color === 'number') {
-    return _normalizeColor(color);
+    const normalized = _normalizeColor(color);
+    // A color in its own space can't be an 8-bit integer
+    if (
+      normalized == null &&
+      typeof color === 'string' &&
+      ReactNativeFeatureFlags.enableColorSpaces()
+    ) {
+      // $FlowFixMe[incompatible-type] the object is a NativeColorValue on the wire
+      return normalizeColorSpace(color);
+    }
+    return normalized;
   }
 }
 

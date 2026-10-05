@@ -10,6 +10,7 @@
 #include <react/cxxstableapi/UmbrellaGuard.h>
 
 #include <react/renderer/graphics/ColorComponents.h>
+#include <react/renderer/graphics/ColorSpaceValue.h>
 #include <react/utils/hash_combine.h>
 #include <cmath>
 #include <cstdint>
@@ -65,6 +66,30 @@ inline Color hostPlatformColorFromComponents(ColorComponents components)
   return Color{
       ((int)round(components.alpha * ratio) & 0xff) << 24 | ((int)round(components.red * ratio) & 0xff) << 16 |
       ((int)round(components.green * ratio) & 0xff) << 8 | ((int)round(components.blue * ratio) & 0xff)};
+}
+
+// An 8-bit host color keeps no color space, so it is always sRGB
+inline bool hostPlatformColorIsColorSpaceColor(const Color & /*color*/)
+{
+  return false;
+}
+
+/*
+ * Android's view layer reads a color in its own space from the props
+ * themselves, as a color long. What reaches this C++ color (text, and props
+ * serialized from C++) is 8-bit sRGB, so here a color in another space is
+ * converted by CSS's arithmetic and clipped to sRGB.
+ */
+inline Color hostPlatformColorFromColorSpaceValue(const ColorSpaceValue &value)
+{
+  auto components = toClippedSRGB(value);
+  return components.has_value() ? hostPlatformColorFromComponents(*components) : HostPlatformColor::UndefinedColor;
+}
+
+// A color that exists for one frame, such as a transition's
+inline Color hostPlatformColorFromTransientColorSpaceValue(const ColorSpaceValue &value)
+{
+  return hostPlatformColorFromColorSpaceValue(value);
 }
 
 inline ColorComponents colorComponentsFromHostPlatformColor(Color color)

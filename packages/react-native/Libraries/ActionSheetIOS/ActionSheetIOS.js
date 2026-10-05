@@ -14,7 +14,30 @@ import type {ColorValue} from '../StyleSheet/StyleSheet';
 import RCTActionSheetManager from './NativeActionSheetManager';
 
 const processColor = require('../StyleSheet/processColor').default;
+const {
+  approximateSRGB,
+} = require('@react-native/normalize-colors/colorInterpolation');
 const invariant = require('invariant');
+
+// The native module takes integer tints
+// DOM-CSS-LIMITATION(action-sheet-tints-are-srgb)
+function asInteger(color: ?ProcessedColorValue): ?ProcessedColorValue {
+  if (
+    color != null &&
+    typeof color === 'object' &&
+    typeof color.space === 'string'
+  ) {
+    // 0xrrggbbaa to 0xaarrggbb, as `processColor` packs an integer. A color
+    // whose space can't be converted leaves the tint unset.
+    const approximation = approximateSRGB(color);
+    if (approximation == null) {
+      return null;
+    }
+    // eslint-disable-next-line no-bitwise
+    return ((approximation << 24) | (approximation >>> 8)) >>> 0;
+  }
+  return color;
+}
 
 export type ActionSheetIOSOptions = Readonly<{
   title?: ?string,
@@ -104,10 +127,12 @@ const ActionSheetIOS = {
       destructiveButtonIndices = [destructiveButtonIndex];
     }
 
-    const processedTintColor = processColor(tintColor);
-    const processedCancelButtonTintColor = processColor(cancelButtonTintColor);
-    const processedDisabledButtonTintColor = processColor(
-      disabledButtonTintColor,
+    const processedTintColor = asInteger(processColor(tintColor));
+    const processedCancelButtonTintColor = asInteger(
+      processColor(cancelButtonTintColor),
+    );
+    const processedDisabledButtonTintColor = asInteger(
+      processColor(disabledButtonTintColor),
     );
 
     invariant(
@@ -177,7 +202,10 @@ const ActionSheetIOS = {
     );
     invariant(RCTActionSheetManager, "ActionSheetManager doesn't exist");
     RCTActionSheetManager.showShareActionSheetWithOptions(
-      {...options, tintColor: processColor(options.tintColor) as $FlowFixMe},
+      {
+        ...options,
+        tintColor: asInteger(processColor(options.tintColor)) as $FlowFixMe,
+      },
       failureCallback,
       successCallback,
     );
