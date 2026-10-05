@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<5d8009322d64d81baf7ba54c9f32dbd1>>
+ * @generated SignedSource<<ec8a2eb58bfaab7d3622e556087b4aa7>>
  */
 
 /**
@@ -207,6 +207,15 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     }
 
     return ReactNativeFeatureFlagsDefaults::enableBridgelessArchitecture();
+  }
+
+  bool enableColorSpaces() override {
+    auto value = values_["enableColorSpaces"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::enableColorSpaces();
   }
 
   bool enableCppPropsIteratorSetter() override {
