@@ -144,6 +144,7 @@ Each remaining marker, with the file that carries it.
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
 - `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `container-query-is-a-media-query` — deviation, `packages/rn-tester/js/astryx/css/__tests__/parse-test.js`
+- `display-on-inline-text-elements` — limitation, `packages/rn-tester/js/astryx/radix/toggles.js`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
