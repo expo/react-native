@@ -215,6 +215,8 @@ class InlineContentShadowNode final
 
   AttributedString getContentAttributedString(Float fontSizeMultiplier) const override;
 
+  InlineAccessibilityContent getInlineAccessibilityContent(const AttributedString &attributedString) const override;
+
   OutsideMarker getOutsideMarker() const override;
 
   std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const override
