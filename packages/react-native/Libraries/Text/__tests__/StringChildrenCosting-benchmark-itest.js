@@ -15,7 +15,7 @@ import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
-import {ScrollView, Text, View} from 'react-native';
+import {ScrollView, StyleSheet, Text, View} from 'react-native';
 import {NativeText} from 'react-native/Libraries/Text/TextNativeComponent';
 
 /*
@@ -48,6 +48,10 @@ import {NativeText} from 'react-native/Libraries/Text/TextNativeComponent';
  *    fast-text/react-native-boost): 1,000 sibling text components with no
  *    row containers — not a shape real apps render, labeled as such.
  */
+
+// Hoisted: an inline object literal would allocate a fresh style per row on
+// every measured render, which the <Text> tiers never pay for.
+const styles = StyleSheet.create({preLine: {whiteSpace: 'pre-line'}});
 
 const ROWS = 1000;
 const MESSAGES = 100;
@@ -138,8 +142,7 @@ function messagesWithBareBodies(): Array<React.Node> {
   const rows: Array<React.Node> = [];
   for (let m = 0; m < MESSAGES; m++) {
     rows.push(
-      // $FlowFixMe[incompatible-type] whiteSpace is a new style key
-      <View key={String(m)} collapsable={false} style={{whiteSpace: 'pre-line'}}>
+      <View key={String(m)} collapsable={false} style={styles.preLine}>
         {messageBody(m)}
       </View>,
     );
@@ -160,7 +163,7 @@ function articleWithText(): Array<React.Node> {
 function articleBare(): Array<React.Node> {
   return [
     // $FlowFixMe[incompatible-type] whiteSpace is a new style key
-    <View key="a" collapsable={false} style={{whiteSpace: 'pre-line'}}>
+    <View key="a" collapsable={false} style={styles.preLine}>
       {articleBody()}
     </View>,
   ];
