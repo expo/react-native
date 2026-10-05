@@ -367,6 +367,7 @@ const ReactNativeStyleAttributes: {[key: string]: AnyAttributeType, ...} = {
   resizeMode: true,
   tintColor: colorAttribute,
   objectFit: true,
+  dynamicRangeLimit: true,
 };
 
 export default ReactNativeStyleAttributes;
