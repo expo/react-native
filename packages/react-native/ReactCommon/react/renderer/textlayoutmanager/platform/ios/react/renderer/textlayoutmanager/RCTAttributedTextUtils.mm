@@ -7,6 +7,10 @@
 
 #import "RCTAttributedTextUtils.h"
 
+// The text stack here is CoreText's throughout; `NSSuperscriptAttributeName`
+// exists only on macOS
+#import <CoreText/CoreText.h>
+
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/accessibilityPropsConversions.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
@@ -222,6 +226,34 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
     attributes[NSBaselineOffsetAttributeName] = @(textAttributes.baselineShift);
   }
 
+  /*
+   * `<sup>` / `<sub>`: the SHIFT only. The size is the sheet's.
+   *
+   * Not `kCTSuperscriptAttributeName`: that attribute does two jobs at once,
+   * CoreText reads the font's superscript metrics and derives both the shift
+   * AND a size reduction, substituting superior/inferior glyphs, while the
+   * user-agent sheet already states `font-size: 0.8333em` for these elements,
+   * exactly as a browser does, so the text would be reduced twice.
+   *
+   * Measured in real Safari on `x<sup>2</sup>`: `getComputedStyle` reports the
+   * superscript at 13.333px against a 16px parent — 0.8333, the sheet's number
+   * to four figures. So the sheet owns the size and the platform owns the
+   * shift, which is the split Android already had: `SuperscriptSpan` shifts
+   * without resizing and the sheet supplies the size there.
+   *
+   * The offset is derived from the font rather than guessed at as an em
+   * fraction, mirroring Android's rule (half the ascent of the already-reduced
+   * font) rather than inventing a constant.
+   */
+  if (textAttributes.verticalAlign.has_value() && *textAttributes.verticalAlign != TextVerticalAlign::Baseline) {
+    UIFont *shiftedFont = attributes[NSFontAttributeName];
+    if (shiftedFont != nil) {
+      const CGFloat magnitude = shiftedFont.ascender / 2;
+      attributes[NSBaselineOffsetAttributeName] =
+          @(*textAttributes.verticalAlign == TextVerticalAlign::Super ? magnitude : -magnitude);
+    }
+  }
+
   // Paragraph Style
   NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
   BOOL isParagraphStyleUsed = NO;
@@ -388,7 +420,23 @@ static void RCTApplyBaselineOffsetForRange(NSMutableAttributedString *attributed
 
   CGFloat baseLineOffset = (maximumLineHeight - maximumFontLineHeight) / 2.0;
 
-  [attributedText addAttribute:NSBaselineOffsetAttributeName value:@(baseLineOffset) range:attributedTextRange];
+  /*
+   * ADDED to whatever is already there, not written over it.
+   *
+   * `<sup>`/`<sub>` carry their own baseline offset on their own range (see
+   * the superscript block above), and this centring pass runs over the WHOLE
+   * string afterwards. A plain `addAttribute:` would replace those per-run
+   * values and silently drop the shift, leaving superscripts sitting on the
+   * baseline. The two offsets are independent and compose: one centres the run
+   * within its line, the other raises or lowers a fragment within the run.
+   */
+  [attributedText enumerateAttribute:NSBaselineOffsetAttributeName
+                             inRange:attributedTextRange
+                             options:0
+                          usingBlock:^(NSNumber *existing, NSRange range, __unused BOOL *stop) {
+                            const CGFloat total = baseLineOffset + (existing != nil ? existing.doubleValue : 0);
+                            [attributedText addAttribute:NSBaselineOffsetAttributeName value:@(total) range:range];
+                          }];
 }
 
 void RCTApplyBaselineOffset(NSMutableAttributedString *attributedText)
