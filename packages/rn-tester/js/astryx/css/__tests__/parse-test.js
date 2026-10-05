@@ -51,6 +51,42 @@ describe('@scope', () => {
   });
 });
 
+describe(':is() and :where() lists', () => {
+  it('expands a list of compounds into one selector each', () => {
+    const sheet = parseStylesheet(
+      ':where(img, video) { display: block } [data-fit="cover"] > :where(*) { width: 100% }',
+    );
+    expect(sheet.rules.map(r => r.selectors.length)).toEqual([2, 1]);
+    const [media, child] = sheet.rules;
+    expect(
+      media.selectors.map(s => s.parts[s.parts.length - 1].compound.tag),
+    ).toEqual(['img', 'video']);
+    expect(child.selectors[0].parts.length).toBe(2);
+    expect(child.selectors[0].parts.some(p => p.combinator === '>')).toBe(true);
+  });
+
+  it('multiplies two lists', () => {
+    const sheet = parseStylesheet(':is(.a, .b) :where(.c, .d) { color: red }');
+    expect(sheet.rules[0].selectors.length).toBe(4);
+  });
+});
+
+describe('@container', () => {
+  // DOM-CSS-DEVIATION(container-query-is-a-media-query)
+  it('keeps the container name and the size condition on the rule', () => {
+    const sheet = parseStylesheet(
+      '@container gallery (max-width: 720px) { .grid { gap: 4px } } @container (width < 500px) { .x { gap: 1px } }',
+    );
+    expect(sheet.rules[0].containers).toEqual([
+      {name: 'gallery', condition: '(max-width: 720px)'},
+    ]);
+    expect(sheet.rules[0].media).toEqual([]);
+    expect(sheet.rules[1].containers).toEqual([
+      {name: null, condition: '(width < 500px)'},
+    ]);
+  });
+});
+
 describe('compileSelector', () => {
   it('compiles a bare class', () => {
     const sel = compileSelector('.rounded-md');
