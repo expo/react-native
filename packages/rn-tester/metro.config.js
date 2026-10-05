@@ -36,7 +36,12 @@ const config = {
     path.resolve(__dirname, '../react-native-test-library/apple'),
     path.resolve(__dirname, '../react-native-test-library/common'),
   ],
+  transformer: {
+    // `.css` imports load as their text for the stylesheet engine
+    babelTransformerPath: path.resolve(__dirname, 'css-transformer.js'),
+  },
   resolver: {
+    sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'css'],
     blockList: [/..\/react-native\/sdks\/hermes/],
     extraNodeModules: {
       'react-native': path.resolve(__dirname, '../react-native'),
