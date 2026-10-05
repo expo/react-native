@@ -122,6 +122,7 @@ Each remaining marker, with the file that carries it.
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `rem-root-is-the-unstylable-surface-root` — limitation, `packages/react-native/ReactCommon/react/renderer/attributedstring/TextAttributes.h`
 - `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`

@@ -211,4 +211,17 @@ describe('a segment break and the space before it', () => {
     expect(widthOf('a \nb') / CHAR_WIDTH).toBe(1);
   });
 
+  it('removes it when the break is in a later fragment', () => {
+    // $FlowExpectedError[not-a-component] intrinsic <b> tag
+    const withSpace = widthOf([
+      <React.Fragment key="a">{'a '}</React.Fragment>,
+      <b key="b">{'\nb'}</b>,
+    ]);
+    // $FlowExpectedError[not-a-component] intrinsic <b> tag
+    const without = widthOf([
+      <React.Fragment key="a">{'a'}</React.Fragment>,
+      <b key="b">{'\nb'}</b>,
+    ]);
+    expect(withSpace).toBe(without);
+  });
 });
