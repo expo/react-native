@@ -2227,6 +2227,8 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   public virtual void addHostChromeSubview:behindSubview:(UIView* _Nonnull view, UIView* _Nonnull sibling);
   public virtual void finalizeUpdates:(RNComponentViewUpdateMask updateMask);
   public virtual void prepareForRecycle();
+  public virtual void rct_applyDynamicRange:headroom:limit:toLayer:drawn:(BOOL bright, CGFloat headroom, facebook::react::DynamicRangeLimit limit, CALayer* layer, BOOL drawn);
+  public virtual void rct_applyDynamicRange:headroom:toLayer:drawn:(BOOL bright, CGFloat headroom, CALayer* layer, BOOL drawn);
   public virtual void removeHostChromeSubview:(UIView* _Nonnull view);
   public virtual void updateEventEmitter:(const facebook::react::EventEmitter::Shared& eventEmitter);
   public virtual void updateLayoutMetrics:oldLayoutMetrics:(const facebook::react::LayoutMetrics& layoutMetrics, const facebook::react::LayoutMetrics& oldLayoutMetrics);
@@ -3373,6 +3375,7 @@ constexpr char facebook::react::LayoutConformanceShadowNodeComponentName[];
 constexpr char* const facebook::react::TextLayoutManagerKey;
 constexpr facebook::react::ReactNativeVersionType facebook::react::ReactNativeVersion;
 constexpr facebook::react::Tag facebook::react::kNoTag;
+constexpr facebook::react::colorspace::Matrix3 facebook::react::kXYZD65ToLinearRec2020;
 constexpr float facebook::react::kDefaultEpsilon;
 constexpr float facebook::react::kElementSelectMinTouchWidth;
 constexpr float facebook::react::kSymbolicMarkerBaselineShiftEm;
@@ -3631,6 +3634,7 @@ concept facebook::react::TextLayoutManagerWithPreparedTextLayout = requires(
   } -> std::same_as<facebook::react::TextMeasurement>;
 };
 CGColorSpaceRef _Nullable facebook::react::platformColorSpaceFor(facebook::react::ColorSpace space);
+CGFloat facebook::react::CGColorHeadroom(CGColorRef _Nullable cgColor);
 NSArray<NSString*>* facebook::react::extractKeysFromFollyDynamic(const folly::dynamic& dyn);
 NSError* facebook::react::tryAndReturnError(const std::function<void()>& func);
 NSString* facebook::react::deriveSourceURL(NSURL* url);
@@ -3649,6 +3653,8 @@ bool facebook::react::hostPlatformColorIsColorSpaceColor(const facebook::react::
 bool facebook::react::isColorMeaningful(const facebook::react::SharedColor& color) noexcept;
 bool facebook::react::isColorSpaceColor(const facebook::react::SharedColor& color);
 bool facebook::react::isHermesBytecodeBundle(const facebook::react::BundleHeader& header);
+bool facebook::react::isHighDynamicRange(const facebook::react::ColorSpaceValue& value);
+bool facebook::react::isHighDynamicRangeColor(const facebook::react::Color& color);
 bool facebook::react::isSymbolicListStyleType(facebook::react::ListStyleType type);
 bool facebook::react::isZero(facebook::react::Float n);
 bool facebook::react::preservesNewlines(facebook::react::WhiteSpace whiteSpace);
@@ -7254,7 +7260,8 @@ class facebook::react::ViewComponentDescriptor : public facebook::react::Concret
 
 class facebook::react::ViewState {
   public ViewState() = default;
-  public ViewState(std::vector<facebook::react::ViewState::TextRun> textRuns, std::weak_ptr<const facebook::react::TextLayoutManager> layoutManager);
+  public ViewState(std::vector<facebook::react::ViewState::TextRun> textRuns, std::weak_ptr<const facebook::react::TextLayoutManager> layoutManager, std::optional<facebook::react::DynamicRangeLimit> dynamicRangeLimit = std::nullopt);
+  public std::optional<facebook::react::DynamicRangeLimit> dynamicRangeLimit;
   public std::vector<facebook::react::ViewState::TextRun> textRuns;
   public std::weak_ptr<const facebook::react::TextLayoutManager> layoutManager;
 }
@@ -7302,6 +7309,7 @@ class facebook::react::VirtualViewProps : public facebook::react::HostPlatformVi
 }
 
 class facebook::react::YogaLayoutableShadowNode : public facebook::react::LayoutableShadowNode {
+  protected const std::shared_ptr<const facebook::react::TextAttributes>& receivedCascade() const;
   protected facebook::yoga::Config yogaConfig_;
   protected mutable facebook::yoga::Node yogaNode_;
   protected virtual bool shouldNewRevisionDirtyMeasurement(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment) const;
@@ -9134,6 +9142,7 @@ struct facebook::react::Color {
   public Color(const facebook::react::DynamicColor& dynamicColor);
   public Color(int32_t color);
   public bool isColorSpaceColor() const;
+  public bool isHighDynamicRange() const;
   public bool operator!=(const facebook::react::Color& other) const;
   public bool operator==(const facebook::react::Color& other) const;
   public constexpr Color();
@@ -10020,6 +10029,7 @@ class facebook::react::AbstractViewShadowNode : public facebook::react::Concrete
   public virtual facebook::react::Float lastLineBaseline(const facebook::react::LayoutContext& layoutContext, facebook::react::Size size) const override;
   public virtual void appendChild(const std::shared_ptr<const facebook::react::ShadowNode>& child) override;
   public virtual void layout(facebook::react::LayoutContext layoutContext) override;
+  public virtual void setInheritedCascade(const std::shared_ptr<const facebook::react::TextAttributes>& cascade) override;
 }
 
 template <const char* concreteComponentName, typename ViewPropsT, typename ViewEventEmitterT, typename StateDataT>

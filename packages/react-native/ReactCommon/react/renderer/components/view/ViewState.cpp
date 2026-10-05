@@ -90,6 +90,10 @@ MapBuffer ViewState::getMapBuffer() const {
   }
   auto builder = MapBufferBuilder();
   builder.putMapBufferList(0, runs);
+  if (dynamicRangeLimit.has_value()) {
+    builder.putInt(
+        VS_KEY_DYNAMIC_RANGE_LIMIT, static_cast<int32_t>(*dynamicRangeLimit));
+  }
   return builder.build();
 }
 

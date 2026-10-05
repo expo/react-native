@@ -234,6 +234,12 @@ internal class BorderDrawable(
     invalidateSelf()
   }
 
+  /** Every edge color set as a color long an integer can't hold */
+  fun colorLongs(): List<Long>? =
+      borderColors?.edgeColors?.filterNotNull()?.filter {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ColorPropConverter.isIntegerColor(it)
+      }
+
   /** The edge's color, or its sRGB approximation for a color an integer can't hold */
   fun getBorderColor(position: LogicalEdge): Int {
     return argb(getBorderColorLong(position))
@@ -509,7 +515,12 @@ internal class BorderDrawable(
       @ColorLong colorBottom: Long,
   ): Long {
     // If any of the border colors are translucent then we can't use the fast path.
-    if (!isOpaque(colorLeft) || !isOpaque(colorTop) || !isOpaque(colorRight) || !isOpaque(colorBottom)) {
+    if (
+        !isOpaque(colorLeft) ||
+            !isOpaque(colorTop) ||
+            !isOpaque(colorRight) ||
+            !isOpaque(colorBottom)
+    ) {
       return 0L
     }
 
@@ -1111,21 +1122,30 @@ internal class BorderDrawable(
   /** The color as an ARGB integer; an sRGB approximation for a color in another space */
   @ColorInt
   private fun argb(@ColorLong color: Long): Int =
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ColorPropConverter.isIntegerColor(color)) {
+      if (
+          Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+              !ColorPropConverter.isIntegerColor(color)
+      ) {
         Color.toArgb(color)
       } else {
         (color ushr 32).toInt()
       }
 
   private fun isOpaque(@ColorLong color: Long): Boolean =
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ColorPropConverter.isIntegerColor(color)) {
+      if (
+          Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+              !ColorPropConverter.isIntegerColor(color)
+      ) {
         Color.alpha(color) == 1f
       } else {
         Color.alpha(argb(color)) == 255
       }
 
   private fun isTransparent(@ColorLong color: Long): Boolean =
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ColorPropConverter.isIntegerColor(color)) {
+      if (
+          Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+              !ColorPropConverter.isIntegerColor(color)
+      ) {
         Color.alpha(color) == 0f
       } else {
         Color.alpha(argb(color)) == 0

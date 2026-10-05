@@ -29,6 +29,14 @@ public class BackgroundImageLayer() {
     this.gradient = gradient
   }
 
+  /** The stops in their own color space, as color longs */
+  internal fun colorLongs(): List<Long> =
+      when (val gradient = this.gradient) {
+        is LinearGradient -> gradient.colorStops.mapNotNull { it.colorLong }
+        is RadialGradient -> gradient.colorStops.mapNotNull { it.colorLong }
+        else -> emptyList()
+      }
+
   public companion object {
     /**
      * Parses a ReadableMap into a BackgroundImageLayer.

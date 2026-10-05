@@ -13,8 +13,8 @@
 #include <react/renderer/graphics/ColorSpaceValue.h>
 #include <algorithm>
 #include <cmath>
-#include <optional>
 #include <cstdint>
+#include <optional>
 
 namespace facebook::react {
 
@@ -37,13 +37,14 @@ inline Color hostPlatformColorFromComponents(ColorComponents components)
       channel(components.red), channel(components.green), channel(components.blue), channel(components.alpha));
 }
 
-/*
- * This host draws 8-bit sRGB only, so a color in another space is converted
- * by CSS's arithmetic and clipped to sRGB, and a space CSS doesn't define
- * can't be shown
- */
-// An 8-bit host color keeps no color space, so it is always sRGB
+// This host draws 8-bit sRGB only: a color in another space is clipped to
+// sRGB by CSS's arithmetic, and a dashed space can't be shown
 inline bool hostPlatformColorIsColorSpaceColor(const Color & /*color*/)
+{
+  return false;
+}
+
+inline bool isHighDynamicRangeColor(const Color & /*color*/)
 {
   return false;
 }
