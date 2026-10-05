@@ -203,6 +203,11 @@ const APIs: Array<RNTesterModuleInfo> = (
   [
     // The renderer's CSS transitions and animations
     {
+      key: 'ShadcnExample',
+      module: require('../examples/Astryx/ShadcnExample').default,
+      category: 'UI',
+    },
+    {
       key: 'RadixExample',
       module: require('../examples/Astryx/RadixExample').default,
       category: 'UI',
