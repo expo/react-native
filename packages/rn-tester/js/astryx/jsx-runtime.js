@@ -254,8 +254,18 @@ function IntrinsicElement({__astryxTag, ...props}: IntrinsicProps): React.Node {
   );
 
   const mapped = ELEMENT_COMPONENTS[__astryxTag];
-  const mergedStyle =
+  const entryMerged =
     entryStyle != null ? [resolvedStyle, entryStyle] : resolvedStyle;
+  // Astryx's reset, applied to Astryx's own elements only — see ASTRYX_RESET.
+  // Underneath everything, so it is a floor the sources can still override,
+  // which is what a reset is.
+  const reset = ASTRYX_RESET[__astryxTag];
+  const mergedStyle =
+    reset == null
+      ? entryMerged
+      : entryMerged != null
+        ? [reset, entryMerged]
+        : reset;
   // Interaction handlers attach only when a candidate rule gates on state,
   // composing WITH any handlers the author passed rather than replacing
   // them.
@@ -372,6 +382,16 @@ function composeInteractionHandlers(
   }
   return out;
 }
+
+/**
+ * Astryx's CSS reset, scoped to Astryx's own elements: its Card computes an
+ * exact 16px inset and the user-agent `<p>` margins would make it 32. Scoped
+ * rather than `overrideUAStyle`, which mutates the shared sheet for every
+ * screen in the app.
+ */
+const ASTRYX_RESET: {[string]: {[string]: unknown}} = {
+  p: {marginBlock: 0},
+};
 
 /**
  * Elements that need *behavioral* translation rather than a view-config

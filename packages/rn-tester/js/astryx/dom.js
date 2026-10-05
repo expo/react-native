@@ -10,16 +10,9 @@
 
 'use strict';
 
-// The element catalog supplies Astryx's intrinsics; this module is the seam for
-// anything Astryx needs on top of it
+// The seam for any element Astryx needs that the catalog does not provide
 
 import '@react-native/expo-intrinsics-poc';
 
-import {overrideUAStyle} from '@react-native/expo-intrinsics-poc';
-
-// Astryx's CSS reset. On the web Astryx ships a reset and styles from scratch
-// on top of it (its Card computes an exact 16px inset); the vendored slice
-// does not include the reset, so the user-agent `<p>` margins would add to it.
-// The UA sheet stays web-faithful; the reset belongs to the consumer, as in a
-// browser.
-overrideUAStyle('p', {marginBlock: 0});
+// Astryx's CSS reset is `ASTRYX_RESET` in `jsx-runtime.js`, scoped to its
+// elements; `overrideUAStyle` would mutate the shared user-agent sheet
