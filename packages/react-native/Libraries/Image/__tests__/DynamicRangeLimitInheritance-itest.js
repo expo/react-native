@@ -10,6 +10,7 @@
  */
 
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
+import '@react-native/expo-intrinsics-poc';
 
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
@@ -35,7 +36,7 @@ function limitsOf(root: Fantom.Root): Array<?string> {
       children?: Array<$FlowFixMe>,
       ...
     } = node;
-    if (element.type === 'Image') {
+    if (element.type === 'Image' || element.type === 'img') {
       limits.push(element.props?.dynamicRangeLimit);
     }
     for (const child of element.children ?? []) {
@@ -114,6 +115,29 @@ describe('dynamic-range-limit inheritance', () => {
               <Picture />
             </View>
           </View>,
+        );
+      });
+    render('standard');
+    expect(limitsOf(root)).toEqual(['standard']);
+    render('constrained');
+    expect(limitsOf(root)).toEqual(['constrained']);
+    render('no-limit');
+    expect(limitsOf(root)).toEqual(['no-limit']);
+    root.destroy();
+  });
+
+  it('reaches an inline <img> through its anonymous box in the same commit', () => {
+    // The picture is an atomic inline hanging off an anonymous box
+    const root = Fantom.createRoot();
+    const render = (limit: 'no-limit' | 'constrained' | 'standard') =>
+      Fantom.runTask(() => {
+        root.render(
+          // $FlowFixMe[prop-missing] elements from the catalog
+          <div style={{width: 200, dynamicRangeLimit: limit}}>
+            before
+            <img source={SOURCE} style={{width: 10, height: 10}} />
+            after
+          </div>,
         );
       });
     render('standard');

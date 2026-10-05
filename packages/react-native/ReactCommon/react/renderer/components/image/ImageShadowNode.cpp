@@ -221,6 +221,51 @@ void ImageShadowNode::layout(LayoutContext layoutContext) {
 // `ImageShadowNode` is `final` with a fixed component handle (see the
 // `ImgTagShadowNode` declaration in ImageShadowNode.h).
 
+ImgTagShadowNode::ImgTagShadowNode(
+    const ShadowNodeFragment& fragment,
+    const ShadowNodeFamily::Shared& family,
+    ShadowNodeTraits traits)
+    : ConcreteViewShadowNode(fragment, family, traits) {
+  // With the flag off a picture is an ordinary leaf
+  if (!ReactNativeFeatureFlags::enableColorSpaces()) {
+    traits_.unset(ShadowNodeTraits::Trait::TextCascadeConsumer);
+  }
+}
+
+ImgTagShadowNode::ImgTagShadowNode(
+    const ShadowNode& sourceShadowNode,
+    const ShadowNodeFragment& fragment)
+    : ConcreteViewShadowNode(sourceShadowNode, fragment) {
+  // Kept for a clone the configure pass skips (unchanged cascade)
+  inheritedCascade_ =
+      static_cast<const ImgTagShadowNode&>(sourceShadowNode).inheritedCascade_;
+}
+
+void ImgTagShadowNode::setInheritedCascade(
+    const std::shared_ptr<const TextAttributes>& cascade) {
+  inheritedCascade_ = cascade;
+  // `layout` is skipped for a node whose own layout didn't change, so a
+  // container's new limit has to reach the picture here. `isPublished()`, not
+  // the seal: a release build has no seal.
+  if (imageManager_ != nullptr && !isPublished() &&
+      ReactNativeFeatureFlags::enableColorSpaces()) {
+    updateStateIfNeeded();
+  }
+}
+
+DynamicRangeLimit ImgTagShadowNode::effectiveDynamicRangeLimit() const {
+  const auto& own = getConcreteProps().dynamicRangeLimit;
+  if (own.has_value()) {
+    return *own;
+  }
+  if (ReactNativeFeatureFlags::enableStringChildren() &&
+      inheritedCascade_ != nullptr &&
+      inheritedCascade_->dynamicRangeLimit.has_value()) {
+    return *inheritedCascade_->dynamicRangeLimit;
+  }
+  return DynamicRangeLimit::NoLimit;
+}
+
 void ImgTagShadowNode::setImageManager(
     const std::shared_ptr<ImageManager>& imageManager) {
   ensureUnsealed();
@@ -269,8 +314,13 @@ void ImgTagShadowNode::updateStateIfNeeded() {
 #endif
   );
 
+  const auto dynamicRangeLimit = effectiveDynamicRangeLimit();
   if (oldImageSource == newImageSource &&
       oldImageRequestParams == newImageRequestParams) {
+    // The limit is paint-only, so a change to it alone keeps the request
+    if (savedState.getDynamicRangeLimit() != dynamicRangeLimit) {
+      setStateData(ImageState{savedState, dynamicRangeLimit});
+    }
     return;
   }
 
@@ -278,7 +328,8 @@ void ImgTagShadowNode::updateStateIfNeeded() {
       newImageSource,
       imageManager_->requestImage(
           newImageSource, getSurfaceId(), newImageRequestParams, getTag()),
-      newImageRequestParams};
+      newImageRequestParams,
+      dynamicRangeLimit};
   setStateData(std::move(state));
 }
 
