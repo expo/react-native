@@ -10,6 +10,25 @@ node_modules/expo/**
 node_modules/expo-image/**
 node_modules/expo-modules-core/**
 node_modules/expo-modules-autolinking/**
+; The symlink entries themselves, plus `@expo`, which `expo*` does not cover
+node_modules/expo
+node_modules/expo-image
+node_modules/expo-modules-core
+node_modules/expo-modules-autolinking
+node_modules/@expo/**
+; Any pnpm store: `.pnpm` is a farm of symlinks that link to one another, so a
+; traversal that follows them does not terminate
+**/.pnpm/**
+
+; The workspace packages' build output, reached a second time through their
+; `node_modules/@react-native/*` symlinks; the packages themselves are sources
+; Flow resolves imports through
+node_modules/@react-native/*/.out/**
+node_modules/@react-native/*/build/**
+
+; react-native through its symlink; module.name_mapper already redirects every
+; `react-native` import to <PROJECT_ROOT>/packages/react-native
+node_modules/react-native/**
 
 ; The Fantom runner's per-test Metro bundle cache: gigabytes of generated
 ; multi-megabyte bundles that grow with every suite run. Parsing them is what
@@ -18,6 +37,31 @@ private/react-native-fantom/.out/**
 
 ; Ignore build cache folder
 packages/react-native/sdks/**
+
+; Native build output, which Gradle and CocoaPods rewrite during a build and
+; which would retrigger the check for as long as a build daemon runs
+packages/react-native/ReactAndroid/build/**
+packages/react-native/ReactAndroid/.cxx/**
+; More build output and Babel's on-disk cache; `module.file_ext=.json` makes
+; Flow parse every generated JSON file in them, and jest rewrites the cache
+**/node_modules/.cache/**
+private/react-native-fantom/build/**
+packages/react-native/ReactAndroid/hermes-engine/build/**
+packages/gradle-plugin/*/build/**
+packages/rn-tester/android/*/build/**
+packages/rn-tester/Pods/**
+packages/react-native-popup-menu-android/android/build/**
+**/.gradle/**
+**/.cxx/**
+
+; Lint tooling, which nothing Flow checks imports and which dominates the crawl
+**/node_modules/eslint*/**
+**/node_modules/@eslint/**
+**/node_modules/es-abstract/**
+**/node_modules/es-to-primitive/**
+**/node_modules/*.prototype.*/**
+**/node_modules/arraybuffer.prototype.*/**
+**/node_modules/reflect.getprototypeof/**
 
 ; Ignore fb_internal modules
 packages/react-native/src/fb_internal/**
@@ -66,6 +110,10 @@ packages/react-native/flow/
 builtin_lib=core-only
 
 emoji=true
+
+; Watchman rather than Flow's built-in crawler, which makes a cold start on a
+; repo this size pathological
+file_watcher=watchman
 
 format.bracket_spacing=false
 
