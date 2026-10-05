@@ -22,7 +22,9 @@ import android.view.View
 import android.view.ViewOutlineProvider
 import android.widget.ImageView
 import androidx.annotation.ColorInt
+import androidx.annotation.ColorLong
 import com.facebook.react.R
+import com.facebook.react.bridge.ColorPropConverter
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.common.annotations.UnstableReactNativeAPI
 import com.facebook.react.uimanager.PixelUtil.dpToPx
@@ -77,6 +79,21 @@ public object BackgroundStyleApplicator {
     }
 
     ensureBackgroundDrawable(view).backgroundColor = color ?: Color.TRANSPARENT
+  }
+
+  /**
+   * [setBackgroundColor] with a color long, which keeps a color in its own space. Named apart from
+   * it because Java widens an `int` to this overload.
+   */
+  @JvmStatic
+  public fun setBackgroundColorLong(view: View, @ColorLong color: Long) {
+    if (ColorPropConverter.isIntegerColor(color) || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+      // An sRGB color long holds its ARGB integer in the high 32 bits
+      setBackgroundColor(view, (color ushr 32).toInt())
+      return
+    }
+    ensureBackgroundDrawable(view).setBackgroundColorLong(color)
+    WideColorGamut.request(view)
   }
 
   /**
@@ -182,6 +199,24 @@ public object BackgroundStyleApplicator {
   @JvmStatic
   public fun setBorderColor(view: View, edge: LogicalEdge, @ColorInt color: Int?) {
     ensureBorderDrawable(view).setBorderColor(edge, color)
+  }
+
+  /**
+   * [setBorderColor] with a color long, which keeps a color in its own space. Named apart from it
+   * because Java widens an `int` to this overload.
+   */
+  @JvmStatic
+  public fun setBorderColorLong(view: View, edge: LogicalEdge, @ColorLong color: Long?) {
+    if (
+        color == null ||
+            ColorPropConverter.isIntegerColor(color) ||
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+    ) {
+      setBorderColor(view, edge, color?.let { (it ushr 32).toInt() })
+      return
+    }
+    ensureBorderDrawable(view).setBorderColorLong(edge, color)
+    WideColorGamut.request(view)
   }
 
   /**
@@ -391,6 +426,9 @@ public object BackgroundStyleApplicator {
      * https://drafts.csswg.org/css-backgrounds/#shadow-layers
      */
     for (boxShadow in shadows) {
+      if (boxShadow.colorLong != null) {
+        WideColorGamut.request(view)
+      }
       val offsetX = boxShadow.offsetX
       val offsetY = boxShadow.offsetY
       val color = boxShadow.color ?: Color.BLACK
@@ -405,6 +443,7 @@ public object BackgroundStyleApplicator {
                 borderRadius = borderRadius,
                 borderInsets = borderInsets,
                 shadowColor = color,
+                shadowColorLong = boxShadow.colorLong,
                 offsetX = offsetX,
                 offsetY = offsetY,
                 blurRadius = blurRadius,
@@ -417,6 +456,7 @@ public object BackgroundStyleApplicator {
                 context = view.context,
                 borderRadius = borderRadius,
                 shadowColor = color,
+                shadowColorLong = boxShadow.colorLong,
                 offsetX = offsetX,
                 offsetY = offsetY,
                 blurRadius = blurRadius,

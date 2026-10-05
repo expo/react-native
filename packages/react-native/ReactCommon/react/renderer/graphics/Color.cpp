@@ -50,6 +50,13 @@ bool isColorSpaceColor(const SharedColor& color) {
   return color && hostPlatformColorIsColorSpaceColor(*color);
 }
 
+std::optional<ColorSpaceValue> colorSpaceValueOf(const SharedColor& color) {
+  if (!color) {
+    return std::nullopt;
+  }
+  return hostPlatformColorSpaceValueOf(*color);
+}
+
 // Read Color components in [0, 1] range
 ColorComponents colorComponentsFromColor(SharedColor sharedColor) {
   return colorComponentsFromHostPlatformColor(*sharedColor);

@@ -12,6 +12,7 @@ package com.facebook.react.views.text
 import android.text.Spannable
 import android.text.Spanned
 import android.view.View
+import androidx.annotation.ColorLong
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.internal.SystraceSection
 import com.facebook.react.module.annotations.ReactModule
@@ -26,12 +27,14 @@ import com.facebook.react.uimanager.ReferenceStateWrapper
 import com.facebook.react.uimanager.StateWrapper
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewProps
+import com.facebook.react.uimanager.WideColorGamut
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.facebook.react.uimanager.annotations.ReactPropGroup
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
+import com.facebook.react.views.text.internal.span.ReactForegroundColorSpan
 import com.facebook.react.views.view.ImportantForInteractionHelper
 import java.util.HashMap
 
@@ -74,6 +77,9 @@ internal class PreparedLayoutTextViewManager :
     SystraceSection("PreparedLayoutTextViewManager.updateExtraData").use { _ ->
       val preparedLayout = extraData as PreparedLayout
       view.preparedLayout = preparedLayout
+      if (ReactForegroundColorSpan.hasColorLong(preparedLayout.layout.text)) {
+        WideColorGamut.request(view)
+      }
 
       val text = preparedLayout.layout.text
       if (text is Spanned) {
@@ -181,6 +187,11 @@ internal class PreparedLayoutTextViewManager :
           ],
       customType = "Color",
   )
+  public fun setBorderColorLong(view: PreparedLayoutTextView, index: Int, @ColorLong color: Long?) {
+    BackgroundStyleApplicator.setBorderColorLong(view, LogicalEdge.values()[index], color)
+  }
+
+  /** The border color as an integer. [setBorderColorLong] receives the prop. */
   fun setBorderColor(view: PreparedLayoutTextView, index: Int, color: Int?) {
     BackgroundStyleApplicator.setBorderColor(view, LogicalEdge.values()[index], color)
   }

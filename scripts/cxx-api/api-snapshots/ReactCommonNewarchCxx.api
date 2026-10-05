@@ -262,6 +262,7 @@ std::optional<facebook::react::BlendMode> facebook::react::blendModeFromString(s
 std::optional<facebook::react::CSSAnimation> facebook::react::buildAnimation(const std::string& keyframesJson, const std::string& duration, const std::string& delay, const std::string& timingFunction, const std::string& iterationCount, const std::string& direction, const std::string& fillMode);
 std::optional<facebook::react::ColorComponents> facebook::react::toClippedSRGB(const facebook::react::ColorSpaceValue& value);
 std::optional<facebook::react::ColorSpace> facebook::react::colorSpaceFromName(std::string_view name);
+std::optional<facebook::react::ColorSpaceValue> facebook::react::colorSpaceValueOf(const facebook::react::SharedColor& color);
 std::optional<facebook::react::FilterType> facebook::react::filterTypeFromString(std::string_view filterName);
 std::optional<facebook::react::Isolation> facebook::react::isolationFromString(std::string_view isolationSetting);
 std::optional<facebook::react::TransitionProperty> facebook::react::parseTransitionProperty(const std::string& value);
