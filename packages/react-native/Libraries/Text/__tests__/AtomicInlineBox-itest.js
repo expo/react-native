@@ -4,8 +4,10 @@
  */
 import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 
-// <inline> and <block> are react-native's own example elements
-// (fixtures/exampleElements.js), so these tests borrow no catalog tag
+// These exercise the INLINE ELEMENT machinery — padding, borders, baselines —
+// not HTML. <inline> and <block> are react-native's own example elements, so
+// the tests do not borrow a tag from the element catalog to test their own
+// layout. See fixtures/exampleElements.js.
 import './fixtures/exampleElements';
 import '@react-native/expo-intrinsics-poc';
 
@@ -27,6 +29,72 @@ function rectOf(ref: {current: HostInstance | null}) {
 }
 
 describe('inline-flex chip (css-display-3 §2)', () => {
+  it('lays its children out like a flex row', () => {
+    const inlineRef = createRef<HostInstance>();
+    const inlineDotRef = createRef<HostInstance>();
+    const viewRef = createRef<HostInstance>();
+    const viewDotRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    // `flexDirection: 'row'` is explicit because React Native defaults a flex
+    // container to `column` where CSS defaults to `row` — worth knowing, and
+    // not what this test is about.
+    const style = {
+      display: 'inline-flex' as const,
+      flexDirection: 'row' as const,
+      gap: 4,
+      alignItems: 'center' as const,
+      paddingHorizontal: 6,
+    };
+
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{display: 'block', width: 300}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <inline ref={inlineRef} style={style}>
+            <View
+              ref={inlineDotRef}
+              style={{width: 8, height: 8}}
+              collapsable={false}
+            />
+            {'ready'}
+          </inline>
+          {/* The same children in a plain flex row, as the control. */}
+          <View
+            ref={viewRef}
+            collapsable={false}
+            style={{
+              ...style,
+              display: 'flex' as const,
+              alignSelf: 'flex-start' as const,
+            }}>
+            <View
+              ref={viewDotRef}
+              style={{width: 8, height: 8}}
+              collapsable={false}
+            />
+            {'ready'}
+          </View>
+        </View>,
+      );
+    });
+
+    const inlineRect = rectOf(inlineRef);
+    const inlineDot = rectOf(inlineDotRef);
+    const view = rectOf(viewRef);
+    const viewDot = rectOf(viewDotRef);
+    console.log(
+      `inline w=${inlineRect.width} h=${inlineRect.height} dot@(${inlineDot.x - inlineRect.x},${inlineDot.y - inlineRect.y}) | ` +
+        `view w=${view.width} h=${view.height} dot@(${viewDot.x - view.x},${viewDot.y - view.y})`,
+    );
+    // Its children ARE laid out as flex items — the offsets match the control.
+    expect(inlineDot.x - inlineRect.x).toBe(viewDot.x - view.x);
+    expect(inlineDot.y - inlineRect.y).toBe(viewDot.y - view.y);
+
+    // An inline-level box is shrink-to-fit, so it matches the control exactly
+    // rather than stretching across the line.
+    expect(inlineRect.width).toBe(view.width);
+  });
+
   it('bare text vs <Text> as a flex sibling', () => {
     const bareDot = createRef<HostInstance>();
     const bareBox = createRef<HostInstance>();
@@ -75,6 +143,31 @@ describe('inline-flex chip (css-display-3 §2)', () => {
     expect(bb.width).toBe(tb.width);
   });
 
+  it('atomic inline boxes shrink to fit', () => {
+    const flexRef = createRef<HostInstance>();
+    const blockRef = createRef<HostInstance>();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{display: 'block', width: 300}}>
+          {/* $FlowExpectedError[not-a-component] */}
+          <inline ref={flexRef} style={{display: 'inline-flex'}}>
+            {'ab'}
+          </inline>
+          {/* $FlowExpectedError[not-a-component] */}
+          <inline ref={blockRef} style={{display: 'inline-block'}}>
+            {'ab'}
+          </inline>
+        </View>,
+      );
+    });
+    console.log(
+      `inline-flex w=${rectOf(flexRef).width} inline-block w=${rectOf(blockRef).width} (content is 20)`,
+    );
+    expect(rectOf(blockRef).width).toBe(20);
+    expect(rectOf(flexRef).width).toBe(20);
+  });
+
   it('contains its children', () => {
     const chipRef = createRef<HostInstance>();
     const dotRef = createRef<HostInstance>();
@@ -113,7 +206,8 @@ describe('inline-flex chip (css-display-3 §2)', () => {
       `chip x=${chip.x} y=${chip.y} w=${chip.width} h=${chip.height} | ` +
         `dot x=${dot.x} y=${dot.y} w=${dot.width} h=${dot.height}`,
     );
-    // The dot must sit inside the chip's box in both axes
+    // The dot must sit inside the chip's box in both axes; anything else is
+    // the chip clipping or the dot escaping.
     expect(dot.y).toBeGreaterThanOrEqual(chip.y);
     expect(dot.y + dot.height).toBeLessThanOrEqual(chip.y + chip.height);
     expect(dot.x).toBeGreaterThanOrEqual(chip.x);
@@ -122,9 +216,14 @@ describe('inline-flex chip (css-display-3 §2)', () => {
 });
 
 /*
- * `display` sets the outer display and the inner one (css-display-3 §2), and
- * every `inline-*` value shares one outer display, so one table asks each the
- * same question; that catches a value wired for its inner display alone.
+ * Outer display, for every value that has both forms.
+ *
+ * `display` sets two things: whether the box is inline-level or block-level on
+ * the OUTSIDE, and how it lays its own children out on the INSIDE
+ * (css-display-3 §2). Every `inline-*` value shares one outer display and
+ * differs only on the inside, so they belong in one table — asking each of
+ * them the same question is what catches a value that was added to the style
+ * type and wired for its inner display alone.
  */
 describe('outer display (css-display-3 §2)', () => {
   const TEXT_WIDTH = 20; // 'aa' at the deterministic 10pt cell width
@@ -148,7 +247,12 @@ describe('outer display (css-display-3 §2)', () => {
     return rect.x;
   }
 
-  for (const display of ['inline-block', 'inline-flex']) {
+  for (const display of [
+    'inline-block',
+    'inline-flex',
+    'inline-grid',
+    'inline-grid-lanes',
+  ]) {
     it(`display:${display} is inline-level, so it sits on the line after the text`, () => {
       expect(xOfBoxAfterText(display)).toBe(TEXT_WIDTH);
     });
@@ -162,9 +266,13 @@ describe('outer display (css-display-3 §2)', () => {
 });
 
 /*
- * In a block container an inline-level box joins a line, sized to its content;
- * in a flex container it is blockified into a flex item (css-display-3 §2.7)
- * and aligns as the container says, so no rule may force its alignSelf.
+ * Where an inline-level box sits depends on the formatting context it is in,
+ * and each context already says so without the box being told.
+ *
+ * In a block container it joins a line, sized to its content. In a flex
+ * container it is blockified into an ordinary flex item (css-display-3 §2.7)
+ * and aligns as the container says; the box must not force its own
+ * `alignSelf` there, or it overrides the container's `alignItems`.
  */
 describe('inline-level boxes and their formatting context', () => {
   function layOut(container: ViewStyleProp): {
@@ -203,5 +311,11 @@ describe('inline-level boxes and their formatting context', () => {
   it('stretches across a flex column, as a browser stretches it', () => {
     const {box} = layOut({flexDirection: 'column', width: 300});
     expect(box.width).toBe(300);
+  });
+
+  it('keeps the width of its content in a block container', () => {
+    const {box} = layOut({display: 'block', width: 300});
+    expect(box.width).toBeGreaterThan(0);
+    expect(box.width).toBeLessThan(100);
   });
 });
