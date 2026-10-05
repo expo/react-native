@@ -53,6 +53,12 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'UI',
   },
   {
+    key: 'ColorHTMLExample',
+    group: 'Color',
+    module: require('../examples/ColorGallery/ColorHTMLExample').default,
+    category: 'UI',
+  },
+  {
     key: 'EnvSafeAreaExample',
     group: 'CSS Layout',
     module: require('../examples/SafeArea/EnvSafeAreaExample'),
