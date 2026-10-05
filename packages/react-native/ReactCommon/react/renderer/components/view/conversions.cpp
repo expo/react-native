@@ -672,6 +672,10 @@ void parseUnprocessedTransform(
 
 } // namespace
 
+void parseTransformString(const std::string& value, Transform& result) {
+  parseUnprocessedTransformString(value, result);
+}
+
 void fromRawValue(
     const PropsParserContext& context,
     const RawValue& value,
