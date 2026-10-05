@@ -17,6 +17,8 @@
   ],
   "bugs": "https://github.com/react/react-native/issues",
   "files": [
+    "colorInterpolation.js",
+    "colorInterpolation.js.flow",
     "colorSpaces.js",
     "colorSpaces.js.flow",
     "index.js",
