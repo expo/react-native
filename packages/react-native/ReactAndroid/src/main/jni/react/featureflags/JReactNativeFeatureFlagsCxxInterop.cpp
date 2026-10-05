@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<8b4ffe9eef2fe7c75cd4af0837bfd066>>
+ * @generated SignedSource<<26c0493bcab4fb857836226bb1a02b0a>>
  */
 
 /**
@@ -312,6 +312,12 @@ class ReactNativeFeatureFlagsJavaProvider
   bool enableNativeCSSParsing() override {
     static const auto method =
         getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableNativeCSSParsing");
+    return method(javaProvider_);
+  }
+
+  bool enableNativeGestureRecognizers() override {
+    static const auto method =
+        getReactNativeFeatureFlagsProviderJavaClass()->getMethod<jboolean()>("enableNativeGestureRecognizers");
     return method(javaProvider_);
   }
 
@@ -855,6 +861,11 @@ bool JReactNativeFeatureFlagsCxxInterop::enableNativeCSSParsing(
   return ReactNativeFeatureFlags::enableNativeCSSParsing();
 }
 
+bool JReactNativeFeatureFlagsCxxInterop::enableNativeGestureRecognizers(
+    facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
+  return ReactNativeFeatureFlags::enableNativeGestureRecognizers();
+}
+
 bool JReactNativeFeatureFlagsCxxInterop::enablePreallocatedPropsDiffOnInsertAndroid(
     facebook::jni::alias_ref<JReactNativeFeatureFlagsCxxInterop> /*unused*/) {
   return ReactNativeFeatureFlags::enablePreallocatedPropsDiffOnInsertAndroid();
@@ -1279,6 +1290,9 @@ void JReactNativeFeatureFlagsCxxInterop::registerNatives() {
       makeNativeMethod(
         "enableNativeCSSParsing",
         JReactNativeFeatureFlagsCxxInterop::enableNativeCSSParsing),
+      makeNativeMethod(
+        "enableNativeGestureRecognizers",
+        JReactNativeFeatureFlagsCxxInterop::enableNativeGestureRecognizers),
       makeNativeMethod(
         "enablePreallocatedPropsDiffOnInsertAndroid",
         JReactNativeFeatureFlagsCxxInterop::enablePreallocatedPropsDiffOnInsertAndroid),

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<2d42bf3f07fc4d88cf353a263ffe4a91>>
+ * @generated SignedSource<<46f32ecc1966b09643dc5fe765082ba8>>
  * @flow strict
  * @noformat
  */
@@ -96,6 +96,7 @@ export type ReactNativeFeatureFlags = Readonly<{
   enableMountingCoordinatorPullModelAndroid: Getter<boolean>,
   enableMutationObserverByDefault: Getter<boolean>,
   enableNativeCSSParsing: Getter<boolean>,
+  enableNativeGestureRecognizers: Getter<boolean>,
   enablePreallocatedPropsDiffOnInsertAndroid: Getter<boolean>,
   enablePreparedTextLayout: Getter<boolean>,
   enablePropsUpdateReconciliationAndroid: Getter<boolean>,
@@ -412,6 +413,10 @@ export const enableMutationObserverByDefault: Getter<boolean> = createNativeFlag
  * Parse CSS strings using the Fabric CSS parser instead of ViewConfig processing
  */
 export const enableNativeCSSParsing: Getter<boolean> = createNativeFlagGetter('enableNativeCSSParsing', false);
+/**
+ * Route interaction for the DOM element catalog's own elements through native gesture recognizers (UIGestureRecognizer dependencies on iOS, ViewGroup interception on Android) instead of the JS responder system, so arbitration happens in the platform's arena and a scroll can claim a gesture without a round trip through JavaScript. Scoped to the new elements: nothing already shipping changes behaviour.
+ */
+export const enableNativeGestureRecognizers: Getter<boolean> = createNativeFlagGetter('enableNativeGestureRecognizers', false);
 /**
  * When enabled together with `enableAccumulatedUpdatesInRawPropsAndroid`, the Insert of a preallocated view only sends the difference between the props the view was preallocated with and the inserted props, instead of sending all props again on every Insert.
  */
