@@ -18,8 +18,19 @@ const Components: Array<RNTesterModuleInfo> = [
   // features under active development.
   {
     key: 'SharedTextBenchmarkExample',
-    module: require('../examples/DeviceBench/SharedTextBenchmarkExample').default,
+    module: require('../examples/DeviceBench/SharedTextBenchmarkExample')
+      .default,
     category: 'Basic',
+  },
+  {
+    key: 'NativeButtonExample',
+    module: require('../examples/NativeGestures/NativeButtonExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'ExpoUISmokeExample',
+    module: require('../examples/ExpoUI/ExpoUISmokeExample').default,
+    category: 'UI',
   },
   {
     key: 'AstryxExample',
@@ -36,6 +47,58 @@ const Components: Array<RNTesterModuleInfo> = [
     module: require('../examples/TextChildren/StringChildrenExample').default,
     category: 'Basic',
   },
+  {
+    key: 'ListsExample',
+    module: require('../examples/Lists/ListsExample').default,
+  },
+  {
+    key: 'IntrinsicElementsExample',
+    module: require('../examples/TextChildren/IntrinsicElementsExample')
+      .default,
+    category: 'Basic',
+  },
+  {
+    key: 'HTMLConformanceExample',
+    module: require('../examples/HTMLElements/HTMLConformanceExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLFormsExample',
+    module: require('../examples/HTMLElements/HTMLFormsExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLTextLevelExample',
+    module: require('../examples/HTMLElements/HTMLTextLevelExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLGroupingExample',
+    module: require('../examples/HTMLElements/HTMLGroupingExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLEmbeddedExample',
+    module: require('../examples/HTMLElements/HTMLEmbeddedExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'HTMLIntrinsicsDocExample',
+    module: require('../examples/HTMLElements/HTMLIntrinsicsDocExample')
+      .default,
+    category: 'UI',
+  },
+  {
+    key: 'DisplayBlockExample',
+    module: require('../examples/DisplayBlock/DisplayBlockExample').default,
+    category: 'UI',
+  },
+  {
+    key: 'DisplayInlineExample',
+    module: require('../examples/DisplayInline/DisplayInlineExample').default,
+    category: 'UI',
+  },
+
   {
     key: 'CascadeExample',
     module: require('../examples/Cascade/CascadeExample').default,
@@ -197,7 +260,8 @@ const Components: Array<RNTesterModuleInfo> = [
 
 const APIs: Array<RNTesterModuleInfo> = (
   [
-    // The renderer's CSS transitions and animations
+    // ---- Fork work, pinned for quick access (same pattern as Components):
+    // the renderer's CSS transitions and display: contents coverage.
     {
       key: 'ShadcnExample',
       module: require('../examples/Astryx/ShadcnExample').default,
@@ -223,6 +287,12 @@ const APIs: Array<RNTesterModuleInfo> = (
       module: require('../examples/CSSTransitions/CSSTransitionsExample')
         .default,
       category: 'UI',
+    },
+    {
+      key: 'DisplayContentsExample',
+      category: 'UI',
+      module: require('../examples/DisplayContents/DisplayContentsExample')
+        .default,
     },
     {
       key: 'AccessibilityExample',
@@ -307,12 +377,6 @@ const APIs: Array<RNTesterModuleInfo> = (
       key: 'TextInheritanceExample',
       category: 'UI',
       module: require('../examples/TextInheritance/TextInheritanceExample')
-        .default,
-    },
-    {
-      key: 'DisplayContentsExample',
-      category: 'UI',
-      module: require('../examples/DisplayContents/DisplayContentsExample')
         .default,
     },
     {
