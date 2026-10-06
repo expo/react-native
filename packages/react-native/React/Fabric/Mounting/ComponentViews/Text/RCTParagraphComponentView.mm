@@ -8,7 +8,9 @@
 #import "RCTParagraphComponentView.h"
 #import "RCTParagraphComponentAccessibilityProvider.h"
 
+#import <CoreImage/CoreImage.h>
 #import <MobileCoreServices/UTCoreTypes.h>
+
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/components/text/DomElementsRegistry.h>
 #import <react/renderer/components/text/ParagraphComponentDescriptor.h>
@@ -16,10 +18,12 @@
 #import <react/renderer/components/text/ParagraphState.h>
 #import <react/renderer/components/text/TextComponentDescriptor.h>
 #import <react/renderer/components/text/TextNodeComponentDescriptor.h>
+#import <react/renderer/graphics/HostPlatformColor.h>
 #import <react/renderer/textlayoutmanager/RCTAttributedTextUtils.h>
 #import <react/renderer/textlayoutmanager/RCTTextLayoutManager.h>
 #import <react/renderer/textlayoutmanager/TextLayoutManager.h>
 #import <react/utils/ManagedObjectWrapper.h>
+#include <algorithm>
 
 #import "RCTConversions.h"
 #import "RCTFabricComponentsPlugins.h"
@@ -43,6 +47,10 @@ using namespace facebook::react;
 @property (nonatomic) ParagraphAttributes paragraphAttributes;
 @property (nonatomic) LayoutMetrics layoutMetrics;
 @property (nonatomic) CGRect drawingFrame;
+/** The limit the paragraph resolved, for the shadow it casts apart. */
+@property (nonatomic) DynamicRangeLimit dynamicRangeLimit;
+/** The component view, which asks layers for their range. */
+@property (nonatomic, weak) RCTViewComponentView *rangeOwner;
 
 @end
 
@@ -137,9 +145,41 @@ using namespace facebook::react;
   [super updateProps:props oldProps:oldProps];
 }
 
+// The peak over SDR white of what the paragraph's store draws (its text and run backgrounds; a text shadow past
+// white is cast apart), and the tightest `dynamic-range-limit` among the runs that draw past white
+static std::pair<CGFloat, DynamicRangeLimit> RCTAttributedStringHeadroom(const AttributedString &attributedString)
+{
+  CGFloat headroom = 0;
+  auto limit = DynamicRangeLimit::NoLimit;
+  for (const auto &fragment : attributedString.getFragments()) {
+    const auto &attributes = fragment.textAttributes;
+    for (const auto &color : {attributes.foregroundColor, attributes.backgroundColor}) {
+      if (!color || !isHighDynamicRangeColor(*color)) {
+        continue;
+      }
+      headroom = std::max(headroom, CGColorHeadroom(RCTUIColorFromSharedColor(color).CGColor));
+      const auto runLimit = attributes.dynamicRangeLimit.value_or(DynamicRangeLimit::NoLimit);
+      if (runLimit == DynamicRangeLimit::Standard ||
+          (runLimit == DynamicRangeLimit::Constrained && limit == DynamicRangeLimit::NoLimit)) {
+        limit = runLimit;
+      }
+    }
+  }
+  return {headroom, limit};
+}
+
 - (void)updateState:(const State::Shared &)state oldState:(const State::Shared &)oldState
 {
   _textView.state = std::static_pointer_cast<const ParagraphShadowNode::ConcreteState>(state);
+  if (ReactNativeFeatureFlags::enableColorSpaces() && _textView.state) {
+    // The text is drawn into the layer's store, which has to be half float for a color past white to survive
+    const auto [headroom, runLimit] = RCTAttributedStringHeadroom(_textView.state->getData().attributedString);
+    // The paragraph's own declaration first; a run's limit, where one is set, otherwise
+    const auto limit = _props->inheritedDynamicRangeLimit.value_or(runLimit);
+    _textView.dynamicRangeLimit = limit;
+    _textView.rangeOwner = self;
+    [self rct_applyDynamicRange:headroom > 1 headroom:headroom limit:limit toLayer:_textView.layer drawn:YES];
+  }
   [_textView setNeedsDisplay];
   [self setNeedsLayout];
 
@@ -449,6 +489,136 @@ Class<RCTComponentViewProtocol> RCTParagraphCls(void)
 
 @implementation RCTParagraphTextView {
   CAShapeLayer *_highlightLayer;
+  CALayer *_shadowCastLayer;
+}
+
+// The text shadow past SDR white, if any, with its offset and blur: the paragraph draws it apart from its ink
+static bool RCTAttributedStringCastShadow(
+    const AttributedString &attributedString,
+    CGSize &offset,
+    CGFloat &blur,
+    CGFloat &headroom)
+{
+  bool found = false;
+  for (const auto &fragment : attributedString.getFragments()) {
+    const auto &attributes = fragment.textAttributes;
+    if (!attributes.textShadowColor || !isHighDynamicRangeColor(*attributes.textShadowColor)) {
+      continue;
+    }
+    found = true;
+    headroom = std::max(headroom, CGColorHeadroom(RCTUIColorFromSharedColor(attributes.textShadowColor).CGColor));
+    if (attributes.textShadowOffset.has_value()) {
+      offset = CGSizeMake(attributes.textShadowOffset->width, attributes.textShadowOffset->height);
+    }
+    if (!isnan(attributes.textShadowRadius)) {
+      blur = std::max<CGFloat>(blur, attributes.textShadowRadius);
+    }
+  }
+  return found;
+}
+
+// The same text with every run's ink replaced by its shadow color (runs without an HDR shadow go transparent),
+// so the layout manager lays the shadow out exactly as it lays out the text
+static AttributedString RCTShadowOnlyAttributedString(const AttributedString &attributedString)
+{
+  AttributedString shadowString = attributedString;
+  for (auto &fragment : shadowString.getFragments()) {
+    auto &attributes = fragment.textAttributes;
+    const bool cast = attributes.textShadowColor && isHighDynamicRangeColor(*attributes.textShadowColor);
+    attributes.foregroundColor = cast ? attributes.textShadowColor : clearColor();
+    attributes.backgroundColor = SharedColor{};
+    attributes.textDecorationLineType = TextDecorationLineType::None;
+    attributes.textShadowColor = SharedColor{};
+    attributes.textShadowOffset = std::nullopt;
+  }
+  return shadowString;
+}
+
+- (void)castShadowWithLayoutManager:(RCTTextLayoutManager *)layoutManager
+                   attributedString:(const AttributedString &)attributedString
+                              frame:(CGRect)frame
+{
+  CGSize offset = CGSizeZero;
+  CGFloat blur = 0;
+  CGFloat headroom = 0;
+  if (!ReactNativeFeatureFlags::enableColorSpaces() ||
+      !RCTAttributedStringCastShadow(attributedString, offset, blur, headroom)) {
+    [_shadowCastLayer removeFromSuperlayer];
+    _shadowCastLayer = nil;
+    return;
+  }
+  const CGFloat reach = ceil(fmax(fabs(offset.width), fabs(offset.height)) + 3 * blur + 1);
+  const CGRect extent = CGRectInset(self.bounds, -reach, -reach);
+  const CGFloat scale = self.layer.contentsScale > 0 ? self.layer.contentsScale : [UIScreen mainScreen].scale;
+  const size_t width = (size_t)ceil(extent.size.width * scale);
+  const size_t height = (size_t)ceil(extent.size.height * scale);
+  if (width == 0 || height == 0) {
+    return;
+  }
+  static CGColorSpaceRef extendedLinear = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearSRGB);
+  CGContextRef context = CGBitmapContextCreate(
+      nullptr,
+      width,
+      height,
+      16,
+      0,
+      extendedLinear,
+      kCGImageAlphaPremultipliedLast | kCGBitmapFloatComponents | kCGBitmapByteOrder16Little);
+  if (context == nullptr) {
+    return;
+  }
+  CGContextScaleCTM(context, scale, scale);
+  CGContextTranslateCTM(context, 0, extent.size.height);
+  CGContextScaleCTM(context, 1, -1);
+  CGContextTranslateCTM(context, reach + offset.width, reach + offset.height);
+  UIGraphicsPushContext(context);
+  [layoutManager drawAttributedString:RCTShadowOnlyAttributedString(attributedString)
+                  paragraphAttributes:_paragraphAttributes
+                                frame:frame
+                    drawHighlightPath:^(UIBezierPath *){
+                    }];
+  UIGraphicsPopContext();
+  CGImageRef image = CGBitmapContextCreateImage(context);
+  CGContextRelease(context);
+  if (blur > 0) {
+    // A Core Image blur keeps the half-float values; a Core Graphics shadow would not
+    static CIContext *blurContext = [CIContext contextWithOptions:@{
+      kCIContextWorkingFormat : @(kCIFormatRGBAh),
+      kCIContextWorkingColorSpace : (__bridge id)extendedLinear,
+    }];
+    CIImage *source = [CIImage imageWithCGImage:image];
+    CIImage *blurred = [[source imageByClampingToExtent] imageByApplyingGaussianBlurWithSigma:blur / 2];
+    CGImageRef blurredImage = [blurContext createCGImage:[blurred imageByCroppingToRect:source.extent]
+                                                fromRect:source.extent
+                                                  format:kCIFormatRGBAh
+                                              colorSpace:extendedLinear];
+    if (blurredImage != nullptr) {
+      CGImageRelease(image);
+      image = blurredImage;
+    }
+  }
+  // Under the ink: a sublayer would draw over this layer's own store, so the cast sits beside this view's layer
+  // in the parent, below it
+  CALayer *host = self.superview.layer;
+  if (host == nil) {
+    return;
+  }
+  if (_shadowCastLayer == nil) {
+    _shadowCastLayer = [CALayer layer];
+  }
+  if (_shadowCastLayer.superlayer != host) {
+    [_shadowCastLayer removeFromSuperlayer];
+    [host insertSublayer:_shadowCastLayer below:self.layer];
+  }
+  _shadowCastLayer.frame = CGRectOffset(extent, self.frame.origin.x, self.frame.origin.y);
+  _shadowCastLayer.contentsScale = scale;
+  _shadowCastLayer.contents = (__bridge id)image;
+  CGImageRelease(image);
+  [self.rangeOwner rct_applyDynamicRange:YES
+                                headroom:headroom
+                                   limit:self.dynamicRangeLimit
+                                 toLayer:_shadowCastLayer
+                                   drawn:YES];
 }
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
@@ -473,6 +643,7 @@ Class<RCTComponentViewProtocol> RCTParagraphCls(void)
 
   CGRect frame = _drawingFrame;
 
+  [self castShadowWithLayoutManager:nativeTextLayoutManager attributedString:stateData.attributedString frame:frame];
   [nativeTextLayoutManager drawAttributedString:stateData.attributedString
                             paragraphAttributes:_paragraphAttributes
                                           frame:frame

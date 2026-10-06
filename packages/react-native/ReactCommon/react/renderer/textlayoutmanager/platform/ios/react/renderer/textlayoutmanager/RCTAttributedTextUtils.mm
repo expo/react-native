@@ -587,8 +587,11 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
     }
   }
 
-  // Shadow
-  if (textAttributes.textShadowOffset.has_value()) {
+  // Shadow. One past SDR white is cast by the paragraph into a layer of its own, since Core Text's shadow
+  // does not keep a color's headroom and a shared store would tone-map the ink with it
+  const bool castApart = ReactNativeFeatureFlags::enableColorSpaces() && textAttributes.textShadowColor &&
+      isHighDynamicRangeColor(*textAttributes.textShadowColor);
+  if (textAttributes.textShadowOffset.has_value() && !castApart) {
     auto textShadowOffset = textAttributes.textShadowOffset.value();
     NSShadow *shadow = [NSShadow new];
     shadow.shadowOffset = CGSize{textShadowOffset.width, textShadowOffset.height};
