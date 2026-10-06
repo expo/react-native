@@ -387,18 +387,25 @@ const HDR_COLORS = [
 
 // Four times SDR white, painted every way a view can paint a color
 const HDR_FOUR = 'color(rec2100-linear 4 4 4)';
+const HDR_ONE = 'color(rec2100-linear 1 1 1)';
 const HDR_PAINTS = [
   'text',
   'text shadow',
   'border',
   'border, two widths',
   'box shadow',
+  'gradient, 1× to 4×',
 ];
 
-function HdrPaint({kind}: {kind: string}) {
+function HdrPaint({kind, limit}: {kind: string, limit: string}) {
   switch (kind) {
     case 'text':
-      return <Text style={[styles.hdrText, {color: HDR_FOUR}]}>HDR</Text>;
+      return (
+        <Text
+          style={[styles.hdrText, {color: HDR_FOUR, dynamicRangeLimit: limit}]}>
+          HDR
+        </Text>
+      );
     case 'text shadow':
       return (
         <Text
@@ -408,27 +415,55 @@ function HdrPaint({kind}: {kind: string}) {
               color: '#ffffff',
               textShadowColor: HDR_FOUR,
               textShadowOffset: {width: 3, height: 3},
-              textShadowRadius: 3,
+              textShadowRadius: 0,
+              dynamicRangeLimit: limit,
             },
           ]}>
           HDR
         </Text>
       );
     case 'border':
-      return <View style={[styles.hdrBorder, {borderColor: HDR_FOUR}]} />;
+      return (
+        <View
+          style={[
+            styles.hdrBorder,
+            {borderColor: HDR_FOUR, dynamicRangeLimit: limit},
+          ]}
+        />
+      );
     case 'border, two widths':
       return (
         <View
           style={[
             styles.hdrBorder,
-            {borderColor: HDR_FOUR, borderLeftWidth: 8, borderRightWidth: 8},
+            {
+              borderColor: HDR_FOUR,
+              borderLeftWidth: 8,
+              borderRightWidth: 8,
+              dynamicRangeLimit: limit,
+            },
+          ]}
+        />
+      );
+    case 'box shadow':
+      return (
+        <View
+          style={[
+            styles.hdrShadow,
+            {boxShadow: `6px 6px 10px 0 ${HDR_FOUR}`, dynamicRangeLimit: limit},
           ]}
         />
       );
     default:
       return (
         <View
-          style={[styles.hdrShadow, {boxShadow: `0 0 10px 4px ${HDR_FOUR}`}]}
+          style={[
+            styles.hdrGradient,
+            {
+              backgroundImage: `linear-gradient(in srgb-linear to right, ${HDR_ONE}, ${HDR_FOUR})`,
+              dynamicRangeLimit: limit,
+            },
+          ]}
         />
       );
   }
@@ -482,7 +517,11 @@ function HdrColorTable() {
       {HDR_PAINTS.flatMap(kind => [
         <View key={kind}>
           <Text style={styles.name}>{kind}</Text>
-          <Text style={styles.note}>rec2100-linear 4 4 4</Text>
+          <Text style={styles.note}>
+            {kind.startsWith('gradient')
+              ? 'rec2100-linear'
+              : 'rec2100-linear 4 4 4'}
+          </Text>
         </View>,
         <View key={`${kind} white`} style={styles.hdrPaintCell}>
           <HdrPaintWhite kind={kind} />
@@ -492,7 +531,7 @@ function HdrColorTable() {
             key={`${kind} ${limit}`}
             testID={`hdr-paint-${limit}-${kind}`}
             style={[styles.hdrPaintCell, {dynamicRangeLimit: limit}]}>
-            <HdrPaint kind={kind} />
+            <HdrPaint kind={kind} limit={limit} />
           </View>
         )),
       ])}
@@ -514,7 +553,7 @@ function HdrPaintWhite({kind}: {kind: string}) {
               color: '#ffffff',
               textShadowColor: '#ffffff',
               textShadowOffset: {width: 3, height: 3},
-              textShadowRadius: 3,
+              textShadowRadius: 0,
             },
           ]}>
           HDR
@@ -531,9 +570,20 @@ function HdrPaintWhite({kind}: {kind: string}) {
           ]}
         />
       );
+    case 'box shadow':
+      return (
+        <View
+          style={[styles.hdrShadow, {boxShadow: '6px 6px 10px 0 #ffffff'}]}
+        />
+      );
     default:
       return (
-        <View style={[styles.hdrShadow, {boxShadow: '0 0 10px 4px #ffffff'}]} />
+        <View
+          style={[
+            styles.hdrGradient,
+            {backgroundImage: 'linear-gradient(to right, #ffffff, #ffffff)'},
+          ]}
+        />
       );
   }
 }
@@ -580,6 +630,11 @@ const TRANSITIONS = [
   ['legacy', '#0000ff', '#ffff00'],
   ['oklch', 'oklch(0.45 0.31 264)', 'oklch(0.97 0.21 110)'],
   ['display-p3', 'color(display-p3 0 0 1)', 'color(display-p3 1 1 0)'],
+  [
+    'HDR, 1× to 4×',
+    'color(rec2100-linear 1 1 1)',
+    'color(rec2100-linear 4 4 4)',
+  ],
 ];
 
 function TransitionTable() {
@@ -728,7 +783,7 @@ function Gallery() {
         <Section
           title="HDR colors"
           expect="Expect: brighter than paper under no-limit, less under constrained, paper-white under standard; each cell states its own limit, so the bar changes nothing here."
-          legend="Each row: the paint in plain white, then the color under its own dynamic-range-limit: no-limit, constrained and standard, independent of the bar above, as the pictures' three-up is. The first rows are backgrounds; the rest paint four times SDR white as text, as a text shadow behind white text, as a border, as a border with sides of two widths and as a box shadow. On an SDR screen every white is the same white.">
+          legend="Each row: the paint in plain white, then the color under its own dynamic-range-limit: no-limit, constrained and standard, independent of the bar above, as the pictures' three-up is. The first rows are backgrounds; the rest paint four times SDR white as text, as a text shadow behind white text, as a border, as a border with sides of two widths, as a box shadow and as a gradient from SDR white to four times it. On an SDR screen every white is the same white.">
           <HdrColorTable />
         </Section>
 
@@ -741,8 +796,8 @@ function Gallery() {
 
         <Section
           title="Transitions"
-          expect="Expect: the Oklab transition keeps its midpoint light; the bar changes nothing."
-          legend="Two seconds, linear. Legacy colors move in sRGB; a color in its own space moves in Oklab, so its midpoint stays light and saturated.">
+          expect="Expect: the Oklab transition keeps its midpoint light; the HDR row brightens past paper on an HDR screen under no-limit, and the bar limits it."
+          legend="Two seconds, linear. Legacy colors move in sRGB; a color in its own space moves in Oklab, so its midpoint stays light and saturated. The HDR row moves from SDR white to four times it.">
           <TransitionTable />
         </Section>
 
@@ -964,11 +1019,17 @@ const styles = StyleSheet.create({
     height: 22,
     borderWidth: 4,
     borderStyle: 'solid',
+    // A view that clips draws a uniform border as a layer border, which can be HDR
+    overflow: 'hidden',
   },
   hdrShadow: {
     width: '50%',
     height: 12,
     backgroundColor: '#000000',
+  },
+  hdrGradient: {
+    width: '100%',
+    height: 40,
   },
   mixedBorder: {
     borderColor: 'color(display-p3 1 0 0)',
