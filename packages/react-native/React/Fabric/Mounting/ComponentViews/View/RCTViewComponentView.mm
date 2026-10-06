@@ -2001,9 +2001,9 @@ static BOOL RCTGradientHasHighDynamicRangeStop(const BackgroundImage &background
     [_backgroundColorLayer removeAllAnimations];
   }
 
-  // Core Animation composites a layer's background and border colors itself,
-  // so those two are what can draw brighter than white.
-  // DOM-CSS-LIMITATION(hdr-text-and-gradients-draw-at-sdr-white-on-ios)
+  // Core Animation composites a layer's background and border colors itself;
+  // a border drawn per edge goes through an 8-bit image and stays SDR
+  // DOM-CSS-LIMITATION(hdr-drawn-borders-draw-at-sdr-white-on-ios)
   [self _updateDynamicRangeOfLayer:layer
              withBackgroundColor:_props->backgroundColor
                      borderColor:useCoreAnimationBorderRendering ? borderMetrics.borderColors.left : SharedColor{}];
@@ -2230,6 +2230,12 @@ static BOOL RCTGradientHasHighDynamicRangeStop(const BackgroundImage &background
           RCTUIEdgeInsetsFromEdgeInsets(borderMetrics.borderWidths),
           self.layer.bounds.size);
       shadowLayer.zPosition = _borderLayer.zPosition;
+      // An HDR outer shadow is a drawn store (`RCTGetBoxShadowLayer`); the rest are layer shadows
+      const BOOL brightShadow = it->color && isHighDynamicRangeColor(*it->color);
+      [self rct_applyDynamicRange:brightShadow
+                         headroom:brightShadow ? CGColorHeadroom(RCTUIColorFromSharedColor(it->color).CGColor) : 0
+                          toLayer:shadowLayer
+                            drawn:brightShadow && !it->inset];
       [layer addSublayer:shadowLayer];
       [_boxShadowLayers addObject:shadowLayer];
     }

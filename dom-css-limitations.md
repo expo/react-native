@@ -190,12 +190,18 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
   `oklch(0.7 0.1 none)` keeps the other end's hue. Here `none` is 0 from
   parsing on, so it turns from hue 0. Deferred: it needs the parsed value to
   keep which channels are missing.
-- **`DOM-CSS-LIMITATION(hdr-text-and-gradients-draw-at-sdr-white-on-ios)` —
-  on iOS only backgrounds and uniform borders draw brighter than white.**
-  Those are layer colors, which Core Animation composites in extended range
-  when the layer asks. Text, shadows, gradients and per-edge borders are drawn
-  into 8-bit bitmaps, so an HDR color there is clipped to SDR white. Android
-  paints every color long into the window, whose HDR mode covers them all.
+- **`DOM-CSS-LIMITATION(hdr-drawn-borders-draw-at-sdr-white-on-ios)` — on
+  iOS a drawn border, and an inset box shadow, stay at SDR white.**
+  Backgrounds, gradients and the uniform solid border of a view that clips
+  (`overflow: hidden`) are layer colors Core Animation composites in extended
+  range when the layer asks; text, a text shadow and an outer box shadow are
+  drawn into half-float stores tagged with their headroom, which Core
+  Animation maps to the limit under tone mapping "if supported". Any other
+  border (a view that does not clip, differing edges or styles) goes through
+  an 8-bit border image, and an inset shadow is a layer shadow, whose color
+  Core Animation never maps, so an HDR color there is clipped to SDR white.
+  Android paints every color long into the window, whose HDR mode covers them
+  all.
 - **`DOM-CSS-LIMITATION(gradient-interpolation-needs-percent-stops)` — a
   gradient with a length stop or a hint interpolates in sRGB.** Neither
   platform's shader interpolates in a chosen space, so the stretches are
