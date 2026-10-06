@@ -8,6 +8,7 @@
 package com.facebook.react.views.view
 
 import android.view.View
+import androidx.annotation.ColorLong
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.LengthPercentage
@@ -42,7 +43,7 @@ internal object ElementFieldBox {
     )
   }
 
-  fun setBorderColor(view: View, index: Int, color: Int?) {
-    BackgroundStyleApplicator.setBorderColor(view, LogicalEdge.values()[index], color)
+  fun setBorderColor(view: View, index: Int, @ColorLong color: Long?) {
+    BackgroundStyleApplicator.setBorderColorLong(view, LogicalEdge.values()[index], color)
   }
 }
