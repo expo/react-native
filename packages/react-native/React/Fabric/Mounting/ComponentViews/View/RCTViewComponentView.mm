@@ -1797,11 +1797,10 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 }
 
 /*
- * Asks the layer, and the background sublayer where there is one, for the
- * range the colors need: extended where either is brighter than SDR white and
- * the limit allows. `preferredDynamicRange` activates EDR only for a CGColor
- * with a headroom tag, which a PQ color carries (`UIColorFromColorSpaceValue`);
- * tone mapping is the OS's.
+ * The range the layer's own colors need: extended where either is brighter
+ * than SDR white and the limit allows. `preferredDynamicRange` activates EDR
+ * only for a CGColor with a headroom tag, which a PQ color carries
+ * (`UIColorFromColorSpaceValue`); tone mapping is the OS's.
  */
 - (void)_updateDynamicRangeOfLayer:(CALayer *)layer
                withBackgroundColor:(const SharedColor &)backgroundColor
@@ -1816,37 +1815,92 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     return;
   }
   _layerWantsExtendedDynamicRange = bright;
+  [self rct_applyDynamicRange:bright headroom:0 toLayer:layer drawn:NO];
+  if (_backgroundColorLayer != nil) {
+    [self rct_applyDynamicRange:bright headroom:0 toLayer:_backgroundColorLayer drawn:NO];
+  }
+}
+
+- (void)rct_applyDynamicRange:(BOOL)bright headroom:(CGFloat)headroom toLayer:(CALayer *)layer drawn:(BOOL)drawn
+{
   // The element's own declaration first, then what the cascade gave it
   const auto limit = _props->inheritedDynamicRangeLimit.has_value()
       ? *_props->inheritedDynamicRangeLimit
       : _stateDynamicRangeLimit.value_or(DynamicRangeLimit::NoLimit);
-  NSArray<CALayer *> *layers = _backgroundColorLayer != nil ? @[ layer, _backgroundColorLayer ] : @[ layer ];
-  for (CALayer *each in layers) {
-    if (@available(iOS 26.0, *)) {
-      CADynamicRange range = CADynamicRangeAutomatic;
-      if (bright) {
-        switch (limit) {
-          case DynamicRangeLimit::Standard:
-            range = CADynamicRangeStandard;
-            break;
-          case DynamicRangeLimit::Constrained:
-            range = CADynamicRangeConstrainedHigh;
-            break;
-          case DynamicRangeLimit::NoLimit:
-            range = CADynamicRangeHigh;
-            break;
-        }
-      }
-      each.preferredDynamicRange = range;
-    } else if (@available(iOS 17.0, *)) {
-      // One switch: `constrained` draws as `no-limit` before iOS 26
-      // DOM-CSS-LIMITATION(ios-17-constrained-is-no-limit)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-      each.wantsExtendedDynamicRangeContent = bright && limit != DynamicRangeLimit::Standard;
-#pragma clang diagnostic pop
+  [self rct_applyDynamicRange:bright headroom:headroom limit:limit toLayer:layer drawn:drawn];
+}
+
+- (void)rct_applyDynamicRange:(BOOL)bright
+                     headroom:(CGFloat)headroom
+                        limit:(DynamicRangeLimit)limit
+                      toLayer:(CALayer *)layer
+                        drawn:(BOOL)drawn
+{
+  if (!ReactNativeFeatureFlags::enableColorSpaces()) {
+    return;
+  }
+  if (drawn) {
+    // Only a store this made half float goes back to eight bits
+    CALayerContentsFormat format = bright ? kCAContentsFormatRGBA16Float : kCAContentsFormatRGBA8Uint;
+    if (layer.contentsFormat != format && (bright || [layer.contentsFormat isEqual:kCAContentsFormatRGBA16Float])) {
+      layer.contentsFormat = format;
     }
   }
+  if (@available(iOS 26.0, *)) {
+    CADynamicRange range = CADynamicRangeAutomatic;
+    if (bright) {
+      switch (limit) {
+        case DynamicRangeLimit::Standard:
+          range = CADynamicRangeStandard;
+          break;
+        case DynamicRangeLimit::Constrained:
+          range = CADynamicRangeConstrainedHigh;
+          break;
+        case DynamicRangeLimit::NoLimit:
+          range = CADynamicRangeHigh;
+          break;
+      }
+    }
+    layer.preferredDynamicRange = range;
+    if (drawn) {
+      // A drawn store carries no color-space headroom of its own, so it is tagged with the peak it draws
+      layer.contentsHeadroom = bright ? headroom : 0;
+    }
+  } else if (@available(iOS 17.0, *)) {
+    // One switch: `constrained` draws as `no-limit` before iOS 26
+    // DOM-CSS-LIMITATION(ios-17-constrained-is-no-limit)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    layer.wantsExtendedDynamicRangeContent = bright && limit != DynamicRangeLimit::Standard;
+#pragma clang diagnostic pop
+  }
+  if (@available(iOS 18.0, *)) {
+    // Core Animation maps extended-range contents (a drawn store, a gradient's stops) to the layer's range only
+    // under `ifSupported`; a flat color needs no mapping
+    const BOOL extendedContents = drawn || [layer isKindOfClass:[CAGradientLayer class]];
+    if (extendedContents) {
+      layer.toneMapMode = bright ? CAToneMapModeIfSupported : CAToneMapModeAutomatic;
+    }
+  }
+}
+
+static BOOL RCTGradientHasHighDynamicRangeStop(const BackgroundImage &backgroundImage)
+{
+  const std::vector<ColorStop> *stops = nullptr;
+  if (std::holds_alternative<LinearGradient>(backgroundImage)) {
+    stops = &std::get<LinearGradient>(backgroundImage).colorStops;
+  } else if (std::holds_alternative<RadialGradient>(backgroundImage)) {
+    stops = &std::get<RadialGradient>(backgroundImage).colorStops;
+  }
+  if (stops == nullptr) {
+    return NO;
+  }
+  for (const auto &stop : *stops) {
+    if (stop.color && isHighDynamicRangeColor(*stop.color)) {
+      return YES;
+    }
+  }
+  return NO;
 }
 
 - (void)invalidateLayer
@@ -2138,6 +2192,10 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
       }
 
       if (gradientLayer != nil) {
+        [self rct_applyDynamicRange:RCTGradientHasHighDynamicRangeStop(backgroundImage)
+                           headroom:0
+                            toLayer:gradientLayer
+                              drawn:NO];
         CALayer *backgroundImageLayer =
             [RCTBackgroundImageUtils createBackgroundImageLayerWithSize:backgroundPositioningArea
                                                            paintingArea:backgroundPaintingArea

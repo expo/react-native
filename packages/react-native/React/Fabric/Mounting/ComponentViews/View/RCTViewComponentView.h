@@ -30,6 +30,21 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 /**
+ * Asks `layer` for the dynamic range its colors need under this view's
+ * `dynamic-range-limit`: extended when `bright`, standard otherwise. A layer
+ * the view draws into (`drawn`) also gets a half-float backing store tagged
+ * with `headroom`, the peak of what it draws over SDR white, so Core Animation
+ * composites the drawing as HDR rather than clipping it at white.
+ */
+- (void)rct_applyDynamicRange:(BOOL)bright headroom:(CGFloat)headroom toLayer:(CALayer *)layer drawn:(BOOL)drawn;
+/** The same under an explicit limit, for content whose limit travels with it rather than with the view (text runs). */
+- (void)rct_applyDynamicRange:(BOOL)bright
+                     headroom:(CGFloat)headroom
+                        limit:(facebook::react::DynamicRangeLimit)limit
+                      toLayer:(CALayer *)layer
+                        drawn:(BOOL)drawn;
+
+/**
  * Represents the `UIView` instance that is being automatically attached to
  * the component view and laid out using on `layoutMetrics` (especially `size`
  * and `padding`) of the component.

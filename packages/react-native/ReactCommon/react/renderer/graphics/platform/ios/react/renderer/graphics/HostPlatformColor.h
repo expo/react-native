@@ -9,10 +9,11 @@
 
 #include <react/cxxstableapi/UmbrellaGuard.h>
 
+#include <CoreGraphics/CGColor.h>
+#include <CoreGraphics/CGColorSpace.h>
 #include <react/renderer/graphics/ColorComponents.h>
 #include <react/renderer/graphics/ColorSpaceValue.h>
 #include <react/utils/hash_combine.h>
-#include <CoreGraphics/CGColorSpace.h>
 #include <cmath>
 #include <optional>
 
@@ -89,6 +90,9 @@ inline bool isHighDynamicRangeColor(const Color &color)
 {
   return color.isHighDynamicRange();
 }
+
+// A color's peak over SDR white in linear Rec. 2020: at least 1 for a color past white, 0 for one within it
+CGFloat CGColorHeadroom(CGColorRef _Nullable cgColor);
 
 namespace HostPlatformColor {
 

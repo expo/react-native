@@ -6,12 +6,13 @@
  */
 
 #import "HostPlatformColor.h"
+#include <algorithm>
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
-#import <react/renderer/graphics/RCTPlatformColorUtils.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
+#import <react/renderer/graphics/RCTPlatformColorUtils.h>
 #import <react/utils/ManagedObjectWrapper.h>
 #import <algorithm>
 #import <array>
@@ -242,7 +243,8 @@ UIColor *_Nullable UIColorFromColorSpaceValue(const ColorSpaceValue &value, bool
 bool CGColorIsHighDynamicRange(CGColorRef cgColor)
 {
   static CGColorSpaceRef linearRec2020 = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearITUR_2020);
-  CGColorRef linear = CGColorCreateCopyByMatchingToColorSpace(linearRec2020, kCGRenderingIntentDefault, cgColor, nullptr);
+  CGColorRef linear =
+      CGColorCreateCopyByMatchingToColorSpace(linearRec2020, kCGRenderingIntentDefault, cgColor, nullptr);
   if (linear == nullptr) {
     return false;
   }
@@ -348,6 +350,23 @@ std::size_t hashFromUIColor(const std::shared_ptr<void> &uiColor)
 
 } // anonymous namespace
 
+CGFloat CGColorHeadroom(CGColorRef _Nullable cgColor)
+{
+  if (cgColor == nullptr || !CGColorIsHighDynamicRange(cgColor)) {
+    return 0;
+  }
+  static CGColorSpaceRef linearRec2020 = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearITUR_2020);
+  CGColorRef linear =
+      CGColorCreateCopyByMatchingToColorSpace(linearRec2020, kCGRenderingIntentDefault, cgColor, nullptr);
+  if (linear == nullptr) {
+    return 1;
+  }
+  const CGFloat *components = CGColorGetComponents(linear);
+  const CGFloat peak = std::max({components[0], components[1], components[2], CGFloat{1}});
+  CGColorRelease(linear);
+  return peak;
+}
+
 Color::Color(int32_t color)
 {
   uiColor_ = wrapManagedObject(UIColorFromInt32(color));
@@ -379,9 +398,10 @@ Color::Color(const ColorSpaceValue &value)
   bool highDynamicRange = false;
   UIColor *color = UIColorFromColorSpaceValue(value, highDynamicRange);
   uiColor_ = color != nil ? wrapManagedObject(color) : nullptr;
-  uiColorHashValue_ = (facebook::react::hash_combine(
-                           static_cast<int>(value.space), value.channels[0], value.channels[1], value.channels[2], value.alpha) &
-                       ~(kColorSpaceColorBit | kHighDynamicRangeBit)) |
+  uiColorHashValue_ =
+      (facebook::react::hash_combine(
+           static_cast<int>(value.space), value.channels[0], value.channels[1], value.channels[2], value.alpha) &
+       ~(kColorSpaceColorBit | kHighDynamicRangeBit)) |
       kColorSpaceColorBit | (highDynamicRange ? kHighDynamicRangeBit : 0);
 }
 
@@ -392,7 +412,8 @@ ColorComponents Color::getColorComponents() const
     if (color == nil) {
       return {};
     }
-    return ExtendedSRGBComponentsFromUIColor([color resolvedColorWithTraitCollection:[UITraitCollection currentTraitCollection]]);
+    return ExtendedSRGBComponentsFromUIColor(
+        [color resolvedColorWithTraitCollection:[UITraitCollection currentTraitCollection]]);
   }
   float ratio = 255;
   int32_t primitiveColor = getColor();
@@ -497,7 +518,6 @@ Color Color::createSemanticColor(std::vector<std::string> &semanticItems)
   }
   return Color(wrapManagedObject(semanticColor));
 }
-
 
 CGColorSpaceRef _Nullable platformColorSpaceFor(ColorSpace space)
 {
