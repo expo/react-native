@@ -93,9 +93,16 @@ void packTransformOrigin(
 }
 
 // The integer, or where the host keeps the color in its space (Android) the
-// object `processColor` passed
+// object `processColor` passed; a host that keeps only the platform color
+// (iOS) hands back its extended-sRGB components, so a color past white or
+// outside sRGB survives the frame rather than being clipped to eight bits
 folly::dynamic colorToDynamic(const SharedColor& color) {
   auto value = colorSpaceValueOf(color);
+  if (!value.has_value() && color && isColorSpaceColor(color)) {
+    const auto components = colorComponentsFromColor(color);
+    return folly::dynamic::object("space", "srgb")("r", components.red)(
+        "g", components.green)("b", components.blue)("alpha", components.alpha);
+  }
   if (!value.has_value()) {
     return static_cast<int32_t>(*color);
   }
