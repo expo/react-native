@@ -7,16 +7,17 @@
 
 package com.facebook.react.views.view
 
-import com.facebook.react.bridge.ReadableArray
-import android.view.inputmethod.InputMethodManager
 import android.content.Context
+import android.view.inputmethod.InputMethodManager
+import androidx.annotation.ColorLong
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.Dynamic
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
-import com.facebook.react.bridge.Dynamic
 import com.facebook.react.uimanager.ViewProps
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.facebook.react.uimanager.annotations.ReactPropGroup
@@ -45,10 +46,14 @@ internal class ElementTextInputViewManager : SimpleViewManager<ElementTextInputV
       dispatch(ElementTextChangeEvent(UIManagerHelper.getSurfaceId(view), view.id, text))
     }
     view.onFocusGained = {
-      dispatch(ElementTextSimpleEvent(UIManagerHelper.getSurfaceId(view), view.id, "topElementFocus"))
+      dispatch(
+          ElementTextSimpleEvent(UIManagerHelper.getSurfaceId(view), view.id, "topElementFocus")
+      )
     }
     view.onFocusLost = {
-      dispatch(ElementTextSimpleEvent(UIManagerHelper.getSurfaceId(view), view.id, "topElementBlur"))
+      dispatch(
+          ElementTextSimpleEvent(UIManagerHelper.getSurfaceId(view), view.id, "topElementBlur")
+      )
     }
     view.onSubmit = { text ->
       dispatch(ElementTextSubmitEvent(UIManagerHelper.getSurfaceId(view), view.id, text))
@@ -61,12 +66,18 @@ internal class ElementTextInputViewManager : SimpleViewManager<ElementTextInputV
 
   /**
    * Fabric delivers the Yoga-computed padding of a LEAF view here, and the base ViewManager DROPS
-   * it — which is how the user-agent sheet's Material 16dp field inset (`FIELD_SURFACE.paddingInline`
-   * in uaStyles.js) never reached the EditText: the field rendered with the platform drawable's
-   * ~4dp and the placeholder sat nearly on the edge. Forwarding is the same contract the
-   * framework's own `ReactTextInputManager.setPadding` implements.
+   * it — which is how the user-agent sheet's Material 16dp field inset
+   * (`FIELD_SURFACE.paddingInline` in uaStyles.js) never reached the EditText: the field rendered
+   * with the platform drawable's ~4dp and the placeholder sat nearly on the edge. Forwarding is the
+   * same contract the framework's own `ReactTextInputManager.setPadding` implements.
    */
-  override fun setPadding(view: ElementTextInputView, left: Int, top: Int, right: Int, bottom: Int) {
+  override fun setPadding(
+      view: ElementTextInputView,
+      left: Int,
+      top: Int,
+      right: Int,
+      bottom: Int,
+  ) {
     view.setPadding(left, top, right, bottom)
   }
 
@@ -123,7 +134,7 @@ internal class ElementTextInputViewManager : SimpleViewManager<ElementTextInputV
           ],
       customType = "Color",
   )
-  public open fun setBorderColor(view: ElementTextInputView, index: Int, color: Int?) {
+  public open fun setBorderColor(view: ElementTextInputView, index: Int, @ColorLong color: Long?) {
     ElementFieldBox.setBorderColor(view, index, color)
   }
 
@@ -206,31 +217,26 @@ internal class ElementTextInputViewManager : SimpleViewManager<ElementTextInputV
     }
   }
 
-
   /**
    * `focus()` and `blur()`, the pair the DOM has and this element did not.
    *
-   * `autoFocus` covered only the element that knows at mount that it wants the
-   * keyboard. Nothing covered the ordinary case — a button that focuses a field,
-   * a form moving to the next invalid input — so nothing could focus one of
-   * these at all.
+   * `autoFocus` covered only the element that knows at mount that it wants the keyboard. Nothing
+   * covered the ordinary case — a button that focuses a field, a form moving to the next invalid
+   * input — so nothing could focus one of these at all.
    *
-   * `showSoftInput` as well as `requestFocus`: focus alone moves the cursor
-   * without necessarily bringing the keyboard, which is not what a caller asking
-   * for focus means.
+   * `showSoftInput` as well as `requestFocus`: focus alone moves the cursor without necessarily
+   * bringing the keyboard, which is not what a caller asking for focus means.
    */
   override fun receiveCommand(view: ElementTextInputView, commandId: String, args: ReadableArray?) {
     when (commandId) {
       "focus" -> {
         view.requestFocus()
-        val imm =
-            view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         imm?.showSoftInput(view, 0)
       }
       "blur" -> {
         view.clearFocus()
-        val imm =
-            view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         imm?.hideSoftInputFromWindow(view.windowToken, 0)
       }
       else -> super.receiveCommand(view, commandId, args)
@@ -258,7 +264,7 @@ private class ElementTextInputEvent(
     surfaceId: Int,
     viewTag: Int,
     private val text: String,
-    private val eventCount: Int
+    private val eventCount: Int,
 ) : Event<ElementTextInputEvent>(surfaceId, viewTag) {
   override fun getEventName(): String = "topElementInput"
 
@@ -295,7 +301,7 @@ private class ElementTextSelectionEvent(
     surfaceId: Int,
     viewTag: Int,
     private val start: Int,
-    private val end: Int
+    private val end: Int,
 ) : Event<ElementTextSelectionEvent>(surfaceId, viewTag) {
   override fun getEventName(): String = "topElementSelectionChange"
 
@@ -306,11 +312,8 @@ private class ElementTextSelectionEvent(
       }
 }
 
-private class ElementTextSimpleEvent(
-    surfaceId: Int,
-    viewTag: Int,
-    private val name: String
-) : Event<ElementTextSimpleEvent>(surfaceId, viewTag) {
+private class ElementTextSimpleEvent(surfaceId: Int, viewTag: Int, private val name: String) :
+    Event<ElementTextSimpleEvent>(surfaceId, viewTag) {
   override fun getEventName(): String = name
 
   override fun canCoalesce(): Boolean = false
