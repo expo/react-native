@@ -1,0 +1,609 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		27AA1DB3F021C987AF0411EB /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1F6F841DB3167364E1D99B67 /* OFL.txt */; };
+		2E77594D4C882B79452DD2D6 /* Figtree-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C7C185A9EC8CD3CF0EDE0317 /* Figtree-Regular.ttf */; };
+		42604F91CA573289A0F1D729 /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2C3B5F285FCAEB05F986F67C /* SceneDelegate.mm */; };
+		4A39128D33A52EEC5CBDE0D6 /* Figtree-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 58058114FE1F4FE33B089AAB /* Figtree-Italic.ttf */; };
+		4B619930B2CB71FB7B457B5E /* Figtree-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1D902FC6D6A9E8A4CB0CF34A /* Figtree-MediumItalic.ttf */; };
+		4B8AE538123C52736084B2EA /* Figtree-SemiBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 11F5BFC0D275D3FC70FFB9F0 /* Figtree-SemiBoldItalic.ttf */; };
+		4DD1D4EE792FC9C7CF909418 /* Figtree-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F113ED4298F35210FBF689FA /* Figtree-BoldItalic.ttf */; };
+		508B7F68BE11ED1C3CDFE9FB /* Figtree-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9FF70DDE6D2B2344473AB6F3 /* Figtree-Bold.ttf */; };
+		60F78D95A8D1E19D19B578FA /* web in Resources */ = {isa = PBXBuildFile; fileRef = 4DFAFD550772A51BB7E093A6 /* web */; };
+		6DDF0AD3805CFF007521C60B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D0D16CB5A1BE56ED98749FC5 /* PrivacyInfo.xcprivacy */; };
+		95D33224D26CE133649DEA83 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0BA66926E42405521D40815 /* AppDelegate.mm */; };
+		A1A058EE2F823FC54D36AE4F /* libPods-AstryxDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 920B0622AE7112F4102D7699 /* libPods-AstryxDemo.a */; };
+		B98C3B142A674ED8606F4DD5 /* Figtree-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F8B856D1F5F5A2B4C4F8B3F4 /* Figtree-Medium.ttf */; };
+		C0D78B628F8BD84CF9DA5854 /* Figtree-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9F4B8285EE4E855EF2EB9ABF /* Figtree-SemiBold.ttf */; };
+		C1744808C5463E272D1AAF81 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DDA6A0DF2BD931160A778284 /* main.m */; };
+		DD67DADCF43FC74B4CCA7441 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BC904F9465AABB36D164203 /* ExpoModulesProvider.swift */; };
+		FFD4DC25A31FCC3F4552A237 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 37FE41A117BF6E8E2D52E163 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		11F5BFC0D275D3FC70FFB9F0 /* Figtree-SemiBoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Figtree-SemiBoldItalic.ttf"; sourceTree = "<group>"; };
+		1D902FC6D6A9E8A4CB0CF34A /* Figtree-MediumItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Figtree-MediumItalic.ttf"; sourceTree = "<group>"; };
+		1F6F841DB3167364E1D99B67 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
+		23F1EA4736F9B14F6D825181 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2BC904F9465AABB36D164203 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-AstryxDemo/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		2C3B5F285FCAEB05F986F67C /* SceneDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SceneDelegate.mm; sourceTree = "<group>"; };
+		37FE41A117BF6E8E2D52E163 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		45D47B1DF481D0DC8F9AD162 /* AstryxDemo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AstryxDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DFAFD550772A51BB7E093A6 /* web */ = {isa = PBXFileReference; lastKnownFileType = folder; name = web; path = ../web; sourceTree = SOURCE_ROOT; };
+		58058114FE1F4FE33B089AAB /* Figtree-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Figtree-Italic.ttf"; sourceTree = "<group>"; };
+		920B0622AE7112F4102D7699 /* libPods-AstryxDemo.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-AstryxDemo.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A0E2159CB6F966D2FD2094C /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		9F4B8285EE4E855EF2EB9ABF /* Figtree-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Figtree-SemiBold.ttf"; sourceTree = "<group>"; };
+		9FF70DDE6D2B2344473AB6F3 /* Figtree-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Figtree-Bold.ttf"; sourceTree = "<group>"; };
+		C7C185A9EC8CD3CF0EDE0317 /* Figtree-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Figtree-Regular.ttf"; sourceTree = "<group>"; };
+		D0BA66926E42405521D40815 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
+		D0D16CB5A1BE56ED98749FC5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = ../PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		DDA6A0DF2BD931160A778284 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		E03225E595A55E97E2D8AAA2 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
+		EF0E855D27F5AB8A599144D5 /* Pods-AstryxDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AstryxDemo.debug.xcconfig"; path = "Target Support Files/Pods-AstryxDemo/Pods-AstryxDemo.debug.xcconfig"; sourceTree = "<group>"; };
+		F113ED4298F35210FBF689FA /* Figtree-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Figtree-BoldItalic.ttf"; sourceTree = "<group>"; };
+		F8B856D1F5F5A2B4C4F8B3F4 /* Figtree-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Figtree-Medium.ttf"; sourceTree = "<group>"; };
+		FAB7D97E82D432D39339E857 /* Pods-AstryxDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AstryxDemo.release.xcconfig"; path = "Target Support Files/Pods-AstryxDemo/Pods-AstryxDemo.release.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9C78BA2F56AFEC8C5D5F9F9F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1A058EE2F823FC54D36AE4F /* libPods-AstryxDemo.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		100681C2ECC91627E1BDAA9E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				45D47B1DF481D0DC8F9AD162 /* AstryxDemo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5266109C08558D5DB8AE80A6 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				9FF70DDE6D2B2344473AB6F3 /* Figtree-Bold.ttf */,
+				F113ED4298F35210FBF689FA /* Figtree-BoldItalic.ttf */,
+				58058114FE1F4FE33B089AAB /* Figtree-Italic.ttf */,
+				F8B856D1F5F5A2B4C4F8B3F4 /* Figtree-Medium.ttf */,
+				1D902FC6D6A9E8A4CB0CF34A /* Figtree-MediumItalic.ttf */,
+				C7C185A9EC8CD3CF0EDE0317 /* Figtree-Regular.ttf */,
+				9F4B8285EE4E855EF2EB9ABF /* Figtree-SemiBold.ttf */,
+				11F5BFC0D275D3FC70FFB9F0 /* Figtree-SemiBoldItalic.ttf */,
+				1F6F841DB3167364E1D99B67 /* OFL.txt */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		73992FA034A2E712DEC68D75 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				EF0E855D27F5AB8A599144D5 /* Pods-AstryxDemo.debug.xcconfig */,
+				FAB7D97E82D432D39339E857 /* Pods-AstryxDemo.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		8C626F9FA72A61613459D062 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				EA10710B7A70113A8E5B048F /* AstryxDemo */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
+		B284B2AA541CF8474164C33C = {
+			isa = PBXGroup;
+			children = (
+				4DFAFD550772A51BB7E093A6 /* web */,
+				EDE915334802C96C70B852AE /* AstryxDemo */,
+				100681C2ECC91627E1BDAA9E /* Products */,
+				73992FA034A2E712DEC68D75 /* Pods */,
+				EC29159797D43DCCEE7CAE1E /* Frameworks */,
+				8C626F9FA72A61613459D062 /* ExpoModulesProviders */,
+			);
+			sourceTree = "<group>";
+		};
+		EA10710B7A70113A8E5B048F /* AstryxDemo */ = {
+			isa = PBXGroup;
+			children = (
+				2BC904F9465AABB36D164203 /* ExpoModulesProvider.swift */,
+			);
+			name = AstryxDemo;
+			sourceTree = "<group>";
+		};
+		EC29159797D43DCCEE7CAE1E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				920B0622AE7112F4102D7699 /* libPods-AstryxDemo.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		EDE915334802C96C70B852AE /* AstryxDemo */ = {
+			isa = PBXGroup;
+			children = (
+				9A0E2159CB6F966D2FD2094C /* AppDelegate.h */,
+				D0BA66926E42405521D40815 /* AppDelegate.mm */,
+				37FE41A117BF6E8E2D52E163 /* Assets.xcassets */,
+				23F1EA4736F9B14F6D825181 /* Info.plist */,
+				DDA6A0DF2BD931160A778284 /* main.m */,
+				E03225E595A55E97E2D8AAA2 /* SceneDelegate.h */,
+				2C3B5F285FCAEB05F986F67C /* SceneDelegate.mm */,
+				5266109C08558D5DB8AE80A6 /* Fonts */,
+				D0D16CB5A1BE56ED98749FC5 /* PrivacyInfo.xcprivacy */,
+			);
+			path = AstryxDemo;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BE28BABFFD51D83C6B95D390 /* AstryxDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 81B3AC89B0435E696A1C65ED /* Build configuration list for PBXNativeTarget "AstryxDemo" */;
+			buildPhases = (
+				AE819A311DAFC33978246C87 /* [CP] Check Pods Manifest.lock */,
+				373CD1214A9E8D0FDF539FE6 /* Check the templates' web version */,
+				5DE9D8FB2C342428A034E251 /* [Expo] Configure project */,
+				0A454CE8B37FBFB44C8BDE47 /* Sources */,
+				EEFD3D46EBC542509D61F009 /* Resources */,
+				EB3D885ECD2514E5D3E7C0D2 /* Stamp the build into Info.plist */,
+				AE066B976D47CF22DF196558 /* Bundle React Native code and images */,
+				9C78BA2F56AFEC8C5D5F9F9F /* Frameworks */,
+				6BFE9A048ED954B0C0C3933C /* [CP] Embed Pods Frameworks */,
+				5CC4AA5A89F8CB761C575A3E /* [CP] Copy Pods Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AstryxDemo;
+			productName = AstryxDemo;
+			productReference = 45D47B1DF481D0DC8F9AD162 /* AstryxDemo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A94939B5C8817490EF7DABCE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					BE28BABFFD51D83C6B95D390 = {
+						DevelopmentTeam = C8D8QTF339;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = DCFDFE94437480EC937B0053 /* Build configuration list for PBXProject "AstryxDemo" */;
+			compatibilityVersion = "Xcode 15.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B284B2AA541CF8474164C33C;
+			minimizedProjectReferenceProxies = 1;
+			productRefGroup = 100681C2ECC91627E1BDAA9E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BE28BABFFD51D83C6B95D390 /* AstryxDemo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EEFD3D46EBC542509D61F009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FFD4DC25A31FCC3F4552A237 /* Assets.xcassets in Resources */,
+				508B7F68BE11ED1C3CDFE9FB /* Figtree-Bold.ttf in Resources */,
+				4DD1D4EE792FC9C7CF909418 /* Figtree-BoldItalic.ttf in Resources */,
+				4A39128D33A52EEC5CBDE0D6 /* Figtree-Italic.ttf in Resources */,
+				B98C3B142A674ED8606F4DD5 /* Figtree-Medium.ttf in Resources */,
+				4B619930B2CB71FB7B457B5E /* Figtree-MediumItalic.ttf in Resources */,
+				2E77594D4C882B79452DD2D6 /* Figtree-Regular.ttf in Resources */,
+				C0D78B628F8BD84CF9DA5854 /* Figtree-SemiBold.ttf in Resources */,
+				4B8AE538123C52736084B2EA /* Figtree-SemiBoldItalic.ttf in Resources */,
+				27AA1DB3F021C987AF0411EB /* OFL.txt in Resources */,
+				60F78D95A8D1E19D19B578FA /* web in Resources */,
+				6DDF0AD3805CFF007521C60B /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		373CD1214A9E8D0FDF539FE6 /* Check the templates' web version */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Check the templates' web version";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nNODE_BINARY=$(command -v node || true)\n[ -f \"$PROJECT_DIR/.xcode.env\" ] && . \"$PROJECT_DIR/.xcode.env\"\n[ -f \"$PROJECT_DIR/.xcode.env.local\" ] && . \"$PROJECT_DIR/.xcode.env.local\"\n\"$NODE_BINARY\" \"$PROJECT_DIR/../scripts/sync-web.js\" --check\n";
+		};
+		5CC4AA5A89F8CB761C575A3E /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-AstryxDemo/Pods-AstryxDemo-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-AstryxDemo/Pods-AstryxDemo-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-AstryxDemo/Pods-AstryxDemo-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		5DE9D8FB2C342428A034E251 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env",
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-AstryxDemo/expo-configure-project.sh",
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Pods/Target Support Files/Pods-AstryxDemo/ExpoModulesProvider.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-AstryxDemo/expo-configure-project.sh\"\n";
+		};
+		6BFE9A048ED954B0C0C3933C /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-AstryxDemo/Pods-AstryxDemo-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-AstryxDemo/Pods-AstryxDemo-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-AstryxDemo/Pods-AstryxDemo-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		AE066B976D47CF22DF196558 /* Bundle React Native code and images */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle React Native code and images";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nexport NODE_BINARY=node\n# PROJECT_ROOT must be this package, where `react-native.config.js` is. From the\n# repository root the CLI finds no platforms and Metro rejects `--platform ios`.\n# (Metro's own `projectRoot` is still the repository root; see metro.config.js.)\nexport PROJECT_ROOT=\"$PROJECT_DIR/..\"\nREPO_ROOT=\"$PROJECT_DIR/../../..\"\nexport ENTRY_FILE=\"$PROJECT_ROOT/index.js\"\nexport BUNDLE_CONFIG=\"$PROJECT_ROOT/metro.config.js\"\nWITH_ENVIRONMENT=\"$REPO_ROOT/packages/react-native/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REPO_ROOT/packages/react-native/scripts/react-native-xcode.sh\"\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
+		};
+		AE819A311DAFC33978246C87 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-AstryxDemo-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		EB3D885ECD2514E5D3E7C0D2 /* Stamp the build into Info.plist */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Stamp the build into Info.plist";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nPLIST=\"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\nCOMMIT=$(cd \"$PROJECT_DIR\" && git rev-parse --short HEAD 2>/dev/null || echo unknown)\nDIRTY=$(cd \"$PROJECT_DIR\" && git diff --quiet 2>/dev/null || echo \"+\")\nSTAMP=$(date \"+%m-%d %H:%M\")\n/usr/libexec/PlistBuddy -c \"Delete :EXPBuildCommit\" \"$PLIST\" 2>/dev/null || true\n/usr/libexec/PlistBuddy -c \"Delete :EXPBuildStamp\" \"$PLIST\" 2>/dev/null || true\n/usr/libexec/PlistBuddy -c \"Add :EXPBuildCommit string $COMMIT$DIRTY\" \"$PLIST\"\n/usr/libexec/PlistBuddy -c \"Add :EXPBuildStamp string $STAMP\" \"$PLIST\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0A454CE8B37FBFB44C8BDE47 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				95D33224D26CE133649DEA83 /* AppDelegate.mm in Sources */,
+				42604F91CA573289A0F1D729 /* SceneDelegate.mm in Sources */,
+				C1744808C5463E272D1AAF81 /* main.m in Sources */,
+				DD67DADCF43FC74B4CCA7441 /* ExpoModulesProvider.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A6EEAD3F64B2CE0089DE9A57 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
+				PODFILE_DIR = "$(SRCROOT)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../react-native";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				USE_HERMES = true;
+			};
+			name = Debug;
+		};
+		AE4C0FF1B7F33B326A103515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = FAB7D97E82D432D39339E857 /* Pods-AstryxDemo.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = C8D8QTF339;
+				INFOPLIST_FILE = AstryxDemo/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.expo.astryxdemo;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D99777AB84A6F7731DCA5968 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
+				PODFILE_DIR = "$(SRCROOT)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../react-native";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				USE_HERMES = true;
+			};
+			name = Release;
+		};
+		FA3AC35F46D9A69BD366C083 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EF0E855D27F5AB8A599144D5 /* Pods-AstryxDemo.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = C8D8QTF339;
+				INFOPLIST_FILE = AstryxDemo/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.expo.astryxdemo;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		81B3AC89B0435E696A1C65ED /* Build configuration list for PBXNativeTarget "AstryxDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA3AC35F46D9A69BD366C083 /* Debug */,
+				AE4C0FF1B7F33B326A103515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DCFDFE94437480EC937B0053 /* Build configuration list for PBXProject "AstryxDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A6EEAD3F64B2CE0089DE9A57 /* Debug */,
+				D99777AB84A6F7731DCA5968 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A94939B5C8817490EF7DABCE /* Project object */;
+}

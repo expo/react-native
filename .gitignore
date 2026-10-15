@@ -29,6 +29,10 @@ project.xcworkspace
 /packages/rn-tester/android/app/build/
 /packages/chat-demo/android/app/build/
 /packages/chat-demo/android/app/.cxx/
+/packages/astryx-demo/android/app/build/
+/packages/astryx-demo/android/app/.cxx/
+# The templates' web version, built by packages/astryx-demo/scripts/sync-web.js
+/packages/astryx-demo/web/
 /packages/chat-demo/android/.gradle/
 /packages/rn-tester/android/app/gradle/
 /packages/rn-tester/android/app/gradlew

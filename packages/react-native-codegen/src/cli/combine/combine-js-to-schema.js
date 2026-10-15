@@ -71,6 +71,9 @@ function expandDirectoriesIntoFiles(
         onlyFiles: true,
         absolute: true,
         cwd: file,
+        // A package's specs belong to that package. Nested dependencies are
+        // generated as their own libraries, including with Yarn's hoisting.
+        ignore: ['**/node_modules/**'],
       });
     })
     .filter(element => filterJSFile(element, platform, exclude));

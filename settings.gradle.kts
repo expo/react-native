@@ -22,6 +22,7 @@ include(
     ":packages:rn-tester:android:app:benchmark",
     ":private:react-native-fantom",
     ":packages:chat-demo:android:app",
+    ":packages:astryx-demo:android:app",
 )
 
 includeBuild("packages/gradle-plugin/")
@@ -42,7 +43,8 @@ plugins {
 /*
  * Autolinking is computed for ONE app per build: the settings plugin writes a single
  * `autolinking.json` for the whole repository, so the working directory has to be the app that
- * is being built. rn-tester is the default and a `:packages:chat-demo:` task switches it —
+ * is being built. rn-tester is the default and a `:packages:chat-demo:` or `:packages:astryx-demo:`
+ * task switches it —
  * without which the chat demo builds against rn-tester's dependency list and its own native
  * libraries are simply absent, which is how `react-native-screens` came to have no view manager
  * on Android while resolving perfectly well in JavaScript.
@@ -53,6 +55,8 @@ plugins {
  */
 val autolinkApp =
     if (gradle.startParameter.taskNames.any { it.contains(":chat-demo:") }) "packages/chat-demo"
+    else if (gradle.startParameter.taskNames.any { it.contains(":astryx-demo:") })
+        "packages/astryx-demo"
     else "packages/rn-tester"
 
 configure<com.facebook.react.ReactSettingsExtension> {

@@ -1,6 +1,6 @@
-diff --git a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
---- a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
-+++ b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
+diff --git a/node_modules/@react-native/tester/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm b/node_modules/@react-native/tester/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
+--- a/node_modules/@react-native/tester/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
++++ b/node_modules/@react-native/tester/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
 @@ -380,6 +380,11 @@
        appearance.shadowColor = shadowColor;
        appearance.shadowImage = shadowImage;

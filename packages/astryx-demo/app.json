@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Astryx",
+    "slug": "astryx-demo",
+    "scheme": "astryxdemo",
+    "ios": {
+      "bundleIdentifier": "dev.expo.astryxdemo"
+    },
+    "android": {
+      "package": "dev.expo.astryxdemo"
+    }
+  }
+}
