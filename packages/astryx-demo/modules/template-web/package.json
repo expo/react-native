@@ -1,0 +1,8 @@
+{
+  "name": "template-web",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The web version of an Astryx template, bundled into the app and shown in a web view.",
+  "main": "src/index.js",
+  "license": "MIT"
+}

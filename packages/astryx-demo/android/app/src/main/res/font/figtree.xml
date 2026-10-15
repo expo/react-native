@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Figtree at the weights the neutral theme uses, upright and italic: the same
+  static instances the iOS app bundles (ios/AstryxDemo/Fonts), registered as
+  the "Figtree" family in MainApplication.kt.
+-->
+<font-family xmlns:app="http://schemas.android.com/apk/res-auto">
+    <font app:fontStyle="normal" app:fontWeight="400" app:font="@font/figtree_regular" />
+    <font app:fontStyle="italic" app:fontWeight="400" app:font="@font/figtree_italic" />
+    <font app:fontStyle="normal" app:fontWeight="500" app:font="@font/figtree_medium" />
+    <font app:fontStyle="italic" app:fontWeight="500" app:font="@font/figtree_mediumitalic" />
+    <font app:fontStyle="normal" app:fontWeight="600" app:font="@font/figtree_semibold" />
+    <font app:fontStyle="italic" app:fontWeight="600" app:font="@font/figtree_semibolditalic" />
+    <font app:fontStyle="normal" app:fontWeight="700" app:font="@font/figtree_bold" />
+    <font app:fontStyle="italic" app:fontWeight="700" app:font="@font/figtree_bolditalic" />
+</font-family>

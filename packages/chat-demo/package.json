@@ -17,7 +17,7 @@
     }
   },
   "dependencies": {
-    "react-native-screens": "4.27.0"
+    "react-native-screens": "4.30.0"
   },
   "devDependencies": {
     "@react-native-community/cli": "21.0.0-alpha.1",
