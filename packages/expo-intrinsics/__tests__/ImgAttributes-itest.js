@@ -22,6 +22,7 @@ import '@react-native/fantom/src/setUpDefaultReactNativeEnvironment';
 
 import type {HostInstance} from 'react-native';
 
+import {setRootRelativeSourceResolver} from '@react-native/expo-intrinsics-poc/src/rootRelativeSources';
 import * as Fantom from '@react-native/fantom';
 import * as React from 'react';
 import {createRef} from 'react';
@@ -121,6 +122,32 @@ describe('<img> attributes', () => {
     expect(rectOf(image).height).toBe(16);
   });
 
+  test('a source that states its size gives the ratio to an auto height', () => {
+    // A bundled asset states its size; `width: 100%; height: auto` is sized
+    // by it, as a browser sizes a loaded image
+    setRootRelativeSourceResolver(path =>
+      path === '/hero.png'
+        ? {uri: 'file:///hero.png', width: 1200, height: 800}
+        : null,
+    );
+    const image = createRef<HostInstance>();
+    try {
+      mount(
+        // $FlowFixMe[prop-missing] elements from the catalog
+        <div style={{width: 300}}>
+          <img
+            ref={image}
+            src="/hero.png"
+            style={{display: 'block', width: '100%', height: 'auto'}}
+          />
+        </div>,
+      );
+      expect(rectOf(image).width).toBe(300);
+      expect(rectOf(image).height).toBe(200);
+    } finally {
+      setRootRelativeSourceResolver(null);
+    }
+  });
 
   test('the RN-shaped source prop still works', () => {
     const image = createRef<HostInstance>();
