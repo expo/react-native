@@ -1,0 +1,13 @@
+<resources>
+    <!--
+      Don't opt out of edge-to-edge or inset the window: the demo tests safe-area
+      insets, which need the React surface to reach the screen edges.
+    -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <!--
+          Dark status bar icons, because the app draws under the status bar.
+          `values-night/styles.xml` sets light ones.
+        -->
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

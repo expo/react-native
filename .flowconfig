@@ -5,16 +5,16 @@
 ; the entire pnpm store of that repo into the crawl.
 **/Developer/expo/**
 ; The same packages through their node_modules symlinks: flow does not
-; canonicalize before matching, so both spellings need ignoring.
+; canonicalize before matching, so both spellings need ignoring. The glob
+; covers every link scripts/link-expo.js in packages/astryx-demo makes
+; (expo-router, expo-constants, expo-linking, expo-glass-effect, ...): one
+; left out is a door into the checkout's pnpm store by a path without `.pnpm`
+; in it, and the crawl parses hundreds of thousands of files
 node_modules/expo/**
-node_modules/expo-image/**
-node_modules/expo-modules-core/**
-node_modules/expo-modules-autolinking/**
+node_modules/expo-*/**
 ; The symlink entries themselves, plus `@expo`, which `expo*` does not cover
 node_modules/expo
-node_modules/expo-image
-node_modules/expo-modules-core
-node_modules/expo-modules-autolinking
+node_modules/expo-*
 node_modules/@expo/**
 ; Any pnpm store: `.pnpm` is a farm of symlinks that link to one another, so a
 ; traversal that follows them does not terminate
@@ -97,6 +97,13 @@ private/helloworld/ios/Pods/**
 
 ; Ignore rn-tester Pods
 packages/rn-tester/Pods/**
+
+; The Astryx app's native build output and its nested react-native-screens
+packages/astryx-demo/ios/Pods/**
+packages/astryx-demo/ios/build/**
+packages/astryx-demo/android/**/build/**
+packages/astryx-demo/node_modules/**
+packages/astryx-demo/web/**
 
 [include]
 

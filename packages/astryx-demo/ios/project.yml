@@ -1,0 +1,114 @@
+name: AstryxDemo
+options:
+  bundleIdPrefix: dev.expo
+  # CocoaPods' xcodeproj reads up to object version 63; XcodeGen 2.46 writes 77
+  # by default, and `pod install` then fails
+  projectFormat: xcode15_3
+  deploymentTarget:
+    iOS: '16.4'
+targets:
+  AstryxDemo:
+    type: application
+    platform: iOS
+    sources:
+      - path: AstryxDemo
+        # The icon's sources, from which Assets.xcassets is drawn; not shipped
+        excludes:
+          - icon-source/**
+      # The templates' web version (../scripts/sync-web.js), which the sheet's
+      # web view loads from the bundle (modules/template-web)
+      - path: ../web
+        type: folder
+        buildPhase: resources
+    info:
+      path: AstryxDemo/Info.plist
+      properties:
+        CFBundleDisplayName: Astryx
+        # Expo Router opens `astryxdemo://template/<slug>` (the scheme in ../app.json)
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.expo.astryxdemo
+            CFBundleURLSchemes: [astryxdemo]
+        UILaunchScreen: {}
+        # Figtree, the typeface Astryx's neutral theme names (AstryxDemo/Fonts)
+        UIAppFonts:
+          - Figtree-Regular.ttf
+          - Figtree-Medium.ttf
+          - Figtree-SemiBold.ttf
+          - Figtree-Bold.ttf
+          - Figtree-Italic.ttf
+          - Figtree-MediumItalic.ttf
+          - Figtree-SemiBoldItalic.ttf
+          - Figtree-BoldItalic.ttf
+        # Must match the scene configuration in AppDelegate.mm (`Default`, `SceneDelegate`).
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: SceneDelegate
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
+        UIViewControllerBasedStatusBarAppearance: true
+        # Lets the app run at 120Hz. Without it iOS limits an iPhone app to 60fps while the keyboard
+        # animates at 120Hz, so views that follow the keyboard lag behind it. See ui-metrics.md,
+        # "Keyboard reveal at the 60fps cap".
+        CADisableMinimumFrameDurationOnPhone: true
+    preBuildScripts:
+      # ../web is built from a checkout of Astryx and not committed; without
+      # this an app without it builds and shows a blank sheet
+      - name: Check the templates' web version
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          NODE_BINARY=$(command -v node || true)
+          [ -f "$PROJECT_DIR/.xcode.env" ] && . "$PROJECT_DIR/.xcode.env"
+          [ -f "$PROJECT_DIR/.xcode.env.local" ] && . "$PROJECT_DIR/.xcode.env.local"
+          "$NODE_BINARY" "$PROJECT_DIR/../scripts/sync-web.js" --check
+    postBuildScripts:
+      # Read by RenderStatsModule.mm (`buildCommit`, `buildStamp`). A `+` after the
+      # commit means the tree had uncommitted changes.
+      - name: Stamp the build into Info.plist
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          COMMIT=$(cd "$PROJECT_DIR" && git rev-parse --short HEAD 2>/dev/null || echo unknown)
+          DIRTY=$(cd "$PROJECT_DIR" && git diff --quiet 2>/dev/null || echo "+")
+          STAMP=$(date "+%m-%d %H:%M")
+          /usr/libexec/PlistBuddy -c "Delete :EXPBuildCommit" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Delete :EXPBuildStamp" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :EXPBuildCommit string $COMMIT$DIRTY" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :EXPBuildStamp string $STAMP" "$PLIST"
+      # xcodegen adds no bundling phase. Without this a Release build succeeds but has no
+      # `main.jsbundle`, and the app fails to load at launch.
+      - name: Bundle React Native code and images
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          export NODE_BINARY=node
+          # PROJECT_ROOT must be this package, where `react-native.config.js` is. From the
+          # repository root the CLI finds no platforms and Metro rejects `--platform ios`.
+          # (Metro's own `projectRoot` is still the repository root; see metro.config.js.)
+          export PROJECT_ROOT="$PROJECT_DIR/.."
+          REPO_ROOT="$PROJECT_DIR/../../.."
+          export ENTRY_FILE="$PROJECT_ROOT/index.js"
+          export BUNDLE_CONFIG="$PROJECT_ROOT/metro.config.js"
+          WITH_ENVIRONMENT="$REPO_ROOT/packages/react-native/scripts/xcode/with-environment.sh"
+          REACT_NATIVE_XCODE="$REPO_ROOT/packages/react-native/scripts/react-native-xcode.sh"
+          /bin/sh -c "$WITH_ENVIRONMENT $REACT_NATIVE_XCODE"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.expo.astryxdemo
+        # Signed so the app runs on devices: some keyboard bugs only reproduce on
+        # hardware.
+        DEVELOPMENT_TEAM: C8D8QTF339
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: '5.0'
+        OTHER_LDFLAGS: '$(inherited) -ObjC -lc++'
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
