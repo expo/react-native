@@ -505,6 +505,8 @@ describe('ReactNativeElement', () => {
           Node.DOCUMENT_POSITION_PRECEDING,
         );
         expect(childNodeBB.contains(childNodeAA)).toBe(false);
+        // Node/nothing: `contains(Node? other)` takes null and answers false
+        expect(parentNode.contains(null)).toBe(false);
 
         // Remove one of the children
         Fantom.runTask(() => {

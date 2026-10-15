@@ -217,7 +217,7 @@ export function unescapeIdent(ident: string): string {
         j++;
       }
       out += String.fromCodePoint(parseInt(ident.slice(i + 1, j), 16));
-      if (ident[j] === ' ') {
+      if (ident[j] === ' ' || ident[j] === '\t' || ident[j] === '\n') {
         j++;
       }
       i = j;
@@ -235,6 +235,7 @@ const SUPPORTED_PSEUDO_CLASSES = new Set([
   'focus',
   'focus-visible',
   'disabled',
+  'popover-open',
   'root',
 ]);
 
@@ -242,15 +243,34 @@ const SUPPORTED_PSEUDO_CLASSES = new Set([
 // matchable instead of discarding styles that do apply
 const ALWAYS_TRUE_PSEUDO_CLASSES = new Set(['enabled', 'link', 'any-link']);
 
+// The index after the escape at `start` (css-syntax-3 §4.3.7): a backslash and
+// one character, or up to six hex digits and the one whitespace that may end
+// them, which belongs to the escape and is not a descendant combinator
+function escapeEnd(text: string, start: number): number {
+  let i = start + 1;
+  while (i < text.length && i < start + 7 && /[0-9a-fA-F]/.test(text[i])) {
+    i++;
+  }
+  if (i === start + 1) {
+    return Math.min(start + 2, text.length);
+  }
+  if (text[i] === ' ' || text[i] === '\t' || text[i] === '\n') {
+    i++;
+  }
+  return i;
+}
+
+// An identifier's extent (css-syntax-3 §4.3.11): ASCII letters, digits, `_`,
+// `-`, any non-ASCII code point, and escapes
 function scanSelectorIdent(sel: string, i: number): [string, number] {
   let j = i;
   while (j < sel.length) {
     const ch = sel[j];
     if (ch === '\\') {
-      j += 2;
+      j = escapeEnd(sel, j);
       continue;
     }
-    if (/[A-Za-z0-9_-]/.test(ch)) {
+    if (/[A-Za-z0-9_-]/.test(ch) || ch.charCodeAt(0) >= 0x80) {
       j++;
       continue;
     }
@@ -518,8 +538,9 @@ export function compileSelector(raw: string): ComplexSelector {
     for (let i = 0; i < text.length; i++) {
       const ch = text[i];
       if (ch === '\\') {
-        current += ch + (text[i + 1] ?? '');
-        i++;
+        const end = escapeEnd(text, i);
+        current += text.slice(i, end);
+        i = end - 1;
         continue;
       }
       if (ch === '(' || ch === '[') {

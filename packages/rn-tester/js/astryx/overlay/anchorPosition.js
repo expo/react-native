@@ -115,8 +115,21 @@ const INLINE_FLIP: {[PositionArea]: PositionArea} = {
   center: 'center',
 };
 
+/**
+ * `area` mirrored across the anchor on the axes `flip-block` and `flip-inline`
+ * name, as the try tactics do (css-anchor-position-1 §5.2).
+ */
+export function flipArea(
+  area: PositionArea,
+  block: boolean,
+  inline: boolean,
+): PositionArea {
+  const flippedBlock = block ? (BLOCK_FLIP[area] ?? area) : area;
+  return inline ? (INLINE_FLIP[flippedBlock] ?? flippedBlock) : flippedBlock;
+}
+
 /** Places the overlay for one area, without any fitting logic. */
-function place(
+export function place(
   area: PositionArea,
   anchor: Rect,
   overlay: Size,

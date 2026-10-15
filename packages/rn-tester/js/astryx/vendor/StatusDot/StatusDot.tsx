@@ -200,7 +200,7 @@ export function StatusDot({
       role="img"
       aria-label={label}
       {...mergeProps(
-        themeProps('statusdot', {variant}),
+        themeProps('status-dot', {variant}),
         stylex.props(
           styles.base,
           variants[variant],

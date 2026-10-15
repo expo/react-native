@@ -29,6 +29,7 @@ import type {
   InteractionStates,
   Matcher,
 } from './match';
+import type {MatchContext} from './match';
 import type {Stylesheet} from './parse';
 
 import {
@@ -64,16 +65,26 @@ AccessibilityInfo.addEventListener?.('reduceMotionChanged', enabled => {
   bumpVersion();
 });
 
-function currentContext() {
+// Exported for dom-compat.js, whose `matches()` runs the same matcher
+export function currentContext(): MatchContext {
+  // Read once per version: a change to any of these bumps it
+  if (context != null && contextVersion === version) {
+    return context;
+  }
   const window = Dimensions.get('window');
-  return {
+  context = {
     schemeIsDark: Appearance.getColorScheme() === 'dark',
     reduceMotion,
     windowWidth: window.width,
     windowHeight: window.height,
     touch: true,
   };
+  contextVersion = version;
+  return context;
 }
+
+let context: ?MatchContext = null;
+let contextVersion = -1;
 
 const sheets: Array<Stylesheet> = [];
 let matcher: Matcher | null = null;
@@ -163,16 +174,93 @@ function rewriteSiblingSpacing(sheet: Stylesheet): void {
   }
 }
 
-export function installStylesheet(css: string | Stylesheet): void {
-  const sheet = typeof css === 'string' ? parseStylesheet(css, ruleCount) : css;
-  rewriteSiblingSpacing(sheet);
+export function installStylesheet(css: string | Stylesheet): Stylesheet {
+  const sheet = prepareStylesheet(css, ruleCount);
   ruleCount += sheet.rules.length;
   sheets.push(sheet);
+  // A sheet added last with no style rules and no keyframes (Astryx's
+  // `@position-try` slide rules, a bare `@layer` order statement) leaves every
+  // element's cascade as it was, so nothing re-resolves for it: re-resolving
+  // re-renders every element on the screen
+  const changesNoMatch =
+    matcher != null && sheet.rules.length === 0 && sheet.keyframes.length === 0;
+  sheetsChanged(sheet, !changesNoMatch);
+  return sheet;
+}
+
+/**
+ * Removes an installed sheet, as removing a `<style>` from the document drops
+ * its rules (CSSOM §6.1). The keyframes it declared stay registered under
+ * their names.
+ */
+export function removeStylesheet(sheet: Stylesheet): void {
+  const index = sheets.indexOf(sheet);
+  if (index === -1) {
+    return;
+  }
+  sheets.splice(index, 1);
+  sheetsChanged(null, true);
+}
+
+/**
+ * Replaces an installed sheet's rules with `css` in the same cascade position,
+ * as a `<style>` whose text changes keeps its place in the document. Returns
+ * the new sheet, which later replacements and removals take.
+ */
+export function replaceStylesheet(sheet: Stylesheet, css: string): Stylesheet {
+  const index = sheets.indexOf(sheet);
+  if (index === -1) {
+    return installStylesheet(css);
+  }
+  const replacement = prepareStylesheet(css, 0);
+  sheets[index] = replacement;
+  renumberRules();
+  sheetsChanged(replacement, true);
+  return replacement;
+}
+
+function prepareStylesheet(
+  css: string | Stylesheet,
+  startOrder: number,
+): Stylesheet {
+  const sheet =
+    typeof css === 'string' ? parseStylesheet(css, startOrder) : css;
+  rewriteSiblingSpacing(sheet);
+  return sheet;
+}
+
+// Rebuilds the matcher over the installed sheets, and re-resolves every
+// element when the change can alter what one matches
+function sheetsChanged(added: Stylesheet | null, reresolve: boolean): void {
   matcher = createMatcher(sheets);
-  for (const kf of sheet.keyframes) {
+  for (const kf of added?.keyframes ?? []) {
     registerNamedKeyframes(kf.name, keyframesToFrames(kf.stops));
   }
-  bumpVersion();
+  if (reresolve) {
+    bumpVersion();
+  }
+}
+
+// Renumbers source order across the sheets in their cascade order, keeping
+// each sheet's own spacing (a rule synthesized from another shares its order)
+function renumberRules(): void {
+  let next = 0;
+  for (const sheet of sheets) {
+    if (sheet.rules.length === 0) {
+      continue;
+    }
+    let lowest = Infinity;
+    let highest = -Infinity;
+    for (const rule of sheet.rules) {
+      lowest = Math.min(lowest, rule.order);
+      highest = Math.max(highest, rule.order);
+    }
+    for (const rule of sheet.rules) {
+      rule.order = rule.order - lowest + next;
+    }
+    next += highest - lowest + 1;
+  }
+  ruleCount = next;
 }
 
 /**
@@ -189,8 +277,16 @@ export function hasStylesheets(): boolean {
   return matcher != null;
 }
 
+// A property's camel-cased name, computed once per name
+const camelNames: Map<string, string> = new Map();
+
 function camelize(property: string): string {
-  return property.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  let camel = camelNames.get(property);
+  if (camel == null) {
+    camel = property.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    camelNames.set(property, camel);
+  }
+  return camel;
 }
 
 const ANIMATION_TIMING =
@@ -428,6 +524,7 @@ export function resolveCssForElement(
     declarations,
     dependsOnStates: subjectDependsOnStates,
     outranksStylex,
+    key,
   } = active.matchDeclarations({...el, states: interaction}, ctx);
   // An element whose class some rule reads state from in an ancestor position
   // (`.group:hover .x`) must track interaction even though nothing about its
@@ -435,6 +532,51 @@ export function resolveCssForElement(
   const dependsOnStates =
     subjectDependsOnStates ||
     el.classes.some(cls => active.tracksStateForDescendants(cls));
+  // The resolution of the same matched rules in the same state and viewport,
+  // which is the same object for every element that shares them, so what the
+  // runtime derives from it can be kept by identity too
+  if (resolutionsMatcher !== active) {
+    resolutions.clear();
+    resolutionsMatcher = active;
+  } else if (resolutions.size >= RESOLUTIONS_BOUND) {
+    resolutions.clear();
+  }
+  const resolutionKey =
+    key +
+    (interaction.hovered === true ? 'h' : '') +
+    (interaction.pressed === true ? 'p' : '') +
+    (interaction.focused === true ? 'f' : '') +
+    (interaction.focusVisible === true ? 'v' : '') +
+    (interaction.disabled === true ? 'd' : '') +
+    (dependsOnStates ? 's' : '') +
+    (ctx.schemeIsDark ? 'D' : '') +
+    `|${ctx.windowWidth}x${ctx.windowHeight}`;
+  const known = resolutions.get(resolutionKey);
+  if (known != null) {
+    return known;
+  }
+  const resolution = resolveDeclared(
+    declarations,
+    outranksStylex,
+    dependsOnStates,
+    interaction,
+  );
+  resolutions.set(resolutionKey, resolution);
+  return resolution;
+}
+
+const resolutions: Map<string, CssResolution> = new Map();
+let resolutionsMatcher: ?Matcher = null;
+const RESOLUTIONS_BOUND = 4096;
+
+// The matched declarations as a style, the custom properties they declare and
+// the container they make the element
+function resolveDeclared(
+  declarations: {[string]: string},
+  outranksStylex: Set<string>,
+  dependsOnStates: boolean,
+  interaction: InteractionStates,
+): CssResolution {
   const keys = Object.keys(declarations);
   if (keys.length === 0) {
     return dependsOnStates ? {...EMPTY, dependsOnStates} : EMPTY;

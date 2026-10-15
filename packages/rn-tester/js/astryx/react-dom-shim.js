@@ -21,23 +21,46 @@
 
 /**
  * Renders `children` where they are: React Native has no DOM and no
- * `createPortal` for host components, so a null target gets the children
- * themselves, as `useLayer` does on its own side of the null check. A non-null
- * target is a path this shim has not modelled and says so; the mechanism that
- * escapes a parent on this platform is `overlay/TopLayer.js`.
+ * `createPortal` for host components, so the children come back as they are,
+ * which is what `useLayer` renders on its own side of the null check.
+ *
+ * Since Astryx 0.7.0 the target is not always null: `Layer/layerHost.ts`
+ * walks `parentElement` and `tagName`, both of which this platform's
+ * elements have, and asks for a portal above the outermost `<p>`, `<a>`,
+ * `<button>` or other host that must not contain a layer.
+ * DOM-CSS-LIMITATION(layer-portal-stays-inline): that move does not happen;
+ * the layer stays where the sentinel is. On the web the move prevents the
+ * HTML parser's reparenting and a wrapping control capturing the layer's
+ * interactions; here there is no parser, and a layer inside a control keeps
+ * its own hit-testing, so the visible cost is typography inherited from an
+ * inline formatting ancestor. The mechanism that escapes an ancestor on this
+ * platform is `overlay/TopLayer.js`.
  */
-let warnedAboutTarget = false;
-
 export function createPortal(children: unknown, container: unknown): unknown {
-  if (__DEV__ && container != null && !warnedAboutTarget) {
-    warnedAboutTarget = true;
-    console.warn(
-      'astryx: createPortal was called with a target, which this platform ' +
-        'has no equivalent for — the subtree is rendered in place instead. ' +
-        'Use overlay/TopLayer.js to escape an ancestor on React Native.',
-    );
-  }
   return children;
 }
 
-export default {createPortal};
+/**
+ * What `react-dom/client` resolves to. Astryx's `Toast/useToast` imports
+ * `createRoot` to mount its toaster into a DOM container; there is no DOM
+ * container here, so the branch is unreachable, and a call that reaches it
+ * anyway gets a root that renders nothing and says so once.
+ */
+let warnedAboutRoot = false;
+
+export function createRoot(container: unknown): {
+  render(children: unknown): void,
+  unmount(): void,
+} {
+  if (__DEV__ && !warnedAboutRoot) {
+    warnedAboutRoot = true;
+    console.warn(
+      'astryx: createRoot was called, which this platform has no equivalent ' +
+        'for — nothing is rendered into the container. Use overlay/TopLayer.js ' +
+        'to mount above the app on React Native.',
+    );
+  }
+  return {render() {}, unmount() {}};
+}
+
+export default {createPortal, createRoot};
