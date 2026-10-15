@@ -17,7 +17,13 @@
  * match it rather than the whole sheet.
  */
 
-import type {ComplexSelector, Compound, StyleRule, Stylesheet} from './parse';
+import type {
+  ComplexSelector,
+  Compound,
+  ContainerQuery,
+  StyleRule,
+  Stylesheet,
+} from './parse';
 
 export type InteractionStates = {
   readonly hovered?: boolean,
@@ -37,7 +43,94 @@ export type ElementDescriptor = {
   // The ancestor chain for descendant and child combinators
   parent: ElementDescriptor | null,
   isRoot?: boolean,
+  // Set when the element is a query container (`container-type` other than
+  // normal), with the names `container-name` gives it
+  container?: ?ElementContainer,
+  // The container's laid-out size, once it has one; its queries read the
+  // window until then
+  containerSize?: ?BoxSize,
 };
+
+export type ElementContainer = {names: Array<string>};
+
+/**
+ * The custom properties through which a measured box tells its descendants
+ * its size: the viewport's, declared by the host surface a page renders in
+ * (an app's screen or a split view's column rather than the window), and a
+ * query container's, declared by the runtime when the container lays out.
+ * Viewport units, container units and `@container` conditions read them
+ * from the scope; before a box has laid out, or outside any, the window
+ * stands in.
+ */
+export const VIEWPORT_INLINE_SIZE = '--astryx-viewport-inline-size';
+export const VIEWPORT_BLOCK_SIZE = '--astryx-viewport-block-size';
+export const CONTAINER_INLINE_SIZE = '--astryx-container-inline-size';
+export const CONTAINER_BLOCK_SIZE = '--astryx-container-block-size';
+
+export type BoxSize = {width: number, height: number};
+
+/** A size a scope carries under the two keys, if both are pixel lengths */
+export function scopeSize(
+  scope: ?Map<string, unknown>,
+  inlineKey: string,
+  blockKey: string,
+): ?BoxSize {
+  if (scope == null) {
+    return null;
+  }
+  const width = pixels(scope.get(inlineKey));
+  const height = pixels(scope.get(blockKey));
+  return width != null && height != null ? {width, height} : null;
+}
+
+function pixels(value: unknown): ?number {
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const m = /^\s*([+-]?(?:\d+\.?\d*|\.\d+))px\s*$/.exec(value);
+  return m == null ? null : parseFloat(m[1]);
+}
+
+/**
+ * What `container-type`, `container-name` and the `container` shorthand
+ * (`<name>* / <type>`, or a type alone) make of an element: a query container
+ * with its names, or none for `normal`.
+ */
+export function containerFromDeclarations(
+  type: unknown,
+  names: unknown,
+  shorthand: unknown,
+): ElementContainer | null {
+  let containerType = typeof type === 'string' ? type.trim() : null;
+  let containerNames = typeof names === 'string' ? names.trim() : null;
+  if (typeof shorthand === 'string') {
+    const [before, after] = shorthand.split('/').map(part => part.trim());
+    if (after != null) {
+      containerNames = containerNames ?? before;
+      containerType = containerType ?? after;
+    } else {
+      containerType = containerType ?? before;
+    }
+  }
+  if (
+    containerType == null ||
+    containerType === '' ||
+    containerType === 'normal'
+  ) {
+    return null;
+  }
+  return {
+    names:
+      containerNames == null ||
+      containerNames === '' ||
+      containerNames === 'none'
+        ? []
+        : containerNames.split(/\s+/),
+  };
+}
 
 export type MatchContext = {
   schemeIsDark: boolean,
@@ -342,6 +435,44 @@ export type Matcher = {
 };
 
 /**
+ * Whether a `@container` block applies to an element: an ancestor is a query
+ * container — the one of the query's name when it names one, any otherwise —
+ * and the size condition holds. The size is the window's; see
+ * DOM-CSS-DEVIATION(container-query-is-a-media-query) in parse.js.
+ */
+function containerQueryApplies(
+  query: ContainerQuery,
+  el: ElementDescriptor,
+  ctx: MatchContext,
+): boolean {
+  let found: ?ElementDescriptor = null;
+  for (let a = el.parent; a != null; a = a.parent) {
+    const container = a.container;
+    if (
+      container != null &&
+      (query.name == null || container.names.includes(query.name))
+    ) {
+      found = a;
+      break;
+    }
+  }
+  if (found == null) {
+    return false;
+  }
+  if (query.condition === '') {
+    return true;
+  }
+  // The container's own size once it has laid out; the window until then
+  const size = found.containerSize;
+  return mediaConditionApplies(
+    query.condition,
+    size == null
+      ? ctx
+      : {...ctx, windowWidth: size.width, windowHeight: size.height},
+  );
+}
+
+/**
  * The cascade layer StyleX's rules are emitted into on the web: Astryx builds
  * its components with `@layer astryx-base` (the theme's `@layer reset,
  * astryx-base, astryx-theme;` orders it), so its theme rules beat component
@@ -349,6 +480,7 @@ export type Matcher = {
  * layer leaves StyleX unranked, and nothing in it outranks a StyleX style.
  */
 export const STYLEX_LAYER = 'astryx-base';
+
 export function createMatcher(sheets: Array<Stylesheet>): Matcher {
   // The first declaration of a layer, across sheets, fixes its slot
   const layerOrder: Array<string> = [];
@@ -474,6 +606,12 @@ export function createMatcher(sheets: Array<Stylesheet>): Matcher {
       if (
         indexed.rule.media.length > 0 &&
         !indexed.rule.media.every(m => mediaConditionApplies(m, ctx))
+      ) {
+        continue;
+      }
+      if (
+        indexed.rule.containers.length > 0 &&
+        !indexed.rule.containers.every(q => containerQueryApplies(q, el, ctx))
       ) {
         continue;
       }

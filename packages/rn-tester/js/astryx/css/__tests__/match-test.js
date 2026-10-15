@@ -239,6 +239,62 @@ describe('createMatcher cascade', () => {
     expect(declarations.padding).toBe('1px');
   });
 
+  it('tells the declarations that outrank a StyleX style', () => {
+    const matcher = createMatcher([
+      parseStylesheet(`
+        @layer reset, astryx-base, theme;
+        @layer reset { .a { padding: 2px } }
+        @layer astryx-base { .a.b.c { margin: 3px } }
+        @layer theme { .a { color: red } }
+        .a { opacity: 0.5 }
+      `),
+    ]);
+    const {declarations, outranksStylex} = matcher.matchDeclarations(
+      el({classes: ['a', 'b', 'c']}),
+      CTX,
+    );
+    expect(declarations.color).toBe('red');
+    // A layer above astryx-base, or none: beats StyleX. The reset layer and
+    // astryx-base itself, whatever the specificity, do not.
+    expect([...outranksStylex].sort()).toEqual(['color', 'opacity']);
+  });
+
+  it('ranks nothing above StyleX when no sheet orders its layer', () => {
+    const matcher = createMatcher([
+      parseStylesheet('.a[data-x="1"] { color: green }'),
+    ]);
+    const {outranksStylex} = matcher.matchDeclarations(
+      el({classes: ['a'], attributes: {'data-x': '1'}}),
+      CTX,
+    );
+    expect(outranksStylex.size).toBe(0);
+  });
+
+  it('applies a container query only under a container, by name when named', () => {
+    const matcher = createMatcher([
+      parseStylesheet(`
+        @container (max-width: 720px) { .a { gap: 4px } }
+        @container nav (max-width: 720px) { .a { color: red } }
+        @container nav (min-width: 9000px) { .a { opacity: 0.5 } }
+      `),
+    ]);
+    const alone = matcher.matchDeclarations(el({classes: ['a']}), CTX);
+    expect(alone.declarations).toEqual({});
+    const anyContainer = el({container: {names: []}});
+    const underAny = matcher.matchDeclarations(
+      el({classes: ['a'], parent: anyContainer}),
+      CTX,
+    );
+    expect(underAny.declarations).toEqual({gap: '4px'});
+    const nav = el({container: {names: ['nav']}, parent: anyContainer});
+    const underNav = matcher.matchDeclarations(
+      el({classes: ['a'], parent: nav}),
+      CTX,
+    );
+    // The size is the window's (400 wide here)
+    expect(underNav.declarations).toEqual({gap: '4px', color: 'red'});
+  });
+
   it('unlayered wins over any layer at equal specificity', () => {
     const matcher = createMatcher([
       parseStylesheet(`
