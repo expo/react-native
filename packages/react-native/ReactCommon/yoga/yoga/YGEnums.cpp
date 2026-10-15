@@ -139,6 +139,8 @@ const char* YGExperimentalFeatureToString(const YGExperimentalFeature value) {
       return "web-flex-basis";
     case YGExperimentalFeatureFixFlexBasisFitContent:
       return "fix-flex-basis-fit-content";
+    case YGExperimentalFeatureWebPercentageHeights:
+      return "web-percentage-heights";
   }
   return "unknown";
 }

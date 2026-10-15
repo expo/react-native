@@ -10452,6 +10452,7 @@ struct facebook::yoga::LayoutResults {
   public facebook::yoga::FloatOptional staticPositionBlockStart;
   public float border(facebook::yoga::PhysicalEdge physicalEdge) const;
   public float dimension(facebook::yoga::Dimension axis) const;
+  public float lastOwnerHeight;
   public float margin(facebook::yoga::PhysicalEdge physicalEdge) const;
   public float measuredDimension(facebook::yoga::Dimension axis) const;
   public float padding(facebook::yoga::PhysicalEdge physicalEdge) const;
@@ -10462,10 +10463,10 @@ struct facebook::yoga::LayoutResults {
   public std::array<float, 2> minContent;
   public std::array<float, 2> minContentOwnerWidth;
   public std::array<uint32_t, 2> minContentGeneration;
+  public uint8_t nextCachedMeasurementsIndex;
   public uint32_t computedFlexBasisGeneration;
   public uint32_t configVersion;
   public uint32_t generationCount;
-  public uint32_t nextCachedMeasurementsIndex;
   public void setBorder(facebook::yoga::PhysicalEdge physicalEdge, float dimension);
   public void setDimension(facebook::yoga::Dimension axis, float dimension);
   public void setDirection(facebook::yoga::Direction direction);

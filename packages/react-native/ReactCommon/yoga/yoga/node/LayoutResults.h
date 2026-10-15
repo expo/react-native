@@ -153,8 +153,14 @@ struct LayoutResults {
   uint32_t generationCount = 0;
   uint32_t configVersion = 0;
   Direction lastOwnerDirection = Direction::Inherit;
+  // A byte, with the owner height after it, so the two share the space the
+  // direction's padding and a 32-bit index took: every View carries this
+  uint8_t nextCachedMeasurementsIndex = 0;
+  // The owner height of the latest layout or measurement, for a node whose
+  // height is a percentage of it; see calculateLayoutInternal
+  float lastOwnerHeight = YGUndefined;
 
-  uint32_t nextCachedMeasurementsIndex = 0;
+
   std::array<CachedMeasurement, MaxCachedMeasurements> cachedMeasurements = {};
 
   CachedMeasurement cachedLayout{};
