@@ -5,6 +5,7 @@
 /**
  * @file List.tsx
  * @input Uses React, ReactNode, StyleXStyles, theme tokens, ListContext
+ *   with optional inline edge compensation
  * @output Exports List component, ListProps, ListDensity, ListStyle types
  * @position Core implementation; consumed by index.ts, tested by List.test.tsx
  *
@@ -59,6 +60,20 @@ export interface ListProps extends BaseProps<
   hasDividers?: boolean;
 
   /**
+   * Compensates for each item's built-in inline inset, up to the container
+   * padding available on each edge. Use "inline" to bring row content toward
+   * sibling content such as a section heading. Content aligns when the
+   * container padding is at least the item inset; smaller padding leaves
+   * some inset uncompensated.
+   * The cancelling margin reads the same variable the items derive their
+   * inline padding from, so it tracks density and theme padding overrides
+   * automatically. Hover and selection backgrounds still extend past the
+   * text by the inset.
+   * Omit to leave item positions unchanged.
+   */
+  edgeCompensation?: 'inline';
+
+  /**
    * Header content rendered above the list.
    * Semantically associated via aria-labelledby.
    */
@@ -100,6 +115,11 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: spacingVars['--spacing-0-5'],
+    // A row dragged aside for its swipe actions (Item.swipeActions) paints
+    // past the list's inline edge unless the list clips. `clip`, never
+    // `hidden`: hidden makes a scroll container, which fights the list's
+    // vertical scroller. (StyleX emits the physical longhand of this axis.)
+    overflowInline: 'clip',
   },
   withDividers: {
     gap: 0,
@@ -128,6 +148,10 @@ const dynamicStyles = stylex.create({
  * Renders semantic `<ul>` or `<ol>` elements with configurable density,
  * dividers, marker styles, and an optional header.
  *
+ * Set `edgeCompensation="inline"` to compensate for the items' inline inset
+ * up to the container padding available on each edge, for alignment with
+ * sibling content such as a section heading.
+ *
  * @example
  * ```
  * <List>
@@ -144,6 +168,7 @@ export function List({
   children,
   density = 'balanced',
   hasDividers = false,
+  edgeCompensation,
   header,
   listStyle = 'none',
   start,
@@ -152,21 +177,28 @@ export function List({
   style,
   'data-testid': testId,
   ref,
+  ...props
 }: ListProps) {
   const headerId = useId();
   const isOrdered = listStyle === 'decimal';
   const Tag = isOrdered ? 'ol' : 'ul';
 
   const contextValue = useMemo(
-    () => ({density, hasDividers, listStyle}),
-    [density, hasDividers, listStyle],
+    () => ({density, hasDividers, listStyle, edgeCompensation}),
+    [density, hasDividers, listStyle, edgeCompensation],
   );
 
   const listElement = (
     <Tag
       ref={ref as React.Ref<HTMLUListElement & HTMLOListElement>}
+      // Consumer props first: everything the component sets for itself below
+      // is part of its contract and wins on conflict.
+      {...props}
       data-testid={testId}
-      aria-labelledby={header != null ? headerId : undefined}
+      // Only when this component renders the header — writing `undefined`
+      // unconditionally would erase a label a consumer pointed at their own
+      // heading.
+      {...(header != null ? {'aria-labelledby': headerId} : null)}
       {...(isOrdered && start != null && start !== 1 ? {start} : {})}
       // The base list style always sets list-style-type: none (markers are
       // custom-rendered by ListItem), and Safari/VoiceOver drops implicit

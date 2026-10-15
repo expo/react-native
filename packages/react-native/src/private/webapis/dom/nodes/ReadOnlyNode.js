@@ -207,7 +207,13 @@ class ReadOnlyNode extends ReadOnlyNodeBase {
     return NativeDOM.compareDocumentPosition(shadowNode, otherShadowNode);
   }
 
-  contains(otherNode: ReadOnlyNode): boolean {
+  contains(otherNode: ?ReadOnlyNode): boolean {
+    // Answer false for a missing node, as the DOM's `contains(Node? other)`
+    // does, so `node.contains(document.activeElement)` with nothing focused
+    // is a question rather than a crash
+    if (otherNode == null) {
+      return false;
+    }
     if (otherNode === this) {
       return true;
     }

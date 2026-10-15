@@ -9,7 +9,8 @@
  *
  * Compositional API: children are Avatar elements (and optionally
  * one AvatarGroupOverflow). The group provides overlap styling via
- * context — no child introspection needed.
+ * context — no child introspection needed. The overlap does not depend on
+ * child position, so avatars can be wrapped in HoverCard or Tooltip.
  *
  * When the group contains interactive avatars (rendered as links/buttons) or an
  * interactive AvatarGroupOverflow, it becomes a single Tab stop with roving
@@ -26,7 +27,7 @@
 
 import {useId, useMemo, useState, type ReactNode} from 'react';
 import type {BaseProps} from '../BaseProps';
-import {resolveSize, type AvatarSize} from '../Avatar';
+import {resolveSize, type AvatarShape, type AvatarSize} from '../Avatar';
 import * as stylex from '@stylexjs/stylex';
 import {mergeProps} from '../utils';
 import {composeEventHandlers} from '../utils/composeEventHandlers';
@@ -56,6 +57,13 @@ export interface AvatarGroupProps extends BaseProps<HTMLDivElement> {
    */
   size?: AvatarSize;
   /**
+   * Shape applied to all avatars via context, overriding each avatar's own
+   * `shape` prop so a group stays visually uniform. Also applied to the
+   * `AvatarGroupOverflow` "+N" indicator, so it matches the group.
+   * @default 'circle'
+   */
+  shape?: AvatarShape;
+  /**
    * Test ID for integration testing.
    */
   'data-testid'?: string;
@@ -65,7 +73,21 @@ const styles = stylex.create({
   root: {
     display: 'inline-flex',
     alignItems: 'center',
+    // Every avatar (and the overflow indicator) takes the negative overlap
+    // margin, including the first one, so the overlap survives wrappers such
+    // as HoverCard and Tooltip. This padding gives the first child that space
+    // back, keeping the row inside the group's box.
+    paddingInlineStart: {
+      default: 'calc(-1 * var(--_avatar-group-overlap))',
+      ':empty': 0,
+    },
   },
+});
+
+const dynamicStyles = stylex.create({
+  overlap: (offset: number) => ({
+    '--_avatar-group-overlap': `${offset}px`,
+  }),
 });
 
 /**
@@ -89,6 +111,7 @@ const styles = stylex.create({
 export function AvatarGroup({
   children,
   size = 'md',
+  shape = 'circle',
   'data-testid': testId,
   'aria-label': ariaLabelFromProps,
   'aria-describedby': ariaDescribedByFromProps,
@@ -106,8 +129,8 @@ export function AvatarGroup({
   const overlap = Math.round(numericSize * OVERLAP_RATIO);
 
   const contextValue = useMemo(
-    () => ({size, overlap, numericSize}),
-    [size, overlap, numericSize],
+    () => ({size, shape, overlap, numericSize}),
+    [size, shape, overlap, numericSize],
   );
 
   // The keyboard hint and roving tab stop only make sense once the group has
@@ -152,8 +175,8 @@ export function AvatarGroup({
         onKeyDown={composeEventHandlers(onKeyDown, handleKeyDown)}
         onFocus={composeEventHandlers(onFocus, handleFocus)}
         {...mergeProps(
-          themeProps('avatar-group', {size}),
-          stylex.props(styles.root, xstyle),
+          themeProps('avatar-group', {size, shape}),
+          stylex.props(styles.root, dynamicStyles.overlap(-overlap), xstyle),
           className,
           style,
         )}>

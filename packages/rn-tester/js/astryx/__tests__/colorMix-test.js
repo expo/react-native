@@ -10,8 +10,13 @@
 
 'use strict';
 
-import {parseColor, resolveColorMixArgs} from '../colorMix';
+import {
+  parseColor,
+  resolveColorMixArgs,
+  substituteOklabColors,
+} from '../colorMix';
 import * as stylex from '../stylex-rn';
+import {processColor} from 'react-native';
 
 /** The resolved mix as {r,g,b,a} in 0..255 / 0..1, for readable assertions. */
 function mix(expression: string) {
@@ -188,5 +193,35 @@ describe('through the style pipeline', () => {
     expect(parseColor(String((style as $FlowFixMe).backgroundColor))).toEqual(
       parseColor(String((direct as $FlowFixMe).backgroundColor)),
     );
+  });
+});
+
+describe('oklch() and oklab()', () => {
+  it('are written as the sRGB colours they are', () => {
+    expect(substituteOklabColors('oklch(0 0 0 / 5%)')).toBe(
+      'rgba(0, 0, 0, 0.05)',
+    );
+    expect(substituteOklabColors('oklab(1 0 0)')).toBe(
+      'rgba(255, 255, 255, 1)',
+    );
+    // css-color-4's sRGB red, written in oklch
+    expect(substituteOklabColors('oklch(62.8% 0.2577 29.23deg)')).toBe(
+      'rgba(255, 0, 0, 1)',
+    );
+  });
+
+  it('make a theme shadow whose colours React Native parses', () => {
+    // React Native's parser rejects the colour as written, which dropped the
+    // whole shadow
+    expect(processColor('oklch(0 0 0 / 5%)')).toBe(undefined);
+    const shadow = substituteOklabColors(
+      '0 2px 4px oklch(0 0 0 / 5%), 0 4px 8px oklch(0 0 0 / 10%), inset 0 0 0 1px transparent',
+    );
+    expect(shadow).toBe(
+      '0 2px 4px rgba(0, 0, 0, 0.05), 0 4px 8px rgba(0, 0, 0, 0.1), inset 0 0 0 1px transparent',
+    );
+    for (const color of shadow.match(/rgba\([^)]*\)/g) ?? []) {
+      expect(typeof processColor(color)).toBe('number');
+    }
   });
 });

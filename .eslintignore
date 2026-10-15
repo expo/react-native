@@ -21,6 +21,9 @@ packages/react-native/Libraries/vendor/**/*
 # which ESLint reports as errors — and "fixing" them would mean editing files
 # whose whole value is being unmodified.
 packages/rn-tester/js/astryx/vendor/**/*
+# Astryx's themes as `astryx theme build` writes them, generated and vendored
+# as they are
+packages/rn-tester/js/astryx/vendor-themes/*/built/**/*
 node_modules/
 packages/*/node_modules
 packages/*/dist

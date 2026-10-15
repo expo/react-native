@@ -86,18 +86,13 @@ export interface UseListFocusOptions {
   hasHomeEnd?: boolean;
 
   /**
-   * @deprecated Direction is auto-detected from the container's computed
-   * `direction` — omit this. The explicit override is redundant (there's no
-   * valid reason to force RTL arrows in an LTR context) and will be removed in
-   * an upcoming major.
-   *
-   * When set, forces whether the list is right-to-left: ArrowLeft/ArrowRight
-   * are swapped so horizontal navigation follows visual direction. When
-   * omitted (preferred), the direction is auto-detected from the container's
-   * computed `direction` (read lazily on keydown, horizontal arrows only).
-   * @default undefined (auto-detect from the container)
+   * Whether PageDown/PageUp page through a list that scrolls: PageDown moves
+   * to the last enabled item fully visible in the container, and pressed
+   * there again one viewport further; PageUp is the mirror. Neither wraps.
+   * In a list that does not scroll they act as End/Home.
+   * @default false
    */
-  isRtl?: boolean;
+  hasPaging?: boolean;
 
   /**
    * Roving-tabindex ownership. When true, the hook manages a single tab stop
@@ -190,6 +185,17 @@ const TEXT_INPUT_TYPES = new Set([
   'password',
   'number',
 ]);
+
+/**
+ * Whether `el` sits under a `hidden` or `inert` ancestor that is itself inside
+ * `listEl` (the list's own state is not consulted). Such a row cannot take
+ * focus — a drilled-in menu hides the rows a view replaced — so it
+ * leaves the roving order and the typeahead.
+ */
+function isHiddenWithin(el: HTMLElement, listEl: HTMLElement): boolean {
+  const hidden = el.parentElement?.closest<HTMLElement>('[hidden],[inert]');
+  return hidden != null && hidden !== listEl && listEl.contains(hidden);
+}
 
 /**
  * The nearest `contenteditable` root for `el`, or null when `el` is not inside
@@ -327,7 +333,7 @@ export function useListFocus<T extends HTMLElement = HTMLElement>(
     onEscape,
     orientation = 'vertical',
     hasHomeEnd = true,
-    isRtl,
+    hasPaging = false,
     hasRovingTabIndex = false,
     hasCaretGuard = false,
   } = options;
@@ -357,7 +363,7 @@ export function useListFocus<T extends HTMLElement = HTMLElement>(
     }
     const matched = Array.from(
       listEl.querySelectorAll<HTMLElement>(itemSelector),
-    );
+    ).filter(el => !isHiddenWithin(el, listEl));
     // When a boundary is set, keep only items that belong to THIS list level —
     // i.e. whose nearest boundary ancestor is our own container. This excludes
     // items inside nested lists (e.g. inline submenu flyouts) that would
@@ -535,6 +541,86 @@ export function useListFocus<T extends HTMLElement = HTMLElement>(
   }, [getItems, findEnabledIndex, focusIndex]);
 
   /**
+   * PageDown / PageUp: move to the last / first enabled item fully
+   * visible in the scrolling container. Pressed there again, scroll one
+   * viewport further and land on the last / first item then visible. Never
+   * wraps; at the end of the list it stays on the last enabled item.
+   */
+  const focusPage = useCallback(
+    (direction: 1 | -1) => {
+      const container = listRef.current;
+      const items = getItems();
+      if (!container || items.length === 0) {
+        return;
+      }
+      const currentIndex = getCurrentIndex();
+      const enabledIndices = items
+        .map((item, index) => (isItemDisabled(item) ? -1 : index))
+        .filter(index => index !== -1);
+      if (enabledIndices.length === 0) {
+        return;
+      }
+      const edgeVisible = (): number => {
+        const bounds = container.getBoundingClientRect();
+        const visible = enabledIndices.filter(index => {
+          const rect = items[index].getBoundingClientRect();
+          return rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1;
+        });
+        if (visible.length === 0) {
+          return -1;
+        }
+        return direction === 1 ? visible[visible.length - 1] : visible[0];
+      };
+      const isAhead = (index: number): boolean =>
+        currentIndex === -1 ||
+        (direction === 1 ? index > currentIndex : index < currentIndex);
+      if (currentIndex === -1 && direction === -1) {
+        focusFirst();
+        return;
+      }
+      let target = edgeVisible();
+      if (target === -1 || !isAhead(target)) {
+        // Already at the visible edge: one viewport further.
+        const before = container.scrollTop;
+        container.scrollTop = before + direction * container.clientHeight;
+        target = edgeVisible();
+        if (target === -1 || !isAhead(target)) {
+          // No usable geometry (or nothing moved): step by the number of rows
+          // a viewport shows, never wrapping.
+          const pageSize = Math.max(
+            1,
+            enabledIndices.filter(index => {
+              const bounds = container.getBoundingClientRect();
+              const rect = items[index].getBoundingClientRect();
+              return (
+                rect.height > 0 &&
+                rect.top >= bounds.top - 1 &&
+                rect.bottom <= bounds.bottom + 1
+              );
+            }).length,
+          );
+          const position = enabledIndices.indexOf(currentIndex);
+          const from =
+            position === -1
+              ? direction === 1
+                ? -1
+                : enabledIndices.length
+              : position;
+          const next = Math.max(
+            0,
+            Math.min(enabledIndices.length - 1, from + direction * pageSize),
+          );
+          target = enabledIndices[next];
+        }
+      }
+      if (target !== -1 && target !== currentIndex) {
+        focusIndex(items, target);
+      }
+    },
+    [getItems, getCurrentIndex, isItemDisabled, focusIndex, focusFirst],
+  );
+
+  /**
    * Keep the roving stop pointing at whatever ended up focused (e.g. a click
    * or programmatic focus) so the next Tab behaves correctly. No-op unless
    * roving tabindex is enabled.
@@ -580,13 +666,13 @@ export function useListFocus<T extends HTMLElement = HTMLElement>(
       // Resolve which keys advance vs retreat, honoring RTL for horizontal.
       // Direction is resolved lazily — getComputedStyle runs only when a
       // horizontal arrow key is actually pressed (SSR-safe, no layout thrash
-      // on unrelated keys) — and an explicit `isRtl` always wins.
+      // on unrelated keys).
       const nextKeys: string[] = [];
       const prevKeys: string[] = [];
       if (horizontal) {
         const rtl =
           e.key === 'ArrowLeft' || e.key === 'ArrowRight'
-            ? (isRtl ?? isRtlElement(listRef.current))
+            ? isRtlElement(listRef.current)
             : false;
         nextKeys.push(rtl ? 'ArrowLeft' : 'ArrowRight');
         prevKeys.push(rtl ? 'ArrowRight' : 'ArrowLeft');
@@ -600,8 +686,10 @@ export function useListFocus<T extends HTMLElement = HTMLElement>(
       const isPrev = prevKeys.includes(e.key);
       const isHome = hasHomeEnd && e.key === 'Home';
       const isEnd = hasHomeEnd && e.key === 'End';
+      const isPageDown = hasPaging && e.key === 'PageDown';
+      const isPageUp = hasPaging && e.key === 'PageUp';
 
-      if (!isNext && !isPrev && !isHome && !isEnd) {
+      if (!isNext && !isPrev && !isHome && !isEnd && !isPageDown && !isPageUp) {
         return;
       }
 
@@ -635,6 +723,10 @@ export function useListFocus<T extends HTMLElement = HTMLElement>(
         focusFirst();
       } else if (isEnd) {
         focusLast();
+      } else if (isPageDown) {
+        focusPage(1);
+      } else if (isPageUp) {
+        focusPage(-1);
       }
 
       e.preventDefault();
@@ -644,13 +736,14 @@ export function useListFocus<T extends HTMLElement = HTMLElement>(
       getItems,
       wrap,
       orientation,
-      isRtl,
       hasHomeEnd,
+      hasPaging,
       hasCaretGuard,
       findEnabledIndex,
       focusIndex,
       focusFirst,
       focusLast,
+      focusPage,
       onEscape,
       ownsEvent,
     ],

@@ -31,6 +31,8 @@ export type InteractionStates = {
   readonly focused?: boolean,
   readonly focusVisible?: boolean,
   readonly disabled?: boolean,
+  // Shown with `showPopover()` (HTML §6.12): `:popover-open`
+  readonly popoverOpen?: boolean,
 };
 
 export type ElementDescriptor = {
@@ -154,12 +156,17 @@ export type MatchResult = {
   // Some candidate selector gates on interaction state, so the runtime must
   // track interaction and re-match when it changes even if nothing matches now
   dependsOnStates: boolean,
+  // The matched rules, by identity: elements with the same key have the same
+  // `declarations` and `outranksStylex`, the same objects, within one matcher
+  key: string,
 };
 
-// :root and :disabled are read off the element itself, not tracked as
+// :root, :disabled and :popover-open are read off the element itself, not tracked as
 // interaction
 function isInteractionPseudo(pseudo: string): boolean {
-  return pseudo !== 'root' && pseudo !== 'disabled';
+  return (
+    pseudo !== 'root' && pseudo !== 'disabled' && pseudo !== 'popover-open'
+  );
 }
 
 // Comma is OR and 'and' is AND. An unknown feature makes its branch false: a
@@ -338,6 +345,11 @@ function compoundMatches(compound: Compound, el: ElementDescriptor): boolean {
           return false;
         }
         break;
+      case 'popover-open':
+        if (el.states.popoverOpen !== true) {
+          return false;
+        }
+        break;
       case 'root':
         if (el.isRoot !== true) {
           return false;
@@ -412,6 +424,8 @@ export function selectorMatches(
 }
 
 type IndexedRule = {
+  // Unique within one matcher
+  id: number,
   rule: StyleRule,
   selector: ComplexSelector,
   // cascade-5 §6.3: unlayered rules beat layered ones, and a later-declared
@@ -481,6 +495,8 @@ function containerQueryApplies(
  */
 export const STYLEX_LAYER = 'astryx-base';
 
+const CASCADES_BOUND = 4096;
+
 export function createMatcher(sheets: Array<Stylesheet>): Matcher {
   // The first declaration of a layer, across sheets, fixes its slot
   const layerOrder: Array<string> = [];
@@ -505,6 +521,14 @@ export function createMatcher(sheets: Array<Stylesheet>): Matcher {
   > = new Map();
   let anyStateDependent = false;
   const statefulAncestorClasses = new Set<string>();
+  let nextRuleId = 0;
+  // The cascade of each set of matched rules, computed once: the cells of a
+  // table, the items of a list, match the same rules, and merging their
+  // declarations again for each was most of what matching an element cost
+  const cascades: Map<
+    string,
+    {declarations: {[string]: string}, outranksStylex: Set<string>},
+  > = new Map();
 
   for (const sheet of sheets) {
     for (const kf of sheet.keyframes) {
@@ -519,7 +543,12 @@ export function createMatcher(sheets: Array<Stylesheet>): Matcher {
           rule.layer == null
             ? unlayeredRank
             : Math.max(0, layerOrder.indexOf(rule.layer));
-        const indexed: IndexedRule = {rule, selector, layerRank};
+        const indexed: IndexedRule = {
+          id: nextRuleId++,
+          rule,
+          selector,
+          layerRank,
+        };
         const subject = selector.parts[selector.parts.length - 1].compound;
         if (subject.pseudoClasses.length > 0) {
           anyStateDependent = true;
@@ -637,21 +666,38 @@ export function createMatcher(sheets: Array<Stylesheet>): Matcher {
       return x.order - y.order;
     });
 
-    const declarations: {[string]: string} = {};
-    const outranksStylex: Set<string> = new Set();
+    let key = '';
     for (const m of matched) {
-      const source = m.indexed.rule.declarations;
-      const strong = stylexRank >= 0 && m.indexed.layerRank > stylexRank;
-      for (const property of Object.keys(source)) {
-        declarations[property] = source[property];
-        if (strong) {
-          outranksStylex.add(property);
-        } else {
-          outranksStylex.delete(property);
+      key += m.indexed.id + ',';
+    }
+    let cascade = cascades.get(key);
+    if (cascade == null) {
+      const declarations: {[string]: string} = {};
+      const outranksStylex: Set<string> = new Set();
+      for (const m of matched) {
+        const source = m.indexed.rule.declarations;
+        const strong = stylexRank >= 0 && m.indexed.layerRank > stylexRank;
+        for (const property of Object.keys(source)) {
+          declarations[property] = source[property];
+          if (strong) {
+            outranksStylex.add(property);
+          } else {
+            outranksStylex.delete(property);
+          }
         }
       }
+      if (cascades.size >= CASCADES_BOUND) {
+        cascades.clear();
+      }
+      cascade = {declarations, outranksStylex};
+      cascades.set(key, cascade);
     }
-    return {declarations, dependsOnStates, outranksStylex};
+    return {
+      declarations: cascade.declarations,
+      dependsOnStates,
+      outranksStylex: cascade.outranksStylex,
+      key,
+    };
   }
 
   return {

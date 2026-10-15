@@ -43,7 +43,9 @@ export interface DerivedVarEntry {
  * entries share the same property.
  */
 export const derivedVarRegistry: Record<string, DerivedVarEntry[]> = {
+  avatar: [{property: 'borderRadius', vars: ['--_avatar-radius']}],
   banner: [{property: 'borderRadius', vars: ['--_banner-radius']}],
+  'bottom-sheet': [{property: 'padding', expand: 'container'}],
   button: [{property: 'borderRadius', vars: ['--_button-radius']}],
   card: [
     {property: 'borderRadius', vars: ['--_card-radius']},
@@ -57,6 +59,10 @@ export const derivedVarRegistry: Record<string, DerivedVarEntry[]> = {
     {property: 'borderRadius', vars: ['--_dialog-radius']},
     {property: 'padding', expand: 'container'},
   ],
+  // Drawer lives in @astryxdesign/lab; its doc source of truth is
+  // packages/lab/src/Drawer/Drawer.doc.mjs, outside this package's consistency
+  // scan. defineTheme.test.ts pins the expansion instead.
+  drawer: [{property: 'padding', expand: 'container'}],
   'context-menu': [
     {property: 'borderRadius', vars: ['--_dropdown-menu-radius']},
     {property: 'padding', vars: ['--_dropdown-menu-padding']},
@@ -66,13 +72,14 @@ export const derivedVarRegistry: Record<string, DerivedVarEntry[]> = {
     {property: 'padding', vars: ['--_dropdown-menu-padding']},
   ],
   field: [{property: 'borderRadius', vars: ['--_field-radius']}],
-  hovercard: [{property: 'borderRadius', vars: ['--_hovercard-radius']}],
+  'hover-card': [{property: 'borderRadius', vars: ['--_hovercard-radius']}],
+  item: [{property: 'paddingInline', vars: ['--_item-inset-inline']}],
   'number-input': [
     {property: 'padding', expand: 'container'},
     {property: 'borderRadius', vars: ['--_field-radius']},
   ],
   popover: [{property: 'borderRadius', vars: ['--_popover-radius']}],
-  'progressbar-mark': [
+  'progress-bar-mark': [
     {property: 'width', vars: ['--_progressbar-mark-width'], replaces: true},
     {property: 'height', vars: ['--_progressbar-mark-height'], replaces: true},
   ],
@@ -81,7 +88,7 @@ export const derivedVarRegistry: Record<string, DerivedVarEntry[]> = {
     {property: 'borderRadius', vars: ['--_segmented-control-radius']},
     {property: 'padding', vars: ['--_segmented-control-padding']},
   ],
-  textarea: [
+  'text-area': [
     {
       property: 'paddingInline',
       vars: ['--_textarea-inline-padding'],
@@ -90,10 +97,6 @@ export const derivedVarRegistry: Record<string, DerivedVarEntry[]> = {
   ],
 };
 
-/**
- * Look up derived var entries for a component + CSS property.
- * Returns matching entries in priority order, or empty array if none.
- */
 export function getDerivedVars(
   component: string,
   property: string,

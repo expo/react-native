@@ -159,11 +159,11 @@ const indeterminateSizeStyles = stylex.create({
  * indeterminate bar.
  *
  * Decorative and non-interactive — it renders `aria-hidden` and owns no input,
- * role, or focus behavior. The focus ring lives on the owner's control wrapper
- * (see CheckboxInput), so a theme that replaces this component keeps a visible
- * focus indicator for free. Themes replace it wholesale through
- * `defineTheme({indicators: {checkbox: MyCheckbox}})`, or restyle it through
- * the `checkbox` theme target like any other component.
+ * role, or focus behavior. The owning control keeps focus semantics and paints its
+ * standard focus ring onto this indicator element (see CheckboxInput), so a
+ * replacement's root radius determines the ring shape. Themes replace it
+ * wholesale through `defineTheme({indicators: {checkbox: MyCheckbox}})`, or
+ * restyle it through the canonical `checkbox-indicator` theme target.
  *
  * @example
  * ```
@@ -195,21 +195,15 @@ export function CheckboxIndicator({
       ref={ref}
       aria-hidden="true"
       {...mergeProps(
-        themeProps(
-          'checkbox-indicator',
-          {
-            size,
-            checked: isChecked
-              ? 'checked'
-              : isIndeterminate
-                ? 'indeterminate'
-                : null,
-            disabled: isDisabled ? 'disabled' : null,
-          },
-          // `checkbox` was the target before indicators existed; themes
-          // styling it keep working until the next major.
-          {legacyNames: ['checkbox']},
-        ),
+        themeProps('checkbox-indicator', {
+          size,
+          checked: isChecked
+            ? 'checked'
+            : isIndeterminate
+              ? 'indeterminate'
+              : null,
+          disabled: isDisabled ? 'disabled' : null,
+        }),
         stylex.props(
           styles.box,
           boxSizeStyles[size],
@@ -227,10 +221,13 @@ export function CheckboxIndicator({
         <>
           <svg
             viewBox="0 0 10 10"
-            {...stylex.props(
-              styles.checkmark,
-              checkmarkSizeStyles[size],
-              isChecked && styles.checkmarkVisible,
+            {...mergeProps(
+              themeProps('checkbox-indicator-check', {size}),
+              stylex.props(
+                styles.checkmark,
+                checkmarkSizeStyles[size],
+                isChecked && styles.checkmarkVisible,
+              ),
             )}>
             <path
               d="M8.5 2.5L4 7.5L1.5 5"
@@ -242,10 +239,13 @@ export function CheckboxIndicator({
             />
           </svg>
           <span
-            {...stylex.props(
-              styles.indeterminateMark,
-              indeterminateSizeStyles[size],
-              isIndeterminate && styles.indeterminateMarkVisible,
+            {...mergeProps(
+              themeProps('checkbox-indicator-dash', {size}),
+              stylex.props(
+                styles.indeterminateMark,
+                indeterminateSizeStyles[size],
+                isIndeterminate && styles.indeterminateMarkVisible,
+              ),
             )}
           />
         </>

@@ -2,6 +2,18 @@
 
 'use client';
 
+/**
+ * @file ToastViewport.tsx
+ * @input Uses React state/effects, ToastContext, content-provider boundary, useAnnounce, viewport tokens,
+ *   shared layer text reset, the active modal outlet, and placement-derived motion variables
+ * @output Exports the ToastViewport provider, stack, live announcement dispatch,
+ *   focus handoff, safe-area-aware edge gutters, modal rehosting, and motion context
+ * @position Core provider/imperative viewport for useToast()
+ *
+ * SYNC: When placement, stacking, hosting, focus, announcement, or safe-area
+ *   behavior changes, update ToastViewport.test.tsx, Toast.doc.mjs, and Toast.stories.tsx.
+ */
+
 import {
   isValidElement,
   useCallback,
@@ -12,53 +24,106 @@ import {
   useState,
 } from 'react';
 import type {ReactNode} from 'react';
+import {createPortal} from 'react-dom';
 import * as stylex from '@stylexjs/stylex';
 import {spacingVars, durationVars, easeVars} from '../theme/tokens.stylex';
 import {mergeProps} from '../utils';
 import {INTERACTIVE_SELECTORS} from '../hooks/useClickableContainer';
 import {useAnnounce} from '../hooks/useAnnounce';
-import {Toast} from './Toast';
+import {layerTextReset} from '../Layer/layerTextReset.stylex';
+import {layerStructureReset} from '../Layer/layerStructureReset.stylex';
+import {LayerContentBoundary} from '../Layer/layerScopedContext';
+import {
+  getActiveModalOutlet,
+  subscribeModalOutlets,
+} from '../Layer/modalOutlet';
+import {ToastSurface} from './Toast';
 import {ToastContext, type ToastContextValue} from './ToastContext';
 import type {ToastEntry, ToastPosition, ToastDismissReason} from './types';
 import {useTranslator} from '../i18n';
+import {layerInsetProperties} from '../Layer/layerInset';
+import type {LayerInset} from '../Layer/LayerContext';
+
+const SAFE_AREA_INLINE_START = `max(${spacingVars['--spacing-4']}, env(safe-area-inset-left, 0px))`;
+const SAFE_AREA_INLINE_END = `max(${spacingVars['--spacing-4']}, env(safe-area-inset-right, 0px))`;
+const SAFE_AREA_BLOCK_START = `max(${spacingVars['--spacing-4']}, env(safe-area-inset-top, 0px))`;
+const SAFE_AREA_BLOCK_END = `max(${spacingVars['--spacing-4']}, env(safe-area-inset-bottom, 0px))`;
+const TOAST_EDGE_DRIFT = spacingVars['--spacing-2'];
+const TOAST_EDGE_DRIFT_NEGATIVE = `calc(-1 * ${TOAST_EDGE_DRIFT})`;
 
 const styles = stylex.create({
+  rootOutlet: {
+    display: 'contents',
+  },
   viewport: {
     position: 'fixed',
     zIndex: 500,
     display: 'flex',
+    boxSizing: 'border-box',
     flexDirection: 'column',
-    padding: spacingVars['--spacing-4'],
+    paddingBlockStart: SAFE_AREA_BLOCK_START,
+    paddingBlockEnd: SAFE_AREA_BLOCK_END,
+    paddingInlineStart: {
+      default: SAFE_AREA_INLINE_START,
+      ':is([dir="rtl"] *)': SAFE_AREA_INLINE_END,
+    },
+    paddingInlineEnd: {
+      default: SAFE_AREA_INLINE_END,
+      ':is([dir="rtl"] *)': SAFE_AREA_INLINE_START,
+    },
     pointerEvents: 'none',
     // Reset popover styles — the popover attribute puts us in the top
     // layer (above dialogs), but we don't want its default styles.
     // UA stylesheet applies background-color: Canvas, margin: auto, etc.
     inset: 'unset',
+    // `width` is part of that reset: the UA gives every popover
+    // `width: fit-content`, and this element is positioned by spanning the
+    // inline axis (`viewportInlineSpan` sets both inset-inline edges to 0) and
+    // then aligning within itself. A shrink-wrapped box cannot span, so both
+    // edges cannot be honoured — the box resolves against the start edge at
+    // its content width, and `align-items: flex-end` then aligns the toast to
+    // the right of a box that is itself sitting on the left. Measured in
+    // Chromium at 1200px wide: 438px box at x=0, end-positioned toast landing
+    // at x=19.
+    width: 'auto',
     margin: 0,
-    border: 'none',
-    background: 'none',
+    borderWidth: 0,
+    borderStyle: 'none',
     backgroundColor: 'transparent',
     overflow: 'visible',
   },
-  bottomEnd: {bottom: 0, insetInlineEnd: 0, alignItems: 'flex-end'},
-  bottomStart: {bottom: 0, insetInlineStart: 0, alignItems: 'flex-start'},
+  // The viewport sits at the inset the app declared on LayerProvider for a
+  // bar floating over that edge (spec:AST-059 FR6); unset, each reads 0px.
+  // A toast-only `inset` prop writes the same edges inline and wins.
+  viewportInlineSpan: {
+    insetInlineStart: 'var(--astryx-layer-inset-inline-start, 0px)',
+    insetInlineEnd: 'var(--astryx-layer-inset-inline-end, 0px)',
+  },
+  bottomEnd: {
+    bottom: 'var(--astryx-layer-inset-block-end, 0px)',
+    alignItems: 'flex-end',
+  },
+  bottomStart: {
+    bottom: 'var(--astryx-layer-inset-block-end, 0px)',
+    alignItems: 'flex-start',
+  },
   topEnd: {
-    top: 0,
-    insetInlineEnd: 0,
+    top: 'var(--astryx-layer-inset-block-start, 0px)',
     alignItems: 'flex-end',
     flexDirection: 'column-reverse',
   },
   topStart: {
-    top: 0,
-    insetInlineStart: 0,
+    top: 'var(--astryx-layer-inset-block-start, 0px)',
     alignItems: 'flex-start',
     flexDirection: 'column-reverse',
   },
   toastWrapper: {
     pointerEvents: 'auto',
     display: 'grid',
+    width: '100%',
+    maxWidth: 400,
+    minWidth: 0,
     gridTemplateRows: '1fr',
-    paddingBlockEnd: spacingVars['--spacing-3'],
     transitionProperty: 'grid-template-rows, padding',
     transitionDuration: {
       default: durationVars['--duration-fast'],
@@ -70,12 +135,39 @@ const styles = stylex.create({
       paddingBlockEnd: 0,
     },
   },
+  toastWrapperFromBottom: {
+    '--_toast-slide-y': TOAST_EDGE_DRIFT,
+  },
+  toastWrapperFromTop: {
+    '--_toast-slide-y': TOAST_EDGE_DRIFT_NEGATIVE,
+  },
+  // The inter-toast gap is padding on each wrapper so it collapses with the
+  // grid track. The wrapper nearest the viewport edge drops that padding; the
+  // child flips because top stacks use column-reverse.
+  toastWrapperGap: {
+    paddingBlockEnd: {default: spacingVars['--spacing-2'], ':last-child': 0},
+  },
+  toastWrapperGapReversed: {
+    paddingBlockEnd: {default: spacingVars['--spacing-2'], ':first-child': 0},
+  },
   toastWrapperExiting: {
     gridTemplateRows: '0fr',
     paddingBlockEnd: 0,
   },
   toastWrapperInner: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    minHeight: 0,
+    // Clip while the grid row opens and closes so the toast reads as folding
+    // into the stack. Once the entry transition settles, the companion style
+    // below releases the clip so the card's shadow can paint. `hidden` works
+    // in every engine and restores the exact exit paint/hit boundary that the
+    // viewport shipped with before the shadow fix.
     overflow: 'hidden',
+  },
+  toastWrapperInnerSettled: {
+    overflow: 'visible',
   },
 });
 
@@ -104,16 +196,127 @@ function getNodeText(node: ReactNode): string {
 
 export interface ToastViewportProps {
   position?: ToastPosition;
+  /** Maximum number of visible toasts. @default 5 */
   maxVisible?: number;
   inset?: {top?: number; bottom?: number; start?: number; end?: number};
   /**
-   * Promote viewport to CSS top layer via popover="manual".
-   * Set to false when inside a dialog or other top-layer element.
+   * The app-declared viewport inset from LayerProvider (spec:AST-059 FR6).
+   * The viewport sits at it on each edge unless `inset` overrides that edge.
+   */
+  layerInset?: LayerInset;
+  /**
+   * Promote viewport to CSS top layer via popover="manual". While a Dialog
+   * is open, the viewport moves into the latest one so toasts stay visible
+   * and clickable above it. Set to false to render in place, e.g. a viewport you mount
+   * inside your own top-layer element.
    * @default true
    */
   isTopLayer?: boolean;
   children?: React.ReactNode;
 }
+
+/**
+ * Drop an id from a Set of ids, keeping the Set's identity when the id is not
+ * in it so React can skip the re-render. The viewport tracks two of these
+ * (exiting rows, settled rows) and each has to be pruned from more than one
+ * place.
+ */
+const withoutId =
+  (id: string) =>
+  (prev: Set<string>): Set<string> => {
+    if (!prev.has(id)) {
+      return prev;
+    }
+    const next = new Set(prev);
+    next.delete(id);
+    return next;
+  };
+
+interface ToastRowProps {
+  entry: ToastEntry;
+  isExiting: boolean;
+  /** Top-anchored stacks grow downward and flip the row's drift and gap. */
+  isReversed: boolean;
+  onExited: (id: string) => void;
+  onDismiss: (id: string, reason: ToastDismissReason) => void;
+}
+
+/**
+ * One row of the stack: the grid wrapper that opens and collapses, and the
+ * clip that releases once it is open so the card's elevation can paint.
+ *
+ * Settled state lives here, on the mounted row, rather than in a Set of ids on
+ * the viewport. A row leaves the DOM by more paths than dismissal — `maxVisible`
+ * evicts the oldest when a newer toast arrives, and a uniqueID overwrite swaps
+ * a new entry into a replaced toast's place — and on those paths nothing on the
+ * dismissal path runs to prune it. Holding the flag on the row makes every one
+ * of them the same event: the row unmounts, the flag goes with it, and a toast
+ * that resurfaces when the stack drains mounts clipped and runs its own entry
+ * transition. Re-clipping on dismissal is the same rule read forward, since the
+ * clip is released only while the row is settled *and* not exiting.
+ */
+function ToastRow({
+  entry,
+  isExiting,
+  isReversed,
+  onExited,
+  onDismiss,
+}: ToastRowProps) {
+  const o = entry.options;
+  const type = o.type ?? 'info';
+  const isAutoHide = o.isAutoHide ?? (type === 'error' ? false : true);
+  const dur = o.autoHideDuration ?? 5000;
+  const [isSettled, setIsSettled] = useState(false);
+
+  return (
+    <div
+      data-toast-id={entry.id}
+      {...stylex.props(
+        styles.toastWrapper,
+        isReversed ? styles.toastWrapperFromTop : styles.toastWrapperFromBottom,
+        isReversed ? styles.toastWrapperGapReversed : styles.toastWrapperGap,
+        isExiting && styles.toastWrapperExiting,
+      )}
+      onTransitionEnd={(e: React.TransitionEvent) => {
+        // `grid-template-rows` is not private to this wrapper — any descendant
+        // may animate its own grid, and transitionend bubbles. Only the row's
+        // own transition says the row has finished opening or collapsing.
+        if (e.target !== e.currentTarget) {
+          return;
+        }
+        if (e.propertyName !== 'grid-template-rows') {
+          return;
+        }
+        if (isExiting) {
+          onExited(entry.id);
+          return;
+        }
+        // The row is fully open now. Release only the paint clip; the wrapper
+        // still owns pointer events and restores the clip synchronously when
+        // dismissal starts.
+        setIsSettled(true);
+      }}>
+      <div
+        {...stylex.props(
+          styles.toastWrapperInner,
+          isSettled && !isExiting && styles.toastWrapperInnerSettled,
+        )}>
+        <ToastSurface
+          type={type}
+          body={o.body}
+          endContent={o.endContent}
+          isAutoHide={isAutoHide}
+          autoHideDuration={dur}
+          isExiting={isExiting}
+          gestureDirection={isReversed ? -1 : 1}
+          onDismiss={reason => onDismiss(entry.id, reason)}
+          renderContent={o.renderContent}
+        />
+      </div>
+    </div>
+  );
+}
+ToastRow.displayName = 'ToastRow';
 
 /**
  * Container that renders and manages toast notifications. Place at the root
@@ -131,6 +334,7 @@ export function ToastViewport({
   position = 'bottomEnd',
   maxVisible = 5,
   inset,
+  layerInset,
   isTopLayer = true,
   children,
 }: ToastViewportProps) {
@@ -140,7 +344,6 @@ export function ToastViewport({
   const toastsRef = useRef(toasts);
   toastsRef.current = toasts;
 
-  // Show the popover on mount so it enters the top layer.
   const viewportRef = useRef<HTMLDivElement>(null);
   // Toast ids whose exit has begun — guards onHide from double-firing (see
   // removeToast). Mirrors exitingIds state, readable synchronously.
@@ -220,6 +423,10 @@ export function ToastViewport({
         // else to the polite region (role="status") — mirrors Toast.tsx.
         announce(text, entry.options.type === 'error' ? 'assertive' : 'polite');
       }
+      // An overwrite swaps a new entry, with a new id, into the replaced
+      // toast's place, so the old row leaves the DOM without ever being
+      // dismissed. Its settled id is dropped by the prune below, which covers
+      // every silent exit with one rule rather than one branch per path.
       setToasts(prev => {
         if (uniqueID) {
           const existing = prev.find(t => t.options.uniqueID === uniqueID);
@@ -283,14 +490,7 @@ export function ToastViewport({
 
   const handleExited = useCallback((id: string) => {
     exitingIdsRef.current.delete(id);
-    setExitingIds(prev => {
-      if (!prev.has(id)) {
-        return prev;
-      }
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
+    setExitingIds(withoutId(id));
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
@@ -341,7 +541,10 @@ export function ToastViewport({
   );
 
   const visibleToasts = toasts.slice(-maxVisible);
-  const insetStyle: React.CSSProperties = {};
+
+  const insetStyle: React.CSSProperties = {
+    ...layerInsetProperties(layerInset),
+  };
   if (inset?.top) {
     insetStyle.top = inset.top;
   }
@@ -355,20 +558,69 @@ export function ToastViewport({
     insetStyle.insetInlineEnd = inset.end;
   }
 
-  // Show the popover on mount so it enters the top layer
-  useEffect(() => {
+  // A top-layer viewport renders into a host element this component owns, so
+  // the host can move into the latest open native modal and back without
+  // React remounting the rows: their timers and gesture state live there.
+  // Outside a modal the host sits at the viewport's own place in the tree.
+  const rootOutletRef = useRef<HTMLDivElement>(null);
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
     if (!isTopLayer) {
       return;
     }
-    const el = viewportRef.current;
-    if (el && typeof el.showPopover === 'function') {
-      try {
-        el.showPopover();
-      } catch {
-        /* already showing */
-      }
-    }
+    const element = document.createElement('div');
+    element.style.display = 'contents';
+    // eslint-disable-next-line @eslint-react/set-state-in-effect -- the host exists only on the client, so server and hydration markup carry no portal
+    setHost(element);
+    return () => {
+      element.remove();
+      setHost(null);
+    };
   }, [isTopLayer]);
+
+  useLayoutEffect(() => {
+    if (!isTopLayer || host == null) {
+      return;
+    }
+    const place = () => {
+      const parent = getActiveModalOutlet() ?? rootOutletRef.current;
+      if (parent == null) {
+        return;
+      }
+      if (host.parentNode !== parent) {
+        // Moving a node blurs whatever inside it had focus.
+        const active = document.activeElement;
+        const hadFocus = active instanceof HTMLElement && host.contains(active);
+        parent.appendChild(host);
+        if (hadFocus) {
+          active.focus({preventScroll: true});
+        }
+      }
+      // Leaving the document hid the popover. Showing it again puts it above
+      // the modal that just opened, or above everything once the last modal
+      // closed.
+      const el = viewportRef.current;
+      if (el == null || typeof el.showPopover !== 'function') {
+        return;
+      }
+      let isShowing = false;
+      try {
+        isShowing = el.matches(':popover-open');
+      } catch {
+        /* :popover-open unsupported */
+      }
+      if (!isShowing) {
+        try {
+          el.showPopover();
+        } catch {
+          /* already showing */
+        }
+      }
+    };
+    place();
+    return subscribeModalOutlets(place);
+  }, [isTopLayer, host]);
 
   // F6 jumps focus into the toast viewport — the standard "go to
   // notifications" affordance. Focus the first control in the newest toast,
@@ -417,59 +669,56 @@ export function ToastViewport({
         : position === 'bottomStart'
           ? styles.bottomStart
           : styles.bottomEnd;
+  const isReversed = position === 'topEnd' || position === 'topStart';
+
+  const viewport = (
+    <div
+      ref={viewportRef}
+      role={hasToasts ? 'region' : undefined}
+      aria-label={hasToasts ? t('@astryx.toast.viewport') : undefined}
+      tabIndex={hasToasts ? -1 : undefined}
+      // popover="manual" promotes to the top layer; the host effect above
+      // keeps it above the latest open modal. Omitted when the caller
+      // renders the viewport in place.
+      popover={isTopLayer ? 'manual' : undefined}
+      {...mergeProps(
+        stylex.props(
+          layerTextReset.reset,
+          layerStructureReset.reset,
+          styles.viewport,
+          styles.viewportInlineSpan,
+          posStyle,
+        ),
+        {
+          style: Object.keys(insetStyle).length > 0 ? insetStyle : undefined,
+        },
+      )}>
+      <LayerContentBoundary>
+        {visibleToasts.map(entry => (
+          <ToastRow
+            key={entry.id}
+            entry={entry}
+            isExiting={exitingIds.has(entry.id)}
+            isReversed={isReversed}
+            onExited={handleExited}
+            onDismiss={removeToast}
+          />
+        ))}
+      </LayerContentBoundary>
+    </div>
+  );
 
   return (
     <ToastContext value={contextValue}>
       {children}
-      <div
-        ref={viewportRef}
-        role="region"
-        aria-label={t('@astryx.toast.viewport')}
-        tabIndex={-1}
-        // popover="manual" promotes to the top layer (above dialogs).
-        // Omitted inside dialogs where the viewport is already in a top layer.
-        popover={isTopLayer ? 'manual' : undefined}
-        {...mergeProps(stylex.props(styles.viewport, posStyle), {
-          style: Object.keys(insetStyle).length > 0 ? insetStyle : undefined,
-        })}>
-        {visibleToasts.map(entry => {
-          const o = entry.options;
-          const type = o.type ?? 'info';
-          const isAutoHide = o.isAutoHide ?? (type === 'error' ? false : true);
-          const dur = o.autoHideDuration ?? 5000;
-          const isExiting = exitingIds.has(entry.id);
-          return (
-            <div
-              key={entry.id}
-              data-toast-id={entry.id}
-              {...stylex.props(
-                styles.toastWrapper,
-                isExiting && styles.toastWrapperExiting,
-              )}
-              onTransitionEnd={
-                isExiting
-                  ? (e: React.TransitionEvent) => {
-                      if (e.propertyName === 'grid-template-rows') {
-                        handleExited(entry.id);
-                      }
-                    }
-                  : undefined
-              }>
-              <div {...stylex.props(styles.toastWrapperInner)}>
-                <Toast
-                  type={type}
-                  body={o.body}
-                  endContent={o.endContent}
-                  isAutoHide={isAutoHide}
-                  autoHideDuration={dur}
-                  isExiting={isExiting}
-                  onDismiss={reason => removeToast(entry.id, reason)}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {isTopLayer ? (
+        <>
+          <div ref={rootOutletRef} {...stylex.props(styles.rootOutlet)} />
+          {host != null ? createPortal(viewport, host) : null}
+        </>
+      ) : (
+        viewport
+      )}
     </ToastContext>
   );
 }

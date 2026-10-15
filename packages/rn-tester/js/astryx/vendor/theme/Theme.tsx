@@ -8,9 +8,8 @@
  * Applies theme tokens and sets color-scheme for light-dark() to work.
  * Themes are created with `defineTheme()` and applied via CSS:
  * - Token overrides set as CSS custom properties on [data-astryx-theme]
- * - Component overrides scoped via @scope'd CSS selectors on the stable Astryx
- *   selector surface (`.xds-*` classes today; components also emit `data-*`
- *   prop reflections for the data-attribute selector migration)
+ * - Component overrides scoped via @scope'd CSS selectors on stable Astryx
+ *   target classes combined with reflected `data-*` prop/state attributes
  *
  * Root detection: The first Theme in the tree (no parent Theme)
  * automatically syncs attributes to `document.documentElement`:
@@ -97,6 +96,7 @@ ThemeNestingContext.displayName = 'ThemeNestingContext';
 
 /** Track which themes have already been injected */
 const injectedThemes = new Set<string>();
+const THEME_LAYER_ORDER = '@layer reset, astryx-base, astryx-theme;';
 
 /**
  * Hook to inject theme CSS into the document.
@@ -112,6 +112,8 @@ function useThemeStyleInjection(theme: DefinedTheme): void {
       return;
     }
 
+    // Second and later `Theme`s using this theme do no work at all —
+    // generation included. Its CSS is document-wide and identical for each.
     const themeKey = `astryx-theme-${theme.name}`;
     if (injectedThemes.has(themeKey)) {
       return;
@@ -130,9 +132,8 @@ function useThemeStyleInjection(theme: DefinedTheme): void {
     );
 
     const {prose, component} = generateThemeCSS(theme);
-    if (!prose && !component) {
-      return;
-    }
+    injectedThemes.add(themeKey);
+    const cleanups: (() => void)[] = [() => injectedThemes.delete(themeKey)];
 
     // Prose defaults go into @layer reset — lowest priority, scoped to
     // the theme region. Any class-based style (StyleX, .xds-*) wins.
@@ -140,7 +141,7 @@ function useThemeStyleInjection(theme: DefinedTheme): void {
       const proseStyle = document.createElement('style');
       proseStyle.setAttribute(dataAttr('theme-prose'), theme.name);
       proseStyle.setAttribute(dataAttr('id'), id);
-      proseStyle.textContent = `@layer reset {\n${prose}\n}`;
+      proseStyle.textContent = `${THEME_LAYER_ORDER}\n@layer reset {\n${prose}\n}`;
       document.head.appendChild(proseStyle);
     }
 
@@ -150,24 +151,28 @@ function useThemeStyleInjection(theme: DefinedTheme): void {
       const compStyle = document.createElement('style');
       compStyle.setAttribute(dataAttr('theme'), theme.name);
       compStyle.setAttribute(dataAttr('id'), id);
-      compStyle.textContent = `@layer astryx-theme {\n${component}\n}`;
+      compStyle.textContent = `${THEME_LAYER_ORDER}\n@layer astryx-theme {\n${component}\n}`;
       document.head.appendChild(compStyle);
     }
 
-    injectedThemes.add(themeKey);
+    if (prose || component) {
+      cleanups.push(() => {
+        // Matched by the astryx id marker, which is always written above.
+        const proseEl = document.querySelector(
+          `style[${dataAttr('theme-prose')}="${theme.name}"][${dataAttr('id')}="${id}"]`,
+        );
+        const compEl = document.querySelector(
+          `style[${dataAttr('theme')}="${theme.name}"][${dataAttr('id')}="${id}"]`,
+        );
+        proseEl?.remove();
+        compEl?.remove();
+      });
+    }
 
     return () => {
-      // Remove both prose and component style tags (matched by the new
-      // astryx id marker, which is always written above).
-      const proseEl = document.querySelector(
-        `style[${dataAttr('theme-prose')}="${theme.name}"][${dataAttr('id')}="${id}"]`,
-      );
-      const compEl = document.querySelector(
-        `style[${dataAttr('theme')}="${theme.name}"][${dataAttr('id')}="${id}"]`,
-      );
-      proseEl?.remove();
-      compEl?.remove();
-      injectedThemes.delete(themeKey);
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
     };
   }, [theme, id]);
 }
