@@ -9,10 +9,12 @@
  */
 
 import type {ImageCandidate} from './imgSources';
+import type {RootRelativeSource} from './rootRelativeSources';
 import type {ImageStyleProp} from 'react-native/Libraries/StyleSheet/StyleSheet';
 
 import {imgIsExpoImage} from './imgBacking';
 import {parseSrcSet, resolveSizes, selectImageSource} from './imgSources';
+import {resolveRootRelativeSource} from './rootRelativeSources';
 import * as React from 'react';
 import {Dimensions, PixelRatio, StyleSheet} from 'react-native';
 
@@ -285,7 +287,11 @@ function Img(props: ImgProps): React.Node {
     // Exactly one source, chosen here — see `selectImageSource` for why the
     // platform is not handed the list.
     const chosen = selectImageSource(candidates, layoutWidth, PixelRatio.get());
-    return chosen == null ? [] : [{uri: chosen.uri}];
+    if (chosen == null) {
+      return [] as Array<RootRelativeSource | {uri: string}>;
+    }
+    // A root-relative URL is whatever the app says its root holds; see the file
+    return [resolveRootRelativeSource(chosen.uri) ?? {uri: chosen.uri}];
   }, [source, src, srcSet, layoutWidth]);
 
   /*
