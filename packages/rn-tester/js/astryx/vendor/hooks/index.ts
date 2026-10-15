@@ -14,14 +14,6 @@
 export {hasActiveFocusTrapEscape, useFocusTrap} from './useFocusTrap';
 export type {UseFocusTrapOptions, UseFocusTrapReturn} from './useFocusTrap';
 
-/**
- * @deprecated Import from `@astryxdesign/core/utils` instead — this is a pure
- * predicate, not a hook, and the `hooks` barrel is a `'use client'` boundary.
- * Re-exported here for one release so consumers can move; will be removed in
- * an upcoming major.
- */
-export {isImeKeyEvent} from '../utils/ime';
-
 export {useAnnounce} from './useAnnounce';
 export type {AnnounceFn, AnnouncePoliteness} from './useAnnounce';
 
@@ -46,6 +38,21 @@ export type {Hotkey} from './useHotkeys';
 
 export {useTypeahead} from './useTypeahead';
 
+export {
+  useMenuPress,
+  MENU_PRESS_MARKER,
+  isMenuPressActivation,
+} from './useMenuPress';
+export type {UseMenuPressOptions, UseMenuPressReturn} from './useMenuPress';
+export {menuPressStep, MENU_PRESS_SETTLE_MS} from './menuPressGesture';
+export type {
+  MenuPressEffect,
+  MenuPressEvent,
+  MenuPressGesture,
+  MenuPressPointerType,
+  MenuPressStep,
+} from './menuPressGesture';
+
 export {useKeyboardHint} from './useKeyboardHint';
 export type {
   UseKeyboardHintOptions,
@@ -64,6 +71,19 @@ export type {UseOverflowOptions, UseOverflowReturn} from './useOverflow';
 export {useScrollOverflow} from './useScrollOverflow';
 export type {ScrollOverflowState} from './useScrollOverflow';
 
+export {useScrollableArea} from './useScrollableArea';
+export type {
+  ScrollAxis,
+  ScrollAxisState,
+  ScrollOverscroll,
+  ScrollStickyContainment,
+  ScrollKeyboardAccess,
+  ScrollableAreaState,
+  ScrollableElementProps,
+  UseScrollableAreaOptions,
+  UseScrollableAreaResult,
+} from './useScrollableArea';
+
 export {useScrollLock} from './useScrollLock';
 
 export {useEntryAnimation} from './useEntryAnimation';
@@ -80,6 +100,8 @@ export type {ImageSampleRegion, UseImageModeOptions} from './useImageMode';
 export {
   useClickableContainer,
   INTERACTIVE_SELECTORS,
+  hasInteractiveAncestor,
+  hasTextSelection,
 } from './useClickableContainer';
 export type {
   UseClickableContainerOptions,
@@ -103,6 +125,8 @@ export type {
 
 export {useLongPress} from './useLongPress';
 export type {UseLongPressOptions, UseLongPressHandlers} from './useLongPress';
+
+export {usePressFeedback} from './usePressFeedback';
 
 export {useDevWarning} from './useDevWarning';
 export {useIndicatorFocusRing} from './useIndicatorFocusRing';

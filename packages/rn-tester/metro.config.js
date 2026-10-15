@@ -213,7 +213,7 @@ const config = {
       // its portal target is an `HTMLElement` resolved from `parentElement`.
       // The import still has to resolve for the module to load. Aliasing keeps
       // the vendored source unmodified, exactly as the StyleX alias below does.
-      if (moduleName === 'react-dom') {
+      if (moduleName === 'react-dom' || moduleName === 'react-dom/client') {
         return {
           type: 'sourceFile',
           filePath: path.resolve(__dirname, 'js/astryx/react-dom-shim.js'),
@@ -224,6 +224,48 @@ const config = {
           type: 'sourceFile',
           filePath: path.resolve(__dirname, 'js/astryx/stylex-rn.js'),
         };
+      }
+      // A vendored source or an icon package that builds an element with
+      // `React.createElement` gets a React whose createElement routes
+      // intrinsics through the Astryx JSX runtime, as Babel does for JSX; see
+      // js/astryx/react-with-runtime.js. Heroicons and Lucide build their
+      // `<svg>` and its shapes that way: Astryx's Icon hands an icon its
+      // colour as a `var()`, which only the runtime resolves, and only the
+      // runtime draws `<path>`.
+      if (
+        moduleName === 'react' &&
+        (context.originModulePath.startsWith(
+          path.resolve(__dirname, 'js/astryx/vendor') + path.sep,
+        ) ||
+          [
+            path.sep + path.join('@heroicons', 'react') + path.sep,
+            path.sep + 'lucide-react' + path.sep,
+          ].some(icons => context.originModulePath.includes(icons)))
+      ) {
+        return {
+          type: 'sourceFile',
+          filePath: path.resolve(__dirname, 'js/astryx/react-with-runtime.js'),
+        };
+      }
+      // Astryx's document-level press controller (vendor/utils/pressFeedback)
+      // listens on `window` and `document`; its stand-in keeps the exports and
+      // installs nothing. Matched on the resolved path, so the vendored
+      // importers (hooks/usePressFeedback) stay unmodified.
+      if (/\/pressFeedback$/.test(moduleName)) {
+        const resolved = context.resolveRequest(context, moduleName, platform);
+        if (
+          resolved.type === 'sourceFile' &&
+          resolved.filePath.endsWith('/js/astryx/vendor/utils/pressFeedback.ts')
+        ) {
+          return {
+            type: 'sourceFile',
+            filePath: path.resolve(
+              __dirname,
+              'js/astryx/pressFeedback-shim.js',
+            ),
+          };
+        }
+        return resolved;
       }
       // The astryx directory compiles JSX against this runtime (see .babelrc)
       // so intrinsic elements can inherit CSS custom properties.

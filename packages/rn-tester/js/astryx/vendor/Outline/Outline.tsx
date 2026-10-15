@@ -43,6 +43,8 @@ import {useScrollSpy} from './useScrollSpy';
 import type {OutlineItem} from './types';
 import {themeProps} from '../utils/themeProps';
 import {focusOutlineProps} from '../utils/focusOutline.stylex';
+import {interactionOverlayStyles} from '../utils/interactionOverlay.stylex';
+import {usePressFeedback} from '../hooks/usePressFeedback';
 import {useTranslator} from '../i18n';
 
 import {useMergedRefs} from '../hooks/useMergedRefs';
@@ -197,7 +199,6 @@ const styles = stylex.create({
     },
     display: 'flex',
     fontWeight: fontWeightVars['--font-weight-normal'],
-    outline: 'none',
     position: 'relative',
     textAlign: 'start',
     textDecoration: 'none',
@@ -209,12 +210,8 @@ const styles = stylex.create({
     lineHeight: typeScaleVars['--text-body-leading'],
     ':hover:where(:not(:disabled,[aria-disabled="true"]))': {
       '@media (hover: hover)': {
-        backgroundColor: colorVars['--color-overlay-hover'],
         color: colorVars['--color-text-primary'],
       },
-    },
-    ':active': {
-      backgroundColor: colorVars['--color-overlay-pressed'],
     },
   },
   activeLink: {
@@ -327,6 +324,7 @@ export function Outline({
   'data-testid': testId,
   ...props
 }: OutlineProps) {
+  const pressable = usePressFeedback();
   const t = useTranslator();
   const label = labelFromProps ?? t('@astryx.outline.label');
   const rootRef = useRef<HTMLElement | null>(null);
@@ -469,6 +467,7 @@ export function Outline({
                 aria-current={isActive ? 'location' : undefined}
                 onClick={handleClick(item.id)}
                 onKeyDown={handleKeyDown(item.id)}
+                {...pressable}
                 {...mergeProps(
                   themeProps('outline-item', {
                     active: isActive ? 'active' : null,
@@ -476,6 +475,7 @@ export function Outline({
                   }),
                   focusOutlineProps.focusVisible(
                     styles.link,
+                    interactionOverlayStyles.backgroundColor,
                     densityStyles[density],
                     getIndentStyle(item.level),
                     isActive && styles.activeLink,

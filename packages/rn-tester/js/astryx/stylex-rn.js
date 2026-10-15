@@ -29,11 +29,20 @@
  * `DROPPED_PREFIXES` below. Anything unsupported is dropped with a dev warning.
  */
 
-import {resolveColorMixArgs} from './colorMix';
-import {containerFromDeclarations} from './css/match';
+import {resolveColorMixArgs, substituteOklabColors} from './colorMix';
+import {
+  CONTAINER_BLOCK_SIZE,
+  CONTAINER_INLINE_SIZE,
+  VIEWPORT_BLOCK_SIZE,
+  VIEWPORT_INLINE_SIZE,
+  containerFromDeclarations,
+  mediaConditionApplies,
+  scopeSize,
+} from './css/match';
 import {
   AccessibilityInfo,
   Appearance,
+  Dimensions,
   Platform,
   processColor,
 } from 'react-native';
@@ -87,7 +96,14 @@ export function registerNamedKeyframes(name: string, frames: RawStyle): void {
 
 export function keyframes(frames: RawStyle): string {
   const name = `__rn_keyframes_${keyframesCounter++}`;
-  keyframesRegistry.set(name, frames);
+  const declared: {[string]: unknown} = {};
+  for (const offset of Object.keys(frames)) {
+    const frame = frames[offset];
+    declared[offset] = isPlainBlock(frame)
+      ? declarationsOf(frame as $FlowFixMe)
+      : frame;
+  }
+  keyframesRegistry.set(name, declared);
   return name;
 }
 
@@ -144,6 +160,39 @@ export function firstThatWorks(...values: Array<unknown>): unknown {
   // No feature detection on RN — take the first candidate.
   return values[0];
 }
+
+/**
+ * `stylex.defineConsts()` declares values the StyleX compiler inlines at build
+ * time. Styles here are read as written, so the constants are returned as they
+ * are and read by name.
+ */
+export function defineConsts<T extends {readonly [string]: unknown}>(
+  consts: T,
+): T {
+  return consts;
+}
+
+/**
+ * `stylex.types.*` tags a variable's default with its CSS type
+ * (`stylex.types.number(0)`) so the compiler can emit an `@property` rule.
+ * The renderer has no registered properties; the value itself is the default.
+ */
+const typedValue = (value: unknown): unknown => value;
+export const types: {readonly [string]: (unknown) => unknown} = {
+  angle: typedValue,
+  color: typedValue,
+  image: typedValue,
+  integer: typedValue,
+  length: typedValue,
+  lengthPercentage: typedValue,
+  number: typedValue,
+  percentage: typedValue,
+  resolution: typedValue,
+  time: typedValue,
+  transformFunction: typedValue,
+  transformList: typedValue,
+  url: typedValue,
+};
 
 // Finds `fn(` at or after `from` and returns the span of the balanced call.
 function findCall(
@@ -205,7 +254,10 @@ function lookupVar(
     : final
       ? tokenTable.get(name)
       : undefined;
-  if (raw == null) {
+  // A custom property declared `initial` holds the guaranteed-invalid value
+  // (css-variables-1 §2.1), so a `var()` of it takes its fallback, as for a
+  // name nothing declared; Astryx's Layout resets its padding properties so
+  if (raw == null || String(raw).trim() === 'initial') {
     return null;
   }
   return resolveString(String(raw), scope, depth + 1, final);
@@ -312,7 +364,38 @@ function substituteColorMix(value: string): string {
 // resolved px number as a string, or null when it hits anything it cannot
 // evaluate (%, em, unresolved keywords) — the calc() is then dropped upstream.
 
-type CalcParser = {src: string, pos: number};
+// The lengths the relative units stand for, in px: the viewport's (vw, vh,
+// vi, vb and their s/d/l variants) and the nearest container's (cqi, cqw,
+// cqb, cqh); see `unitLengths`
+type UnitLengths = {vw: number, vh: number, cqi: number, cqb: number};
+
+type CalcParser = {src: string, pos: number, lengths: UnitLengths};
+
+// A value with a viewport or container unit in it, which is only known at the
+// element: `100dvh`, `calc(50vw + 10px)`, `10cqb`
+const RELATIVE_UNIT = /\d(?:[sdl]?v[whib]|cq[iwbh])\b/;
+// A bare length in one of those units
+const RELATIVE_LENGTH = /^([+-]?(?:\d+\.?\d*|\.\d+))([sdl]?v[whib]|cq[iwbh])$/;
+
+/**
+ * What the viewport and container units resolve against for an element: the
+ * sizes its scope carries (a host surface declares the viewport's, a laid-out
+ * container its own; see css/match.js), the window where it carries none —
+ * so a page in a split view's column sizes to the column, and a container
+ * query unit to the container, once each has laid out.
+ */
+function unitLengths(scope: ?VarScope): UnitLengths {
+  const window = Dimensions.get('window');
+  const viewport = scopeSize(scope, VIEWPORT_INLINE_SIZE, VIEWPORT_BLOCK_SIZE);
+  const container = scopeSize(
+    scope,
+    CONTAINER_INLINE_SIZE,
+    CONTAINER_BLOCK_SIZE,
+  );
+  const vw = viewport?.width ?? window.width;
+  const vh = viewport?.height ?? window.height;
+  return {vw, vh, cqi: container?.width ?? vw, cqb: container?.height ?? vh};
+}
 
 function calcSkipWs(p: CalcParser) {
   while (p.pos < p.src.length && p.src[p.pos] === ' ') {
@@ -332,7 +415,67 @@ function calcParsePrimary(p: CalcParser): ?number {
     p.pos++;
     return v;
   }
-  const m = /^[+-]?(\d+\.?\d*|\.\d+)(px|rem|em)?/.exec(p.src.slice(p.pos));
+  // A nested math function: `calc()` is its argument; `min()`, `max()` and
+  // `clamp()` take their arguments in pixels, which is what every argument
+  // evaluates to here
+  const fn = /^(calc|min|max|clamp)\(/.exec(p.src.slice(p.pos));
+  if (fn != null) {
+    p.pos += fn[0].length;
+    const args: Array<number> = [];
+    while (true) {
+      const v = calcParseSum(p);
+      if (v == null) {
+        return null;
+      }
+      args.push(v);
+      calcSkipWs(p);
+      if (p.src[p.pos] === ',') {
+        p.pos++;
+        continue;
+      }
+      if (p.src[p.pos] !== ')') {
+        return null;
+      }
+      p.pos++;
+      break;
+    }
+    switch (fn[1]) {
+      case 'min':
+        return Math.min(...args);
+      case 'max':
+        return Math.max(...args);
+      case 'clamp':
+        return args.length === 3
+          ? Math.min(Math.max(args[1], args[0]), args[2])
+          : null;
+      default:
+        return args.length === 1 ? args[0] : null;
+    }
+  }
+  // `env(name, fallback)`: the value the app registered for the name, else
+  // the fallback, else nothing
+  const env = /^env\(\s*([a-z-]+)\s*(?:,\s*)?/.exec(p.src.slice(p.pos));
+  if (env != null) {
+    p.pos += env[0].length;
+    let fallback: ?number = null;
+    if (p.src[p.pos] !== ')') {
+      fallback = calcParseSum(p);
+      if (fallback == null) {
+        return null;
+      }
+      calcSkipWs(p);
+    }
+    if (p.src[p.pos] !== ')') {
+      return null;
+    }
+    p.pos++;
+    const known = environmentResolver?.(env[1]);
+    return known ?? fallback;
+  }
+  const m =
+    /^[+-]?(\d+\.?\d*|\.\d+)(px|rem|em|[sdl]?v(?:w|h|i|b)|cq(?:i|w|b|h))?/.exec(
+      p.src.slice(p.pos),
+    );
   if (m == null) {
     return null;
   }
@@ -340,8 +483,44 @@ function calcParsePrimary(p: CalcParser): ?number {
   const n = parseFloat(m[0]);
   // rem/em normalize to the same fixed 16px root the rest of the runtime
   // uses, so mixed-unit calcs (Tailwind's `calc(0.5rem - 2px)` radii)
-  // evaluate instead of dropping.
-  return m[2] === 'rem' || m[2] === 'em' ? n * 16 : n;
+  // evaluate instead of dropping. The viewport and container units are what
+  // the scope says they are (`unitLengths`); horizontal writing being the
+  // only one here, the inline units are widths and the block units heights.
+  const unit = m[2] ?? '';
+  if (unit === 'rem' || unit === 'em') {
+    return n * 16;
+  }
+  if (/^[sdl]?v[wi]$/.test(unit)) {
+    return (n * p.lengths.vw) / 100;
+  }
+  if (/^cq[iw]$/.test(unit)) {
+    return (n * p.lengths.cqi) / 100;
+  }
+  if (/^[sdl]?v[hb]$/.test(unit)) {
+    return (n * p.lengths.vh) / 100;
+  }
+  if (/^cq[bh]$/.test(unit)) {
+    return (n * p.lengths.cqb) / 100;
+  }
+  return n;
+}
+
+/**
+ * What `env()` answers inside a calc: the app registers a reader of the
+ * platform's environment variables (the safe-area insets above all), in
+ * pixels; a name it does not know falls back to the `env()`'s own fallback.
+ */
+let environmentResolver: ?(name: string) => ?number = null;
+
+// Bumped with each resolver, which is what the `props()` memo can know of the
+// environment's answers changing
+let environmentGeneration = 0;
+
+export function setEnvironmentResolver(
+  resolve: ?(name: string) => ?number,
+): void {
+  environmentResolver = resolve;
+  environmentGeneration++;
 }
 
 function calcParseProduct(p: CalcParser): ?number {
@@ -380,29 +559,184 @@ function calcParseSum(p: CalcParser): ?number {
   return left;
 }
 
-function substituteCalc(value: string): ?string {
+// A value with a math function in it, which `substituteCalc` evaluates
+const MATH_FUNCTION = /\b(?:calc|min|max|clamp)\(/;
+
+function substituteCalc(value: string, scope: ?VarScope): ?string {
+  const lengths = unitLengths(scope);
   let result = value;
   while (true) {
-    const call = findCall(result, 'calc', 0);
+    // The outermost math function, whichever it is: `max(2rem, calc(…))` is
+    // as much a value as `calc(…)`
+    const call =
+      findCall(result, 'calc', 0) ??
+      findCall(result, 'max', 0) ??
+      findCall(result, 'min', 0) ??
+      findCall(result, 'clamp', 0);
     if (call == null) {
       break;
     }
     const inner = result.slice(call.open + 1, call.close);
-    const parser: CalcParser = {src: inner, pos: 0};
-    const evaluated = calcParseSum(parser);
+    // The whole call, name included, so a comma-separated `max()`/`min()`/
+    // `clamp()` is read by the primary parser's function branch
+    const whole = result.slice(call.start, call.close + 1);
+    const parser: CalcParser = {src: whole, pos: 0, lengths};
+    const evaluated = calcParsePrimary(parser);
     calcSkipWs(parser);
-    if (evaluated == null || parser.pos !== inner.length) {
+    let replacement: ?string =
+      evaluated == null || parser.pos !== whole.length
+        ? null
+        : `${evaluated}px`;
+    if (replacement == null) {
+      replacement = calcPercentageWithCancelledLengths(inner, lengths);
+    }
+    if (replacement == null) {
       return null; // unevaluable calc — drop the declaration
     }
     result =
-      result.slice(0, call.start) +
-      `${evaluated}px` +
-      result.slice(call.close + 1);
+      result.slice(0, call.start) + replacement + result.slice(call.close + 1);
   }
   return result;
 }
 
+/**
+ * A sum of one percentage and lengths that add up to nothing is that
+ * percentage: `calc(100% + var(--pad-start, 0px) + var(--pad-end, 0px))`,
+ * Astryx's way of bleeding a block through its container's padding, is
+ * `100%` wherever the padding is unset. A percentage and a non-zero length
+ * cannot be added before layout and the declaration stays unevaluable.
+ */
+function calcPercentageWithCancelledLengths(
+  inner: string,
+  lengths: UnitLengths,
+): ?string {
+  const terms: Array<{sign: number, text: string}> = [];
+  let depth = 0;
+  let sign = 1;
+  let start = 0;
+  for (let i = 0; i <= inner.length; i++) {
+    const ch = inner[i];
+    if (ch === '(') {
+      depth++;
+    } else if (ch === ')') {
+      depth--;
+    } else if (
+      i === inner.length ||
+      (depth === 0 &&
+        (ch === '+' || ch === '-') &&
+        i > start &&
+        /\s/.test(inner[i - 1]))
+    ) {
+      terms.push({sign, text: inner.slice(start, i).trim()});
+      sign = ch === '-' ? -1 : 1;
+      start = i + 1;
+    }
+  }
+  let percentage: ?string = null;
+  for (const term of terms) {
+    const pct = term.text.match(/^(-?\d*\.?\d+)%$/);
+    if (pct != null) {
+      if (percentage != null) {
+        return null;
+      }
+      percentage = `${term.sign * Number(pct[1])}%`;
+      continue;
+    }
+    const parser: CalcParser = {src: term.text, pos: 0, lengths};
+    const value = calcParseSum(parser);
+    calcSkipWs(parser);
+    if (value !== 0 || parser.pos !== term.text.length) {
+      return null;
+    }
+  }
+  return percentage;
+}
+
 const MAX_VAR_DEPTH = 32;
+
+// The properties whose percentages a fixed element takes against the
+// viewport's width, and those against its height
+const INLINE_PERCENT_PROPERTIES: Set<string> = new Set([
+  'width',
+  'minWidth',
+  'maxWidth',
+  'left',
+  'right',
+  'inlineSize',
+  'minInlineSize',
+  'maxInlineSize',
+  'insetInlineStart',
+  'insetInlineEnd',
+]);
+const BLOCK_PERCENT_PROPERTIES: Set<string> = new Set([
+  'height',
+  'minHeight',
+  'maxHeight',
+  'top',
+  'bottom',
+  'blockSize',
+  'minBlockSize',
+  'maxBlockSize',
+  'insetBlockStart',
+  'insetBlockEnd',
+]);
+
+// `value` with each percentage written as the length it is of the viewport,
+// for a fixed element's size or inset; `min(100%, …)` then evaluates
+function viewportPercentages(
+  prop: string,
+  value: string,
+  scope: ?VarScope,
+): string {
+  const lengths = unitLengths(scope);
+  const base = INLINE_PERCENT_PROPERTIES.has(prop)
+    ? lengths.vw
+    : BLOCK_PERCENT_PROPERTIES.has(prop)
+      ? lengths.vh
+      : null;
+  if (base == null) {
+    return value;
+  }
+  return value.replace(
+    /([+-]?(?:\d+\.?\d*|\.\d+))%/g,
+    (_, n: string) => `${(parseFloat(n) * base) / 100}px`,
+  );
+}
+
+// A scope no element declared into, for a block resolved with none inherited
+const EMPTY_SCOPE: VarScope = new Map();
+
+/**
+ * `resolveString` for a scope that outlives the call, remembered per scope:
+ * the elements under one ancestor share its scope object and resolve the same
+ * declarations against it. The colour scheme is part of the answer
+ * (`light-dark()`), and so of the key.
+ */
+const substitutionsByScope: WeakMap<
+  VarScope,
+  Map<string, string>,
+> = new WeakMap();
+
+function resolveStringInScope(
+  value: string,
+  scope: VarScope,
+  final: boolean,
+): string {
+  let substitutions = substitutionsByScope.get(scope);
+  if (substitutions == null) {
+    substitutions = new Map();
+    substitutionsByScope.set(scope, substitutions);
+  } else if (substitutions.size >= MEMO_BOUND) {
+    substitutions.clear();
+  }
+  const key = (final ? '1' : '0') + (currentSchemeIsDark() ? '1' : '0') + value;
+  let result = substitutions.get(key);
+  if (result == null) {
+    result = resolveString(value, scope, 0, final);
+    substitutions.set(key, result);
+  }
+  return result;
+}
 
 function resolveString(
   value: string,
@@ -417,6 +751,8 @@ function resolveString(
   let result = substituteVars(value, scope, depth, final);
   result = substituteLightDark(result, currentSchemeIsDark());
   // After both, so a mix's arguments are concrete colours by the time it runs.
+  // Before the mixes, whose arguments may be either
+  result = substituteOklabColors(result);
   result = substituteColorMix(result);
   result = substituteModernHsl(result);
   return result;
@@ -467,6 +803,13 @@ function warnOnce(key: string, message: string) {
   if (__DEV__ && !warned.has(key)) {
     warned.add(key);
     console.warn(`[stylex-rn] ${message}`);
+  }
+}
+
+function noteOnce(key: string, message: string) {
+  if (__DEV__ && !warned.has(key)) {
+    warned.add(key);
+    console.info(`[stylex-rn] ${message}`);
   }
 }
 
@@ -522,6 +865,15 @@ const PASSED_THROUGH_LIST = new Set([
   'listStylePosition',
 ]);
 
+// CSS anchor positioning, which the top layer reads to place a popover
+// (overlay/TopLayerElement.js); it reaches no native prop
+const PASSED_THROUGH_ANCHOR = new Set([
+  'positionAnchor',
+  'positionArea',
+  'positionTryFallbacks',
+  'positionTryOrder',
+]);
+
 // Properties that have no RN analog (yet); dropped silently by prefix.
 const DROPPED_PREFIXES = [
   'transition',
@@ -548,8 +900,40 @@ const DROPPED_PREFIXES = [
 ];
 
 function isDroppedProperty(prop: string): boolean {
-  return DROPPED_PREFIXES.some(prefix => prop.startsWith(prefix));
+  let dropped = droppedProperties.get(prop);
+  if (dropped == null) {
+    dropped = DROPPED_PREFIXES.some(prefix => prop.startsWith(prefix));
+    droppedProperties.set(prop, dropped);
+  }
+  return dropped;
 }
+const droppedProperties: Map<string, boolean> = new Map();
+
+/**
+ * A memo for a pure function of a property and a value string, which every
+ * element of a page calls with the same few hundred pairs on every render: the
+ * string parsing behind a declaration was the largest part of rendering one.
+ * Cleared when it grows past a bound, so a value that changes every frame
+ * (an inline width written by an animation) cannot grow it forever.
+ */
+function memoByPropertyAndValue<T>(
+  compute: (prop: string, value: string) => T,
+): (prop: string, value: string) => T {
+  const memo: Map<string, T> = new Map();
+  return (prop, value) => {
+    const key = prop + '\u0000' + value;
+    if (memo.has(key)) {
+      return memo.get(key) as $FlowFixMe;
+    }
+    if (memo.size >= MEMO_BOUND) {
+      memo.clear();
+    }
+    const result = compute(prop, value);
+    memo.set(key, result);
+    return result;
+  };
+}
+const MEMO_BOUND = 4096;
 
 // The CSS initial root font size, which `rem` is relative to.
 const ROOT_FONT_SIZE = 16;
@@ -746,7 +1130,15 @@ const BORDER_STYLES = new Set([
   'outset',
 ]);
 
-function expandShorthand(
+// Memoized: the expansion is read, never written, by its one caller
+const expandShorthand: (
+  prop: string,
+  value: string,
+) => {readonly [string]: string} | null = memoByPropertyAndValue(
+  expandShorthandUncached,
+);
+
+function expandShorthandUncached(
   prop: string,
   value: string,
 ): {[string]: string} | null {
@@ -880,6 +1272,16 @@ function expandShorthand(
 
 // Keyword/value fixups per property.
 function convertValue(prop: string, value: string): unknown {
+  // A transform converts to an array the style keeps, which is not shared
+  // between elements, and its conversion depends on `keepTransformStrings`
+  return prop === 'transform'
+    ? convertValueUncached(prop, value)
+    : convertValueMemoized(prop, value);
+}
+const convertValueMemoized: (prop: string, value: string) => unknown =
+  memoByPropertyAndValue(convertValueUncached);
+
+function convertValueUncached(prop: string, value: string): unknown {
   // The `transition-*` longhands reach the native parser as the CSS strings
   // they are. A bare-numeric delay ('0') must not become a number here: the
   // native side reads these props as strings, comma lists and units included.
@@ -960,9 +1362,6 @@ export type StyleXProps = {
   // props()); consumed and stripped by the JSX runtime.
   __stylexStyle?: {[string]: unknown},
   __stylexVars?: {[string]: unknown},
-  // The element is a query container (`containerType`), with the names
-  // `containerName` gives it, for the container queries of its descendants
-  __stylexContainer?: {names: Array<string>},
   // The resolved `@starting-style` block: style overrides for the element's
   // FIRST commit only. The element drops them after mount and the renderer's
   // native transitions animate to the real values.
@@ -977,6 +1376,11 @@ export type StyleXProps = {
   // `when.*` blocks, condition key to the style it applies, left for the JSX
   // runtime to settle from the element's position in the tree
   __stylexWhen?: {[string]: unknown},
+  // The resolved `::backdrop` block, which a modal dialog draws behind itself
+  __stylexBackdrop?: {[string]: unknown},
+  // The element is a query container (`containerType`), with the names
+  // `containerName` gives it, for the container queries of its descendants
+  __stylexContainer?: {names: Array<string>},
 };
 
 export type InteractionState = {
@@ -1029,6 +1433,20 @@ if (AccessibilityInfo != null) {
 // `@media (hover: hover)` / `(pointer: coarse)` are the capability guards
 // Astryx wraps every :hover in; resolve them against the platform rather than
 // dropping the branch (touch → no hover, coarse pointer).
+/**
+ * The condition of an `@media` or `@container` key. A container query is
+ * answered as a media query over the window, the container's name dropped;
+ * see DOM-CSS-DEVIATION(container-query-is-a-media-query) in css/parse.js.
+ */
+function conditionOf(key: string): string {
+  if (key.startsWith('@media')) {
+    return key.slice('@media'.length);
+  }
+  const condition = key.slice('@container'.length);
+  const paren = condition.indexOf('(');
+  return paren === -1 ? condition : condition.slice(paren);
+}
+
 function mediaQueryApplies(query: string): boolean {
   const q = query.toLowerCase();
   if (q.includes('hover: hover')) {
@@ -1048,8 +1466,15 @@ function mediaQueryApplies(query: string): boolean {
     // resolution is synchronous
     return q.includes('reduce') === reduceMotionEnabled;
   }
-  // Width/feature queries we cannot evaluate: keep the default branch.
-  return false;
+  // Everything else — width and height ranges above all — is the stylesheet
+  // engine's matcher's, against the window
+  return mediaConditionApplies(query, {
+    schemeIsDark: Appearance.getColorScheme() === 'dark',
+    reduceMotion: reduceMotionEnabled,
+    windowWidth: Dimensions.get('window').width,
+    windowHeight: Dimensions.get('window').height,
+    touch: Platform.OS === 'ios' || Platform.OS === 'android',
+  });
 }
 
 /**
@@ -1058,6 +1483,12 @@ function mediaQueryApplies(query: string): boolean {
  * Branch values may nest (`{'@media (hover: hover)': {':hover': …}}`), which
  * is exactly how Astryx guards its hover styles.
  */
+function pickIfConditional(value: unknown, state: InteractionState): unknown {
+  return value != null && typeof value === 'object' && !Array.isArray(value)
+    ? pickConditionalValue(value as $FlowFixMe, state)
+    : value;
+}
+
 function pickConditionalValue(
   value: {readonly [string]: unknown},
   state: InteractionState,
@@ -1068,8 +1499,8 @@ function pickConditionalValue(
     if (key === 'default') {
       continue;
     }
-    if (key.startsWith('@media')) {
-      if (!mediaQueryApplies(key.slice('@media'.length))) {
+    if (key.startsWith('@media') || key.startsWith('@container')) {
+      if (!mediaQueryApplies(conditionOf(key))) {
         continue;
       }
       const inner = value[key];
@@ -1105,10 +1536,10 @@ function pickConditionalValue(
     // Guarded pseudo (e.g. '@media (hover: hover)': {':hover': …}) — walk the
     // applicable media branches for this pseudo too.
     for (const key of Object.keys(value)) {
-      if (!key.startsWith('@media')) {
+      if (!key.startsWith('@media') && !key.startsWith('@container')) {
         continue;
       }
-      if (!mediaQueryApplies(key.slice('@media'.length))) {
+      if (!mediaQueryApplies(conditionOf(key))) {
         continue;
       }
       const inner = value[key];
@@ -1128,20 +1559,93 @@ function pickConditionalValue(
   return picked;
 }
 
+/**
+ * The logical border properties React Native has no style property for, each
+ * on the physical sides it names in a horizontal writing mode:
+ * `border-block-end-width` is the bottom border's width, an inline side the
+ * start or end one. React Native draws one border style for all four sides,
+ * so a logical side's style is the box's.
+ */
+const LOGICAL_BORDER_SIDES: Map<string, ReadonlyArray<string>> = new Map([
+  ['borderBlockStartWidth', ['borderTopWidth']],
+  ['borderBlockEndWidth', ['borderBottomWidth']],
+  ['borderBlockWidth', ['borderTopWidth', 'borderBottomWidth']],
+  ['borderInlineStartWidth', ['borderStartWidth']],
+  ['borderInlineEndWidth', ['borderEndWidth']],
+  ['borderInlineWidth', ['borderStartWidth', 'borderEndWidth']],
+  ['borderInlineStartColor', ['borderStartColor']],
+  ['borderInlineEndColor', ['borderEndColor']],
+  ['borderInlineColor', ['borderStartColor', 'borderEndColor']],
+  ['borderBlockStartStyle', ['borderStyle']],
+  ['borderBlockEndStyle', ['borderStyle']],
+  ['borderBlockStyle', ['borderStyle']],
+  ['borderInlineStartStyle', ['borderStyle']],
+  ['borderInlineEndStyle', ['borderStyle']],
+  ['borderInlineStyle', ['borderStyle']],
+]);
+
+// In declaration order, so whichever of a physical side and the logical
+// property that names it comes later wins, as the cascade has it for two
+// declarations of equal standing
+function withPhysicalBorders(declared: {[string]: unknown}): {
+  [string]: unknown,
+} {
+  let hasLogical = false;
+  for (const prop of Object.keys(declared)) {
+    if (LOGICAL_BORDER_SIDES.has(prop)) {
+      hasLogical = true;
+      break;
+    }
+  }
+  if (!hasLogical) {
+    return declared;
+  }
+  const physical: {[string]: unknown} = {};
+  for (const prop of Object.keys(declared)) {
+    const sides = LOGICAL_BORDER_SIDES.get(prop);
+    if (sides == null) {
+      physical[prop] = declared[prop];
+      continue;
+    }
+    for (const side of sides) {
+      physical[side] = declared[prop];
+    }
+  }
+  return physical;
+}
+
 export function resolveDeclarations(
-  merged: {[string]: unknown},
+  declared: {[string]: unknown},
   state: InteractionState,
   inheritedScope: ?VarScope,
   final: boolean,
 ): {[string]: unknown} {
+  const merged = withPhysicalBorders(declared);
   // Custom properties in scope, innermost first: this element's own
-  // declarations shadow the inherited ones, which shadow global tokens.
-  const scope: VarScope = new Map(inheritedScope ?? []);
+  // declarations shadow the inherited ones, which shadow global tokens. The
+  // inherited scope is copied only for a block that declares its own, so the
+  // common block reads the ancestor's map as it is, with the substitutions
+  // already made against it
+  let scope: VarScope = inheritedScope ?? EMPTY_SCOPE;
+  let ownScope = false;
   for (const key of Object.keys(merged)) {
     if (key.startsWith('--')) {
-      scope.set(key, merged[key]);
+      if (!ownScope) {
+        scope = new Map(inheritedScope ?? []);
+        ownScope = true;
+      }
+      // A custom property declared with conditions (`{default: '0px',
+      // ':has(:focus-visible)': ...}`) holds one value at a time, as any
+      // other property does; the object itself would read as
+      // "[object Object]" inside a var()
+      scope.set(key, pickIfConditional(merged[key], state));
     }
   }
+
+  // A fixed element's containing block is the viewport (CSS 2.1 §10.1), and
+  // it is laid out here inside a box of its own (the top layer's handle), so
+  // its percentages are taken against the viewport before they reach layout
+  const fixedPosition = pickIfConditional(merged.position, state) === 'fixed';
 
   const out: {[string]: unknown} = {};
   // Held back until the whole block is resolved: a unitless line-height and an
@@ -1188,19 +1692,35 @@ export function resolveDeclarations(
       isDroppedProperty(prop) &&
       !PASSED_THROUGH_TRANSITIONS.has(prop) &&
       !PASSED_THROUGH_GRID.has(prop) &&
-      !PASSED_THROUGH_LIST.has(prop)
+      !PASSED_THROUGH_LIST.has(prop) &&
+      !PASSED_THROUGH_ANCHOR.has(prop)
     ) {
-      // `transition-behavior` and the rest of the drop list. The warning stays
-      // quiet for transition-* so it does not fire on the one member of the
-      // family that genuinely has no analog.
+      // The drop list is the properties this platform has no analog for,
+      // every one of them written down in dom-css-limitations.md; a note on
+      // the console, once per property, is for whoever wonders where a
+      // declaration went, not a warning for the app to show. It stays quiet
+      // for transition-* so it does not fire on the one member of the family
+      // that genuinely has no analog.
       if (!prop.startsWith('transition')) {
-        warnOnce(`drop:${prop}`, `Dropping unsupported property "${prop}"`);
+        noteOnce(`drop:${prop}`, `Dropping unsupported property "${prop}"`);
       }
       continue;
     }
     let value = merged[prop];
     if (value != null && typeof value === 'object' && !Array.isArray(value)) {
       value = pickConditionalValue(value, state);
+    }
+    if (prop === 'visibility') {
+      // DOM-CSS-LIMITATION(visibility-is-opacity): the platform has no
+      // visibility; `hidden` draws nothing and takes no touches, which is the
+      // visible half of it. The element still holds its box, as on the web,
+      // and Tab's label sizer relies on exactly that; it is not hidden from
+      // assistive technology.
+      if (value === 'hidden' || value === 'collapse') {
+        out.opacity = 0;
+        out.pointerEvents = 'none';
+      }
+      continue;
     }
     if (value === null) {
       // An explicit-`inherit` reset (resolveCssForElement): the null must
@@ -1216,7 +1736,12 @@ export function resolveDeclarations(
       out[prop] = value;
       continue;
     }
-    let resolved = resolveString(String(value), scope, 0, final);
+    let resolved = ownScope
+      ? resolveString(String(value), scope, 0, final)
+      : resolveStringInScope(String(value), scope, final);
+    if (fixedPosition && resolved.includes('%')) {
+      resolved = viewportPercentages(prop, resolved, inheritedScope);
+    }
     // Shorthands expand BEFORE the var() deferral: a shorthand whose value
     // is still an unresolved var() must become deferred LONGHANDS, or it
     // would come back from the element's inheritance pass as a shorthand
@@ -1238,8 +1763,14 @@ export function resolveDeclarations(
       out[prop] = resolved;
       continue;
     }
-    if (resolved.includes('calc(')) {
-      const afterCalc = substituteCalc(resolved);
+    if (!final && RELATIVE_UNIT.test(resolved)) {
+      // A viewport or container unit is the element's to size, against the
+      // boxes its scope will name (`unitLengths`)
+      out[prop] = resolved;
+      continue;
+    }
+    if (MATH_FUNCTION.test(resolved)) {
+      const afterCalc = substituteCalc(resolved, inheritedScope);
       if (afterCalc == null) {
         warnOnce(
           `calc:${prop}`,
@@ -1274,6 +1805,19 @@ export function resolveDeclarations(
       // §8.5.3); React Native's `borderStyle` has no way to say "no border"
       out.borderWidth = 0;
       continue;
+    }
+    const relative = RELATIVE_LENGTH.exec(resolved);
+    if (relative != null) {
+      const lengths = unitLengths(inheritedScope);
+      const unit = relative[2];
+      const basis = /^[sdl]?v[wi]$/.test(unit)
+        ? lengths.vw
+        : /^cq[iw]$/.test(unit)
+          ? lengths.cqi
+          : /^[sdl]?v[hb]$/.test(unit)
+            ? lengths.vh
+            : lengths.cqb;
+      resolved = `${(parseFloat(relative[1]) * basis) / 100}px`;
     }
     const em = EM_LENGTH.exec(resolved);
     if (em != null && prop !== 'fontSize') {
@@ -1314,8 +1858,7 @@ export function resolveDeclarations(
     if (typeof fontSize === 'number') {
       out.lineHeight = unitlessLineHeight * fontSize;
     } else if (!final) {
-      // The font size is still a var() for the element to finish, and the
-      // ratio is finished with it there, by this same pass run final
+      // As for the em lengths above: the ratio waits for the element's pass
       out.lineHeight = String(unitlessLineHeight);
     } else {
       // The font size is inherited and there is no `lineHeightEm` to carry the
@@ -1345,8 +1888,9 @@ function flattenInto(target: {[string]: unknown}, item: unknown) {
     return;
   }
   if (typeof item === 'object') {
-    for (const key of Object.keys(item)) {
-      const value = item[key];
+    for (const written of Object.keys(item)) {
+      const value = item[written];
+      const key = propertyOf(written);
       if (value === null) {
         // CSS `null` means "unset this property".
         delete target[key];
@@ -1378,12 +1922,91 @@ function isPlainBlock(value: unknown): boolean {
   return value != null && typeof value === 'object' && !Array.isArray(value);
 }
 
+// A variable `defineVars()` made, written as a key (`[vars.alpha]: 1`),
+// declares that variable, as the StyleX compiler reads it: the key is the
+// variable's `var()` reference, and the property is the variable
+const VARIABLE_KEY = /^var\((--[^\s,()]+)\)$/;
+
+function propertyOf(key: string): string {
+  const variable = VARIABLE_KEY.exec(key);
+  return variable != null ? variable[1] : key;
+}
+
+// A block of declarations with each key as the property it declares
+function declarationsOf(block: RawStyle): {[string]: unknown} {
+  const declared: {[string]: unknown} = {};
+  for (const key of Object.keys(block)) {
+    declared[propertyOf(key)] = block[key];
+  }
+  return declared;
+}
+
 /**
  * Web StyleX returns `{className, style}`; here the resolved declarations all
  * land in `style` as a plain RN style object.
  */
 export function props(...items: Array<unknown>): StyleXProps {
-  return propsWithState(RESTING, ...items);
+  return memoizedProps(items);
+}
+
+/**
+ * `props()` for an argument list it has answered before, while the
+ * environment its `@media` keys read is unchanged.
+ *
+ * Components call `props()` with the same `stylex.create` objects on every
+ * render. Answering with the same object is cheaper than merging and resolving
+ * them again, and it is also what lets the element that receives the style see
+ * that nothing changed. The answers are kept in a trie over the arguments:
+ * objects under weak keys, so a style made for one render is forgotten with
+ * it, and the rest (`false` from `cond && style`, a string) under strong ones.
+ */
+type PropsTrieNode = {
+  objects: WeakMap<Object, PropsTrieNode>,
+  primitives: Map<unknown, PropsTrieNode>,
+  answer: ?StyleXProps,
+};
+
+let propsTrie: PropsTrieNode = newPropsTrieNode();
+let propsEnvironment: string = '';
+
+function newPropsTrieNode(): PropsTrieNode {
+  return {objects: new WeakMap(), primitives: new Map(), answer: null};
+}
+
+function memoizedProps(items: Array<unknown>): StyleXProps {
+  const environment = mediaEnvironmentKey();
+  if (environment !== propsEnvironment) {
+    propsEnvironment = environment;
+    propsTrie = newPropsTrieNode();
+  }
+  let node = propsTrie;
+  for (const item of items) {
+    const isObject =
+      item != null && (typeof item === 'object' || typeof item === 'function');
+    let next = isObject
+      ? node.objects.get(item as $FlowFixMe)
+      : node.primitives.get(item);
+    if (next == null) {
+      next = newPropsTrieNode();
+      if (isObject) {
+        node.objects.set(item as $FlowFixMe, next);
+      } else {
+        node.primitives.set(item, next);
+      }
+    }
+    node = next;
+  }
+  if (node.answer == null) {
+    node.answer = propsWithState(RESTING, ...items);
+  }
+  return node.answer;
+}
+
+// What `@media` keys and `env()` can read, as a key that changes when any of
+// it does. An app whose `env()` answers change registers a new resolver.
+function mediaEnvironmentKey(): string {
+  const window = Dimensions.get('window');
+  return `${window.width}x${window.height} ${String(Appearance.getColorScheme())} ${String(reduceMotionEnabled)} ${environmentGeneration}`;
 }
 
 /**
@@ -1446,7 +2069,7 @@ export function propsWithState(
       if (declaredVars == null) {
         declaredVars = {} as {[string]: unknown};
       }
-      declaredVars[key] = merged[key];
+      declaredVars[key] = pickIfConditional(merged[key], state);
     }
   }
 
@@ -1461,9 +2084,9 @@ export function propsWithState(
   // A query container is a fact about the element for its descendants'
   // container queries, not a style of its own; the JSX runtime publishes it
   const container = containerFromDeclarations(
-    merged.containerType,
-    merged.containerName,
-    merged.container,
+    pickIfConditional(merged.containerType, state),
+    pickIfConditional(merged.containerName, state),
+    pickIfConditional(merged.container, state),
   );
   delete merged.containerType;
   delete merged.containerName;
@@ -1490,6 +2113,18 @@ export function propsWithState(
   }
   if (container != null) {
     result.__stylexContainer = container;
+  }
+  // The `::backdrop` a dialog paints behind itself in the top layer
+  // (HTML §15.3.5), resolved like the element's own declarations; the JSX
+  // runtime draws it under a modal dialog
+  const backdrop = merged['::backdrop'];
+  if (backdrop != null && typeof backdrop === 'object') {
+    result.__stylexBackdrop = resolveDeclarations(
+      {...(backdrop as $FlowFixMe)},
+      state,
+      null,
+      false,
+    );
   }
 
   /*
@@ -1621,6 +2256,7 @@ export function resolveInherited(
 function isDeferredValue(prop: string, value: string): boolean {
   return (
     value.includes('var(') ||
+    RELATIVE_UNIT.test(value) ||
     (prop === 'lineHeight' && UNITLESS_NUMBER.test(value)) ||
     (prop !== 'fontSize' && EM_LENGTH.test(value))
   );

@@ -45,6 +45,14 @@ module.exports = {
     '^lucide-react$': '<rootDir>/packages/rn-tester/js/shadcn/lib/lucide.js',
     '^@radix-ui/react-(.*)$':
       '<rootDir>/packages/rn-tester/js/astryx/radix/pkg/react-$1.js',
+    // The vendored Astryx sources import StyleX and react-dom by their
+    // published names; Metro resolves both to the fork's runtime (see
+    // packages/rn-tester/metro.config.js), and so does Jest
+    '^@stylexjs/stylex$': '<rootDir>/packages/rn-tester/js/astryx/stylex-rn.js',
+    '^(\\.\\./)+utils/pressFeedback$':
+      '<rootDir>/packages/rn-tester/js/astryx/pressFeedback-shim.js',
+    '^react-dom(/client)?$':
+      '<rootDir>/packages/rn-tester/js/astryx/react-dom-shim.js',
     '^astryx-jsx/jsx-runtime$':
       '<rootDir>/packages/rn-tester/js/astryx/jsx-runtime.js',
     '^astryx-jsx/jsx-dev-runtime$':
@@ -68,7 +76,11 @@ module.exports = {
     '<rootDir>/packages/react-native/sdks/hermes/',
     ...PODS_LOCATIONS,
   ] /*:: as ReadonlyArray<string> */,
-  transformIgnorePatterns: ['node_modules/(?!@react-native/)'],
+  // intl-messageformat 11 and its @formatjs dependencies ship ES modules only;
+  // the vendored Astryx i18n imports them, so Jest has to transform them
+  transformIgnorePatterns: [
+    'node_modules/(?!@react-native/|intl-messageformat|@formatjs/)',
+  ],
   haste: {
     defaultPlatform: 'ios',
     platforms: ['ios', 'android'],

@@ -10,6 +10,7 @@
  * SYNC: When modified, update these files to stay in sync:
  * - /packages/core/src/AvatarGroup/AvatarGroup.doc.mjs
  * - /packages/core/src/AvatarGroup/index.ts
+ * - /apps/storybook/stories/AvatarGroupOverflow.stories.tsx
  * - /packages/cli/assets/templates/blocks/components/AvatarGroup/ (showcase blocks)
  */
 
@@ -20,15 +21,17 @@ import {
   typographyVars,
   typeScaleVars,
   fontWeightVars,
-  radiusVars,
   spacingVars,
 } from '../theme/tokens.stylex';
+import {shapeStyles} from '../Avatar/Avatar';
 import {mergeProps} from '../utils';
 import {resolveSize} from '../Avatar';
 import {useAvatarGroup} from './AvatarGroupContext';
 import type {BaseProps} from '../BaseProps';
 import {themeProps} from '../utils/themeProps';
 import {focusOutlineProps} from '../utils/focusOutline.stylex';
+import {interactionOverlayStyles} from '../utils/interactionOverlay.stylex';
+import {usePressFeedback} from '../hooks/usePressFeedback';
 import {useTranslator} from '../i18n';
 
 const BORDER_WIDTH = 2;
@@ -65,7 +68,10 @@ const styles = stylex.create({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radiusVars['--radius-full'],
+    // Reads the shape variant's `--_avatar-radius` (set via `shapeStyles`,
+    // shared with Avatar) so the overflow indicator matches the group's
+    // shape instead of always staying a circle.
+    borderRadius: 'var(--_avatar-radius)',
     // Use opaque background to prevent avatar bleed-through
     backgroundColor: colorVars['--color-background-surface'],
     color: colorVars['--color-text-secondary'],
@@ -93,23 +99,13 @@ const styles = stylex.create({
     // Reset the UA button's block padding only; the inline padding from `base`
     // provides the pill's breathing room and must be preserved.
     paddingBlock: 0,
-    // Interactive overlay states layered on top via backgroundImage
-    backgroundImage: {
-      default: `linear-gradient(${colorVars['--color-neutral']}, ${colorVars['--color-neutral']})`,
-      ':hover:where(:not(:disabled,[aria-disabled="true"]))': {
-        '@media (hover: hover)': `linear-gradient(${colorVars['--color-overlay-hover']}, ${colorVars['--color-overlay-hover']}), linear-gradient(${colorVars['--color-neutral']}, ${colorVars['--color-neutral']})`,
-      },
-      ':active': `linear-gradient(${colorVars['--color-overlay-pressed']}, ${colorVars['--color-overlay-pressed']}), linear-gradient(${colorVars['--color-neutral']}, ${colorVars['--color-neutral']})`,
-    },
     // Focus ring via focus-visible
   },
   overlap: {
-    // Matches Avatar's own overlap rule: the first item in the row must not be
-    // pulled outside the group's box.
-    marginInlineStart: {
-      default: null,
-      ':not(:first-child)': 'var(--_avatar-group-overlap)',
-    },
+    // Matches Avatar's own overlap rule. AvatarGroup pads its start edge by
+    // the same amount, so the indicator stays inside the group's box even
+    // when it is the first child.
+    marginInlineStart: 'var(--_avatar-group-overlap)',
   },
 });
 
@@ -163,9 +159,11 @@ export function AvatarGroupOverflow({
   style,
   ...rest
 }: AvatarGroupOverflowProps): ReactNode {
+  const pressable = usePressFeedback();
   const t = useTranslator();
   const group = useAvatarGroup();
   const size = group?.size ?? 'md';
+  const shape = group?.shape ?? 'circle';
   const numericSize = group?.numericSize ?? resolveSize('md');
   const overlap = group?.overlap ?? 0;
 
@@ -185,15 +183,18 @@ export function AvatarGroupOverflow({
         {...rest}
         aria-label={label}
         data-avatar-item=""
+        {...pressable}
         {...mergeProps(
-          themeProps('avatar-group-overflow', {size}),
+          themeProps('avatar-group-overflow', {size, shape}),
           focusOutlineProps.focusVisible(
             styles.base,
             styles.button,
+            interactionOverlayStyles.backgroundImageOnNeutral,
             styles.overlap,
             dynamicStyles.size(numericSize),
             dynamicStyles.fontSize(numericSize),
             dynamicStyles.overlap(-overlap),
+            shapeStyles[shape],
             xstyle,
           ),
           className,
@@ -210,13 +211,14 @@ export function AvatarGroupOverflow({
       {...rest}
       aria-label={label}
       {...mergeProps(
-        themeProps('avatar-group-overflow', {size}),
+        themeProps('avatar-group-overflow', {size, shape}),
         stylex.props(
           styles.base,
           styles.overlap,
           dynamicStyles.size(numericSize),
           dynamicStyles.fontSize(numericSize),
           dynamicStyles.overlap(-overlap),
+          shapeStyles[shape],
           xstyle,
         ),
         className,

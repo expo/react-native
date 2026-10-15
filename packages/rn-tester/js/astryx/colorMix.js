@@ -111,6 +111,86 @@ function oklabToRgb(L: number, a: number, b: number): [number, number, number] {
 }
 
 /**
+ * `oklch()` and `oklab()` (css-color-4 §9) written as the sRGB `rgba()` React
+ * Native's colour parser reads, which knows neither: Astryx's shadow tokens
+ * are `oklch(0 0 0 / 5%)`, and a box shadow with a colour the parser refuses
+ * is dropped whole, so no menu, popover or dialog had a shadow.
+ * DOM-CSS-LIMITATION(oklab-colours-are-srgb): a colour outside sRGB is clipped
+ * to it, channel by channel.
+ */
+export function substituteOklabColors(value: string): string {
+  if (!/okl(?:ch|ab)\(/i.test(value)) {
+    return value;
+  }
+  return value.replace(/okl(ch|ab)\(([^()]*)\)/gi, (whole, kind, args) => {
+    const [channels, alphaText] = String(args).split('/');
+    const parts = channels.trim().split(/[\s,]+/);
+    if (parts.length !== 3) {
+      return whole;
+    }
+    const lightness = oklabNumber(parts[0], 1);
+    let a: ?number;
+    let b: ?number;
+    if (String(kind).toLowerCase() === 'ch') {
+      const chroma = oklabNumber(parts[1], 0.4);
+      const hue = hueDegrees(parts[2]);
+      if (chroma == null || hue == null) {
+        return whole;
+      }
+      a = chroma * Math.cos((hue * Math.PI) / 180);
+      b = chroma * Math.sin((hue * Math.PI) / 180);
+    } else {
+      a = oklabNumber(parts[1], 0.4);
+      b = oklabNumber(parts[2], 0.4);
+    }
+    const alpha = alphaText == null ? 1 : oklabNumber(alphaText.trim(), 1);
+    if (lightness == null || a == null || b == null || alpha == null) {
+      return whole;
+    }
+    const [r, g, bl] = oklabToRgb(lightness, a, b);
+    return toCssRgba({
+      r: Math.min(1, Math.max(0, r)),
+      g: Math.min(1, Math.max(0, g)),
+      b: Math.min(1, Math.max(0, bl)),
+      a: Math.min(1, Math.max(0, alpha)),
+    });
+  });
+}
+
+// A number, a percentage of `full`, or `none` (zero)
+function oklabNumber(text: string, full: number): ?number {
+  if (text === 'none') {
+    return 0;
+  }
+  const n = parseFloat(text);
+  if (!Number.isFinite(n)) {
+    return null;
+  }
+  return text.endsWith('%') ? (n / 100) * full : n;
+}
+
+// An angle in degrees: a bare number, or deg, rad, grad or turn
+function hueDegrees(text: string): ?number {
+  if (text === 'none') {
+    return 0;
+  }
+  const n = parseFloat(text);
+  if (!Number.isFinite(n)) {
+    return null;
+  }
+  if (text.endsWith('rad')) {
+    return (n * 180) / Math.PI;
+  }
+  if (text.endsWith('grad')) {
+    return n * 0.9;
+  }
+  if (text.endsWith('turn')) {
+    return n * 360;
+  }
+  return n;
+}
+
+/**
  * Mixes two colours in the given space.
  *
  * `p1` and `p2` are the raw percentages as authored, either of which may be

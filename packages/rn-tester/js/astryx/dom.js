@@ -13,6 +13,10 @@
 // The seam for any element Astryx needs that the catalog does not provide
 
 import '@react-native/expo-intrinsics-poc';
+// The `document` the vendored sources reach for; see the file
+import './document-shim';
+// The DOM methods the sources call on their element refs; see the file
+import './dom-compat';
 
 // Astryx's CSS reset is `ASTRYX_RESET` in `jsx-runtime.js`, scoped to its
 // elements; `overrideUAStyle` would mutate the shared user-agent sheet

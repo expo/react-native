@@ -105,4 +105,14 @@ export default function setUpDOM() {
     'CustomEvent',
     () => require('../webapis/dom/events/CustomEvent').default,
   );
+
+  polyfillGlobal(
+    'UIEvent',
+    () => require('../webapis/dom/events/UIEvent').default,
+  );
+
+  polyfillGlobal(
+    'MouseEvent',
+    () => require('../webapis/dom/events/MouseEvent').default,
+  );
 }

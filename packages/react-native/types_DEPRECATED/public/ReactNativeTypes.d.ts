@@ -167,7 +167,7 @@ export interface NodeList<T> extends Iterable<T>, ArrayLike<T> {
 export interface ReadOnlyNode {
   get childNodes(): NodeList<ReadOnlyNode>;
   compareDocumentPosition(otherNode: ReadOnlyNode): number;
-  contains(otherNode: ReadOnlyNode): boolean;
+  contains(otherNode: ReadOnlyNode | null | undefined): boolean;
   get firstChild(): null | ReadOnlyNode;
   getRootNode(): ReadOnlyNode;
   hasChildNodes(): boolean;

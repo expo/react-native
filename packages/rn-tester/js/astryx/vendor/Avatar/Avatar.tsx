@@ -98,6 +98,11 @@ type AvatarNumericSize =
 export type AvatarSize = AvatarNamedSize | AvatarNumericSize;
 
 /**
+ * Avatar shape options
+ */
+export type AvatarShape = 'circle' | 'rounded' | 'square';
+
+/**
  * Resolves named sizes to their numeric pixel values
  */
 export function resolveSize(size: AvatarSize): number {
@@ -118,6 +123,25 @@ export function resolveSize(size: AvatarSize): number {
   }
 }
 
+// Sets one local custom property rather than `borderRadius` directly, so
+// every clipping/ring surface that needs the shape's radius (the wrapper,
+// the interactive focus ring, the content div that actually clips via
+// `overflow: hidden`, and AvatarGroupOverflow's "+N" indicator) reads the
+// same value instead of each hardcoding its own borderRadius independently.
+// A theme override only has to reach this one property, not fight the
+// per-surface StyleX class order to change the shape everywhere at once.
+export const shapeStyles = stylex.create({
+  circle: {
+    '--_avatar-radius': radiusVars['--radius-full'],
+  },
+  rounded: {
+    '--_avatar-radius': radiusVars['--radius-element'],
+  },
+  square: {
+    '--_avatar-radius': radiusVars['--radius-none'],
+  },
+});
+
 /**
  * Base styles for the avatar
  * Uses a wrapper/content structure so status isn't clipped by overflow:hidden
@@ -127,10 +151,10 @@ const styles = stylex.create({
     position: 'relative',
     display: 'inline-flex',
     flexShrink: 0,
-    // The wrapper carries the avatar's box as well as its radius, so a theme
-    // rule on the `.astryx-avatar` target reaches both: the size the `size`
-    // visual prop selects on is set here, and the content below fills it.
-    borderRadius: radiusVars['--radius-full'],
+    // Reads the shape variant's `--_avatar-radius` (set by `shapeStyles`
+    // below) rather than a hardcoded value, so `shape` actually changes the
+    // wrapper's own radius instead of only the content div's clip.
+    borderRadius: 'var(--_avatar-radius)',
   },
   content: {
     display: 'flex',
@@ -138,9 +162,14 @@ const styles = stylex.create({
     justifyContent: 'center',
     width: '100%',
     height: '100%',
-    borderRadius: radiusVars['--radius-full'],
     overflow: 'hidden',
     userSelect: 'none',
+    // The content div is the one that actually clips (via overflow: hidden
+    // above), so it needs its own border-radius matching the wrapper's.
+    // It inherits `--_avatar-radius` from the wrapper, since custom
+    // properties cascade to descendants even though border-radius itself
+    // does not.
+    borderRadius: 'var(--_avatar-radius)',
   },
   image: {
     width: '100%',
@@ -167,9 +196,6 @@ const styles = stylex.create({
   status: {
     position: 'absolute',
   },
-  // Visible focus ring for the name-tooltip tab stop, matching the repo-wide
-  // focus-visible outline treatment (see Timestamp, Token, Thumbnail). Only
-  // applied when a tooltip is active so keyboard users can reveal it.
   // Reset the intrinsic styling of the interactive element (<a>/<button>) so it
   // is a transparent, correctly-sized wrapper around the avatar visuals. The
   // element carries the focus-visible accent ring for keyboard users.
@@ -187,8 +213,9 @@ const styles = stylex.create({
       default: 'pointer',
       ':is(:disabled,[aria-disabled="true"])': 'default',
     },
-    // Match the avatar's circular shape so the focus ring hugs it.
-    borderRadius: radiusVars['--radius-full'],
+    // Match the avatar's shape (via `--_avatar-radius`) so the focus ring
+    // hugs it, whichever shape variant is in effect.
+    borderRadius: 'var(--_avatar-radius)',
   },
 });
 
@@ -207,7 +234,7 @@ const dynamicStyles = stylex.create({
   fontSize: (size: number) => ({
     fontSize: `${size * INITIALS_FONT_SIZE_RATIO}px`,
   }),
-  statusPosition: (size: number) => ({
+  statusPositionCircle: (size: number) => ({
     bottom: size * CIRCLE_EDGE_OFFSET_RATIO,
     insetInlineEnd: size * CIRCLE_EDGE_OFFSET_RATIO,
     // `insetInlineEnd` anchors to the right edge in LTR / left in RTL, so the
@@ -217,24 +244,35 @@ const dynamicStyles = stylex.create({
       ':is([dir="rtl"] *)': 'translate(-50%, 50%)',
     },
   }),
+  statusPositionCorner: {
+    bottom: 0,
+    insetInlineEnd: 0,
+    // Same RTL mirroring as statusPositionCircle above: insetInlineEnd
+    // anchors to the right edge in LTR / left in RTL, so the outward push
+    // must flip sign too.
+    transform: {
+      default: 'translate(25%, 25%)',
+      ':is([dir="rtl"] *)': 'translate(-25%, 25%)',
+    },
+  },
 });
 
 const BORDER_WIDTH = 2;
 
 const groupStyles = stylex.create({
   ring: {
-    borderRadius: radiusVars['--radius-full'],
     borderWidth: BORDER_WIDTH,
     borderStyle: 'solid',
     borderColor: colorVars['--color-background-surface'],
     backgroundColor: colorVars['--color-background-surface'],
     boxSizing: 'content-box',
   },
+  // Every avatar takes the overlap, not just `:not(:first-child)`: a
+  // HoverCard or Tooltip wraps its trigger in its own element, which makes
+  // every wrapped avatar a first child. AvatarGroup pads its start edge by the
+  // same amount so the first avatar still sits inside the group's box.
   overlap: {
-    marginInlineStart: {
-      default: null,
-      ':not(:first-child)': 'var(--_avatar-group-overlap)',
-    },
+    marginInlineStart: 'var(--_avatar-group-overlap)',
   },
 });
 
@@ -276,6 +314,14 @@ export interface AvatarProps extends BaseProps<HTMLDivElement> {
    * @default 'md'
    */
   size?: AvatarSize;
+  /**
+   * Shape variant of the avatar.
+   * - 'circle': Full circle (default)
+   * - 'rounded': Rounded square
+   * - 'square': Sharp square
+   * @default 'circle'
+   */
+  shape?: AvatarShape;
   /**
    * The primary image source for the avatar.
    */
@@ -339,25 +385,46 @@ export interface AvatarProps extends BaseProps<HTMLDivElement> {
 }
 
 /**
- * Generates initials from a name string.
- * Takes the first letter of the first two words.
+ * A character that can stand for a word in initials: a letter, a digit, or an
+ * emoji. Punctuation and other symbols, such as `(`, `"` or `-`, cannot.
+ */
+const INITIAL_CHARACTER =
+  /[\p{L}\p{N}\p{Extended_Pictographic}\p{Regional_Indicator}]/u;
+
+/**
+ * The first character of a word that can stand for it in initials, skipping
+ * leading punctuation, or '' when the word has none (a lone `-` or `()`).
+ */
+function initialCharacter(word: string): string {
+  const index = word.search(INITIAL_CHARACTER);
+  return index === -1 ? '' : firstCharacter(word.slice(index));
+}
+
+/**
+ * Generates initials from a name string: the first letter, digit or emoji of
+ * the first and last words. Words with none of those, such as a lone `-`, are
+ * skipped, and leading punctuation within a word is ignored. Returns '' when
+ * no word yields an initial.
  * @example
  * ```
- * getInitials('John Doe')
- * getInitials('Alice')
+ * getInitials('John Doe') // 'JD'
+ * getInitials('Alice') // 'A'
+ * getInitials('Northwind Workbench (automation)') // 'NA'
  * ```
  */
 function getInitials(name: string): string {
-  const words = name.trim().split(/\s+/);
-  if (words.length === 0) {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .map(initialCharacter)
+    .filter(initial => initial !== '');
+  if (initials.length === 0) {
     return '';
   }
-  if (words.length === 1) {
-    return firstCharacter(words[0]).toUpperCase();
+  if (initials.length === 1) {
+    return initials[0].toUpperCase();
   }
-  return (
-    firstCharacter(words[0]) + firstCharacter(words[words.length - 1])
-  ).toUpperCase();
+  return (initials[0] + initials[initials.length - 1]).toUpperCase();
 }
 
 /**
@@ -479,6 +546,7 @@ export function Avatar({
   fallbackSrc,
   name,
   size = 'md',
+  shape = 'circle',
   src,
   status,
   tooltip = true,
@@ -508,8 +576,11 @@ export function Avatar({
   // truthy), leaving an empty plate behind a blank accessible name.
   const meaningfulName = meaningful(name);
   const meaningfulAlt = meaningful(alt);
-  const showInitials = !showImage && !showFallbackImage && meaningfulName;
-  const showIcon = !showImage && !showFallbackImage && !meaningfulName;
+  // A name made only of punctuation ("—", "()") still names the avatar, but
+  // yields no initials; it falls back to the default icon, not an empty plate.
+  const initials = meaningfulName ? getInitials(meaningfulName) : '';
+  const showInitials = !showImage && !showFallbackImage && initials !== '';
+  const showIcon = !showImage && !showFallbackImage && initials === '';
 
   // A meaningful accessible name comes from `alt`/`name`, composed with the
   // status element's `label` when one is present ("Jane Doe, Online") — the
@@ -538,6 +609,7 @@ export function Avatar({
     : undefined;
   const avatarGroup = useAvatarGroup();
   const resolvedSize = avatarGroup?.size ?? size;
+  const resolvedShape = avatarGroup?.shape ?? shape;
   const numericSize = useMemo(() => resolveSize(resolvedSize), [resolvedSize]);
 
   // Resolve the tooltip content:
@@ -706,7 +778,7 @@ export function Avatar({
                 dynamicStyles.fontSize(numericSize),
               ),
             )}>
-            {getInitials(meaningfulName)}
+            {initials}
           </div>
         )}
         {showIcon && (
@@ -723,7 +795,9 @@ export function Avatar({
         <div
           {...stylex.props(
             styles.status,
-            dynamicStyles.statusPosition(numericSize),
+            resolvedShape === 'circle'
+              ? dynamicStyles.statusPositionCircle(numericSize)
+              : dynamicStyles.statusPositionCorner,
           )}>
           {status}
         </div>
@@ -736,7 +810,7 @@ export function Avatar({
   // tooltip tab-stop focus ring all live here so the interactive
   // `<a>`/`<button>` and the static `<div>` carry the exact same box.
   const rootStylexProps = mergeProps(
-    themeProps('avatar', {size: resolvedSize}),
+    themeProps('avatar', {size: resolvedSize, shape: resolvedShape}),
     focusOutlineProps.focusVisible(
       styles.wrapper,
       dynamicStyles.size(numericSize),
@@ -744,6 +818,7 @@ export function Avatar({
       avatarGroup && groupStyles.ring,
       avatarGroup && groupStyles.overlap,
       avatarGroup && groupDynamicStyles.overlap(-avatarGroup.overlap),
+      shapeStyles[resolvedShape],
       xstyle,
     ),
     className,

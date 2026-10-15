@@ -26,6 +26,7 @@
 import type {InteractionState} from '../stylex-rn';
 import type {KeyboardTypeOptions} from 'react-native';
 
+import useFieldInstance from './fieldInstance';
 import * as React from 'react';
 import {TextInput} from 'react-native';
 
@@ -91,13 +92,16 @@ function Input({
   // `rest` is intentionally unused — see the InputProps note above.
   void rest;
 
+  const field = useFieldInstance(ref, value, defaultValue);
+  const onText = field.onText;
   const handleChangeText = React.useCallback(
     (text: string) => {
+      onText(text);
       const event: WebChangeEvent = {target: {value: text}};
       onInput?.(event);
       onChange?.(event);
     },
-    [onChange, onInput],
+    [onChange, onInput, onText],
   );
 
   // A disabled field is not editable and not focusable; readOnly stays
@@ -111,7 +115,7 @@ function Input({
 
   return (
     <TextInput
-      ref={ref}
+      ref={field.ref}
       value={value}
       defaultValue={defaultValue}
       placeholder={placeholder}

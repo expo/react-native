@@ -25,6 +25,7 @@
 
 import type {InteractionState} from '../stylex-rn';
 
+import useFieldInstance from './fieldInstance';
 import * as React from 'react';
 import {useCallback} from 'react';
 import {TextInput} from 'react-native';
@@ -47,6 +48,7 @@ type Props = {
   style?: unknown,
   state?: ?InteractionState,
   children?: React.Node,
+  ref?: React.RefSetter<React.ElementRef<typeof TextInput>>,
 };
 
 // A line of text at the default font size, for turning `rows` into a height.
@@ -71,25 +73,28 @@ export default function TextArea({
   // forwarded to TextInput as renderable content, which would draw it as a
   // second, overlapping line of text.
   children,
+  ref,
 }: Props): React.Node {
   // The web fires `change`/`input` with the new value on `event.target`; RN
   // hands the string straight to `onChangeText`. Synthesized to the shape the
   // vendored sources expect, exactly as `<input>` does.
+  const initialValue =
+    defaultValue ?? (typeof children === 'string' ? children : undefined);
+  const field = useFieldInstance(ref, value, initialValue);
+  const onText = field.onText;
   const handleChangeText = useCallback(
     (text: string) => {
+      onText(text);
       const event: WebChangeEvent = {target: {value: text}};
       onInput?.(event);
       onChange?.(event);
     },
-    [onChange, onInput],
+    [onChange, onInput, onText],
   );
 
   // Disabled is neither editable nor focusable; readOnly stays focusable and
   // selectable, which is the distinction the web draws.
   const editable = disabled !== true && readOnly !== true;
-
-  const initialValue =
-    defaultValue ?? (typeof children === 'string' ? children : undefined);
 
   // The StyleX runtime produces a plain style object; TextInput's style type
   // is stricter than what CSS resolution can be typed as.
@@ -99,6 +104,7 @@ export default function TextArea({
 
   return (
     <TextInput
+      ref={field.ref}
       multiline={true}
       // Without this the field is vertically centred on Android, so a
       // multi-line box starts its text in the middle of itself.

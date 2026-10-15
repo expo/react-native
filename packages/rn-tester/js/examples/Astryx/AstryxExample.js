@@ -12,7 +12,7 @@
 
 import type {RNTesterModule} from '../../types/RNTesterTypes';
 
-import Dialog from '../../astryx/elements/Dialog';
+import {jsx as astryxJsx} from '../../astryx/jsx-runtime';
 import {resolveAnchorPosition} from '../../astryx/overlay/anchorPosition';
 import {useInteractionState} from '../../astryx/useInteractionState';
 // $FlowFixMe[cannot-resolve-module]
@@ -488,10 +488,8 @@ function AnchoredPopover(): React.Node {
         Open popover
       </AstryxButton>
       {open && position != null ? (
-        // `Dialog`, not a lowercase `<dialog>`: React resolves lowercase JSX
-        // to a host component by name, so the intrinsic spelling never reaches
-        // this composite and so never enters the top layer.
-        <Dialog
+        // A `<dialog>` shown in place (`show()`), placed by its own style
+        <ExampleDialog
           open
           modal={false}
           onClose={() => setOpen(false)}
@@ -511,10 +509,43 @@ function AnchoredPopover(): React.Node {
           Anchored with position-area{'\n'}
           {position.area}
           {'\n'}Tap outside to dismiss.
-        </Dialog>
+        </ExampleDialog>
       ) : null}
     </View>
   );
+}
+
+/**
+ * A `<dialog>` element as the Astryx runtime draws it (this file's JSX is
+ * React's own, which would not reach the runtime), opened and closed by its
+ * methods as a page does: `showModal()` for a modal dialog, `show()` in place.
+ */
+function ExampleDialog({
+  open,
+  modal,
+  ...props
+}: {
+  open: boolean,
+  modal: boolean,
+  [string]: unknown,
+}): React.Node {
+  const ref = useRef<$FlowFixMe>(null);
+  React.useLayoutEffect(() => {
+    const dialog = ref.current;
+    if (dialog == null) {
+      return;
+    }
+    if (open && dialog.open !== true) {
+      if (modal) {
+        dialog.showModal();
+      } else {
+        dialog.show();
+      }
+    } else if (!open && dialog.open === true) {
+      dialog.close();
+    }
+  }, [open, modal]);
+  return astryxJsx('dialog', {...props, ref});
 }
 
 function ModalDialog(): React.Node {
@@ -522,15 +553,12 @@ function ModalDialog(): React.Node {
   return (
     <View>
       <AstryxButton onClick={() => setOpen(true)}>Open modal</AstryxButton>
-      {/* The `Dialog` component, NOT a lowercase `<dialog>` intrinsic: React
-          resolves lowercase JSX to a host component by name, so `<dialog>`
-          fell through to the unknown-element path and never reached
-          `useTopLayer` — it painted its surface inline instead of being
-          promoted into the top layer, which is why its buttons could not be
-          tapped and only the backdrop looked right. */}
-      <Dialog
+      {/* A `<dialog>` that `showModal()` draws in the top layer over its
+          backdrop */}
+      <ExampleDialog
         modal
         open={open}
+        onClose={() => setOpen(false)}
         {...stylex.props(overlayStyles.surface)}
         // Centred in the viewport, which is what `showModal()` does on the
         // web — `margin: auto` in the UA stylesheet's `dialog:modal` rule. A
@@ -552,7 +580,7 @@ function ModalDialog(): React.Node {
             Close
           </AstryxButton>
         </View>
-      </Dialog>
+      </ExampleDialog>
     </View>
   );
 }
