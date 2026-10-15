@@ -5,7 +5,7 @@
 /**
  * @file usePopover.tsx
  * @input Uses useLayer, useFocusTrap, React hooks
- * @output Exports usePopover hook for popover dialogs with focus trapping
+ * @output Exports the public usePopover hook with derived focus and guarded opening.
  * @position Higher-level layer utility; used by DatePicker, Combobox, etc.
  *
  * Combines popover layer behavior with focus trap for dialog-like popovers.
@@ -28,12 +28,39 @@ import {
   shadowVars,
 } from '../theme/tokens.stylex';
 import {Button} from '../Button';
+import {FOCUSABLE_SELECTOR} from '../hooks/focusableSelector';
 import {rtlStyles} from '../utils';
 import {useTranslator} from '../i18n';
 import {useDevWarning} from '../hooks/useDevWarning';
+import {focusOutlineProps} from '../utils/focusOutline.stylex';
 import {mergeProps} from '../utils/mergeProps';
 import {themeProps} from '../utils/themeProps';
+import {paddingStyles} from '../Layout/padding.stylex';
+import type {SpacingStep} from '../utils/types';
 import {stableClassName} from '../naming';
+
+const FALLBACK_CLOSE_SELECTOR = '[data-astryx-popover-fallback-close]';
+
+function attemptFocus(element: HTMLElement): boolean {
+  try {
+    element.focus();
+  } catch {
+    // Ignore non-focusable elements; the caller will try the next target.
+  }
+  return document.activeElement === element;
+}
+
+function focusFirstContentControl(container: HTMLElement): boolean {
+  const focusable = Array.from(
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  ).filter(element => element.closest(FALLBACK_CLOSE_SELECTOR) == null);
+  for (const element of focusable) {
+    if (attemptFocus(element)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 const styles = stylex.create({
   // Default popover surface — background, radius, shadow.
@@ -41,10 +68,12 @@ const styles = stylex.create({
   // Consumers that need a raw positioned layer should use useLayer instead.
   surface: {
     backgroundColor: colorVars['--color-background-popover'],
-    borderRadius: radiusVars['--radius-container'],
+    '--_popover-radius': radiusVars['--radius-container'],
+    borderRadius: 'var(--_popover-radius)',
     boxShadow: shadowVars['--shadow-low'],
   },
-  // Focus trap container
+  // Focus trap container. Shared :focus-visible styling keeps semantic focus
+  // placement independent of pointer/keyboard indication.
   contentWrapper: {
     position: 'relative',
   },
@@ -110,6 +139,16 @@ export interface UsePopoverOptions {
    * `:popover-open`), pass `xstyle` via the `render()` call's props instead.
    */
   xstyle?: StyleXStyles;
+
+  /**
+   * Additional class name applied to the painted popover surface.
+   */
+  className?: string;
+
+  /**
+   * Inline styles applied to the painted popover surface.
+   */
+  style?: React.CSSProperties;
 
   /**
    * Whether clicking outside should dismiss the popover.
@@ -193,6 +232,22 @@ export interface UsePopoverOptions {
   hasSurface?: boolean;
 
   /**
+   * Inner padding of the painted surface, using the spacing scale.
+   * Accepts numeric spacing steps: 0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10.
+   * `0` paints a flush surface for content that owns its own edges (a list of
+   * rows, a header with a rule). Matches the `padding` prop on `Card`,
+   * `Stack` and `Popover`.
+   *
+   * Applied to the surface itself — the box that paints background, radius
+   * and elevation — so a theme's `padding` on the `popover` target replaces
+   * it instead of nesting inside it. `xstyle` merges after it.
+   *
+   * Omit it and the surface paints no padding of its own (the hook's
+   * historical behavior; `Popover` passes its own default).
+   */
+  padding?: SpacingStep;
+
+  /**
    * Theme-target name stamped on the popup SURFACE — the element that paints
    * the background, radius and elevation — without the `astryx-` prefix
    * (e.g. `'complex-selector-popup'`).
@@ -203,8 +258,8 @@ export interface UsePopoverOptions {
    * or radius rule paints the wrong box. Name the surface through this option
    * and document the class in the component's `theming.targets`.
    *
-   * The shared `astryx-popover-surface` class is always present alongside it,
-   * so a theme can style every popup surface at once.
+   * The canonical `astryx-popover` target is always present alongside any
+   * component-owned refinement target.
    */
   surfaceTarget?: string;
 }
@@ -323,15 +378,20 @@ export interface UsePopoverReturn {
  * }
  * ```
  */
-export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
+function usePopoverImplementation(
+  options: UsePopoverOptions = {},
+): UsePopoverReturn {
   const {
     onShow,
     onHide,
     xstyle,
+    className,
+    style,
     hasLightDismiss = true,
     hasEscapeDismiss = true,
     hasAutoFocus = true,
     hasSurface = true,
+    padding,
     surfaceTarget,
     hasCloseButton = true,
     closeButtonLabel: closeButtonLabelFromProps,
@@ -366,19 +426,32 @@ export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
     onEscape: hasEscapeDismiss || hasLightDismiss ? layer.hide : undefined,
   });
 
+  const focusInitialTarget = useCallback(() => {
+    const container = contentRef.current;
+    if (!container) {
+      return;
+    }
+    if (focusFirstContentControl(container)) {
+      return;
+    }
+    if (role === 'dialog') {
+      attemptFocus(container);
+      return;
+    }
+    focusFirst();
+  }, [contentRef, focusFirst, role]);
+
   // Auto-focus first element when popover opens (unless skipped)
   useEffect(() => {
     if (layer.isOpen && hasAutoFocus && !skipAutoFocusRef.current) {
       // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        focusFirst();
-      });
+      requestAnimationFrame(focusInitialTarget);
     }
-    // Reset the skip flag after the effect runs
+    // Reset the per-open focus preference after the popover closes.
     if (!layer.isOpen) {
       skipAutoFocusRef.current = false;
     }
-  }, [layer.isOpen, hasAutoFocus, focusFirst]);
+  }, [layer.isOpen, hasAutoFocus, focusInitialTarget]);
 
   // Combined ref for trigger element (layer anchor + our ref)
   const triggerRef = useCallback(
@@ -389,7 +462,7 @@ export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
     [layer],
   );
 
-  // Show function with optional skipAutoFocus
+  // Show function with optional focus preservation
   const show = useCallback(
     (showOptions?: {skipAutoFocus?: boolean}) => {
       skipAutoFocusRef.current = showOptions?.skipAutoFocus ?? false;
@@ -398,7 +471,8 @@ export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
     [layer],
   );
 
-  // Toggle function
+  // Toggle function. Opening delegates to show so every route inherits the
+  // same-gesture reopen guard owned by Layer.
   const toggle = useCallback(() => {
     if (layer.isOpen) {
       layer.hide();
@@ -430,9 +504,9 @@ export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
       // `mergeProps` is positional — a third OBJECT argument is read as
       // `style`, not as more props — so the surface's classes are composed
       // into one props object before merging with the StyleX result.
-      const surfaceProps = themeProps('popover-surface');
+      const surfaceProps = themeProps('popover');
       const surfaceClassName =
-        surfaceTarget != null
+        surfaceTarget != null && surfaceTarget !== 'popover'
           ? `${surfaceProps.className} ${stableClassName(surfaceTarget)}`
           : surfaceProps.className;
 
@@ -443,17 +517,22 @@ export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
             role={role === 'dialog' ? 'dialog' : undefined}
             aria-modal={role === 'dialog' && isModal ? true : undefined}
             aria-label={role === 'dialog' ? dialogLabel : undefined}
+            tabIndex={role === 'dialog' ? -1 : undefined}
             {...mergeProps(
               {...surfaceProps, className: surfaceClassName},
-              stylex.props(
+              focusOutlineProps.focusVisible(
                 styles.contentWrapper,
                 hasSurface && styles.surface,
+                padding != null && paddingStyles[padding],
                 xstyle,
               ),
+              className,
+              style,
             )}>
             {children}
             {hasCloseButton && (
               <div
+                data-astryx-popover-fallback-close=""
                 {...stylex.props(
                   styles.closeButtonWrapper,
                   rtlStyles.centerInline('100%'),
@@ -474,7 +553,10 @@ export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
       layer,
       hasCloseButton,
       hasSurface,
+      padding,
       surfaceTarget,
+      className,
+      style,
       closeButtonLabel,
       contentRef,
       dialogLabel,
@@ -496,4 +578,8 @@ export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
     render,
     triggerProps,
   };
+}
+
+export function usePopover(options: UsePopoverOptions = {}): UsePopoverReturn {
+  return usePopoverImplementation(options);
 }

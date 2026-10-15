@@ -122,6 +122,21 @@ module.exports = {
       src = prePass.code;
     }
 
+    // intl-messageformat 11 (the vendored Astryx i18n's formatter) and its
+    // @formatjs dependencies ship ES modules with static class blocks, which
+    // the preset the transformer below uses does not parse; lower those first.
+    if (/node_modules\/(intl-messageformat|@formatjs)\//.test(file)) {
+      src = babelTransformSync(src, {
+        filename: file,
+        babelrc: false,
+        configFile: false,
+        retainLines: true,
+        plugins: [require('@babel/plugin-transform-class-static-block')],
+        sourceType: 'module',
+        ast: false,
+      }).code;
+    }
+
     let {ast} = transformer.transform({
       filename: file,
       options: {

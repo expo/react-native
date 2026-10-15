@@ -40,6 +40,22 @@ Three kinds appear here and it is worth telling them apart:
 
 ## Layout and box generation
 
+**`container-query-is-a-media-query`** — `packages/rn-tester/js/astryx/css/parse.js`, `stylex-rn.js`
+
+A `@container` rule in a stylesheet applies only under an ancestor that
+declares `container-type` (in a sheet, a StyleX style or an inline style),
+and under the one of that name when the query names one, as on the web — so
+a query with no container to ask (Astryx's Login Split names its grid as its
+own container) matches nowhere, as it does in Safari. The container measures
+itself (`onLayout`) and its size answers the query and the container units
+(`cqi`, `cqb`, …) of its descendants from the render after its first layout;
+until then, and for a `@container` key in a StyleX style, the viewport
+answers — the host surface's size where a page declares one
+(`VIEWPORT_INLINE_SIZE` in css/match.js; a split view's column rather than
+the window), the window otherwise. The deviation that remains is that first
+paint, and the StyleX keys: a page whose first layout depends on a container
+query lays out twice.
+
 **`stylex-is-a-layer`** — `packages/rn-tester/js/astryx/jsx-runtime.js`, `css/match.js`
 
 A StyleX style is taken for what it is on the web, a rule in the `astryx-base`
@@ -57,6 +73,16 @@ which is what StyleX's specificity bump does on the web.
 declares its tokens on `[data-astryx-theme="…"]`. The limit is not applied: a
 scoped rule still reaches past a nested root (a second theme inside the
 first), and a `&` in a scoped selector is not resolved.
+
+**`background-image-url-layer`** — `packages/rn-tester/js/astryx/jsx-runtime.js`
+
+The renderer's `backgroundImage` takes gradients only. A `url()` is drawn by
+an image filling the element's box under its children, clipped to the same
+corners, sized by `background-size` (`cover`, `contain`, or the image's own
+size centred). `background-position` other than centred, `background-repeat`,
+and a url() layered with a gradient or a second image are not drawn: the
+first url() is the layer, and the gradients go with it. A block that scrolls
+(`overflow: auto`) does not take the layer.
 
 **`clearance-on-an-empty-box`** — `yoga/algorithm/CalculateLayout.cpp`
 An empty box with `clear` still lets its margins collapse past it, so the
@@ -484,11 +510,47 @@ a real screen first. Background in `element-model-design.md`.
   can only bind when min-content < x < max-content, i.e. for content that
   reflows, which is also why the conformance corpus cannot catch it: every case
   there is a fixed-size box, deliberately, so that no case depends on a font.
-- **`DOM-CSS-LIMITATION(grid-min-content)` — `min-content` as a MAXIMUM sizing
-  function behaves as `auto`.** Yoga has no min-content sizing function. Its
-  `auto` minimum IS the automatic minimum size, which is min-content for a
-  non-scrollable box, so `min-content` as a minimum is correct; only the
-  maximum position is approximated.
+- **`DOM-CSS-LIMITATION(no-nested-vertical-scroll)` — a block with
+  `overflow: auto | scroll` on the block axis grows to its content instead
+  of scrolling.** On a phone a page scrolls as one: a region that scrolls on
+  its own takes the drag meant for the page, hides what lies below its edge,
+  and fights the keyboard and the safe area the page reserves. So the element
+  keeps its markup but its scrolling region takes its content height
+  (`jsx-runtime.js`, `growingOverflowStyle`): the box's `height` becomes its
+  `min-height`, `max-height` is set aside, and a flex item that was allowed
+  to shrink to its share of a column (`flex: 1; min-height: 0`) keeps its
+  content height. Whatever then overflows the ancestors is reachable: the
+  page scroll view's content size is the scrollable overflow area
+  (css-overflow-3 §2.2, `ExpoScrollViewShadowNode`), not the content box. The
+  inline axis is the exception: an explicit `overflow-x: auto | scroll` (a
+  wide table, a File Explorer's row of columns) scrolls sideways through the
+  platform's horizontal scroll view, which reserves no safe area and does not
+  bounce when its content fits. The `overflow` shorthand does so only on a
+  flex row that does not wrap (a strip of document tabs), whose items sit
+  side by side with their own widths; elsewhere a fixed-height card's text
+  would be measured without a width inside a horizontal scroll view and never
+  wrap, so the shorthand's inline axis clips with the box. The top layer is
+  the other exception: a dialog, a sheet or a
+  menu drawn there has no page to grow into, so a region in it with
+  `overflow: auto | scroll` on the block axis scrolls through a vertical
+  scroll view, as on the web. The element's `scroll` events, `scrollTop` and
+  `scrollTo` reach no scroll view.
+- **`DOM-CSS-LIMITATION(visibility-is-opacity)` — `visibility: hidden` is
+  `opacity: 0` plus `pointer-events: none`.** The platform has no visibility
+  property. The box stays in layout and draws nothing, which is what a hidden
+  label sizer (Tab's bold-width reserve) needs; unlike the web it is not
+  hidden from assistive technology, and `visible` on a descendant cannot
+  show it again inside a hidden ancestor.
+- **`DOM-CSS-LIMITATION(grid-min-content)` — `min-content` measures as
+  max-content.** Yoga has no min-content measure, so the track-sizing pass
+  takes an item's max-content size wherever the spec asks for its min-content
+  size (`minContentContribution` in `TrackSizing.h`). That reaches the
+  automatic minimum of every `auto` and `1fr` track: an item holding text is
+  as wide as its longest line unwrapped, where the web would let the text wrap
+  down to its longest word. Two `1fr` columns of cards with a long caption
+  each are wider than the phone and overflow it; a grid item with
+  `min-width: 0` opts out, as on the web. `min-content` as a MAXIMUM sizing
+  function behaves as `auto` for the same reason.
 - **`grid-auto-flow` is fully implemented** — `row`, `column`, and either with
   `dense`. Column flow runs the row algorithm in transposed space rather than
   duplicating it: every axis-specific read is swapped on the way in and the
@@ -562,6 +624,7 @@ rather than going quiet.
 - `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
 - `android-chat-bubble-has-no-tail` — limitation, `packages/expo-intrinsics/src/NativeChatBubble.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
+- `astryx-press-controller-inert` — limitation, `packages/rn-tester/js/astryx/pressFeedback-shim.js`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `checkable-line-centering` — deviation, `packages/expo-intrinsics/__tests__/CheckableLineCentering-itest.js`
@@ -569,10 +632,13 @@ rather than going quiet.
 - `clipping-eats-the-shadow` — limitation, `packages/chat-demo/Composer.js`
 - `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `compact-menu-row-holds-four` — limitation, `packages/chat-demo/screens/ChatScreen.js`
-- `container-query-is-a-media-query` — deviation, `packages/rn-tester/js/astryx/css/__tests__/parse-test.js`
 - `corner-shape-clips-border-and-shadow` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `corner-shape-ios-only` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `display-on-inline-text-elements` — limitation, `packages/rn-tester/js/astryx/radix/toggles.js`
+- `document-is-a-stub` — limitation, `packages/rn-tester/js/astryx/document-shim.js`
+- `dom-methods-are-a-subset` — limitation, `packages/rn-tester/js/astryx/dom-compat.js`
+- `event-fields-on-every-event` — limitation, `packages/rn-tester/js/astryx/dom-compat.js`
+- `field-value-write-is-not-shown` — limitation, `packages/rn-tester/js/astryx/elements/fieldInstance.js`
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `glass-surface-press-is-the-platforms` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPMaterialSurface.mm`
@@ -587,21 +653,27 @@ rather than going quiet.
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
 - `lanes-abspos-containing-block` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
 - `lanes-baseline-export` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
+- `layer-portal-stays-inline` — limitation, `packages/rn-tester/js/astryx/react-dom-shim.js`
 - `link-title-is-not-idn-decoded` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPTextLinkInteraction.mm`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-cascade-origins` — limitation, `packages/expo-intrinsics/src/index.js`
 - `no-font-on-a-control` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPElementTextAreaComponentView.mm`
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
-- `no-nested-vertical-scroll` — limitation, `packages/react-native/ReactCommon/react/renderer/components/view/ExpoScrollViewShadowNode.cpp`
 - `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `number-parts-are-read-from-the-string` — limitation, `packages/rn-tester/js/astryx/intl-shim.js`
+- `oklab-colours-are-srgb` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `panel-content-fades-without-the-blur` — deviation, `packages/chat-demo/Composer.js`
 - `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
 - `peek-outruns-the-scroll` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPPeekInteraction.h`
+- `plural-rules-are-english` — limitation, `packages/rn-tester/js/astryx/intl-shim.js`
+- `popover-is-not-in-the-top-layer` — limitation, `packages/rn-tester/js/astryx/dom-compat.js`
 - `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `position-try-is-flips-and-a-clamp` — limitation, `packages/rn-tester/js/astryx/overlay/topLayerPlacement.js`
 - `press-dim-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
 - `radio-card-needs-a-contrasting-page` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPRadioRunList.h`
+- `relative-time-is-english` — limitation, `packages/rn-tester/js/astryx/intl-shim.js`
 - `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`
 - `rtl-inline-run-not-reordered` — limitation, `ReactCommon/react/renderer/components/text/InlineContentShadowNode.cpp`

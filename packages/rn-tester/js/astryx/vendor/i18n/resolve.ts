@@ -20,11 +20,9 @@
  */
 
 import IntlMessageFormat from 'intl-messageformat';
-import type {Catalog, Locale, MessagesByLocale, Overrides} from './types';
-import enSource from '../../locales/en.json' with {type: 'json'};
+import type {Locale, Overrides, ProviderMessagesByLocale} from './types';
+import enCatalog from './generated-locales/en.generated';
 import {warnOnce, __resetDevWarnings} from '../utils/devWarning';
-
-const EN_CATALOG = enSource as Catalog;
 
 /**
  * Cache of parsed ICU MessageFormat objects keyed by `${locale}::${message}`.
@@ -73,74 +71,73 @@ export function resolveLocaleChain(locale: Locale): Locale[] {
   return chain;
 }
 
-function lookup(
-  key: string,
+function getLookup(
   locale: Locale,
-  messages: MessagesByLocale,
-  overrides: Overrides | undefined,
-): string | null {
+  messages: ProviderMessagesByLocale,
+  overrides?: Overrides,
+): Record<string, string> {
+  const lookup: Record<string, string> = {};
   const chain = resolveLocaleChain(locale);
-
   // 1 + 2. Overrides (most specific to least specific in the chain)
   if (overrides !== undefined) {
     for (const tag of chain) {
-      const value = overrides[tag]?.[key];
-      if (value !== undefined) {
-        return value;
+      if (overrides[tag]) {
+        for (const [key, value] of Object.entries(overrides[tag])) {
+          if (lookup[key] === undefined && value !== null) {
+            lookup[key] = value;
+          }
+        }
+      }
+    }
+  }
+  for (const tag of chain) {
+    if (messages[tag]) {
+      for (const [key, value] of Object.entries(messages[tag])) {
+        const message =
+          typeof value === 'string' ? value : value?.defaultMessage;
+        if (lookup[key] === undefined && message != null) {
+          lookup[key] = message;
+        }
       }
     }
   }
 
-  // 3 + 4. Shipped catalogs (most specific to least specific)
-  for (const tag of chain) {
-    const entry = messages[tag]?.[key];
-    if (entry !== undefined) {
-      return entry.defaultMessage;
-    }
-  }
-
-  // 5. Shipped en catalog — always present
-  const enEntry = EN_CATALOG[key];
-  if (enEntry !== undefined) {
-    return enEntry.defaultMessage;
-  }
-
-  // 6. Nothing found
-  return null;
+  return lookup;
 }
 
-export function resolve(
-  key: string,
-  values: Record<string, unknown> | undefined,
+export function getResolve(
   locale: Locale,
-  messages: MessagesByLocale,
-  overrides: Overrides | undefined,
-): string {
-  const result = lookup(key, locale, messages, overrides);
+  messages: ProviderMessagesByLocale,
+  overrides?: Overrides,
+) {
+  const lookup = getLookup(locale, messages, overrides);
 
-  if (result === null) {
-    // Fires ONLY when a key is missing from every source including the
-    // shipped `en` catalog — a real bug (typo, stale catalog, deleted key).
-    // Fallback to `en` from a non-en locale is expected and stays silent,
-    // matching the FormatJS / i18next default.
-    warnOnce(
-      `astryx-i18n:${locale}::${key}`,
-      'astryx-i18n',
-      `missing key: ${key} (locale: ${locale})`,
-    );
-    return key;
-  }
+  return (key: string, values: Record<string, unknown> | undefined) => {
+    const result = lookup[key] ?? enCatalog[key];
+    if (result === undefined) {
+      // Fires ONLY when a key is missing from every source including the
+      // shipped `en` catalog — a real bug (typo, stale catalog, deleted key).
+      // Fallback to `en` from a non-en locale is expected and stays silent,
+      // matching the FormatJS / i18next default.
+      warnOnce(
+        `astryx-i18n:${locale}::${key}`,
+        'astryx-i18n',
+        `missing key: ${key} (locale: ${locale})`,
+      );
+      return key;
+    }
 
-  if (values === undefined) {
-    // Static string — skip the parser entirely for the common case
-    return result;
-  }
+    if (values === undefined) {
+      // Static string — skip the parser entirely for the common case
+      return result;
+    }
 
-  const formatted = getFormatter(result, locale).format(values);
-  // IntlMessageFormat.format returns string | (string | React elements) — we
-  // only ever pass string values so it will be a string; assert for the type
-  // system.
-  return formatted as string;
+    const formatted = getFormatter(result, locale).format(values);
+    // IntlMessageFormat.format returns string | (string | React elements) — we
+    // only ever pass string values so it will be a string; assert for the type
+    // system.
+    return formatted as string;
+  };
 }
 
 /**
