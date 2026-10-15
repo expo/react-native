@@ -43,6 +43,40 @@ using namespace facebook::react;
 
 static NSSet<NSNumber *> *returnKeyTypesSet;
 
+/*
+ * The field's text attributes, with a single-line field's line centred.
+ *
+ * A `lineHeight` reaches the field as a paragraph style's minimum and maximum
+ * line height, and TextKit puts the whole of that extra leading ABOVE the
+ * glyphs, so the text and its placeholder sat on the bottom of a field whose
+ * box the layout had already centred: a 16-point face in a 24-point line box
+ * drew 4 points low in every Astryx field. CSS splits the leading above and
+ * below (CSS2 §10.8), which `RCTApplyBaselineOffset` does for a paragraph; a
+ * field's attributes are a dictionary, so the same half-leading is written
+ * here as the baseline offset. Multi-line fields are left alone: their lines
+ * stack, and shifting each would move the text away from the top.
+ */
+static NSMutableDictionary<NSAttributedStringKey, id> *RCTTextInputDefaultTextAttributes(
+    const facebook::react::TextInputProps &props,
+    BOOL singleLine)
+{
+  NSMutableDictionary<NSAttributedStringKey, id> *attributes =
+      RCTNSTextAttributesFromTextAttributes(props.getEffectiveTextAttributes(RCTFontSizeMultiplier()));
+  if (!singleLine) {
+    return attributes;
+  }
+  NSParagraphStyle *paragraphStyle = attributes[NSParagraphStyleAttributeName];
+  UIFont *font = attributes[NSFontAttributeName];
+  if (paragraphStyle == nil || font == nil || paragraphStyle.maximumLineHeight <= 0) {
+    return attributes;
+  }
+  const CGFloat halfLeading = (paragraphStyle.maximumLineHeight - font.lineHeight) / 2.0;
+  if (halfLeading > 0) {
+    attributes[NSBaselineOffsetAttributeName] = @(halfLeading);
+  }
+  return attributes;
+}
+
 @implementation RCTTextInputComponentView {
   TextInputShadowNode::ConcreteState::Shared _state;
   UIView<RCTBackedTextInputViewProtocol> *_backedTextInputView;
@@ -145,7 +179,7 @@ static NSSet<NSNumber *> *returnKeyTypesSet;
           previousTraitCollection.preferredContentSizeCategory) {
     const auto &newTextInputProps = static_cast<const TextInputProps &>(*_props);
     _backedTextInputView.defaultTextAttributes =
-        RCTNSTextAttributesFromTextAttributes(newTextInputProps.getEffectiveTextAttributes(RCTFontSizeMultiplier()));
+        RCTTextInputDefaultTextAttributes(newTextInputProps, !newTextInputProps.multiline);
   }
 }
 
@@ -303,7 +337,7 @@ static NSSet<NSNumber *> *returnKeyTypesSet;
 
   if (newTextInputProps.textAttributes != oldTextInputProps.textAttributes) {
     NSMutableDictionary<NSAttributedStringKey, id> *defaultAttributes =
-        RCTNSTextAttributesFromTextAttributes(newTextInputProps.getEffectiveTextAttributes(RCTFontSizeMultiplier()));
+        RCTTextInputDefaultTextAttributes(newTextInputProps, !newTextInputProps.multiline);
     defaultAttributes[RCTAttributedStringEventEmitterKey] =
         _backedTextInputView.defaultTextAttributes[RCTAttributedStringEventEmitterKey];
     _backedTextInputView.defaultTextAttributes = defaultAttributes;
