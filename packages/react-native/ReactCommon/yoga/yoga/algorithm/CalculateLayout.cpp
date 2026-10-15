@@ -1075,6 +1075,8 @@ static float distributeFreeSpaceSecondPass(
     const float mainAxisOwnerSize,
     const float availableInnerMainDim,
     const float availableInnerCrossDim,
+    const float percentOwnerMainDim,
+    const float percentOwnerCrossDim,
     const float availableInnerWidth,
     const float availableInnerHeight,
     const bool mainAxisOverflows,
@@ -1176,7 +1178,7 @@ static float distributeFreeSpaceSecondPass(
     } else if (
         !std::isnan(availableInnerCrossDim) &&
         !currentLineChild->hasDefiniteLength(
-            dimension(crossAxis), availableInnerCrossDim) &&
+            dimension(crossAxis), percentOwnerCrossDim) &&
         sizingModeCrossDim == SizingMode::StretchFit &&
         !(isNodeFlexWrap && mainAxisOverflows) &&
         resolveChildAlignment(node, currentLineChild) == Align::Stretch &&
@@ -1186,7 +1188,7 @@ static float distributeFreeSpaceSecondPass(
       childCrossSize = availableInnerCrossDim;
       childCrossSizingMode = SizingMode::StretchFit;
     } else if (!currentLineChild->hasDefiniteLength(
-                   dimension(crossAxis), availableInnerCrossDim)) {
+                   dimension(crossAxis), percentOwnerCrossDim)) {
       childCrossSize = availableInnerCrossDim;
       childCrossSizingMode = yoga::isUndefined(childCrossSize)
           ? SizingMode::MaxContent
@@ -1196,7 +1198,7 @@ static float distributeFreeSpaceSecondPass(
                            ->getResolvedDimension(
                                direction,
                                dimension(crossAxis),
-                               availableInnerCrossDim,
+                               percentOwnerCrossDim,
                                availableInnerWidth)
                            .unwrap() +
           marginCross;
@@ -1214,7 +1216,7 @@ static float distributeFreeSpaceSecondPass(
         currentLineChild,
         direction,
         mainAxis,
-        availableInnerMainDim,
+        percentOwnerMainDim,
         availableInnerWidth,
         &childMainSizingMode,
         &childMainSize);
@@ -1222,14 +1224,14 @@ static float distributeFreeSpaceSecondPass(
         currentLineChild,
         direction,
         crossAxis,
-        availableInnerCrossDim,
+        percentOwnerCrossDim,
         availableInnerWidth,
         &childCrossSizingMode,
         &childCrossSize);
 
     const bool requiresStretchLayout =
         !currentLineChild->hasDefiniteLength(
-            dimension(crossAxis), availableInnerCrossDim) &&
+            dimension(crossAxis), percentOwnerCrossDim) &&
         resolveChildAlignment(node, currentLineChild) == Align::Stretch &&
         !currentLineChild->style().flexStartMarginIsAuto(
             crossAxis, direction) &&
@@ -1413,6 +1415,8 @@ static void resolveFlexibleLength(
     const float mainAxisOwnerSize,
     const float availableInnerMainDim,
     const float availableInnerCrossDim,
+    const float percentOwnerMainDim,
+    const float percentOwnerCrossDim,
     const float availableInnerWidth,
     const float availableInnerHeight,
     const bool mainAxisOverflows,
@@ -1467,6 +1471,8 @@ static void resolveFlexibleLength(
       mainAxisOwnerSize,
       availableInnerMainDim,
       availableInnerCrossDim,
+      percentOwnerMainDim,
+      percentOwnerCrossDim,
       availableInnerWidth,
       availableInnerHeight,
       mainAxisOverflows,
@@ -2162,6 +2168,14 @@ static void calculateBlockLayout(
       paddingAndBorderAxisColumn,
       ownerHeight,
       ownerWidth);
+  // The height the children resolve percentages against: definite only when
+  // this block was laid out at an exact height; see the flex path
+  const float ownerHeightForChildren =
+      node->getConfig()->isExperimentalFeatureEnabled(
+          ExperimentalFeature::WebPercentageHeights) &&
+          heightSizingMode != SizingMode::StretchFit
+      ? YGUndefined
+      : availableInnerHeight;
 
   // Auto-width block children fill the container's content width only when the
   // container's own width is definite (StretchFit). During a content-measuring
@@ -2309,12 +2323,12 @@ static void calculateBlockLayout(
       }
       float floatHeight = YGUndefined;
       SizingMode floatHeightMode = SizingMode::MaxContent;
-      if (child->hasDefiniteLength(Dimension::Height, availableInnerHeight)) {
+      if (child->hasDefiniteLength(Dimension::Height, ownerHeightForChildren)) {
         floatHeight = child
                           ->getResolvedDimension(
                               direction,
                               Dimension::Height,
-                              availableInnerHeight,
+                              ownerHeightForChildren,
                               availableInnerWidth)
                           .unwrap() +
             floatMarginColumn;
@@ -2329,7 +2343,7 @@ static void calculateBlockLayout(
           floatWidthMode,
           floatHeightMode,
           availableInnerWidth,
-          availableInnerHeight,
+          ownerHeightForChildren,
           performLayout,
           performLayout ? LayoutPassReason::kFlexLayout
                         : LayoutPassReason::kFlexMeasure,
@@ -2433,7 +2447,7 @@ static void calculateBlockLayout(
     const bool childWidthDefinite =
         child->hasDefiniteLength(Dimension::Width, availableInnerWidth);
     const bool childHeightDefinite =
-        child->hasDefiniteLength(Dimension::Height, availableInnerHeight);
+        child->hasDefiniteLength(Dimension::Height, ownerHeightForChildren);
 
     // Inline (cross) axis: a block child fills the container's content width
     // unless it has a definite width; when the container width is indefinite
@@ -2472,7 +2486,7 @@ static void calculateBlockLayout(
                         ->getResolvedDimension(
                             direction,
                             Dimension::Height,
-                            availableInnerHeight,
+                            ownerHeightForChildren,
                             availableInnerWidth)
                         .unwrap() +
           childMarginColumn;
@@ -2513,7 +2527,7 @@ static void calculateBlockLayout(
         child,
         direction,
         FlexDirection::Column,
-        availableInnerHeight,
+        ownerHeightForChildren,
         ownerWidth,
         &childHeightSizingMode,
         &childHeight);
@@ -2544,7 +2558,7 @@ static void calculateBlockLayout(
         childWidthSizingMode,
         childHeightSizingMode,
         availableInnerWidth,
-        availableInnerHeight,
+        ownerHeightForChildren,
         performLayout,
         performLayout ? LayoutPassReason::kFlexLayout
                       : LayoutPassReason::kFlexMeasure,
@@ -3074,6 +3088,28 @@ static void calculateLayoutImpl(
   const float availableInnerCrossDim =
       isMainAxisRow ? availableInnerHeight : availableInnerWidth;
 
+  /*
+   * The height the children resolve percentages against. CSS (css-sizing-3
+   * §5.1.2, CSS 2.1 §10.5) resolves a percentage height only against a
+   * DEFINITE containing-block height; otherwise it computes to `auto`. Yoga
+   * resolves it against whatever height is available, so a `height: 100%`
+   * box under an auto-height parent takes the grandparent's free space and
+   * grows it in a loop. Under WebPercentageHeights this box's height is
+   * definite to its children only when it was laid out at an exact size
+   * (its own definite height, a flexed main size, a stretched cross size).
+   */
+  const bool webPercentageHeights =
+      node->getConfig()->isExperimentalFeatureEnabled(
+          ExperimentalFeature::WebPercentageHeights);
+  const float ownerHeightForChildren =
+      webPercentageHeights && heightSizingMode != SizingMode::StretchFit
+      ? YGUndefined
+      : availableInnerHeight;
+  const float percentOwnerMainDim =
+      isMainAxisRow ? availableInnerWidth : ownerHeightForChildren;
+  const float percentOwnerCrossDim =
+      isMainAxisRow ? ownerHeightForChildren : availableInnerWidth;
+
   // STEP 3: DETERMINE FLEX BASIS FOR EACH ITEM
 
   // Computed basis + margins + gap
@@ -3083,7 +3119,7 @@ static void calculateLayoutImpl(
       availableInnerWidth,
       availableInnerHeight,
       availableInnerWidth,
-      availableInnerHeight,
+      ownerHeightForChildren,
       widthSizingMode,
       heightSizingMode,
       direction,
@@ -3228,8 +3264,10 @@ static void calculateLayoutImpl(
           mainAxisOwnerSize,
           availableInnerMainDim,
           availableInnerCrossDim,
+          percentOwnerMainDim,
+          percentOwnerCrossDim,
           availableInnerWidth,
-          availableInnerHeight,
+          ownerHeightForChildren,
           mainAxisOverflows,
           sizingModeCrossDim,
           performLayout,
@@ -3320,7 +3358,7 @@ static void calculateLayoutImpl(
           // If the child defines a definite size for its cross axis, there's
           // no need to stretch.
           if (!child->hasDefiniteLength(
-                  dimension(crossAxis), availableInnerCrossDim)) {
+                  dimension(crossAxis), percentOwnerCrossDim)) {
             float childMainSize =
                 child->getLayout().measuredDimension(dimension(mainAxis));
             const auto& childStyle = child->style();
@@ -3341,7 +3379,7 @@ static void calculateLayoutImpl(
                 child,
                 direction,
                 mainAxis,
-                availableInnerMainDim,
+                percentOwnerMainDim,
                 availableInnerWidth,
                 &childMainSizingMode,
                 &childMainSize);
@@ -3349,7 +3387,7 @@ static void calculateLayoutImpl(
                 child,
                 direction,
                 crossAxis,
-                availableInnerCrossDim,
+                percentOwnerCrossDim,
                 availableInnerWidth,
                 &childCrossSizingMode,
                 &childCrossSize);
@@ -3381,7 +3419,7 @@ static void calculateLayoutImpl(
                 childWidthSizingMode,
                 childHeightSizingMode,
                 availableInnerWidth,
-                availableInnerHeight,
+                ownerHeightForChildren,
                 true,
                 LayoutPassReason::kStretch,
                 layoutMarkerData,
@@ -3617,7 +3655,7 @@ static void calculateLayoutImpl(
                       SizingMode::StretchFit,
                       SizingMode::StretchFit,
                       availableInnerWidth,
-                      availableInnerHeight,
+                      ownerHeightForChildren,
                       true,
                       LayoutPassReason::kMultilineStretch,
                       layoutMarkerData,
@@ -3829,10 +3867,22 @@ bool calculateLayoutInternal(
 
   depth++;
 
+  // A node whose own height is a percentage resolves it against its owner's
+  // height, which is not among the cache's keys: under WebPercentageHeights it
+  // can change while the available sizes stay the same (an owner that became
+  // definite), and a `min-height: 100%` laid out against an earlier owner kept
+  // that height
+  const bool percentOwnerChanged =
+      !yoga::inexactEquals(layout->lastOwnerHeight, ownerHeight) &&
+      (node->style().dimension(Dimension::Height).isPercent() ||
+       node->style().minDimension(Dimension::Height).isPercent() ||
+       node->style().maxDimension(Dimension::Height).isPercent());
+  layout->lastOwnerHeight = ownerHeight;
+
   const bool needToVisitNode =
       (node->isDirty() && layout->generationCount != generationCount) ||
       layout->configVersion != node->getConfig()->getVersion() ||
-      layout->lastOwnerDirection != ownerDirection;
+      layout->lastOwnerDirection != ownerDirection || percentOwnerChanged;
 
   if (needToVisitNode) {
     // Invalidate the cached results.
