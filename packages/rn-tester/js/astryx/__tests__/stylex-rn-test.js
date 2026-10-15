@@ -110,6 +110,31 @@ describe('stylex-rn', () => {
     );
   });
 
+  it('sizes viewport and container units from the boxes in scope', () => {
+    // A host surface declares the viewport, a laid-out container its size
+    // (css/match.js); the window stands in for whatever is not declared
+    const scope = new Map<string, unknown>([
+      ['--astryx-viewport-inline-size', '400px'],
+      ['--astryx-viewport-block-size', '800px'],
+      ['--astryx-container-inline-size', '300px'],
+      ['--astryx-container-block-size', '150px'],
+    ]);
+    const result = stylex.props({
+      width: 'calc(50vw + 10px)',
+      height: '100dvh',
+      paddingInlineStart: 'calc((100cqi - 100px) / 2)',
+      minHeight: '10cqb',
+    });
+    expect(resolved(result, scope)).toEqual({
+      width: 210,
+      height: 800,
+      paddingInlineStart: 100,
+      minHeight: 15,
+    });
+    const windowed = resolved(stylex.props({width: '100vw'}));
+    expect(typeof windowed?.width).toBe('number');
+  });
+
   it('resolves element-local custom properties shadowing tokens', () => {
     expect(
       resolved(
@@ -203,9 +228,9 @@ describe('stylex-rn', () => {
   });
 
   it('drops unsupported declarations without throwing', () => {
-    // The runtime warns once per dropped property in dev; silence the repo's
-    // warn-is-error jest guard for this intentional case.
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    // The runtime notes once per dropped property in dev, on console.info,
+    // which is not a warning the app shows
+    const warnSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
     const {style} = stylex.props({
       cursor: 'pointer',
       anchorName: '--x',
@@ -452,6 +477,37 @@ describe('stylex-rn custom-property inheritance (M3)', () => {
     });
   });
 
+  // css-variables-1 §2.1: `initial` on a custom property is the
+  // guaranteed-invalid value, which Astryx's Layout uses to reset its padding
+  // chain for a subtree; a `var()` of it takes the fallback
+  it('takes the fallback of a custom property an ancestor set to initial', () => {
+    const {scope} = stylex.resolveInherited(
+      stylex.props({'--container-padding-inline-start': 'initial'}).style,
+      null,
+      null,
+    );
+    const child = stylex.props({
+      marginInlineStart:
+        'calc(-1 * var(--container-padding-inline-start, 8px))',
+    });
+    expect(stylex.resolveInherited(child.style, null, scope).style).toEqual({
+      marginInlineStart: -8,
+    });
+  });
+
+  // Astryx bleeds a block through its container's padding with
+  // `calc(100% + pad-start + pad-end)`; with the padding unset the sum is the
+  // percentage, which layout can take, not a value to drop
+  it('keeps the percentage of a calc() whose lengths cancel', () => {
+    const child = stylex.props({
+      height:
+        'calc(100% + var(--container-padding-block-start, 0px) + var(--container-padding-block-end, 0px))',
+    });
+    expect(stylex.resolveInherited(child.style, null, null).style).toEqual({
+      height: '100%',
+    });
+  });
+
   it('falls back only when no ancestor defines the property', () => {
     const child = stylex.props({
       marginInlineStart:
@@ -601,6 +657,108 @@ describe('CSS-wide keywords', () => {
   });
 });
 
+describe('conditional custom properties', () => {
+  // TabList's strip declares its bleed as `{default: '0px', ':has(...)': ...}`
+  // and reads it back through var(); the object must not reach the string
+  it('reads the picked value of a conditional custom property', () => {
+    const {style} = stylex.props({
+      '--_bleed': {default: '4px', ':hover': '8px'},
+      paddingTop: 'var(--_bleed)',
+      marginTop: 'calc(-1 * (var(--_bleed)))',
+    });
+    expect(style).toMatchObject({paddingTop: 4, marginTop: -4});
+  });
+});
+
+describe('math functions and window units', () => {
+  // LayoutContent centres a column of alignment width W inside its container
+  // with `max(pad, calc((100cqi - W) / 2 + pad))`; on a phone the window is
+  // the container and narrower than W, so the padding wins
+  // Viewport and container units are the element's to size (an ancestor
+  // may name the boxes they measure), so these resolve through its pass
+  it('evaluates max() over calc() with container-query units', () => {
+    const style = resolved(
+      stylex.props({
+        paddingInlineStart: 'max(2rem, calc((100cqi - 1200px) / 2 + 2rem))',
+      }),
+    );
+    expect(style).toEqual({paddingInlineStart: 32});
+  });
+
+  it('evaluates clamp() and viewport units', () => {
+    const width = require('react-native').Dimensions.get('window').width;
+    const style = resolved(
+      stylex.props({fontSize: 'clamp(10px, 5vw, 1000px)'}),
+    );
+    expect(style).toEqual({fontSize: (5 * width) / 100});
+  });
+});
+
+describe('env() in calc', () => {
+  // The Layer sizes a popover to the viewport minus the safe area:
+  // `calc(100vi - calc(max(1rem, env(safe-area-inset-left, 0px)) + 0px) - …)`
+  it('takes the fallback when the app registered nothing', () => {
+    const width = require('react-native').Dimensions.get('window').width;
+    const style = resolved(
+      stylex.props({
+        maxWidth: 'calc(100vi - max(1rem, env(safe-area-inset-left, 0px)))',
+      }),
+    );
+    expect(style).toEqual({maxWidth: width - 16});
+  });
+
+  it('takes the registered inset', () => {
+    const width = require('react-native').Dimensions.get('window').width;
+    stylex.setEnvironmentResolver(name =>
+      name === 'safe-area-inset-left' ? 44 : null,
+    );
+    try {
+      const style = resolved(
+        stylex.props({
+          maxWidth: 'calc(100svi - max(1rem, env(safe-area-inset-left, 0px)))',
+        }),
+      );
+      expect(style).toEqual({maxWidth: width - 44});
+    } finally {
+      stylex.setEnvironmentResolver(null);
+    }
+  });
+});
+
+describe('@container keys', () => {
+  // DOM-CSS-DEVIATION(container-query-is-a-media-query)
+  it('answer as a media query over the window', () => {
+    const narrow = stylex.props({
+      flexDirection: {
+        default: 'row',
+        '@container chips (max-width: 100000px)': 'column',
+      },
+    });
+    expect(narrow.style).toEqual({flexDirection: 'column'});
+    const wide = stylex.props({
+      flexDirection: {
+        default: 'row',
+        '@container (min-width: 100000px)': 'column',
+      },
+    });
+    expect(wide.style).toEqual({flexDirection: 'row'});
+  });
+});
+
+describe('visibility', () => {
+  // Tab reserves the width of its bold label with a hidden copy; the copy
+  // must keep its box and draw nothing
+  it('maps hidden to an invisible, untouchable box', () => {
+    const {style} = stylex.props({visibility: 'hidden', width: 40});
+    expect(style).toEqual({opacity: 0, pointerEvents: 'none', width: 40});
+  });
+
+  it('leaves visible alone', () => {
+    const {style} = stylex.props({visibility: 'visible', width: 40});
+    expect(style).toEqual({width: 40});
+  });
+});
+
 describe('border-style: none', () => {
   // React Native's `borderStyle` takes solid, dotted or dashed and has no way
   // to say "no border". CSS says `none` forces the used width to zero
@@ -670,7 +828,7 @@ describe('CSS Grid', () => {
   });
 
   it('still drops the shorthands, which have no RN property', () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
     // A supported longhand rides along so `style` exists at all: when every
     // declaration is dropped, props() returns no style object to inspect.
     const style = styleOf(
@@ -735,5 +893,27 @@ describe('list-style', () => {
     expect(style.listStyle).toBeUndefined();
     expect(warnSpy).toHaveBeenCalledTimes(1);
     warnSpy.mockRestore();
+  });
+
+  it('draws a logical border on the physical side it names', () => {
+    const styles = stylex.create({
+      divider: {
+        borderBlockEndWidth: 1,
+        borderBlockEndStyle: 'solid',
+        borderInlineStartWidth: 2,
+      },
+      both: {borderBottomWidth: 3, borderBlockEndWidth: 1},
+      physicalLast: {borderBlockEndWidth: 1, borderBottomWidth: 3},
+    });
+    const divider: $FlowFixMe = stylex.props(styles.divider).style;
+    expect(divider.borderBottomWidth).toBe(1);
+    expect(divider.borderStartWidth).toBe(2);
+    expect(divider.borderStyle).toBe('solid');
+    expect(divider.borderBlockEndWidth).toBeUndefined();
+    // Whichever of the two is declared later wins
+    const both: $FlowFixMe = stylex.props(styles.both).style;
+    expect(both.borderBottomWidth).toBe(1);
+    const physicalLast: $FlowFixMe = stylex.props(styles.physicalLast).style;
+    expect(physicalLast.borderBottomWidth).toBe(3);
   });
 });

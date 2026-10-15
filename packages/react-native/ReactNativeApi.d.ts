@@ -4075,7 +4075,7 @@ declare class ReadOnlyNode_default extends ReadOnlyNodeBase {
   get childNodes(): NodeList_default<ReadOnlyNode_default>
   compareDocumentPosition(otherNode: ReadOnlyNode_default): number
   protected constructor()
-  contains(otherNode: ReadOnlyNode_default): boolean
+  contains(otherNode: null | ReadOnlyNode_default | undefined): boolean
   get firstChild(): null | ReadOnlyNode_default
   getRootNode(): ReadOnlyNode_default
   hasChildNodes(): boolean

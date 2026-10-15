@@ -50,19 +50,19 @@ const styles = stylex.create({
   },
   // Start panel: outer-x on left edge
   startPanel: {
-    paddingInlineStart: `var(--layout-padding-outer-x, ${spacingVars['--spacing-4']})`,
+    paddingInlineStart: `var(--layout-padding-own-outer-x, var(--layout-padding-outer-x, ${spacingVars['--spacing-4']}))`,
   },
   // End panel: outer-x on right edge
   endPanel: {
-    paddingInlineEnd: `var(--layout-padding-outer-x, ${spacingVars['--spacing-4']})`,
+    paddingInlineEnd: `var(--layout-padding-own-outer-x, var(--layout-padding-outer-x, ${spacingVars['--spacing-4']}))`,
   },
   // When no header: outer-y on top
   noHeader: {
-    paddingBlockStart: `var(--layout-padding-outer-y, ${spacingVars['--spacing-4']})`,
+    paddingBlockStart: `var(--layout-padding-own-outer-y, var(--layout-padding-outer-y, ${spacingVars['--spacing-4']}))`,
   },
   // When no footer: outer-y on bottom
   noFooter: {
-    paddingBlockEnd: `var(--layout-padding-outer-y, ${spacingVars['--spacing-4']})`,
+    paddingBlockEnd: `var(--layout-padding-own-outer-y, var(--layout-padding-outer-y, ${spacingVars['--spacing-4']}))`,
   },
   fullBleed: {
     paddingInlineStart: 0,
@@ -167,7 +167,7 @@ export interface LayoutPanelProps extends BaseProps<HTMLDivElement> {
    *
    * @example
    * ```
-   * const sidebar = useResizable({ defaultSize: 250, minSizePx: 200 });
+   * const sidebar = useResizable({ defaultSize: 250, minSize: 200 });
    * <LayoutPanel resizable={sidebar.props}>
    *   <Navigation />
    * </LayoutPanel>
