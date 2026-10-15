@@ -2374,6 +2374,17 @@ yoga::Config& YogaLayoutableShadowNode::initializeYogaConfig(
         &config, YGExperimentalFeatureFixFlexBasisFitContent, true);
   }
 
+  // With the web's block layout comes the web's percentage heights: a
+  // percentage resolves only against a definite containing-block height and
+  // computes to `auto` otherwise, where Yoga resolves it against the
+  // available height. A `height: 100%` box under an auto-height parent (an
+  // Astryx Section inside a column) would otherwise take the column's free
+  // space. See WebPercentageHeights in CalculateLayout.cpp.
+  if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
+    YGConfigSetExperimentalFeatureEnabled(
+        &config, YGExperimentalFeatureWebPercentageHeights, true);
+  }
+
   return config;
 }
 
