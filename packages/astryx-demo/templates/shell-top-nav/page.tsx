@@ -1,0 +1,222 @@
+// Copyright (c) Meta Platforms, Inc. and affiliates.
+
+'use client';
+
+import * as stylex from '@stylexjs/stylex';
+import {AppShell} from '@astryxdesign/core/AppShell';
+import {
+  TopNav,
+  TopNavHeading,
+  TopNavItem,
+  TopNavMegaMenu,
+  TopNavMegaMenuItem,
+  TopNavMegaMenuFeaturedCard,
+} from '@astryxdesign/core/TopNav';
+import {NavIcon} from '@astryxdesign/core/NavIcon';
+import {Icon} from '@astryxdesign/core/Icon';
+import type {IconType} from '@astryxdesign/core/Icon';
+import {IconButton} from '@astryxdesign/core/IconButton';
+import {Button} from '@astryxdesign/core/Button';
+import {Badge} from '@astryxdesign/core/Badge';
+import {Card} from '@astryxdesign/core/Card';
+import {Grid} from '@astryxdesign/core/Grid';
+import {Stack, VStack} from '@astryxdesign/core/Stack';
+import {useMediaQuery} from '@astryxdesign/core/hooks';
+import {
+  ShoppingBagIcon,
+  ShoppingCartIcon,
+  MagnifyingGlassIcon,
+  SparklesIcon,
+  SwatchIcon,
+  TagIcon,
+  HomeModernIcon,
+  FaceSmileIcon,
+  ReceiptPercentIcon,
+  GiftIcon,
+  CloudIcon,
+  BoltIcon,
+  SunIcon,
+  StarIcon,
+  FireIcon,
+  GlobeAltIcon,
+  MoonIcon,
+} from '@heroicons/react/24/outline';
+
+const styles = stylex.create({
+  // Cap + center the page body so wide screens show whitespace gutters.
+  contentMax: {maxWidth: 1100, marginInline: 'auto'},
+  // Keep Shop and Brands the same size, while fitting a narrow drawer or pane.
+  megaItems: {gridColumn: '1 / -1', width: 520, maxWidth: '100%', minWidth: 0},
+  megaFeatured: {width: 240, maxWidth: '100%', minWidth: 0},
+});
+
+type MegaItem = {name: string; tagline: string; icon: IconType};
+
+// Shop and Brands each render 8 items — the mega menu's built-in 2-column grid
+// lays them out as 2 columns × 4 rows, alongside a featured card.
+const SHOP_ITEMS: MegaItem[] = [
+  {name: 'New Arrivals', tagline: 'The latest drops', icon: SparklesIcon},
+  {name: 'Womenswear', tagline: 'Dresses, knitwear & more', icon: SwatchIcon},
+  {name: 'Menswear', tagline: 'Shirts, tailoring & more', icon: TagIcon},
+  {name: 'Home', tagline: 'Bedding, lighting & décor', icon: HomeModernIcon},
+  {
+    name: 'Beauty',
+    tagline: 'Skincare, fragrance & makeup',
+    icon: FaceSmileIcon,
+  },
+  {
+    name: 'Accessories',
+    tagline: 'Bags, hats & sunglasses',
+    icon: ShoppingBagIcon,
+  },
+  {name: 'Sale', tagline: 'Up to 50% off', icon: ReceiptPercentIcon},
+  {name: 'Gift Cards', tagline: 'The perfect present', icon: GiftIcon},
+];
+
+const BRAND_ITEMS: MegaItem[] = [
+  {name: 'Aether', tagline: 'Performance essentials', icon: SparklesIcon},
+  {name: 'Northwind', tagline: 'Outdoor & technical', icon: CloudIcon},
+  {name: 'Loomwell', tagline: 'Everyday knitwear', icon: BoltIcon},
+  {name: 'Verdant', tagline: 'Sustainable basics', icon: SunIcon},
+  {name: 'Studio Mara', tagline: 'Modern tailoring', icon: StarIcon},
+  {name: 'Atelier Kos', tagline: 'Limited ateliers', icon: FireIcon},
+  {name: 'Rue & Co', tagline: 'City streetwear', icon: GlobeAltIcon},
+  {name: 'Halden', tagline: 'Minimal staples', icon: MoonIcon},
+];
+
+const CATEGORY_TILES = [
+  'New Arrivals',
+  'Womenswear',
+  'Menswear',
+  'Home & Living',
+  'Beauty',
+  'Accessories',
+];
+
+// Both menus share the same cap and collapse to one column inside the drawer.
+function MegaItems({items}: {items: MegaItem[]}) {
+  return (
+    <Stack xstyle={styles.megaItems}>
+      <Grid columns={{minWidth: 200, max: 2, repeat: 'fit'}} gap={2}>
+        {items.map(item => (
+          <TopNavMegaMenuItem
+            key={item.name}
+            title={item.name}
+            description={item.tagline}
+            icon={<Icon icon={item.icon} size="md" color="secondary" />}
+            href="#"
+          />
+        ))}
+      </Grid>
+    </Stack>
+  );
+}
+
+// Pins the featured card to a fixed width so both panels match exactly.
+function MegaFeatured(props: {
+  title: string;
+  description: string;
+  image: string;
+  imageAlt: string;
+  linkLabel: string;
+  linkHref: string;
+}) {
+  return (
+    <Stack xstyle={styles.megaFeatured}>
+      <TopNavMegaMenuFeaturedCard {...props} />
+    </Stack>
+  );
+}
+
+export default function ShellTopNav() {
+  const compactActions = useMediaQuery('(width < 480px)');
+  return (
+    <AppShell
+      variant="surface"
+      contentPadding={6}
+      topNav={
+        <TopNav
+          label="Lumen storefront navigation"
+          heading={
+            <TopNavHeading
+              heading="Lumen"
+              logo={
+                <NavIcon icon={<Icon icon={ShoppingBagIcon} size="sm" />} />
+              }
+              headingHref="#"
+            />
+          }
+          centerContent={
+            <>
+              <TopNavMegaMenu
+                label="Shop"
+                items={<MegaItems items={SHOP_ITEMS} />}
+                featured={
+                  <MegaFeatured
+                    title="The Autumn Edit"
+                    description="Layering staples in warm, earthy tones."
+                    image="/template-assets/texture-beige-horizontal-1.png"
+                    imageAlt="Autumn collection lookbook"
+                    linkLabel="Shop the edit"
+                    linkHref="#autumn-edit"
+                  />
+                }
+              />
+              <TopNavMegaMenu
+                label="Brands"
+                items={<MegaItems items={BRAND_ITEMS} />}
+                featured={
+                  <MegaFeatured
+                    title="Meet Studio Mara"
+                    description="Modern tailoring, made to last."
+                    image="/template-assets/texture-beige-horizontal-2.png"
+                    imageAlt="Studio Mara lookbook"
+                    linkLabel="Discover the label"
+                    linkHref="#studio-mara"
+                  />
+                }
+              />
+              <TopNavItem label="Sale" href="#" />
+              <TopNavItem label="Service" href="#" />
+            </>
+          }
+          endContent={
+            <>
+              <IconButton
+                label="Search products"
+                tooltip="Search"
+                variant="ghost"
+                icon={<Icon icon={MagnifyingGlassIcon} size="sm" />}
+              />
+              <Button label="Sign in" variant="ghost" />
+              <Button
+                label={compactActions ? 'Checkout, 3 items' : 'Checkout'}
+                isIconOnly={compactActions}
+                variant="primary"
+                icon={<Icon icon={ShoppingCartIcon} size="sm" />}
+                endContent={<Badge label={3} />}
+              />
+            </>
+          }
+        />
+      }>
+      <VStack gap={10} xstyle={styles.contentMax}>
+        <Card variant="muted" padding={0} width="100%" height={360} />
+
+        {[0, 1, 2].map(section => (
+          <VStack key={section} gap={4}>
+            <Card variant="muted" padding={0} width={200} height={24} />
+            <Grid columns={{minWidth: 160, repeat: 'fit'}} gap={4}>
+              {CATEGORY_TILES.map(tile => (
+                <VStack key={tile} gap={2}>
+                  <Card variant="muted" padding={0} width="100%" height={120} />
+                  <Card variant="muted" padding={0} width="60%" height={14} />
+                </VStack>
+              ))}
+            </Grid>
+          </VStack>
+        ))}
+      </VStack>
+    </AppShell>
+  );
+}

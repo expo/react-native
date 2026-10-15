@@ -42,7 +42,7 @@ import {Platform, StyleSheet, UIManager} from 'react-native';
  */
 const HEADER_APPEARANCE =
   Platform.OS === 'ios'
-    ? {}
+    ? {blurEffect: 'systemDefault'}
     : {
         backgroundColor: uiColor('systemBackground'),
         titleColor: uiColor('label'),

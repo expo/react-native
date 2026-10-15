@@ -1,0 +1,54 @@
+{
+  "name": "astryx-demo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Astryx template gallery with native previews and adaptive navigation.",
+  "scripts": {
+    "start": "react-native start",
+    "ios": "cd ios && xcodegen generate && bundle exec pod install",
+    "postinstall": "node ./scripts/link-expo.js"
+  },
+  "codegenConfig": {
+    "name": "AppSpecs",
+    "type": "all",
+    "jsSrcsDir": "../rn-tester",
+    "android": {
+      "javaPackageName": "com.facebook.fbreact.specs"
+    },
+    "ios": {
+      "components": {
+        "RNTMyNativeView": {
+          "className": "RNTMyNativeViewComponentView"
+        },
+        "AstryxVectorShape": {
+          "className": "AstryxVectorShapeComponentView"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "intl-messageformat": "^11.2.9",
+    "lucide-react": "^1.57.0",
+    "react-native-safe-area-context": "^5.6.1",
+    "react-native-screens": "4.30.0"
+  },
+  "devDependencies": {
+    "@react-native-community/cli": "21.0.0-alpha.1",
+    "@react-native/community-cli-plugin": "0.87.0-main"
+  },
+  "peerDependencies": {
+    "@expo/log-box": "*",
+    "@expo/metro-runtime": "*",
+    "expo": "*",
+    "expo-constants": "*",
+    "expo-glass-effect": "*",
+    "expo-image": "*",
+    "expo-linking": "*",
+    "expo-modules-core": "*",
+    "expo-router": "*"
+  },
+  "peerDependenciesMeta": {
+    "//": "Peer, not regular, dependencies: scripts/link-expo.js links these from the sibling expo checkout (see there for why Yarn cannot), and Expo's autolinking walks peer dependencies, which is how their pods reach the Podfile."
+  }
+}

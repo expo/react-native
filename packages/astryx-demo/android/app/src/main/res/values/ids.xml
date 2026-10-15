@@ -1,0 +1,4 @@
+<resources>
+  <item name="astryx_catalog" type="id" />
+  <item name="astryx_detail" type="id" />
+</resources>

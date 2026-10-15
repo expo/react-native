@@ -278,6 +278,27 @@ const config = {
           filePath: path.resolve(__dirname, 'js/astryx/jsx-runtime.js'),
         };
       }
+      // Responsive hooks inside an Astryx document query that document's viewport.
+      if (/(?:^|\/)useMediaQuery$/.test(moduleName)) {
+        const resolved = context.resolveRequest(context, moduleName, platform);
+        if (
+          resolved.type === 'sourceFile' &&
+          resolved.filePath ===
+            path.join(
+              path.resolve(__dirname, 'js/astryx'),
+              'vendor/hooks/useMediaQuery.ts',
+            )
+        ) {
+          return {
+            type: 'sourceFile',
+            filePath: path.join(
+              path.resolve(__dirname, 'js/astryx'),
+              'native-css/useMediaQuery.js',
+            ),
+          };
+        }
+        return resolved;
+      }
       return context.resolveRequest(context, moduleName, platform);
     },
   },
