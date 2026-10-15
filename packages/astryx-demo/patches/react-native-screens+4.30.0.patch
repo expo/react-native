@@ -1,0 +1,61 @@
+diff --git a/node_modules/react-native-screens/ios/RNSConvert.mm b/node_modules/react-native-screens/ios/RNSConvert.mm
+index 0d6039f..53b0cdf 100644
+--- a/node_modules/react-native-screens/ios/RNSConvert.mm
++++ b/node_modules/react-native-screens/ios/RNSConvert.mm
+@@ -318,6 +318,8 @@ + (RNSBlurEffectStyle)RNSBlurEffectStyleFromCppEquivalent:(react::RNSScreenStack
+   switch (blurEffect) {
+     case None:
+       return RNSBlurEffectStyleNone;
++    case SystemDefault:
++      return RNSBlurEffectStyleSystemDefault;
+     case ExtraLight:
+       return RNSBlurEffectStyleExtraLight;
+     case Light:
+diff --git a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
+index e217b24..306969a 100644
+--- a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
++++ b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
+@@ -403,7 +403,12 @@ + (UINavigationBarAppearance *)buildAppearance:(UIViewController *)vc withConfig
+ {
+   UINavigationBarAppearance *appearance = [UINavigationBarAppearance new];
+ 
+-  if (config.backgroundColor && CGColorGetAlpha(config.backgroundColor.CGColor) == 0.) {
++  if (config.blurEffect == RNSBlurEffectStyleSystemDefault) {
++    // The system's own bar background — Liquid Glass on iOS 26 and later —
++    // which neither the transparent nor the opaque configuration can produce.
++    // The colour, if any, is left to the system too.
++    [appearance configureWithDefaultBackground];
++  } else if (config.backgroundColor && CGColorGetAlpha(config.backgroundColor.CGColor) == 0.) {
+     // Preserve the shadow properties in case the user wants to show the shadow on scroll.
+     UIColor *shadowColor = appearance.shadowColor;
+     UIImage *shadowImage = appearance.shadowImage;
+@@ -419,7 +424,7 @@ + (UINavigationBarAppearance *)buildAppearance:(UIViewController *)vc withConfig
+   }
+ 
+   // set background color if specified
+-  if (config.backgroundColor) {
++  if (config.backgroundColor && config.blurEffect != RNSBlurEffectStyleSystemDefault) {
+     appearance.backgroundColor = config.backgroundColor;
+   }
+ 
+@@ -429,7 +434,7 @@ + (UINavigationBarAppearance *)buildAppearance:(UIViewController *)vc withConfig
+       break;
+ 
+     case RNSBlurEffectStyleSystemDefault:
+-      RCTLogError(@"[RNScreens] ScreenStack does not support RNSBlurEffectStyleSystemDefault.");
++      // Configured above
+       break;
+ 
+     default:
+diff --git a/node_modules/react-native-screens/src/fabric/ScreenStackHeaderConfigNativeComponent.ts b/node_modules/react-native-screens/src/fabric/ScreenStackHeaderConfigNativeComponent.ts
+index da28c51..38f1a7d 100644
+--- a/node_modules/react-native-screens/src/fabric/ScreenStackHeaderConfigNativeComponent.ts
++++ b/node_modules/react-native-screens/src/fabric/ScreenStackHeaderConfigNativeComponent.ts
+@@ -22,6 +22,7 @@ type BackButtonDisplayMode = 'minimal' | 'default' | 'generic';
+ 
+ type BlurEffect =
+   | 'none'
++  | 'systemDefault'
+   | 'extraLight'
+   | 'light'
+   | 'dark'

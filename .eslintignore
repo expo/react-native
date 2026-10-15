@@ -24,6 +24,10 @@ packages/rn-tester/js/astryx/vendor/**/*
 # Astryx's themes as `astryx theme build` writes them, generated and vendored
 # as they are
 packages/rn-tester/js/astryx/vendor-themes/*/built/**/*
+# Astryx's page templates, kept identical to upstream (`scripts/sync-templates.js
+# --check`), and the web build the app's timings compare against
+packages/astryx-demo/templates/**/*
+packages/astryx-demo/web/
 node_modules/
 packages/*/node_modules
 packages/*/dist

@@ -1,0 +1,39 @@
+diff --git a/node_modules/expo-modules-core/ios/Core/AppContext.swift b/node_modules/expo-modules-core/ios/Core/AppContext.swift
+index 83e6efa079..6ffcee3ba9 100644
+--- a/node_modules/expo-modules-core/ios/Core/AppContext.swift
++++ b/node_modules/expo-modules-core/ios/Core/AppContext.swift
+@@ -65,7 +65,10 @@ public final class AppContext: NSObject, EXAppContextProtocol, @unchecked Sendab
+   public var _runtime: ExpoRuntime? {
+     didSet {
+       if _runtime == nil {
+-        JavaScriptActor.assumeIsolated {
++        // Skip the JavaScript thread check: `ExpoModulesHostObject` unpins the runtime from its destructor, which Hermes
++        // runs on its finalizer thread while it tears the runtime down. Releasing JSI values there is safe because
++        // Hermes drains that thread before it frees the values, and no JavaScript runs on a runtime being destroyed.
++        JavaScriptActor.assumeIsolatedUnchecked {
+           // When the runtime is unpinned from the context (e.g. deallocated),
+           // we should make sure to release all JS objects from the memory.
+           // Otherwise the JSCRuntime asserts may fail on deallocation.
+diff --git a/node_modules/expo-modules-core/ios/JS/JavaScriptActor.swift b/node_modules/expo-modules-core/ios/JS/JavaScriptActor.swift
+index 7c6c0fc78a..c65d988031 100644
+--- a/node_modules/expo-modules-core/ios/JS/JavaScriptActor.swift
++++ b/node_modules/expo-modules-core/ios/JS/JavaScriptActor.swift
+@@ -31,6 +31,18 @@ public actor JavaScriptActor: GlobalActor {
+     // This will crash if the current context cannot be isolated.
+     shared.executor.checkIsolated()
+ 
++    return try assumeIsolatedUnchecked(operation)
++  }
++
++  /**
++   A variant of `assumeIsolated` that does not check the current thread. Use it only when no JavaScript can run on the
++   runtime concurrently, for example while the runtime is torn down. Hermes runs host object, host function and native
++   state finalizers on its own finalizer thread then, not on the JavaScript thread.
++   */
++  internal static func assumeIsolatedUnchecked<T>(_ operation: @JavaScriptActor () throws -> T) rethrows -> T {
++    typealias YesActor = @JavaScriptActor () throws -> T
++    typealias NoActor = () throws -> T
++
+     // To do the unsafe cast, we have to pretend it's @escaping.
+     return try withoutActuallyEscaping(operation) { (_ fn: @escaping YesActor) throws -> T in
+       let rawFn = unsafeBitCast(fn, to: NoActor.self)

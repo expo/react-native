@@ -1,0 +1,42 @@
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve("react-native/scripts/react_native_pods.rb", {paths: [process.argv[1]]})',
+  __dir__]).strip
+# Expo modules (the module system, expo-image, expo-linking, expo-constants,
+# expo-glass-effect) come from the local expo checkout, the way RN Tester takes
+# them: the autolinking entry is required straight from it, and the search path
+# is this repository's node_modules, where scripts/link-expo.js linked them.
+require File.expand_path('../../../../expo/packages/expo/scripts/autolinking.rb', __dir__)
+
+# Expo modules on main require iOS 16.4
+platform :ios, '16.4'
+prepare_react_native_project!
+
+target 'AstryxDemo' do
+  use_react_native!(
+    path: '../../react-native',
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  use_expo_modules!(
+    searchPaths: [File.expand_path('../../../node_modules', __dir__)],
+    # Not the `expo` pod itself: this app bootstraps React Native through
+    # RCTReactNativeFactory (AppDelegate.mm), so it has no use for Expo's
+    # AppDelegate/factory pod, which also tracks a different react-native than
+    # this fork. The rest are modules the app does not ship.
+    exclude: ['expo', '@expo/dom-webview'],
+  )
+
+  # The navigator. react-native-screens is pinned per app, so Yarn nests this
+  # app's version under its own node_modules.
+  pod 'RNScreens', :path => '../node_modules/react-native-screens'
+  pod 'react-native-safe-area-context', :path => '../../../node_modules/react-native-safe-area-context'
+
+  # The native view behind the Astryx layer's `<svg>` (AstryxVectorShapeComponentView), which RN
+  # Tester keeps with its native component samples; this app's codegen (package.json) generates its
+  # spec from packages/rn-tester/js/astryx/svg under the same library name, AppSpecs.
+  pod 'MyNativeView', :path => '../../rn-tester/NativeComponentExample'
+
+  post_install do |installer|
+    react_native_post_install(installer, '../../react-native')
+  end
+end
