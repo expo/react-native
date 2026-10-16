@@ -28,13 +28,15 @@ platforms:
 
 | § | | |
 | --- | --- | --- |
-| 2.1 | Reordering and accessibility | **not implemented** — `order` |
+| 2.1 | Reordering and accessibility | **done** — `order` |
 | 2.2 | Establishing grid lanes layout | **done** (inner display); outer display below |
 | 2.3 | Orienting grid lanes layout | **done** |
 
-`order` does not exist in Yoga or in React Native's style surface, so a lanes
-container cannot honour it. The corpus keeps the case (`lanes-order-0113`) and
-every harness reports it as unsupported rather than skipping it.
+`order` is a Yoga style (`yoga::Style::order`, set from React Native's `order`
+style prop) that flex, grid and lanes containers lay their items out by, so the
+corpus case `lanes-order-0113` passes in the Fantom harness. Yoga's C API has
+no setter for it, so the C++ replay harness still reports the case as
+unsupported.
 
 `display: 'grid-lanes'` and `'inline-grid-lanes'` both parse, both produce
 lanes layout inside, and the *outer* displays differ as they should: an
