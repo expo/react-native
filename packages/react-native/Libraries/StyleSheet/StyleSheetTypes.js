@@ -789,6 +789,12 @@ type ____LayoutStyle_Internal = Readonly<{
   gridRowStart?: number | string,
   gridRowEnd?: number | string,
   /**
+   * A flex or grid item's place in its container's order-modified document
+   * order: items are laid out by ascending `order`, equal values in document
+   * order. Ignored in block layout, as on the web.
+   */
+  order?: number,
+  /**
    * Default in-track alignment for a grid container's items, on the inline
    * axis (css-align-3). `justifySelf` overrides it for one item.
    */
