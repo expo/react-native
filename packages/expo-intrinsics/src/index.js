@@ -57,6 +57,14 @@ import Picture from './Picture';
 import Quote from './Quote';
 import Select from './Select';
 import {systemColor} from './systemColors';
+import {
+  TABLE_SECTION_TAGS,
+  makeCell,
+  makeCol,
+  makeRow,
+  makeRowGroup,
+  makeTable,
+} from './Table';
 import TextArea from './TextArea';
 import uaStyles, {
   CHECKABLE_FOOTPRINT_BY_PLATFORM,
@@ -1350,6 +1358,29 @@ for (const tag of LIST_TAGS) {
   registerBlockElementUnderName(`element-${tag}`, tag);
   registerFrameworkComponent(tag, makeList(tag));
 }
+
+// The table elements are components because a row's columns are the table's,
+// set by its first row: context the per-tag sheet cannot see. The boxes are
+// ordinary blocks under `element-table`…; see Table.js for the layout.
+registerBlockElementUnderName('element-table', 'table');
+registerFrameworkComponent('table', makeTable());
+for (const tag of TABLE_SECTION_TAGS) {
+  registerBlockElementUnderName(`element-${tag}`, tag);
+  registerFrameworkComponent(tag, makeRowGroup(tag));
+}
+registerBlockElementUnderName('element-tr', 'tr');
+registerFrameworkComponent('tr', makeRow());
+for (const tag of ['td', 'th']) {
+  registerBlockElementUnderName(`element-${tag}`, tag);
+  registerFrameworkComponent(tag, makeCell(tag === 'th' ? 'th' : 'td'));
+}
+// A caption is a block above the rows; columns are not boxes at all, and a
+// `<col>` gives the columns it spans its width
+for (const tag of ['caption', 'colgroup']) {
+  registerBlockElement(tag);
+}
+registerBlockElementUnderName('element-col', 'col');
+registerFrameworkComponent('col', makeCol());
 
 // Inline presentational elements, styled entirely by the UA sheet.
 for (const name of [
