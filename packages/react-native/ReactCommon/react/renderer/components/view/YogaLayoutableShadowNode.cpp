@@ -2394,9 +2394,14 @@ yoga::Config& YogaLayoutableShadowNode::initializeYogaConfig(
   // available height. A `height: 100%` box under an auto-height parent (an
   // Astryx Section inside a column) would otherwise take the column's free
   // space. See WebPercentageHeights in CalculateLayout.cpp.
+  // And the web's flex basis: a length is the flex base size even in a row
+  // sized by its content, such as a horizontal scroll view's. See
+  // WebDefiniteFlexBasis in CalculateLayout.cpp.
   if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
     YGConfigSetExperimentalFeatureEnabled(
         &config, YGExperimentalFeatureWebPercentageHeights, true);
+    YGConfigSetExperimentalFeatureEnabled(
+        &config, YGExperimentalFeatureWebDefiniteFlexBasis, true);
   }
 
   return config;
