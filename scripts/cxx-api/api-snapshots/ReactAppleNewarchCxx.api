@@ -460,6 +460,9 @@ interface EXPTextLinkInteraction : public NSObject <UIContextMenuInteractionDele
   public virtual void setInstalled:(BOOL wanted);
 }
 
+interface EXPTopLayerComponentView : public RCTViewComponentView {
+}
+
 interface EventEmitterCallbackWrapper : public NSObject {
   public facebook::react::EventEmitterCallback _eventEmitterCallback;
 }
@@ -3317,6 +3320,7 @@ const char facebook::react::ElementSelectComponentName[];
 const char facebook::react::ElementTextAreaComponentName[];
 const char facebook::react::ElementTextInputComponentName[];
 const char facebook::react::ExpoNativeButtonComponentName[];
+const char facebook::react::ExpoTopLayerComponentName[];
 const char facebook::react::InlineContentComponentName[];
 const char facebook::react::InlineTextComponentName[];
 const char facebook::react::TextNodeComponentName[];
@@ -3392,6 +3396,7 @@ using facebook::react::EventPipeConclusion = std::function<void(facebook::jsi::R
 using facebook::react::EventTag = unsigned int;
 using facebook::react::ExpoNativeButtonComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoNativeButtonShadowNode>;
 using facebook::react::ExpoNativeButtonShadowNode = facebook::react::ConcreteViewShadowNode<facebook::react::ExpoNativeButtonComponentName, facebook::react::ExpoNativeButtonProps, facebook::react::ExpoNativeButtonEventEmitter>;
+using facebook::react::ExpoTopLayerComponentDescriptor = facebook::react::ConcreteComponentDescriptor<facebook::react::ExpoTopLayerShadowNode>;
 using facebook::react::Float = CGFloat;
 using facebook::react::GradientDirection = std::variant<facebook::react::Float, facebook::react::GradientKeyword>;
 using facebook::react::HostPlatformTouch = facebook::react::BaseTouch;
@@ -4495,6 +4500,22 @@ class facebook::react::ExpoNativeButtonProps : public facebook::react::HostPlatf
   public std::string systemImage;
   public std::string title;
   public std::vector<facebook::react::ElementMenuCommand> commands;
+}
+
+class facebook::react::ExpoTopLayerEventEmitter : public facebook::react::BaseViewEventEmitter {
+  public void onOutsidePress(facebook::react::Float x, facebook::react::Float y) const;
+}
+
+class facebook::react::ExpoTopLayerProps : public facebook::react::HostPlatformViewProps {
+  public ExpoTopLayerProps() = default;
+  public ExpoTopLayerProps(const facebook::react::PropsParserContext& context, const facebook::react::ExpoTopLayerProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public bool active;
+}
+
+class facebook::react::ExpoTopLayerShadowNode : public facebook::react::ConcreteViewShadowNode<facebook::react::ExpoTopLayerComponentName, facebook::react::ExpoTopLayerProps, facebook::react::ExpoTopLayerEventEmitter> {
+  public ExpoTopLayerShadowNode(const facebook::react::ShadowNode& sourceShadowNode, const facebook::react::ShadowNodeFragment& fragment);
+  public ExpoTopLayerShadowNode(const facebook::react::ShadowNodeFragment& fragment, const facebook::react::ShadowNodeFamily::Shared& family, facebook::react::ShadowNodeTraits traits);
+  public static facebook::react::ShadowNodeTraits BaseTraits();
 }
 
 class facebook::react::HighResDuration {
