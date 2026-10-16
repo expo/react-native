@@ -535,6 +535,10 @@ rather than going quiet.
 - `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
+- `table-cell-vertical-align` — limitation, `packages/expo-intrinsics/src/Table.js`
+- `table-layout-auto-is-fixed` — limitation, `packages/expo-intrinsics/src/Table.js`
+- `table-percent-columns-need-the-width` — limitation, `packages/expo-intrinsics/src/Table.js`
+- `table-rowspan` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
