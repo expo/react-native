@@ -717,6 +717,18 @@ const uaStyles: {[string]: UAStyle} = {
   // hidden elements (HTML §15.3.1). Laid out, an empty one is a 0x0 flex item
   // that still takes a share of `justify-content: space-between`.
   template: {display: 'none'},
+  // Tables (HTML §15.3.8), over the grid: the table and its row groups stack
+  // their rows, a row is a grid of its cells (see Table.js)
+  table: {display: 'flex', flexDirection: 'column', boxSizing: 'border-box'},
+  thead: {display: 'flex', flexDirection: 'column'},
+  tbody: {display: 'flex', flexDirection: 'column'},
+  tfoot: {display: 'flex', flexDirection: 'column'},
+  tr: {display: 'grid'},
+  td: {padding: 1},
+  th: {padding: 1, fontWeight: 'bold', textAlign: 'center'},
+  caption: {textAlign: 'center'},
+  colgroup: {display: 'none'},
+  col: {display: 'none'},
   ul: {uaMarginBlockEm: 1, paddingInlineStart: 40},
   ol: {uaMarginBlockEm: 1, paddingInlineStart: 40},
   dl: {uaMarginBlockEm: 1},
