@@ -201,6 +201,40 @@ describe('mediaConditionApplies', () => {
     ).toBe(true);
     expect(mediaConditionApplies('(unknown-feature: x)', CTX)).toBe(false);
   });
+
+  it("answers by matchMedia's grammar, against the context's viewport", () => {
+    expect(
+      mediaConditionApplies('only screen and (max-width: 640px)', CTX),
+    ).toBe(true);
+    expect(mediaConditionApplies('not (min-width: 768px)', CTX)).toBe(true);
+    expect(mediaConditionApplies('print, (max-width: 640px)', CTX)).toBe(true);
+    expect(
+      mediaConditionApplies('(min-width: 768px) or (hover: none)', CTX),
+    ).toBe(true);
+    expect(mediaConditionApplies('(hover)', CTX)).toBe(false);
+    expect(mediaConditionApplies('not', CTX)).toBe(false);
+    // A surface narrower than the window, then wider
+    const narrow = {...CTX, windowWidth: 300, windowHeight: 600};
+    expect(mediaConditionApplies('(orientation: portrait)', narrow)).toBe(true);
+    expect(mediaConditionApplies('(width <= 300px)', narrow)).toBe(true);
+    expect(
+      mediaConditionApplies('(min-aspect-ratio: 16/9)', {
+        ...narrow,
+        windowWidth: 1600,
+      }),
+    ).toBe(true);
+    // A container query asks about the container, with vw still the viewport's
+    const container = {width: 150, height: 600};
+    expect(mediaConditionApplies('(width <= 150px)', narrow, container)).toBe(
+      true,
+    );
+    expect(mediaConditionApplies('(width > 40vw)', narrow, container)).toBe(
+      true,
+    );
+    expect(mediaConditionApplies('(width > 60vw)', narrow, container)).toBe(
+      false,
+    );
+  });
 });
 
 describe('createMatcher cascade', () => {
