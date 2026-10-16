@@ -9860,6 +9860,7 @@ class facebook::yoga::Style {
   public float computeInlineStartPosition(facebook::yoga::FlexDirection axis, facebook::yoga::Direction direction, float axisSize) const;
   public float computeMarginForAxis(facebook::yoga::FlexDirection axis, float widthSize) const;
   public float computePaddingAndBorderForDimension(facebook::yoga::Direction direction, facebook::yoga::Dimension dimension, float widthSize) const;
+  public int32_t order() const;
   public static constexpr float DefaultFlexGrow;
   public static constexpr float DefaultFlexShrink;
   public static constexpr float WebDefaultFlexShrink;
@@ -9912,6 +9913,7 @@ class facebook::yoga::Style {
   public void setMargin(facebook::yoga::Edge edge, facebook::yoga::Style::Length value);
   public void setMaxDimension(facebook::yoga::Dimension axis, facebook::yoga::Style::SizeLength value);
   public void setMinDimension(facebook::yoga::Dimension axis, facebook::yoga::Style::SizeLength value);
+  public void setOrder(int32_t value);
   public void setOverflow(facebook::yoga::Overflow value);
   public void setPadding(facebook::yoga::Edge edge, facebook::yoga::Style::Length value);
   public void setPosition(facebook::yoga::Edge edge, facebook::yoga::Style::Length value);
@@ -10393,6 +10395,7 @@ struct facebook::yoga::GridStyle {
   public facebook::yoga::GridTrackList autoRows;
   public facebook::yoga::GridTrackList templateColumns;
   public facebook::yoga::GridTrackList templateRows;
+  public int32_t order;
   public std::string area;
 }
 

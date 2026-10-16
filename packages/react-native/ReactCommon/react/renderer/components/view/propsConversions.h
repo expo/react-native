@@ -115,6 +115,7 @@ convertRawProp(const PropsParserContext &context, const RawProps &rawProps, cons
       convertRawProp(context, rawProps, "gridRowStart", sourceValue.gridRowStart(), yogaStyle.gridRowStart()));
   yogaStyle.setGridRowEnd(
       convertRawProp(context, rawProps, "gridRowEnd", sourceValue.gridRowEnd(), yogaStyle.gridRowEnd()));
+  yogaStyle.setOrder(convertRawProp(context, rawProps, "order", sourceValue.order(), yogaStyle.order()));
 
   yogaStyle.setGridAutoFlow(
       convertRawProp(context, rawProps, "gridAutoFlow", sourceValue.gridAutoFlow(), yogaStyle.gridAutoFlow()));

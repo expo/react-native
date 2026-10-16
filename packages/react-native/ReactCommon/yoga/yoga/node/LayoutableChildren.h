@@ -7,9 +7,12 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <forward_list>
+#include <memory>
 #include <utility>
+#include <vector>
 
 #include <yoga/enums/Display.h>
 
@@ -33,6 +36,9 @@ class LayoutableChildren {
         : node_(node), childIndex_(childIndex) {}
 
     T* operator*() const {
+      if (ordered_ != nullptr) [[unlikely]] {
+        return (*ordered_)[orderedIndex_];
+      }
       return node_->getChild(childIndex_);
     }
 
@@ -48,15 +54,22 @@ class LayoutableChildren {
     }
 
     friend bool operator==(const Iterator& a, const Iterator& b) {
-      return a.node_ == b.node_ && a.childIndex_ == b.childIndex_;
+      return a.node_ == b.node_ && a.childIndex_ == b.childIndex_ &&
+          a.ordered_ == b.ordered_ && a.orderedIndex_ == b.orderedIndex_;
     }
 
     friend bool operator!=(const Iterator& a, const Iterator& b) {
-      return a.node_ != b.node_ || a.childIndex_ != b.childIndex_;
+      return !(a == b);
     }
 
    private:
     void next() {
+      if (ordered_ != nullptr) [[unlikely]] {
+        if (++orderedIndex_ >= ordered_->size()) {
+          *this = Iterator{};
+        }
+        return;
+      }
       if (childIndex_ + 1 >= node_->getChildCount()) {
         // if the current node has no more children, try to backtrack and
         // visit its successor
@@ -113,6 +126,10 @@ class LayoutableChildren {
     const T* node_{nullptr};
     size_t childIndex_{0};
     std::forward_list<std::pair<const T*, size_t>> backtrack_;
+    // The items in order-modified document order, when any of them sets
+    // `order`; see LayoutableChildren::begin
+    std::shared_ptr<const std::vector<T*>> ordered_;
+    size_t orderedIndex_{0};
 
     friend LayoutableChildren;
   };
@@ -124,7 +141,48 @@ class LayoutableChildren {
         "Type parameter of LayoutableChildren must derive from yoga::Node");
   }
 
+  /**
+   * The children in the order a flex or grid container lays them out: by
+   * `order`, stably, so equal values keep document order (css-display-3 §3).
+   * Block containers, and the common case of no item setting `order`, keep
+   * document order and allocate nothing.
+   */
   Iterator begin() const {
+    Iterator documentOrder = documentOrderBegin();
+    const Display display = node_->style().display();
+    if (display != Display::Flex && display != Display::Grid &&
+        display != Display::GridLanes) {
+      return documentOrder;
+    }
+    bool anyOrdered = false;
+    for (Iterator it = documentOrder; it != end(); ++it) {
+      if ((*it)->style().order() != 0) [[unlikely]] {
+        anyOrdered = true;
+        break;
+      }
+    }
+    if (!anyOrdered) [[likely]] {
+      return documentOrder;
+    }
+    auto ordered = std::make_shared<std::vector<T*>>();
+    for (Iterator it = documentOrder; it != end(); ++it) {
+      ordered->push_back(*it);
+    }
+    std::stable_sort(ordered->begin(), ordered->end(), [](T* a, T* b) {
+      return a->style().order() < b->style().order();
+    });
+    Iterator result;
+    result.node_ = node_;
+    result.ordered_ = std::move(ordered);
+    return result;
+  }
+
+  Iterator end() const {
+    return Iterator{};
+  }
+
+ private:
+  Iterator documentOrderBegin() const {
     if (node_->getChildCount() > 0) {
       auto result = Iterator(node_, 0);
       if (node_->getChild(0)->style().display() == Display::Contents)
@@ -137,11 +195,7 @@ class LayoutableChildren {
     }
   }
 
-  Iterator end() const {
-    return Iterator{};
-  }
 
- private:
   const T* node_;
 };
 

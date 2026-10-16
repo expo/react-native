@@ -177,9 +177,9 @@ void calculateGridLanesLayoutInternal(
   }
   size_t trackCount = expandedTracks.size();
 
-  // Collect the in-flow items and their grid-axis placements, in document
-  // order: `DOM-CSS-LIMITATION(lanes-order)`. css-grid-3 §2.1 reorders items
-  // by `order` first, which neither Yoga nor React Native's style surface has.
+  // Collect the in-flow items and their grid-axis placements in
+  // order-modified document order (css-grid-3 §2.1), which is the order
+  // getLayoutChildren() visits a lanes container's items in.
   std::vector<LaneItem> items;
   items.reserve(node->getChildCount());
   for (auto child : node->getLayoutChildren()) {

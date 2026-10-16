@@ -24,8 +24,8 @@
  * prop, the track-list parser, the props wiring, and layout as the app sees
  * it through getBoundingClientRect().
  *
- * 343 cases; 5 corpus cases are not expressible as RN styles
- * (min-content as a maximum, order, and the percentage flow-tolerance
+ * 344 cases; 4 corpus cases are not expressible as RN styles
+ * (min-content as a maximum, and the percentage flow-tolerance
  * Safari cannot adjudicate).
  */
 
@@ -10475,6 +10475,104 @@ describe('lanes-explicit-placement', () => {
       );
       expectClose(r.width, 193.33, 'lanes-explicit-placement-0112 item[4].w');
       expectClose(r.height, 40, 'lanes-explicit-placement-0112 item[4].h');
+    }
+  });
+});
+
+describe('lanes-order', () => {
+  it('lanes-order-0113: order rewrites the placement sequence', () => {
+    const containerRef = createRef<HostInstance>();
+    const itemRefs = [
+      createRef<HostInstance>(),
+      createRef<HostInstance>(),
+      createRef<HostInstance>(),
+      createRef<HostInstance>(),
+      createRef<HostInstance>(),
+    ];
+    const root = Fantom.createRoot({viewportWidth: VIEWPORT_WIDTH});
+    Fantom.runTask(() => {
+      root.render(
+        <View
+          collapsable={false}
+          ref={containerRef}
+          /* $FlowExpectedError[incompatible-type] grid style keys */
+          style={{
+            display: 'grid-lanes',
+            width: 600,
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: 10,
+            flowTolerance: 0,
+          }}>
+          <View
+            collapsable={false}
+            ref={itemRefs[0]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{height: 50, order: 2}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[1]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{height: 30, order: 1}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[2]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{height: 70, order: 3}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[3]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{height: 40, order: -1}}
+          />
+          <View
+            collapsable={false}
+            ref={itemRefs[4]}
+            /* $FlowExpectedError[incompatible-type] grid style keys */
+            style={{height: 60}}
+          />
+        </View>,
+      );
+    });
+    const container = rectOf(containerRef);
+    expectClose(container.width, 600, 'lanes-order-0113 container.width');
+    expectClose(container.height, 120, 'lanes-order-0113 container.height');
+    {
+      const r = rectOf(itemRefs[0]);
+      expectClose(r.x - container.x, 406.66, 'lanes-order-0113 item[0].x');
+      expectClose(r.y - container.y, 40, 'lanes-order-0113 item[0].y');
+      expectClose(r.width, 193.34, 'lanes-order-0113 item[0].w');
+      expectClose(r.height, 50, 'lanes-order-0113 item[0].h');
+    }
+    {
+      const r = rectOf(itemRefs[1]);
+      expectClose(r.x - container.x, 406.66, 'lanes-order-0113 item[1].x');
+      expectClose(r.y - container.y, 0, 'lanes-order-0113 item[1].y');
+      expectClose(r.width, 193.34, 'lanes-order-0113 item[1].w');
+      expectClose(r.height, 30, 'lanes-order-0113 item[1].h');
+    }
+    {
+      const r = rectOf(itemRefs[2]);
+      expectClose(r.x - container.x, 0, 'lanes-order-0113 item[2].x');
+      expectClose(r.y - container.y, 50, 'lanes-order-0113 item[2].y');
+      expectClose(r.width, 193.33, 'lanes-order-0113 item[2].w');
+      expectClose(r.height, 70, 'lanes-order-0113 item[2].h');
+    }
+    {
+      const r = rectOf(itemRefs[3]);
+      expectClose(r.x - container.x, 0, 'lanes-order-0113 item[3].x');
+      expectClose(r.y - container.y, 0, 'lanes-order-0113 item[3].y');
+      expectClose(r.width, 193.33, 'lanes-order-0113 item[3].w');
+      expectClose(r.height, 40, 'lanes-order-0113 item[3].h');
+    }
+    {
+      const r = rectOf(itemRefs[4]);
+      expectClose(r.x - container.x, 203.33, 'lanes-order-0113 item[4].x');
+      expectClose(r.y - container.y, 0, 'lanes-order-0113 item[4].y');
+      expectClose(r.width, 193.33, 'lanes-order-0113 item[4].w');
+      expectClose(r.height, 60, 'lanes-order-0113 item[4].h');
     }
   });
 });
