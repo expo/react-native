@@ -364,6 +364,16 @@ class YG_EXPORT Style {
     grid_.ensure().rowEnd = value;
   }
 
+  int32_t order() const {
+    return grid_.get().order;
+  }
+  void setOrder(int32_t value) {
+    // Leaves the storage unallocated for the default
+    if (value != order()) {
+      grid_.ensure().order = value;
+    }
+  }
+
   FloatOptional resolvedMinDimension(
       Direction direction,
       Dimension axis,
