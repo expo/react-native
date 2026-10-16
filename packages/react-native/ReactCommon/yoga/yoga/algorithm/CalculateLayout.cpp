@@ -271,8 +271,20 @@ static void computeFlexBasisForChild(
       node->getConfig()->isExperimentalFeatureEnabled(
           ExperimentalFeature::FixFlexBasisFitContent);
 
-  const bool useResolvedFlexBasis =
-      resolvedFlexBasis.isDefined() && yoga::isDefined(mainAxisSize);
+  // A flex basis that is a length is the item's flex base size whatever the
+  // container's size (css-flexbox-1 §9.2.3.A); Yoga took it only when the
+  // container's main size was definite, so in a row sized by its content (a
+  // horizontal scroll view's) an item was as wide as its content instead. A
+  // percentage needs the definite size, and resolves to nothing without it.
+  // An item that can grow keeps the content size there: a container sized by
+  // its content gives such an item at least its content (§9.9.1), which a
+  // `flex: 1 1 0` region would otherwise lose, laid out at zero.
+  const bool flexBasisIsLength =
+      node->getConfig()->isExperimentalFeatureEnabled(
+          ExperimentalFeature::WebDefiniteFlexBasis) &&
+      child->processFlexBasis().isPoints() && child->resolveFlexGrow() == 0;
+  const bool useResolvedFlexBasis = resolvedFlexBasis.isDefined() &&
+      (yoga::isDefined(mainAxisSize) || flexBasisIsLength);
 
   if (useResolvedFlexBasis) {
     if (child->getLayout().computedFlexBasis.isUndefined() ||
