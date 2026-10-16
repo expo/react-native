@@ -510,10 +510,6 @@ a real screen first. Background in `element-model-design.md`.
 Section-by-section coverage is in `grid-lanes-spec-coverage.md`; these are the
 divergences.
 
-- **`DOM-CSS-LIMITATION(lanes-order)` — `order` is not supported.** css-grid-3
-  §2.1 reorders items before placement. Neither Yoga nor React Native's style
-  surface has `order`, so this is not a lanes limitation so much as an engine
-  one, and it applies equally to flex and grid.
 - **`DOM-CSS-LIMITATION(lanes-baseline-export)` — a lanes container does not
   export a baseline.** Baseline alignment *inside* the grid-axis tracks works
   as it does for a regular grid container (css-grid-3 §6.5). What is missing is
@@ -596,7 +592,6 @@ rather than going quiet.
 - `label-activation-is-radio-only` — limitation, `packages/expo-intrinsics/__tests__/RadioGroup-itest.js`
 - `lanes-abspos-containing-block` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
 - `lanes-baseline-export` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
-- `lanes-order` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
 - `link-title-is-not-idn-decoded` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPTextLinkInteraction.mm`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`

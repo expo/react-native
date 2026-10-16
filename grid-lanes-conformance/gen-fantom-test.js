@@ -131,6 +131,7 @@ function rnItemStyle(item) {
   if (item.colEnd != null) style.gridColumnEnd = item.colEnd;
   if (item.justifySelf) style.justifySelf = item.justifySelf;
   if (item.alignSelf) style.alignSelf = item.alignSelf;
+  if (item.order != null) style.order = item.order;
   if (item.displayNone) style.display = 'none';
   if (item.absolute) {
     style.position = 'absolute';
@@ -162,7 +163,7 @@ for (const c of expected.cases) {
   const style = rnStyle(c.container);
   // An empty container is kept: its own size is still an assertion, and a
   // grid with no items is exactly where an off-by-one in track sizing hides.
-  if (style == null || c.items.some(i => i.order != null)) {
+  if (style == null) {
     skipped++;
     continue;
   }
@@ -216,7 +217,7 @@ w(' *');
 w(
   ` * ${usable.length} cases; ${skipped} corpus cases are not expressible as RN styles`,
 );
-w(' * (min-content as a maximum, order, and the percentage flow-tolerance');
+w(' * (min-content as a maximum, and the percentage flow-tolerance');
 w(' * Safari cannot adjudicate).');
 w(' */');
 w('');

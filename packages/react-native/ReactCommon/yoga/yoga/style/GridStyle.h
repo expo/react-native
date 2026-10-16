@@ -49,6 +49,11 @@ struct GridStyle {
   GridLine rowStart{};
   GridLine rowEnd{};
 
+  // Flex and grid items: the item's place in its container's order-modified
+  // document order (css-display-3 §3). Kept here, with the other item
+  // placement, so that a node which never sets it allocates nothing for it.
+  int32_t order{0};
+
   bool operator==(const GridStyle& other) const = default;
 };
 
