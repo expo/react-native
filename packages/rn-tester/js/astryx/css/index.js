@@ -39,7 +39,8 @@ import {
 } from '../stylex-rn';
 import {containerFromDeclarations, createMatcher} from './match';
 import {compileSelector, parseStylesheet} from './parse';
-import {AccessibilityInfo, Appearance, Dimensions} from 'react-native';
+import {Appearance, Dimensions} from 'react-native';
+import matchMedia from 'react-native/Libraries/Utilities/matchMedia';
 
 export {
   CONTAINER_BLOCK_SIZE,
@@ -53,17 +54,11 @@ export type {BoxSize} from './match';
 export type {ElementDescriptor} from './match';
 export {withoutOutrankedBoxEdges} from './cascade';
 
-let reduceMotion = false;
-AccessibilityInfo.isReduceMotionEnabled?.()?.then?.(
-  (enabled: boolean) => {
-    reduceMotion = enabled === true;
-  },
-  () => {},
-);
-AccessibilityInfo.addEventListener?.('reduceMotionChanged', enabled => {
-  reduceMotion = enabled === true;
-  bumpVersion();
-});
+// The reduce-motion preference as matchMedia answers it, so a StyleX value
+// and a stylesheet rule agree; its first answer arrives asynchronously, and
+// re-resolves every element like any later change
+const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+reducedMotionQuery.addEventListener('change', () => bumpVersion());
 
 // Exported for dom-compat.js, whose `matches()` runs the same matcher
 export function currentContext(): MatchContext {
@@ -74,7 +69,7 @@ export function currentContext(): MatchContext {
   const window = Dimensions.get('window');
   context = {
     schemeIsDark: Appearance.getColorScheme() === 'dark',
-    reduceMotion,
+    reduceMotion: reducedMotionQuery.matches,
     windowWidth: window.width,
     windowHeight: window.height,
     touch: true,
