@@ -306,10 +306,20 @@ Colors in their own color spaces and HDR, behind `enableColorSpaces`.
 - **`DOM-CSS-LIMITATION(action-sheet-tints-are-srgb)` — `ActionSheetIOS`'s
   tints are sRGB.** Its native module takes integers, so a color in its own
   space goes as its sRGB approximation. Platform wall as the module stands.
-- **`DOM-CSS-LIMITATION(media-queries-have-no-or-and-no-nesting)` —
-  `matchMedia` parses `and`, commas and `not`, not `or` or nested
-  conditions.** A query using them is false. Deferred: the full Media
-  Queries 4 grammar.
+- **`DOM-CSS-LIMITATION(media-pointer-is-the-touchscreen)` — `matchMedia`
+  knows only the touchscreen on iOS and Android.** `pointer` and `hover`
+  answer `coarse` and `none`, and `any-pointer` and `any-hover` answer the
+  same, so an iPad's trackpad, a mouse or a stylus beside the touchscreen
+  isn't reported. Deferred: asking UIKit and Android's input devices.
+- **`DOM-CSS-LIMITATION(media-queries-take-no-escapes)` — a media query's
+  CSS escapes aren't decoded.** `scr\65 en` is not `screen`, so a query
+  spelling a name with escapes is unknown or invalid. Deferred: CSS Syntax's
+  escape handling in the media query tokenizer.
+- **`DOM-CSS-LIMITATION(reduced-motion-is-known-after-the-first-read)` —
+  `prefers-reduced-motion` is `no-preference` until the OS answers.** React
+  Native asks for the setting asynchronously, so a query read before the
+  answer arrives allows motion; a list whose answer then changes fires
+  `change`. Deferred: a synchronous read of the setting.
 - **`DOM-CSS-LIMITATION(android-dynamic-range-is-per-window)` — Android's HDR
   is the window's.** A window shows HDR only in its HDR color mode, and its
   headroom is one value, so `constrained` draws as `no-limit`, and a

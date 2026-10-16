@@ -43,7 +43,46 @@ jest.mock('../Appearance', () => ({
   },
 }));
 
+const window = {width: 402, height: 874, scale: 3, fontScale: 1};
+const dimensionsListeners = [];
+
+jest.mock('../Dimensions', () => ({
+  __esModule: true,
+  default: {
+    get: () => ({...window}),
+    addEventListener: (type: string, listener: $FlowFixMe) => {
+      dimensionsListeners.push(listener);
+      return {remove() {}};
+    },
+  },
+}));
+
+const reduceMotion: {
+  answer: ?(boolean) => void,
+  listeners: Array<(boolean) => void>,
+} = {answer: null, listeners: []};
+
+jest.mock('../../Components/AccessibilityInfo/AccessibilityInfo', () => ({
+  __esModule: true,
+  default: {
+    isReduceMotionEnabled: () =>
+      new Promise(resolve => {
+        reduceMotion.answer = resolve;
+      }),
+    addEventListener: (type: string, listener: $FlowFixMe) => {
+      reduceMotion.listeners.push(listener);
+      return {remove() {}};
+    },
+  },
+}));
+
 const matchMedia = require('../matchMedia').default;
+
+function windowChanged(width: number, height: number) {
+  window.width = width;
+  window.height = height;
+  dimensionsListeners.forEach(listener => listener({window}));
+}
 
 function displayChanged(next: {colorGamut: string, dynamicRange: string}) {
   capabilities.colorGamut = next.colorGamut;
@@ -56,6 +95,8 @@ describe('matchMedia', () => {
     capabilities.colorGamut = 'p3';
     capabilities.dynamicRange = 'standard';
     colorScheme = 'light';
+    window.width = 402;
+    window.height = 874;
   });
 
   it('answers color-gamut as a gamut the display covers or more', () => {
@@ -99,8 +140,8 @@ describe('matchMedia', () => {
   });
 
   it("is false for a feature or a value it doesn't know, under not too, and keeps the text", () => {
-    expect(matchMedia('(min-width: 600px)').matches).toBe(false);
-    expect(matchMedia('not (min-width: 600px)').matches).toBe(false);
+    expect(matchMedia('(paper-size: a4)').matches).toBe(false);
+    expect(matchMedia('not (paper-size: a4)').matches).toBe(false);
     expect(matchMedia('(color-gamut: wide)').matches).toBe(false);
     expect(matchMedia('not (color-gamut: wide)').matches).toBe(false);
     expect(matchMedia('  (color-gamut: p3)  ').media).toBe('(color-gamut: p3)');
@@ -251,6 +292,57 @@ describe('matchMedia', () => {
     list.removeListener(listener);
     colorScheme = 'light';
     appearanceListeners.forEach(cb => cb({colorScheme}));
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers the window, and tells a listener when its size crosses the query', () => {
+    const list = matchMedia('(max-width: 768px)');
+    const listener = jest.fn();
+    list.addEventListener('change', listener);
+    expect(list.matches).toBe(true);
+    windowChanged(600, 874);
+    expect(listener).toHaveBeenCalledTimes(0);
+    windowChanged(1024, 768);
+    expect(list.matches).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener.mock.calls[0][0].matches).toBe(false);
+    expect(matchMedia('(orientation: landscape)').matches).toBe(true);
+    expect(matchMedia('(min-resolution: 3dppx)').matches).toBe(true);
+  });
+
+  it("answers a touchscreen's pointer", () => {
+    expect(matchMedia('(hover: none) and (pointer: coarse)').matches).toBe(
+      true,
+    );
+    expect(matchMedia('(any-pointer: fine)').matches).toBe(false);
+  });
+
+  it('allows motion until the OS answers, then fires the change', async () => {
+    const list = matchMedia('(prefers-reduced-motion: reduce)');
+    const listener = jest.fn();
+    list.addEventListener('change', listener);
+    expect(list.matches).toBe(false);
+    reduceMotion.answer?.(true);
+    await Promise.resolve();
+    expect(list.matches).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+    reduceMotion.listeners.forEach(cb => cb(false));
+    expect(list.matches).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a change event over an older first answer that arrives after it', async () => {
+    jest.resetModules();
+    const fresh = require('../matchMedia').default;
+    const list = fresh('(prefers-reduced-motion: reduce)');
+    const listener = jest.fn();
+    list.addEventListener('change', listener);
+    const answer = reduceMotion.answer;
+    reduceMotion.listeners.at(-1)?.(true);
+    expect(list.matches).toBe(true);
+    answer?.(false);
+    await Promise.resolve();
+    expect(list.matches).toBe(true);
     expect(listener).toHaveBeenCalledTimes(1);
   });
 });

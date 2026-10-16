@@ -12,19 +12,26 @@
 // flowlint unsafe-getters-setters:off
 
 import type {EventSubscription} from '../vendor/emitter/EventEmitter';
+import type {MediaEnvironment, ParsedMediaQueryList} from './MediaQueries';
 import type {DisplayCapabilities} from './NativeDisplayCapabilities';
 
 import Event from '../../src/private/webapis/dom/events/Event';
 import EventTarget from '../../src/private/webapis/dom/events/EventTarget';
+import AccessibilityInfo from '../Components/AccessibilityInfo/AccessibilityInfo';
 import NativeEventEmitter from '../EventEmitter/NativeEventEmitter';
 import * as Appearance from './Appearance';
+import Dimensions from './Dimensions';
+import {parsedMediaQueryListMatches, parseMediaQueryList} from './MediaQueries';
 import NativeDisplayCapabilities from './NativeDisplayCapabilities';
+import PixelRatio from './PixelRatio';
+import Platform from './Platform';
 
 /**
- * `window.matchMedia` (cssom-view-1 §4) for `color-gamut`, `dynamic-range`,
- * `video-dynamic-range` (Media Queries 5 §6) and `prefers-color-scheme`,
- * asked of the OS. `or` and nested conditions aren't parsed.
- * DOM-CSS-LIMITATION(media-queries-have-no-or-and-no-nesting)
+ * `window.matchMedia` (cssom-view-1 §4), by the Media Queries 4 grammar in
+ * MediaQueries.js, about the window: its size, aspect ratio, orientation and
+ * resolution, the pointer, `prefers-color-scheme` and
+ * `prefers-reduced-motion`, and the display's `color-gamut` and
+ * `dynamic-range` (Media Queries 5 §6), each asked of the OS.
  */
 export default function matchMedia(query: string): MediaQueryList {
   return new MediaQueryList(String(query));
@@ -59,12 +66,12 @@ export class MediaQueryList extends EventTarget {
   // Kept while `onchange` is non-null, so a replaced handler keeps its place
   // among the listeners (HTML's event handler processing algorithm)
   #onchangeDispatcher: ?(Event) => void = null;
-  #queries: ReadonlyArray<Query>;
+  #queries: ParsedMediaQueryList;
 
   constructor(query: string) {
     super();
     this.media = query.trim();
-    this.#queries = parseQueryList(this.media);
+    this.#queries = parseMediaQueryList(this.media);
     this.#lastReported = this.#evaluate();
   }
 
@@ -165,7 +172,7 @@ export class MediaQueryList extends EventTarget {
   }
 
   #evaluate(): boolean {
-    return this.#queries.some(query => evaluateQuery(query) === true);
+    return parsedMediaQueryListMatches(this.#queries, windowMediaEnvironment());
   }
 
   // Dispatches a change event only when the answer changed
@@ -211,7 +218,7 @@ function normalizeOptions(options: $FlowFixMe): {
   };
 }
 
-// -- The sources --
+// -- The window --
 
 const DEFAULT_CAPABILITIES: DisplayCapabilities = {
   colorGamut: 'srgb',
@@ -222,19 +229,89 @@ function displayCapabilities(): DisplayCapabilities {
   return NativeDisplayCapabilities?.getCapabilities() ?? DEFAULT_CAPABILITIES;
 }
 
+// The touchscreen is the pointer on a phone or tablet. An iPad's trackpad, a
+// mouse or a stylus is not asked about, so `any-pointer: fine` and
+// `any-hover: hover` are false beside one.
+// DOM-CSS-LIMITATION(media-pointer-is-the-touchscreen)
+const TOUCH_FIRST: boolean = Platform.OS === 'ios' || Platform.OS === 'android';
+
+/**
+ * The window as a media query sees it. A stylesheet engine that styles a
+ * surface smaller than the window can spread this and give the surface's
+ * size instead.
+ */
+export function windowMediaEnvironment(): MediaEnvironment {
+  askReducedMotion();
+  const {width, height} = Dimensions.get('window');
+  return {
+    width,
+    height,
+    viewportWidth: width,
+    viewportHeight: height,
+    resolution: PixelRatio.get(),
+    colorScheme: Appearance.getColorScheme() === 'dark' ? 'dark' : 'light',
+    reducedMotion,
+    pointer: TOUCH_FIRST ? 'coarse' : 'fine',
+    hover: !TOUCH_FIRST,
+    display: displayCapabilities,
+  };
+}
+
+// The OS answers the reduce-motion setting asynchronously, so it is kept here
+// and kept current. Until the first answer, motion is allowed, as the web's
+// default is; a list whose answer then changes fires `change`.
+// DOM-CSS-LIMITATION(reduced-motion-is-known-after-the-first-read)
+let reducedMotion = false;
+let askedReducedMotion = false;
+
+// Asked once, and the change listener kept for the life of the app rather
+// than released with the other sources when no list is watched, so a read
+// without listeners is current too
+function askReducedMotion(): void {
+  if (askedReducedMotion) {
+    return;
+  }
+  askedReducedMotion = true;
+  // A change event is newer than the first answer, which may arrive after it
+  let changed = false;
+  const update = (enabled: boolean) => {
+    if (reducedMotion !== (enabled === true)) {
+      reducedMotion = enabled === true;
+      refreshAll();
+    }
+  };
+  AccessibilityInfo.isReduceMotionEnabled().then(
+    enabled => {
+      if (!changed) {
+        update(enabled);
+      }
+    },
+    () => {},
+  );
+  AccessibilityInfo.addEventListener('reduceMotionChanged', enabled => {
+    changed = true;
+    update(enabled);
+  });
+}
+
 const watched: Set<MediaQueryList> = new Set();
 let subscriptions: ?Array<EventSubscription> = null;
+
+function refreshAll(): void {
+  for (const list of Array.from(watched)) {
+    list.__refresh();
+  }
+}
 
 function ensureWatching(): void {
   if (subscriptions != null) {
     return;
   }
-  const refreshAll = () => {
-    for (const list of Array.from(watched)) {
-      list.__refresh();
-    }
-  };
-  subscriptions = [Appearance.addChangeListener(refreshAll)];
+  askReducedMotion();
+  subscriptions = [
+    Appearance.addChangeListener(refreshAll),
+    Dimensions.addEventListener('change', refreshAll),
+  ];
   if (NativeDisplayCapabilities != null) {
     subscriptions.push(
       new NativeEventEmitter<{
@@ -255,209 +332,4 @@ function releaseWatchingIfIdle(): void {
     subscription.remove();
   }
   subscriptions = null;
-}
-
-// -- The grammar --
-
-type Feature = {name: string, value: ?string};
-type Query = {
-  negated: boolean,
-  // A media type this renderer doesn't describe (`print`) is valid and false
-  mediaTypeMatches: boolean,
-  features: ReadonlyArray<Feature>,
-  valid: boolean,
-};
-
-const INVALID: Query = {
-  negated: false,
-  mediaTypeMatches: false,
-  features: [],
-  valid: false,
-};
-
-function parseQueryList(text: string): ReadonlyArray<Query> {
-  return splitTopLevel(text, ',').map(parseQuery);
-}
-
-// Media Queries 5 §2.1: `[not | only]? <media-type> [and <feature>]*`, or
-// `<feature> [and <feature>]*`, or `not <feature>` on its own
-function parseQuery(text: string): Query {
-  const tokens = splitTopLevel(text, /\s+and\s+/i).map(token => token.trim());
-  if (tokens.some(token => token === '')) {
-    return INVALID;
-  }
-  const first = tokens[0];
-  const words = first.split(/\s+/);
-  const modifier = words[0].toLowerCase();
-  if (modifier === 'not' || modifier === 'only') {
-    const rest = first.slice(words[0].length).trim();
-    if (isMediaType(rest)) {
-      // `not screen and (…)` negates the whole query
-      return parseFeatures(tokens.slice(1), {
-        negated: modifier === 'not',
-        mediaTypeMatches: mediaTypeMatches(rest),
-      });
-    }
-    // `not (feature)`, and nothing joined to it
-    if (modifier === 'not' && tokens.length === 1 && isParenthesised(rest)) {
-      return parseFeatures([rest], {negated: true, mediaTypeMatches: true});
-    }
-    return INVALID;
-  }
-  if (isMediaType(first)) {
-    return parseFeatures(tokens.slice(1), {
-      negated: false,
-      mediaTypeMatches: mediaTypeMatches(first),
-    });
-  }
-  return parseFeatures(tokens, {negated: false, mediaTypeMatches: true});
-}
-
-function parseFeatures(
-  tokens: ReadonlyArray<string>,
-  head: {negated: boolean, mediaTypeMatches: boolean},
-): Query {
-  const features = [];
-  for (const token of tokens) {
-    const feature = parseFeature(token);
-    if (feature == null) {
-      return INVALID;
-    }
-    features.push(feature);
-  }
-  return {...head, features, valid: true};
-}
-
-function isMediaType(text: string): boolean {
-  return /^[a-z-]+$/i.test(text);
-}
-
-function mediaTypeMatches(type: string): boolean {
-  const name = type.toLowerCase();
-  return name === 'all' || name === 'screen';
-}
-
-function isParenthesised(text: string): boolean {
-  return text.startsWith('(') && text.endsWith(')');
-}
-
-function parseFeature(text: string): ?Feature {
-  const part = text.trim();
-  if (!isParenthesised(part)) {
-    return null;
-  }
-  const inner = part.slice(1, -1).trim();
-  const colon = inner.indexOf(':');
-  if (colon < 0) {
-    return {name: inner.toLowerCase(), value: null};
-  }
-  return {
-    name: inner.slice(0, colon).trim().toLowerCase(),
-    value: inner
-      .slice(colon + 1)
-      .trim()
-      .toLowerCase(),
-  };
-}
-
-// Splits on a separator that isn't inside parentheses
-function splitTopLevel(
-  text: string,
-  separator: string | RegExp,
-): Array<string> {
-  const parts = [];
-  let depth = 0;
-  let start = 0;
-  const pattern =
-    typeof separator === 'string'
-      ? new RegExp(separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
-      : new RegExp(
-          separator.source,
-          separator.flags.includes('g')
-            ? separator.flags
-            : separator.flags + 'g',
-        );
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (char === '(') {
-      depth += 1;
-    } else if (char === ')') {
-      depth = Math.max(0, depth - 1);
-    } else if (depth === 0) {
-      pattern.lastIndex = i;
-      const match = pattern.exec(text);
-      if (match != null && match.index === i && match[0].length > 0) {
-        parts.push(text.slice(start, i));
-        i += match[0].length - 1;
-        start = i + 1;
-      }
-    }
-  }
-  parts.push(text.slice(start));
-  return parts;
-}
-
-// -- Evaluation --
-
-const GAMUT_RANK: {[string]: number} = {srgb: 0, p3: 1, rec2020: 2};
-
-// Media Queries 5 §3.1: `unknown` stays unknown under `not`
-type Truth = boolean | 'unknown';
-
-function evaluateQuery(query: Query): Truth {
-  if (!query.valid) {
-    return false;
-  }
-  let result: Truth = query.mediaTypeMatches;
-  for (const feature of query.features) {
-    const value = evaluateFeature(feature);
-    if (value === false || result === false) {
-      result = false;
-    } else if (value === 'unknown' || result === 'unknown') {
-      result = 'unknown';
-    }
-  }
-  if (query.negated) {
-    return result === 'unknown' ? 'unknown' : !result;
-  }
-  return result;
-}
-
-// `color-gamut: p3` is true for P3 "or more"; in the boolean context every
-// feature is true
-function evaluateFeature(feature: Feature): Truth {
-  const {name, value} = feature;
-  switch (name) {
-    case 'color-gamut': {
-      if (value == null) {
-        return true;
-      }
-      const asked = GAMUT_RANK[value];
-      if (asked === undefined) {
-        return 'unknown';
-      }
-      return asked <= (GAMUT_RANK[displayCapabilities().colorGamut] ?? 0);
-    }
-    case 'dynamic-range':
-    case 'video-dynamic-range': {
-      if (value == null || value === 'standard') {
-        return true;
-      }
-      if (value === 'high') {
-        return displayCapabilities().dynamicRange === 'high';
-      }
-      return 'unknown';
-    }
-    case 'prefers-color-scheme': {
-      if (value == null) {
-        return true;
-      }
-      if (value !== 'light' && value !== 'dark') {
-        return 'unknown';
-      }
-      return value === (Appearance.getColorScheme() ?? 'light');
-    }
-    default:
-      return 'unknown';
-  }
 }

@@ -25,6 +25,7 @@ import {compileSelector} from './css/parse';
 import {recordOf} from './elementRegistry';
 import {installIntlShim} from './intl-shim';
 import {Platform, TurboModuleRegistry} from 'react-native';
+import matchMedia from 'react-native/Libraries/Utilities/matchMedia';
 
 /**
  * A `document` for the vendored Astryx sources, installed on the global when
@@ -696,6 +697,11 @@ export function installDocumentShim(): void {
   }
   if (g.CustomEvent == null) {
     g.CustomEvent = g.Event;
+  }
+  // React Native's `matchMedia`, which an app gets only with the color spaces
+  // flag on; the stylesheet engine answers `@media` by the same grammar
+  if (typeof g.matchMedia !== 'function') {
+    g.matchMedia = matchMedia;
   }
   if (typeof g.getSelection !== 'function') {
     g.getSelection = (): null => null;
