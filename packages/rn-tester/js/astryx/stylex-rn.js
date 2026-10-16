@@ -36,16 +36,11 @@ import {
   VIEWPORT_BLOCK_SIZE,
   VIEWPORT_INLINE_SIZE,
   containerFromDeclarations,
-  mediaConditionApplies,
   scopeSize,
 } from './css/match';
-import {
-  AccessibilityInfo,
-  Appearance,
-  Dimensions,
-  Platform,
-  processColor,
-} from 'react-native';
+import {Appearance, Dimensions, processColor} from 'react-native';
+import {windowMediaEnvironment} from 'react-native/Libraries/Utilities/matchMedia';
+import {mediaQueryListMatches} from 'react-native/Libraries/Utilities/MediaQueries';
 
 type RawStyle = {readonly [string]: unknown};
 
@@ -1413,26 +1408,6 @@ const PSEUDO_ORDER: ReadonlyArray<[string, (InteractionState) => boolean]> = [
  */
 const PRESS_ANSWERING_PSEUDOS = [':hover', ':active'];
 
-// The OS accessibility setting behind `prefers-reduced-motion`, cached so the
-// synchronous style-resolution path can read it. Seeded and kept fresh by
-// AccessibilityInfo; until the first async answer arrives, motion is allowed
-// (the web default).
-let reduceMotionEnabled = false;
-if (AccessibilityInfo != null) {
-  AccessibilityInfo.isReduceMotionEnabled?.()?.then?.(
-    (enabled: boolean) => {
-      reduceMotionEnabled = enabled === true;
-    },
-    () => {},
-  );
-  AccessibilityInfo.addEventListener?.('reduceMotionChanged', enabled => {
-    reduceMotionEnabled = enabled === true;
-  });
-}
-
-// `@media (hover: hover)` / `(pointer: coarse)` are the capability guards
-// Astryx wraps every :hover in; resolve them against the platform rather than
-// dropping the branch (touch → no hover, coarse pointer).
 /**
  * The condition of an `@media` or `@container` key. A container query is
  * answered as a media query over the window, the container's name dropped;
@@ -1447,34 +1422,10 @@ function conditionOf(key: string): string {
   return paren === -1 ? condition : condition.slice(paren);
 }
 
+// By the Media Queries grammar `matchMedia` uses, against the window. Astryx
+// guards every :hover in `@media (hover: hover)`, which a touchscreen fails.
 function mediaQueryApplies(query: string): boolean {
-  const q = query.toLowerCase();
-  if (q.includes('hover: hover')) {
-    return Platform.OS !== 'ios' && Platform.OS !== 'android';
-  }
-  if (q.includes('hover: none')) {
-    return Platform.OS === 'ios' || Platform.OS === 'android';
-  }
-  if (q.includes('pointer: coarse')) {
-    return Platform.OS === 'ios' || Platform.OS === 'android';
-  }
-  if (q.includes('pointer: fine')) {
-    return Platform.OS !== 'ios' && Platform.OS !== 'android';
-  }
-  if (q.includes('prefers-reduced-motion')) {
-    // Tracks the OS "Reduce Motion" setting; cached below because style
-    // resolution is synchronous
-    return q.includes('reduce') === reduceMotionEnabled;
-  }
-  // Everything else — width and height ranges above all — is the stylesheet
-  // engine's matcher's, against the window
-  return mediaConditionApplies(query, {
-    schemeIsDark: Appearance.getColorScheme() === 'dark',
-    reduceMotion: reduceMotionEnabled,
-    windowWidth: Dimensions.get('window').width,
-    windowHeight: Dimensions.get('window').height,
-    touch: Platform.OS === 'ios' || Platform.OS === 'android',
-  });
+  return mediaQueryListMatches(query, windowMediaEnvironment());
 }
 
 /**
@@ -2005,8 +1956,8 @@ function memoizedProps(items: Array<unknown>): StyleXProps {
 // What `@media` keys and `env()` can read, as a key that changes when any of
 // it does. An app whose `env()` answers change registers a new resolver.
 function mediaEnvironmentKey(): string {
-  const window = Dimensions.get('window');
-  return `${window.width}x${window.height} ${String(Appearance.getColorScheme())} ${String(reduceMotionEnabled)} ${environmentGeneration}`;
+  const environment = windowMediaEnvironment();
+  return `${environment.width}x${environment.height}@${environment.resolution} ${environment.colorScheme} ${String(environment.reducedMotion)} ${environmentGeneration}`;
 }
 
 /**

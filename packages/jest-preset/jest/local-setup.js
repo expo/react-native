@@ -26,6 +26,22 @@ console.error = (...args) => {
 
 // $FlowFixMe[cannot-write]
 console.warn = (...args) => {
+  if (isRNTesterDeepImport(args[0])) {
+    return;
+  }
   consoleWarn(...args);
   throw new Error('console.warn() was called (see warning above)');
 };
+
+// Skip the deep-import warning for RNTester's own sources: it is React
+// Native's app, and its native intrinsics and the Astryx runtime reach into
+// React Native by design
+function isRNTesterDeepImport(message: unknown): boolean {
+  return (
+    typeof message === 'string' &&
+    message.startsWith(
+      "Deep imports from the 'react-native' package are deprecated",
+    ) &&
+    message.includes('/packages/rn-tester/')
+  );
+}
