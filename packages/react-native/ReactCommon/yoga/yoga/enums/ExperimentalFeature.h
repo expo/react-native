@@ -19,11 +19,12 @@ enum class ExperimentalFeature : uint8_t {
   WebFlexBasis = YGExperimentalFeatureWebFlexBasis,
   FixFlexBasisFitContent = YGExperimentalFeatureFixFlexBasisFitContent,
   WebPercentageHeights = YGExperimentalFeatureWebPercentageHeights,
+  WebDefiniteFlexBasis = YGExperimentalFeatureWebDefiniteFlexBasis,
 };
 
 template <>
 constexpr int32_t ordinalCount<ExperimentalFeature>() {
-  return 3;
+  return 4;
 }
 
 constexpr ExperimentalFeature scopedEnum(YGExperimentalFeature unscoped) {
