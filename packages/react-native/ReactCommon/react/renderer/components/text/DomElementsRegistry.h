@@ -26,6 +26,7 @@
 #include <react/renderer/components/view/ElementSelectShadowNode.h>
 #include <react/renderer/components/view/ElementTextAreaShadowNode.h>
 #include <react/renderer/components/view/ElementTextInputShadowNode.h>
+#include <react/renderer/components/view/ExpoTopLayerShadowNode.h>
 
 #include <react/renderer/attributedstring/AttributedString.h>
 #include <react/renderer/attributedstring/AttributedStringBox.h>
@@ -145,6 +146,9 @@ inline std::vector<ComponentDescriptorProvider> allElementProviders()
   providers.push_back(concreteComponentDescriptorProvider<ElementColorInputComponentDescriptor>());
   // `<input type="file">`.
   providers.push_back(concreteComponentDescriptorProvider<ElementFileInputComponentDescriptor>());
+  // `<native:toplayer>`: HTML's top layer, where a shown popover and a modal
+  // dialog are painted above the page while staying where React renders them
+  providers.push_back(concreteComponentDescriptorProvider<ExpoTopLayerComponentDescriptor>());
   return providers;
 }
 

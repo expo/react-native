@@ -62,6 +62,7 @@ import com.facebook.react.views.text.PreparedLayoutTextViewManager
 import com.facebook.react.views.text.ReactTextViewManager
 import com.facebook.react.views.text.SelectableTextViewManager
 import com.facebook.react.views.textinput.ReactTextInputManager
+import com.facebook.react.views.toplayer.ExpoTopLayerViewManager
 import com.facebook.react.views.unimplementedview.ReactUnimplementedViewManager
 import com.facebook.react.views.view.ElementBoxViewManager
 import com.facebook.react.views.view.ElementButtonViewManager
@@ -169,6 +170,8 @@ constructor(private val config: MainPackageConfig? = null) :
           // Native equivalents
           ReactImageManager(),
           ReactModalHostManager(),
+          // HTML's top layer, where a shown popover is drawn
+          ExpoTopLayerViewManager(),
           ReactTextInputManager(),
           if (ReactNativeFeatureFlags.enablePreparedTextLayout()) PreparedLayoutTextViewManager()
           else ReactTextViewManager(),
@@ -236,6 +239,8 @@ constructor(private val config: MainPackageConfig? = null) :
           ReactImageManager.REACT_CLASS to ModuleSpec.viewManagerSpec { ReactImageManager() },
           ReactModalHostManager.REACT_CLASS to
               ModuleSpec.viewManagerSpec { ReactModalHostManager() },
+          ExpoTopLayerViewManager.REACT_CLASS to
+              ModuleSpec.viewManagerSpec { ExpoTopLayerViewManager() },
           ReactTextInputManager.REACT_CLASS to
               ModuleSpec.viewManagerSpec { ReactTextInputManager() },
           ReactTextViewManager.REACT_CLASS to
