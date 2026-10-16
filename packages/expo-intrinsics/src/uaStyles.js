@@ -560,6 +560,8 @@ const uaStyles: {[string]: UAStyle} = {
    */
   p: {uaMarginBlockEm: 1},
   blockquote: {uaMarginBlockEm: 1, marginInline: 40},
+  // html.css: `padding: 1em; border: solid` (medium is 3px)
+  dialog: {padding: 16, borderWidth: 3, borderStyle: 'solid'},
   figure: {uaMarginBlockEm: 1, marginInline: 40},
   // `white-space: pre` is the whole point of <pre>: browsers set it in
   // html.css, and it is what preserves the newlines and space runs an author
