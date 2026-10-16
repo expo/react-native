@@ -1034,6 +1034,26 @@ registerFrameworkComponent('select', Select);
 registerFrameworkComponent('input', Input);
 
 /*
+ * The host element `<native:toplayer>` renders: HTML's top layer. Its children
+ * stay where React renders them and lay out against it, and are painted above
+ * everything on the screen at its place in the window. A press that begins
+ * outside them is `onOutsidePress`, with where it began in window coordinates.
+ */
+registerFrameworkElement('native-toplayer', () =>
+  createViewConfig({
+    validAttributes: {
+      // Whether the layer is up; a closed popover keeps its handle
+      active: true,
+    },
+    bubblingEventTypes: {},
+    directEventTypes: {
+      topOutsidePress: {registrationName: 'onOutsidePress'},
+    },
+    uiViewClassName: 'native-toplayer',
+  }),
+);
+
+/*
  * The host element `<native:button>` renders.
  *
  * A real `UIButton` whose action is a `UIMenu`. Its commands are one prop rather
@@ -1339,6 +1359,9 @@ for (const name of [
   'dl',
   'dt',
   'dd',
+  // A dialog is a block whose showing the Astryx runtime manages: hidden until
+  // opened, and drawn in the top layer while modal
+  'dialog',
 ]) {
   registerBlockElement(name);
 }
