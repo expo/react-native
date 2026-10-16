@@ -24,6 +24,10 @@ import type {
   StyleRule,
   Stylesheet,
 } from './parse';
+import type {MediaEnvironment} from 'react-native/Libraries/Utilities/MediaQueries';
+
+import {windowMediaEnvironment} from 'react-native/Libraries/Utilities/matchMedia';
+import {mediaQueryListMatches} from 'react-native/Libraries/Utilities/MediaQueries';
 
 export type InteractionStates = {
   readonly hovered?: boolean,
@@ -134,13 +138,14 @@ export function containerFromDeclarations(
   };
 }
 
+// Read-only, since media queries are answered once per context object
 export type MatchContext = {
-  schemeIsDark: boolean,
-  reduceMotion: boolean,
-  windowWidth: number,
-  windowHeight: number,
+  readonly schemeIsDark: boolean,
+  readonly reduceMotion: boolean,
+  readonly windowWidth: number,
+  readonly windowHeight: number,
   // A touch-first platform fails the hover and fine-pointer media branches
-  touch: boolean,
+  readonly touch: boolean,
 };
 
 export type MatchResult = {
@@ -169,91 +174,48 @@ function isInteractionPseudo(pseudo: string): boolean {
   );
 }
 
-// Comma is OR and 'and' is AND. An unknown feature makes its branch false: a
-// rule guarded by something the runtime cannot model must not apply.
+/**
+ * Whether a rule's media condition holds, by the Media Queries grammar
+ * `matchMedia` uses, against the context's viewport (the window's or a host
+ * surface's), or for a container query against the container's size with
+ * viewport units still the viewport's. A query the grammar can't answer is
+ * false: a rule guarded by something the runtime cannot model must not
+ * apply.
+ */
 export function mediaConditionApplies(
   condition: string,
   ctx: MatchContext,
+  container: ?BoxSize = null,
 ): boolean {
-  return condition.split(',').some(branch => {
-    const terms = branch.split(/\band\b/);
-    return terms.every(term => mediaTermApplies(term.trim(), ctx));
-  });
+  const viewport = mediaEnvironmentOf(ctx);
+  return mediaQueryListMatches(
+    condition,
+    container == null
+      ? viewport
+      : {...viewport, width: container.width, height: container.height},
+  );
 }
 
-function mediaTermApplies(term: string, ctx: MatchContext): boolean {
-  const inner = term
-    .replace(/^\(|\)$/g, '')
-    .trim()
-    .toLowerCase();
-  if (inner === 'screen' || inner === 'all') {
-    return true;
-  }
-  // Range syntax (mediaqueries-4 §2.4): `(width < 1024px)`, `(width >= 40em)`,
-  // `(400px <= width < 800px)`; `height` likewise
-  const range =
-    /^(?:([\d.]+(?:px|r?em)?)\s*(<=?|>=?)\s*)?(width|height)\s*(?:(<=?|>=?|=)\s*([\d.]+(?:px|r?em)?))?$/.exec(
-      inner,
-    );
-  if (range != null && (range[1] != null || range[5] != null)) {
-    const actual = range[3] === 'width' ? ctx.windowWidth : ctx.windowHeight;
-    const compare = (op: string, a: number, b: number): boolean =>
-      op === '<'
-        ? a < b
-        : op === '<='
-          ? a <= b
-          : op === '>'
-            ? a > b
-            : op === '>='
-              ? a >= b
-              : a === b;
-    let ok = true;
-    if (range[1] != null) {
-      // `400px <= width` reads as `width >= 400px`
-      ok = ok && compare(range[2], parseLength(range[1]), actual);
-    }
-    if (range[5] != null) {
-      ok = ok && compare(range[4], actual, parseLength(range[5]));
-    }
-    return ok;
-  }
-  const colon = inner.indexOf(':');
-  if (colon === -1) {
-    return false;
-  }
-  const feature = inner.slice(0, colon).trim();
-  const value = inner.slice(colon + 1).trim();
-  switch (feature) {
-    case 'min-width':
-      return ctx.windowWidth >= parseLength(value);
-    case 'max-width':
-      return ctx.windowWidth <= parseLength(value);
-    case 'min-height':
-      return ctx.windowHeight >= parseLength(value);
-    case 'max-height':
-      return ctx.windowHeight <= parseLength(value);
-    case 'prefers-color-scheme':
-      return value === (ctx.schemeIsDark ? 'dark' : 'light');
-    case 'prefers-reduced-motion':
-      return (value === 'reduce') === ctx.reduceMotion;
-    case 'hover':
-      return (value === 'hover') !== ctx.touch;
-    case 'pointer':
-      return (value === 'coarse') === ctx.touch;
-    case 'orientation':
-      return (value === 'landscape') === ctx.windowWidth > ctx.windowHeight;
-    default:
-      return false;
-  }
-}
+const mediaEnvironments: WeakMap<MatchContext, MediaEnvironment> =
+  new WeakMap();
 
-function parseLength(value: string): number {
-  // A 16px root; px and rem cover every breakpoint Tailwind emits
-  const n = parseFloat(value);
-  if (Number.isNaN(n)) {
-    return Number.POSITIVE_INFINITY;
+function mediaEnvironmentOf(ctx: MatchContext): MediaEnvironment {
+  let environment = mediaEnvironments.get(ctx);
+  if (environment == null) {
+    environment = {
+      ...windowMediaEnvironment(),
+      width: ctx.windowWidth,
+      height: ctx.windowHeight,
+      viewportWidth: ctx.windowWidth,
+      viewportHeight: ctx.windowHeight,
+      colorScheme: ctx.schemeIsDark ? 'dark' : 'light',
+      reducedMotion: ctx.reduceMotion,
+      pointer: ctx.touch ? 'coarse' : 'fine',
+      hover: !ctx.touch,
+    };
+    mediaEnvironments.set(ctx, environment);
   }
-  return value.endsWith('rem') || value.endsWith('em') ? n * 16 : n;
+  return environment;
 }
 
 function attributeValue(el: ElementDescriptor, name: string): unknown {
@@ -476,14 +438,8 @@ function containerQueryApplies(
   if (query.condition === '') {
     return true;
   }
-  // The container's own size once it has laid out; the window until then
-  const size = found.containerSize;
-  return mediaConditionApplies(
-    query.condition,
-    size == null
-      ? ctx
-      : {...ctx, windowWidth: size.width, windowHeight: size.height},
-  );
+  // The container's own size once it has laid out; the viewport's until then
+  return mediaConditionApplies(query.condition, ctx, found.containerSize);
 }
 
 /**
