@@ -271,8 +271,33 @@ static void computeFlexBasisForChild(
       node->getConfig()->isExperimentalFeatureEnabled(
           ExperimentalFeature::FixFlexBasisFitContent);
 
-  const bool useResolvedFlexBasis =
-      resolvedFlexBasis.isDefined() && yoga::isDefined(mainAxisSize);
+  // A flex basis that is a length is the item's flex base size whatever the
+  // container's size (css-flexbox-1 §9.2.3.A); Yoga took it only when the
+  // container's main size was definite, so in a row sized by its content (a
+  // horizontal scroll view's) an item was as wide as its content instead. A
+  // percentage needs the definite size, and resolves to nothing without it.
+  // An item that can grow keeps the content size there: a container sized by
+  // its content gives such an item at least its content (§9.9.1), which a
+  // `flex: 1 1 0` region would otherwise lose, laid out at zero.
+  const bool flexBasisIsLength =
+      node->getConfig()->isExperimentalFeatureEnabled(
+          ExperimentalFeature::WebDefiniteFlexBasis) &&
+      child->processFlexBasis().isPoints() && child->resolveFlexGrow() == 0;
+  // The same rule when the container is being sized by its content with a
+  // definite space on offer (fit-content, max-content): §9.9.1 counts the
+  // item's content there too. A menu placed in the top layer is measured
+  // against the window's width, and its labels, `flex: 1 1 0%`, resolved to
+  // nothing against it, so the menu was as wide as its icons and padding.
+  const SizingMode mainAxisSizingMode = isMainAxisRow ? widthMode : heightMode;
+  const bool mainAxisSizedByContent =
+      (mainAxisSizingMode == SizingMode::MaxContent ||
+       mainAxisSizingMode == SizingMode::FitContent) &&
+      node->getConfig()->isExperimentalFeatureEnabled(
+          ExperimentalFeature::WebDefiniteFlexBasis) &&
+      child->resolveFlexGrow() > 0;
+  const bool useResolvedFlexBasis = resolvedFlexBasis.isDefined() &&
+      ((yoga::isDefined(mainAxisSize) && !mainAxisSizedByContent) ||
+       flexBasisIsLength);
 
   if (useResolvedFlexBasis) {
     if (child->getLayout().computedFlexBasis.isUndefined() ||
