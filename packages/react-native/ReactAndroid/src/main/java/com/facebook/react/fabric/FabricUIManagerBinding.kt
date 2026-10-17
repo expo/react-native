@@ -27,6 +27,7 @@ internal class FabricUIManagerBinding : HybridClassBase() {
 
   private external fun installFabricUIManager(
       runtimeExecutor: RuntimeExecutor,
+      bindingsExecutor: RuntimeExecutor?,
       runtimeScheduler: RuntimeScheduler,
       uiManager: FabricUIManager,
       eventBeatManager: EventBeatManager,
@@ -100,17 +101,24 @@ internal class FabricUIManagerBinding : HybridClassBase() {
 
   external fun mergeReactRevision(surfaceId: Int)
 
+  /**
+   * [bindingsExecutor] runs work before the JavaScript bundle is evaluated, which is when the
+   * renderer's global bindings belong: a module may read one as it loads. Without one they are
+   * installed on [runtimeExecutor], after the bundle.
+   */
   fun register(
       runtimeExecutor: RuntimeExecutor,
       runtimeScheduler: RuntimeScheduler,
       fabricUIManager: FabricUIManager,
       eventBeatManager: EventBeatManager,
       componentFactory: ComponentFactory,
+      bindingsExecutor: RuntimeExecutor? = null,
   ) {
     fabricUIManager.setBinding(this)
 
     installFabricUIManager(
         runtimeExecutor,
+        bindingsExecutor,
         runtimeScheduler,
         fabricUIManager,
         eventBeatManager,

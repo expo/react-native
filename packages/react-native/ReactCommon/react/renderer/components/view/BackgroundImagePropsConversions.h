@@ -29,10 +29,15 @@ void parseUnprocessedBackgroundImageString(const std::string &value, std::vector
 
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, std::vector<BackgroundImage> &result)
 {
+  // CSS text is parsed here whichever way the flag is set: the style engine
+  // (cssengine) hands a gradient over as its declared text, which no
+  // JavaScript processing has turned into the processed form
+  if (value.hasType<std::string>()) {
+    parseUnprocessedBackgroundImageString((std::string)value, result);
+    return;
+  }
   if (ReactNativeFeatureFlags_DO_NOT_USE::enableNativeCSSParsing()) {
-    if (value.hasType<std::string>()) {
-      parseUnprocessedBackgroundImageString((std::string)value, result);
-    } else if (value.hasType<std::vector<RawValue>>()) {
+    if (value.hasType<std::vector<RawValue>>()) {
       parseUnprocessedBackgroundImageList(context, (std::vector<RawValue>)value, result);
     } else {
       result = {};

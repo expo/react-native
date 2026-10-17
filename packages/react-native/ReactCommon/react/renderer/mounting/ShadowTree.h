@@ -52,6 +52,10 @@ enum class ShadowTreeCommitSource {
   React,
   AnimationEndSync,
   ReactRevisionMerge,
+  // The renderer's style engine restyling what is committed: a script's write
+  // to an element's inline style, an interaction state, a stylesheet or the
+  // environment changed. An author's change, as React's commits are.
+  StyleEngine,
 };
 
 struct ShadowTreeCommitOptions {

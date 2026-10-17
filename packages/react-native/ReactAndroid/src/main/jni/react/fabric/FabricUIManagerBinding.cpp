@@ -588,6 +588,7 @@ void FabricUIManagerBinding::setConstraints(
 
 void FabricUIManagerBinding::installFabricUIManager(
     jni::alias_ref<JRuntimeExecutor::javaobject> runtimeExecutorHolder,
+    jni::alias_ref<JRuntimeExecutor::javaobject> bindingsExecutorHolder,
     jni::alias_ref<JRuntimeScheduler::javaobject> runtimeSchedulerHolder,
     jni::alias_ref<JFabricUIManager::javaobject> javaUIManager,
     EventBeatManager* eventBeatManager,
@@ -643,9 +644,12 @@ void FabricUIManagerBinding::installFabricUIManager(
   toolbox.contextContainer = contextContainer;
   toolbox.componentRegistryFactory = componentsRegistry->buildRegistryFunction;
 
-  // TODO: (T132338609) runtimeExecutor should execute lambdas after
-  // main bundle eval, and bindingsInstallExecutor should execute before.
-  toolbox.bridgelessBindingsExecutor = std::nullopt;
+  // Install the renderer's global bindings on the executor that runs before
+  // the bundle is evaluated, where the host has one, as iOS's and the C++
+  // host's do: a module may read a binding as it loads
+  toolbox.bridgelessBindingsExecutor = bindingsExecutorHolder
+      ? std::optional<RuntimeExecutor>(bindingsExecutorHolder->cthis()->get())
+      : std::nullopt;
   toolbox.runtimeExecutor = runtimeExecutor;
 
   toolbox.eventBeatFactory = eventBeatFactory;

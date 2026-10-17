@@ -583,6 +583,7 @@ constexpr char facebook::react::toLower(char c);
 constexpr uint32_t facebook::react::fnv1aLowercase(std::string_view string);
 facebook::jsi::Value facebook::react::createPromiseAsJSIValue(facebook::jsi::Runtime& rt, facebook::react::PromiseSetupFunctionType&& func);
 facebook::react::AnimatedPropsBuffer facebook::react::encodeAnimatedProps(const std::unordered_map<facebook::react::Tag, facebook::react::AnimatedProps>& updates);
+facebook::react::AnimationKeyframe facebook::react::parseKeyframeDeclarations(const folly::dynamic& stop);
 facebook::react::Color facebook::react::hostPlatformColorFromColorSpaceValue(const facebook::react::ColorSpaceValue& value);
 facebook::react::Color facebook::react::hostPlatformColorFromComponents(facebook::react::ColorComponents components);
 facebook::react::Color facebook::react::hostPlatformColorFromRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
@@ -649,6 +650,7 @@ folly::dynamic facebook::react::toDynamic(uint32_t value);
 int facebook::react::toAndroidRepr(const facebook::react::SharedColor& color);
 int facebook::react::toInt(const facebook::react::DisplayType& displayType);
 int facebook::react::toInt(const facebook::react::LayoutDirection& layoutDirection);
+std::optional<facebook::react::AnimationKeyframe> facebook::react::buildStartingStyle(const std::string& json);
 std::optional<facebook::react::BlendMode> facebook::react::blendModeFromString(std::string_view blendModeName);
 std::optional<facebook::react::CSSAnimation> facebook::react::buildAnimation(const std::string& keyframesJson, const std::string& duration, const std::string& delay, const std::string& timingFunction, const std::string& iterationCount, const std::string& direction, const std::string& fillMode);
 std::optional<facebook::react::ColorComponents> facebook::react::toClippedSRGB(const facebook::react::ColorSpaceValue& value);
@@ -1089,6 +1091,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public bool removeClippedSubviews;
   public bool shouldRasterize;
   public const facebook::react::Transitions& transitions() const;
+  public const std::optional<facebook::react::AnimationKeyframe>& startingStyle() const;
   public const std::optional<facebook::react::CSSAnimation>& animation() const;
   public const std::optional<facebook::react::EdgeInsets>& environmentSafeAreaInsets() const;
   public facebook::react::BackfaceVisibility backfaceVisibility;
@@ -1166,6 +1169,7 @@ struct facebook::react::BaseViewProps::CssExtras {
   public bool isEmpty() const;
   public bool rawsEqual(const facebook::react::BaseViewProps::CssExtras& other) const;
   public facebook::react::Transitions transitions;
+  public std::optional<facebook::react::AnimationKeyframe> startingStyle;
   public std::optional<facebook::react::CSSAnimation> animation;
   public std::optional<facebook::react::EdgeInsets> environmentSafeAreaInsets;
   public std::string animationDelayRaw;
@@ -1175,6 +1179,7 @@ struct facebook::react::BaseViewProps::CssExtras {
   public std::string animationIterationCountRaw;
   public std::string animationKeyframesRaw;
   public std::string animationTimingFunctionRaw;
+  public std::string startingStyleRaw;
   public std::string transitionDelayRaw;
   public std::string transitionDurationRaw;
   public std::string transitionPropertyRaw;
@@ -1393,10 +1398,11 @@ class facebook::react::ElementBoxEventEmitter : public facebook::react::BaseView
   public void onContextMenu() const;
 }
 
-class facebook::react::ElementBoxProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementBoxProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementBoxProps() = default;
   public ElementBoxProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementBoxProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool wantsContextMenu;
+  public facebook::react::ElementStyleInputs styleInputs;
   public facebook::react::Float appleVisualEffectFade;
   public int start;
   public std::string appleVisualEffect;
@@ -1405,6 +1411,7 @@ class facebook::react::ElementBoxProps : public facebook::react::HostPlatformVie
   public std::string listStyleTypeValue;
   public std::string nodeName;
   public std::vector<facebook::react::ElementMenuCommand> menuCommands;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1418,7 +1425,7 @@ class facebook::react::ElementButtonEventEmitter : public facebook::react::BaseV
   public void onElementPressChange(bool pressed) const;
 }
 
-class facebook::react::ElementButtonProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementButtonProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementButtonProps() = default;
   public ElementButtonProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementButtonProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool accessibleAuthored;
@@ -1426,12 +1433,14 @@ class facebook::react::ElementButtonProps : public facebook::react::HostPlatform
   public bool disabled;
   public bool hasAuthorChrome;
   public bool traitsAuthored;
+  public facebook::react::ElementStyleInputs styleInputs;
   public facebook::react::Float appleVisualEffectFade;
   public std::string appleVisualEffect;
   public std::string buttonStyle;
   public std::string nodeName;
   public std::string touchAction;
   public std::vector<facebook::react::ElementMenuCommand> menuCommands;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1445,12 +1454,14 @@ class facebook::react::ElementCheckboxEventEmitter : public facebook::react::Bas
   public void onElementChange(bool checked) const;
 }
 
-class facebook::react::ElementCheckboxProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementCheckboxProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementCheckboxProps() = default;
   public ElementCheckboxProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementCheckboxProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool checked;
   public bool disabled;
+  public facebook::react::ElementStyleInputs styleInputs;
   public std::string nodeName;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1459,12 +1470,14 @@ class facebook::react::ElementColorInputEventEmitter : public facebook::react::B
   public void onElementInput(const std::string& value) const;
 }
 
-class facebook::react::ElementColorInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementColorInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementColorInputProps() = default;
   public ElementColorInputProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementColorInputProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool disabled;
+  public facebook::react::ElementStyleInputs styleInputs;
   public std::string nodeName;
   public std::string value;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1493,18 +1506,20 @@ class facebook::react::ElementDateInputEventEmitter : public facebook::react::Ba
   public void onElementInput(const std::string& value) const;
 }
 
-class facebook::react::ElementDateInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementDateInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementDateInputProps() = default;
   public ElementDateInputProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementDateInputProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool disabled;
   public bool hasValue;
   public bool showsDate() const;
   public bool showsTime() const;
+  public facebook::react::ElementStyleInputs styleInputs;
   public std::string maximum;
   public std::string minimum;
   public std::string nodeName;
   public std::string type;
   public std::string value;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1520,13 +1535,15 @@ class facebook::react::ElementFileInputEventEmitter : public facebook::react::Ba
   public void onElementChange(const std::vector<facebook::react::ElementFileDescriptor>& files) const;
 }
 
-class facebook::react::ElementFileInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementFileInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementFileInputProps() = default;
   public ElementFileInputProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementFileInputProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool disabled;
   public bool multiple;
+  public facebook::react::ElementStyleInputs styleInputs;
   public std::string accept;
   public std::string nodeName;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1537,7 +1554,7 @@ class facebook::react::ElementFileInputShadowNode : public facebook::react::Conc
   public virtual facebook::react::Size measureContent(const facebook::react::LayoutContext&, const facebook::react::LayoutConstraints& layoutConstraints) const override;
 }
 
-class facebook::react::ElementProgressProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementProgressProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementProgressProps() = default;
   public ElementProgressProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementProgressProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool disabled;
@@ -1547,18 +1564,22 @@ class facebook::react::ElementProgressProps : public facebook::react::HostPlatfo
   public double maximum;
   public double minimum;
   public double value;
+  public facebook::react::ElementStyleInputs styleInputs;
   public std::string nodeName;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
-class facebook::react::ElementRadioProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementRadioProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementRadioProps() = default;
   public ElementRadioProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementRadioProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool checked;
   public bool disabled;
+  public facebook::react::ElementStyleInputs styleInputs;
   public std::string name;
   public std::string nodeName;
   public std::string value;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1567,7 +1588,7 @@ class facebook::react::ElementRangeEventEmitter : public facebook::react::BaseVi
   public void onElementInput(double value) const;
 }
 
-class facebook::react::ElementRangeProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementRangeProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementRangeProps() = default;
   public ElementRangeProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementRangeProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool disabled;
@@ -1576,7 +1597,9 @@ class facebook::react::ElementRangeProps : public facebook::react::HostPlatformV
   public double minimum;
   public double step;
   public double value;
+  public facebook::react::ElementStyleInputs styleInputs;
   public std::string nodeName;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1584,15 +1607,17 @@ class facebook::react::ElementSelectEventEmitter : public facebook::react::BaseV
   public void onElementChange(const std::string& value, int index) const;
 }
 
-class facebook::react::ElementSelectProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementSelectProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementSelectProps() = default;
   public ElementSelectProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementSelectProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool disabled;
   public bool hasValue;
+  public facebook::react::ElementStyleInputs styleInputs;
   public int selectedIndex() const;
   public std::string nodeName;
   public std::string value;
   public std::vector<facebook::react::ElementSelectOption> options;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1611,7 +1636,7 @@ class facebook::react::ElementTextAreaComponentDescriptor : public facebook::rea
   public ElementTextAreaComponentDescriptor(const facebook::react::ComponentDescriptorParameters& parameters, facebook::react::RawPropsParser&& rawPropsParser = {});
 }
 
-class facebook::react::ElementTextAreaProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementTextAreaProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementTextAreaProps() = default;
   public ElementTextAreaProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementTextAreaProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool autoCorrect;
@@ -1621,6 +1646,7 @@ class facebook::react::ElementTextAreaProps : public facebook::react::HostPlatfo
   public bool quiet;
   public bool readOnly;
   public bool spellCheck;
+  public facebook::react::ElementStyleInputs styleInputs;
   public facebook::react::SharedColor caretColor;
   public int maxLength;
   public int mostRecentEventCount;
@@ -1629,6 +1655,7 @@ class facebook::react::ElementTextAreaProps : public facebook::react::HostPlatfo
   public std::string nodeName;
   public std::string placeholder;
   public std::string value;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -1651,7 +1678,7 @@ class facebook::react::ElementTextInputEventEmitter : public facebook::react::Ba
   public void onElementSubmit(const std::string& value) const;
 }
 
-class facebook::react::ElementTextInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider {
+class facebook::react::ElementTextInputProps : public facebook::react::HostPlatformViewProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public ElementTextInputProps() = default;
   public ElementTextInputProps(const facebook::react::PropsParserContext& context, const facebook::react::ElementTextInputProps& sourceProps, const facebook::react::RawProps& rawProps);
   public bool autoCorrect;
@@ -1662,6 +1689,7 @@ class facebook::react::ElementTextInputProps : public facebook::react::HostPlatf
   public bool isSecure() const;
   public bool readOnly;
   public bool spellCheck;
+  public facebook::react::ElementStyleInputs styleInputs;
   public int maxLength;
   public int mostRecentEventCount;
   public std::string autoComplete;
@@ -1672,6 +1700,7 @@ class facebook::react::ElementTextInputProps : public facebook::react::HostPlatf
   public std::string placeholder;
   public std::string type;
   public std::string value;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
 }
 
@@ -2214,10 +2243,12 @@ struct facebook::react::InlineContentShadowNode::CachedContent {
   public std::vector<facebook::react::Rect> fragmentRects;
 }
 
-class facebook::react::InlineTagProps : public facebook::react::TextProps, public facebook::react::AccessibilityProps, public facebook::react::NodeNameProvider {
+class facebook::react::InlineTagProps : public facebook::react::TextProps, public facebook::react::AccessibilityProps, public facebook::react::NodeNameProvider, public facebook::react::ElementStyleInputsProvider {
   public InlineTagProps() = default;
   public InlineTagProps(const facebook::react::PropsParserContext& context, const facebook::react::InlineTagProps& sourceProps, const facebook::react::RawProps& rawProps);
+  public facebook::react::ElementStyleInputs styleInputs;
   public std::string nodeName;
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const override;
   public virtual std::string domNodeName() const override;
   public void setProp(const facebook::react::PropsParserContext& context, facebook::react::RawPropsPropNameHash hash, const char* propName, const facebook::react::RawValue& value);
 }
@@ -3171,6 +3202,68 @@ class facebook::react::StateWrapperImpl : public jni::HybridClass<facebook::reac
   public std::shared_ptr<const facebook::react::State> getState() const;
   public void setState(std::shared_ptr<const facebook::react::State> state);
   public void updateStateImpl(facebook::react::NativeMap* map, jint updateMode);
+}
+
+class facebook::react::StyleEngine : public facebook::react::UIManagerCommitHook, public std::enable_shared_from_this<facebook::react::StyleEngine> {
+  public StyleEngine(const facebook::react::StyleEngine&) = delete;
+  public StyleEngine(facebook::react::UIManager& uiManager);
+  public bool handleEvent(const facebook::react::RawEvent& event);
+  public bool matches(const facebook::react::ShadowNode& node, const std::string& selectors) const;
+  public facebook::react::StyleEngine& operator=(const facebook::react::StyleEngine&) = delete;
+  public facebook::react::StyleEngine::Stats stats() const;
+  public folly::dynamic computedStyle(const facebook::react::ShadowNode& node) const;
+  public folly::dynamic customProperty(const facebook::react::ShadowNode& node, const std::string& name) const;
+  public folly::dynamic explain(const facebook::react::ShadowNode& node) const;
+  public folly::dynamic scriptStyle(const facebook::react::ShadowNode& node) const;
+  public int64_t registerStyle(const folly::dynamic& entries);
+  public int addStyleSheet(const std::string& text);
+  public static void installBindings(facebook::jsi::Runtime& runtime, std::weak_ptr<facebook::react::StyleEngine> engine);
+  public uint32_t hints(const std::string& tag, const std::string& className, const folly::dynamic& attributes, int64_t styleId, const folly::dynamic& inlineStyle) const;
+  public virtual facebook::react::RootShadowNode::Unshared shadowTreeWillCommit(const facebook::react::ShadowTree& shadowTree, const facebook::react::RootShadowNode::Shared& oldRootShadowNode, const facebook::react::RootShadowNode::Unshared& newRootShadowNode, const facebook::react::ShadowTreeCommitOptions& commitOptions) noexcept override;
+  public virtual void commitHookWasRegistered(const facebook::react::UIManager& uiManager) noexcept override;
+  public virtual void commitHookWasUnregistered(const facebook::react::UIManager& uiManager) noexcept override;
+  public void flush();
+  public void registerKeyframes(const std::string& name, const folly::dynamic& frames);
+  public void registerTokens(const folly::dynamic& entries);
+  public void removeStyleSheet(int id);
+  public void replaceStyleSheet(int id, const std::string& text);
+  public void resetStats();
+  public void setEnvironment(facebook::react::cssengine::StyleEnvironment environment);
+  public void setScriptAttributes(const std::vector<std::pair<std::shared_ptr<const facebook::react::ShadowNode>, folly::dynamic>>& writes);
+  public void setScriptStyles(const std::vector<std::pair<std::shared_ptr<const facebook::react::ShadowNode>, folly::dynamic>>& writes);
+  public ~StyleEngine() override;
+}
+
+struct facebook::react::StyleEngine::Stats {
+  public uint64_t childContextsKept;
+  public uint64_t elementsKept;
+  public uint64_t elementsKeptAcrossParent;
+  public uint64_t elementsResolved;
+  public uint64_t hintsAsked;
+  public uint64_t hintsNanos;
+  public uint64_t matchNanos;
+  public uint64_t nodesCloned;
+  public uint64_t nodesVisited;
+  public uint64_t passNanos;
+  public uint64_t passes;
+  public uint64_t propsParseNanos;
+  public uint64_t propsParsed;
+  public uint64_t registerNanos;
+  public uint64_t resolveNanos;
+  public uint64_t resolvedEnvironment;
+  public uint64_t resolvedGeneration;
+  public uint64_t resolvedNew;
+  public uint64_t resolvedParent;
+  public uint64_t resolvedProps;
+  public uint64_t resolvedScriptWrites;
+  public uint64_t resolvedSiblings;
+  public uint64_t resolvedStates;
+  public uint64_t restyles;
+  public uint64_t snapshots;
+  public uint64_t stateCommits;
+  public uint64_t stateEvents;
+  public uint64_t stylesRegistered;
+  public uint64_t subtreesKept;
 }
 
 class facebook::react::SurfaceHandlerBinding : public jni::HybridClass<facebook::react::SurfaceHandlerBinding> {
@@ -4631,6 +4724,26 @@ struct facebook::react::ElementSelectOption {
   public bool operator==(const facebook::react::ElementSelectOption& rhs) const;
   public std::string label;
   public std::string value;
+}
+
+struct facebook::react::ElementStyleInputs {
+  public ElementStyleInputs() = default;
+  public ElementStyleInputs(const facebook::react::PropsParserContext& context, const facebook::react::ElementStyleInputs& source, const facebook::react::RawProps& rawProps);
+  public bool stateful;
+  public bool styled;
+  public folly::dynamic inlineStyle;
+  public folly::dynamic presentationalStyle;
+  public int64_t styleId;
+  public std::string tag;
+  public std::vector<std::pair<std::string, std::string>> attributes;
+  public std::vector<std::string> classes;
+  public uint8_t scrollPart;
+  public uint32_t states;
+}
+
+struct facebook::react::ElementStyleInputsProvider {
+  public virtual const facebook::react::ElementStyleInputs& elementStyleInputs() const = 0;
+  public virtual ~ElementStyleInputsProvider() = default;
 }
 
 struct facebook::react::EnvironmentDependency {
@@ -6899,6 +7012,10 @@ class facebook::react::dom::ElementSelectMeasuredComponentDescriptor : public fa
 }
 
 
+std::vector<std::pair<std::string, std::string>> facebook::react::elementstyleinputs_detail::parseAttributes(const folly::dynamic& object);
+std::vector<std::string> facebook::react::elementstyleinputs_detail::splitClasses(const std::string& value);
+
+
 template <typename JSReturnT, typename ReturnT>
 constexpr bool facebook::react::bridging::supportsToJs<JSReturnT, ReturnT, std::void_t<decltype(toJs(std::declval<facebook::jsi::Runtime&>(), std::declval<JSReturnT>(), nullptr))>>;
 template <typename ReturnT>
@@ -7036,6 +7153,422 @@ template <typename T>
 struct facebook::react::map_detail::Bridging {
   public static T fromJs(facebook::jsi::Runtime& rt, const facebook::jsi::Object& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
   public static facebook::jsi::Object toJs(facebook::jsi::Runtime& rt, const T& map, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+}
+
+
+using facebook::react::cssengine::KeyframesResolver = std::function<folly::dynamic(std::string_view)>;
+using facebook::react::cssengine::SelectorList = std::vector<facebook::react::cssengine::ComplexSelector>;
+using facebook::react::cssengine::SharedStyleContext = std::shared_ptr<const facebook::react::cssengine::StyleContext>;
+bool facebook::react::cssengine::compoundCouldMatch(const facebook::react::cssengine::CompoundSelector& compound, const facebook::react::cssengine::StyleContext& element);
+bool facebook::react::cssengine::isDroppedProperty(std::string_view property);
+bool facebook::react::cssengine::isInheritedProperty(std::string_view property);
+bool facebook::react::cssengine::matchesCompound(const facebook::react::cssengine::CompoundSelector& compound, const facebook::react::cssengine::StyleContext& element);
+bool facebook::react::cssengine::matchesSelector(const facebook::react::cssengine::ComplexSelector& selector, const facebook::react::cssengine::StyleContext& element);
+bool facebook::react::cssengine::matchesSelectorList(const facebook::react::cssengine::SelectorList& list, const facebook::react::cssengine::StyleContext& element);
+facebook::react::cssengine::AuthorStyle facebook::react::cssengine::parseAuthorStyle(const folly::dynamic& entries);
+facebook::react::cssengine::SelectorList facebook::react::cssengine::parseSelectorList(std::string_view source);
+std::optional<double> facebook::react::cssengine::parseNumber(std::string_view value);
+std::optional<double> facebook::react::cssengine::resolveLength(std::string_view value, const facebook::react::cssengine::LengthBasis& basis);
+std::optional<facebook::react::cssengine::FunctionCall> facebook::react::cssengine::findFunction(std::string_view value, std::string_view name, size_t from = 0);
+std::optional<std::string> facebook::react::cssengine::mathForLayout(std::string_view value, const facebook::react::cssengine::LengthBasis& basis);
+std::optional<std::string> facebook::react::cssengine::substituteMath(std::string_view value, const facebook::react::cssengine::LengthBasis& basis);
+std::optional<std::string> facebook::react::cssengine::substituteVariables(std::string_view value, const facebook::react::cssengine::CustomProperties& scope);
+std::optional<uint32_t> facebook::react::cssengine::parseColor(std::string_view value);
+std::shared_ptr<const facebook::react::cssengine::StyleSheet> facebook::react::cssengine::parseStyleSheet(std::string_view source);
+std::string facebook::react::cssengine::camelCasePropertyName(std::string_view name);
+std::string facebook::react::cssengine::cssTextOfPackedColor(uint32_t color);
+std::string facebook::react::cssengine::serializeTokens(std::string_view source, const std::vector<facebook::react::cssengine::Token>& tokens, size_t first, size_t last);
+std::string facebook::react::cssengine::substituteColorMix(std::string_view value);
+std::string facebook::react::cssengine::substituteCurrentColor(std::string_view value, std::string_view currentColor);
+std::string facebook::react::cssengine::substituteLightDark(std::string_view value, bool dark);
+std::string facebook::react::cssengine::substituteOklabColors(std::string_view value);
+std::string facebook::react::cssengine::trackListForLayout(std::string_view value, const facebook::react::cssengine::LengthBasis& basis);
+std::string_view facebook::react::cssengine::trimmed(std::string_view value);
+std::vector<facebook::react::cssengine::Token> facebook::react::cssengine::tokenize(std::string_view source);
+std::vector<std::string_view> facebook::react::cssengine::splitTopLevel(std::string_view value, char separator);
+std::vector<std::string_view> facebook::react::cssengine::splitTopLevelWhitespace(std::string_view value);
+uint32_t facebook::react::cssengine::specificityOf(const facebook::react::cssengine::ComplexSelector& selector);
+void facebook::react::cssengine::convertLonghands(const std::vector<facebook::react::cssengine::Longhand>& cascaded, const facebook::react::cssengine::ConversionContext& context, folly::dynamic& props);
+void facebook::react::cssengine::expandDeclaration(std::string_view property, std::string_view value, bool rtl, std::vector<facebook::react::cssengine::Longhand>& out);
+void facebook::react::cssengine::recordCustomPropertyRead(const std::string& name);
+
+class facebook::react::cssengine::CustomProperties {
+  public CustomProperties() = default;
+  public CustomProperties(std::shared_ptr<const facebook::react::cssengine::CustomProperties> parent);
+  public const std::shared_ptr<const facebook::react::cssengine::CustomProperties>& parent() const;
+  public const std::string* find(const std::string& name) const;
+  public const std::unordered_map<std::string, std::string>& own() const;
+  public std::unordered_map<std::string, std::string> flattened() const;
+  public void set(std::string name, std::string value);
+}
+
+class facebook::react::cssengine::CustomPropertyReadsScope {
+  public CustomPropertyReadsScope(const facebook::react::cssengine::CustomPropertyReadsScope&) = delete;
+  public CustomPropertyReadsScope(std::unordered_set<std::string>* reads);
+  public facebook::react::cssengine::CustomPropertyReadsScope& operator=(const facebook::react::cssengine::CustomPropertyReadsScope&) = delete;
+  public ~CustomPropertyReadsScope();
+}
+
+class facebook::react::cssengine::MediaQueryList {
+  public bool matches(const facebook::react::cssengine::MediaEnvironment& environment) const;
+  public static std::shared_ptr<const facebook::react::cssengine::MediaQueryList> parse(std::string_view text);
+  public static std::shared_ptr<const facebook::react::cssengine::MediaQueryList> parseCondition(std::string_view text);
+}
+
+struct facebook::react::cssengine::MediaQueryList::Query {
+  public bool negated;
+  public bool typeMatches;
+  public std::shared_ptr<const Condition> condition;
+}
+
+class facebook::react::cssengine::RuleSet {
+  public RuleSet(std::vector<std::shared_ptr<const facebook::react::cssengine::StyleSheet>> sheets);
+  public bool hasStartingRules() const;
+  public bool readsSiblings() const;
+  public bool usesExplicitInheritance() const;
+  public const facebook::react::cssengine::AncestorFeatures& ancestorFeatures() const;
+  public const facebook::react::cssengine::KeyframesRule* keyframes(std::string_view name) const;
+  public const std::unordered_set<std::string>& explicitInherits() const;
+  public int styleXLayerRank() const;
+  public void match(const facebook::react::cssengine::StyleContext& element, const facebook::react::cssengine::MediaEnvironment& environment, std::vector<facebook::react::cssengine::MatchedRule>& out) const;
+}
+
+enum facebook::react::cssengine::Combinator : uint8_t {
+  Child,
+  Descendant,
+  NextSibling,
+  SubsequentSibling,
+}
+
+enum facebook::react::cssengine::ElementState : uint32_t {
+  ElementStateActive,
+  ElementStateChecked,
+  ElementStateFocus,
+  ElementStateFocusVisible,
+  ElementStateHover,
+  ElementStatePopoverOpen,
+}
+
+enum facebook::react::cssengine::PseudoClass : uint8_t {
+  Active,
+  AnyLink,
+  Checked,
+  Disabled,
+  Enabled,
+  FirstChild,
+  Focus,
+  FocusVisible,
+  Hover,
+  Is,
+  LastChild,
+  Not,
+  NthChild,
+  NthLastChild,
+  OnlyChild,
+  PopoverOpen,
+  Root,
+  Scope,
+  Unsupported,
+  Where,
+}
+
+enum facebook::react::cssengine::StyleHint : uint32_t {
+  StyleHintBox,
+  StyleHintClipBlock,
+  StyleHintFlexColumn,
+  StyleHintFlexRow,
+  StyleHintPressStates,
+  StyleHintScroll,
+  StyleHintScrollBlock,
+  StyleHintStates,
+}
+
+enum facebook::react::cssengine::TokenType : uint8_t {
+  AtKeyword,
+  BadString,
+  BadUrl,
+  CDC,
+  CDO,
+  CloseCurly,
+  CloseParen,
+  CloseSquare,
+  Colon,
+  Comma,
+  Delim,
+  Dimension,
+  Function,
+  Hash,
+  Ident,
+  Number,
+  OpenCurly,
+  OpenParen,
+  OpenSquare,
+  Percentage,
+  Semicolon,
+  String,
+  Url,
+  Whitespace,
+}
+
+struct facebook::react::cssengine::AncestorFeatures {
+  public bool distinguishes(const facebook::react::cssengine::StyleContext& before, const facebook::react::cssengine::StyleContext& after, bool siblingsByContent = false) const;
+  public bool positional;
+  public std::unordered_set<std::string> attributes;
+  public std::unordered_set<std::string> classes;
+  public uint32_t states;
+  public void addSelectorList(const facebook::react::cssengine::SelectorList& list);
+  public void merge(const facebook::react::cssengine::AncestorFeatures& other);
+}
+
+struct facebook::react::cssengine::AttributeSelector {
+  public bool caseInsensitive;
+  public facebook::react::cssengine::AttributeSelector::Operator op;
+  public std::string name;
+  public std::string value;
+}
+
+enum facebook::react::cssengine::AttributeSelector::Operator : uint8_t {
+  DashMatch,
+  Equals,
+  Exists,
+  Includes,
+  Prefix,
+  Substring,
+  Suffix,
+}
+
+struct facebook::react::cssengine::AuthorEntry {
+  public facebook::react::cssengine::AuthorEntry::Condition condition;
+  public facebook::react::cssengine::AuthorEntry::Kind kind;
+  public folly::dynamic raw;
+  public int pseudoClass;
+  public std::shared_ptr<const facebook::react::cssengine::MediaQueryList> media;
+  public std::shared_ptr<const facebook::react::cssengine::SelectorList> selector;
+  public std::string key;
+  public std::string text;
+  public std::vector<facebook::react::cssengine::AuthorEntry> entries;
+}
+
+enum facebook::react::cssengine::AuthorEntry::Condition : uint8_t {
+  Default,
+  Ignored,
+  Media,
+  None,
+  PseudoClass,
+  Selector,
+  Starting,
+}
+
+enum facebook::react::cssengine::AuthorEntry::Kind : uint8_t {
+  Nested,
+  Null,
+  Raw,
+  Value,
+}
+
+struct facebook::react::cssengine::AuthorStyle {
+  public bool hasStartingStyle;
+  public bool readsSiblings;
+  public std::vector<facebook::react::cssengine::AuthorEntry> declarations;
+}
+
+struct facebook::react::cssengine::ComplexSelector {
+  public bool matchable;
+  public std::shared_ptr<const facebook::react::cssengine::ScopeInfo> scope;
+  public std::vector<facebook::react::cssengine::Combinator> combinators;
+  public std::vector<facebook::react::cssengine::CompoundSelector> compounds;
+  public uint32_t specificity;
+}
+
+struct facebook::react::cssengine::CompoundSelector {
+  public bool pseudoElement;
+  public std::string tag;
+  public std::vector<facebook::react::cssengine::AttributeSelector> attributes;
+  public std::vector<facebook::react::cssengine::PseudoClassSelector> pseudoClasses;
+  public std::vector<std::string> classes;
+  public std::vector<std::string> ids;
+}
+
+struct facebook::react::cssengine::ContainerQuery {
+  public std::shared_ptr<const facebook::react::cssengine::MediaQueryList> condition;
+  public std::string name;
+}
+
+struct facebook::react::cssengine::ConversionContext {
+  public bool rtl;
+  public double parentFontSize;
+  public facebook::react::cssengine::KeyframesResolver keyframes;
+  public facebook::react::cssengine::LengthBasis basis;
+  public std::string currentColor;
+}
+
+struct facebook::react::cssengine::Declaration {
+  public bool important;
+  public std::string property;
+  public std::string value;
+}
+
+struct facebook::react::cssengine::FunctionCall {
+  public size_t close;
+  public size_t open;
+  public size_t start;
+}
+
+struct facebook::react::cssengine::IndexedSelector {
+  public const facebook::react::cssengine::ComplexSelector* selector;
+  public const facebook::react::cssengine::StyleRule* rule;
+  public uint32_t layerRank;
+  public uint32_t specificity;
+  public uint64_t order;
+}
+
+struct facebook::react::cssengine::KeyframesRule {
+  public std::string name;
+  public std::vector<std::pair<double, std::vector<facebook::react::cssengine::Declaration>>> stops;
+}
+
+struct facebook::react::cssengine::LengthBasis {
+  public double containerHeight;
+  public double containerWidth;
+  public double fontSize;
+  public double lineHeight;
+  public double rootFontSize;
+  public double rootLineHeight;
+  public double viewportHeight;
+  public double viewportWidth;
+  public std::function<std::optional<double>(std::string_view)> environment;
+}
+
+struct facebook::react::cssengine::Longhand {
+  public bool fromVariable;
+  public std::string property;
+  public std::string value;
+}
+
+struct facebook::react::cssengine::MatchedRule {
+  public const facebook::react::cssengine::IndexedSelector* operator->() const;
+  public const facebook::react::cssengine::IndexedSelector* selector;
+  public uint32_t proximity;
+}
+
+struct facebook::react::cssengine::MediaEnvironment {
+  public bool dark;
+  public bool highDynamicRange;
+  public bool hover;
+  public bool reducedMotion;
+  public double height;
+  public double resolution;
+  public double viewportHeight;
+  public double viewportWidth;
+  public double width;
+  public facebook::react::cssengine::MediaEnvironment::Gamut gamut;
+  public facebook::react::cssengine::MediaEnvironment::Pointer pointer;
+}
+
+enum facebook::react::cssengine::MediaEnvironment::Gamut : uint8_t {
+  P3,
+  Rec2020,
+  Srgb,
+}
+
+enum facebook::react::cssengine::MediaEnvironment::Pointer : uint8_t {
+  Coarse,
+  Fine,
+  None,
+}
+
+struct facebook::react::cssengine::PseudoClassSelector {
+  public facebook::react::cssengine::PseudoClass kind;
+  public int a;
+  public int b;
+  public std::shared_ptr<const facebook::react::cssengine::SelectorList> arguments;
+}
+
+struct facebook::react::cssengine::ScopeInfo {
+  public facebook::react::cssengine::SelectorList limits;
+  public facebook::react::cssengine::SelectorList roots;
+}
+
+struct facebook::react::cssengine::StyleContext {
+  public bool clipsBlockBelow;
+  public bool darkScheme;
+  public bool hasClass(std::string_view name) const;
+  public bool hidden;
+  public bool isRoot;
+  public bool laysOutItems;
+  public bool pointerEventsNone;
+  public bool rtl;
+  public const std::string* attribute(std::string_view name) const;
+  public double fontSize;
+  public std::optional<double> lineHeightFactor;
+  public std::optional<double> lineHeightLength;
+  public std::shared_ptr<const facebook::react::cssengine::CustomProperties> customProperties;
+  public std::shared_ptr<const facebook::react::cssengine::StyleContext> parent;
+  public std::shared_ptr<const facebook::react::cssengine::StyleContext> previousSibling;
+  public std::shared_ptr<const facebook::react::cssengine::TableLayout> tableLayout;
+  public std::shared_ptr<const folly::dynamic> computed;
+  public std::shared_ptr<const folly::dynamic> scrollContent;
+  public std::shared_ptr<const std::vector<std::shared_ptr<const facebook::react::cssengine::StyleContext>>> followingSiblings;
+  public std::string cellAlign;
+  public std::string color;
+  public std::string colorScheme;
+  public std::string tag;
+  public std::vector<std::pair<std::string, std::string>> attributes;
+  public std::vector<std::string> classes;
+  public std::vector<std::string> containerNames;
+  public uint32_t position;
+  public uint32_t siblingCount;
+  public uint32_t states;
+}
+
+struct facebook::react::cssengine::StyleEnvironment {
+  public facebook::react::cssengine::MediaEnvironment media;
+}
+
+struct facebook::react::cssengine::StyleRule {
+  public bool layered;
+  public bool starting;
+  public facebook::react::cssengine::SelectorList selectors;
+  public std::string layer;
+  public std::vector<facebook::react::cssengine::ContainerQuery> containers;
+  public std::vector<facebook::react::cssengine::Declaration> declarations;
+  public std::vector<std::shared_ptr<const facebook::react::cssengine::MediaQueryList>> media;
+  public uint32_t order;
+}
+
+struct facebook::react::cssengine::StyleSheet {
+  public bool readsSiblings;
+  public std::vector<facebook::react::cssengine::KeyframesRule> keyframes;
+  public std::vector<facebook::react::cssengine::StyleRule> rules;
+  public std::vector<std::string> layerOrder;
+}
+
+struct facebook::react::cssengine::TableColumn {
+  public bool operator==(const facebook::react::cssengine::TableColumn&) const = default;
+  public double value;
+  public facebook::react::cssengine::TableColumn::Kind kind;
+}
+
+enum facebook::react::cssengine::TableColumn::Kind : uint8_t {
+  Auto,
+  Percent,
+  Points,
+}
+
+struct facebook::react::cssengine::TableLayout {
+  public bool operator==(const facebook::react::cssengine::TableLayout&) const = default;
+  public double blockSpacing;
+  public double inlineSpacing;
+  public std::vector<facebook::react::cssengine::TableColumn> columns;
+}
+
+struct facebook::react::cssengine::Token {
+  public bool idHash;
+  public double number;
+  public facebook::react::cssengine::TokenType type;
+  public std::string value;
+  public uint32_t begin;
+  public uint32_t end;
 }
 
 

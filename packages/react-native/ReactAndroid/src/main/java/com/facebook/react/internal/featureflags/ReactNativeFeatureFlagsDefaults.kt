@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<786a39711692c08a4ca7dbd7500f71a2>>
+ * @generated SignedSource<<d8bef1edf2a78a1b0daa71359df037c5>>
  */
 
 /**
@@ -51,7 +51,7 @@ public open class ReactNativeFeatureFlagsDefaults : ReactNativeFeatureFlagsProvi
 
   override fun enableAccessibilityOrder(): Boolean = false
 
-  override fun enableAccumulatedUpdatesInRawPropsAndroid(): Boolean = false
+  override fun enableAccumulatedUpdatesInRawPropsAndroid(): Boolean = true
 
   override fun enableAndroidAutoOffscreenCompositingForElevation(): Boolean = false
 
@@ -121,7 +121,7 @@ public open class ReactNativeFeatureFlagsDefaults : ReactNativeFeatureFlagsProvi
 
   override fun enableNativeGestureRecognizers(): Boolean = false
 
-  override fun enablePreallocatedPropsDiffOnInsertAndroid(): Boolean = false
+  override fun enablePreallocatedPropsDiffOnInsertAndroid(): Boolean = true
 
   override fun enablePreparedTextLayout(): Boolean = true
 

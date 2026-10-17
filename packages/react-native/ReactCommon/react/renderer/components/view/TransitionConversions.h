@@ -229,6 +229,53 @@ inline Transitions buildTransitions(
 }
 
 /*
+ * One stop's declarations in the wire format: resolved values, colors already
+ * ints, a transform as a CSS string. The offset is the caller's.
+ */
+inline AnimationKeyframe parseKeyframeDeclarations(const folly::dynamic &stop)
+{
+  AnimationKeyframe keyframe;
+  if (auto *v = stop.get_ptr("opacity"); v != nullptr && v->isNumber()) {
+    keyframe.opacity = static_cast<Float>(v->asDouble());
+  }
+  if (auto *v = stop.get_ptr("backgroundColor"); v != nullptr && v->isNumber()) {
+    keyframe.backgroundColor = static_cast<int32_t>(v->asInt());
+  }
+  if (auto *v = stop.get_ptr("borderColor"); v != nullptr && v->isNumber()) {
+    keyframe.borderColor = static_cast<int32_t>(v->asInt());
+  }
+  if (auto *v = stop.get_ptr("transform"); v != nullptr && v->isString()) {
+    Transform transform;
+    parseTransformString(v->getString(), transform);
+    keyframe.transform = transform;
+  }
+  return keyframe;
+}
+
+/*
+ * An element's starting style (css-transitions-2 §3.3), what its
+ * `@starting-style` rules give the properties a transition interpolates, in a
+ * stop's wire format: the values a transition runs from when the element
+ * comes to be rendered
+ */
+inline std::optional<AnimationKeyframe> buildStartingStyle(const std::string &json)
+{
+  if (json.empty()) {
+    return std::nullopt;
+  }
+  folly::dynamic parsed;
+  try {
+    parsed = folly::parseJson(json);
+  } catch (...) {
+    return std::nullopt;
+  }
+  if (!parsed.isObject()) {
+    return std::nullopt;
+  }
+  return parseKeyframeDeclarations(parsed);
+}
+
+/*
  * Building a CSS animation from the wire format: `animationKeyframes` is a
  * JSON array of stops (offset + resolved declarations, colors already ints,
  * transforms as CSS strings), and the longhands are the same CSS strings the
@@ -261,22 +308,8 @@ inline std::optional<CSSAnimation> buildAnimation(
     if (!stop.isObject() || stop.find("offset") == stop.items().end()) {
       continue;
     }
-    AnimationKeyframe keyframe;
+    AnimationKeyframe keyframe = parseKeyframeDeclarations(stop);
     keyframe.offset = static_cast<Float>(stop["offset"].asDouble());
-    if (auto *v = stop.get_ptr("opacity"); v != nullptr && v->isNumber()) {
-      keyframe.opacity = static_cast<Float>(v->asDouble());
-    }
-    if (auto *v = stop.get_ptr("backgroundColor"); v != nullptr && v->isNumber()) {
-      keyframe.backgroundColor = static_cast<int32_t>(v->asInt());
-    }
-    if (auto *v = stop.get_ptr("borderColor"); v != nullptr && v->isNumber()) {
-      keyframe.borderColor = static_cast<int32_t>(v->asInt());
-    }
-    if (auto *v = stop.get_ptr("transform"); v != nullptr && v->isString()) {
-      Transform transform;
-      parseTransformString(v->getString(), transform);
-      keyframe.transform = transform;
-    }
     animation.keyframes.push_back(std::move(keyframe));
   }
   if (animation.keyframes.size() < 2) {

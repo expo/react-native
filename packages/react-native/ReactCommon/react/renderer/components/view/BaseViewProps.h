@@ -319,12 +319,17 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
     std::string animationFillModeRaw{};
     std::optional<CSSAnimation> animation{};
 
+    // The values a transition runs from as the view comes to be rendered:
+    // what `@starting-style` gives the properties a transition interpolates
+    std::string startingStyleRaw{};
+    std::optional<AnimationKeyframe> startingStyle{};
+
     bool isEmpty() const
     {
       return !environmentSafeAreaInsets && transitionPropertyRaw.empty() && transitionDurationRaw.empty() && transitionDelayRaw.empty() &&
           transitionTimingFunctionRaw.empty() && animationKeyframesRaw.empty() && animationDurationRaw.empty() &&
           animationDelayRaw.empty() && animationTimingFunctionRaw.empty() && animationIterationCountRaw.empty() &&
-          animationDirectionRaw.empty() && animationFillModeRaw.empty();
+          animationDirectionRaw.empty() && animationFillModeRaw.empty() && startingStyleRaw.empty();
     }
 
     bool rawsEqual(const CssExtras &other) const
@@ -337,7 +342,8 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
           animationDelayRaw == other.animationDelayRaw &&
           animationTimingFunctionRaw == other.animationTimingFunctionRaw &&
           animationIterationCountRaw == other.animationIterationCountRaw &&
-          animationDirectionRaw == other.animationDirectionRaw && animationFillModeRaw == other.animationFillModeRaw;
+          animationDirectionRaw == other.animationDirectionRaw && animationFillModeRaw == other.animationFillModeRaw &&
+          startingStyleRaw == other.startingStyleRaw;
     }
   };
 
@@ -353,6 +359,12 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   {
     static const std::optional<CSSAnimation> kNone{};
     return cssExtras == nullptr ? kNone : cssExtras->animation;
+  }
+
+  const std::optional<AnimationKeyframe> &startingStyle() const
+  {
+    static const std::optional<AnimationKeyframe> kNone{};
+    return cssExtras == nullptr ? kNone : cssExtras->startingStyle;
   }
 
   /*

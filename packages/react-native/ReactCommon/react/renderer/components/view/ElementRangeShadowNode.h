@@ -18,6 +18,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -57,11 +58,20 @@ class ElementRangeEventEmitter : public ViewEventEmitter {
   }
 };
 
-class ElementRangeProps final : public ViewProps, public NodeNameProvider {
+class ElementRangeProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementRangeProps() = default;
   ElementRangeProps(const PropsParserContext &context, const ElementRangeProps &sourceProps, const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         value(convertRawProp(context, rawProps, "value", sourceProps.value, 50.0)),
         minimum(convertRawProp(context, rawProps, "min", sourceProps.minimum, 0.0)),
