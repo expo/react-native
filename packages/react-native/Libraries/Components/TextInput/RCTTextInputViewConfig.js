@@ -105,6 +105,7 @@ const RCTTextInputViewConfig: PartialViewConfigWithoutName = {
     cssStyle: true,
     cssInline: true,
     cssStates: true,
+    cssStateful: true,
     dynamicTypeRamp: true,
     fontSize: true,
     fontWeight: true,

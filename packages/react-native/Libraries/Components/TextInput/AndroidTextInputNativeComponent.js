@@ -666,6 +666,7 @@ export const __INTERNAL_VIEW_CONFIG: PartialViewConfig = {
     cssStyle: true,
     cssInline: true,
     cssStates: true,
+    cssStateful: true,
     maxFontSizeMultiplier: true,
     adjustsFontSizeToFit: true,
     minimumFontScale: true,

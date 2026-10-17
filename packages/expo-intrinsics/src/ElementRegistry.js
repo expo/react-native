@@ -54,6 +54,7 @@ const STYLE_ENGINE_ATTRIBUTES = {
   cssStyle: true,
   cssInline: true,
   cssStates: true,
+  cssStateful: true,
   cssPresentational: true,
   cssScroll: true,
 } as const;

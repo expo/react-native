@@ -157,6 +157,15 @@ Scheduler::Scheduler(
                        jsi::Runtime& runtime) {
     StyleEngine::installBindings(runtime, weakStyleEngine);
   });
+  // The hover, active and focus states the engine keeps, from the events
+  // before they reach JavaScript
+  addEventListener(
+      std::make_shared<const EventListener>(
+          [weakStyleEngine = std::weak_ptr<StyleEngine>(styleEngine_)](
+              const RawEvent& event) {
+            auto styleEngine = weakStyleEngine.lock();
+            return styleEngine != nullptr && styleEngine->handleEvent(event);
+          }));
 
   // Must come after `setDelegate`: the backend's constructor registers a
   // surface-start callback, and `UIManager` silently drops those while it has

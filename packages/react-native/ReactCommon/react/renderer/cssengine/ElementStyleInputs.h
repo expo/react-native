@@ -44,6 +44,10 @@ struct ElementStyleInputs {
   folly::dynamic inlineStyle{nullptr};
   // `ElementState` bits: hover, active, focus, popover-open, …
   uint32_t states{0};
+  // Whether the engine keeps the element's hover, active and focus states
+  // from its pointer and focus events, for styles that read them; the
+  // element listens for those events
+  bool stateful{false};
   // SVG's presentation attributes (`width`, `height`) as ordered entries,
   // which sit under every rule (SVG 2 §6.6)
   folly::dynamic presentationalStyle{nullptr};
@@ -139,6 +143,9 @@ inline ElementStyleInputs::ElementStyleInputs(
   }
   if (const RawValue *value = rawProps.at("cssStates", nullptr, nullptr)) {
     states = value->hasType<int>() ? static_cast<uint32_t>(static_cast<int>(*value)) : 0u;
+  }
+  if (const RawValue *value = rawProps.at("cssStateful", nullptr, nullptr)) {
+    stateful = value->hasType<bool>() && static_cast<bool>(*value);
   }
   if (const RawValue *value = rawProps.at("cssPresentational", nullptr, nullptr)) {
     presentationalStyle = static_cast<folly::dynamic>(*value);

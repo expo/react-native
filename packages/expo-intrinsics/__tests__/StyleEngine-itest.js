@@ -458,3 +458,131 @@ test('an ancestor attribute no rule names leaves the descendants as they were', 
   expect(stats.elementsResolved).toBe(1);
   expect(stats.childContextsKept).toBe(1);
 });
+
+function reportsEvents(): void {}
+
+test('a press restyles the element and its stateful ancestor, with no render', () => {
+  engine().addStyleSheet(
+    '.press { width: 10px; height: 10px; } .press:active { height: 30px; } ' +
+      '.label { width: 5px; height: 5px; } .press:active .label { width: 7px; }',
+  );
+  const button = createRef<HostInstance>();
+  const label = createRef<HostInstance>();
+  let renders = 0;
+  function Button(): React.Node {
+    renders++;
+    return (
+      // $FlowExpectedError[prop-missing]
+      <div
+        ref={button}
+        cssEngine={true}
+        cssClass="press"
+        cssStateful={true}
+        onPointerDown={reportsEvents}
+        onPointerUp={reportsEvents}>
+        {/* $FlowExpectedError[prop-missing] */}
+        <div ref={label} cssEngine={true} cssClass="label" />
+      </div>
+    );
+  }
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(<Button />);
+  });
+  expect(rect(button)).toBe('x=0 y=0 w=10 h=10');
+
+  // Pressed where the label is: `:active` reaches the label's ancestors
+  Fantom.dispatchNativeEvent(label, 'pointerDown');
+  expect(rect(button)).toBe('x=0 y=0 w=10 h=30');
+  expect(rect(label)).toBe('x=0 y=0 w=7 h=5');
+
+  Fantom.dispatchNativeEvent(label, 'pointerUp');
+  expect(rect(button)).toBe('x=0 y=0 w=10 h=10');
+  expect(rect(label)).toBe('x=0 y=0 w=5 h=5');
+  expect(renders).toBe(1);
+  expect(engine().stats().stateCommits).toBeGreaterThan(0);
+});
+
+test('hover follows the pointer entering and leaving a StyleX element', () => {
+  const styleId = engine().registerStyle([
+    ['width', 10],
+    [
+      'height',
+      {
+        c: [
+          ['default', '10px'],
+          [':hover', '20px'],
+        ],
+      },
+    ],
+  ]);
+  const ref = createRef<HostInstance>();
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      // $FlowExpectedError[prop-missing]
+      <div
+        ref={ref}
+        cssEngine={true}
+        cssStyle={styleId}
+        cssStateful={true}
+        onPointerEnter={reportsEvents}
+        onPointerLeave={reportsEvents}
+      />,
+    );
+  });
+  expect(rect(ref)).toBe('x=0 y=0 w=10 h=10');
+  Fantom.dispatchNativeEvent(ref, 'pointerEnter');
+  expect(rect(ref)).toBe('x=0 y=0 w=10 h=20');
+  Fantom.dispatchNativeEvent(ref, 'pointerLeave');
+  expect(rect(ref)).toBe('x=0 y=0 w=10 h=10');
+});
+
+test('a disabled element has no interaction states', () => {
+  engine().addStyleSheet(
+    '.inert { width: 10px; height: 10px; } .inert:active { height: 30px; }',
+  );
+  const ref = createRef<HostInstance>();
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      // $FlowExpectedError[prop-missing]
+      <div
+        ref={ref}
+        cssEngine={true}
+        cssClass="inert"
+        cssAttributes={{disabled: true}}
+        cssStateful={true}
+        onPointerDown={reportsEvents}
+      />,
+    );
+  });
+  Fantom.dispatchNativeEvent(ref, 'pointerDown');
+  expect(rect(ref)).toBe('x=0 y=0 w=10 h=10');
+  Fantom.dispatchNativeEvent(ref, 'pointerUp');
+});
+
+test('matches() reads the states the engine keeps', () => {
+  engine().addStyleSheet('.held { width: 10px; height: 10px; }');
+  const ref = createRef<HostInstance>();
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      // $FlowExpectedError[prop-missing]
+      <div
+        ref={ref}
+        cssEngine={true}
+        cssClass="held"
+        cssStateful={true}
+        onPointerDown={reportsEvents}
+      />,
+    );
+  });
+  const node = (ref.current as $FlowFixMe)?.__internalInstanceHandle?.stateNode
+    ?.node;
+  expect(engine().matches(node, '.held:active')).toBe(false);
+  Fantom.dispatchNativeEvent(ref, 'pointerDown');
+  expect(engine().matches(node, '.held:active')).toBe(true);
+  Fantom.dispatchNativeEvent(ref, 'pointerUp');
+  expect(engine().matches(node, '.held:active')).toBe(false);
+});

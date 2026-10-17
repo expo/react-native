@@ -820,6 +820,8 @@ struct StyleEngine::CacheEntry {
   // that differs from it only in what nothing below can read
   SharedStyleContext childContext;
   bool element{false};
+  // The states the engine kept for it when it was resolved
+  uint32_t nativeStates{0};
 };
 
 struct StyleEngine::Counters {
@@ -833,6 +835,7 @@ struct StyleEngine::Counters {
   std::atomic<uint64_t> resolvedParent{0};
   std::atomic<uint64_t> resolvedSiblings{0};
   std::atomic<uint64_t> resolvedGeneration{0};
+  std::atomic<uint64_t> resolvedStates{0};
   std::atomic<uint64_t> resolveNanos{0};
   std::atomic<uint64_t> matchNanos{0};
   std::atomic<uint64_t> elementsKept{0};
@@ -846,6 +849,8 @@ struct StyleEngine::Counters {
   std::atomic<uint64_t> registerNanos{0};
   std::atomic<uint64_t> hintsAsked{0};
   std::atomic<uint64_t> hintsNanos{0};
+  std::atomic<uint64_t> stateEvents{0};
+  std::atomic<uint64_t> stateCommits{0};
 };
 
 namespace {
@@ -1761,7 +1766,12 @@ class StyleEngine::Pass {
         stylesLock_(engine.stylesMutex_),
         parserContext_{surfaceId, contextContainer},
         readsSiblings_(
-            snapshot_->rules->readsSiblings() || engine.stylesReadSiblings_) {}
+            snapshot_->rules->readsSiblings() || engine.stylesReadSiblings_) {
+    std::scoped_lock lock(engine.nativeStatesMutex_);
+    for (const auto& [tag, state] : engine.nativeStates_) {
+      nativeStates_.emplace(tag, state.states);
+    }
+  }
 
   std::shared_ptr<const ShadowNode> visit(
       const std::shared_ptr<const ShadowNode>& node,
@@ -1815,7 +1825,15 @@ class StyleEngine::Pass {
       if (entry.outputProps != nullptr && base == entry.outputProps) {
         base = entry.inputProps;
       }
-      if (sameUnder && base == entry.inputProps && entry.context != nullptr) {
+      uint32_t nativeStates = 0;
+      if (!nativeStates_.empty()) {
+        auto found = nativeStates_.find(node->getTag());
+        if (found != nativeStates_.end()) {
+          nativeStates = found->second;
+        }
+      }
+      if (sameUnder && base == entry.inputProps && entry.context != nullptr &&
+          entry.nativeStates == nativeStates) {
         add(counters_.elementsKept, 1);
         context = entry.context;
         childContext =
@@ -1841,6 +1859,8 @@ class StyleEngine::Pass {
             add(counters_.resolvedProps, 1);
           } else if (entry.generation != snapshot_->generation) {
             add(counters_.resolvedGeneration, 1);
+          } else if (entry.nativeStates != nativeStates) {
+            add(counters_.resolvedStates, 1);
           } else if (entry.parent != parent) {
             add(counters_.resolvedParent, 1);
           } else {
@@ -1850,6 +1870,7 @@ class StyleEngine::Pass {
               *node,
               *base,
               inputs,
+              nativeStates,
               parent,
               previousSibling,
               position,
@@ -1890,6 +1911,7 @@ class StyleEngine::Pass {
         entry.extras = std::move(resolution.extras);
         entry.inputProps = base;
         entry.outputProps = outputProps;
+        entry.nativeStates = nativeStates;
       }
       elementContext = context;
     } else {
@@ -1975,6 +1997,7 @@ class StyleEngine::Pass {
       const ShadowNode& /*node*/,
       const Props& props,
       const ElementStyleInputs& inputs,
+      uint32_t nativeStates,
       const SharedStyleContext& parent,
       const SharedStyleContext& previousSibling,
       uint32_t position,
@@ -1989,6 +2012,16 @@ class StyleEngine::Pass {
     element->classes = inputs.classes;
     element->attributes = inputs.attributes;
     element->states = inputs.states;
+    // The states the engine keeps, which a disabled element does not have
+    if (nativeStates != 0 &&
+        std::none_of(
+            inputs.attributes.begin(),
+            inputs.attributes.end(),
+            [](const auto& attribute) {
+              return attribute.first == "disabled";
+            })) {
+      element->states |= nativeStates;
+    }
     element->parent = parent;
     element->previousSibling = previousSibling;
     element->position = position;
@@ -2031,6 +2064,8 @@ class StyleEngine::Pass {
   std::shared_lock<std::shared_mutex> stylesLock_;
   PropsParserContext parserContext_;
   bool readsSiblings_;
+  // The states the engine keeps, as of the pass's start
+  std::unordered_map<Tag, uint32_t> nativeStates_;
 };
 
 // -- StyleEngine --
@@ -2146,6 +2181,186 @@ void StyleEngine::restyleAll() {
               return std::static_pointer_cast<RootShadowNode>(
                   oldRootShadowNode.ShadowNode::clone(
                       {.runtimeShadowNodeReference = false}));
+            },
+            {.enableStateReconciliation = false,
+             .mountSynchronously = true,
+             .source = ShadowTreeCommitSource::Unknown});
+      });
+}
+
+namespace {
+
+/*
+ * The node at the end of `ancestors` cloned, and each ancestor with the
+ * clone in its place, up to a clone of the root. None takes React's runtime
+ * reference: React keeps its own nodes, which the pass styles from.
+ */
+std::shared_ptr<const ShadowNode> clonePath(
+    const ShadowNodeFamily::AncestorList& ancestors) {
+  const auto& [parent, index] = ancestors.back();
+  std::shared_ptr<const ShadowNode> child =
+      parent.get().getChildren().at(index)->clone(
+          {.runtimeShadowNodeReference = false});
+  for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
+    const ShadowNode& node = it->first.get();
+    auto children = node.getChildren();
+    children[it->second] = child;
+    child = node.clone(
+        {.children =
+             std::make_shared<std::vector<std::shared_ptr<const ShadowNode>>>(
+                 std::move(children)),
+         .runtimeShadowNodeReference = false});
+  }
+  return child;
+}
+
+// The path from `node` down to the node tagged `tag`, both included
+bool findPath(
+    const ShadowNode& node,
+    Tag tag,
+    std::vector<const ShadowNode*>& path) {
+  path.push_back(&node);
+  if (node.getTag() == tag) {
+    return true;
+  }
+  for (const auto& child : node.getChildren()) {
+    if (findPath(*child, tag, path)) {
+      return true;
+    }
+  }
+  path.pop_back();
+  return false;
+}
+
+bool isStateful(const ShadowNode& node) {
+  const auto* provider =
+      dynamic_cast<const ElementStyleInputsProvider*>(node.getProps().get());
+  return provider != nullptr && provider->elementStyleInputs().styled &&
+      provider->elementStyleInputs().stateful;
+}
+
+} // namespace
+
+bool StyleEngine::handleEvent(const RawEvent& event) {
+  if (!active_.load(std::memory_order_acquire) ||
+      event.eventTarget == nullptr) {
+    return false;
+  }
+  // What the event sets and clears, and whether it reaches the target's
+  // ancestors, as `:active` does on the web, where it bubbles
+  const std::string& type = event.type;
+  uint32_t set = 0;
+  uint32_t clear = 0;
+  bool reachesAncestors = false;
+  bool clearsEverywhere = false;
+  if (type == "topPointerEnter") {
+    set = cssengine::ElementStateHover;
+  } else if (type == "topPointerLeave") {
+    clear = cssengine::ElementStateHover | cssengine::ElementStateActive;
+  } else if (type == "topPointerDown") {
+    set = cssengine::ElementStateActive;
+    reachesAncestors = true;
+  } else if (type == "topPointerUp" || type == "topPointerCancel") {
+    clear = cssengine::ElementStateActive;
+    clearsEverywhere = true;
+  } else if (type == "topFocus") {
+    set = cssengine::ElementStateFocus | cssengine::ElementStateFocusVisible;
+  } else if (type == "topBlur") {
+    clear = cssengine::ElementStateFocus | cssengine::ElementStateFocusVisible;
+  } else {
+    return false;
+  }
+
+  Tag tag = event.eventTarget->getTag();
+  SurfaceId surfaceId = event.eventTarget->getSurfaceId();
+
+  // The stateful elements the event reaches: the target, and its ancestors
+  // for an event that bubbles
+  std::vector<std::pair<Tag, std::shared_ptr<const ShadowNodeFamily>>> targets;
+  if (!clearsEverywhere) {
+    uiManager_.getShadowTreeRegistry().visit(
+        surfaceId, [&](const ShadowTree& shadowTree) {
+          auto root = shadowTree.getCurrentRevision().rootShadowNode;
+          std::vector<const ShadowNode*> path;
+          if (root == nullptr || !findPath(*root, tag, path)) {
+            return;
+          }
+          for (auto it = path.rbegin(); it != path.rend(); ++it) {
+            if (isStateful(**it)) {
+              targets.emplace_back((*it)->getTag(), (*it)->getFamilyShared());
+            }
+            if (!reachesAncestors) {
+              break;
+            }
+          }
+        });
+  }
+
+  std::vector<std::shared_ptr<const ShadowNodeFamily>> changed;
+  {
+    std::scoped_lock lock(nativeStatesMutex_);
+    if (clearsEverywhere) {
+      // Releasing the pointer ends the press wherever it began
+      for (auto it = nativeStates_.begin(); it != nativeStates_.end();) {
+        auto& state = it->second;
+        if (state.surfaceId == surfaceId && (state.states & clear) != 0) {
+          state.states &= ~clear;
+          if (auto family = state.family.lock()) {
+            changed.push_back(std::move(family));
+          }
+        }
+        if (state.states == 0) {
+          it = nativeStates_.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    } else {
+      for (auto& [targetTag, family] : targets) {
+        auto& state = nativeStates_[targetTag];
+        uint32_t states = (state.states & ~clear) | set;
+        if (states != state.states) {
+          state.states = states;
+          state.surfaceId = surfaceId;
+          state.family = family;
+          changed.push_back(family);
+        }
+        if (states == 0) {
+          nativeStates_.erase(targetTag);
+        }
+      }
+    }
+  }
+  if (!changed.empty()) {
+    add(counters_->stateEvents, 1);
+    restyleElements(surfaceId, changed);
+  }
+  return false;
+}
+
+void StyleEngine::restyleElements(
+    SurfaceId surfaceId,
+    const std::vector<std::shared_ptr<const ShadowNodeFamily>>& families) {
+  TraceSection trace("StyleEngine::restyleElements");
+  uiManager_.getShadowTreeRegistry().visit(
+      surfaceId, [&](const ShadowTree& shadowTree) {
+        add(counters_->stateCommits, 1);
+        shadowTree.commit(
+            [&](const RootShadowNode& oldRootShadowNode)
+                -> RootShadowNode::Unshared {
+              std::shared_ptr<const ShadowNode> root;
+              for (const auto& family : families) {
+                const ShadowNode& from =
+                    root != nullptr ? *root : oldRootShadowNode;
+                auto ancestors = family->getAncestors(from);
+                if (!ancestors.empty()) {
+                  root = clonePath(ancestors);
+                }
+              }
+              return root != nullptr
+                  ? std::static_pointer_cast<RootShadowNode>(
+                        std::const_pointer_cast<ShadowNode>(root))
+                  : nullptr;
             },
             {.enableStateReconciliation = false,
              .mountSynchronously = true,
@@ -2793,6 +3008,7 @@ StyleEngine::Stats StyleEngine::stats() const {
   stats.resolvedParent = load(c.resolvedParent);
   stats.resolvedSiblings = load(c.resolvedSiblings);
   stats.resolvedGeneration = load(c.resolvedGeneration);
+  stats.resolvedStates = load(c.resolvedStates);
   stats.resolveNanos = load(c.resolveNanos);
   stats.matchNanos = load(c.matchNanos);
   stats.elementsKept = load(c.elementsKept);
@@ -2806,6 +3022,8 @@ StyleEngine::Stats StyleEngine::stats() const {
   stats.registerNanos = load(c.registerNanos);
   stats.hintsAsked = load(c.hintsAsked);
   stats.hintsNanos = load(c.hintsNanos);
+  stats.stateEvents = load(c.stateEvents);
+  stats.stateCommits = load(c.stateCommits);
   return stats;
 }
 
@@ -2822,7 +3040,8 @@ void StyleEngine::resetStats() {
                         &c.nodesCloned,      &c.restyles,
                         &c.snapshots,        &c.stylesRegistered,
                         &c.registerNanos,    &c.hintsAsked,
-                        &c.hintsNanos}) {
+                        &c.hintsNanos,       &c.resolvedStates,
+                        &c.stateEvents,      &c.stateCommits}) {
     counter->store(0, std::memory_order_relaxed);
   }
 }
@@ -3143,6 +3362,12 @@ void StyleEngine::installBindings(
         out.setProperty(
             rt, "hintsAsked", static_cast<double>(stats.hintsAsked));
         out.setProperty(rt, "hintsMs", ms(stats.hintsNanos));
+        out.setProperty(
+            rt, "resolvedStates", static_cast<double>(stats.resolvedStates));
+        out.setProperty(
+            rt, "stateEvents", static_cast<double>(stats.stateEvents));
+        out.setProperty(
+            rt, "stateCommits", static_cast<double>(stats.stateCommits));
         return jsi::Value(rt, out);
       });
   define(

@@ -18,6 +18,7 @@
 
 #include <folly/dynamic.h>
 #include <jsi/jsi.h>
+#include <react/renderer/core/RawEvent.h>
 #include <react/renderer/core/ShadowNode.h>
 #include <react/renderer/cssengine/AncestorFeatures.h>
 #include <react/renderer/cssengine/MediaQueries.h>
@@ -172,6 +173,20 @@ class StyleEngine : public UIManagerCommitHook, public std::enable_shared_from_t
 
   bool matches(const ShadowNode &node, const std::string &selectors) const;
 
+  // -- Interaction states --
+
+  /*
+   * Keeps the hover, active and focus states of the elements that ask for
+   * them (`cssStateful`) from their pointer and focus events, as a browser
+   * keeps `:hover`, `:active` and `:focus`, and restyles the surface with a
+   * commit of its own: no JavaScript renders. Pointer enter and leave set and
+   * clear hover (leave clears active too), down sets active on the target and
+   * its stateful ancestors, up and cancel clear it, and focus and blur set
+   * and clear focus and focus-visible. A disabled element has none of them.
+   * Returns false, so the event goes on to JavaScript as before.
+   */
+  bool handleEvent(const RawEvent &event);
+
   /*
    * What the engine has done since the counters were last reset, for timing:
    * the style passes and their time, the elements resolved and the ones
@@ -192,6 +207,8 @@ class StyleEngine : public UIManagerCommitHook, public std::enable_shared_from_t
     uint64_t resolvedParent{0};
     uint64_t resolvedSiblings{0};
     uint64_t resolvedGeneration{0};
+    // An element whose own hover, active or focus state changed
+    uint64_t resolvedStates{0};
     uint64_t resolveNanos{0};
     uint64_t matchNanos{0};
     uint64_t elementsKept{0};
@@ -206,6 +223,10 @@ class StyleEngine : public UIManagerCommitHook, public std::enable_shared_from_t
     uint64_t registerNanos{0};
     uint64_t hintsAsked{0};
     uint64_t hintsNanos{0};
+    // Pointer and focus events that changed an element's state, and the
+    // commits that restyled it
+    uint64_t stateEvents{0};
+    uint64_t stateCommits{0};
   };
   Stats stats() const;
   void resetStats();
@@ -263,6 +284,9 @@ class StyleEngine : public UIManagerCommitHook, public std::enable_shared_from_t
   // generation. Called with `stateMutex_` held.
   void rebuildLocked(bool sheetsChanged = true, bool invalidates = true);
   void restyleAll();
+  // Commits the surface again with the path to each element cloned, so the
+  // pass visits those elements and nothing else
+  void restyleElements(SurfaceId surfaceId, const std::vector<std::shared_ptr<const ShadowNodeFamily>> &families);
   std::shared_ptr<const cssengine::AuthorStyle> style(int64_t id) const;
   std::shared_ptr<const CacheEntry> entryFor(const ShadowNode &node) const;
   // The element as the committed tree has it, for a query: its context with
@@ -311,6 +335,15 @@ class StyleEngine : public UIManagerCommitHook, public std::enable_shared_from_t
   // `Stats`, each counter updated on its own
   struct Counters;
   std::unique_ptr<Counters> counters_;
+
+  // The hover, active and focus states the engine keeps, by element tag
+  struct NativeState {
+    uint32_t states{0};
+    SurfaceId surfaceId{0};
+    std::weak_ptr<const ShadowNodeFamily> family;
+  };
+  mutable std::mutex nativeStatesMutex_;
+  std::unordered_map<Tag, NativeState> nativeStates_;
 
   // Selector lists `matches()` was asked, parsed
   mutable std::mutex selectorsMutex_;

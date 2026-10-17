@@ -39,9 +39,21 @@ and the cascade read and nothing resolved: `cssEngine` (styled by the engine),
 (the id of a registered StyleX style), `cssInline` (an inline `style`, as
 ordered entries), `cssStates` (hover, active, focus, popover-open), and for
 the runtime's own structures `cssTag`, `cssPresentational` (SVG's
-presentation attributes) and `cssScroll` (a scroll container's parts). They
+presentation attributes) and `cssScroll` (a scroll container's parts), and
+`cssStateful` for an element whose styles read its interaction states. They
 are parsed into `ElementStyleInputs` with the element's props
 (`ElementStyleInputsProvider`), so a pass reads them without JavaScript.
+
+**Interaction states** (`handleEvent`). The engine keeps the hover, active
+and focus states of a `cssStateful` element from its pointer and focus
+events, as a browser keeps `:hover`, `:active` and `:focus`: it listens to
+the renderer's events before they reach JavaScript, and a change commits the
+surface again with the path to the element cloned, so the pass restyles that
+element and what reads it, and React does not render. Pressing sets `:active`
+on the target and its stateful ancestors, as `:active` reaches a pressed
+element's ancestors on the web; a disabled element has no interaction states.
+The element's view reports the events because it has handlers for them, which
+the runtime gives it and which do nothing.
 
 **Registration.** `globalThis.__cssEngine` takes sheets (`addStyleSheet`,
 `replaceStyleSheet`, `removeStyleSheet`), StyleX styles (`registerStyle`, as
@@ -97,17 +109,18 @@ scroll, or read its interaction state.
 
 **Instrumentation.** `stats()` reports passes and their time, the nodes
 visited and kept, the elements resolved and why (new, props, parent,
-siblings, generation), the props parsed and the nodes cloned, the time in
-matching, registrations and hints; `resetStats()` starts over. The pass and
-rebuilds are trace sections (`StyleEngine::pass`, `StyleEngine::rebuild`,
-`StyleEngine::restyleAll`).
+siblings, generation, interaction states), the props parsed and the nodes
+cloned, the time in matching, registrations and hints, and the events that
+changed an element's state and the commits that followed; `resetStats()`
+starts over. The pass and rebuilds are trace sections (`StyleEngine::pass`,
+`StyleEngine::rebuild`, `StyleEngine::restyleAll`,
+`StyleEngine::restyleElements`).
 
 ## What stays in JavaScript
 
 Behaviour, not style: popover and dialog state and the top layer, the
 platform scroll view of a scroll container, the form controls' components,
-interaction tracking, focus management, and the DOM methods Astryx calls on
-its refs. An element needing none of these is rendered as its host node
+focus management, and the DOM methods Astryx calls on its refs. An element needing none of these is rendered as its host node
 directly, with no component. StyleX's `props()` merges its arguments and
 registers the merged style once; it does not resolve values.
 
@@ -125,11 +138,11 @@ Safari's answers. `StyleEngine-itest.js` covers the pass itself.
 1. **Engine core, measured.** Done: the corpus above, and Table Filter, Table
    Inbox, Table Tree and Table Page timed against the JavaScript engine,
    interleaved.
-2. **Interaction and structure.** `:hover`, `:active` and `:focus` from the
-   native view's own state, so an element that styles them needs no
-   component; `@starting-style`; container queries and container units from
-   the last layout; `when.descendant` and the other `:has()`-shaped
-   conditions; `:nth-last-child(… of S)` in a sheet.
+2. **Interaction and structure.** Done: `:hover`, `:active` and `:focus`
+   kept by the engine from the element's events, so an element that styles
+   them needs no component. Next: `@starting-style`; container queries and
+   container units from the last layout; `when.descendant` and the other
+   `:has()`-shaped conditions; `:nth-last-child(… of S)` in a sheet.
 3. **One engine.** The user-agent sheet and the layout-time text cascade move
    into the engine; the JavaScript engine is removed; Android is verified on
    the emulator.
