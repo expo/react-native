@@ -35,7 +35,6 @@
  *    into the page behind it. See `focusTrap.js`.
  */
 
-import {VarScopeContext} from '../jsx-runtime';
 import {INERT_PROPS, NOT_INERT_PROPS, modalContainerProps} from './focusTrap';
 import * as React from 'react';
 import {
@@ -196,39 +195,17 @@ export function useTopLayer(
 ): boolean {
   const api = useContext(TopLayerContext);
   const id = useMemo(() => allocateOverlayId(), []);
-  /*
-   * The custom properties in scope where the overlay was WRITTEN.
-   *
-   * React context follows the element tree, and this content is handed to a
-   * host mounted at the app root — so inside the top layer it would see the
-   * host's scope, not the caller's, and every `var()` it uses would reach the
-   * platform as a literal string.
-   *
-   * Carrying the scope over is what the web already does by not moving the
-   * element at all: its top layer is a paint order, and inheritance still runs
-   * down the DOM tree it was written in.
-   */
-  const scope = useContext(VarScopeContext);
-  const scoped = useMemo(
-    () => (
-      <VarScopeContext.Provider value={scope}>
-        {content}
-      </VarScopeContext.Provider>
-    ),
-    [scope, content],
-  );
-
   useEffect(() => {
     if (api == null) {
       return;
     }
     if (open) {
-      api.present(id, mode, scoped);
+      api.present(id, mode, content);
     } else {
       api.dismiss(id);
     }
     return () => api.dismiss(id);
-  }, [api, id, open, mode, scoped]);
+  }, [api, id, open, mode, content]);
 
   return api != null;
 }

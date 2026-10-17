@@ -139,25 +139,21 @@ async function main() {
     18,
   );
   /*
-   * Vertically the authored metrics are a FLOOR, not the value: the element
-   * button keeps Material's 48dp touch-target minimum even under an author
-   * surface (DOM-CSS-DEVIATION — the platform's accessibility floor outranks
-   * the stylesheet's arithmetic), and the label centres in the slack that
-   * minimum adds. So three properties hold instead of one exact number: the
-   * button is at least 48 tall, the label sits at least padding+border from
-   * the top, and the slack is symmetric. The old exact-10 expectation
-   * predated the OS-API button work and failed by exactly the centring
-   * (measured 14.48 = 10 + (48 - content) / 2).
+   * Vertically, too, the authored metrics are the box. The button states its
+   * own padding, so the user-agent touch-target minimum withdraws, as it does
+   * for any control that states its padding or height (PADDING_KEYS and
+   * HEIGHT_KEYS in expo-intrinsics): the button is its label plus 8 padding
+   * and a 2 border above and below, as on the web.
    */
   const labelTopInset = v.buttonLabel.y - v.button.y;
   const labelBottomInset =
     v.button.y + v.button.h - (v.buttonLabel.y + v.buttonLabel.h);
-  ok = checkAtLeast(ok, 'button meets the 48dp touch minimum', v.button.h, 48);
-  ok = checkAtLeast(
+  ok = check(ok, 'button label inset y (8 + 2 border)', labelTopInset, 10);
+  ok = check(
     ok,
-    'button label inset y floor (8 + 2 border)',
-    labelTopInset,
-    10,
+    'button height is its label plus padding and border',
+    v.button.h,
+    v.buttonLabel.h + 20,
   );
   ok = check(
     ok,

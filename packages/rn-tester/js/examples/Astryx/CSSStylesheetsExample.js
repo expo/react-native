@@ -24,7 +24,7 @@ import {ScrollView} from 'react-native';
  * load, elements carry className, and everything else — selector matching,
  * the cascade, :root variables with a scheme-aware .dark override,
  * @keyframes into the renderer's animation engine, transitions, media
- * queries — is the stylesheet engine (js/astryx/css).
+ * queries — is the renderer's style engine.
  */
 installStylesheet(demoCss);
 

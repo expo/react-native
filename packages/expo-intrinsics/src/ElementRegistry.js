@@ -57,6 +57,7 @@ const STYLE_ENGINE_ATTRIBUTES = {
   cssStateful: true,
   cssPresentational: true,
   cssScroll: true,
+  cssPseudo: true,
 } as const;
 
 function commit(tag: string) {

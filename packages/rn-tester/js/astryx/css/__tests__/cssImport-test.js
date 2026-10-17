@@ -10,17 +10,13 @@
 
 'use strict';
 
-import {parseStylesheet} from '../parse';
 // A `.css` import is its raw text, through cssFileTransformer in jest and the
 // Metro css-transformer in the app; this pins the contract the demo screens
 // rely on
 // $FlowFixMe[cannot-resolve-module] .css resolves via the jest transform
 import fixtureCss from './__fixtures__/fixture.css';
 
-test('a .css import is its text, and parses', () => {
+test('a .css import is its text', () => {
   expect(typeof fixtureCss).toBe('string');
   expect(fixtureCss).toContain('--fixture-pad');
-  const sheet = parseStylesheet(fixtureCss);
-  expect(sheet.rules).toHaveLength(2);
-  expect(sheet.rules[1].declarations.padding).toBe('var(--fixture-pad)');
 });

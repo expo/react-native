@@ -49,8 +49,6 @@ module.exports = {
     // published names; Metro resolves both to the fork's runtime (see
     // packages/rn-tester/metro.config.js), and so does Jest
     '^@stylexjs/stylex$': '<rootDir>/packages/rn-tester/js/astryx/stylex-rn.js',
-    '^(\\.\\./)+utils/pressFeedback$':
-      '<rootDir>/packages/rn-tester/js/astryx/pressFeedback-shim.js',
     '^react-dom(/client)?$':
       '<rootDir>/packages/rn-tester/js/astryx/react-dom-shim.js',
     '^astryx-jsx/jsx-runtime$':

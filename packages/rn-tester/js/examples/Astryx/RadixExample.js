@@ -261,7 +261,8 @@ export default {
   category: 'UI',
   description:
     'Radix UI primitives on the fork: @radix-ui/* imports resolved to shims ' +
-    'over the top layer, anchor positioning, and the stylesheet engine.',
+    'over the top layer, anchor positioning, and the renderer\u2019s style ' +
+    'engine.',
   examples: [
     {
       title: 'Radix Primitives',

@@ -287,22 +287,3 @@ function lengthOf(value: unknown): ?number {
   }
   return null;
 }
-
-/** The margin properties a placed element drops, its position taking them in */
-export const MARGIN_KEYS: ReadonlyArray<string> = [
-  'margin',
-  'marginTop',
-  'marginBottom',
-  'marginLeft',
-  'marginRight',
-  'marginStart',
-  'marginEnd',
-  'marginVertical',
-  'marginHorizontal',
-  'marginBlock',
-  'marginBlockStart',
-  'marginBlockEnd',
-  'marginInline',
-  'marginInlineStart',
-  'marginInlineEnd',
-];

@@ -14,7 +14,6 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 
 import {jsx as astryxJsx} from '../../astryx/jsx-runtime';
 import {resolveAnchorPosition} from '../../astryx/overlay/anchorPosition';
-import {useInteractionState} from '../../astryx/useInteractionState';
 // $FlowFixMe[cannot-resolve-module]
 import {AspectRatio} from '../../astryx/vendor/AspectRatio/AspectRatio';
 // A second vendored slice: components whose whole dependency closure is
@@ -54,19 +53,20 @@ import {
   DemoContent,
   usePublishRects,
 } from '../TextChildren/TextChildrenShared';
+import {inAstryxSurface} from './AstryxSurface';
 // Resolved to js/astryx/stylex-rn.js by the Metro alias — same module the
 // vendored sources get, so consumer xstyle overrides use the identical API.
 // $FlowFixMe[cannot-resolve-module]
 import * as stylex from '@stylexjs/stylex';
 import * as React from 'react';
 import {useRef, useState} from 'react';
-import {View, useColorScheme, useWindowDimensions} from 'react-native';
+import {View, useWindowDimensions} from 'react-native';
 
 // Registers the extra intrinsics Astryx needs (<p>, <button> as div aliases).
 import '../../astryx/dom';
 
 // Consumer-side StyleX (the xstyle escape hatch Astryx documents), including
-// a token reference and light-dark() — resolved by the RN runtime.
+// a token reference and light-dark() — resolved by the renderer's style engine.
 const consumerStyles = stylex.create({
   fancy: {
     borderRadius: 'var(--radius-page)',
@@ -79,12 +79,13 @@ const consumerStyles = stylex.create({
 
 // An Astryx-shaped button built the way the design system authors one: styles
 // from design tokens with :active/:focus-visible/@media(hover:hover) branches,
-// resolved per interaction state. The element is the <button> intrinsic (a
-// block container) and the press comes from DOM pointer + click events —
-// NO Pressable, NO gesture responder, NO JS gesture recognizer.
+// which the renderer's style engine answers from the element's own pointer
+// events. The element is the <button> intrinsic (a block container) and the
+// press comes from DOM pointer + click events — NO Pressable, NO gesture
+// responder, NO JS gesture recognizer.
 const buttonStyles = stylex.create({
   base: {
-    // Astryx tokens, resolved by the RN StyleX runtime.
+    // Astryx tokens, resolved by the renderer's style engine.
     backgroundColor: 'var(--color-accent)',
     color: 'var(--color-on-accent)',
     borderRadius: 'var(--radius-element)',
@@ -97,7 +98,7 @@ const buttonStyles = stylex.create({
     borderWidth: 2,
     borderColor: 'transparent',
     // The declarations Astryx's own Button writes (background-image aside).
-    // They pass through the runtime to the renderer, so the :active swap
+    // They reach the renderer, so the :active swap
     // below ANIMATES natively — press and hold to see the fade in, release
     // for the fade back, all off the JS thread.
     transitionProperty: 'background-color, color, opacity, transform',
@@ -132,15 +133,12 @@ function AstryxButton({
   buttonRef?: {current: React.ElementRef<typeof View> | null},
   labelRef?: {current: React.ElementRef<typeof View> | null},
 }): React.Node {
-  const {state, handlers} = useInteractionState();
   return (
     // $FlowFixMe[not-a-component] <button> intrinsic (block container alias)
     <button
       ref={buttonRef}
-      {...handlers}
       onClick={onClick}
-      {...stylex.propsWithState(
-        state,
+      {...stylex.props(
         buttonStyles.base,
         secondary === true && buttonStyles.secondary,
       )}>
@@ -182,7 +180,8 @@ function ButtonCase(): React.Node {
 
 /**
  * The end-to-end proof: Meta's Astryx <Card> — vendored source, UNMODIFIED —
- * rendering on the fork through the RN StyleX runtime + intrinsic elements
+ * rendering on the fork through StyleX, the renderer's style engine and the
+ * intrinsic elements
  * (<div>/<p> block containers, bare-text children, inherited text styles).
  * Rects publish to globalThis.__displayVerify: the default card's total
  * content inset must be 16pt — Astryx subtracts the 1px border from the
@@ -219,10 +218,10 @@ function InlineMetricsCase(): React.Node {
  * Applied here, at the point of use, rather than through `overrideUAStyle`.
  * That call mutates the SHARED user-agent style object, so a module-scope call
  * would zero `<p>` margins for every screen in the app, the user-agent sheet
- * demo included. `ASTRYX_RESET` in
- * `js/astryx/jsx-runtime.js` covers Astryx's OWN elements; these paragraphs are
- * core intrinsics (the babel override only compiles `js/astryx` against the
- * Astryx JSX runtime), so they carry it themselves.
+ * demo included. Astryx's reset sheet covers Astryx's OWN elements, which the
+ * style engine styles; these paragraphs are core intrinsics (the babel
+ * override only compiles `js/astryx` against the Astryx JSX runtime), so they
+ * carry it themselves.
  */
 const ASTRYX_CARD_P = {marginBlock: 0} as const;
 
@@ -239,8 +238,6 @@ function CardCases(): React.Node {
     cardPad2: cardPad2Ref,
     cardPad2P: cardPad2PRef,
   });
-  // light-dark() resolves at render time; re-render on scheme change.
-  useColorScheme();
 
   return (
     <View style={{gap: 12}}>
@@ -291,8 +288,8 @@ function CardCases(): React.Node {
 // a descendant reads it (Section's negative-margin "escape the parent's
 // padding" trick), and a nested element *shadows* it to 0px for its own
 // subtree. Nothing here resolves inside a single stylex.props() call: the
-// values are finished at each element with its inherited scope, via the
-// astryx JSX runtime.
+// renderer's style engine finishes the values at each element with the custom
+// properties it inherits, as a browser does.
 const inheritStyles = stylex.create({
   scopeSetter: {
     '--demo-gutter': '20px',
@@ -355,9 +352,9 @@ function InheritanceCase(): React.Node {
 }
 
 // <input> — the web element mapped onto RN's TextInput (js/astryx/elements/
-// Input.js), resolved by the Astryx JSX runtime. Astryx's own field
+// Input.js), which the element runtime renders for it. Astryx's own field
 // components render <input> directly, so this is what makes the form family
-// reachable. Token styling flows through the same StyleX runtime.
+// reachable. Its token styling is the style engine's, like every element's.
 const inputStyles = stylex.create({
   field: {
     borderWidth: 'var(--border-width)',
@@ -590,14 +587,14 @@ function ModalDialog(): React.Node {
  * byte-identical Astryx source; if any of it misbehaves the fault is ours.
  */
 /**
- * color-mix() resolved by the runtime, shown as swatches so the result is
- * checkable by eye as well as by test.
+ * color-mix() resolved by the renderer's style engine, shown as swatches so the
+ * result is checkable by eye as well as by test.
  */
 /**
- * `@starting-style` entry animations, riding the renderer's native CSS
- * transitions: first commit renders the block's values, the next drops them.
- * Remounting the subtree replays them, which is the only way to see a
- * first-render animation more than once.
+ * `@starting-style` entry animations: the renderer's style engine gives each
+ * box the values of its block as it comes to be rendered, and its CSS
+ * transitions run from them to the box's own. Remounting the subtree replays
+ * them, which is the only way to see a first-render animation more than once.
  */
 /**
  * `<br>` and `<textarea>`: the last two element gaps.
@@ -770,19 +767,12 @@ const gridStyles = stylex.create({
 });
 
 function GridCell({children, extra}: {children: React.Node, extra?: unknown}) {
-  const {state, handlers} = useInteractionState();
-  return (
-    <div
-      {...handlers}
-      {...stylex.propsWithState(state, gridStyles.cell, extra)}>
-      {children}
-    </div>
-  );
+  return <div {...stylex.props(gridStyles.cell, extra)}>{children}</div>;
 }
 
-// stylex.keyframes() registers the stops; the runtime resolves them through the
-// same token/calc pipeline as ordinary styles and hands them to the renderer's
-// native animation engine, which runs them off the JS thread.
+// stylex.keyframes() registers the stops with the renderer's style engine, which
+// resolves them like any style and hands them to the native animation engine,
+// which runs them off the JS thread.
 const pulse = stylex.keyframes({
   '0%': {opacity: 0.35, transform: 'scale(0.9)'},
   '50%': {opacity: 1, transform: 'scale(1.06)'},
@@ -969,7 +959,7 @@ function PortedComponents(): React.Node {
       </VStack>
       <Divider />
       {/* Skeleton's surface is a color-mix() of two design tokens, so these
-          bars render at all only because the runtime resolves it. */}
+          bars render at all only because the style engine resolves it. */}
       <VStack gap={1}>
         <Skeleton width={220} height={12} />
         <Skeleton width={180} height={12} />
@@ -1017,14 +1007,11 @@ function SelectableCardDemo({
   selected: boolean,
   onSelect: () => void,
 }): React.Node {
-  const {state, handlers} = useInteractionState();
   return (
     // $FlowFixMe[not-a-component] intrinsic <button> tag
     <button
-      {...handlers}
       onClick={onSelect}
-      {...stylex.propsWithState(
-        state,
+      {...stylex.props(
         selectableStyles.card,
         selected && selectableStyles.selected,
       )}>
@@ -1035,8 +1022,6 @@ function SelectableCardDemo({
 
 function NativeTransitionsCases(): React.Node {
   const [selected, setSelected] = useState(0);
-  // light-dark() resolves at render time; re-render on scheme change.
-  useColorScheme();
   return (
     <VStack gap={3}>
       {/* The press fade: the same AstryxButton as the button demo, whose
@@ -1071,7 +1056,7 @@ export default {
   description:
     "Meta's Astryx design system, running on React Native with the original " +
     'Astryx source code.',
-  examples: [
+  examples: inAstryxSurface([
     {
       name: 'nativeTransitions',
       title: 'CSS transitions — native interaction states',
@@ -1110,11 +1095,10 @@ export default {
       name: 'startingStyle',
       title: '@starting-style — entry animations',
       description:
-        'The values an element renders with on its FIRST commit ' +
-        '(css-transitions-2 §3); the renderer\u2019s native CSS transitions ' +
-        'then animate to the real values, exactly as a browser does — the ' +
-        'block is one frame of style, not an animation API. Press to ' +
-        'remount and replay.',
+        'The values an element is rendered from as it first appears ' +
+        '(css-transitions-2 §3.3); the renderer\u2019s CSS transitions then ' +
+        'animate to its own values, as a browser does: the block is a ' +
+        'starting style, not an animation API. Press to remount and replay.',
       render: (): React.Node => (
         <DemoContent
           code={
@@ -1337,7 +1321,8 @@ export default {
     {
       title: 'Card — vendored source, end to end',
       description:
-        'stylex.create/props resolve at render time to RN styles; <div>/<p> ' +
+        'stylex.create/props register styles the renderer\u2019s style engine ' +
+        'resolves; <div>/<p> ' +
         'are block containers with text children; toggle the OS appearance ' +
         'to watch light-dark() tokens retheme.',
       render: (): React.Node => (
@@ -1362,18 +1347,15 @@ export default {
       title: 'Button — DOM click, no Pressable',
       description:
         'The <button> intrinsic with token styles and :active/:focus-visible/' +
-        '@media(hover:hover) branches, resolved from the element\u2019s own W3C ' +
-        'pointer events via useInteractionState() — no Pressable, gesture ' +
-        'responder, or JS gesture recognizer anywhere.',
+        '@media(hover:hover) branches, which the renderer\u2019s style engine ' +
+        'answers from the element\u2019s own W3C pointer events — no Pressable, ' +
+        'gesture responder, or JS gesture recognizer anywhere.',
       render: (): React.Node => (
         <DemoContent
           code={
-            'const {state, handlers} = useInteractionState();\n' +
-            '\n' +
             '<button\n' +
-            '  {...handlers}\n' +
             '  onClick={onClick}\n' +
-            '  {...stylex.propsWithState(state, buttonStyles.base)}>\n' +
+            '  {...stylex.props(buttonStyles.base)}>\n' +
             '  {children}\n' +
             '</button>\n' +
             '\n' +
@@ -1389,7 +1371,7 @@ export default {
     {
       title: '<input> — the web element on RN TextInput',
       description:
-        "Astryx's field components render <input> directly. The Astryx JSX " +
+        "Astryx's field components render <input> directly. The element " +
         'runtime maps it to a component that translates the web vocabulary ' +
         '(value/onChange/disabled/readOnly/type) onto TextInput, so token ' +
         'styling and the surrounding components work unchanged. @expo/ui is ' +
@@ -1414,9 +1396,9 @@ export default {
       description:
         'A CSS custom property set on an ancestor is visible to every ' +
         'descendant and can be shadowed for a subtree — the mechanism ' +
-        'Astryx\u2019s Layout/Section/ClickableCard rely on. Resolution ' +
-        'happens per element through the astryx JSX runtime, not inside a ' +
-        'single stylex.props() call.',
+        'Astryx\u2019s Layout/Section/ClickableCard rely on. The renderer\u2019s ' +
+        'style engine resolves it per element, not inside a single ' +
+        'stylex.props() call.',
       render: (): React.Node => (
         <DemoContent
           code={
@@ -1678,14 +1660,14 @@ export default {
             srgb and oklab · rem against the CSS root size · unitless
             line-height as a multiplier · conditional values resolved against
             real :hover/:focus/:active from W3C pointer events · CSS Grid track
-            lists, named areas and dense packing · transitions, @starting-style
-            and @keyframes on the renderer's native engine · anchor positioning
-            and the top layer · shadow token lists → native boxShadow ·
-            overflow: clip → hidden · logical padding props
-            (paddingInlineStart…) · mergeProps/themeProps pass-through.
+            lists, named areas and dense packing · transitions and @keyframes on
+            the renderer's native engine · anchor positioning and the top layer
+            · shadow token lists → native boxShadow · overflow: clip → hidden ·
+            logical padding props (paddingInlineStart…) · mergeProps/themeProps
+            pass-through.
           </View>
         </DemoContent>
       ),
     },
-  ],
+  ]),
 } as RNTesterModule;

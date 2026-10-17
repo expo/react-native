@@ -56,6 +56,11 @@ struct ElementStyleInputs {
   // children's layout moves to its content (3), the element just inside the
   // platform's scroll view
   uint8_t scrollPart{0};
+  // A `::before` (1) or `::after` (2) box the runtime draws as a child of the
+  // element it is generated for, or a `::backdrop` (3) box it draws under the
+  // element, as the sibling before it: styled like an element, but not one,
+  // so it holds no place among its siblings (`:first-child` and the rest)
+  uint8_t pseudo{0};
 };
 
 namespace elementstyleinputs_detail {
@@ -152,6 +157,9 @@ inline ElementStyleInputs::ElementStyleInputs(
   }
   if (const RawValue *value = rawProps.at("cssScroll", nullptr, nullptr)) {
     scrollPart = value->hasType<int>() ? static_cast<uint8_t>(static_cast<int>(*value)) : uint8_t{0};
+  }
+  if (const RawValue *value = rawProps.at("cssPseudo", nullptr, nullptr)) {
+    pseudo = value->hasType<int>() ? static_cast<uint8_t>(static_cast<int>(*value)) : uint8_t{0};
   }
 }
 

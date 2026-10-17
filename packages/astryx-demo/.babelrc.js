@@ -25,9 +25,9 @@ module.exports = {
   overrides: [
     {
       // The Astryx layer, the vendored templates and this app's screens compile
-      // JSX against the runtime that lets intrinsic elements inherit CSS custom
-      // properties (packages/rn-tester/js/astryx/jsx-runtime.js; Metro resolves
-      // the 'astryx-jsx' module id). Absolute paths: Babel matches `test`
+      // JSX against the runtime that renders intrinsic elements for the
+      // renderer's style engine (packages/rn-tester/js/astryx/jsx-runtime.js;
+      // Metro resolves the 'astryx-jsx' module id). Absolute paths: Babel matches `test`
       // against the absolute filename.
       test: [
         path.join(__dirname, '..', 'rn-tester', 'js', 'astryx'),

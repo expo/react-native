@@ -16,16 +16,16 @@
  * Unlike the pure containers, `<input>` needs *behavioral* translation: the web's
  * `value`/`onChange`/`disabled`/`readOnly` vocabulary onto RN's
  * `value`/`onChangeText`/`editable` one, and `type` onto the keyboard and
- * secure-entry flags. So it is a composite component, resolved by the Astryx
- * JSX runtime (see ../jsx-runtime.js), which keeps vendored Astryx sources
- * rendering plain `<input>` unmodified.
+ * secure-entry flags. So it is a composite component, which the element
+ * runtime renders for `<input>` (see ../native-css/EngineElement.js), keeping
+ * vendored Astryx sources rendering plain `<input>` unmodified.
  *
  * This module is the one place that changes if a different field backs it.
  */
 
-import type {InteractionState} from '../stylex-rn';
 import type {KeyboardTypeOptions} from 'react-native';
 
+import {engineInputProps} from '../native-css/engine';
 import useFieldInstance from './fieldInstance';
 import * as React from 'react';
 import {TextInput} from 'react-native';
@@ -57,11 +57,8 @@ export type InputProps = {
   onInput?: (event: WebChangeEvent) => void,
   onFocus?: () => void,
   onBlur?: () => void,
-  style?: {[string]: unknown},
   testID?: string,
   ref?: React.RefSetter<React.ElementRef<typeof TextInput>>,
-  // Interaction state, when the caller drives pseudo-class styling.
-  __interactionState?: InteractionState,
   // Web attributes Astryx also passes (aria-*, data-*, name, id). They are
   // accepted so the element type-checks, then dropped: TextInput's props are
   // exact, and RN has no equivalent for most of them.
@@ -81,7 +78,6 @@ function Input({
   onInput,
   onFocus,
   onBlur,
-  style,
   testID,
   ref,
   ...rest
@@ -89,8 +85,9 @@ function Input({
   // The web fires `change`/`input` with the new value on `event.target`;
   // RN hands the string straight to `onChangeText`. Synthesize the shape the
   // Astryx handlers expect rather than making them RN-aware.
-  // `rest` is intentionally unused — see the InputProps note above.
-  void rest;
+  // `rest` is dropped (see the InputProps note above) but for what the
+  // renderer's style engine reads, which the field's host carries
+  const engineInputs = engineInputProps(rest);
 
   const field = useFieldInstance(ref, value, defaultValue);
   const onText = field.onText;
@@ -107,11 +104,6 @@ function Input({
   // A disabled field is not editable and not focusable; readOnly stays
   // focusable/selectable but rejects edits — the same split as the web.
   const editable = disabled !== true && readOnly !== true;
-
-  // The StyleX runtime produces a plain style object; RN's TextInput style
-  // type is exact, so it cannot accept an indexed one directly.
-  // $FlowFixMe[unclear-type] see above
-  const textInputStyle: any = style;
 
   return (
     <TextInput
@@ -134,8 +126,8 @@ function Input({
       onChangeText={handleChangeText}
       onFocus={onFocus}
       onBlur={onBlur}
-      style={textInputStyle}
       testID={typeof testID === 'string' ? testID : undefined}
+      {...(engineInputs as $FlowFixMe)}
     />
   );
 }

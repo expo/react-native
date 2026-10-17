@@ -23,8 +23,7 @@
  * submitting.
  */
 
-import type {InteractionState} from '../stylex-rn';
-
+import {engineInputProps} from '../native-css/engine';
 import useFieldInstance from './fieldInstance';
 import * as React from 'react';
 import {useCallback} from 'react';
@@ -45,10 +44,11 @@ type Props = {
   onInput?: ?(event: WebChangeEvent) => void,
   onFocus?: ?() => void,
   onBlur?: ?() => void,
-  style?: unknown,
-  state?: ?InteractionState,
   children?: React.Node,
   ref?: React.RefSetter<React.ElementRef<typeof TextInput>>,
+  // The other web attributes the sources pass; only the style engine's
+  // inputs among them reach the field
+  [string]: unknown,
 };
 
 // A line of text at the default font size, for turning `rows` into a height.
@@ -68,12 +68,12 @@ export default function TextArea({
   onInput,
   onFocus,
   onBlur,
-  style,
   // `children` is a textarea's initial value on the web. Accepted so it is not
   // forwarded to TextInput as renderable content, which would draw it as a
   // second, overlapping line of text.
   children,
   ref,
+  ...rest
 }: Props): React.Node {
   // The web fires `change`/`input` with the new value on `event.target`; RN
   // hands the string straight to `onChangeText`. Synthesized to the shape the
@@ -96,9 +96,6 @@ export default function TextArea({
   // selectable, which is the distinction the web draws.
   const editable = disabled !== true && readOnly !== true;
 
-  // The StyleX runtime produces a plain style object; TextInput's style type
-  // is stricter than what CSS resolution can be typed as.
-  const textInputStyle: any = style;
   const rowsHeight =
     rows != null && rows > 0 ? rows * APPROX_LINE_HEIGHT : null;
 
@@ -117,11 +114,9 @@ export default function TextArea({
       onChangeText={handleChangeText}
       onFocus={onFocus}
       onBlur={onBlur}
-      style={
-        rowsHeight != null
-          ? [textInputStyle, {height: rowsHeight}]
-          : textInputStyle
-      }
+      style={rowsHeight != null ? {height: rowsHeight} : undefined}
+      // What the renderer's style engine reads, which the field's host carries
+      {...(engineInputProps(rest) as $FlowFixMe)}
     />
   );
 }

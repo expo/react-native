@@ -11,7 +11,8 @@
 'use strict';
 
 import type {ElementDescriptor} from './css';
-import type {ComplexSelector, Stylesheet} from './css/parse';
+import type {Stylesheet} from './css';
+import type {ComplexSelector} from './css/parse';
 import type {Spec as ClipboardSpec} from 'react-native/src/private/specs_DEPRECATED/modules/NativeClipboard';
 
 import {
@@ -42,8 +43,8 @@ import matchMedia from 'react-native/Libraries/Utilities/matchMedia';
  * that tree of its own elements.
  *
  * What it does with what it is handed: a `<style>` element in the document
- * installs its text as a stylesheet in the fork's CSS engine
- * (`js/astryx/css`), which is how a theme's token overrides reach the
+ * installs its text as a stylesheet in the renderer's style engine (through
+ * `js/astryx/css`), which is how a theme's token overrides reach the
  * elements under `[data-astryx-theme]`. As in CSSOM, the sheet follows its
  * element: it is dropped when the element leaves the document and replaced in
  * place when the text changes. And `getElementById`, `querySelector` and the
