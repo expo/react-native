@@ -1365,5 +1365,39 @@
     3
    ]
   }
+ ],
+ "an author’s padding and margin beat the user agent’s, however each is spelled": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    4
+   ]
+  },
+  {
+   "rect": [
+    0,
+    4,
+    300,
+    4
+   ]
+  },
+  {
+   "rect": [
+    0,
+    8,
+    300,
+    4
+   ]
+  },
+  {
+   "rect": [
+    0,
+    12,
+    300,
+    4
+   ]
+  }
  ]
 }

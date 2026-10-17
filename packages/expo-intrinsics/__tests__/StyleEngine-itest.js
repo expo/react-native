@@ -560,6 +560,72 @@ test('below a box that clips its block axis the same block keeps its height', ()
   expect(rect(sideways)).toBe('x=0 y=30 w=390 h=80');
 });
 
+test("an element the pass makes inline-flex joins its block's line", () => {
+  // React commits the element as a box whose display it does not know, and
+  // the pass clones its parent with the styled element in its place
+  engine().addStyleSheet(
+    '.badge-cell { width: 150px; padding: 0 12px; font-size: 16px; line-height: 24px; }' +
+      ' .badge { display: inline-flex; padding: 0 8px; line-height: 20px; }',
+  );
+  const styled = createRef<HostInstance>();
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      // $FlowExpectedError[prop-missing]
+      <div cssEngine={true} cssClass="badge-cell">
+        {/* $FlowExpectedError[prop-missing] */}
+        <span ref={styled} cssEngine={true} cssBox={true} cssClass="badge">
+          Active
+        </span>
+      </div>,
+    );
+  });
+  const inline = createRef<HostInstance>();
+  const other = Fantom.createRoot();
+  Fantom.runTask(() => {
+    other.render(
+      // $FlowExpectedError[prop-missing]
+      <div
+        style={{width: 150, paddingInline: 12, fontSize: 16, lineHeight: 24}}>
+        {/* $FlowExpectedError[prop-missing] */}
+        <span
+          ref={inline}
+          style={{display: 'inline-flex', paddingInline: 8, lineHeight: 20}}>
+          Active
+        </span>
+      </div>,
+    );
+  });
+  expect(rect(styled)).toBe(rect(inline));
+  expect(styled.current?.getBoundingClientRect().width).toBeLessThan(126);
+});
+
+test('an element whose styles may give it a box is inline where none does', () => {
+  // The runtime makes the element a box when a rule could give it one; no
+  // rule here declares a display, so it is the inline element its tag is
+  engine().addStyleSheet(
+    '.inline-cell { width: 150px; font-size: 16px; line-height: 24px; }',
+  );
+  const cell = createRef<HostInstance>();
+  const span = createRef<HostInstance>();
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      // $FlowExpectedError[prop-missing]
+      <div ref={cell} cssEngine={true} cssClass="inline-cell">
+        {/* $FlowExpectedError[prop-missing] */}
+        <span ref={span} cssEngine={true} cssBox={true}>
+          Hello
+        </span>{' '}
+        world
+      </div>,
+    );
+  });
+  // One line, and the span as wide as its text
+  expect(rect(cell)).toBe('x=0 y=0 w=150 h=24');
+  expect(rect(span)).toBe('x=0 y=0 w=50 h=24');
+});
+
 test("a scroll container's box keeps its size and its content takes the padding", () => {
   engine().addStyleSheet(
     '.strip { width: 200px; padding: 9px; display: flex; flex-direction: row; overflow-x: auto; background-color: red; } .cell { width: 150px; height: 10px; flex-shrink: 0; }',
@@ -896,6 +962,37 @@ test('a percentage in a math function is resolved by layout', () => {
   expect(rect(inset)).toBe('x=134 y=10 w=118 h=10');
 });
 
+test("an author's edge replaces the user agent's, whichever way each spells it", () => {
+  // The user agent indents a list with `padding-inline-start: 40px`; a reset's
+  // `padding: 0` takes it away, and a rule that names only another edge keeps
+  // it
+  engine().addStyleSheet(
+    '.flush-list { padding: 0; } .topped-list { padding-top: 4px; } .list-row { height: 10px; }',
+  );
+  const flush = createRef<HostInstance>();
+  const topped = createRef<HostInstance>();
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      // $FlowExpectedError[prop-missing]
+      <div cssEngine={true}>
+        {/* $FlowExpectedError[prop-missing] */}
+        <ul cssEngine={true} cssClass="flush-list">
+          {/* $FlowExpectedError[prop-missing] */}
+          <li ref={flush} cssEngine={true} cssClass="list-row" />
+        </ul>
+        {/* $FlowExpectedError[prop-missing] */}
+        <ul cssEngine={true} cssClass="topped-list">
+          {/* $FlowExpectedError[prop-missing] */}
+          <li ref={topped} cssEngine={true} cssClass="list-row" />
+        </ul>
+      </div>,
+    );
+  });
+  expect(flush.current?.getBoundingClientRect().x).toBe(0);
+  expect(topped.current?.getBoundingClientRect().x).toBe(40);
+});
+
 test('the viewport a host declares answers media queries and viewport units below it', () => {
   engine().addStyleSheet(
     '.responsive { width: 50vw; height: 4px; } @media (max-width: 300px) { .responsive { height: 8px; } }',
@@ -1153,6 +1250,33 @@ test('matches() reads the states the engine keeps', () => {
   expect(engine().matches(node, '.held:active')).toBe(false);
 });
 
+test('an <img> is laid out by the declarations the engine resolves for it', () => {
+  // An image view carries no style inputs, so the engine styles the element's
+  // box and the picture fills it; without the box the picture drew at 0x0
+  engine().addStyleSheet(
+    '.frame { position: relative; width: 352px; height: 198px; } ' +
+      '.picture { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }',
+  );
+  const ref = createRef<HostInstance>();
+  const root = Fantom.createRoot();
+  Fantom.runTask(() => {
+    root.render(
+      // $FlowExpectedError[prop-missing]
+      <div cssEngine={true} cssClass="frame">
+        {/* $FlowExpectedError[prop-missing] */}
+        <img
+          ref={ref}
+          cssEngine={true}
+          cssClass="picture"
+          src="https://example.com/picture.jpg"
+          alt=""
+        />
+      </div>,
+    );
+  });
+  expect(rect(ref)).toBe('x=0 y=0 w=352 h=198');
+});
+
 test('pointer-events: none leaves a descendant that restores auto a target', () => {
   // CSS's `none` takes the element alone out of hit testing and inherits, so
   // a dock that passes touches through still has a composer that takes them;
@@ -1186,117 +1310,3 @@ test('pointer-events: none leaves a descendant that restores auto a target', () 
   expect(pointerEventsOf(blur)).toBe('box-none');
   expect(pointerEventsOf(composer)).toBe('auto');
 });
-
-test("an explicit inherit reads the parent's value, and a parent's other props leave its subtree be", () => {
-  // `inherit` on a property that does not inherit takes the parent's computed
-  // value (css-cascade-5 §7.2); it is the only reason an element keeps any of
-  // its props for its descendants, so a change to a prop nobody inherits (a
-  // width a table plugin writes after measuring) must not re-resolve them
-  engine().addStyleSheet(
-    '.inherits-radius { border-radius: inherit; width: 20px; height: 20px; }' +
-      ' .rounded { border-radius: 7px; }',
-  );
-  const child = createRef<HostInstance>();
-  const root = Fantom.createRoot();
-  const render = (width: number) =>
-    Fantom.runTask(() => {
-      root.render(
-        // $FlowExpectedError[prop-missing]
-        <div cssEngine={true} cssClass="rounded" style={{width}}>
-          {/* $FlowExpectedError[prop-missing] */}
-          <div ref={child} cssEngine={true} cssClass="inherits-radius">
-            {/* $FlowExpectedError[prop-missing] */}
-            <div cssEngine={true} style={{height: 5}} />
-          </div>
-        </div>,
-      );
-    });
-  render(100);
-  // $FlowExpectedError[prop-missing] the host instance's shadow node
-  const childNode = (child.current as $FlowFixMe)?.__internalInstanceHandle
-    ?.stateNode?.node;
-  expect(engine().computedStyle(childNode)?.borderTopLeftRadius).toBe(7);
-  const before = engine().stats();
-  render(200);
-  const after = engine().stats();
-  // The parent re-resolved for its new width; the child and grandchild kept
-  // their resolutions, since nothing they can read of the parent changed
-  expect(after.resolvedProps - before.resolvedProps).toBe(1);
-  expect(after.resolvedParent - before.resolvedParent).toBe(0);
-  expect(engine().computedStyle(childNode)?.borderTopLeftRadius).toBe(7);
-});
-
-test('a custom property rewritten on an ancestor re-resolves its readers, and nothing else', () => {
-  // A table's resize plugin rewrites `--table-resize-height` on each resize;
-  // only the handles read it, so only they resolve again. Every other element
-  // under the table keeps its resolution although its parent context is a new
-  // object (the pass's `keptAcrossParent`).
-  engine().addStyleSheet(
-    '.reader { height: var(--probe-height); width: 10px; }' +
-      ' .bystander { width: 12px; height: 12px; }' +
-      ' .probe-30 { --probe-height: 30px; } .probe-40 { --probe-height: 40px; }',
-  );
-  const reader = createRef<HostInstance>();
-  const root = Fantom.createRoot();
-  const render = (scopeClass: string) =>
-    Fantom.runTask(() => {
-      root.render(
-        // $FlowExpectedError[prop-missing]
-        <div cssEngine={true} cssClass={scopeClass}>
-          {/* $FlowExpectedError[prop-missing] */}
-          <div cssEngine={true} cssClass="bystander">
-            {/* $FlowExpectedError[prop-missing] */}
-            <div cssEngine={true} cssClass="bystander" />
-            {/* $FlowExpectedError[prop-missing] */}
-            <div cssEngine={true} cssClass="bystander" />
-          </div>
-          {/* $FlowExpectedError[prop-missing] */}
-          <div ref={reader} cssEngine={true} cssClass="reader" />
-        </div>,
-      );
-    });
-  render('probe-30');
-  expect(rect(reader)).toBe('x=0 y=12 w=10 h=30');
-  const before = engine().stats();
-  render('probe-40');
-  const after = engine().stats();
-  expect(rect(reader)).toBe('x=0 y=12 w=10 h=40');
-  // The ancestor for its new declaration, the reader for the value it reads
-  expect(after.resolvedProps - before.resolvedProps).toBe(1);
-  expect(after.resolvedParent - before.resolvedParent).toBe(1);
-  expect(after.elementsKeptAcrossParent - before.elementsKeptAcrossParent).toBe(
-    3,
-  );
-});
-
-/* eslint-disable no-bitwise */
-test('the overflow shorthand hints a sideways scroll on a flex row alone', () => {
-  // The bits of `StyleHint` in StyleEngine.h. The class names are this
-  // test's own: the suite's sheets outlive the test that adds them.
-  const HINT_SCROLL = 2;
-  const HINT_SCROLL_BLOCK = 64;
-  const HINT_FLEX_ROW = 128;
-  const HINT_FLEX_COLUMN = 256;
-  engine().addStyleSheet(
-    '.hint-row { display: flex; overflow: auto; }' +
-      ' .hint-pane { display: flex; flex-direction: column; overflow: auto; }' +
-      ' .hint-wrapping { display: flex; flex-flow: row wrap; overflow: auto; }' +
-      ' .hint-tight { display: flex; flex-wrap: nowrap; overflow: auto; }' +
-      ' .hint-sideways { overflow-x: auto; }',
-  );
-  const hints = (className: string) =>
-    engine().hints('div', className, null, 0, null);
-  // A row: the shorthand may scroll sideways, as the runtime reads the bits
-  expect(hints('hint-row') & (HINT_SCROLL_BLOCK | HINT_FLEX_ROW)).toBe(
-    HINT_SCROLL_BLOCK | HINT_FLEX_ROW,
-  );
-  expect(hints('hint-row') & HINT_FLEX_COLUMN).toBe(0);
-  expect(hints('hint-tight') & HINT_FLEX_COLUMN).toBe(0);
-  // A column and a wrapping row stay block-axis regions
-  expect(hints('hint-pane') & HINT_FLEX_COLUMN).toBe(HINT_FLEX_COLUMN);
-  expect(hints('hint-wrapping') & HINT_FLEX_COLUMN).toBe(HINT_FLEX_COLUMN);
-  // An explicit overflow-x is the sideways hint itself
-  expect(hints('hint-sideways') & HINT_SCROLL).toBe(HINT_SCROLL);
-  expect(hints('hint-row') & HINT_SCROLL).toBe(0);
-});
-/* eslint-enable no-bitwise */

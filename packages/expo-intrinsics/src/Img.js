@@ -233,6 +233,38 @@ const IMAGE_FILLS_CONTENT_BOX = {
 // rounds the picture too, the way a browser clips replaced content.
 const ELEMENT_BOX_BASE = {display: 'inline-block', overflow: 'hidden'};
 
+// The event props of the picture itself, which the element's box does not take
+const PICTURE_EVENTS = [
+  'onLoadStart',
+  'onProgress',
+  'onError',
+  'onLoad',
+  'onLoadEnd',
+];
+
+/**
+ * `object-fit` from the inline entries the renderer's style engine is handed
+ * (`cssInline`, ordered `[property, value]` pairs): the one declaration the
+ * picture reads itself, since the engine styles the element's box and an image
+ * view has no inputs for it.
+ */
+function inlineObjectFit(entries: unknown): ?string {
+  if (!Array.isArray(entries)) {
+    return null;
+  }
+  let fit: ?string = null;
+  for (const entry of entries) {
+    if (
+      Array.isArray(entry) &&
+      (entry[0] === 'objectFit' || entry[0] === 'object-fit') &&
+      typeof entry[1] === 'string'
+    ) {
+      fit = entry[1];
+    }
+  }
+  return fit;
+}
+
 function Img(props: ImgProps): React.Node {
   // `ref` is pulled out because it must always land on the ELEMENT's box —
   // the single image view on the fast path, the wrapper of the composite —
@@ -255,6 +287,14 @@ function Img(props: ImgProps): React.Node {
   const flattened: Readonly<{objectFit?: ?string, width?: unknown, ...}> =
     StyleSheet.flatten(style) ?? {};
   const {objectFit, ...boxStyle} = flattened;
+  // Under the renderer's style engine the author's declarations arrive as the
+  // engine's inputs rather than as a `style`, and the engine styles the
+  // element's BOX: an image view's props carry no style inputs, so a bare
+  // image view would be laid out by nothing and draw at 0x0
+  const engineStyled = (rest as $FlowFixMe).cssEngine === true;
+  const engineObjectFit = engineStyled
+    ? inlineObjectFit((rest as $FlowFixMe).cssInline)
+    : null;
 
   /*
    * The width the image will be drawn at, for choosing between `w` candidates.
@@ -354,7 +394,7 @@ function Img(props: ImgProps): React.Node {
     dimensionHints.aspectRatio = stated.width / stated.height;
   }
 
-  const fit = objectFitProps(objectFit);
+  const fit = objectFitProps(objectFit ?? engineObjectFit);
 
   /*
    * Android's image view emits its load events only when told handlers exist —
@@ -404,6 +444,50 @@ function Img(props: ImgProps): React.Node {
     contentFit: fit.contentFit,
     resizeMode: fit.resizeMode,
   };
+
+  if (engineStyled) {
+    // The composite, always: the box is the element the engine styles (its
+    // inputs ride on it, and `cssTag` names it `img` to the selectors, since
+    // the host is a div), and the picture fills its content box. The box's
+    // own style is the user agent's display and the attributes' hints, which
+    // the engine's resolved declarations are written over.
+    const boxProps: $FlowFixMe = {};
+    for (const key of Object.keys(rest)) {
+      if (!PICTURE_EVENTS.includes(key)) {
+        boxProps[key] = (rest as $FlowFixMe)[key];
+      }
+    }
+    const picture: $FlowFixMe = {
+      source: imageProps.source,
+      contentFit: imageProps.contentFit,
+      resizeMode: imageProps.resizeMode,
+      shouldNotifyLoadEvents: imageProps.shouldNotifyLoadEvents,
+    };
+    for (const key of PICTURE_EVENTS) {
+      if ((relayed as $FlowFixMe)[key] != null) {
+        picture[key] = (relayed as $FlowFixMe)[key];
+      }
+    }
+    return (
+      // $FlowFixMe[prop-missing] intrinsic
+      <div
+        {...boxProps}
+        {...accessibility}
+        ref={ref}
+        nodeName="img"
+        cssTag="img"
+        style={[ELEMENT_BOX_BASE, dimensionHints]}>
+        {/* $FlowFixMe[prop-missing] intrinsic */}
+        <element-img
+          {...picture}
+          accessible={false}
+          accessibilityElementsHidden={true}
+          importantForAccessibility="no-hide-descendants"
+          style={IMAGE_FILLS_CONTENT_BOX}
+        />
+      </div>
+    );
+  }
 
   if (!hasBoxChrome(boxStyle)) {
     return (
