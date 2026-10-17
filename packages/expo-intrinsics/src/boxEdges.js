@@ -208,3 +208,46 @@ export function withoutOutrankedBoxEdges(
   }
   return masked ?? uaStyle;
 }
+
+// Each flow-relative margin and padding alias, and the edges the style engine
+// names for it; the axes come first, so an edge's own alias overwrites them
+const ENGINE_EDGE_SPELLINGS: ReadonlyArray<[string, ReadonlyArray<string>]> = [
+  ['Inline', ['Start', 'End']],
+  ['Block', ['Top', 'Bottom']],
+  ['InlineStart', ['Start']],
+  ['InlineEnd', ['End']],
+  ['BlockStart', ['Top']],
+  ['BlockEnd', ['Bottom']],
+];
+
+/**
+ * `uaStyle` with its flow-relative margins and paddings spelled as the style
+ * engine spells an author's: `Start`, `End`, `Top` and `Bottom`.
+ *
+ * The engine writes an element's props over React's key by key, and Yoga gives
+ * a flow-relative spelling precedence over the others, so `<ul>`'s
+ * `paddingInlineStart: 40` outranked an author's `padding: 0`, which the engine
+ * writes as `paddingStart: 0`. Spelled alike, the author's edge replaces the
+ * sheet's and an edge the author leaves keeps it, as `withoutOutrankedBoxEdges`
+ * does for a React style. Returns `uaStyle` itself when it has no such alias.
+ */
+export function withEngineSpelledBoxEdges(uaStyle: {[string]: unknown}): {
+  [string]: unknown,
+} {
+  let respelled: {[string]: unknown} | null = null;
+  for (const prefix of ['margin', 'padding']) {
+    for (const [alias, edges] of ENGINE_EDGE_SPELLINGS) {
+      const key = prefix + alias;
+      if (!(key in uaStyle)) {
+        continue;
+      }
+      respelled ??= {...uaStyle};
+      const value = uaStyle[key];
+      delete respelled[key];
+      for (const edge of edges) {
+        respelled[prefix + edge] = value;
+      }
+    }
+  }
+  return respelled ?? uaStyle;
+}

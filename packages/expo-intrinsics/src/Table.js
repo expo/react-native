@@ -23,8 +23,12 @@ import {StyleSheet} from 'react-native';
  * The table elements (HTML §4.9) laid out as CSS 2.1 §17's fixed table layout,
  * over the grid the engine has: each row is a grid with the table's column
  * template, so the cells of every row line up and a row still draws its own
- * background and borders. The template comes from the first row (§17.5.2.1):
- * a cell's `width` sizes the columns it spans, and the columns nothing sizes
+ * background and borders. A table the renderer's style engine styles (its
+ * elements carry `cssEngine`) is laid out by the engine, in the commit that
+ * styles it (`applyTableRules` in StyleEngine.cpp), and its parts here are the
+ * hosts alone; this file lays out a table styled with React Native's style
+ * props, the same way. The template comes from the first row (§17.5.2.1): a
+ * cell's `width` sizes the columns it spans, and the columns nothing sizes
  * share what is left equally. Where every column is sized, the widths follow
  * WebKit's fixed table layout, which Mobile Safari answers with: percentage
  * columns share what the pixel columns leave, in proportion to their
@@ -91,6 +95,9 @@ const AlignContext: React.Context<?string> = createContext(null);
 type ElementProps = {
   children?: React.Node,
   style?: unknown,
+  // The style engine's mark that it styles the element, and the element's ref
+  cssEngine?: boolean,
+  ref?: unknown,
   ...
 };
 
@@ -274,7 +281,7 @@ function verticalAlignOf(style: unknown): ?string {
 
 export function makeTable(): React.ComponentType<ElementProps> {
   const Host: $FlowFixMe = 'element-table';
-  function Table({style, children, ...rest}: ElementProps): React.Node {
+  function StyleTable({style, children, ...rest}: ElementProps): React.Node {
     const flat: {[string]: unknown} =
       (StyleSheet.flatten(style as $FlowFixMe) as $FlowFixMe) ?? {};
     const spacing = spacingOf(flat);
@@ -363,13 +370,20 @@ export function makeTable(): React.ComponentType<ElementProps> {
       </TableContext.Provider>
     );
   }
+  function Table(props: ElementProps): React.Node {
+    return props.cssEngine === true ? (
+      <Host {...props} nodeName="table" />
+    ) : (
+      <StyleTable {...props} />
+    );
+  }
   Table.displayName = '<table>';
   return Table;
 }
 
 export function makeRowGroup(tag: string): React.ComponentType<ElementProps> {
   const Host: $FlowFixMe = `element-${tag}`;
-  function RowGroup({style, ...rest}: ElementProps): React.Node {
+  function StyleRowGroup({style, ...rest}: ElementProps): React.Node {
     const table = useContext(TableContext);
     const block = table?.spacing.block ?? 0;
     const inherited = useContext(AlignContext);
@@ -382,6 +396,13 @@ export function makeRowGroup(tag: string): React.ComponentType<ElementProps> {
           style={[block > 0 ? {rowGap: block} : null, style]}
         />
       </AlignContext.Provider>
+    );
+  }
+  function RowGroup(props: ElementProps): React.Node {
+    return props.cssEngine === true ? (
+      <Host {...props} nodeName={tag} />
+    ) : (
+      <StyleRowGroup {...props} />
     );
   }
   RowGroup.displayName = `<${tag}>`;
@@ -397,7 +418,7 @@ const ROW_BEFORE_COLUMNS = {
 
 export function makeRow(): React.ComponentType<ElementProps> {
   const Host: $FlowFixMe = 'element-tr';
-  function Row({style, ...rest}: ElementProps): React.Node {
+  function StyleRow({style, ...rest}: ElementProps): React.Node {
     const table = useContext(TableContext);
     const tableRows = table?.rows;
     const identity = useRef<{...}>({});
@@ -465,6 +486,13 @@ export function makeRow(): React.ComponentType<ElementProps> {
       </RowContext.Provider>
     );
   }
+  function Row(props: ElementProps): React.Node {
+    return props.cssEngine === true ? (
+      <Host {...props} nodeName="tr" />
+    ) : (
+      <StyleRow {...props} />
+    );
+  }
   Row.displayName = '<tr>';
   return Row;
 }
@@ -485,7 +513,12 @@ const CELL_ALIGNMENT: {readonly [string]: string} = {
 
 export function makeCell(tag: 'td' | 'th'): React.ComponentType<CellProps> {
   const Host: $FlowFixMe = `element-${tag}`;
-  function Cell({style, colSpan, rowSpan, ...rest}: CellProps): React.Node {
+  function StyleCell({
+    style,
+    colSpan,
+    rowSpan,
+    ...rest
+  }: CellProps): React.Node {
     const row = useContext(RowContext);
     const inheritedAlign = useContext(AlignContext);
     const flat: {[string]: unknown} =
@@ -538,6 +571,14 @@ export function makeCell(tag: 'td' | 'th'): React.ComponentType<CellProps> {
       />
     );
   }
+  function Cell({colSpan, rowSpan, ...rest}: CellProps): React.Node {
+    // The engine reads the spans as the cell's attributes
+    return rest.cssEngine === true ? (
+      <Host {...rest} nodeName={tag} />
+    ) : (
+      <StyleCell {...rest} colSpan={colSpan} rowSpan={rowSpan} />
+    );
+  }
   Cell.displayName = `<${tag}>`;
   return Cell;
 }
@@ -551,7 +592,7 @@ type ColProps = {
 // `<col>`: no box of its own, a width for the columns it spans
 export function makeCol(): React.ComponentType<ColProps> {
   const Host: $FlowFixMe = 'element-col';
-  function Col({style, span: spanProp, ...rest}: ColProps): React.Node {
+  function StyleCol({style, span: spanProp, ...rest}: ColProps): React.Node {
     const table = useContext(TableContext);
     const tableRows = table?.rows;
     const flat: {[string]: unknown} =
@@ -571,6 +612,14 @@ export function makeCol(): React.ComponentType<ColProps> {
       }
     }, [tableRows, entry, span, width]);
     return <Host {...rest} nodeName="col" style={style} />;
+  }
+  function Col({span, ...rest}: ColProps): React.Node {
+    // The engine reads the span as the column's attribute
+    return rest.cssEngine === true ? (
+      <Host {...rest} nodeName="col" />
+    ) : (
+      <StyleCol {...rest} span={span} />
+    );
   }
   Col.displayName = '<col>';
   return Col;
