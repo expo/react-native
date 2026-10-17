@@ -193,7 +193,7 @@ const definitions: FeatureFlagDefinitions = {
     },
     enableAccumulatedUpdatesInRawPropsAndroid: {
       dangerouslyExposeInPublicCppHeaders: true,
-      defaultValue: false,
+      defaultValue: true,
       metadata: {
         dateAdded: '2024-12-10',
         description:
@@ -567,7 +567,7 @@ const definitions: FeatureFlagDefinitions = {
       ossReleaseStage: 'none',
     },
     enablePreallocatedPropsDiffOnInsertAndroid: {
-      defaultValue: false,
+      defaultValue: true,
       metadata: {
         dateAdded: '2026-09-30',
         description:

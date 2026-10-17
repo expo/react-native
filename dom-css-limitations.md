@@ -84,6 +84,15 @@ and a url() layered with a gradient or a second image are not drawn: the
 first url() is the layer, and the gradients go with it. A block that scrolls
 (`overflow: auto`) does not take the layer.
 
+**`background-boxes-are-fixed`** — `ReactCommon/react/renderer/cssengine/StyleProperties.cpp`
+
+A background is placed against the padding box and painted to the border box,
+the initial `background-origin` and `background-clip`, whatever they say; the
+`background` shorthand reads a box keyword and drops it. Likewise
+`background-attachment`: an element's background scrolls with it, as the
+renderer's own `fixed` is not reached from CSS. Each would take a prop the view
+reads where it lays out its background layers.
+
 **`css-url-escapes-kept`** — `ReactCommon/react/renderer/css/CSSTokenizer.h`
 
 A `url()` or a string keeps its escapes as written, so `url(a\)b.png)` names
@@ -637,6 +646,7 @@ rather than going quiet.
 - `android-chat-bubble-has-no-tail` — limitation, `packages/expo-intrinsics/src/NativeChatBubble.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
 - `astryx-press-controller-inert` — limitation, `packages/rn-tester/js/astryx/pressFeedback-shim.js`
+- `background-boxes-are-fixed` — limitation, `ReactCommon/react/renderer/cssengine/StyleProperties.cpp`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `checkable-label-gap` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `checkable-line-centering` — deviation, `packages/expo-intrinsics/__tests__/CheckableLineCentering-itest.js`
@@ -667,6 +677,7 @@ rather than going quiet.
 - `lanes-abspos-containing-block` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
 - `lanes-baseline-export` — limitation, `ReactCommon/yoga/yoga/algorithm/GridLanesLayout.cpp`
 - `layer-portal-stays-inline` — limitation, `packages/rn-tester/js/astryx/react-dom-shim.js`
+- `lh-normal-is-a-ratio` — limitation, `ReactCommon/react/renderer/cssengine/StyleEngine.cpp`
 - `link-title-is-not-idn-decoded` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPTextLinkInteraction.mm`
 - `list-style-type-complex-styles` — limitation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `native-form-widgets` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
@@ -675,6 +686,7 @@ rather than going quiet.
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `nth-last-of-selector-in-sheets` — limitation, `packages/react-native/ReactCommon/react/renderer/cssengine/SelectorMatching.cpp`
 - `number-parts-are-read-from-the-string` — limitation, `packages/rn-tester/js/astryx/intl-shim.js`
 - `oklab-colours-are-srgb` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `panel-content-fades-without-the-blur` — deviation, `packages/chat-demo/Composer.js`
@@ -698,8 +710,10 @@ rather than going quiet.
 - `table-layout-auto-is-fixed` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-percent-columns-need-the-width` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-rowspan` — limitation, `packages/expo-intrinsics/src/Table.js`
+- `unanswered-pseudo-classes` — limitation, `packages/react-native/ReactCommon/react/renderer/cssengine/StyleSheetParser.cpp`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
+- `when-relations-need-has` — limitation, `ReactCommon/react/renderer/cssengine/StyleEngine.cpp`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
 
 ## `anchor-name-from-contents` — FIXED 2026-09-01

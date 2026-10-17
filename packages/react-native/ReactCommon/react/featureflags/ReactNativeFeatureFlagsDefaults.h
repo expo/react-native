@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<e73fa351da0b69c040f4d079163c5a14>>
+ * @generated SignedSource<<f4d01c3584f33e71f59fd90c5ac4672f>>
  */
 
 /**
@@ -82,7 +82,7 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enableAccumulatedUpdatesInRawPropsAndroid() override {
-    return false;
+    return true;
   }
 
   bool enableAndroidAutoOffscreenCompositingForElevation() override {
@@ -222,7 +222,7 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enablePreallocatedPropsDiffOnInsertAndroid() override {
-    return false;
+    return true;
   }
 
   bool enablePreparedTextLayout() override {

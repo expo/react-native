@@ -221,11 +221,30 @@ class CSSTransitions final : public UIManagerCommitHook {
    */
   void noteCommitBehindTransitions(const RootShadowNode &newRootShadowNode, ShadowTreeCommitSource source) noexcept;
 
-  void diffNode(const ShadowNode &oldNode, const ShadowNode &newNode, std::vector<LayoutStart> &layoutStarts);
-  // A subtree with no old counterpart: freshly mounted. Transitions do not
-  // start here (no previous value exists) but animations do, since an
-  // animation runs because the node carries it.
-  void visitFreshNode(const ShadowNode &node);
+  // `oldParentRendered` and `newParentRendered` say whether the parents
+  // generate boxes in the two trees, which a node that comes to be rendered
+  // needs to know: its transitions run from its starting style
+  void diffNode(
+      const ShadowNode &oldNode,
+      const ShadowNode &newNode,
+      std::vector<LayoutStart> &layoutStarts,
+      bool oldParentRendered,
+      bool newParentRendered);
+  // A subtree with no old counterpart: freshly mounted, or come to be
+  // rendered. Transitions start here only from a starting style
+  // (`@starting-style`), there being no previous value; animations start,
+  // since an animation runs because the node carries it.
+  void visitFreshNode(const ShadowNode &node, bool parentRendered);
+  // Runs the node's transitions from its starting style (css-transitions-2
+  // §3.3) as it comes to be rendered
+  void startFromStartingStyle(const ShadowNode &node, const ViewProps &props);
+  // Starts one property's transition. Called with `mutex_` held.
+  void startTransition(
+      const ShadowNode &node,
+      TransitionProperty property,
+      const Transition &declared,
+      const TransitionValue &previous,
+      const TransitionValue &target);
   // Latches sawTransitionableContent_ when props declare a transition
   void noteTransitionableContent(const ViewProps *viewProps);
   void syncAnimation(const ShadowNode &node);

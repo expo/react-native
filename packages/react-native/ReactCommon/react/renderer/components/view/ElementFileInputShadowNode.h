@@ -20,6 +20,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -69,14 +70,23 @@ class ElementFileInputEventEmitter : public ViewEventEmitter {
  * `PHPickerViewController` and `UIImagePickerController` from frameworks this
  * target does not link.
  */
-class ElementFileInputProps final : public ViewProps, public NodeNameProvider {
+class ElementFileInputProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementFileInputProps() = default;
   ElementFileInputProps(
       const PropsParserContext &context,
       const ElementFileInputProps &sourceProps,
       const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         // HTML's `accept`: a comma-separated list of MIME types or extensions.
         // Passed through as written, because the two platforms narrow it in

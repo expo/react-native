@@ -19,6 +19,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -136,11 +137,20 @@ class ElementButtonEventEmitter : public ViewEventEmitter {
   }
 };
 
-class ElementButtonProps final : public ViewProps, public NodeNameProvider {
+class ElementButtonProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementButtonProps() = default;
   ElementButtonProps(const PropsParserContext &context, const ElementButtonProps &sourceProps, const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         // In declaration order: `-Wreorder-ctor` is an error under the `-Werror`
         // of the Android and Fantom builds, and only a hidden warning in Xcode
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
@@ -224,9 +234,9 @@ class ElementButtonProps final : public ViewProps, public NodeNameProvider {
   // platforms. The platform chrome is drawn only when false.
   bool hasAuthorChrome{false};
 
-  // Whether the author's styles answer a press (`:active` or any declaration
-  // that varies with interaction state). When they do, the platform must not
-  // also respond: the two land on different clocks.
+  // Whether the author's styles answer a press: they read the button's
+  // `:hover` or `:active`. When they do, the platform must not also respond:
+  // the two land on different clocks.
   bool authorStatesPressFeedback{false};
 
   // Whether the author supplied these, so the user-agent defaults apply only

@@ -67,6 +67,7 @@ class FabricUIManagerBinding : public jni::HybridClass<FabricUIManagerBinding>,
 
   void installFabricUIManager(
       jni::alias_ref<JRuntimeExecutor::javaobject> runtimeExecutorHolder,
+      jni::alias_ref<JRuntimeExecutor::javaobject> bindingsExecutorHolder,
       jni::alias_ref<JRuntimeScheduler::javaobject> runtimeSchedulerHolder,
       jni::alias_ref<JFabricUIManager::javaobject> javaUIManager,
       EventBeatManager *eventBeatManager,

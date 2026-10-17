@@ -265,6 +265,8 @@ internal class ReactInstance(
         fabricUIManager,
         eventBeatManager,
         componentFactory,
+        // Use unbuffered RuntimeExecutor to install bindings
+        bindingsExecutor = unbufferedRuntimeExecutor,
     )
 
     // Initialize the FabricUIManager

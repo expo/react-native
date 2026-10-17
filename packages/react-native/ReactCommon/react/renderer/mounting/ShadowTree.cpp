@@ -36,6 +36,8 @@ std::string getShadowTreeCommitSourceName(ShadowTreeCommitSource source) {
       return "AnimationEndSync";
     case ShadowTreeCommitSource::ReactRevisionMerge:
       return "ReactRevisionMerge";
+    case ShadowTreeCommitSource::StyleEngine:
+      return "StyleEngine";
   }
 }
 

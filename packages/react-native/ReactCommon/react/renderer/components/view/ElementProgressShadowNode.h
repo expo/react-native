@@ -18,6 +18,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -27,14 +28,23 @@ extern const char ElementProgressComponentName[];
 // One element for `<progress>` and `<meter>`, which differ in meaning and by
 // `nodeName`; `min` exists only for `<meter>`. Not interactive, so it never
 // claims a drag
-class ElementProgressProps final : public ViewProps, public NodeNameProvider {
+class ElementProgressProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementProgressProps() = default;
   ElementProgressProps(
       const PropsParserContext &context,
       const ElementProgressProps &sourceProps,
       const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         value(convertRawProp(context, rawProps, "value", sourceProps.value, 0.0)),
         // An absent `value` on a `<progress>` means indeterminate — a task
