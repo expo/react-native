@@ -52,6 +52,11 @@ import {
 import {registerElement} from './elementRegistry';
 import Input from './elements/Input';
 import TextArea from './elements/TextArea';
+import {engineEnabled} from './native-css/engine';
+import EngineElement, {
+  clickOnTheElementItself,
+  hostPropsFor,
+} from './native-css/EngineElement';
 import TopLayerElement from './overlay/TopLayerElement';
 import {
   EMPTY_MARKER_STATE,
@@ -62,7 +67,7 @@ import {
   resolveWhen,
 } from './stylex-rn';
 import {CurrentColorContext} from './svg/CurrentColor';
-import {Svg, SvgCircle, SvgLine, SvgPath, SvgRect} from './svg/Svg';
+import {EngineSvg, Svg, SvgCircle, SvgLine, SvgPath, SvgRect} from './svg/Svg';
 import {useInteractionState} from './useInteractionState';
 import {resolveRootRelativeSource} from '@react-native/expo-intrinsics-poc/src/rootRelativeSources';
 import * as React from 'react';
@@ -269,35 +274,6 @@ function sameMatchedElement(
 
 // HTML's `dialog::backdrop`, under an author's (html.css)
 const DEFAULT_BACKDROP = {backgroundColor: 'rgba(0, 0, 0, 0.1)'};
-
-// Calls an element's click handler as a click whose target is the element
-// itself, which is what a press on a dialog's backdrop is on the web
-function clickOnTheElementItself(handler: unknown, instance: unknown): void {
-  if (typeof handler !== 'function' || instance == null) {
-    return;
-  }
-  const click: (event: {...}) => unknown = handler as $FlowFixMe;
-  let defaultPrevented = false;
-  let propagationStopped = false;
-  click({
-    type: 'click',
-    target: instance,
-    currentTarget: instance,
-    nativeEvent: {},
-    get defaultPrevented(): boolean {
-      return defaultPrevented;
-    },
-    preventDefault(): void {
-      defaultPrevented = true;
-    },
-    stopPropagation(): void {
-      propagationStopped = true;
-    },
-    isDefaultPrevented: (): boolean => defaultPrevented,
-    isPropagationStopped: (): boolean => propagationStopped,
-    persist(): void {},
-  });
-}
 
 // The native top layer, on the platforms that have it.
 // DOM-CSS-LIMITATION(popover-is-not-in-the-top-layer): on Android a shown
@@ -1864,6 +1840,13 @@ function StyleElement({children}: {children?: unknown}): React.Node {
   const css = React.Children.toArray<$FlowFixMe>(children as $FlowFixMe)
     .filter(child => typeof child === 'string' || typeof child === 'number')
     .join('');
+  // Where the renderer's style engine styles the page, the sheet is installed
+  // as the page renders, so the commit that mounts the page is styled under
+  // it; installing it after would restyle the whole page once more
+  if (styledByEngine && css !== '' && !installedStyleTexts.has(css)) {
+    installedStyleTexts.add(css);
+    installStylesheet(css);
+  }
   // A layout effect, not an insertion effect: installing a sheet notifies
   // the elements subscribed to the engine, and React forbids updates from an
   // insertion effect
@@ -1875,6 +1858,21 @@ function StyleElement({children}: {children?: unknown}): React.Node {
   }, [css]);
   return null;
 }
+
+/**
+ * The elements the renderer's style engine styles, where it does: an element
+ * is one host node naming its inputs (native-css/EngineElement.js), and the
+ * SVG shapes draw as before, inside an `<svg>` styled like any element.
+ */
+const ENGINE_COMPONENTS: {[string]: React.ComponentType<any>} = {
+  svg: EngineSvg,
+  path: SvgPath,
+  circle: SvgCircle,
+  rect: SvgRect,
+  line: SvgLine,
+};
+
+const styledByEngine: boolean = engineEnabled();
 
 function wrap(type: unknown, props: unknown): [unknown, unknown] {
   if (typeof type !== 'string') {
@@ -1889,6 +1887,20 @@ function wrap(type: unknown, props: unknown): [unknown, unknown] {
   }
   if (type === 'style') {
     return [StyleElement, props];
+  }
+  if (styledByEngine) {
+    const engineComponent = ENGINE_COMPONENTS[type];
+    if (engineComponent != null) {
+      // $FlowFixMe[incompatible-type] intrinsic props
+      return [engineComponent, {...props, __astryxTag: type}];
+    }
+    // The element as its host node, where it needs nothing else
+    const hostProps = hostPropsFor(type, props as $FlowFixMe);
+    if (hostProps != null) {
+      return [type, hostProps];
+    }
+    // $FlowFixMe[incompatible-type] intrinsic props
+    return [EngineElement, {...props, __astryxTag: type}];
   }
   const component = ELEMENT_COMPONENTS[type];
   if (component != null) {

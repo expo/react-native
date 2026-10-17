@@ -33,6 +33,12 @@ import type {MatchContext} from './match';
 import type {Stylesheet} from './parse';
 
 import {
+  addStyleSheet as addEngineStyleSheet,
+  engineEnabled,
+  removeStyleSheet as removeEngineStyleSheet,
+  replaceStyleSheet as replaceEngineStyleSheet,
+} from '../native-css/engine';
+import {
   INHERITED_PROPERTIES,
   registerNamedKeyframes,
   resolveDeclarations,
@@ -169,7 +175,29 @@ function rewriteSiblingSpacing(sheet: Stylesheet): void {
   }
 }
 
+// The sheets installed in the renderer's style engine, by the stand-in the
+// caller holds for each
+const engineSheetIds: WeakMap<Stylesheet, number> = new WeakMap();
+
+// A sheet in the renderer's style engine, held by its caller as a sheet with
+// no rules of its own here
+function engineSheet(id: number): Stylesheet {
+  // $FlowFixMe[incompatible-type] a stand-in the engine's id is kept for
+  const sheet: Stylesheet = {rules: [], keyframes: []};
+  engineSheetIds.set(sheet, id);
+  return sheet;
+}
+
 export function installStylesheet(css: string | Stylesheet): Stylesheet {
+  if (engineEnabled()) {
+    if (typeof css !== 'string') {
+      throw new Error(
+        "The renderer's style engine takes a stylesheet as CSS text, and " +
+          "was given one already parsed. Install the sheet's text instead.",
+      );
+    }
+    return engineSheet(addEngineStyleSheet(css));
+  }
   const sheet = prepareStylesheet(css, ruleCount);
   ruleCount += sheet.rules.length;
   sheets.push(sheet);
@@ -189,6 +217,11 @@ export function installStylesheet(css: string | Stylesheet): Stylesheet {
  * their names.
  */
 export function removeStylesheet(sheet: Stylesheet): void {
+  const engineId = engineSheetIds.get(sheet);
+  if (engineId != null) {
+    removeEngineStyleSheet(engineId);
+    return;
+  }
   const index = sheets.indexOf(sheet);
   if (index === -1) {
     return;
@@ -203,6 +236,11 @@ export function removeStylesheet(sheet: Stylesheet): void {
  * the new sheet, which later replacements and removals take.
  */
 export function replaceStylesheet(sheet: Stylesheet, css: string): Stylesheet {
+  const engineId = engineSheetIds.get(sheet);
+  if (engineId != null) {
+    replaceEngineStyleSheet(engineId, css);
+    return sheet;
+  }
   const index = sheets.indexOf(sheet);
   if (index === -1) {
     return installStylesheet(css);

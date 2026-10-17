@@ -674,6 +674,7 @@ rather than going quiet.
 - `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
 - `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
 - `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
+- `svg-paint-read-after-layout` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `table-cell-vertical-align` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-layout-auto-is-fixed` — limitation, `packages/expo-intrinsics/src/Table.js`

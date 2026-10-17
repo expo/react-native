@@ -1,0 +1,703 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
+ * @format
+ */
+
+/* eslint no-bitwise: 0 */
+
+/**
+ * An HTML element whose CSS the renderer's style engine resolves: one host
+ * node that names the element's inputs (its class, the attributes selectors
+ * read, its StyleX and inline styles, its interaction states), and the
+ * behaviour the engine cannot supply — interaction tracking, popovers and
+ * dialogs in the top layer, a scroll container's platform scroll view, and
+ * the element's record for the DOM methods.
+ *
+ * It reads no context but one, whether it is in the top layer, and provides
+ * none: what an element inherits from its ancestors (custom properties,
+ * `color`, font size, what selectors match) the engine reads from the tree it
+ * commits.
+ */
+
+import type {ElementRecord} from '../elementRegistry';
+
+import {registerElement, setRecordFallback} from '../elementRegistry';
+import Input from '../elements/Input';
+import TextArea from '../elements/TextArea';
+import TopLayerElement from '../overlay/TopLayerElement';
+import {useInteractionState} from '../useInteractionState';
+import {
+  HINT_BOX,
+  HINT_SCROLL,
+  HINT_SCROLL_BLOCK,
+  HINT_STATES,
+  STATE_ACTIVE,
+  STATE_FOCUS,
+  STATE_FOCUS_VISIBLE,
+  STATE_HOVER,
+  STATE_POPOVER_OPEN,
+  computedStyleForInstance,
+  counters,
+  declaresOverflow,
+  encodeStyle,
+  hintsFor,
+  instrumenting,
+  styleInputsOf,
+} from './engine';
+import * as React from 'react';
+import {Platform, ScrollView} from 'react-native';
+import {jsx as reactJsx} from 'react/jsx-runtime';
+
+/**
+ * Whether an element is in the top layer, where a region that overflows in
+ * the block axis scrolls (a menu, a dialog) rather than growing into a page.
+ * Provided by the top layer's elements only.
+ */
+export const InTopLayerContext: React.Context<boolean> =
+  React.createContext(false);
+
+// The custom property an element in the top layer declares for its subtree,
+// which the engine reads to leave its regions scrolling
+const IN_TOP_LAYER_ENTRY: [string, unknown] = ['--astryx-in-top-layer', '1'];
+
+/**
+ * The attributes that take part in selector matching, beyond `data-*` and
+ * `aria-*`: the ones the sheets and the user agent's rules name.
+ */
+const MATCHABLE_ATTRIBUTES = [
+  'id',
+  'disabled',
+  'type',
+  'role',
+  'dir',
+  'lang',
+  'hidden',
+  'popover',
+  'open',
+  'href',
+  'name',
+  'checked',
+  'selected',
+  'multiple',
+  'readOnly',
+  'required',
+  'tabIndex',
+  'title',
+  'htmlFor',
+  'placeholder',
+];
+
+// `htmlFor` is `for` and `tabIndex` is `tabindex` to a selector
+const ATTRIBUTE_NAMES: {[string]: string} = {
+  htmlFor: 'for',
+  tabIndex: 'tabindex',
+  readOnly: 'readonly',
+};
+
+/**
+ * The elements that scroll their content when their style says so: block
+ * containers. Matches the engine's list.
+ */
+const SCROLL_CONTAINER_TAGS: Set<string> = new Set([
+  'div',
+  'section',
+  'main',
+  'article',
+  'aside',
+  'nav',
+  'header',
+  'footer',
+  'form',
+  'fieldset',
+  'figure',
+  'ul',
+  'ol',
+  'menu',
+]);
+
+const DEFAULT_BACKDROP = {backgroundColor: 'rgba(0, 0, 0, 0.1)'};
+
+// The native top layer, on the platforms that have it.
+// DOM-CSS-LIMITATION(popover-is-not-in-the-top-layer): on Android a shown
+// popover still sits where its author styles put it.
+const TOP_LAYER_IS_NATIVE: boolean = Platform.OS === 'ios';
+
+/**
+ * Elements drawn by a component rather than a host of their own name, which
+ * passes the engine's inputs to the host it renders: a text field for
+ * `<input>` and `<textarea>`.
+ */
+const MAPPED_COMPONENTS: {[string]: React.ComponentType<$FlowFixMe>} = {
+  input: Input,
+  textarea: TextArea,
+};
+
+const SCROLL_VIEW_STYLE = {flexGrow: 1, flexShrink: 1};
+const HORIZONTAL_CONTENT_CONTAINER = {minWidth: '100%'};
+const VERTICAL_CONTENT_CONTAINER = {minHeight: '100%'};
+
+type Attributes = {[string]: unknown};
+
+function buildAttributes(props: {readonly [string]: unknown}): {
+  attributes: Attributes,
+  key: string,
+} {
+  const attributes: Attributes = {};
+  let key = '';
+  for (const name of Object.keys(props)) {
+    if (name.startsWith('data-') || name.startsWith('aria-')) {
+      const value = props[name];
+      if (value != null && value !== false) {
+        attributes[name] = value;
+        key += `${name}=${String(value)}&`;
+      }
+    }
+  }
+  for (const name of MATCHABLE_ATTRIBUTES) {
+    const value = props[name];
+    if (value != null && value !== false) {
+      const attribute = ATTRIBUTE_NAMES[name] ?? name;
+      attributes[attribute] = value;
+      key += `${attribute}=${String(value)}&`;
+    }
+  }
+  return {attributes, key};
+}
+
+// What an inline style may do, as `hints()` would say it of a sheet rule
+function inlineHints(inline: ?{readonly [string]: unknown}): number {
+  if (inline == null) {
+    return 0;
+  }
+  let hints = 0;
+  for (const key of Object.keys(inline)) {
+    const value = String(inline[key]);
+    if (key === 'display') {
+      if (value !== 'inline' && value !== 'none' && value !== 'contents') {
+        hints |= HINT_BOX;
+      }
+    } else if (key === 'position') {
+      if (value === 'absolute' || value === 'fixed') {
+        hints |= HINT_BOX;
+      }
+    } else if (key === 'float' || key.startsWith('grid')) {
+      hints |= HINT_BOX;
+    } else if (key === 'overflowX') {
+      if (value === 'auto' || value === 'scroll') {
+        hints |= HINT_SCROLL;
+      }
+    } else if (key === 'overflow' || key === 'overflowY') {
+      if (value === 'auto' || value === 'scroll') {
+        hints |= HINT_SCROLL_BLOCK;
+      }
+    }
+  }
+  return hints;
+}
+
+const classLists: Map<string, Array<string>> = new Map();
+
+function classListOf(className: unknown): Array<string> {
+  if (typeof className !== 'string' || className === '') {
+    return [];
+  }
+  let list = classLists.get(className);
+  if (list == null) {
+    list = className.split(/\s+/).filter(name => name !== '');
+    if (classLists.size > 4096) {
+      classLists.clear();
+    }
+    classLists.set(className, list);
+  }
+  return list;
+}
+
+const encodedInline: WeakMap<
+  interface {},
+  Array<[string, unknown]>,
+> = new WeakMap();
+
+function encodeInline(inline: {
+  readonly [string]: unknown,
+}): Array<[string, unknown]> {
+  let encoded = encodedInline.get(inline);
+  if (encoded == null) {
+    encoded = encodeStyle(inline);
+    encodedInline.set(inline, encoded);
+  }
+  return encoded;
+}
+
+/**
+ * The props of an element that needs no behaviour of the runtime's, as the
+ * host node it is rendered as directly — no component, no hooks: its inputs
+ * for the style engine beside the author's props. Null when the element
+ * needs `EngineElement`: a popover or a dialog, an element whose styles read
+ * its interaction state or a StyleX marker's, a scroll container, a
+ * behaviour-mapped element.
+ */
+export function hostPropsFor(
+  tag: string,
+  props: {readonly [string]: unknown},
+): ?{[string]: unknown} {
+  const start = instrumenting() ? performance.now() : 0;
+  if (MAPPED_COMPONENTS[tag] != null || tag === 'dialog') {
+    return null;
+  }
+  // One pass over the props: the host's, the attributes selectors read, and
+  // the style inputs, with nothing allocated an element without them needs
+  const host: {[string]: unknown} = {};
+  let attributes: ?Attributes = null;
+  let attributesKey = '';
+  let style: unknown;
+  let styleId: unknown;
+  let className = '';
+  for (const key in props) {
+    const value = props[key];
+    if (key === 'style') {
+      style = value;
+      continue;
+    }
+    if (key === '__cssStyle') {
+      styleId = value;
+      continue;
+    }
+    if (key === '__cssBackdrop') {
+      continue;
+    }
+    if (
+      key === '__cssMarker' ||
+      (key === 'popover' && value != null && value !== false)
+    ) {
+      // A marked element reports its states, and a popover is shown and
+      // hidden: the component's
+      return null;
+    }
+    if (key === 'className' && typeof value === 'string') {
+      className = value;
+    }
+    host[key] = value;
+    if (value == null || value === false) {
+      continue;
+    }
+    const attribute = MATCHABLE[key];
+    if (
+      attribute != null ||
+      key.startsWith('data-') ||
+      key.startsWith('aria-')
+    ) {
+      const name = attribute ?? key;
+      const target: Attributes = attributes ?? {};
+      target[name] = value;
+      attributes = target;
+      attributesKey += `${name}=${String(value)}&`;
+    }
+  }
+  const {styleId: resolvedStyle, inline} = styleInputsOf(styleId, style);
+  const hints =
+    hintsFor(tag, className, attributes, attributesKey, resolvedStyle) |
+    inlineHints(inline);
+  // A block that may scroll is the component's, which builds the platform's
+  // scroll view around it; asked of what the style states, not of the value,
+  // so a style that changes its `overflow` as it measures does not move the
+  // element between a host node and the component, remounting its children
+  if (
+    (hints & HINT_STATES) !== 0 ||
+    (SCROLL_CONTAINER_TAGS.has(tag) &&
+      ((hints & (HINT_SCROLL | HINT_SCROLL_BLOCK)) !== 0 ||
+        declaresOverflow(resolvedStyle, inline)))
+  ) {
+    return null;
+  }
+  host.cssEngine = true;
+  host.cssClass = className;
+  host.cssAttributes = attributes ?? NO_ATTRIBUTES;
+  host.cssStyle = resolvedStyle;
+  host.cssInline = inline != null ? encodeInline(inline) : null;
+  host.cssBox = (hints & HINT_BOX) !== 0;
+  if (start !== 0) {
+    counters.hostElements++;
+    counters.hostElementMs += performance.now() - start;
+  }
+  return host;
+}
+
+// The attributes selectors read beyond `data-*` and `aria-*`, by prop name,
+// under the name a selector gives them
+const MATCHABLE: {readonly [string]: string} = (() => {
+  const names: {[string]: string} = {};
+  for (const name of MATCHABLE_ATTRIBUTES) {
+    names[name] = ATTRIBUTE_NAMES[name] ?? name;
+  }
+  return names;
+})();
+
+const NO_ATTRIBUTES: Attributes = Object.freeze({});
+
+/*
+ * The record of an element rendered as a bare host node, for the DOM methods:
+ * its props as last committed, which carry its attributes and its inputs.
+ */
+const hostRecords: WeakMap<
+  interface {},
+  {props: unknown, record: ElementRecord},
+> = new WeakMap();
+
+setRecordFallback((instance: Object): ElementRecord | null => {
+  const canonical = instance?.__internalInstanceHandle?.stateNode?.canonical;
+  const props = canonical?.currentProps;
+  if (props == null || props.cssEngine !== true) {
+    return null;
+  }
+  const cached = hostRecords.get(instance);
+  if (cached != null && cached.props === props) {
+    return cached.record;
+  }
+  const tag =
+    typeof instance.nodeName === 'string'
+      ? instance.nodeName.toLowerCase()
+      : '';
+  const record: $FlowFixMe = {
+    descriptor: {
+      tag,
+      classes: classListOf(props.className),
+      attributes: props.cssAttributes ?? {},
+      states: {
+        hovered: false,
+        pressed: false,
+        focused: false,
+        focusVisible: false,
+        disabled: props.disabled === true,
+        popoverOpen: false,
+      },
+      parent: null,
+      container: null,
+    },
+    props,
+    overrides: cached?.record.overrides ?? new Map(),
+    popoverOpen: false,
+    setPopoverOpen: () => {},
+    dialogMode: null,
+    setDialogMode: () => {},
+    returnValue: '',
+    engine: true,
+  };
+  Object.defineProperty(record, 'style', {
+    get: () => computedStyleForInstance(instance),
+    enumerable: true,
+  });
+  hostRecords.set(instance, {props, record});
+  return record;
+});
+
+type Props = {
+  __astryxTag: string,
+  // The host to render, where it is not the tag: `<svg>` is drawn by a box
+  // whose children are its shapes
+  __hostTag?: string,
+  [string]: unknown,
+};
+
+export default function EngineElement({
+  __astryxTag: tag,
+  __hostTag: hostTag = tag,
+  ...props
+}: Props): React.Node {
+  const start = instrumenting() ? performance.now() : 0;
+  const {
+    style,
+    __cssStyle,
+    __cssBackdrop,
+    __cssMarker,
+    __stylexStyle: _stylexStyle,
+    __stylexVars: _stylexVars,
+    __stylexContainer: _stylexContainer,
+    __startingStyle: _startingStyle,
+    __stylexMarker: _stylexMarker,
+    __stylexWhen: _stylexWhen,
+    __stylexAnswersPress: _stylexAnswersPress,
+    __stylexBackdrop: _stylexBackdrop,
+    __astryxIndex: _astryxIndex,
+    __astryxCount: _astryxCount,
+    className,
+    children,
+    ...rest
+  } = props;
+
+  const {styleId, inline} = styleInputsOf(__cssStyle, style);
+  const {attributes, key: attributesKey} = buildAttributes(rest);
+  // A StyleX marker is a class, which `when.*` conditions name
+  const authoredClasses = typeof className === 'string' ? className : '';
+  const classes =
+    typeof __cssMarker === 'string'
+      ? `${authoredClasses} __stylex-marker-${__cssMarker}`
+      : authoredClasses;
+  const hints =
+    hintsFor(tag, classes, attributes, attributesKey, styleId) |
+    inlineHints(inline);
+
+  const inTopLayerAbove = React.useContext(InTopLayerContext);
+
+  // Interaction tracking, for the rules and StyleX conditions that read it.
+  // The hook always runs (hook order); its handlers attach only when needed
+  // A marked element reports its states for the `when.*` conditions below it
+  const tracksStates =
+    (hints & HINT_STATES) !== 0 || typeof __cssMarker === 'string';
+  const {state: interaction, handlers: interactionHandlers} =
+    useInteractionState({disabled: rest.disabled === true});
+
+  // Whether a popover is shown (HTML §6.12), and how a dialog is shown (HTML
+  // §4.11.4); the DOM methods set them through the element's record
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const isPopover = rest.popover != null && rest.popover !== false;
+  const isDialog = tag === 'dialog';
+  const [dialogMode, setDialogMode] =
+    React.useState<?('modal' | 'non-modal')>(null);
+  React.useLayoutEffect(() => {
+    if (!isPopover && popoverOpen) {
+      setPopoverOpen(false);
+    }
+  }, [isPopover, popoverOpen]);
+
+  const recordHolder = React.useRef<?ElementRecord>(null);
+  const instanceRef = React.useRef<$FlowFixMe>(null);
+  const authorRef = rest.ref;
+  const authorRefRef = React.useRef<$FlowFixMe>(authorRef);
+  authorRefRef.current = authorRef;
+  const registeringRef = React.useCallback((instance: $FlowFixMe) => {
+    instanceRef.current = instance;
+    if (instance != null && typeof instance === 'object') {
+      registerElement(instance, recordHolder as $FlowFixMe);
+    }
+    const author = authorRefRef.current;
+    if (typeof author === 'function') {
+      author(instance);
+    } else if (author != null && typeof author === 'object') {
+      author.current = instance;
+    }
+  }, []);
+
+  let states = 0;
+  if (tracksStates) {
+    if (interaction.hovered === true) {
+      states |= STATE_HOVER;
+    }
+    if (interaction.pressed === true) {
+      states |= STATE_ACTIVE;
+    }
+    if (interaction.focused === true) {
+      states |= STATE_FOCUS | STATE_FOCUS_VISIBLE;
+    }
+  }
+  if (popoverOpen) {
+    states |= STATE_POPOVER_OPEN;
+  }
+
+  // A shown dialog has its `open` attribute, which the user agent's
+  // `dialog:not([open])` reads
+  const matchedAttributes =
+    isDialog && dialogMode != null && attributes.open == null
+      ? {...attributes, open: true}
+      : attributes;
+
+  const opensTopLayer = (isPopover || isDialog) && TOP_LAYER_IS_NATIVE;
+  let inlineEntries = inline != null ? encodeInline(inline) : null;
+  if (opensTopLayer) {
+    inlineEntries =
+      inlineEntries != null
+        ? [...inlineEntries, IN_TOP_LAYER_ENTRY]
+        : [IN_TOP_LAYER_ENTRY];
+  }
+
+  const {ref: _ref, ...withoutRef} = rest;
+  const hostProps: {[string]: unknown} = {
+    ...withoutRef,
+    ref: registeringRef,
+    cssEngine: true,
+    cssClass: classes,
+    cssAttributes: matchedAttributes,
+    cssStyle: styleId,
+    cssInline: inlineEntries,
+    cssStates: states,
+    cssBox: (hints & HINT_BOX) !== 0,
+  };
+  if (tracksStates) {
+    for (const name of Object.keys(interactionHandlers)) {
+      const own = interactionHandlers[name];
+      const authored = rest[name];
+      hostProps[name] =
+        typeof authored === 'function'
+          ? (event: $FlowFixMe) => {
+              (authored as $FlowFixMe)(event);
+              own();
+            }
+          : own;
+    }
+    if (tag === 'button') {
+      // A button whose own styles answer a press keeps the platform's
+      // feedback out of it
+      hostProps.authorStatesPressFeedback = true;
+    }
+  }
+
+  // What dom-compat.js answers the DOM methods from
+  const descriptor = {
+    tag,
+    classes: classListOf(className),
+    attributes: matchedAttributes,
+    states: {
+      hovered: interaction.hovered === true,
+      pressed: interaction.pressed === true,
+      focused: interaction.focused === true,
+      focusVisible: interaction.focused === true,
+      disabled: rest.disabled === true,
+      popoverOpen,
+    },
+    parent: null,
+    container: null,
+  };
+  const record: $FlowFixMe = {
+    descriptor,
+    props: rest,
+    overrides: recordHolder.current?.overrides ?? new Map(),
+    popoverOpen,
+    setPopoverOpen,
+    dialogMode,
+    setDialogMode,
+    returnValue: recordHolder.current?.returnValue ?? '',
+    engine: true,
+  };
+  // The style the engine resolved, read when asked
+  Object.defineProperty(record, 'style', {
+    get: () => computedStyleForInstance(instanceRef.current),
+    enumerable: true,
+  });
+  recordHolder.current = record;
+
+  const inTopLayer = inTopLayerAbove || opensTopLayer;
+  // The scroll view an element needs, kept once it has needed one: a scroll
+  // area that sets its own `overflow` as it measures (Astryx's does) would
+  // otherwise move its children in and out of the scroll view, remounting
+  // them, and their refs would measure again
+  const scrollRef = React.useRef<0 | 1 | 2>(0);
+  if (scrollRef.current === 0 && SCROLL_CONTAINER_TAGS.has(tag)) {
+    if ((hints & HINT_SCROLL) !== 0) {
+      scrollRef.current = 1;
+    } else if (inTopLayer && (hints & HINT_SCROLL_BLOCK) !== 0) {
+      scrollRef.current = 2;
+    }
+  }
+  const scrollsSideways = scrollRef.current === 1;
+  const scrollsInBlockAxis = scrollRef.current === 2;
+
+  if (hostTag !== tag) {
+    hostProps.cssTag = tag;
+  }
+
+  let element: React.Node;
+  const Mapped = MAPPED_COMPONENTS[tag];
+  if (Mapped != null) {
+    // A field has no children of its own; a textarea's are its initial value
+    hostProps.cssTag = tag;
+    delete hostProps.cssBox;
+    element = reactJsx(
+      Mapped,
+      tag === 'textarea' ? {...hostProps, children} : hostProps,
+    );
+  } else if (scrollsSideways || scrollsInBlockAxis) {
+    // A scroll container: the element's box holds the platform's scroll view,
+    // and the element just inside it lays out the children; the engine splits
+    // the element's styles between the two.
+    // DOM-CSS-LIMITATION(no-nested-vertical-scroll)
+    hostProps.cssScroll = scrollsSideways ? 1 : 2;
+    hostProps.children = reactJsx(ScrollView, {
+      horizontal: scrollsSideways,
+      style: SCROLL_VIEW_STYLE,
+      contentContainerStyle: scrollsSideways
+        ? HORIZONTAL_CONTENT_CONTAINER
+        : VERTICAL_CONTENT_CONTAINER,
+      showsHorizontalScrollIndicator: false,
+      alwaysBounceHorizontal: false,
+      alwaysBounceVertical: false,
+      children: reactJsx('div', {cssEngine: true, cssScroll: 3, children}),
+    });
+    element = reactJsx(hostTag, hostProps);
+  } else {
+    hostProps.children = children;
+    element = reactJsx(hostTag, hostProps);
+  }
+
+  if (opensTopLayer) {
+    // A shown popover and a modal dialog are drawn in the top layer, from a
+    // handle that stays here whether or not they are shown
+    const authoredClick = rest.onClick;
+    element = (
+      <TopLayerElement
+        open={isDialog ? dialogMode === 'modal' : popoverOpen}
+        lightDismiss={!isDialog && rest.popover !== 'manual'}
+        backdrop={isDialog ? DEFAULT_BACKDROP : null}
+        backdropStyleId={
+          isDialog && typeof __cssBackdrop === 'number' ? __cssBackdrop : null
+        }
+        onBackdropPress={
+          isDialog
+            ? () => clickOnTheElementItself(authoredClick, instanceRef.current)
+            : null
+        }
+        centered={isDialog}
+        viewport={null}
+        instanceRef={instanceRef}>
+        {element}
+      </TopLayerElement>
+    );
+    if (!inTopLayerAbove) {
+      element = (
+        <InTopLayerContext.Provider value={true}>
+          {element}
+        </InTopLayerContext.Provider>
+      );
+    }
+  }
+  if (start !== 0) {
+    counters.elements++;
+    counters.elementMs += performance.now() - start;
+  }
+  return element;
+}
+
+// A press on a dialog's backdrop is a click on the dialog itself, as on the
+// web, which is how a dialog tells it from a click on its content
+export function clickOnTheElementItself(
+  handler: unknown,
+  instance: unknown,
+): void {
+  if (typeof handler !== 'function' || instance == null) {
+    return;
+  }
+  const click: (event: {...}) => unknown = handler as $FlowFixMe;
+  let defaultPrevented = false;
+  let propagationStopped = false;
+  click({
+    type: 'click',
+    target: instance,
+    currentTarget: instance,
+    nativeEvent: {},
+    get defaultPrevented(): boolean {
+      return defaultPrevented;
+    },
+    preventDefault(): void {
+      defaultPrevented = true;
+    },
+    stopPropagation(): void {
+      propagationStopped = true;
+    },
+    isDefaultPrevented: (): boolean => defaultPrevented,
+    isPropagationStopped: (): boolean => propagationStopped,
+    persist(): void {},
+  });
+}

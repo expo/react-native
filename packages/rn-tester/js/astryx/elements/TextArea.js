@@ -25,6 +25,7 @@
 
 import type {InteractionState} from '../stylex-rn';
 
+import {engineInputProps} from '../native-css/engine';
 import useFieldInstance from './fieldInstance';
 import * as React from 'react';
 import {useCallback} from 'react';
@@ -49,6 +50,9 @@ type Props = {
   state?: ?InteractionState,
   children?: React.Node,
   ref?: React.RefSetter<React.ElementRef<typeof TextInput>>,
+  // The other web attributes the sources pass; only the style engine's
+  // inputs among them reach the field
+  [string]: unknown,
 };
 
 // A line of text at the default font size, for turning `rows` into a height.
@@ -74,6 +78,7 @@ export default function TextArea({
   // second, overlapping line of text.
   children,
   ref,
+  ...rest
 }: Props): React.Node {
   // The web fires `change`/`input` with the new value on `event.target`; RN
   // hands the string straight to `onChangeText`. Synthesized to the shape the
@@ -122,6 +127,8 @@ export default function TextArea({
           ? [textInputStyle, {height: rowsHeight}]
           : textInputStyle
       }
+      // What the renderer's style engine reads, which the field's host carries
+      {...(engineInputProps(rest) as $FlowFixMe)}
     />
   );
 }

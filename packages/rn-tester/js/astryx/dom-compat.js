@@ -18,6 +18,11 @@ import {selectorMatches} from './css/match';
 import {compileSelector} from './css/parse';
 import {forwardShimEventsTo} from './document-shim';
 import {observeRegistrations, recordOf} from './elementRegistry';
+import {
+  customProperty as engineCustomProperty,
+  matches as engineMatches,
+  nodeOf,
+} from './native-css/engine';
 import {setAnchorNames} from './overlay/anchorNames';
 import {isTopLayerHandle} from './overlay/topLayerHandles';
 import {StyleSheet} from 'react-native';
@@ -274,6 +279,12 @@ function selectorsOf(selectors: string): Array<$FlowFixMe> {
 }
 
 function nodeMatches(node: Object, selectors: string): boolean {
+  // An element the renderer's style engine styles is matched there, against
+  // the tree it last committed
+  const record = recordOf(node);
+  if (record != null && record.engine === true && record.overrides.size === 0) {
+    return engineMatches(nodeOf(node), selectors);
+  }
   const descriptor = descriptorOf(node);
   if (descriptor == null) {
     return false;
@@ -1107,6 +1118,9 @@ function computedStyleOf(instance: unknown): {[string]: unknown} {
   }
   Object.defineProperty(style, 'getPropertyValue', {
     value: (name: string): string => {
+      if (name.startsWith('--') && record?.engine === true) {
+        return engineCustomProperty(nodeOf(instance), name) ?? '';
+      }
       const v = style[name.startsWith('--') ? name : camel(name)];
       return v == null ? '' : String(v);
     },

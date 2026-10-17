@@ -38,6 +38,16 @@ import {
   containerFromDeclarations,
   scopeSize,
 } from './css/match';
+import {
+  counters,
+  engineEnabled,
+  instrumenting,
+  registerKeyframes as registerEngineKeyframes,
+  registerStyle as registerEngineStyle,
+  registerTokens as registerEngineTokens,
+  setEnvironmentResolver as setEngineEnvironmentResolver,
+  standInFor,
+} from './native-css/engine';
 import {Appearance, Dimensions, processColor} from 'react-native';
 import {windowMediaEnvironment} from 'react-native/Libraries/Utilities/matchMedia';
 import {mediaQueryListMatches} from 'react-native/Libraries/Utilities/MediaQueries';
@@ -58,6 +68,9 @@ export function defineVars<T extends {readonly [string]: unknown}>(
   for (const name of Object.keys(defaults)) {
     tokenTable.set(name, defaults[name]);
     refs[name] = `var(${name})`;
+  }
+  if (engineEnabled()) {
+    registerEngineTokens(defaults);
   }
   // $FlowFixMe[incompatible-type] same keys, var-reference values
   return refs;
@@ -92,6 +105,9 @@ export function registerNamedKeyframes(name: string, frames: RawStyle): void {
 export function keyframes(frames: RawStyle): string {
   const name = `__rn_keyframes_${keyframesCounter++}`;
   keyframesRegistry.set(name, frames);
+  if (engineEnabled()) {
+    registerEngineKeyframes(name, frames);
+  }
   return name;
 }
 
@@ -509,6 +525,7 @@ export function setEnvironmentResolver(
 ): void {
   environmentResolver = resolve;
   environmentGeneration++;
+  setEngineEnvironmentResolver(resolve);
 }
 
 function calcParseProduct(p: CalcParser): ?number {
@@ -1369,6 +1386,11 @@ export type StyleXProps = {
   // The element is a query container (`containerType`), with the names
   // `containerName` gives it, for the container queries of its descendants
   __stylexContainer?: {names: Array<string>},
+  // Where the renderer's style engine styles elements: the id the merged
+  // styles are registered under, and the `::backdrop` block's
+  __cssStyle?: number,
+  __cssBackdrop?: number,
+  __cssMarker?: string,
 };
 
 export type InteractionState = {
@@ -1851,7 +1873,96 @@ function flattenInto(target: {[string]: unknown}, item: unknown) {
  * land in `style` as a plain RN style object.
  */
 export function props(...items: Array<unknown>): StyleXProps {
+  if (engineEnabled()) {
+    return memoizedEngineProps(items);
+  }
   return memoizedProps(items);
+}
+
+/*
+ * `props()` where the renderer's style engine styles elements: the merged
+ * styles are registered with the engine once, and the element is handed
+ * their id, under `style` (so a component that passes `style` on still
+ * passes it) and under a key a later `style` attribute cannot clobber.
+ */
+type EnginePropsTrieNode = {
+  objects: WeakMap<Object, EnginePropsTrieNode>,
+  primitives: Map<unknown, EnginePropsTrieNode>,
+  answer: ?StyleXProps,
+};
+
+const enginePropsTrie: EnginePropsTrieNode = newEnginePropsTrieNode();
+
+function newEnginePropsTrieNode(): EnginePropsTrieNode {
+  return {objects: new WeakMap(), primitives: new Map(), answer: null};
+}
+
+function memoizedEngineProps(items: Array<unknown>): StyleXProps {
+  let node = enginePropsTrie;
+  for (const item of items) {
+    const isObject =
+      item != null && (typeof item === 'object' || typeof item === 'function');
+    let next = isObject
+      ? node.objects.get(item as $FlowFixMe)
+      : node.primitives.get(item);
+    if (next == null) {
+      next = newEnginePropsTrieNode();
+      if (isObject) {
+        node.objects.set(item as $FlowFixMe, next);
+      } else {
+        node.primitives.set(item, next);
+      }
+    }
+    node = next;
+  }
+  let answer = node.answer;
+  if (answer == null) {
+    const start = instrumenting() ? performance.now() : 0;
+    answer = engineProps(items);
+    node.answer = answer;
+    if (start !== 0) {
+      counters.props++;
+      counters.propsMs += performance.now() - start;
+    }
+  }
+  return answer;
+}
+
+function engineProps(items: Array<unknown>): StyleXProps {
+  const merged: {[string]: unknown} = {};
+  for (const item of items) {
+    flattenInto(merged, item);
+  }
+  // A style handed back in (a component merging its caller's style into its
+  // own) brings its declarations, and the id it carried is not one
+  delete merged.__cssStyle;
+  // A dialog's `::backdrop` is a box of its own, styled under its own id
+  const backdrop = merged['::backdrop'];
+  delete merged['::backdrop'];
+  // A marker is a class the element carries, which a `when.*` condition's
+  // selector names
+  const marker = merged.marker;
+  delete merged.marker;
+  const id = registerEngineStyle(merged);
+  const result: StyleXProps = {};
+  if (typeof marker === 'symbol') {
+    const markerId = MARKER_ID_BY_SYMBOL.get(marker);
+    if (markerId != null) {
+      result.__cssMarker = markerId;
+    }
+  }
+  if (id !== 0) {
+    result.style = standInFor(id, merged) as $FlowFixMe;
+    result.__cssStyle = id;
+  }
+  if (backdrop != null && typeof backdrop === 'object') {
+    // $FlowFixMe[incompatible-call] the block's declarations
+    const backdropId = registerEngineStyle(backdrop);
+    if (backdropId !== 0) {
+      result.__cssBackdrop = backdropId;
+    }
+  }
+  return result;
 }
 
 /**

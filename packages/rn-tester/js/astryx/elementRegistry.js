@@ -31,6 +31,8 @@ export type ElementRecord = {
   dialogMode: ?('modal' | 'non-modal'),
   setDialogMode: (mode: ?('modal' | 'non-modal')) => void,
   returnValue: string,
+  // Styled by the renderer's style engine, which answers what it matches
+  engine?: boolean,
 };
 
 /** A holder the runtime updates every render, so readers see the latest. */
@@ -64,9 +66,19 @@ export function unregisterElement(instance: Object): void {
   records.delete(instance);
 }
 
+// The record of an element no component registered: one the renderer's
+// style engine styles as a bare host node, read from its props
+let recordFallback: ?(instance: Object) => ElementRecord | null = null;
+
+export function setRecordFallback(
+  fallback: (instance: Object) => ElementRecord | null,
+): void {
+  recordFallback = fallback;
+}
+
 export function recordOf(instance: unknown): ElementRecord | null {
   if (instance == null || typeof instance !== 'object') {
     return null;
   }
-  return records.get(instance)?.current ?? null;
+  return records.get(instance)?.current ?? recordFallback?.(instance) ?? null;
 }

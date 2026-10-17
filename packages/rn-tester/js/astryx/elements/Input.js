@@ -26,6 +26,7 @@
 import type {InteractionState} from '../stylex-rn';
 import type {KeyboardTypeOptions} from 'react-native';
 
+import {engineInputProps} from '../native-css/engine';
 import useFieldInstance from './fieldInstance';
 import * as React from 'react';
 import {TextInput} from 'react-native';
@@ -89,8 +90,9 @@ function Input({
   // The web fires `change`/`input` with the new value on `event.target`;
   // RN hands the string straight to `onChangeText`. Synthesize the shape the
   // Astryx handlers expect rather than making them RN-aware.
-  // `rest` is intentionally unused — see the InputProps note above.
-  void rest;
+  // `rest` is dropped (see the InputProps note above) but for what the
+  // renderer's style engine reads, which the field's host carries
+  const engineInputs = engineInputProps(rest);
 
   const field = useFieldInstance(ref, value, defaultValue);
   const onText = field.onText;
@@ -136,6 +138,7 @@ function Input({
       onBlur={onBlur}
       style={textInputStyle}
       testID={typeof testID === 'string' ? testID : undefined}
+      {...(engineInputs as $FlowFixMe)}
     />
   );
 }

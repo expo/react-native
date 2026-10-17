@@ -28,6 +28,8 @@
 
 import type {PathCommands} from './pathData';
 
+import {computedStyleForInstance} from '../native-css/engine';
+import EngineElement from '../native-css/EngineElement';
 import AstryxVectorShape from './AstryxVectorShapeNativeComponent';
 import {CurrentColorContext} from './CurrentColor';
 import {
@@ -319,6 +321,142 @@ export function Svg(props: {
       <div style={[{width, height}, props.style]}>
         {childrenWithInheritedPaint}
       </div>
+    </SvgContext.Provider>
+  );
+}
+
+/**
+ * `<svg>` where the renderer's style engine styles the page: the box is an
+ * element like any other, sized by its styles over its `width` and `height`
+ * presentation attributes, and its shapes are drawn at the scale and in the
+ * `currentColor` the box resolved to, read once it is laid out.
+ *
+ * The first frame draws them at the attributes' size in black; the layout
+ * effect's update is committed before that frame is shown.
+ * DOM-CSS-LIMITATION(svg-paint-read-after-layout): a colour that changes
+ * without the `<svg>` rendering again (an ancestor's theme) is not followed.
+ */
+export function EngineSvg(props: {
+  viewBox?: ?string,
+  width?: ?(number | string),
+  height?: ?(number | string),
+  color?: ?string,
+  children?: React.Node,
+  ref?: unknown,
+  [string]: unknown,
+}): React.Node {
+  const {
+    __astryxTag: _tag,
+    viewBox,
+    width,
+    height,
+    color,
+    children,
+    ref: authorRef,
+    fill,
+    stroke,
+    strokeWidth,
+    strokeLinecap,
+    strokeLinejoin,
+    ...rest
+  } = props;
+  const inherited = useContext(SvgContext);
+  const hostRef = React.useRef<$FlowFixMe>(null);
+  const setRef = React.useCallback(
+    (instance: $FlowFixMe) => {
+      hostRef.current = instance;
+      const author: $FlowFixMe = authorRef;
+      if (typeof author === 'function') {
+        author(instance);
+      } else if (author != null && typeof author === 'object') {
+        author.current = instance;
+      }
+    },
+    [authorRef],
+  );
+  const [resolved, setResolved] = React.useState<?{
+    width: number,
+    height: number,
+    color: ?string,
+  }>(null);
+  // Read after every render, once laid out: the engine styles the `<svg>` in
+  // the commit that follows its render. The previous answer is kept when
+  // nothing changed, which ends the chain of updates.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useLayoutEffect(() => {
+    const host = hostRef.current;
+    const rect = host?.getBoundingClientRect?.();
+    if (rect == null) {
+      return;
+    }
+    const computed = computedStyleForInstance(host);
+    const resolvedColor =
+      typeof computed?.color === 'string' ? computed.color : null;
+    setResolved(previous =>
+      previous != null &&
+      previous.width === rect.width &&
+      previous.height === rect.height &&
+      previous.color === resolvedColor
+        ? previous
+        : {width: rect.width, height: rect.height, color: resolvedColor},
+    );
+  });
+
+  const box = parseViewBox(viewBox);
+  const drawnWidth = resolved?.width ?? resolveLength(width, 16, 16);
+  const drawnHeight = resolved?.height ?? resolveLength(height, 16, 16);
+  const scale =
+    box == null
+      ? 1
+      : Math.min(drawnWidth / box.width, drawnHeight / box.height);
+  const currentColor = color ?? resolved?.color ?? inherited.currentColor;
+  const context = useMemo(() => ({scale, currentColor}), [scale, currentColor]);
+
+  const paint: {[string]: unknown} = {
+    fill,
+    stroke,
+    strokeWidth,
+    strokeLinecap,
+    strokeLinejoin,
+  };
+  const childrenWithInheritedPaint = React.Children.map(
+    children,
+    // $FlowFixMe[incompatible-call] reading and cloning arbitrary elements
+    (child: $FlowFixMe) => {
+      if (!React.isValidElement(child)) {
+        return child;
+      }
+      const inheritedPaint: {[string]: unknown} = {};
+      for (const key of Object.keys(paint)) {
+        if (child.props[key] == null && paint[key] != null) {
+          inheritedPaint[key] = paint[key];
+        }
+      }
+      return Object.keys(inheritedPaint).length === 0
+        ? child
+        : React.cloneElement(child, inheritedPaint);
+    },
+  );
+
+  // `width` and `height` are presentation attributes, under every rule
+  const presentational: Array<[string, unknown]> = [];
+  if (width != null) {
+    presentational.push(['width', width]);
+  }
+  if (height != null) {
+    presentational.push(['height', height]);
+  }
+
+  return (
+    <SvgContext.Provider value={context}>
+      <EngineElement
+        {...(rest as $FlowFixMe)}
+        __astryxTag="svg"
+        __hostTag="div"
+        cssPresentational={presentational.length > 0 ? presentational : null}
+        ref={setRef}>
+        {childrenWithInheritedPaint}
+      </EngineElement>
     </SvgContext.Provider>
   );
 }

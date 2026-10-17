@@ -10,6 +10,7 @@
 
 'use strict';
 
+import {computedStyleForInstance} from '../native-css/engine';
 import {anchorElement} from './anchorNames';
 import {registerTopLayerHandle} from './topLayerHandles';
 import {MARGIN_KEYS, placeInTopLayer} from './topLayerPlacement';
@@ -34,6 +35,7 @@ export default function TopLayerElement({
   open,
   lightDismiss,
   backdrop = null,
+  backdropStyleId = null,
   onBackdropPress = null,
   centered = false,
   viewport = null,
@@ -45,6 +47,9 @@ export default function TopLayerElement({
   // A modal dialog's `::backdrop`: the style of a box under it that covers the
   // window and takes every press outside it
   backdrop?: ?{readonly [string]: unknown},
+  // The `::backdrop` as a style the renderer's style engine resolves, where
+  // it styles the page; drawn over `backdrop`
+  backdropStyleId?: ?number,
   onBackdropPress?: ?() => void,
   // Whether the element is placed as a modal dialog is, by the user agent's
   // `inset: 0` and its `margin: auto`: centred in the viewport
@@ -76,6 +81,13 @@ export default function TopLayerElement({
     ? (element as $FlowFixMe).props
     : null;
   const style = authored?.style;
+  // An element the renderer's style engine styles has its resolved style
+  // there, read once it is laid out, and is placed through its inline style
+  const engineStyled = authored?.cssEngine === true;
+  const resolvedStyle = (): {[string]: unknown} =>
+    engineStyled
+      ? (computedStyleForInstance(instanceRef.current) ?? {})
+      : flatStyle(style);
 
   React.useLayoutEffect(() => {
     if (!open) {
@@ -93,7 +105,7 @@ export default function TopLayerElement({
     }
     const own = host.getBoundingClientRect();
     const origin = handle.getBoundingClientRect();
-    const flat = flatStyle(style);
+    const flat = resolvedStyle();
     const anchorRect = anchorRectOf(flat);
     // An element placed by its anchor is placed in the window, which the
     // anchor's rect is in; one placed by its insets, as a fixed element is, in
@@ -133,8 +145,16 @@ export default function TopLayerElement({
     typeof (element as $FlowFixMe).type === 'string'
   ) {
     const authoredLayout = authored.onLayout;
+    const placedProps: {[string]: unknown} = engineStyled
+      ? {
+          cssInline: [
+            ...(authored.cssInline ?? []),
+            ...placedEntries(placement),
+          ],
+        }
+      : {style: placedStyle(style, placement)};
     placed = React.cloneElement(element as $FlowFixMe, {
-      style: placedStyle(style, placement),
+      ...placedProps,
       // A modal dialog is the only content the accessibility tree offers
       ...(backdrop != null ? {'aria-modal': true} : null),
       onLayout: (event: $FlowFixMe) => {
@@ -150,13 +170,13 @@ export default function TopLayerElement({
   // slot is held while closed, so opening does not move the element in the
   // handle's children
   let backdropBox: React.Node = null;
-  if (open && backdrop != null) {
+  if (open && (backdrop != null || backdropStyleId != null)) {
     const window = Dimensions.get('window');
     backdropBox = reactJsx(Pressable, {
       accessible: false,
       onPress: () => onBackdropPress?.(),
       style: [
-        backdrop,
+        backdropStyleId == null ? backdrop : null,
         {
           position: 'absolute',
           left: -(placement?.originX ?? 0),
@@ -165,6 +185,14 @@ export default function TopLayerElement({
           height: window.height,
         },
       ],
+      children:
+        backdropStyleId != null
+          ? reactJsx('div', {
+              cssEngine: true,
+              cssStyle: backdropStyleId,
+              style: StyleSheet.absoluteFill,
+            })
+          : null,
     });
   }
 
@@ -180,7 +208,7 @@ export default function TopLayerElement({
         return;
       }
       const {x, y} = event.nativeEvent;
-      const rect = anchorRectOf(flatStyle(style));
+      const rect = anchorRectOf(resolvedStyle());
       if (
         rect != null &&
         x >= rect.x &&
@@ -269,6 +297,21 @@ function placedStyle(
   placed.left = placement?.left ?? 0;
   placed.top = placement?.top ?? 0;
   return placed;
+}
+
+// The same placement as inline declarations, which an element the
+// renderer's style engine styles takes over every rule
+function placedEntries(
+  placement: ?{readonly left: number, readonly top: number, ...},
+): Array<[string, unknown]> {
+  return [
+    ['position', 'absolute'],
+    ['margin', '0px'],
+    ['right', 'auto'],
+    ['bottom', 'auto'],
+    ['left', `${placement?.left ?? 0}px`],
+    ['top', `${placement?.top ?? 0}px`],
+  ];
 }
 
 const INSET_KEYS: ReadonlyArray<string> = [
