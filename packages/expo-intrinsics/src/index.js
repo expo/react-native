@@ -37,7 +37,7 @@
 import type {UAStyle} from './uaStyles';
 
 import Anchor from './Anchor';
-import {withoutOutrankedBoxEdges} from './boxEdges';
+import {withEngineSpelledBoxEdges, withoutOutrankedBoxEdges} from './boxEdges';
 import Button from './Button';
 import {
   defineReactComponent,
@@ -111,6 +111,26 @@ const inlineTagViewConfig = {
   },
 } as const;
 
+// Counts `overrideUAStyle` calls, so a style derived from the sheet is
+// derived again after one
+let uaSheetVersion = 0;
+
+const engineUAStyles: WeakMap<UAStyle, {version: number, style: UAStyle}> =
+  new WeakMap();
+
+// The user-agent style of an element the style engine styles: the engine
+// writes the author's edges in its own spellings over it (see
+// `withEngineSpelledBoxEdges`)
+function engineUAStyle(uaStyle: UAStyle): UAStyle {
+  const cached = engineUAStyles.get(uaStyle);
+  if (cached != null && cached.version === uaSheetVersion) {
+    return cached.style;
+  }
+  const style: UAStyle = withEngineSpelledBoxEdges(uaStyle);
+  engineUAStyles.set(uaStyle, {version: uaSheetVersion, style});
+  return style;
+}
+
 /**
  * The user-agent style for a tag, as a function of the element's props.
  *
@@ -125,7 +145,27 @@ function uaStyleForProps(tag: string): (props: {[string]: unknown}) => UAStyle {
   // creation and on both sides of every update, and the styles the CSS
   // runtime resolves are shared between elements
   const byStyle: WeakMap<interface {}, UAStyle> = new WeakMap();
+  let engineBoxStyle: ?UAStyle = null;
+  let engineBoxVersion = -1;
   return (props: {[string]: unknown}) => {
+    // An element the style engine styles is box-backed when its styles may
+    // give it a box (`cssBox`), and the engine writes `display` only where a
+    // rule declares one: the element is inline otherwise, as its tag is, not
+    // the block a box is by default
+    if (props?.cssBox === true) {
+      if (engineBoxStyle == null || engineBoxVersion !== uaSheetVersion) {
+        const tagStyle = engineUAStyle(uaStyleFor(tag));
+        engineBoxStyle =
+          tagStyle.display == null
+            ? {...tagStyle, display: 'inline'}
+            : tagStyle;
+        engineBoxVersion = uaSheetVersion;
+      }
+      return engineBoxStyle;
+    }
+    if (props?.cssEngine === true) {
+      return engineUAStyle(uaStyleFor(tag));
+    }
     const style = props?.style;
     if (style == null || typeof style !== 'object') {
       return withoutOutrankedBoxEdges(uaStyleFor(tag), style);
@@ -1456,7 +1496,9 @@ function registerBlockElementUnderName(hostName: string, domName: string) {
       },
       uiViewClassName: 'element-box',
       uaStyle: (props: {[string]: unknown}) =>
-        withoutOutrankedBoxEdges(uaStyle, props?.style),
+        props?.cssEngine === true
+          ? engineUAStyle(uaStyle)
+          : withoutOutrankedBoxEdges(uaStyle, props?.style),
     }),
   );
 }
@@ -1533,7 +1575,9 @@ function registerBlockElement(name: string) {
       },
       uiViewClassName: 'element-box',
       uaStyle: (props: {[string]: unknown}) =>
-        withoutOutrankedBoxEdges(uaStyle, props?.style),
+        props?.cssEngine === true
+          ? engineUAStyle(uaStyle)
+          : withoutOutrankedBoxEdges(uaStyle, props?.style),
     }),
   );
 }
@@ -1676,6 +1720,13 @@ function resolveInlineElementComponent(
   boxComponentName: string = 'element-box',
 ): (props: {[string]: unknown}) => string {
   return (props: {[string]: unknown}): string => {
+    // An element the renderer's style engine styles has no style here to
+    // read; the runtime that renders it says whether its styles can give it a
+    // box (see the style engine's `hints`)
+    const engineBox = props?.cssBox;
+    if (typeof engineBox === 'boolean') {
+      return engineBox ? boxComponentName : uiViewClassName;
+    }
     // The UA display counts too: `<button>`'s inline-block comes from the
     // stylesheet, and box selection has to see it or the element would resolve
     // as text-backed and its padding would have nowhere to apply.
@@ -1779,6 +1830,7 @@ function resolveInlineElementComponent(
  * it stays for the genuine design-system case its first paragraph describes.
  */
 export function overrideUAStyle(tag: string, style: UAStyle) {
+  uaSheetVersion++;
   const existing = uaStyles[tag];
   if (existing != null) {
     // Mutated in place, not replaced: view configs captured this object by
