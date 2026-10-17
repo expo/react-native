@@ -141,9 +141,14 @@ Safari's answers. `StyleEngine-itest.js` covers the pass itself.
    interleaved.
 2. **Interaction and structure.** Done: `:hover`, `:active` and `:focus`
    kept by the engine from the element's events, so an element that styles
-   them needs no component. Next: `@starting-style`; container queries and
-   container units from the last layout; `when.descendant` and the other
+   them needs no component; `@starting-style`, each element's starting style
+   carried on its props for the transitions engine; script's `element.style`
+   writes, restyled without React; `env()` from the surface's own values;
+   `background-image: url()`, a layer the view loads through its image
+   provider, with the background longhands and the `background` shorthand.
+   Next: container queries and container units from the last layout; `when.descendant` and the other
    `:has()`-shaped conditions; `:nth-last-child(… of S)` in a sheet.
-3. **One engine.** The user-agent sheet and the layout-time text cascade move
-   into the engine; the JavaScript engine is removed; Android is verified on
-   the emulator.
+3. **One engine.** Done: the JavaScript engine is removed, so this engine
+   styles every element, and its binding is installed before the bundle runs.
+   Next: the user-agent sheet and the layout-time text cascade move into the
+   engine; Android is verified on the emulator.

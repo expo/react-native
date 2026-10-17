@@ -17,6 +17,7 @@ import type {RNTesterModule} from '../../types/RNTesterTypes';
 // $FlowFixMe[cannot-resolve-module] vendored TypeScript (Metro transforms it)
 import {defaultIcons} from '../../astryx/vendor/Icon/defaultIcons';
 import {DemoContent} from '../TextChildren/TextChildrenShared';
+import {inAstryxSurface} from './AstryxSurface';
 import * as React from 'react';
 import {View} from 'react-native';
 
@@ -57,7 +58,7 @@ export default {
   description:
     "Astryx's own icon set rendering through the <svg>/<path>/<circle>/" +
     '<rect> intrinsics — the vendored source, unmodified.',
-  examples: [
+  examples: inAstryxSurface([
     {
       name: 'icons',
       title: 'The real Astryx icon set',
@@ -168,5 +169,5 @@ export default {
         </DemoContent>
       ),
     },
-  ],
+  ]),
 } as RNTesterModule;

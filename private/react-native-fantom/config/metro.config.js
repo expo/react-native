@@ -14,6 +14,11 @@
 import type {ConfigT, InputConfigT} from 'metro-config';
 */
 
+// RNTester's own config, whose resolution Fantom takes for the RNTester code
+// its tests render: the Astryx layer's module ids ('astryx-jsx',
+// '@stylexjs/stylex', the Radix shims) and its `.css` imports
+// $FlowExpectedError[untyped-import]
+const rnTesterMetroConfig = require('../../../packages/rn-tester/metro.config.js');
 const {getDefaultConfig} = require('@react-native/metro-config');
 const {mergeConfig} = require('metro-config');
 const path = require('node:path');
@@ -37,7 +42,7 @@ const config /*: InputConfigT */ = {
     sourceExts:
       JS_DIR != null
         ? ['fb.js', ...rnTesterConfig.resolver.sourceExts]
-        : rnTesterConfig.resolver.sourceExts,
+        : rnTesterMetroConfig.resolver.sourceExts,
     nodeModulesPaths:
       JS_DIR != null ? [path.join(JS_DIR, 'public', 'node_modules')] : [],
     hasteImplModulePath: path.resolve(__dirname, 'hasteImpl.js'),
@@ -52,7 +57,7 @@ const config /*: InputConfigT */ = {
                   dep,
                   platform,
                 )
-        : null,
+        : rnTesterMetroConfig.resolver.resolveRequest,
   },
   transformer: {
     // We need to wrap the default transformer so we can run it from source

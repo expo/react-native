@@ -17,7 +17,21 @@ import {currentContext} from './css';
 import {selectorMatches} from './css/match';
 import {compileSelector} from './css/parse';
 import {forwardShimEventsTo} from './document-shim';
-import {observeRegistrations, recordOf} from './elementRegistry';
+import {
+  isGeneratedContent,
+  observeRegistrations,
+  recordOf,
+} from './elementRegistry';
+import {checkednessOf} from './elements/checkedness';
+import {
+  customProperty as engineCustomProperty,
+  matches as engineMatches,
+  nodeOf,
+  resolveUrls,
+  scriptStyle as engineScriptStyle,
+  setScriptAttributes as setEngineScriptAttributes,
+  setScriptStyles as setEngineScriptStyles,
+} from './native-css/engine';
 import {setAnchorNames} from './overlay/anchorNames';
 import {isTopLayerHandle} from './overlay/topLayerHandles';
 import {Platform, StyleSheet} from 'react-native';
@@ -44,17 +58,21 @@ import './imperativeEvents';
  *
  * - attributes (`getAttribute`, `setAttribute`, `hasAttribute`,
  *   `removeAttribute`, `dataset`) from the authored props, with `setAttribute`
- *   writes kept over them until React writes the attribute anew;
+ *   writes kept over them until React writes the attribute anew, and sent to
+ *   the style engine, whose selectors match them;
  * - selectors (`matches`, `closest`, `querySelector`, `querySelectorAll`)
  *   through the stylesheet engine's own selector matcher, over the element's
  *   descriptor and the native node tree;
- * - `window.getComputedStyle` from the style the element resolved to.
+ * - `window.getComputedStyle` from the style the element resolved to;
+ * - `element.style` writes as the element's inline style, which the engine
+ *   styles over React's `style`.
  *
- * DOM-CSS-LIMITATION(dom-methods-are-a-subset): `scrollTo`, `scrollBy`,
- * `scrollIntoView` and `animate` do nothing here — the platform's scrolling
- * is driven through the elements' props —
- * and an attribute written with `setAttribute` is readable but reaches no
- * native prop.
+ * DOM-CSS-LIMITATION(dom-methods-are-a-subset): `scrollIntoView` and
+ * `animate` do nothing here, `scrollTo` and `scrollBy` move only a scroll
+ * container the runtime lays out in a platform scroll view, and an attribute
+ * written with `setAttribute` is read and matched but reaches no native prop
+ * (a script's `aria-label` is not what the accessibility tree reads), nor
+ * does a written `class` or `style` restyle the element.
  */
 
 // $FlowFixMe[unclear-type] prototypes are patched by name
@@ -121,7 +139,8 @@ function attributeFromProps(record: ElementRecord, name: string): ?string {
  * What script wrote to the attribute and still stands, or undefined: a write
  * stands over React's value until React writes the attribute anew (a value
  * other than the one it had when script wrote it), as React DOM sets an
- * attribute only when its prop changes.
+ * attribute only when its prop changes. The style engine keeps the same rule
+ * (`setScriptAttributes`), so `getAttribute` and selectors agree.
  */
 function scriptAttribute(record: ElementRecord, name: string): ?string | void {
   const written = record.overrides.get(name);
@@ -192,8 +211,10 @@ define(
 );
 
 /*
- * Writes an attribute over React's, where `getAttribute` and the element's
- * selector methods read it (DOM §4.9, an element's attribute list).
+ * Writes an attribute over React's, where `getAttribute` reads it and, by the
+ * end of the task, the style engine's selectors match it (DOM §4.9, an
+ * element's attribute list): Astryx's touch press controller paints a press
+ * by writing `data-astryx-press` onto the pressed control.
  */
 function writeAttribute(
   element: Object,
@@ -213,6 +234,7 @@ function writeAttribute(
   } else {
     record.overrides.set(lower, {value, reactValue});
   }
+  sendScriptAttributes(element);
 }
 define(
   elementPrototype,
@@ -317,6 +339,17 @@ function selectorsOf(selectors: string): Array<$FlowFixMe> {
 }
 
 function nodeMatches(node: Object, selectors: string): boolean {
+  // An element the renderer's style engine styles is matched there, against
+  // the tree it last committed, unless the DOM methods have changed it since
+  const record = recordOf(node);
+  if (
+    record != null &&
+    record.engine === true &&
+    record.overrides.size === 0 &&
+    record.uncommitted !== true
+  ) {
+    return engineMatches(nodeOf(node), selectors);
+  }
   const descriptor = descriptorOf(node);
   if (descriptor == null) {
     return false;
@@ -535,7 +568,8 @@ defineGetter(documentPrototype, 'head', function (this: Object): ?Object {
  * its listeners. A press reaches them from the first frame, whatever element
  * it lands on, in a browser's order: `window`, then `document`, in the
  * capture phase. Handing the listeners to each document as an element of it
- * first registered left out a page whose elements were all bare host views.
+ * first registered left out a page whose elements were all bare host views:
+ * Astryx's press controller never heard a press there.
  */
 const pageWindow: EventTarget = new EventTarget();
 const pageDocument: EventTarget = new EventTarget();
@@ -596,14 +630,22 @@ for (const name of ['parentNode', 'parentElement']) {
 for (const name of ['childNodes', 'children']) {
   replaceGetter(name, read => node => {
     const nodes = read(node) as $FlowFixMe;
-    if (nodes == null || !Array.from(nodes).some(isTopLayerHandle)) {
+    if (
+      nodes == null ||
+      !Array.from(nodes).some(
+        child => isTopLayerHandle(child) || isGeneratedContent(child),
+      )
+    ) {
       return nodes;
     }
     const flattened: Array<unknown> = [];
     const add = (child: $FlowFixMe) => {
       if (isTopLayerHandle(child)) {
         Array.from(read(child) as $FlowFixMe).forEach(add);
-      } else {
+      } else if (!isGeneratedContent(child)) {
+        // Skip a `::before` or `::after` box, which is drawn as a child but is
+        // not one. DOM-CSS-LIMITATION(generated-content-in-text-content):
+        // `textContent` still counts its text.
         flattened.push(child);
       }
     };
@@ -617,13 +659,14 @@ for (const name of ['childNodes', 'children']) {
 const inlineStyles: WeakMap<Object, Object> = new WeakMap();
 
 /**
- * `element.style`, a CSSStyleDeclaration of sorts: reads answer from the
- * style the element resolved to (so `el.style.anchorName` is `''` rather than
- * a property of `undefined`), and writes (`el.style.top = '4px'`,
- * `setProperty`, `cssText`) are kept on the element and read back. They reach
- * no native prop, as DOM-CSS-LIMITATION(dom-methods-are-a-subset) says:
- * the sources write inline style to position a floating layer or to lock a
- * scroll, which this platform's elements do through their own props.
+ * `element.style`, a CSSStyleDeclaration of sorts: reads answer from what
+ * script wrote, then from the style the element resolved to (so
+ * `el.style.anchorName` is `''` rather than a property of `undefined`), and
+ * writes (`el.style.top = '4px'`, `setProperty`, `removeProperty`,
+ * `cssText`) are the element's inline style as the engine styles it, over
+ * React's `style` until React writes the property anew. They reach the
+ * engine together at the end of the task, which restyles the elements without
+ * React rendering; a read of computed style first sends what is pending.
  */
 defineGetter(elementPrototype, 'style', function (this: Object): Object {
   let style = inlineStyles.get(this);
@@ -635,11 +678,29 @@ defineGetter(elementPrototype, 'style', function (this: Object): Object {
 });
 
 function inlineStyleFor(instance: Object): Object {
+  // What script wrote, by property; the engine's list, once sent, drops what
+  // React has written since
   const writes: Map<string, string> = new Map();
+  let written = false;
+  const standing = (): Map<string, string> => {
+    const node =
+      written && !pendingScriptStyles.has(instance) ? nodeOf(instance) : null;
+    if (node != null) {
+      const anchorName = writes.get('anchorName');
+      writes.clear();
+      for (const [key, value] of engineScriptStyle(node)) {
+        writes.set(key, String(value));
+      }
+      if (anchorName != null) {
+        writes.set('anchorName', anchorName);
+      }
+    }
+    return writes;
+  };
   const read = (name: string): string => {
-    const written = writes.get(name);
-    if (written != null) {
-      return written;
+    const scripted = standing().get(name);
+    if (scripted != null) {
+      return scripted;
     }
     const record = recordOf(instance);
     const flat =
@@ -657,24 +718,28 @@ function inlineStyleFor(instance: Object): Object {
     getPropertyValue: (name: string): string => read(camel(name)),
     setProperty: (name: string, value: ?string): void => {
       const key = camel(name);
+      standing();
+      written = true;
       if (value == null || value === '') {
         writes.delete(key);
       } else {
         writes.set(key, String(value));
       }
-      // An anchor name is the one inline write something else reads: the
-      // element a top-layer popover is placed against
+      // An anchor name is the one inline write the engine does not style:
+      // the element a top-layer popover is placed against
       if (key === 'anchorName') {
         setAnchorNames(instance, writes.get(key) ?? '');
+      } else {
+        sendScriptStyle(instance, writes);
       }
     },
     removeProperty: (name: string): string => {
       const key = camel(name);
-      const had = writes.get(key) ?? '';
+      const had = standing().get(key) ?? '';
       methods.setProperty(key, null);
       return had;
     },
-    item: (index: number): string => Array.from(writes.keys())[index] ?? '',
+    item: (index: number): string => Array.from(standing().keys())[index] ?? '',
   };
   return new Proxy(methods, {
     get(target, name) {
@@ -685,10 +750,10 @@ function inlineStyleFor(instance: Object): Object {
         return target[name];
       }
       if (name === 'length') {
-        return writes.size;
+        return standing().size;
       }
       if (name === 'cssText') {
-        return Array.from(writes)
+        return Array.from(standing())
           .map(([key, value]) => `${kebab(key)}: ${value};`)
           .join(' ');
       }
@@ -703,6 +768,7 @@ function inlineStyleFor(instance: Object): Object {
           setAnchorNames(instance, '');
         }
         writes.clear();
+        sendScriptStyle(instance, writes);
         for (const declaration of String(value ?? '').split(';')) {
           const colon = declaration.indexOf(':');
           if (colon > 0) {
@@ -718,9 +784,91 @@ function inlineStyleFor(instance: Object): Object {
       return true;
     },
     has(target, name) {
-      return typeof name === 'string' && (name in target || writes.has(name));
+      return (
+        typeof name === 'string' && (name in target || standing().has(name))
+      );
     },
   });
+}
+
+// The elements whose inline style script changed this task, and what it is
+const pendingScriptStyles: Map<Object, Map<string, string>> = new Map();
+
+function sendScriptStyle(instance: Object, writes: Map<string, string>): void {
+  if (pendingScriptStyles.size === 0) {
+    queueMicrotask(flushScriptStyles);
+  }
+  pendingScriptStyles.set(instance, writes);
+}
+
+/*
+ * Sends the engine what script wrote to inline styles since the last time, in
+ * one call, which restyles each surface once
+ */
+function flushScriptStyles(): void {
+  if (pendingScriptStyles.size === 0) {
+    return;
+  }
+  const sent: Array<[unknown, Array<[string, unknown]>]> = [];
+  for (const [instance, writes] of pendingScriptStyles) {
+    const node = nodeOf(instance);
+    if (node == null) {
+      continue;
+    }
+    const declarations: Array<[string, unknown]> = [];
+    for (const [key, value] of writes) {
+      if (key !== 'anchorName') {
+        declarations.push([key, resolveUrls(value)]);
+      }
+    }
+    sent.push([node, declarations]);
+  }
+  pendingScriptStyles.clear();
+  if (sent.length > 0) {
+    setEngineScriptStyles(sent);
+  }
+}
+
+// The elements whose attributes script changed this task
+const pendingScriptAttributes: Set<Object> = new Set();
+
+function sendScriptAttributes(instance: Object): void {
+  if (pendingScriptAttributes.size === 0) {
+    queueMicrotask(flushScriptAttributes);
+  }
+  pendingScriptAttributes.add(instance);
+}
+
+/*
+ * Sends the engine every attribute script wrote that stands on each element
+ * changed since the last time, in one call, which restyles each surface once.
+ * `class` and `style` are left out: an element's classes and its inline style
+ * reach the engine as their own inputs, not as attributes.
+ */
+function flushScriptAttributes(): void {
+  if (pendingScriptAttributes.size === 0) {
+    return;
+  }
+  const sent: Array<[unknown, Array<[string, string | null]>]> = [];
+  for (const instance of pendingScriptAttributes) {
+    const record = recordOf(instance);
+    const node = nodeOf(instance);
+    if (record == null || node == null) {
+      continue;
+    }
+    const attributes: Array<[string, string | null]> = [];
+    for (const name of Array.from(record.overrides.keys())) {
+      const value = scriptAttribute(record, name);
+      if (value !== undefined && name !== 'class' && name !== 'style') {
+        attributes.push([name, value]);
+      }
+    }
+    sent.push([node, attributes]);
+  }
+  pendingScriptAttributes.clear();
+  if (sent.length > 0) {
+    setEngineScriptAttributes(sent);
+  }
 }
 
 const CAMEL_UPPER = /[A-Z]/g;
@@ -731,16 +879,121 @@ function kebab(name: string): string {
 // ---- the rest ------------------------------------------------------------
 
 const noop = () => {};
-for (const method of ['scrollTo', 'scrollBy', 'scrollIntoView']) {
-  define(elementPrototype, method, noop);
+define(elementPrototype, 'scrollIntoView', noop);
+
+/*
+ * A scroll container the runtime lays out in a platform scroll view
+ * (`EngineElement`'s `cssScroll`) scrolls that view, not its own box, so its
+ * scroll offsets and its scrolling area's size are the view's (cssom-view-1
+ * §7), and `scrollTo`, `scrollBy` and a write to `scrollTop` or `scrollLeft`
+ * move it. A bottom sheet hands a pull to the sheet only when its body reads
+ * `scrollTop` 0; read off the box, which never scrolls, it always did, so a
+ * pull on scrolled content dragged the sheet as well as the content. Any other
+ * element answers as React Native's element does.
+ */
+function scrollViewOf(element: Object): ?Object {
+  return recordOf(element)?.scrollView ?? null;
 }
+
+const readOnlyElementPrototype = Object.getPrototypeOf(elementPrototype);
+for (const name of ['scrollTop', 'scrollLeft', 'scrollHeight', 'scrollWidth']) {
+  const own = Object.getOwnPropertyDescriptor(readOnlyElementPrototype, name);
+  const get = own?.get;
+  if (get == null) {
+    continue;
+  }
+  const axis = name === 'scrollTop' ? 'y' : name === 'scrollLeft' ? 'x' : null;
+  Object.defineProperty(elementPrototype, name, {
+    configurable: true,
+    get: function (this: Object): unknown {
+      return get.call(scrollViewOf(this) ?? this);
+    },
+    set: function (this: Object, value: unknown): void {
+      if (axis != null && typeof value === 'number') {
+        scrollViewTo(
+          this,
+          axis === 'x' ? value : null,
+          axis === 'y' ? value : null,
+          false,
+        );
+      }
+    },
+  });
+}
+
+// Moves the element's scroll view to `left` and `top`, keeping the offset
+// along an axis given as null
+function scrollViewTo(
+  element: Object,
+  left: ?number,
+  top: ?number,
+  animated: boolean,
+): void {
+  const view = scrollViewOf(element);
+  if (view == null) {
+    return;
+  }
+  view.scrollTo({
+    x: left ?? view.scrollLeft,
+    y: top ?? view.scrollTop,
+    animated,
+  });
+}
+
+// `scrollTo(x, y)` or `scrollTo({left, top, behavior})` (cssom-view-1 §7)
+function scrollOptions(args: ReadonlyArray<unknown>): {
+  left: ?number,
+  top: ?number,
+  animated: boolean,
+} {
+  const [first, second] = args;
+  if (typeof first === 'object' && first != null) {
+    const options: {left?: unknown, top?: unknown, behavior?: unknown} =
+      first as $FlowFixMe;
+    return {
+      left: typeof options.left === 'number' ? options.left : null,
+      top: typeof options.top === 'number' ? options.top : null,
+      animated: options.behavior === 'smooth',
+    };
+  }
+  return {
+    left: typeof first === 'number' ? first : null,
+    top: typeof second === 'number' ? second : null,
+    animated: false,
+  };
+}
+
+define(
+  elementPrototype,
+  'scrollTo',
+  function (this: Object, ...args: ReadonlyArray<unknown>): void {
+    const {left, top, animated} = scrollOptions(args);
+    scrollViewTo(this, left, top, animated);
+  },
+);
+define(
+  elementPrototype,
+  'scrollBy',
+  function (this: Object, ...args: ReadonlyArray<unknown>): void {
+    const view = scrollViewOf(this);
+    if (view == null) {
+      return;
+    }
+    const {left, top, animated} = scrollOptions(args);
+    scrollViewTo(
+      this,
+      left == null ? null : view.scrollLeft + left,
+      top == null ? null : view.scrollTop + top,
+      animated,
+    );
+  },
+);
 
 // The popover methods (HTML §6.12.2) show and hide the element: the runtime
 // renders a popover `display: none` until it is shown, and `:popover-open`
 // matches while it is. A change fires `toggle` after it, as a task, with the
 // old and new states. A shown popover is drawn in the top layer, placed by
-// anchor positioning (overlay/TopLayerElement.js), on the platforms that have
-// one. DOM-CSS-LIMITATION(popover-is-not-in-the-top-layer)
+// anchor positioning (overlay/TopLayerElement.js).
 // The dialog methods (HTML §4.11.4): `showModal()` shows the dialog in the top
 // layer over its backdrop, `show()` where it is; `close()` closes it, keeps
 // the return value it is given and fires `close` after it, as a task;
@@ -771,7 +1024,27 @@ function showDialog(element: Object, mode: 'modal' | 'non-modal'): void {
       }. Close it before opening it the other way.`,
     );
   }
+  setDialogMode(record, mode);
+}
+
+/*
+ * A dialog's state as `show()`, `showModal()` and `close()` change it, which
+ * matching reads from the record until the element renders it: a shown
+ * dialog has its `open` attribute (HTML §4.11.4).
+ */
+function setDialogMode(
+  record: ElementRecord,
+  mode: ?('modal' | 'non-modal'),
+): void {
   record.dialogMode = mode;
+  const authored = record.props.open != null && record.props.open !== false;
+  const {open, ...others} = record.descriptor.attributes;
+  record.descriptor = {
+    ...record.descriptor,
+    attributes:
+      mode != null || authored ? {...others, open: open ?? true} : others,
+  };
+  record.uncommitted = true;
   record.setDialogMode(mode);
 }
 
@@ -792,8 +1065,7 @@ define(
     if (returnValue !== undefined) {
       record.returnValue = String(returnValue);
     }
-    record.dialogMode = null;
-    record.setDialogMode(null);
+    setDialogMode(record, null);
     setTimeout(() => {
       (this as $FlowFixMe).dispatchEvent?.(new Event('close'));
     }, 0);
@@ -900,12 +1172,13 @@ function setPopoverOpen(element: Object, open: boolean): void {
     return;
   }
   record.popoverOpen = open;
-  // What `matches(':popover-open')` reads now, before React renders the
-  // element with its new state
+  // What `matches(':popover-open')` reads now, before the element renders
+  // its new state
   record.descriptor = {
     ...record.descriptor,
     states: {...record.descriptor.states, popoverOpen: open},
   };
+  record.uncommitted = true;
   record.setPopoverOpen(open);
   queueToggle(element, oldState, newState);
 }
@@ -964,11 +1237,31 @@ defineGetter(elementPrototype, 'type', function (this: Object): ?string {
   return record.descriptor.tag === 'input' ? 'text' : undefined;
 });
 
+// An `<input>`'s checkedness (HTML §4.10.5.4), which a checkbox or a radio
+// keeps (CheckableInput), false for any other input and undefined for any
+// other element
+defineGetter(elementPrototype, 'checked', function (this: Object): ?boolean {
+  const checked = checkednessOf(this);
+  if (checked != null) {
+    return checked;
+  }
+  return recordOf(this)?.descriptor.tag === 'input' ? false : undefined;
+});
+
 // `click()` from script runs the element's authored click handler, which is
 // what activating it means here; the platform's own controls are pressed by
 // their native views, which a script cannot reach. An element without a
-// handler does nothing, where an undefined method aborted the app.
+// handler does nothing, where an undefined method aborted the app. A checkbox
+// or a radio is clicked as on the web, by a click event that bubbles from it:
+// its activation behavior is the handler of the click it receives, which a
+// dispatched click reaches as a press does.
 define(elementPrototype, 'click', function (this: Object): void {
+  if (checkednessOf(this) != null) {
+    this.dispatchEvent(
+      new MouseEvent('click', {bubbles: true, cancelable: true}),
+    );
+    return;
+  }
   // $FlowFixMe[unclear-type] an authored handler takes whatever event it is given
   const handler: any = recordOf(this)?.props.onClick;
   if (typeof handler !== 'function') {
@@ -1205,8 +1498,12 @@ observeRegistrations(instance => {
 // ---- getComputedStyle ----------------------------------------------------
 
 const KEBAB = /-([a-z])/g;
+// A property's name as a style object spells it; a custom property's is
+// written as it is, case and all
 function camel(name: string): string {
-  return name.replace(KEBAB, (_, c) => c.toUpperCase());
+  return name.startsWith('--')
+    ? name
+    : name.replace(KEBAB, (_, c) => c.toUpperCase());
 }
 
 /**
@@ -1219,6 +1516,9 @@ function camel(name: string): string {
  * the kebab-cased names.
  */
 function computedStyleOf(instance: unknown): {[string]: unknown} {
+  // Style is resolved with what script wrote, as a browser does on this read
+  flushScriptStyles();
+  flushScriptAttributes();
   const record = recordOf(instance);
   const flat: {[string]: unknown} =
     record == null
@@ -1261,6 +1561,9 @@ function computedStyleOf(instance: unknown): {[string]: unknown} {
   }
   Object.defineProperty(style, 'getPropertyValue', {
     value: (name: string): string => {
+      if (name.startsWith('--') && record?.engine === true) {
+        return engineCustomProperty(nodeOf(instance), name) ?? '';
+      }
       const v = style[name.startsWith('--') ? name : camel(name)];
       return v == null ? '' : String(v);
     },

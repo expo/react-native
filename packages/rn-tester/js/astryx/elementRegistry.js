@@ -13,10 +13,11 @@
 import type {ElementDescriptor} from './css';
 
 /**
- * What the JSX runtime knows about a mounted intrinsic element, kept by host
- * instance for the DOM methods in `dom-compat.js`: the descriptor the CSS
- * matcher uses (tag, classes, attributes, ancestor chain), the props as
- * authored, and the style the element resolved to.
+ * What the element runtime knows about a mounted intrinsic element, kept by
+ * host instance for the DOM methods in `dom-compat.js`: the descriptor the
+ * DOM shim's selector matching uses (tag, classes, attributes, ancestor
+ * chain), the props as authored, and the style the renderer's style engine
+ * resolved it to.
  */
 export type ElementRecord = {
   descriptor: ElementDescriptor,
@@ -32,6 +33,21 @@ export type ElementRecord = {
   dialogMode: ?('modal' | 'non-modal'),
   setDialogMode: (mode: ?('modal' | 'non-modal')) => void,
   returnValue: string,
+  // Styled by the renderer's style engine, which answers what it matches
+  engine?: boolean,
+  // Changed by a DOM method (a popover shown, a dialog closed) since the
+  // element rendered, so the engine's committed tree does not have the change
+  // yet; the record, made anew each render, does
+  uncommitted?: boolean,
+  // Sets what is portaled into the element (react-dom-shim's `createPortal`)
+  setPortals?: (
+    update: (
+      previous: ?ReadonlyMap<string, React.Node>,
+    ) => ?ReadonlyMap<string, React.Node>,
+  ) => void,
+  // The platform scroll view a scroll container lays its content out in, whose
+  // offsets and sizes are the element's `scrollTop`, `scrollHeight` and kin
+  scrollView?: ?Object,
 };
 
 // An attribute as script wrote it (null for one it removed), and the value
@@ -72,9 +88,36 @@ export function unregisterElement(instance: Object): void {
   records.delete(instance);
 }
 
+// The record of an element no component registered: one the renderer's
+// style engine styles as a bare host node, read from its props
+let recordFallback: ?(instance: Object) => ElementRecord | null = null;
+
+export function setRecordFallback(
+  fallback: (instance: Object) => ElementRecord | null,
+): void {
+  recordFallback = fallback;
+}
+
 export function recordOf(instance: unknown): ElementRecord | null {
   if (instance == null || typeof instance !== 'object') {
     return null;
   }
-  return records.get(instance)?.current ?? null;
+  return records.get(instance)?.current ?? recordFallback?.(instance) ?? null;
+}
+
+const generatedContent: WeakSet<Object> = new WeakSet();
+
+/*
+ * Marks a `::before` or `::after` box's host instance, which the DOM leaves
+ * out of its parent's children: a generated box is not an element
+ * (css-pseudo-4 §2). A ref callback.
+ */
+export function markGeneratedContent(instance: unknown): void {
+  if (instance != null && typeof instance === 'object') {
+    generatedContent.add(instance);
+  }
+}
+
+export function isGeneratedContent(node: unknown): boolean {
+  return node != null && typeof node === 'object' && generatedContent.has(node);
 }

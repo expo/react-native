@@ -7160,6 +7160,7 @@ struct facebook::react::ElementStyleInputs {
   public std::string tag;
   public std::vector<std::pair<std::string, std::string>> attributes;
   public std::vector<std::string> classes;
+  public uint8_t pseudo;
   public uint8_t scrollPart;
   public uint32_t states;
 }

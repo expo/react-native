@@ -2049,6 +2049,13 @@ static bool laysOutItems(const std::string& display) {
       display == "inline-grid-lanes";
 }
 
+// A `::before`, `::after` or `::backdrop` box (ElementStyleInputs::pseudo)
+static bool isGeneratedBox(const ShadowNode& node) {
+  const auto* provider =
+      dynamic_cast<const ElementStyleInputsProvider*>(node.getProps().get());
+  return provider != nullptr && provider->elementStyleInputs().pseudo != 0;
+}
+
 // The value React's `style` gives `property` in the element's props, the last
 // one it declares; null when it declares none
 static folly::dynamic reactInlineValue(
@@ -2088,6 +2095,12 @@ static std::optional<std::string> reactAttributeValue(
     }
   }
   return std::nullopt;
+}
+
+static bool isBackdropBox(const ShadowNode& node) {
+  const auto* provider =
+      dynamic_cast<const ElementStyleInputsProvider*>(node.getProps().get());
+  return provider != nullptr && provider->elementStyleInputs().pseudo == 3;
 }
 
 static Resolution resolveElement(
@@ -3334,7 +3347,8 @@ class StyleEngine::Pass {
       for (const auto& child : children) {
         const auto* provider = dynamic_cast<const ElementStyleInputsProvider*>(
             child->getProps().get());
-        if (provider != nullptr && provider->elementStyleInputs().styled) {
+        if (provider != nullptr && provider->elementStyleInputs().styled &&
+            provider->elementStyleInputs().pseudo == 0) {
           count++;
         }
       }
@@ -3342,16 +3356,18 @@ class StyleEngine::Pass {
     std::shared_ptr<std::vector<std::shared_ptr<const ShadowNode>>> result;
     SharedStyleContext previous;
     uint32_t position = 0;
-    for (size_t i = 0; i < children.size(); i++) {
+    // Visits the child at `i` under `parent`, and returns its context
+    auto visitChild = [&](size_t i, const SharedStyleContext& parent) {
       SharedStyleContext childContext;
       auto output = visit(
           children[i],
-          context,
+          parent,
           readsSiblings_ ? previous : nullptr,
           readsSiblings_ ? position + 1 : 0,
           readsSiblings_ ? count : 0,
           childContext);
-      if (childContext != nullptr && readsSiblings_) {
+      if (childContext != nullptr && readsSiblings_ &&
+          !isGeneratedBox(*children[i])) {
         previous = childContext;
         position++;
       }
@@ -3363,6 +3379,19 @@ class StyleEngine::Pass {
         }
         (*result)[i] = output;
       }
+      return childContext;
+    };
+    for (size_t i = 0; i < children.size(); i++) {
+      if (isBackdropBox(*children[i]) && i + 1 < children.size()) {
+        // Style a `::backdrop` box after the element it is drawn under, the
+        // sibling after it: its originating element (css-position-4 §3.2),
+        // which it inherits from, as browsers do since whatwg/fullscreen#124
+        auto originating = visitChild(i + 1, context);
+        visitChild(i, originating != nullptr ? originating : context);
+        i++;
+        continue;
+      }
+      visitChild(i, context);
     }
     return result;
   }
@@ -4060,10 +4089,13 @@ folly::dynamic StyleEngine::customProperty(
 
 namespace {
 
+// An element the engine styles that holds a place among its siblings: a
+// `::before` or `::after` box is styled but is not an element
 bool isStyledElement(const ShadowNode& node) {
   const auto* provider =
       dynamic_cast<const ElementStyleInputsProvider*>(node.getProps().get());
-  return provider != nullptr && provider->elementStyleInputs().styled;
+  return provider != nullptr && provider->elementStyleInputs().styled &&
+      provider->elementStyleInputs().pseudo == 0;
 }
 
 } // namespace

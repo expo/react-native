@@ -15,19 +15,15 @@ import {VStack} from '@astryxdesign/core/Layout';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import * as React from 'react';
 
-/**
- * Every way a shipped template differs from Astryx's source, from
- * templates/modifications.js. The list is meant to stay empty.
- */
+/** Show recorded template changes and the services supplied by the native host. */
 export default function Modifications(): React.Node {
   return (
     <AppPage>
       <VStack gap={3}>
         <Heading level={1}>Modifications</Heading>
         <Text color="secondary">
-          {templates.length} templates from Astryx {astryxVersion}, copied byte
-          for byte by scripts/sync-templates.js, which fails on any template
-          that drifts from upstream without an entry here.
+          {templates.length} templates from Astryx {astryxVersion}. The sync
+          script checks that every change from upstream is documented here.
         </Text>
         {modifications.length === 0 ? (
           <Card>
@@ -46,8 +42,8 @@ export default function Modifications(): React.Node {
         )}
         <Heading level={2}>What the app supplies</Heading>
         <Text color="secondary">
-          Not changes to the templates, but what a page gets from its host on
-          the web and has to get from this app instead.
+          The app provides the assets, theme and page environment that a web
+          host normally supplies.
         </Text>
         {SUPPLIED.map(item => (
           <Card key={item.what}>
@@ -66,54 +62,34 @@ const SUPPLIED = [
   {
     what: 'The template images',
     how:
-      'The templates show images by root-relative path (/template-assets/…), ' +
-      "which Astryx's docsite serves from its public directory. The app bundles " +
-      'the 56 files the templates reference (template-assets/), resized to ' +
-      'phone width and re-encoded as JPEG (the logos keep their PNG ' +
-      'transparency), and resolves the paths to them ' +
-      '(src/templateAssets.js).',
+      'Referenced images are bundled with the app and resolved from their ' +
+      'original root-relative paths. Photos are resized for mobile displays; ' +
+      'logos retain their transparency.',
   },
   {
     what: "Astryx's stylesheets",
     how:
-      "Astryx's reset (reset.css) and the built neutral theme (theme.css), which " +
-      'a web app imports globally and the docsite applies to every page; the ' +
-      'host installs both in the CSS engine. The theme is the one ' +
-      '`astryx theme build` generates from the published sources.',
+      "The host installs Astryx's reset and built neutral theme for every page, " +
+      'including light and dark appearances.',
   },
   {
     what: 'The page',
     how:
-      "The templates render transparent, content only. The host paints the theme's " +
-      'surface colour behind them and gives the page root a definite height, as the ' +
-      'docsite\'s preview frame does, so a Layout of height "fill" scrolls its ' +
-      'content and an auto-height page grows past it. The viewport is the ' +
-      'screen below the bar and above the home indicator, as a ' +
-      "browser's ends above its toolbar (src/AstryxHost.tsx).",
+      'Each template receives its own viewport and safe-area environment, ' +
+      'sized to the available column. The host paints the page background ' +
+      'through the surrounding insets and lets longer pages scroll.',
   },
   {
     what: 'The font',
     how:
-      "The neutral theme's type is Figtree, which the docsite loads from Google " +
-      'Fonts. The app bundles it (ios/AstryxDemo/Fonts and ' +
-      'android/app/src/main/res/font, SIL Open Font License) at the four ' +
-      'weights the theme uses, upright and italic, cut from the variable font; ' +
-      'without it the templates fall back to the system font and wrap their ' +
-      'headings differently.',
+      'Figtree is bundled in the weights and italic styles used by the ' +
+      'neutral theme, under the SIL Open Font License.',
   },
   {
-    what: 'The safe-area insets',
+    what: 'Native navigation',
     how:
-      "env(safe-area-inset-*) in a template's styles resolves to the device's " +
-      "insets: on iOS from the window's safe area (src/environment.js), on " +
-      "Android from the status bar's height, since the app draws under the " +
-      'system bars and the safe-area module is not built there ' +
-      '(src/environment.android.js).',
-  },
-  {
-    what: 'The platform variable',
-    how:
-      'Expo Router expects babel-preset-expo to have inlined process.env.EXPO_OS; ' +
-      "this app compiles with React Native's preset and sets it at startup (expo-os.js).",
+      'The gallery and detail screen share native navigation. The optional ' +
+      'sidebar keeps the selected template highlighted, and the system ' +
+      'controls fold and size-class transitions.',
   },
 ];

@@ -40,49 +40,27 @@ Three kinds appear here and it is worth telling them apart:
 
 ## Layout and box generation
 
-**`container-query-is-a-media-query`** — `packages/rn-tester/js/astryx/css/parse.js`, `stylex-rn.js`
+**`container-query-is-a-media-query`** — `ReactCommon/react/renderer/cssengine/RuleSet.cpp`, `StyleEngine.cpp`
 
-A `@container` rule in a stylesheet applies only under an ancestor that
-declares `container-type` (in a sheet, a StyleX style or an inline style),
-and under the one of that name when the query names one, as on the web — so
-a query with no container to ask (Astryx's Login Split names its grid as its
-own container) matches nowhere, as it does in Safari. The container measures
-itself (`onLayout`) and its size answers the query and the container units
-(`cqi`, `cqb`, …) of its descendants from the render after its first layout;
-until then, and for a `@container` key in a StyleX style, the viewport
-answers — the host surface's size where a page declares one
-(`VIEWPORT_INLINE_SIZE` in css/match.js; a split view's column rather than
-the window), the window otherwise. The deviation that remains is that first
-paint, and the StyleX keys: a page whose first layout depends on a container
-query lays out twice.
+A `@container` rule in a stylesheet applies only under an ancestor that declares
+`container-type`, and under the one of that name when the query names one, as on
+the web — so a query with no container to ask (Astryx's Login Split names its
+grid as its own container) matches nowhere, as it does in Safari. Containers
+report no size of their own, so the condition, and every container unit (`cqi`,
+`cqb`, …), is answered over the viewport: the host surface's size where a page
+declares one (`VIEWPORT_INLINE_SIZE` in css/match.js; a split view's column
+rather than the window), the window otherwise. A `@container` key in a StyleX
+style is answered over the window, its container's name dropped.
 
-**`stylex-is-a-layer`** — `packages/rn-tester/js/astryx/jsx-runtime.js`, `css/match.js`
+**`stylex-is-a-layer`** — `ReactCommon/react/renderer/cssengine/RuleSet.h`
 
 A StyleX style is taken for what it is on the web, a rule in the `astryx-base`
 cascade layer (Astryx's theme orders `reset, astryx-base, astryx-theme`). A
 stylesheet rule in a layer above it, or unlayered, beats it, as the theme's
-`.astryx-heading[data-level="1"]` does on the web; a rule in that layer or
-below sits under it; an inline `style` beats them all. A sheet that orders no
+`.astryx-heading[data-level="1"]` does on the web; a rule in that layer or below
+sits under it; an inline `style` beats them all. A sheet that orders no
 `astryx-base` layer leaves every rule under StyleX, whatever its specificity,
 which is what StyleX's specificity bump does on the web.
-
-**`scope-limit-ignored`** — `packages/rn-tester/js/astryx/css/parse.js`
-
-`@scope (<root>) to (<limit>) { … }` scopes its rules under the root selector,
-`:scope` standing for the root itself, which is how a built Astryx theme
-declares its tokens on `[data-astryx-theme="…"]`. The limit is not applied: a
-scoped rule still reaches past a nested root (a second theme inside the
-first), and a `&` in a scoped selector is not resolved.
-
-**`background-image-url-layer`** — `packages/rn-tester/js/astryx/jsx-runtime.js`
-
-The renderer's `backgroundImage` takes gradients only. A `url()` is drawn by
-an image filling the element's box under its children, clipped to the same
-corners, sized by `background-size` (`cover`, `contain`, or the image's own
-size centred). `background-position` other than centred, `background-repeat`,
-and a url() layered with a gradient or a second image are not drawn: the
-first url() is the layer, and the gradients go with it. A block that scrolls
-(`overflow: auto`) does not take the layer.
 
 **`background-boxes-are-fixed`** — `ReactCommon/react/renderer/cssengine/StyleProperties.cpp`
 
@@ -99,6 +77,13 @@ A `url()` or a string keeps its escapes as written, so `url(a\)b.png)` names
 `a\)b.png`: the tokenizer's tokens are views of the source, with no room for
 decoded text. The runtime percent-encodes what would need escaping in the URLs
 it resolves, so only a URL written with an escape is affected.
+
+**`relative-url-has-no-base`** — `packages/rn-tester/js/astryx/native-css/engine.js`
+
+A relative URL (`url(images/a.png)`) is not resolved against its sheet's or the
+page's URL, as an app has neither; it reaches the platform as written, which
+reads it as the name of a bundled resource. A root-relative URL
+(`/images/a.png`) is resolved, as an `<img src>`'s is.
 
 **`clearance-on-an-empty-box`** — `yoga/algorithm/CalculateLayout.cpp`
 An empty box with `clear` still lets its margins collapse past it, so the
@@ -199,10 +184,9 @@ Font sizes and block margins travel as factors (`uaFontSizeEm`,
 drawn size, so those track the font. Any other `em` length in the web's sheet
 is written here as points.
 
-DEFERRED, and the same missing capability as `no-author-facing-em-lengths` and
-the shim's `rem-fixed-root` and `unitless-line-height-needs-local-font-size`.
+DEFERRED, and the same missing capability as `no-author-facing-em-lengths`.
 One channel — a relative length that survives to where a font size is known —
-closes all four. Worth counting as one piece of work rather than four.
+closes both. Worth counting as one piece of work rather than two.
 
 **`no-quirks-mode`** — no `quirks.css` equivalent, there being no quirks mode
 to be compatible with. Listed so its absence reads as deliberate.
@@ -532,7 +516,7 @@ a real screen first. Background in `element-model-design.md`.
   its own takes the drag meant for the page, hides what lies below its edge,
   and fights the keyboard and the safe area the page reserves. So the element
   keeps its markup but its scrolling region takes its content height
-  (`jsx-runtime.js`, `growingOverflowStyle`): the box's `height` becomes its
+  (`StyleEngine.cpp`, `growOverflow`): the box's `height` becomes its
   `min-height`, `max-height` is set aside, and a flex item that was allowed
   to shrink to its share of a column (`flex: 1; min-height: 0`) keeps its
   content height. Whatever then overflows the ancestors is reachable: the
@@ -549,8 +533,16 @@ a real screen first. Background in `element-model-design.md`.
   the other exception: a dialog, a sheet or a
   menu drawn there has no page to grow into, so a region in it with
   `overflow: auto | scroll` on the block axis scrolls through a vertical
-  scroll view, as on the web. The element's `scroll` events, `scrollTop` and
-  `scrollTo` reach no scroll view.
+  scroll view, as on the web, even when its inline axis scrolls as well (a
+  bottom sheet's body), and then content past its sides is clipped rather
+  than reachable. So does a region below a block container that clips its
+  block axis (`overflow-y: hidden | clip`), such as the body of Astryx's
+  Dialog drawn inline, or of its AppShell: what the region grew by would be
+  cut off at the clip, out of the page's reach, and a footer after it in a
+  column of fixed height would be drawn over it. Where the element has a
+  scroll view, its `scroll` events, `scrollTop`, `scrollHeight` and
+  `scrollTo` are the scroll view's; a region that grows instead has nothing
+  to scroll.
 - **`DOM-CSS-LIMITATION(visibility-is-opacity)` — `visibility: hidden` is
   `opacity: 0` plus `pointer-events: none`.** The platform has no visibility
   property. The box stays in layout and draws nothing, which is what a hidden
@@ -637,10 +629,8 @@ complete. The check now runs both ways, so an unindexed marker fails a test
 rather than going quiet.
 
 - `abbr-underline-is-unconditional` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
-- `ancestor-state-selectors` — limitation, `packages/rn-tester/js/astryx/jsx-runtime.js`
 - `android-chat-bubble-has-no-tail` — limitation, `packages/expo-intrinsics/src/NativeChatBubble.js`
 - `aria-activedescendant-native` — limitation, `packages/rn-tester/js/astryx/overlay/activeDescendant.js`
-- `astryx-press-controller-inert` — limitation, `packages/rn-tester/js/astryx/pressFeedback-shim.js`
 - `background-boxes-are-fixed` — limitation, `ReactCommon/react/renderer/cssengine/StyleProperties.cpp`
 - `button-chrome-withdraws-as-a-unit` — deviation, `packages/expo-intrinsics/__tests__/ButtonChromeWithdrawal-itest.js`
 - `character-units-use-fallback-metrics` — limitation, `ReactCommon/react/renderer/cssengine/StyleValues.cpp`
@@ -648,7 +638,7 @@ rather than going quiet.
 - `checkable-line-centering` — deviation, `packages/expo-intrinsics/__tests__/CheckableLineCentering-itest.js`
 - `client-coordinates-are-not-rect-coordinates` — limitation, `ReactAndroid/src/main/java/com/facebook/react/uimanager/events/PointerEvent.kt`
 - `clipping-eats-the-shadow` — limitation, `packages/chat-demo/Composer.js`
-- `color-mix-spaces` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
+- `color-mix-spaces` — limitation, `ReactCommon/react/renderer/cssengine/StyleValues.cpp`
 - `compact-menu-row-holds-four` — limitation, `packages/chat-demo/screens/ChatScreen.js`
 - `corner-shape-clips-border-and-shadow` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `corner-shape-ios-only` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
@@ -660,6 +650,7 @@ rather than going quiet.
 - `field-value-write-is-not-shown` — limitation, `packages/rn-tester/js/astryx/elements/fieldInstance.js`
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
+- `generated-content-in-text-content` — limitation, `packages/rn-tester/js/astryx/dom-compat.js`
 - `glass-surface-press-is-the-platforms` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPMaterialSurface.mm`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `grid-fit-content-limit` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
@@ -684,30 +675,27 @@ rather than going quiet.
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
 - `nth-last-of-selector-in-sheets` — limitation, `packages/react-native/ReactCommon/react/renderer/cssengine/SelectorMatching.cpp`
 - `number-parts-are-read-from-the-string` — limitation, `packages/rn-tester/js/astryx/intl-shim.js`
-- `oklab-colours-are-srgb` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
+- `oklab-colours-are-srgb` — limitation, `ReactCommon/react/renderer/cssengine/StyleValues.h`
 - `panel-content-fades-without-the-blur` — deviation, `packages/chat-demo/Composer.js`
 - `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
 - `peek-outruns-the-scroll` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPPeekInteraction.h`
 - `plural-rules-are-english` — limitation, `packages/rn-tester/js/astryx/intl-shim.js`
-- `popover-is-not-in-the-top-layer` — limitation, `packages/rn-tester/js/astryx/dom-compat.js`
-- `position-fixed-as-absolute` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `position-fixed-as-absolute` — limitation, `ReactCommon/react/renderer/cssengine/StyleProperties.cpp`
 - `position-try-is-flips-and-a-clamp` — limitation, `packages/rn-tester/js/astryx/overlay/topLayerPlacement.js`
 - `press-dim-on-content` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementButtonComponentView.mm`
 - `radio-card-needs-a-contrasting-page` — limitation, `React/Fabric/Mounting/ComponentViews/View/EXPRadioRunList.h`
 - `relative-time-is-english` — limitation, `packages/rn-tester/js/astryx/intl-shim.js`
-- `rem-fixed-root` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
+- `relative-url-has-no-base` — limitation, `packages/rn-tester/js/astryx/native-css/engine.js`
 - `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`
 - `rtl-inline-run-not-reordered` — limitation, `ReactCommon/react/renderer/components/text/InlineContentShadowNode.cpp`
 - `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
-- `sibling-combinator-spacing-as-gap` — limitation, `packages/rn-tester/js/astryx/css/index.js`
-- `sr-only-not-in-a11y-tree` — limitation, `packages/rn-tester/js/astryx/css/index.js`
+- `svg-paint-read-after-layout` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `table-cell-vertical-align` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-layout-auto-is-fixed` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-percent-columns-need-the-width` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-rowspan` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `unanswered-pseudo-classes` — limitation, `packages/react-native/ReactCommon/react/renderer/cssengine/StyleSheetParser.cpp`
-- `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
 - `when-relations-need-has` — limitation, `ReactCommon/react/renderer/cssengine/StyleEngine.cpp`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`
@@ -867,3 +855,16 @@ Still absent, and for a reason rather than an oversight: `width`, `margin`,
 glide. The mechanism is not specific to height — `isLayoutAffecting` is one line
 and `AnimatedPropsBuilder` already has the setters — so each is small. What each
 one costs is a case to justify it.
+
+## DOM-CSS-LIMITATION(generated-content-in-text-content)
+
+A `::before` or `::after` box's text is part of its element's `textContent`.
+
+The boxes are drawn as children of the element (`EngineElement`), styled from
+their own StyleX block and left out of the element's `childNodes`, `children`
+and its children's sibling positions, so selectors and DOM traversal see the
+element's real children. `textContent` is computed by the platform's DOM from
+every descendant text node, and the generated text is one of them: a line of
+Astryx's code block numbered by `content: attr(data-line)` reads `12const a`
+where the web reads `const a`. Stylesheet rules with a pseudo-element subject
+(`.x::before` in CSS text) are still skipped; only StyleX's blocks generate.
