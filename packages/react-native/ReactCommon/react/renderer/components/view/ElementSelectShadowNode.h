@@ -25,6 +25,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -95,11 +96,20 @@ class ElementSelectEventEmitter : public ViewEventEmitter {
   }
 };
 
-class ElementSelectProps final : public ViewProps, public NodeNameProvider {
+class ElementSelectProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementSelectProps() = default;
   ElementSelectProps(const PropsParserContext &context, const ElementSelectProps &sourceProps, const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         options(convertRawProp(context, rawProps, "options", sourceProps.options, std::vector<ElementSelectOption>{})),
         value(convertRawProp(context, rawProps, "value", sourceProps.value, std::string{})),

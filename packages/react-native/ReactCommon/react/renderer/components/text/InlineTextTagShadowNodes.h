@@ -16,6 +16,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -46,12 +47,24 @@ extern const char InlineTextComponentName[];
  * case core falls back to the component name — see DOM.cpp's use of
  * NodeNameProvider.
  */
-class InlineTagProps : public TextProps, public AccessibilityProps, public NodeNameProvider {
+class InlineTagProps : public TextProps,
+                       public AccessibilityProps,
+                       public NodeNameProvider,
+                       public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   InlineTagProps() = default;
   InlineTagProps(const PropsParserContext &context, const InlineTagProps &sourceProps, const RawProps &rawProps)
       : TextProps(context, sourceProps, rawProps),
         AccessibilityProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{}))
   {
   }

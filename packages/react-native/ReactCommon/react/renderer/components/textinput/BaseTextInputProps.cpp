@@ -27,6 +27,7 @@ BaseTextInputProps::BaseTextInputProps(
     const RawProps& rawProps)
     : ViewProps(context, sourceProps, rawProps),
       BaseTextProps(context, sourceProps, rawProps),
+      styleInputs(context, sourceProps.styleInputs, rawProps),
       paragraphAttributes(convertRawProp(
           context,
           rawProps,

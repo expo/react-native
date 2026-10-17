@@ -656,6 +656,17 @@ export const __INTERNAL_VIEW_CONFIG: PartialViewConfig = {
   },
   validAttributes: {
     acceptDragAndDropTypes: true,
+    // What the renderer's style engine reads of a field that is an HTML
+    // element's (an `<input>`, a `<textarea>`); see
+    // ReactCommon/react/renderer/cssengine
+    cssEngine: true,
+    cssTag: true,
+    cssClass: true,
+    cssAttributes: true,
+    cssStyle: true,
+    cssInline: true,
+    cssStates: true,
+    cssStateful: true,
     maxFontSizeMultiplier: true,
     adjustsFontSizeToFit: true,
     minimumFontScale: true,

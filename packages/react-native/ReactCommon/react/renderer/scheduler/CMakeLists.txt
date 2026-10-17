@@ -25,6 +25,7 @@ target_link_libraries(react_renderer_scheduler
         react_renderer_animationbackend
         react_renderer_componentregistry
         react_renderer_core
+        react_renderer_cssengine
         react_renderer_debug
         react_renderer_graphics
         react_renderer_mounting

@@ -19,6 +19,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 #include <react/renderer/graphics/Color.h>
 
@@ -31,14 +32,23 @@ extern const char ElementTextAreaComponentName[];
  * with unrelated classes; the emitter is shared. No `submit`: Return inserts
  * a newline.
  */
-class ElementTextAreaProps final : public ViewProps, public NodeNameProvider {
+class ElementTextAreaProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementTextAreaProps() = default;
   ElementTextAreaProps(
       const PropsParserContext &context,
       const ElementTextAreaProps &sourceProps,
       const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         value(convertRawProp(context, rawProps, "value", sourceProps.value, std::string{})),
         hasValue(rawProps.at("value") != nullptr || sourceProps.hasValue),

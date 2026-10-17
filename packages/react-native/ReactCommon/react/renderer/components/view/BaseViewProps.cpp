@@ -641,6 +641,8 @@ BaseViewProps::BaseViewProps(
     motion.animationFillModeRaw =
         raw("animationFillMode",
             inherited ? inherited->animationFillModeRaw : kEmpty);
+    motion.startingStyleRaw = raw(
+        "startingStyle", inherited ? inherited->startingStyleRaw : kEmpty);
 
     if (inherited != nullptr && motion.rawsEqual(*inherited)) {
       cssExtras = sourceProps.cssExtras;
@@ -658,6 +660,7 @@ BaseViewProps::BaseViewProps(
           motion.animationIterationCountRaw,
           motion.animationDirectionRaw,
           motion.animationFillModeRaw);
+      motion.startingStyle = buildStartingStyle(motion.startingStyleRaw);
       cssExtras = std::make_shared<const CssExtras>(std::move(motion));
     }
   }

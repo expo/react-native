@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<e5a05b28a6c4992221c4b4b884ff099d>>
+ * @generated SignedSource<<55472e4ad4e5f7f9776123054f7e71b2>>
  * @flow strict
  * @noformat
  */
@@ -284,7 +284,7 @@ export const enableAccessibilityOrder: Getter<boolean> = createNativeFlagGetter(
 /**
  * When enabled, Android will accumulate updates in rawProps to reduce the number of mounting instructions for cascading re-renders.
  */
-export const enableAccumulatedUpdatesInRawPropsAndroid: Getter<boolean> = createNativeFlagGetter('enableAccumulatedUpdatesInRawPropsAndroid', false);
+export const enableAccumulatedUpdatesInRawPropsAndroid: Getter<boolean> = createNativeFlagGetter('enableAccumulatedUpdatesInRawPropsAndroid', true);
 /**
  * Enables various optimizations throughout the path of measuring text on Android.
  */
@@ -428,7 +428,7 @@ export const enableNativeGestureRecognizers: Getter<boolean> = createNativeFlagG
 /**
  * When enabled together with `enableAccumulatedUpdatesInRawPropsAndroid`, the Insert of a preallocated view only sends the difference between the props the view was preallocated with and the inserted props, instead of sending all props again on every Insert.
  */
-export const enablePreallocatedPropsDiffOnInsertAndroid: Getter<boolean> = createNativeFlagGetter('enablePreallocatedPropsDiffOnInsertAndroid', false);
+export const enablePreallocatedPropsDiffOnInsertAndroid: Getter<boolean> = createNativeFlagGetter('enablePreallocatedPropsDiffOnInsertAndroid', true);
 /**
  * Enables caching text layout artifacts for later reuse
  */

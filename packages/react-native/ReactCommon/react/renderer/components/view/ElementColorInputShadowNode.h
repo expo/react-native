@@ -19,6 +19,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -59,14 +60,23 @@ class ElementColorInputEventEmitter : public ViewEventEmitter {
   }
 };
 
-class ElementColorInputProps final : public ViewProps, public NodeNameProvider {
+class ElementColorInputProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementColorInputProps() = default;
   ElementColorInputProps(
       const PropsParserContext &context,
       const ElementColorInputProps &sourceProps,
       const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         // HTML's default for a colour input with no value is black, and it is
         // never empty — the element always has a colour.

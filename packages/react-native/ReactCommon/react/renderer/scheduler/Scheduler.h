@@ -20,6 +20,7 @@
 #include <React/RuntimeExecutor.h>
 #include <React/Utils.h>
 #include <react/renderer/animationbackend/CSSTransitions.h>
+#include <react/renderer/cssengine/StyleEngine.h>
 #include <react/renderer/mounting/MountingOverrideDelegate.h>
 #include <react/renderer/scheduler/SchedulerDelegate.h>
 #include <react/renderer/scheduler/SchedulerToolbox.h>
@@ -129,6 +130,9 @@ class Scheduler final : public UIManagerDelegate {
   SharedComponentDescriptorRegistry componentDescriptorRegistry_;
   RuntimeExecutor runtimeExecutor_;
   std::shared_ptr<UIManager> uiManager_;
+  // CSS for HTML elements, resolved while a tree is committed. Shared so the
+  // JavaScript bindings can hold it weakly.
+  std::shared_ptr<StyleEngine> styleEngine_;
   // Owned so it outlives the commit-hook registration it makes on UIManager.
   std::unique_ptr<CSSTransitions> cssTransitions_;
 

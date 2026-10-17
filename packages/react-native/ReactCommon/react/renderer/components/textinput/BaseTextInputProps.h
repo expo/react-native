@@ -15,13 +15,23 @@
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/components/text/BaseTextProps.h>
 #include <react/renderer/components/textinput/basePrimitives.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <limits>
 #include <string>
 
 namespace facebook::react {
 
-class BaseTextInputProps : public ViewProps, public BaseTextProps {
+class BaseTextInputProps : public ViewProps, public BaseTextProps, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this field when it is an HTML element's;
+  // see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   BaseTextInputProps() = default;
   BaseTextInputProps(
       const PropsParserContext &context,

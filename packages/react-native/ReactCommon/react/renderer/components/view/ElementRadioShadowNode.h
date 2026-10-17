@@ -17,6 +17,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -29,11 +30,20 @@ extern const char ElementRadioComponentName[];
  * as in the DOM; `name` is carried for it. Choosing is atomic, so `change`
  * fires and `input` does not.
  */
-class ElementRadioProps final : public ViewProps, public NodeNameProvider {
+class ElementRadioProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementRadioProps() = default;
   ElementRadioProps(const PropsParserContext &context, const ElementRadioProps &sourceProps, const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         checked(convertRawProp(context, rawProps, "checked", sourceProps.checked, false)),
         disabled(convertRawProp(context, rawProps, "disabled", sourceProps.disabled, false)),
