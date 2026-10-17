@@ -1039,7 +1039,14 @@ void CSSTransitions::syncAnimation(const ShadowNode& node) {
   std::scoped_lock lock(mutex_);
   auto it = animations_.find(tag);
 
-  if (viewProps == nullptr || !viewProps->animation().has_value()) {
+  // A node that generates no box runs no animation, and one that runs is
+  // cancelled as its display becomes `none` (css-animations-1 §3); shown
+  // again, it starts afresh
+  bool generatesNoBox = viewProps != nullptr &&
+      viewProps->yogaStyle.display() == yoga::Display::None;
+
+  if (viewProps == nullptr || !viewProps->animation().has_value() ||
+      generatesNoBox) {
     if (it != animations_.end() && !it->second.cancelled) {
       it->second.cancelled = true;
       trace_->log("anim-cancel t=" + std::to_string(tag));
