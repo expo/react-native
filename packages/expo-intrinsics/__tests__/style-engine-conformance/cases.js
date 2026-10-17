@@ -1056,6 +1056,29 @@ const CASES = [
     tree: div({}, [div({id: 't'})]),
     reads: [{id: 't', rect: box(3)}],
   },
+  // -- origins (css-cascade-5) --
+
+  {
+    name: 'an author’s padding and margin beat the user agent’s, however each is spelled',
+    spec: 'css-cascade-5 §6.1; HTML §15.3.7, §15.3.8',
+    // The user agent indents a list with `padding-inline-start: 40px`, and a
+    // block quote and a description with an inline-start margin; the prelude's
+    // `margin: 0; padding: 0` is the author's, at no specificity
+    css: `
+      li, #q, #v { height: 4px; }`,
+    tree: div({}, [
+      ['ul', {}, [['li', {id: 'u'}, []]]],
+      ['ol', {}, [['li', {id: 'o'}, []]]],
+      ['blockquote', {}, [div({id: 'q'})]],
+      ['dl', {}, [['dd', {}, [div({id: 'v'})]]]],
+    ]),
+    reads: [
+      {id: 'u', rect: box(4)},
+      {id: 'o', rect: box(4, 0, 4)},
+      {id: 'q', rect: box(4, 0, 8)},
+      {id: 'v', rect: box(4, 0, 12)},
+    ],
+  },
 ];
 
 module.exports = {CASES, PRELUDE};
