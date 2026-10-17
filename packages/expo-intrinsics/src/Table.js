@@ -11,6 +11,7 @@
 import * as React from 'react';
 import {
   createContext,
+  useCallback,
   useContext,
   useLayoutEffect,
   useMemo,
@@ -91,10 +92,72 @@ const AlignContext: React.Context<?string> = createContext(null);
 type ElementProps = {
   children?: React.Node,
   style?: unknown,
+  // The style engine's mark that it styles the element, and the element's ref
+  cssEngine?: boolean,
+  ref?: unknown,
   ...
 };
 
 const NO_SPACING: Spacing = {inline: 0, block: 0};
+
+/*
+ * Where the renderer's style engine styles the page (the element carries
+ * `cssEngine`), a table part has no resolved style in its props: what its
+ * layout reads — a cell's width, a table's border spacing — is asked of the
+ * engine once the element is committed, and a change renders it again.
+ */
+function engineComputedStyle(instance: unknown): ?{[string]: unknown} {
+  // $FlowExpectedError[prop-missing] installed by the renderer
+  const engine = globalThis.__cssEngine;
+  // The Fabric host instance's shadow node
+  const node = (instance as $FlowFixMe)?.__internalInstanceHandle?.stateNode
+    ?.node;
+  if (engine == null || node == null) {
+    return null;
+  }
+  return engine.computedStyle(node);
+}
+
+// The width the renderer's style engine gave an element, read once the
+// element is committed. Read after every render, because the engine styles
+// the element in the commit that follows it; the previous value is kept when
+// nothing changed, which ends the chain of updates.
+function useEngineWidth(
+  engineStyled: boolean,
+  hostRef: {current: unknown},
+): unknown {
+  const [engineWidth, setEngineWidth] = useState<unknown>(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    if (!engineStyled) {
+      return;
+    }
+    const next = engineComputedStyle(hostRef.current)?.width ?? null;
+    setEngineWidth(previous => (previous === next ? previous : next));
+  });
+  return engineWidth;
+}
+
+// A ref that sets each of `refs`
+function useMergedRef(
+  own: {current: unknown},
+  authored: unknown,
+): (instance: unknown) => void {
+  const authoredRef = useRef(authored);
+  authoredRef.current = authored;
+  return useCallback(
+    (instance: unknown) => {
+      own.current = instance;
+      const author: $FlowFixMe = authoredRef.current;
+      if (typeof author === 'function') {
+        author(instance);
+      } else if (author != null && typeof author === 'object') {
+        author.current = instance;
+      }
+    },
+    [own],
+  );
+}
 
 // `border-spacing` when the borders are separate, one length for both axes or
 // the horizontal then the vertical, the user agent's 2px unless the author's
@@ -275,8 +338,32 @@ function verticalAlignOf(style: unknown): ?string {
 export function makeTable(): React.ComponentType<ElementProps> {
   const Host: $FlowFixMe = 'element-table';
   function Table({style, children, ...rest}: ElementProps): React.Node {
-    const flat: {[string]: unknown} =
-      (StyleSheet.flatten(style as $FlowFixMe) as $FlowFixMe) ?? {};
+    const engineStyled = rest.cssEngine === true;
+    const hostRef = useRef<unknown>(null);
+    const ref = useMergedRef(hostRef, rest.ref);
+    const [engineFlat, setEngineFlat] = useState<?{[string]: unknown}>(null);
+    // Read after every render, once committed, as `useEngineWidth` does
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useLayoutEffect(() => {
+      if (!engineStyled) {
+        return;
+      }
+      const computed = engineComputedStyle(hostRef.current) ?? {};
+      const next = {
+        borderSpacing: computed.borderSpacing,
+        borderCollapse: computed.borderCollapse,
+      };
+      setEngineFlat(previous =>
+        previous != null &&
+        previous.borderSpacing === next.borderSpacing &&
+        previous.borderCollapse === next.borderCollapse
+          ? previous
+          : next,
+      );
+    });
+    const flat: {[string]: unknown} = engineStyled
+      ? (engineFlat ?? {})
+      : ((StyleSheet.flatten(style as $FlowFixMe) as $FlowFixMe) ?? {});
     const spacing = spacingOf(flat);
     const [rowColumns, setColumns] = useState<?ReadonlyArray<Column>>(null);
     const firstRow = useRef<?{...}>(null);
@@ -343,6 +430,7 @@ export function makeTable(): React.ComponentType<ElementProps> {
       <TableContext.Provider value={table}>
         <Host
           {...rest}
+          ref={ref}
           nodeName="table"
           style={[
             hasSpacing
@@ -352,7 +440,7 @@ export function makeTable(): React.ComponentType<ElementProps> {
                   rowGap: spacing.block,
                 }
               : null,
-            withoutTableProperties(flat),
+            engineStyled ? null : withoutTableProperties(flat),
             minWidth != null &&
             !(typeof flat.minWidth === 'number' && flat.minWidth >= minWidth)
               ? {minWidth}
@@ -488,10 +576,14 @@ export function makeCell(tag: 'td' | 'th'): React.ComponentType<CellProps> {
   function Cell({style, colSpan, rowSpan, ...rest}: CellProps): React.Node {
     const row = useContext(RowContext);
     const inheritedAlign = useContext(AlignContext);
+    const engineStyled = rest.cssEngine === true;
+    const hostRef = useRef<unknown>(null);
+    const ref = useMergedRef(hostRef, rest.ref);
+    const engineWidth = useEngineWidth(engineStyled, hostRef);
     const flat: {[string]: unknown} =
       (StyleSheet.flatten(style as $FlowFixMe) as $FlowFixMe) ?? {};
     const span = spanOf(colSpan);
-    const width = flat.width ?? null;
+    const width = engineStyled ? engineWidth : (flat.width ?? null);
     const entry = useRef<CellEntry>({span, width}).current;
     // Registered once, so the cell keeps its place among the row's cells
     useLayoutEffect(() => {
@@ -529,6 +621,7 @@ export function makeCell(tag: 'td' | 'th'): React.ComponentType<CellProps> {
     return (
       <Host
         {...rest}
+        ref={ref}
         nodeName={tag}
         style={[
           {alignContent},
@@ -554,10 +647,14 @@ export function makeCol(): React.ComponentType<ColProps> {
   function Col({style, span: spanProp, ...rest}: ColProps): React.Node {
     const table = useContext(TableContext);
     const tableRows = table?.rows;
+    const engineStyled = rest.cssEngine === true;
+    const hostRef = useRef<unknown>(null);
+    const ref = useMergedRef(hostRef, rest.ref);
+    const engineWidth = useEngineWidth(engineStyled, hostRef);
     const flat: {[string]: unknown} =
       (StyleSheet.flatten(style as $FlowFixMe) as $FlowFixMe) ?? {};
     const span = spanOf(spanProp);
-    const width = flat.width ?? null;
+    const width = engineStyled ? engineWidth : (flat.width ?? null);
     const entry = useRef<CellEntry>({span, width}).current;
     useLayoutEffect(() => {
       tableRows?.registerCol(entry);
@@ -570,7 +667,7 @@ export function makeCol(): React.ComponentType<ColProps> {
         tableRows?.colChanged();
       }
     }, [tableRows, entry, span, width]);
-    return <Host {...rest} nodeName="col" style={style} />;
+    return <Host {...rest} ref={ref} nodeName="col" style={style} />;
   }
   Col.displayName = '<col>';
   return Col;

@@ -1674,6 +1674,13 @@ function resolveInlineElementComponent(
   boxComponentName: string = 'element-box',
 ): (props: {[string]: unknown}) => string {
   return (props: {[string]: unknown}): string => {
+    // An element the renderer's style engine styles has no style here to
+    // read; the runtime that renders it says whether its styles can give it a
+    // box (see the style engine's `hints`)
+    const engineBox = props?.cssBox;
+    if (typeof engineBox === 'boolean') {
+      return engineBox ? boxComponentName : uiViewClassName;
+    }
     // The UA display counts too: `<button>`'s inline-block comes from the
     // stylesheet, and box selection has to see it or the element would resolve
     // as text-backed and its padding would have nowhere to apply.
