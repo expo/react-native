@@ -150,6 +150,19 @@ Scheduler::Scheduler(
   uiManager->setDelegate(this);
   uiManager->setComponentDescriptorRegistry(componentDescriptorRegistry_);
 
+  // Before the transitions hook, which runs after it and so sees the values
+  // the style pass computed; hooks run in registration order
+  styleEngine_ = std::make_shared<StyleEngine>(*uiManager);
+  // The hover, active and focus states the engine keeps, from the events
+  // before they reach JavaScript
+  addEventListener(
+      std::make_shared<const EventListener>(
+          [weakStyleEngine = std::weak_ptr<StyleEngine>(styleEngine_)](
+              const RawEvent& event) {
+            auto styleEngine = weakStyleEngine.lock();
+            return styleEngine != nullptr && styleEngine->handleEvent(event);
+          }));
+
   // Must come after `setDelegate`: the backend's constructor registers a
   // surface-start callback, and `UIManager` silently drops those while it has
   // no delegate.
@@ -204,6 +217,13 @@ Scheduler::Scheduler(
       : runtimeExecutor_;
   bindingsExecutor([uiManager](jsi::Runtime& runtime) {
     UIManagerBinding::createAndInstallIfNeeded(runtime, uiManager);
+  });
+  // Install the engine's binding with the UI manager's, before the bundle is
+  // evaluated where the host can run work that early: a module registers its
+  // tokens and keyframes with the engine as it loads
+  bindingsExecutor([weakStyleEngine = std::weak_ptr<StyleEngine>(styleEngine_)](
+                       jsi::Runtime& runtime) {
+    StyleEngine::installBindings(runtime, weakStyleEngine);
   });
 
   auto componentDescriptorRegistryKey =

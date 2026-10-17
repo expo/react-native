@@ -23,9 +23,13 @@ RootShadowNode::Unshared AnimationBackendCommitHook::shadowTreeWillCommit(
     const RootShadowNode::Shared& oldRootShadowNode,
     const RootShadowNode::Unshared& newRootShadowNode,
     const ShadowTreeCommitOptions& commitOptions) noexcept {
+  // The style engine's restyles too: they clone what they restyle from the
+  // committed props, which would otherwise mount over a running animation's
+  // values for a frame
   if (commitOptions.source != ShadowTreeCommitSource::React &&
       commitOptions.source != ShadowTreeCommitSource::AnimationEndSync &&
-      commitOptions.source != ShadowTreeCommitSource::ReactRevisionMerge) {
+      commitOptions.source != ShadowTreeCommitSource::ReactRevisionMerge &&
+      commitOptions.source != ShadowTreeCommitSource::StyleEngine) {
     return newRootShadowNode;
   }
 

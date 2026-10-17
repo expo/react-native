@@ -91,6 +91,7 @@ add_react_common_subdir(react/performance/cdpmetrics)
 add_react_common_subdir(react/performance/timeline)
 add_react_common_subdir(react/renderer/animated)
 add_react_common_subdir(react/renderer/animationbackend)
+add_react_common_subdir(react/renderer/cssengine)
 add_react_common_subdir(react/renderer/animations)
 add_react_common_subdir(react/renderer/attributedstring)
 add_react_common_subdir(react/renderer/componentregistry)
@@ -221,6 +222,7 @@ add_library(reactnative
           $<TARGET_OBJECTS:react_performance_timeline>
           $<TARGET_OBJECTS:react_renderer_animated>
           $<TARGET_OBJECTS:react_renderer_animationbackend>
+          $<TARGET_OBJECTS:react_renderer_cssengine>
           $<TARGET_OBJECTS:react_renderer_animations>
           $<TARGET_OBJECTS:react_renderer_attributedstring>
           $<TARGET_OBJECTS:react_renderer_componentregistry>
@@ -323,6 +325,7 @@ target_include_directories(reactnative
         $<TARGET_PROPERTY:react_performance_timeline,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_animated,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_animationbackend,INTERFACE_INCLUDE_DIRECTORIES>
+        $<TARGET_PROPERTY:react_renderer_cssengine,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_animations,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_attributedstring,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_componentregistry,INTERFACE_INCLUDE_DIRECTORIES>

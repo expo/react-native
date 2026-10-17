@@ -258,6 +258,54 @@ SharedColor colorFromRGBA(int32_t color) {
   return colorFromComponents(colorComponentsFromColor(SharedColor(color)));
 }
 
+// The properties whose frames are prop writes, which a starting style gives
+constexpr TransitionProperty kPaintProperties[] = {
+    TransitionProperty::Opacity,
+    TransitionProperty::BackgroundColor,
+    TransitionProperty::BorderColor,
+    TransitionProperty::Transform,
+};
+
+// Whether a node generates a box, one that is not `display: none`
+bool generatesBox(const ViewProps* props) {
+  return props == nullptr || props->yogaStyle.display() != yoga::Display::None;
+}
+
+// What a starting style gives `property`, if anything
+std::optional<TransitionValue> startingValue(
+    const AnimationKeyframe& starting,
+    TransitionProperty property) {
+  TransitionValue value;
+  switch (property) {
+    case TransitionProperty::Opacity:
+      if (!starting.opacity) {
+        return std::nullopt;
+      }
+      value.number = *starting.opacity;
+      return value;
+    case TransitionProperty::BackgroundColor:
+      if (!starting.backgroundColor) {
+        return std::nullopt;
+      }
+      value.color = colorFromRGBA(*starting.backgroundColor);
+      return value;
+    case TransitionProperty::BorderColor:
+      if (!starting.borderColor) {
+        return std::nullopt;
+      }
+      value.color = colorFromRGBA(*starting.borderColor);
+      return value;
+    case TransitionProperty::Transform:
+      if (!starting.transform) {
+        return std::nullopt;
+      }
+      value.transform = *starting.transform;
+      return value;
+    default:
+      return std::nullopt;
+  }
+}
+
 Float interpolateFloat(Float from, Float to, Float progress) {
   return from + (to - from) * progress;
 }
@@ -640,9 +688,14 @@ RootShadowNode::Unshared CSSTransitions::shadowTreeWillCommit(
    * on a device as every transition being chased by its own mirror. The
    * commit SOURCE is the discriminator: a merge is `ReactRevisionMerge`, a
    * state write is `Unknown`, Animated's flush is `AnimationEndSync`, and
-   * none of them can carry an author's change.
+   * none of them can carry an author's change. The style engine's own
+   * commits can (`StyleEngine`): a write to `element.style`, a `:hover` or
+   * `:active` that began, a sheet that changed. Skipped, a bottom sheet
+   * dragged by `element.style` and released jumped shut instead of sliding
+   * from the finger.
    */
-  if (commitOptions.source != ShadowTreeCommitSource::React) {
+  if (commitOptions.source != ShadowTreeCommitSource::React &&
+      commitOptions.source != ShadowTreeCommitSource::StyleEngine) {
     /*
      * Not diffed — but WATCHED, while anything is running.
      *
@@ -665,7 +718,12 @@ RootShadowNode::Unshared CSSTransitions::shadowTreeWillCommit(
   installOnSurface(shadowTree);
 
   std::vector<LayoutStart> layoutStarts;
-  diffNode(*oldRootShadowNode, *newRootShadowNode, layoutStarts);
+  diffNode(
+      *oldRootShadowNode,
+      *newRootShadowNode,
+      layoutStarts,
+      /*oldParentRendered*/ true,
+      /*newParentRendered*/ true);
 
   {
     // Animations whose node no longer exists in the committed tree are
@@ -901,10 +959,16 @@ void CSSTransitions::noteCommitBehindTransitions(
 void CSSTransitions::diffNode(
     const ShadowNode& oldNode,
     const ShadowNode& newNode,
-    std::vector<LayoutStart>& layoutStarts) {
+    std::vector<LayoutStart>& layoutStarts,
+    bool oldParentRendered,
+    bool newParentRendered) {
   // A persistent tree: an untouched subtree is literally the same node, so
-  // the walk is proportional to what changed.
+  // the walk is proportional to what changed, unless an ancestor came to be
+  // rendered, which brings the whole subtree with it
   if (&oldNode == &newNode) {
+    if (!oldParentRendered && newParentRendered) {
+      visitFreshNode(newNode, newParentRendered);
+    }
     return;
   }
 
@@ -912,6 +976,8 @@ void CSSTransitions::diffNode(
       dynamic_cast<const ViewProps*>(newNode.getProps().get());
   const auto* oldViewProps =
       dynamic_cast<const ViewProps*>(oldNode.getProps().get());
+  const bool wasRendered = oldParentRendered && generatesBox(oldViewProps);
+  const bool isRendered = newParentRendered && generatesBox(newViewProps);
 
   if (newViewProps != nullptr) {
     syncAnimation(newNode);
@@ -919,7 +985,14 @@ void CSSTransitions::diffNode(
 
   noteTransitionableContent(newViewProps);
 
-  if (newViewProps != nullptr && oldViewProps != nullptr &&
+  if (!wasRendered) {
+    // No before-change style: a transition runs from the starting style, if
+    // the node has one, as it comes to be rendered (css-transitions-2 §3.3)
+    if (isRendered && newViewProps != nullptr) {
+      startFromStartingStyle(newNode, *newViewProps);
+    }
+  } else if (
+      newViewProps != nullptr && oldViewProps != nullptr &&
       !newViewProps->transitions().empty()) {
     const auto tag = newNode.getTag();
     std::scoped_lock lock(mutex_);
@@ -1111,60 +1184,7 @@ void CSSTransitions::diffNode(
       if (valuesEqual(previous, target, property)) {
         continue;
       }
-
-      /*
-       * A RESTART is worth saying out loud. The same change arriving again,
-       * from the value the last one started at and within a second of it
-       * finishing, is not an author changing their mind — it is a commit
-       * repeating, and on a device it is what a reader sees as a flicker.
-       */
-      const auto doneKey =
-          static_cast<uint64_t>(tag) * 16 + static_cast<uint64_t>(property);
-      const auto journey = describeValue(previous, property) + "->" +
-          describeValue(target, property);
-      std::string again;
-      if (auto done = lastDone_.find(doneKey); done != lastDone_.end()) {
-        const auto since = lastFrameTime_ - done->second.time;
-        if (since > 1000.0 || done->second.journey != journey) {
-          lastDone_.erase(done);
-        } else {
-          done->second.repeats += 1;
-          again = " AGAIN #" + std::to_string(done->second.repeats) + " " +
-              std::to_string(static_cast<int>(since)) + "ms after it finished";
-        }
-      }
-      trace_->log(
-          "start t=" + std::to_string(tag) + " " + propName(property) + " " +
-          journey + again);
-
-      auto& entry = transitions_[tag];
-      entry.tag = tag;
-      entry.family = newNode.getFamilyShared();
-      if (property == TransitionProperty::Transform &&
-          (hasPercentOps(previous.transform) ||
-           hasPercentOps(target.transform))) {
-        entry.needsSize = true;
-      }
-
-      RunningTransition transition;
-      transition.property = property;
-      transition.from = previous;
-      transition.to = target;
-      transition.delay = declared->delay;
-      transition.duration = declared->duration;
-      transition.timingFunction = declared->timingFunction;
-      /*
-       * A fresh transition would return to where it started, and is entitled to
-       * the whole declared timing — css-transitions-1 §3's starting values for
-       * the two reversing quantities. Without seeding this, a later change back
-       * to `previous` could never be RECOGNISED as a reversal, and the
-       * shortening above would never apply.
-       */
-      transition.reversingAdjustedStart = previous;
-      transition.reversingShorteningFactor = 1.0;
-      entry.running.push_back(transition);
-  pendingEvents_.push_back(
-      {.family = entry.family, .type = "transitionRun", .property = property});
+      startTransition(newNode, property, *declared, previous, target);
     }
   }
 
@@ -1177,21 +1197,88 @@ void CSSTransitions::diffNode(
     const auto& newChild = newChildren[i];
     if (i < oldChildren.size() &&
         &oldChildren[i]->getFamily() == &newChild->getFamily()) {
-      diffNode(*oldChildren[i], *newChild, layoutStarts);
+      diffNode(
+          *oldChildren[i], *newChild, layoutStarts, wasRendered, isRendered);
       continue;
     }
     bool matched = false;
     for (const auto& oldChild : oldChildren) {
       if (&oldChild->getFamily() == &newChild->getFamily()) {
-        diffNode(*oldChild, *newChild, layoutStarts);
+        diffNode(*oldChild, *newChild, layoutStarts, wasRendered, isRendered);
         matched = true;
         break;
       }
     }
     if (!matched) {
-      visitFreshNode(*newChild);
+      visitFreshNode(*newChild, isRendered);
     }
   }
+}
+
+/*
+ * Starts `property` on `node` from `previous` to `target` under `declared`.
+ * Called with `mutex_` held.
+ */
+void CSSTransitions::startTransition(
+    const ShadowNode& node,
+    TransitionProperty property,
+    const Transition& declared,
+    const TransitionValue& previous,
+    const TransitionValue& target) {
+  const auto tag = node.getTag();
+  /*
+   * A RESTART is worth saying out loud. The same change arriving again,
+   * from the value the last one started at and within a second of it
+   * finishing, is not an author changing their mind — it is a commit
+   * repeating, and on a device it is what a reader sees as a flicker.
+   */
+  const auto doneKey =
+      static_cast<uint64_t>(tag) * 16 + static_cast<uint64_t>(property);
+  const auto journey = describeValue(previous, property) + "->" +
+      describeValue(target, property);
+  std::string again;
+  if (auto done = lastDone_.find(doneKey); done != lastDone_.end()) {
+    const auto since = lastFrameTime_ - done->second.time;
+    if (since > 1000.0 || done->second.journey != journey) {
+      lastDone_.erase(done);
+    } else {
+      done->second.repeats += 1;
+      again = " AGAIN #" + std::to_string(done->second.repeats) + " " +
+          std::to_string(static_cast<int>(since)) + "ms after it finished";
+    }
+  }
+  trace_->log(
+      "start t=" + std::to_string(tag) + " " + propName(property) + " " +
+      journey + again);
+
+  auto& entry = transitions_[tag];
+  entry.tag = tag;
+  entry.family = node.getFamilyShared();
+  if (property == TransitionProperty::Transform &&
+      (hasPercentOps(previous.transform) ||
+       hasPercentOps(target.transform))) {
+    entry.needsSize = true;
+  }
+
+  RunningTransition transition;
+  transition.property = property;
+  transition.from = previous;
+  transition.to = target;
+  transition.delay = declared.delay;
+  transition.duration = declared.duration;
+  transition.timingFunction = declared.timingFunction;
+  /*
+   * A fresh transition would return to where it started, and is entitled to
+   * the whole declared timing — css-transitions-1 §3's starting values for
+   * the two reversing quantities. Without seeding this, a later change back
+   * to `previous` could never be RECOGNISED as a reversal, and the
+   * shortening in `diffNode` would never apply.
+   */
+  transition.reversingAdjustedStart = previous;
+  transition.reversingShorteningFactor = 1.0;
+  entry.running.push_back(transition);
+  pendingEvents_.push_back(
+      {.family = entry.family, .type = "transitionRun", .property = property});
 }
 
 void CSSTransitions::noteTransitionableContent(const ViewProps* viewProps) {
@@ -1202,14 +1289,57 @@ void CSSTransitions::noteTransitionableContent(const ViewProps* viewProps) {
   sawTransitionableContent_ = true;
 }
 
-void CSSTransitions::visitFreshNode(const ShadowNode& node) {
+void CSSTransitions::visitFreshNode(
+    const ShadowNode& node,
+    bool parentRendered) {
   const auto* viewProps = dynamic_cast<const ViewProps*>(node.getProps().get());
+  const bool rendered = parentRendered && generatesBox(viewProps);
   if (viewProps != nullptr) {
     syncAnimation(node);
+    if (rendered) {
+      startFromStartingStyle(node, *viewProps);
+    }
   }
   noteTransitionableContent(viewProps);
   for (const auto& child : node.getChildren()) {
-    visitFreshNode(*child);
+    visitFreshNode(*child, rendered);
+  }
+}
+
+void CSSTransitions::startFromStartingStyle(
+    const ShadowNode& node,
+    const ViewProps& props) {
+  const auto& starting = props.startingStyle();
+  if (!starting.has_value() || props.transitions().empty()) {
+    return;
+  }
+  const auto tag = node.getTag();
+  std::scoped_lock lock(mutex_);
+  // What ran before the node stopped being rendered ended then
+  // (css-transitions-1 §3)
+  if (auto dropped = transitions_.find(tag); dropped != transitions_.end()) {
+    for (const auto& running : dropped->second.running) {
+      pendingEvents_.push_back(
+          {.family = dropped->second.family,
+           .type = "transitionCancel",
+           .property = running.property});
+    }
+    transitions_.erase(dropped);
+  }
+  for (auto property : kPaintProperties) {
+    const auto* declared = findTransition(props.transitions(), property);
+    if (declared == nullptr) {
+      continue;
+    }
+    auto from = startingValue(*starting, property);
+    if (!from) {
+      continue;
+    }
+    const auto target = currentValue(props, property);
+    if (valuesEqual(*from, target, property)) {
+      continue;
+    }
+    startTransition(node, property, *declared, *from, target);
   }
 }
 

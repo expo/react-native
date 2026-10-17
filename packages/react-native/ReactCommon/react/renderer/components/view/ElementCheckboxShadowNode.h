@@ -17,6 +17,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -47,14 +48,23 @@ class ElementCheckboxEventEmitter : public ViewEventEmitter {
   }
 };
 
-class ElementCheckboxProps final : public ViewProps, public NodeNameProvider {
+class ElementCheckboxProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementCheckboxProps() = default;
   ElementCheckboxProps(
       const PropsParserContext &context,
       const ElementCheckboxProps &sourceProps,
       const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         checked(convertRawProp(context, rawProps, "checked", sourceProps.checked, false)),
         disabled(convertRawProp(context, rawProps, "disabled", sourceProps.disabled, false))

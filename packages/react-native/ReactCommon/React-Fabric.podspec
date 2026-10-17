@@ -84,6 +84,15 @@ Pod::Spec.new do |s|
     ss.header_dir           = "react/renderer/animationbackend"
   end
 
+  s.subspec "cssengine" do |ss|
+    ss.dependency             "React-Fabric/coreUmbrella"
+    ss.dependency             "React-Fabric/uimanager"
+    ss.dependency             "React-renderercss"
+    ss.source_files         = podspec_sources("react/renderer/cssengine/**/*.{m,mm,cpp,h}", "react/renderer/cssengine/**/*.{h}")
+    ss.exclude_files        = "react/renderer/cssengine/tests"
+    ss.header_dir           = "react/renderer/cssengine"
+  end
+
   s.subspec "attributedstring" do |ss|
     ss.dependency             "React-Fabric/coreUmbrella"
     ss.dependency             "React-Fabric/components/viewUmbrella"
@@ -203,6 +212,7 @@ Pod::Spec.new do |s|
     ss.header_dir           = "react/renderer/scheduler"
 
     ss.dependency             "React-Fabric/animationbackend"
+    ss.dependency             "React-Fabric/cssengine"
     ss.dependency             "React-Fabric/viewtransition"
     ss.dependency             "React-performancecdpmetrics"
     ss.dependency             "React-performancetimeline"

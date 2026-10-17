@@ -210,6 +210,18 @@ internal class CompositeBackgroundDrawable(
     )
   }
 
+  /**
+   * Reports no padding. A view's padding is React's, which the mounting layer sets from layout, and
+   * `View.setBackground` replaces a view's padding with whatever padding its new background reports.
+   * Reported, an original background's padding (an EditText's theme insets) would take the place of
+   * the padding React set, whenever a fill or a border first reached the view after its padding had,
+   * and nothing would put React's back, since its layout did not change.
+   */
+  override fun getPadding(padding: Rect): Boolean {
+    padding.setEmpty()
+    return false
+  }
+
   /* Android's elevation implementation requires this to be implemented to know where to draw the
   elevation shadow. */
   override fun getOutline(outline: Outline) {

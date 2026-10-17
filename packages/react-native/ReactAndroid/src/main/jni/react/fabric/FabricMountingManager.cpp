@@ -18,6 +18,8 @@
 #include <react/jni/ReadableNativeArray.h>
 #include <react/jni/ReadableNativeMap.h>
 #include <react/renderer/components/scrollview/ScrollViewProps.h>
+#include <react/renderer/components/view/BaseViewProps.h>
+#include <react/renderer/graphics/BackgroundImage.h>
 #include <react/renderer/core/DynamicPropsUtilities.h>
 #include <react/renderer/core/conversions.h>
 #include <react/renderer/mounting/MountingTransaction.h>
@@ -325,6 +327,35 @@ bool shouldDiffInsertPropsAgainstPreallocatedProps() {
       ReactNativeFeatureFlags::enablePreallocatedPropsDiffOnInsertAndroid();
 }
 
+/*
+ * Hands Java a `backgroundImage` it can read. The view managers take the
+ * processed form, an array of layer objects as JavaScript's
+ * `processBackgroundImage` makes it; CSS text, which the style engine forwards
+ * and the C++ props parse, fails their conversion and throws while the view is
+ * created. The layers the C++ props parsed from that text, gradients and
+ * `url()` images, are handed over instead, in the form `getDiffProps` already
+ * serializes them in.
+ */
+folly::dynamic withProcessedBackgroundImage(
+    folly::dynamic props,
+    const Props& newProps) {
+  auto backgroundImage = props.find("backgroundImage");
+  if (backgroundImage == props.items().end() ||
+      !backgroundImage->second.isString()) {
+    return props;
+  }
+  const auto* viewProps = dynamic_cast<const BaseViewProps*>(&newProps);
+  if (viewProps == nullptr) {
+    return props;
+  }
+  auto layers = folly::dynamic::array();
+  for (const auto& layer : viewProps->backgroundImage) {
+    layers.push_back(toDynamic(layer));
+  }
+  backgroundImage->second = std::move(layers);
+  return props;
+}
+
 jni::local_ref<jobject> getProps(
     const ShadowView& oldShadowView,
     const ShadowView& newShadowView) {
@@ -364,13 +395,15 @@ jni::local_ref<jobject> getProps(
   }
   if (ReactNativeFeatureFlags::enableAccumulatedUpdatesInRawPropsAndroid()) {
     if (oldProps == nullptr) {
-      return ReadableNativeMap::newObjectCxxArgs(newProps->rawProps);
-    } else {
       return ReadableNativeMap::newObjectCxxArgs(
-          diffDynamicProps(oldProps->rawProps, newProps->rawProps));
+          withProcessedBackgroundImage(newProps->rawProps, *newProps));
+    } else {
+      return ReadableNativeMap::newObjectCxxArgs(withProcessedBackgroundImage(
+          diffDynamicProps(oldProps->rawProps, newProps->rawProps), *newProps));
     }
   }
-  return ReadableNativeMap::newObjectCxxArgs(newProps->rawProps);
+  return ReadableNativeMap::newObjectCxxArgs(
+      withProcessedBackgroundImage(newProps->rawProps, *newProps));
 }
 
 struct InstructionBuffer {
