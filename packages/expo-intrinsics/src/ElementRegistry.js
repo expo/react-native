@@ -40,6 +40,24 @@ setElementComponentResolver((tag: string) => components.get(tag) ?? null);
 /** Tags pushed to the reconciler's registry, which allows each name once. */
 const committed: Set<string> = new Set();
 
+/*
+ * What the renderer's style engine reads of an element: its class attribute,
+ * the attributes selectors name, a registered StyleX style, an inline style
+ * and its interaction states. Every element carries them, so a page styled by
+ * the engine needs nothing from the element's own definition.
+ */
+const STYLE_ENGINE_ATTRIBUTES = {
+  cssEngine: true,
+  cssTag: true,
+  cssClass: true,
+  cssAttributes: true,
+  cssStyle: true,
+  cssInline: true,
+  cssStates: true,
+  cssPresentational: true,
+  cssScroll: true,
+} as const;
+
 function commit(tag: string) {
   if (committed.has(tag)) {
     return;
@@ -50,7 +68,14 @@ function commit(tag: string) {
     if (entry == null) {
       throw new Error(`Element <${tag}> lost its registry entry.`);
     }
-    return entry.makeViewConfig();
+    const viewConfig = entry.makeViewConfig();
+    return {
+      ...viewConfig,
+      validAttributes: {
+        ...viewConfig.validAttributes,
+        ...STYLE_ENGINE_ATTRIBUTES,
+      },
+    };
   });
 }
 

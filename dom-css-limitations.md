@@ -657,6 +657,7 @@ rather than going quiet.
 - `no-groove-border` — limitation, `packages/expo-intrinsics/src/uaStyles.js`
 - `no-spellcheck-on-url-email-password` — deviation, `packages/expo-intrinsics/__tests__/textCorrection-test.js`
 - `no-visited-links` — deviation, `packages/expo-intrinsics/src/uaStyles.js`
+- `nth-last-of-selector-in-sheets` — limitation, `packages/react-native/ReactCommon/react/renderer/cssengine/SelectorMatching.cpp`
 - `oklab-colours-are-srgb` — limitation, `packages/rn-tester/js/astryx/colorMix.js`
 - `panel-content-fades-without-the-blur` — deviation, `packages/chat-demo/Composer.js`
 - `paragraph-margin-shorthand-dropped` — limitation, `packages/expo-intrinsics/__tests__/ParagraphMargins-itest.js`
@@ -678,6 +679,7 @@ rather than going quiet.
 - `table-layout-auto-is-fixed` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-percent-columns-need-the-width` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-rowspan` — limitation, `packages/expo-intrinsics/src/Table.js`
+- `unanswered-pseudo-classes` — limitation, `packages/react-native/ReactCommon/react/renderer/cssengine/StyleSheetParser.cpp`
 - `unitless-line-height-needs-local-font-size` — limitation, `packages/rn-tester/js/astryx/stylex-rn.js`
 - `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
 - `white-space-break-spaces-hangs` — limitation, `ReactCommon/react/renderer/attributedstring/conversions.h`

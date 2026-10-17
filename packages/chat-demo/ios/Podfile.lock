@@ -589,6 +589,7 @@ PODS:
     - React-Fabric/consistency (= 1000.0.0)
     - React-Fabric/core (= 1000.0.0)
     - React-Fabric/coreUmbrella (= 1000.0.0)
+    - React-Fabric/cssengine (= 1000.0.0)
     - React-Fabric/dom (= 1000.0.0)
     - React-Fabric/imagemanager (= 1000.0.0)
     - React-Fabric/imagemanagerUmbrella (= 1000.0.0)
@@ -1107,6 +1108,37 @@ PODS:
     - React-utils
     - ReactCommon/turbomodule/core
     - SocketRocket
+  - React-Fabric/cssengine (1000.0.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-cxxreact
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric/coreUmbrella
+    - React-Fabric/uimanager
+    - React-featureflags
+    - React-graphics
+    - React-jsi
+    - React-jsiexecutor
+    - React-logger
+    - React-renderercss
+    - React-rendererdebug
+    - React-runtimeexecutor
+    - React-runtimescheduler
+    - React-timing
+    - React-utils
+    - ReactCommon/turbomodule/core
+    - SocketRocket
   - React-Fabric/dom (1000.0.0):
     - boost
     - DoubleConversion
@@ -1411,6 +1443,7 @@ PODS:
     - React-cxxstableapi
     - React-debug
     - React-Fabric/animationbackend
+    - React-Fabric/cssengine
     - React-Fabric/observers/events
     - React-Fabric/viewtransition
     - React-featureflags

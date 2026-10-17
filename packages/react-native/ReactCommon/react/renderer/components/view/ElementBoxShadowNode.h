@@ -18,6 +18,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -50,11 +51,20 @@ extern const char ElementBoxComponentName[];
  * at instance creation, which is why it carries `nodeName` — the element must
  * still report its own tag (`RN:span`, not `RN:element-box`).
  */
-class ElementBoxProps final : public ViewProps, public NodeNameProvider {
+class ElementBoxProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementBoxProps() = default;
   ElementBoxProps(const PropsParserContext &context, const ElementBoxProps &sourceProps, const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),
         listStyleTypeValue(
             convertRawProp(context, rawProps, "listStyleType", sourceProps.listStyleTypeValue, std::string{})),

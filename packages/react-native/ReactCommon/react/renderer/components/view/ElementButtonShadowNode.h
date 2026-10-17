@@ -19,6 +19,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/propsConversions.h>
+#include <react/renderer/cssengine/ElementStyleInputs.h>
 #include <react/renderer/dom/NodeNameProvider.h>
 
 namespace facebook::react {
@@ -136,11 +137,20 @@ class ElementButtonEventEmitter : public ViewEventEmitter {
   }
 };
 
-class ElementButtonProps final : public ViewProps, public NodeNameProvider {
+class ElementButtonProps final : public ViewProps, public NodeNameProvider, public ElementStyleInputsProvider {
  public:
+  // What the style engine reads of this element; see cssengine/README.md
+  ElementStyleInputs styleInputs{};
+
+  const ElementStyleInputs &elementStyleInputs() const override
+  {
+    return styleInputs;
+  }
+
   ElementButtonProps() = default;
   ElementButtonProps(const PropsParserContext &context, const ElementButtonProps &sourceProps, const RawProps &rawProps)
       : ViewProps(context, sourceProps, rawProps),
+        styleInputs(context, sourceProps.styleInputs, rawProps),
         // In declaration order: `-Wreorder-ctor` is an error under the `-Werror`
         // of the Android and Fantom builds, and only a hidden warning in Xcode
         nodeName(convertRawProp(context, rawProps, "nodeName", sourceProps.nodeName, std::string{})),

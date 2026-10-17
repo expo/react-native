@@ -150,6 +150,14 @@ Scheduler::Scheduler(
   uiManager->setDelegate(this);
   uiManager->setComponentDescriptorRegistry(componentDescriptorRegistry_);
 
+  // Before the transitions hook, which runs after it and so sees the values
+  // the style pass computed; hooks run in registration order
+  styleEngine_ = std::make_shared<StyleEngine>(*uiManager);
+  runtimeExecutor_([weakStyleEngine = std::weak_ptr<StyleEngine>(styleEngine_)](
+                       jsi::Runtime& runtime) {
+    StyleEngine::installBindings(runtime, weakStyleEngine);
+  });
+
   // Must come after `setDelegate`: the backend's constructor registers a
   // surface-start callback, and `UIManager` silently drops those while it has
   // no delegate.

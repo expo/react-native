@@ -1,0 +1,1327 @@
+{
+ "type, class and id selectors": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  },
+  {
+   "rect": [
+    0,
+    2,
+    300,
+    3
+   ]
+  }
+ ],
+ "attribute presence and exact value": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    2
+   ]
+  },
+  {
+   "rect": [
+    0,
+    3,
+    300,
+    3
+   ]
+  }
+ ],
+ "attribute word, prefix, suffix, substring and dash matches": [
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    0
+   ]
+  },
+  {
+   "rect": [
+    0,
+    10,
+    300,
+    5
+   ]
+  }
+ ],
+ "an empty prefix, suffix or substring matches nothing": [
+  {
+   "matches": false
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": false
+  }
+ ],
+ "the case-insensitive attribute flag": [
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    4
+   ]
+  }
+ ],
+ ":not, :is and :where": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    0
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    2
+   ]
+  },
+  {
+   "rect": [
+    0,
+    3,
+    300,
+    3
+   ]
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  }
+ ],
+ ":is and :where forgive an invalid argument, :not does not": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    2
+   ]
+  }
+ ],
+ "one invalid selector drops the whole rule": [
+  {
+   "rect": [
+    0,
+    0,
+    10,
+    1
+   ]
+  }
+ ],
+ "a pseudo-element selects no element": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  }
+ ],
+ "first, last and only child": [
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "rect": [
+    0,
+    15,
+    300,
+    3
+   ]
+  }
+ ],
+ ":nth-child and :nth-last-child with An+B": [
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  }
+ ],
+ ":nth-child of a selector counts only its matches": [
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  }
+ ],
+ "descendant, child, next-sibling and subsequent-sibling combinators": [
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  },
+  {
+   "matches": true
+  }
+ ],
+ ":root is the document element": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    3
+   ]
+  },
+  {
+   "matches": false
+  }
+ ],
+ ":disabled reads a form control, not any element": [
+  {
+   "matches": false
+  },
+  {
+   "matches": true
+  }
+ ],
+ "an id beats any number of classes": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  }
+ ],
+ "more classes beat fewer, and a type adds less than a class": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  }
+ ],
+ "equal specificity: the later rule wins": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    3
+   ]
+  }
+ ],
+ ":where adds nothing, :is and :not take their most specific argument": [
+  {
+   "rect": [
+    0,
+    0,
+    20,
+    7
+   ]
+  }
+ ],
+ ":nth-child of a selector adds the selector’s specificity": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    5
+   ]
+  }
+ ],
+ "an important declaration beats a more specific normal one": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  }
+ ],
+ "an inline style beats every rule, and an important rule beats it": [
+  {
+   "rect": [
+    0,
+    0,
+    40,
+    8
+   ]
+  }
+ ],
+ "a later layer beats an earlier one, whatever the specificity": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  }
+ ],
+ "unlayered rules beat every layer": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    4
+   ]
+  }
+ ],
+ "important declarations rank the layers in reverse": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  }
+ ],
+ "a layer is placed where it is first named": [
+  {
+   "rect": [
+    0,
+    0,
+    10,
+    1
+   ]
+  }
+ ],
+ "nested layers order inside their parent": [
+  {
+   "rect": [
+    0,
+    0,
+    30,
+    2
+   ]
+  }
+ ],
+ "anonymous layers are each their own": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  }
+ ],
+ "a custom property inherits, and a descendant can redeclare it": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    3
+   ]
+  },
+  {
+   "rect": [
+    0,
+    3,
+    300,
+    5
+   ]
+  },
+  {
+   "custom": "5px"
+  }
+ ],
+ "a fallback stands in for a property nothing declared": [
+  {
+   "rect": [
+    0,
+    0,
+    12,
+    6
+   ]
+  }
+ ],
+ "a fallback runs to the closing parenthesis, commas included": [
+  {
+   "custom": "1px, 2px"
+  }
+ ],
+ "a reference resolves where it is declared, not where it is used": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    4
+   ]
+  }
+ ],
+ "properties in a cycle are invalid, and a fallback stands in": [
+  {
+   "rect": [
+    0,
+    0,
+    15,
+    5
+   ]
+  }
+ ],
+ "initial makes a custom property the guaranteed-invalid value": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    3
+   ]
+  }
+ ],
+ "a declaration invalid at computed-value time is unset": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  },
+  {
+   "background": [
+    0,
+    0,
+    0,
+    0
+   ]
+  }
+ ],
+ "a custom property in a shorthand": [
+  {
+   "rect": [
+    4,
+    1,
+    294,
+    5
+   ]
+  }
+ ],
+ "custom properties are case-sensitive": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  }
+ ],
+ "calc with sums, products and nesting": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    15
+   ]
+  },
+  {
+   "rect": [
+    0,
+    15,
+    300,
+    10
+   ]
+  },
+  {
+   "rect": [
+    0,
+    25,
+    300,
+    10
+   ]
+  },
+  {
+   "rect": [
+    0,
+    35,
+    300,
+    5
+   ]
+  }
+ ],
+ "min, max and clamp": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    4
+   ]
+  },
+  {
+   "rect": [
+    0,
+    4,
+    300,
+    10
+   ]
+  },
+  {
+   "rect": [
+    0,
+    14,
+    300,
+    5
+   ]
+  },
+  {
+   "rect": [
+    0,
+    19,
+    300,
+    20
+   ]
+  },
+  {
+   "rect": [
+    0,
+    39,
+    300,
+    8
+   ]
+  }
+ ],
+ "em is the element’s font size, and font-size em is its parent’s": [
+  {
+   "rect": [
+    0,
+    0,
+    90,
+    60
+   ]
+  }
+ ],
+ "rem is the root element’s font size": [
+  {
+   "rect": [
+    0,
+    0,
+    32,
+    8
+   ]
+  }
+ ],
+ "absolute units": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    96
+   ]
+  },
+  {
+   "rect": [
+    0,
+    96,
+    300,
+    96
+   ]
+  },
+  {
+   "rect": [
+    0,
+    192,
+    300,
+    96
+   ]
+  },
+  {
+   "rect": [
+    0,
+    288,
+    300,
+    96
+   ]
+  },
+  {
+   "rect": [
+    0,
+    384,
+    300,
+    96
+   ]
+  }
+ ],
+ "calc with em and rem together": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    36
+   ]
+  }
+ ],
+ "hex, rgb and named colours": [
+  {
+   "background": [
+    255,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "background": [
+    0,
+    128,
+    0,
+    0.5
+   ]
+  },
+  {
+   "background": [
+    0,
+    0,
+    255,
+    0.5
+   ]
+  },
+  {
+   "background": [
+    255,
+    0,
+    0,
+    0.25
+   ]
+  },
+  {
+   "background": [
+    0,
+    128,
+    0,
+    1
+   ]
+  },
+  {
+   "background": [
+    0,
+    0,
+    0,
+    0
+   ]
+  }
+ ],
+ "hsl and hwb": [
+  {
+   "background": [
+    0,
+    128,
+    0,
+    1
+   ]
+  },
+  {
+   "background": [
+    0,
+    0,
+    255,
+    1
+   ]
+  },
+  {
+   "background": [
+    255,
+    0,
+    0,
+    1
+   ]
+  }
+ ],
+ "currentColor is the element’s color, inherited or its own": [
+  {
+   "background": [
+    0,
+    0,
+    255,
+    1
+   ]
+  },
+  {
+   "background": [
+    255,
+    0,
+    0,
+    1
+   ]
+  }
+ ],
+ "color-mix in sRGB": [
+  {
+   "background": [
+    127.5,
+    0,
+    127.5,
+    1
+   ]
+  },
+  {
+   "background": [
+    63.75,
+    0,
+    191.25,
+    1
+   ]
+  },
+  {
+   "background": [
+    255,
+    0,
+    0,
+    0.5
+   ]
+  }
+ ],
+ "light-dark picks by the used colour scheme": [
+  {
+   "background": [
+    255,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "background": [
+    0,
+    0,
+    255,
+    1
+   ]
+  }
+ ],
+ "margin and padding with one to four values": [
+  {
+   "rect": [
+    1,
+    1,
+    298,
+    2
+   ]
+  },
+  {
+   "rect": [
+    2,
+    5,
+    296,
+    2
+   ]
+  },
+  {
+   "rect": [
+    2,
+    9,
+    296,
+    2
+   ]
+  },
+  {
+   "rect": [
+    0,
+    14,
+    300,
+    6
+   ]
+  }
+ ],
+ "a longhand after its shorthand wins, and a shorthand after resets it": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    7
+   ]
+  },
+  {
+   "rect": [
+    0,
+    7,
+    300,
+    10
+   ]
+  }
+ ],
+ "border-width and the border shorthand": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    4
+   ]
+  },
+  {
+   "rect": [
+    0,
+    4,
+    300,
+    8
+   ]
+  },
+  {
+   "rect": [
+    0,
+    12,
+    300,
+    6
+   ]
+  }
+ ],
+ "a border style of none makes the width zero": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  }
+ ],
+ "logical margins and padding in a horizontal writing mode": [
+  {
+   "rect": [
+    5,
+    3,
+    295,
+    2
+   ]
+  }
+ ],
+ "inset in a positioned box": [
+  {
+   "rect": [
+    275,
+    10,
+    5,
+    6
+   ]
+  }
+ ],
+ "flex: a number is a grow factor over a zero basis": [
+  {
+   "rect": [
+    0,
+    0,
+    90,
+    10
+   ]
+  },
+  {
+   "rect": [
+    90,
+    0,
+    180,
+    10
+   ]
+  },
+  {
+   "rect": [
+    270,
+    0,
+    30,
+    10
+   ]
+  }
+ ],
+ "gap with one or two values": [
+  {
+   "rect": [
+    30,
+    0,
+    20,
+    20
+   ]
+  }
+ ],
+ "inherit takes the parent’s computed value, initial the initial one": [
+  {
+   "rect": [
+    0,
+    0,
+    120,
+    20
+   ]
+  },
+  {
+   "rect": [
+    0,
+    20,
+    300,
+    5
+   ]
+  }
+ ],
+ "unset inherits an inherited property and resets the rest": [
+  {
+   "background": [
+    255,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    0
+   ]
+  }
+ ],
+ "media types and negation": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    0
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    3
+   ]
+  },
+  {
+   "rect": [
+    0,
+    4,
+    300,
+    4
+   ]
+  },
+  {
+   "rect": [
+    0,
+    8,
+    300,
+    5
+   ]
+  }
+ ],
+ "range syntax and boolean logic": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    2
+   ]
+  },
+  {
+   "rect": [
+    0,
+    3,
+    300,
+    3
+   ]
+  },
+  {
+   "rect": [
+    0,
+    6,
+    300,
+    4
+   ]
+  },
+  {
+   "rect": [
+    0,
+    10,
+    300,
+    5
+   ]
+  },
+  {
+   "rect": [
+    0,
+    15,
+    300,
+    6
+   ]
+  },
+  {
+   "rect": [
+    0,
+    21,
+    300,
+    0
+   ]
+  }
+ ],
+ "an unknown feature is false, and so is its negation": [
+  {
+   "rect": [
+    0,
+    0,
+    10,
+    0
+   ]
+  },
+  {
+   "rect": [
+    0,
+    0,
+    10,
+    0
+   ]
+  },
+  {
+   "rect": [
+    0,
+    0,
+    10,
+    0
+   ]
+  }
+ ],
+ "nested @media applies when both apply": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  },
+  {
+   "rect": [
+    0,
+    2,
+    300,
+    0
+   ]
+  }
+ ],
+ "@supports with a property, not, and, or": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    0
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    3
+   ]
+  },
+  {
+   "rect": [
+    0,
+    4,
+    300,
+    4
+   ]
+  },
+  {
+   "rect": [
+    0,
+    8,
+    300,
+    0
+   ]
+  }
+ ],
+ "@scope applies inside its root and stops at its limit": [
+  {
+   "rect": [
+    0,
+    0,
+    100,
+    2
+   ]
+  },
+  {
+   "rect": [
+    0,
+    2,
+    100,
+    0
+   ]
+  },
+  {
+   "rect": [
+    0,
+    2,
+    300,
+    0
+   ]
+  }
+ ],
+ "scope proximity: the nearer scope root wins": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    9
+   ]
+  }
+ ],
+ "scope proximity outranks source order": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    2
+   ]
+  }
+ ],
+ "@supports selector()": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    1
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    0
+   ]
+  },
+  {
+   "rect": [
+    0,
+    1,
+    300,
+    3
+   ]
+  }
+ ],
+ "comments, escapes and case in identifiers": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    3
+   ]
+  },
+  {
+   "rect": [
+    0,
+    3,
+    10,
+    4
+   ]
+  }
+ ],
+ "an invalid declaration is dropped, its neighbours kept": [
+  {
+   "rect": [
+    0,
+    0,
+    10,
+    2
+   ]
+  }
+ ],
+ "an unknown at-rule is skipped whole, block and all": [
+  {
+   "rect": [
+    0,
+    0,
+    300,
+    3
+   ]
+  }
+ ]
+}
