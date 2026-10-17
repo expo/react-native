@@ -14,9 +14,9 @@
  * `react` as the vendored Astryx sources see it: the same React, with
  * `createElement` routing an intrinsic element through the Astryx JSX runtime.
  *
- * The runtime (jsx-runtime.js) is where an element's custom properties, its
- * stylesheet rules and its deferred `var()` values are resolved, and Babel
- * sends every JSX expression in the layer through it. A component that builds
+ * The runtime (jsx-runtime.js) is where an element becomes what the renderer's
+ * style engine styles, and Babel sends every JSX expression in the layer
+ * through it. A component that builds
  * its element by hand instead — `Stack`, `StackItem`, `VisuallyHidden`,
  * `EmptyState`, for a polymorphic `as` prop — would otherwise hand the host
  * element raw props, and `<VStack style={{paddingInline: 'var(--spacing-6)'}}>`

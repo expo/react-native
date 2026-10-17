@@ -18,5 +18,6 @@ import './document-shim';
 // The DOM methods the sources call on their element refs; see the file
 import './dom-compat';
 
-// Astryx's CSS reset is `ASTRYX_RESET` in `jsx-runtime.js`, scoped to its
-// elements; `overrideUAStyle` would mutate the shared user-agent sheet
+// Astryx's CSS reset is its own `reset.css`, which a host installs as a sheet
+// (astryx-demo's AstryxHost does); `overrideUAStyle` would mutate the shared
+// user-agent sheet

@@ -10,7 +10,6 @@
 
 'use strict';
 
-import {cssVersion, resetStylesheets, resolveCssForElement} from '../css';
 import {compileSelector} from '../css/parse';
 import {forwardShimEventsTo, installDocumentShim} from '../document-shim';
 import {Dimensions} from 'react-native';
@@ -19,56 +18,16 @@ import {Dimensions} from 'react-native';
 installDocumentShim();
 const doc: $FlowFixMe = (globalThis as $FlowFixMe).document;
 
-function colorOf(className: string): unknown {
-  const resolution = resolveCssForElement(
-    {
-      tag: 'div',
-      classes: [className],
-      attributes: {},
-      states: {},
-      parent: null,
-    },
-    {},
-  );
-  return (resolution.style as $FlowFixMe)?.color;
-}
-
-function styleElement(css: string): $FlowFixMe {
-  const style = doc.createElement('style');
-  style.textContent = css;
-  return style;
-}
-
 afterEach(() => {
   for (const child of doc.head.childNodes.slice()) {
     doc.head.removeChild(child);
   }
-  resetStylesheets();
 });
 
 describe('the document shim', () => {
-  it('finds an element appended to it by id, so a sheet injected once is installed once', () => {
-    // Astryx's `ensureSlideRules`, which every layer calls
-    const ensure = () => {
-      if (doc.getElementById('slide-rules')) {
-        return;
-      }
-      const style = doc.createElement('style');
-      style.id = 'slide-rules';
-      style.textContent = '.slide { color: red; }';
-      doc.head.appendChild(style);
-    };
-    const before = cssVersion();
-    ensure();
-    ensure();
-    ensure();
-    expect(cssVersion() - before).toBe(1);
-    expect(doc.getElementById('slide-rules')?.tagName).toBe('STYLE');
-    expect(colorOf('slide')).toBe('red');
-  });
-
   it('answers selectors over its own elements', () => {
-    const style = styleElement('.a { color: red; }');
+    // Empty, so it installs no sheet
+    const style = doc.createElement('style');
     style.setAttribute('data-following', '');
     style.className = 'one two';
     doc.head.appendChild(style);
@@ -80,41 +39,6 @@ describe('the document shim', () => {
     expect(style.closest('head')).toBe(doc.head);
     expect(doc.head.contains(style)).toBe(true);
     expect(doc.body.contains(style)).toBe(false);
-  });
-
-  it("drops a <style>'s rules when it leaves the document", () => {
-    const style = styleElement('.gone { color: red; }');
-    doc.head.appendChild(style);
-    expect(colorOf('gone')).toBe('red');
-    style.remove();
-    expect(colorOf('gone')).toBe(undefined);
-    // Back in the document, back in the cascade
-    doc.head.appendChild(style);
-    expect(colorOf('gone')).toBe('red');
-  });
-
-  it('installs a <style> only once it is in the document', () => {
-    const style = styleElement('.later { color: red; }');
-    const container = doc.createElement('div');
-    container.appendChild(style);
-    expect(colorOf('later')).toBe(undefined);
-    doc.body.appendChild(container);
-    expect(colorOf('later')).toBe('red');
-  });
-
-  it('replaces a <style> whose text changes in its own cascade position', () => {
-    const first = styleElement('.x { color: red; }');
-    const second = styleElement('.x { color: blue; }');
-    doc.head.appendChild(first);
-    doc.head.appendChild(second);
-    expect(colorOf('x')).toBe('blue');
-    // The earlier sheet changes, and the later one still wins
-    first.textContent = '.x { color: green; }';
-    expect(colorOf('x')).toBe('blue');
-    // Once the later one stops saying anything about colour, the earlier one's
-    // new text shows
-    second.textContent = '.x { width: 10px; }';
-    expect(colorOf('x')).toBe('green');
   });
 
   it('hands its listeners and the window’s to the targets in the event path, now and later', () => {
@@ -158,13 +82,6 @@ describe('the document shim', () => {
     expect(pageDocument.removed).toEqual([['pointerdown', before]]);
     doc.removeEventListener('click', after, true);
     (globalThis as $FlowFixMe).removeEventListener('resize', resize);
-  });
-
-  it('reads a <style> written as text nodes', () => {
-    const style = doc.createElement('style');
-    style.appendChild(doc.createTextNode('.text { color: red; }'));
-    doc.head.appendChild(style);
-    expect(colorOf('text')).toBe('red');
   });
 });
 

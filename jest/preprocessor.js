@@ -77,7 +77,7 @@ module.exports = {
     }
 
     // The Astryx layer and the vendored shadcn sources compile JSX against
-    // the astryx runtime (custom-property inheritance, stylesheet matching)
+    // the astryx runtime (elements rendered for the renderer's style engine)
     // — under Metro via rn-tester's .babelrc override; here the same
     // transform runs as a pre-pass, leaving no JSX for the standard pipeline
     // to re-handle. Mirrors metro.config.js/.babelrc.js.

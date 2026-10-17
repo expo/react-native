@@ -18,14 +18,9 @@
  * Astryx-style `<button>` (a `<div>`/`<span>` intrinsic with `onClick`) look
  * and behave like the web original.
  *
- * The returned `handlers` spread straight onto an intrinsic element; pass
- * `state` to `stylex.propsWithState(state, …styles)`.
- *
- * ```js
- * const {state, handlers} = useInteractionState();
- * <button {...handlers} {...stylex.propsWithState(state, styles.button)}
- *         onClick={onPress}>Save</button>
- * ```
+ * The returned `handlers` spread straight onto an intrinsic element, and
+ * `state` is what the element tells the renderer's style engine
+ * (EngineElement.js), which answers the pseudo-classes from it.
  *
  * Requires W3C pointer events (RNTester enables them in its SceneDelegate);
  * `onClick` itself is the fork's DOM click, which bubbles like the web.
