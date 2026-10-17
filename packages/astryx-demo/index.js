@@ -25,23 +25,22 @@ import '../rn-tester/js/astryx/dom-compat';
 
 // The images the templates reference by root-relative path; see the file
 import './src/templateAssets';
-// What `env()` resolves to in the templates' styles; see the file
-import './src/environment';
 
 import {registerFrameworkComponent} from '../expo-intrinsics/src/ElementRegistry';
 import {
-  Svg,
+  EngineSvg,
   SvgCircle,
   SvgLine,
   SvgPath,
   SvgRect,
 } from '../rn-tester/js/astryx/svg/Svg';
 
-// The templates' icons (@heroicons/react, lucide-react) are compiled
-// `React.createElement('svg', …)` calls, which never pass through the Astryx
-// JSX runtime that maps SVG tags for the vendored sources. Registering the
-// same components under the bare tags lets any `<svg>` in the app render.
-registerFrameworkComponent('svg', Svg);
+// The SVG elements under their bare tags, for an `<svg>` built with React's
+// own `createElement` outside the Astryx runtime (Metro hands the vendored
+// sources and the icon packages `react-with-runtime.js`, which maps the tags
+// as the runtime does): the engine's `<svg>`, which paints with the colour the
+// engine resolved for it.
+registerFrameworkComponent('svg', EngineSvg);
 registerFrameworkComponent('path', SvgPath);
 registerFrameworkComponent('circle', SvgCircle);
 registerFrameworkComponent('rect', SvgRect);

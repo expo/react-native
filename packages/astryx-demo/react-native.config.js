@@ -26,7 +26,7 @@ module.exports = {
   dependencies: {
     // The Android app is a plain shell (index.android.js): Expo Router, the
     // Expo modules it runs on and its native stack stay iOS-only, so none of
-    // them is built there (see src/environment.android.js for the insets)
+    // them is built there
     'react-native-screens': {platforms: {android: null}},
     'react-native-safe-area-context': {platforms: {android: null}},
     expo: {platforms: {android: null}},

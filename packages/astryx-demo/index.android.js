@@ -17,11 +17,10 @@ import '../expo-intrinsics/src/index';
 import '../rn-tester/js/astryx/document-shim';
 import '../rn-tester/js/astryx/dom-compat';
 import './src/templateAssets';
-import './src/environment';
 
 import {registerFrameworkComponent} from '../expo-intrinsics/src/ElementRegistry';
 import {
-  Svg,
+  EngineSvg,
   SvgCircle,
   SvgLine,
   SvgPath,
@@ -30,7 +29,7 @@ import {
 import AndroidApp from './src/AndroidApp';
 import {AppRegistry} from 'react-native';
 
-registerFrameworkComponent('svg', Svg);
+registerFrameworkComponent('svg', EngineSvg);
 registerFrameworkComponent('path', SvgPath);
 registerFrameworkComponent('circle', SvgCircle);
 registerFrameworkComponent('rect', SvgRect);

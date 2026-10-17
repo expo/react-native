@@ -53,7 +53,7 @@ const config = {
   projectRoot: __dirname,
   watchFolders: [repoRoot, expoCheckout],
   transformer: {
-    // `.css` imports load as raw text for the stylesheet engine; see
+    // `.css` imports load as raw text for the renderer's style engine; see
     // packages/rn-tester/css-transformer.js
     babelTransformerPath: path.resolve(
       __dirname,
@@ -232,22 +232,6 @@ const config = {
           platform,
         );
       }
-      // Astryx's document-level press controller listens on `window` and
-      // `document`; its stand-in keeps the exports and installs nothing (see
-      // packages/rn-tester/js/astryx/pressFeedback-shim.js)
-      if (/\/pressFeedback$/.test(moduleName)) {
-        const resolved = context.resolveRequest(context, moduleName, platform);
-        if (
-          resolved.type === 'sourceFile' &&
-          resolved.filePath.endsWith('/js/astryx/vendor/utils/pressFeedback.ts')
-        ) {
-          return {
-            type: 'sourceFile',
-            filePath: path.join(astryx, 'pressFeedback-shim.js'),
-          };
-        }
-        return resolved;
-      }
       // Astryx's `Layer/useLayer` imports `createPortal` from react-dom on a
       // branch this renderer never takes; the import still has to resolve
       if (moduleName === 'react-dom' || moduleName === 'react-dom/client') {
@@ -257,7 +241,8 @@ const config = {
         };
       }
       // The Astryx layer and this app compile JSX against the runtime that
-      // lets intrinsic elements inherit CSS custom properties (see .babelrc.js)
+      // renders intrinsic elements for the renderer's style engine (see
+      // .babelrc.js)
       if (
         moduleName === 'astryx-jsx/jsx-runtime' ||
         moduleName === 'astryx-jsx/jsx-dev-runtime'

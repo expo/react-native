@@ -10,7 +10,7 @@
 
 'use strict';
 
-import {compileSelector, parseStylesheet, unescapeIdent} from '../parse';
+import {compileSelector, unescapeIdent} from '../parse';
 
 describe('unescapeIdent', () => {
   it('unescapes Tailwind identifier escapes', () => {
@@ -26,64 +26,6 @@ describe('unescapeIdent', () => {
   it('unescapes hex escapes with the trailing-space rule', () => {
     expect(unescapeIdent('\\2f foo')).toBe('/foo');
     expect(unescapeIdent('\\34 2')).toBe('42');
-  });
-});
-
-describe('@scope', () => {
-  // DOM-CSS-LIMITATION(scope-limit-ignored)
-  it('scopes rules under the root, :scope being the root', () => {
-    const sheet = parseStylesheet(
-      '@scope ([data-theme="n"]) to ([data-theme]) { :scope { --a: 1px } .x { --b: 2px } }',
-    );
-    const tags = sheet.rules.map(r =>
-      r.selectors[0].parts
-        .map(
-          p =>
-            p.compound.attributes.map(a => a.name).join('') ||
-            p.compound.classes.join(''),
-        )
-        .join(' > '),
-    );
-    expect(sheet.rules.length).toBe(2);
-    expect(sheet.rules[0].selectors[0].parts.length).toBe(1);
-    expect(sheet.rules[1].selectors[0].parts.length).toBe(2);
-    expect(tags[1]).toBe('data-theme > x');
-  });
-});
-
-describe(':is() and :where() lists', () => {
-  it('expands a list of compounds into one selector each', () => {
-    const sheet = parseStylesheet(
-      ':where(img, video) { display: block } [data-fit="cover"] > :where(*) { width: 100% }',
-    );
-    expect(sheet.rules.map(r => r.selectors.length)).toEqual([2, 1]);
-    const [media, child] = sheet.rules;
-    expect(
-      media.selectors.map(s => s.parts[s.parts.length - 1].compound.tag),
-    ).toEqual(['img', 'video']);
-    expect(child.selectors[0].parts.length).toBe(2);
-    expect(child.selectors[0].parts.some(p => p.combinator === '>')).toBe(true);
-  });
-
-  it('multiplies two lists', () => {
-    const sheet = parseStylesheet(':is(.a, .b) :where(.c, .d) { color: red }');
-    expect(sheet.rules[0].selectors.length).toBe(4);
-  });
-});
-
-describe('@container', () => {
-  // DOM-CSS-DEVIATION(container-query-is-a-media-query)
-  it('keeps the container name and the size condition on the rule', () => {
-    const sheet = parseStylesheet(
-      '@container gallery (max-width: 720px) { .grid { gap: 4px } } @container (width < 500px) { .x { gap: 1px } }',
-    );
-    expect(sheet.rules[0].containers).toEqual([
-      {name: 'gallery', condition: '(max-width: 720px)'},
-    ]);
-    expect(sheet.rules[0].media).toEqual([]);
-    expect(sheet.rules[1].containers).toEqual([
-      {name: null, condition: '(width < 500px)'},
-    ]);
   });
 });
 
@@ -177,131 +119,5 @@ describe('compileSelector', () => {
     // Ten classes still lose to one id: the packed fields do not carry
     const many = compileSelector('.a.b.c.d.e.f.g.h.i.j');
     expect(id.specificity).toBeGreaterThan(many.specificity);
-  });
-});
-
-describe('parseStylesheet', () => {
-  it('parses rules, media, and preserves source order', () => {
-    const sheet = parseStylesheet(`
-      .btn { padding-inline: 1rem; border-radius: 0.375rem; }
-      @media (min-width: 768px) {
-        .btn { padding-inline: 2rem; }
-      }
-    `);
-    expect(sheet.rules).toHaveLength(2);
-    expect(sheet.rules[0].declarations).toEqual({
-      'padding-inline': '1rem',
-      'border-radius': '0.375rem',
-    });
-    expect(sheet.rules[0].media).toEqual([]);
-    expect(sheet.rules[1].media).toEqual(['(min-width: 768px)']);
-    expect(sheet.rules[1].order).toBeGreaterThan(sheet.rules[0].order);
-  });
-
-  it('strips comments, including inside blocks', () => {
-    const sheet = parseStylesheet(`
-      /* header */
-      .a { /* pad */ padding: 4px; }
-    `);
-    expect(sheet.rules[0].declarations).toEqual({padding: '4px'});
-  });
-
-  it('keeps functions with semicolode-free commas intact', () => {
-    const sheet = parseStylesheet(
-      '.x { background-color: hsl(222.2 84% 4.9%); transition: color 150ms, opacity 150ms; }',
-    );
-    expect(sheet.rules[0].declarations['background-color']).toBe(
-      'hsl(222.2 84% 4.9%)',
-    );
-    expect(sheet.rules[0].declarations.transition).toBe(
-      'color 150ms, opacity 150ms',
-    );
-  });
-
-  it('parses :root variable blocks', () => {
-    const sheet = parseStylesheet(
-      ':root { --background: 0 0% 100%; --radius: 0.5rem; }',
-    );
-    expect(sheet.rules[0].selectors[0].parts[0].compound.pseudoClasses).toEqual(
-      ['root'],
-    );
-    expect(sheet.rules[0].declarations).toEqual({
-      '--background': '0 0% 100%',
-      '--radius': '0.5rem',
-    });
-  });
-
-  it('parses @layer statements and blocks with nesting', () => {
-    const sheet = parseStylesheet(`
-      @layer base, components, utilities;
-      @layer base { .a { color: red; } }
-      @layer utilities { .b { color: blue; } }
-      .c { color: green; }
-    `);
-    expect(sheet.layerOrder).toEqual(['base', 'components', 'utilities']);
-    expect(sheet.rules[0].layer).toBe('base');
-    expect(sheet.rules[1].layer).toBe('utilities');
-    expect(sheet.rules[2].layer).toBe(null);
-  });
-
-  it('parses @keyframes into sorted offset stops', () => {
-    const sheet = parseStylesheet(`
-      @keyframes enter {
-        to { opacity: 1 }
-        from { opacity: 0; transform: translateY(4px) }
-        50% { opacity: 0.7 }
-      }
-    `);
-    expect(sheet.keyframes).toHaveLength(1);
-    const [kf] = sheet.keyframes;
-    expect(kf.name).toBe('enter');
-    expect(kf.stops.map(s => s.offset)).toEqual([0, 0.5, 1]);
-    expect(kf.stops[0].declarations).toEqual({
-      opacity: '0',
-      transform: 'translateY(4px)',
-    });
-  });
-
-  it('takes @supports blocks and skips unknown at-rules whole', () => {
-    const sheet = parseStylesheet(`
-      @supports (backdrop-filter: blur(4px)) { .y { opacity: 0.5; } }
-      @font-face { font-family: X; src: url(x.woff2); }
-      .z { color: black; }
-    `);
-    expect(sheet.rules).toHaveLength(2);
-    expect(sheet.rules[0].declarations).toEqual({opacity: '0.5'});
-    expect(sheet.rules[1].declarations).toEqual({color: 'black'});
-  });
-
-  it('drops unparseable declarations without losing the rule', () => {
-    const sheet = parseStylesheet('.a { color: red; garbage; padding: 1px }');
-    expect(sheet.rules[0].declarations).toEqual({
-      color: 'red',
-      padding: '1px',
-    });
-  });
-
-  it('threads source order across sheets', () => {
-    const first = parseStylesheet('.a { color: red }', 0);
-    const second = parseStylesheet('.a { color: blue }', first.rules.length);
-    expect(second.rules[0].order).toBeGreaterThan(first.rules[0].order);
-  });
-
-  it('survives a representative Tailwind slice end to end', () => {
-    const sheet = parseStylesheet(`
-      .inline-flex { display: inline-flex }
-      .items-center { align-items: center }
-      .rounded-md { border-radius: calc(var(--radius) - 2px) }
-      .bg-primary { background-color: hsl(var(--primary)) }
-      .text-primary-foreground { color: hsl(var(--primary-foreground)) }
-      .hover\\:bg-primary\\/90:hover { background-color: hsl(var(--primary) / 0.9) }
-      .focus-visible\\:outline-none:focus-visible { outline: 2px solid transparent }
-      .disabled\\:opacity-50:disabled { opacity: 0.5 }
-      .data-\\[state\\=open\\]\\:fade-in-0[data-state=open] { --tw-enter-opacity: 0 }
-    `);
-    expect(sheet.rules).toHaveLength(9);
-    expect(sheet.rules.every(r => r.selectors[0].unsupported === false)).toBe(
-      true,
-    );
   });
 });

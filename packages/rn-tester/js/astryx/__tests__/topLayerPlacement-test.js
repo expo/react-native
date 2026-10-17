@@ -104,4 +104,16 @@ describe('placing an element in the top layer', () => {
       }),
     ).toEqual({x: 402 - 16 - 200, y: 800 - 24 - 50});
   });
+
+  it('centres a modal dialog in the viewport by its inset: 0 and margin: auto', () => {
+    expect(
+      placeInTopLayer({
+        style: {margin: 'auto'},
+        size: {width: 300, height: 200},
+        anchor: null,
+        viewport: {width: 400, height: 800},
+        defaultInset: 0,
+      }),
+    ).toEqual({x: 50, y: 300});
+  });
 });

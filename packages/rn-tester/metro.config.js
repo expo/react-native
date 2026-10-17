@@ -43,8 +43,8 @@ const config = {
     path.resolve(__dirname, '../../../expo'),
   ],
   transformer: {
-    // `.css` imports load as raw text for the stylesheet engine
-    // (js/astryx/css); see css-transformer.js.
+    // `.css` imports load as raw text, which js/astryx/css installs in the
+    // renderer's style engine; see css-transformer.js.
     babelTransformerPath: path.resolve(__dirname, 'css-transformer.js'),
   },
   resolver: {
@@ -231,28 +231,8 @@ const config = {
           filePath: path.resolve(__dirname, 'js/astryx/react-with-runtime.js'),
         };
       }
-      // Astryx's document-level press controller (vendor/utils/pressFeedback)
-      // listens on `window` and `document`; its stand-in keeps the exports and
-      // installs nothing. Matched on the resolved path, so the vendored
-      // importers (hooks/usePressFeedback) stay unmodified.
-      if (/\/pressFeedback$/.test(moduleName)) {
-        const resolved = context.resolveRequest(context, moduleName, platform);
-        if (
-          resolved.type === 'sourceFile' &&
-          resolved.filePath.endsWith('/js/astryx/vendor/utils/pressFeedback.ts')
-        ) {
-          return {
-            type: 'sourceFile',
-            filePath: path.resolve(
-              __dirname,
-              'js/astryx/pressFeedback-shim.js',
-            ),
-          };
-        }
-        return resolved;
-      }
-      // The astryx directory compiles JSX against this runtime (see .babelrc)
-      // so intrinsic elements can inherit CSS custom properties.
+      // The astryx directory compiles JSX against this runtime (see .babelrc),
+      // which renders intrinsic elements for the renderer's style engine.
       if (
         moduleName === 'astryx-jsx/jsx-runtime' ||
         moduleName === 'astryx-jsx/jsx-dev-runtime'

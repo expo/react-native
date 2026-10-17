@@ -102,15 +102,6 @@ const SUPPLIED = [
       'headings differently.',
   },
   {
-    what: 'The safe-area insets',
-    how:
-      "env(safe-area-inset-*) in a template's styles resolves to the device's " +
-      "insets: on iOS from the window's safe area (src/environment.js), on " +
-      "Android from the status bar's height, since the app draws under the " +
-      'system bars and the safe-area module is not built there ' +
-      '(src/environment.android.js).',
-  },
-  {
     what: 'The platform variable',
     how:
       'Expo Router expects babel-preset-expo to have inlined process.env.EXPO_OS; ' +

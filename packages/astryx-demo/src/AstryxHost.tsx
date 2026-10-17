@@ -13,6 +13,7 @@ import {
   VIEWPORT_INLINE_SIZE,
   installStylesheet,
 } from '../../rn-tester/js/astryx/css';
+import {PageViewportContext} from '../../rn-tester/js/astryx/overlay/TopLayerElement';
 import resetCss from '@astryxdesign/core/reset.css';
 import {Theme} from '@astryxdesign/core/theme';
 import {neutralTheme} from '@astryxdesign/theme-neutral/built';
@@ -105,10 +106,7 @@ function AstryxHost({
     [onSurfaceHeight],
   );
   // Declared from the first render, with the window's size until the surface
-  // has one: the CSS runtime opens a custom-property scope only for an
-  // element that declares some, so a surface that began declaring them after
-  // its first layout wrapped the page in a new provider and remounted all of
-  // it, and every picture on it reloaded
+  // has one, so the page's first layout already reads a viewport
   const windowSize = useWindowDimensions();
   const declared = size ?? {
     width: windowSize.width,
@@ -150,23 +148,33 @@ function AstryxHost({
     ...(fill && canvasColor != null ? {backgroundColor: canvasColor} : null),
     ...(fill && bottomInset > 0 ? {paddingBottom: bottomInset} : null),
   };
+  // The same viewport for the top layer, which places a fixed element (a
+  // drawer, a modal dialog) in it rather than over the navigation bar and the
+  // status bar
+  const viewportWidth = declared.width;
+  const viewportBlockSize = viewportHeight ?? declared.height;
+  const pageViewport = React.useMemo(
+    () => ({width: viewportWidth, height: viewportBlockSize}),
+    [viewportWidth, viewportBlockSize],
+  );
   return (
     <Theme theme={neutralTheme}>
-      <div
-        ref={surfaceRef}
-        data-astryx-viewport="true"
-        style={painted}
-        onLayout={onLayout}>
-        {children}
-      </div>
+      <PageViewportContext.Provider value={pageViewport}>
+        <div
+          ref={surfaceRef}
+          data-astryx-viewport="true"
+          style={painted}
+          onLayout={onLayout}>
+          {children}
+        </div>
+      </PageViewportContext.Provider>
     </Theme>
   );
 }
 
 // Memoized: a screen's own state changes (its viewport measurements) would
-// otherwise re-render the host, and a host element's re-render re-renders
-// every element inside it through the CSS runtime, which re-marks its
-// children; the props are primitives, stable callbacks and a memoized element
+// otherwise re-render the host and every element of the page inside it; the
+// props are primitives, stable callbacks and a memoized element
 export default React.memo(AstryxHost);
 
 // The resolved background colour of the surface's first element, when it
