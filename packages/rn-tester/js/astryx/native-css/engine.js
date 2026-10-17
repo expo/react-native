@@ -89,6 +89,12 @@ export const counters: {
   sheets: number,
   tokens: number,
   environments: number,
+  // Why an element is rendered by EngineElement rather than as its host node
+  componentMapped: number,
+  componentPopover: number,
+  componentScroll: number,
+  // Host nodes whose interaction states the engine keeps
+  statefulHosts: number,
 } = {
   elements: 0,
   elementMs: 0,
@@ -103,6 +109,10 @@ export const counters: {
   sheets: 0,
   tokens: 0,
   environments: 0,
+  componentMapped: 0,
+  componentPopover: 0,
+  componentScroll: 0,
+  statefulHosts: 0,
 };
 
 export function instrumenting(): boolean {

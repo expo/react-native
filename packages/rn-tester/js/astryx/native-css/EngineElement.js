@@ -237,9 +237,10 @@ function encodeInline(inline: {
  * The props of an element that needs no behaviour of the runtime's, as the
  * host node it is rendered as directly — no component, no hooks: its inputs
  * for the style engine beside the author's props. Null when the element
- * needs `EngineElement`: a popover or a dialog, an element whose styles read
- * its interaction state or a StyleX marker's, a scroll container, a
- * behaviour-mapped element.
+ * needs `EngineElement`: a popover or a dialog, a scroll container, a
+ * behaviour-mapped element. An element whose styles read its interaction
+ * state, or a StyleX marker's, is a host node too: the engine keeps its
+ * states from its pointer and focus events (`cssStateful`).
  */
 export function hostPropsFor(
   tag: string,
@@ -247,6 +248,9 @@ export function hostPropsFor(
 ): ?{[string]: unknown} {
   const start = instrumenting() ? performance.now() : 0;
   if (MAPPED_COMPONENTS[tag] != null || tag === 'dialog') {
+    if (start !== 0) {
+      counters.componentMapped++;
+    }
     return null;
   }
   // One pass over the props: the host's, the attributes selectors read, and
@@ -257,6 +261,7 @@ export function hostPropsFor(
   let style: unknown;
   let styleId: unknown;
   let className = '';
+  let marker: ?string = null;
   for (const key in props) {
     const value = props[key];
     if (key === 'style') {
@@ -270,12 +275,19 @@ export function hostPropsFor(
     if (key === '__cssBackdrop') {
       continue;
     }
-    if (
-      key === '__cssMarker' ||
-      (key === 'popover' && value != null && value !== false)
-    ) {
-      // A marked element reports its states, and a popover is shown and
-      // hidden: the component's
+    if (key === '__cssMarker') {
+      // A marker is a class a `when.*` condition's selector names, and the
+      // element reports its states for it
+      if (typeof value === 'string') {
+        marker = value;
+      }
+      continue;
+    }
+    if (key === 'popover' && value != null && value !== false) {
+      // A popover is shown and hidden: the component's
+      if (start !== 0) {
+        counters.componentPopover++;
+      }
       return null;
     }
     if (key === 'className' && typeof value === 'string') {
@@ -298,24 +310,41 @@ export function hostPropsFor(
       attributesKey += `${name}=${String(value)}&`;
     }
   }
+  const classes =
+    marker != null ? `${className} __stylex-marker-${marker}` : className;
   const {styleId: resolvedStyle, inline} = styleInputsOf(styleId, style);
   const hints =
-    hintsFor(tag, className, attributes, attributesKey, resolvedStyle) |
+    hintsFor(tag, classes, attributes, attributesKey, resolvedStyle) |
     inlineHints(inline);
   // A block that may scroll is the component's, which builds the platform's
   // scroll view around it; asked of what the style states, not of the value,
   // so a style that changes its `overflow` as it measures does not move the
   // element between a host node and the component, remounting its children
   if (
-    (hints & HINT_STATES) !== 0 ||
-    (SCROLL_CONTAINER_TAGS.has(tag) &&
-      ((hints & (HINT_SCROLL | HINT_SCROLL_BLOCK)) !== 0 ||
-        declaresOverflow(resolvedStyle, inline)))
+    SCROLL_CONTAINER_TAGS.has(tag) &&
+    ((hints & (HINT_SCROLL | HINT_SCROLL_BLOCK)) !== 0 ||
+      declaresOverflow(resolvedStyle, inline))
   ) {
+    if (start !== 0) {
+      counters.componentScroll++;
+    }
     return null;
   }
+  // The engine keeps the states of an element whose styles read them, from
+  // the events these handlers make its view report
+  if ((hints & HINT_STATES) !== 0 || marker != null) {
+    host.cssStateful = true;
+    for (const key in STATE_EVENT_HANDLERS) {
+      if (host[key] == null) {
+        host[key] = STATE_EVENT_HANDLERS[key];
+      }
+    }
+    if (start !== 0) {
+      counters.statefulHosts++;
+    }
+  }
   host.cssEngine = true;
-  host.cssClass = className;
+  host.cssClass = classes;
   host.cssAttributes = attributes ?? NO_ATTRIBUTES;
   host.cssStyle = resolvedStyle;
   host.cssInline = inline != null ? encodeInline(inline) : null;
@@ -326,6 +355,19 @@ export function hostPropsFor(
   }
   return host;
 }
+
+// Handlers for the events the style engine keeps an element's states from:
+// their presence makes the element's view report them, and they do nothing
+function reportToTheStyleEngine(): void {}
+const STATE_EVENT_HANDLERS: {readonly [string]: () => void} = Object.freeze({
+  onPointerEnter: reportToTheStyleEngine,
+  onPointerLeave: reportToTheStyleEngine,
+  onPointerDown: reportToTheStyleEngine,
+  onPointerUp: reportToTheStyleEngine,
+  onPointerCancel: reportToTheStyleEngine,
+  onFocus: reportToTheStyleEngine,
+  onBlur: reportToTheStyleEngine,
+});
 
 // The attributes selectors read beyond `data-*` and `aria-*`, by prop name,
 // under the name a selector gives them
