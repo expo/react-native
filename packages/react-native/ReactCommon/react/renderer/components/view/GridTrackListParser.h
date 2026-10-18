@@ -14,6 +14,7 @@
 
 #include <cctype>
 #include <cstdlib>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -45,6 +46,11 @@ struct ParsedGridTrackList {
   yoga::GridTrackList tracks{};
   yoga::GridAutoRepeat autoRepeat{};
 };
+
+// A math function over lengths and percentages (`calc()`, `min()`, `max()`,
+// `clamp()`) as a size length, as conversions.cpp parses one for every other
+// length; nullopt for one it cannot parse
+std::optional<yoga::StyleSizeLength> sizeLengthFromMathFunction(const std::string &value);
 
 namespace detail {
 
@@ -90,6 +96,19 @@ struct GridTrackScanner {
     const auto token = peekToken();
     pos += token.size();
     return token;
+  }
+
+  // The next <track-breadth>'s text: a token, with the parenthesised arguments
+  // of one that names a function (`min(100%, 96px)`)
+  std::string_view nextBreadth()
+  {
+    const auto token = nextToken();
+    if (token.empty() || token == "(" || pos >= input.size() || input[pos] != '(') {
+      return token;
+    }
+    const size_t start = pos - token.size();
+    consumeBlock();
+    return input.substr(start, pos - start);
   }
 
   // Consumes a balanced parenthesised block, returning its contents.
@@ -147,6 +166,15 @@ inline bool parseBreadth(std::string_view token, yoga::StyleSizeLength &out)
     out = yoga::StyleSizeLength::ofMaxContent();
     return true;
   }
+  if (token.back() == ')') {
+    // A math function: `calc()`, `min()`, `max()` or `clamp()`, over lengths
+    // and percentages
+    if (auto length = sizeLengthFromMathFunction(std::string{token})) {
+      out = *length;
+      return true;
+    }
+    return false;
+  }
   if (equalsIgnoreCase(token, "min-content")) {
     // Yoga has no distinct min-content sizing function. Its `auto` minimum is
     // the automatic minimum size, which is min-content for a non-scrollable
@@ -195,7 +223,7 @@ inline bool parseTrackSize(GridTrackScanner &scanner, yoga::GridTrackSize &out)
     GridTrackScanner inner{contents, 0};
     yoga::StyleSizeLength min{};
     yoga::StyleSizeLength max{};
-    if (!parseBreadth(inner.nextToken(), min) || !parseBreadth(inner.nextToken(), max)) {
+    if (!parseBreadth(inner.nextBreadth(), min) || !parseBreadth(inner.nextBreadth(), max)) {
       return false;
     }
     // An `fr` minimum is invalid CSS; treat it as auto rather than dropping
@@ -212,7 +240,7 @@ inline bool parseTrackSize(GridTrackScanner &scanner, yoga::GridTrackSize &out)
     const auto contents = scanner.consumeBlock();
     GridTrackScanner inner{contents, 0};
     yoga::StyleSizeLength limit{};
-    if (!parseBreadth(inner.nextToken(), limit)) {
+    if (!parseBreadth(inner.nextBreadth(), limit)) {
       return false;
     }
     (void)limit;
@@ -235,9 +263,8 @@ inline bool parseTrackSize(GridTrackScanner &scanner, yoga::GridTrackSize &out)
     return true;
   }
 
-  scanner.nextToken();
   yoga::StyleSizeLength breadth{};
-  if (!parseBreadth(token, breadth)) {
+  if (!parseBreadth(scanner.nextBreadth(), breadth)) {
     return false;
   }
   if (breadth.isStretch() || breadth.isMaxContent() || breadth.isFitContent()) {

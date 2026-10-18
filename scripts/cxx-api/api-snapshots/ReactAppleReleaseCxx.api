@@ -3690,6 +3690,7 @@ std::optional<facebook::react::Float> facebook::react::optionalFloatFromYogaValu
 std::optional<facebook::react::Float> facebook::react::parsePixelLength(std::string_view text);
 std::optional<facebook::react::Isolation> facebook::react::isolationFromString(std::string_view isolationSetting);
 std::optional<facebook::react::TransitionProperty> facebook::react::parseTransitionProperty(const std::string& value);
+std::optional<facebook::yoga::StyleSizeLength> facebook::react::sizeLengthFromMathFunction(const std::string& value);
 std::optional<std::array<float, 3>> facebook::react::toExtendedLinearSRGB(const facebook::react::ColorSpaceValue& value);
 std::shared_ptr<facebook::react::ShadowNode> facebook::react::cloneWithLayoutMetrics(const facebook::react::ShadowNode& node, const facebook::react::LayoutMetricsByFamily& byFamily);
 std::string facebook::react::listMarkerText(facebook::react::ListStyleType type, int ordinal);
@@ -3752,6 +3753,7 @@ uint32_t facebook::react::rendererAbiVersionOfLibrary();
 void facebook::react::FBReactNativeSpec_registerComponentDescriptorsFromCodegen(std::shared_ptr<const facebook::react::ComponentDescriptorProviderRegistry> registry);
 void facebook::react::applyAriaAttributes(const facebook::react::PropsParserContext& context, const facebook::react::RawProps& rawProps, facebook::react::AccessibilityProps& props);
 void facebook::react::applyEnvironmentDependency(facebook::yoga::Style& style, const facebook::react::EnvironmentDependency& dependency, facebook::react::Float variable);
+void facebook::react::applyEnvironmentExpression(facebook::yoga::Style& style, const facebook::react::EnvironmentDependency& dependency, const facebook::react::EnvironmentValues& environment);
 void facebook::react::assertRendererAbiMatchesHeaders(uint32_t headerVersion = facebook::react::kRendererAbiVersion);
 void facebook::react::decorateCancelablePayload(facebook::jsi::Runtime& runtime, facebook::jsi::Object& payload, const std::shared_ptr<facebook::react::CancelableEventDecision>& decision);
 void facebook::react::ensureAnonymousTextContentFactoryInstalled(const facebook::react::ComponentDescriptorParameters& parameters);
@@ -7037,6 +7039,7 @@ struct facebook::react::EnvironmentDependency {
   public facebook::react::EnvironmentVariable variable;
   public facebook::react::Float fallback;
   public facebook::react::Float offset;
+  public std::string expression;
   public uint8_t slot;
 }
 
@@ -8910,6 +8913,7 @@ struct facebook::react::detail::GridTrackScanner {
   public size_t pos;
   public std::string_view consumeBlock();
   public std::string_view input;
+  public std::string_view nextBreadth();
   public std::string_view nextToken();
   public std::string_view peekToken();
   public void skipWhitespace();
@@ -10081,6 +10085,7 @@ struct facebook::jsi::detail::BeforeCaller<std::tuple<T...>> {
 
 
 using facebook::yoga::BaselineItemGroups = std::map<size_t, std::vector<facebook::yoga::GridItem*>>;
+using facebook::yoga::CalcExpression = std::vector<facebook::yoga::CalcStep>;
 using facebook::yoga::GridTrackList = std::vector<facebook::yoga::GridTrackSize>;
 template <typename EnumT>
 concept facebook::yoga::Enumeration = std::is_enum_v<EnumT>;
@@ -10196,6 +10201,7 @@ facebook::yoga::FlexDirection facebook::yoga::resolveCrossDirection(const facebo
 facebook::yoga::FlexDirection facebook::yoga::resolveDirection(const facebook::yoga::FlexDirection flexDirection, const facebook::yoga::Direction direction);
 facebook::yoga::FlexLine facebook::yoga::calculateFlexLine(facebook::yoga::Node* node, facebook::yoga::Direction ownerDirection, float ownerWidth, float mainAxisOwnerSize, float availableInnerWidth, float availableInnerMainDim, facebook::yoga::Node::LayoutableChildren::Iterator& iterator, size_t lineCount);
 facebook::yoga::FloatOptional facebook::yoga::boundAxisWithinMinAndMax(const facebook::yoga::Node *const node, const facebook::yoga::Direction direction, const facebook::yoga::FlexDirection axis, const facebook::yoga::FloatOptional value, const float axisSize, const float widthSize);
+facebook::yoga::FloatOptional facebook::yoga::evaluateCalc(const facebook::yoga::CalcExpression& steps, float referenceLength);
 facebook::yoga::GridTemplateAreas facebook::yoga::parseGridTemplateAreas(const std::vector<std::string>& rows);
 facebook::yoga::GridTrackList facebook::yoga::expandAutoRepeat(const facebook::yoga::GridTrackList& authoredTracks, const facebook::yoga::GridAutoRepeat& autoRepeat, const float availableSize, const float gap, const bool coverMinimum = false);
 facebook::yoga::GridTracks facebook::yoga::createGridTracks(facebook::yoga::Node* node, const facebook::yoga::ResolvedAutoPlacement& autoPlacement, const facebook::yoga::GridTrackList& expandedColumns, const facebook::yoga::GridTrackList& expandedRows);
@@ -10246,6 +10252,13 @@ constexpr bool facebook::yoga::operator==(float lhs, facebook::yoga::FloatOption
 constexpr bool facebook::yoga::operator>(facebook::yoga::FloatOptional lhs, facebook::yoga::FloatOptional rhs);
 constexpr bool facebook::yoga::operator>=(facebook::yoga::FloatOptional lhs, facebook::yoga::FloatOptional rhs);
 constexpr facebook::yoga::FloatOptional facebook::yoga::operator+(facebook::yoga::FloatOptional lhs, facebook::yoga::FloatOptional rhs);
+
+class facebook::yoga::CalcRegistry {
+  public static const facebook::yoga::CalcExpression* get(uint32_t id);
+  public static constexpr uint32_t kInvalidId;
+  public static facebook::yoga::FloatOptional evaluate(uint32_t id, float referenceLength);
+  public static uint32_t intern(const facebook::yoga::CalcExpression& steps);
+}
 
 class facebook::yoga::Config : public YGConfig {
   public YGNodeRef cloneNode(YGNodeConstRef node, YGNodeConstRef owner, size_t childIndex) const;
@@ -10526,14 +10539,17 @@ class facebook::yoga::StyleLength {
   public constexpr StyleLength() = default;
   public constexpr bool inexactEquals(const facebook::yoga::StyleLength& other) const;
   public constexpr bool isAuto() const;
+  public constexpr bool isCalc() const;
   public constexpr bool isDefined() const;
   public constexpr bool isPercent() const;
   public constexpr bool isPoints() const;
+  public constexpr bool isRelative() const;
   public constexpr bool isUndefined() const;
   public constexpr bool operator==(const facebook::yoga::StyleLength& rhs) const;
   public constexpr facebook::yoga::FloatOptional resolve(float referenceLength);
   public constexpr facebook::yoga::FloatOptional value() const;
   public constexpr operator YGValue() const;
+  public static constexpr facebook::yoga::StyleLength calc(uint32_t id);
   public static constexpr facebook::yoga::StyleLength ofAuto();
   public static constexpr facebook::yoga::StyleLength percent(float value);
   public static constexpr facebook::yoga::StyleLength points(float value);
@@ -10544,17 +10560,20 @@ class facebook::yoga::StyleSizeLength {
   public constexpr StyleSizeLength() = default;
   public constexpr bool inexactEquals(const facebook::yoga::StyleSizeLength& other) const;
   public constexpr bool isAuto() const;
+  public constexpr bool isCalc() const;
   public constexpr bool isDefined() const;
   public constexpr bool isFitContent() const;
   public constexpr bool isMaxContent() const;
   public constexpr bool isPercent() const;
   public constexpr bool isPoints() const;
+  public constexpr bool isRelative() const;
   public constexpr bool isStretch() const;
   public constexpr bool isUndefined() const;
   public constexpr bool operator==(const facebook::yoga::StyleSizeLength& rhs) const;
   public constexpr facebook::yoga::FloatOptional resolve(float referenceLength) const;
   public constexpr facebook::yoga::FloatOptional value() const;
   public constexpr operator YGValue() const;
+  public static constexpr facebook::yoga::StyleSizeLength calc(uint32_t id);
   public static constexpr facebook::yoga::StyleSizeLength ofAuto();
   public static constexpr facebook::yoga::StyleSizeLength ofFitContent();
   public static constexpr facebook::yoga::StyleSizeLength ofMaxContent();
@@ -10567,6 +10586,7 @@ class facebook::yoga::StyleSizeLength {
 
 class facebook::yoga::StyleValueHandle {
   public constexpr bool isAuto() const;
+  public constexpr bool isCalc() const;
   public constexpr bool isDefined() const;
   public constexpr bool isPercent() const;
   public constexpr bool isPoint() const;
@@ -10791,6 +10811,7 @@ enum facebook::yoga::SizingMode {
 
 enum facebook::yoga::Unit : uint8_t {
   Auto,
+  Calc,
   FitContent,
   MaxContent,
   Percent,
@@ -10839,6 +10860,26 @@ struct facebook::yoga::CachedMeasurement {
   public float computedWidth;
   public float ownerHeight;
   public float ownerWidth;
+}
+
+struct facebook::yoga::CalcStep {
+  public bool operator==(const facebook::yoga::CalcStep& other) const = default;
+  public facebook::yoga::CalcStep::Kind kind;
+  public float value;
+  public uint8_t count;
+}
+
+enum facebook::yoga::CalcStep::Kind : uint8_t {
+  Add,
+  Clamp,
+  Divide,
+  Max,
+  Min,
+  Multiply,
+  Number,
+  Percent,
+  Points,
+  Subtract,
 }
 
 struct facebook::yoga::Event {

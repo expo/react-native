@@ -97,6 +97,15 @@ Only the inline axis is measured under a real max-content constraint now
 infinite free space, which is how `auto` rows grow to their items. Pinned by
 `Libraries/Components/View/__tests__/GridZeroFrRow-itest.js`.
 
+**`TrackSizing.h` — a math function with a percentage is a percentage.** Our
+Yoga has a unit the PR does not know, `Unit::Calc`, for `calc()`, `min()`,
+`max()` and `clamp()` over a percentage. Track sizing asked `isPercent()` to
+treat a percentage track as `auto` in an indefinite axis, so a math track there
+was neither, and fell through to a branch that assumes it cannot be reached.
+It asks `isRelative()`, which is true of both. Pinned with the auto-repeat
+count, which reads such a track the same way (`GridAutoRepeat.h`), by
+`Libraries/Components/View/__tests__/ViewCalcLength-itest.js`.
+
 ## Upstream status
 
 PR #1894 is being re-split into smaller reviewable pieces after review feedback:

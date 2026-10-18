@@ -103,7 +103,7 @@ bool trackSizingFunctionsInterpolable(
     return true;
   }
   const auto isLengthPercentage = [](const yoga::Style::SizeLength& length) {
-    return length.isPoints() || length.isPercent();
+    return length.isPoints() || length.isPercent() || length.isCalc();
   };
   if (isLengthPercentage(from) && isLengthPercentage(to)) {
     return true;

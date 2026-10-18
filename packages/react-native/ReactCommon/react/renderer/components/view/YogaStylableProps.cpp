@@ -570,8 +570,12 @@ yoga::Style YogaStylableProps::resolveEnvironment(
 
   auto style = yogaStyle;
   for (const auto& dependency : environmentDependencies) {
-    applyEnvironmentDependency(
-        style, dependency, environmentValues.resolve(dependency.variable));
+    if (!dependency.expression.empty()) {
+      applyEnvironmentExpression(style, dependency, environmentValues);
+    } else {
+      applyEnvironmentDependency(
+          style, dependency, environmentValues.resolve(dependency.variable));
+    }
   }
   return style;
 }

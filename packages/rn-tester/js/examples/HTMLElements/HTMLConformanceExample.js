@@ -5511,6 +5511,357 @@ const CORPUS = [
       ],
     },
   },
+  {
+    name: 'math-calc-subtracts-a-length-from-a-percentage',
+    withText: false,
+    section: 'Math functions',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          m: 'narrowed',
+          style: {
+            width: 'calc(100% - 40px)',
+            height: '20px',
+            backgroundColor: '#34c759',
+            display: 'block',
+          },
+        },
+      ],
+    },
+  },
+  {
+    name: 'math-max-is-the-larger-of-a-percentage-and-a-length',
+    withText: false,
+    section: 'Math functions',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          m: 'percentage',
+          style: {
+            width: '999px',
+            height: '20px',
+            backgroundColor: '#ff9500',
+            display: 'block',
+            maxWidth: 'max(50%, 100px)',
+          },
+        },
+        {
+          tag: 'div',
+          m: 'length',
+          style: {
+            width: '999px',
+            height: '20px',
+            backgroundColor: '#af52de',
+            display: 'block',
+            maxWidth: 'max(20%, 100px)',
+          },
+        },
+      ],
+    },
+  },
+  {
+    name: 'math-min-is-the-smaller-of-a-percentage-and-a-length',
+    withText: false,
+    section: 'Math functions',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          m: 'length',
+          style: {
+            width: 'min(100%, 200px)',
+            height: '20px',
+            backgroundColor: '#ff3b30',
+            display: 'block',
+          },
+        },
+        {
+          tag: 'div',
+          m: 'percentage',
+          style: {
+            width: 'min(50%, 200px)',
+            height: '20px',
+            backgroundColor: '#30b0c7',
+            display: 'block',
+          },
+        },
+      ],
+    },
+  },
+  {
+    name: 'math-clamp-keeps-a-percentage-between-two-lengths',
+    withText: false,
+    section: 'Math functions',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          m: 'upper',
+          style: {
+            width: 'clamp(100px, 50%, 120px)',
+            height: '20px',
+            backgroundColor: '#0a84ff',
+            display: 'block',
+          },
+        },
+        {
+          tag: 'div',
+          m: 'lower',
+          style: {
+            width: 'clamp(100px, 20%, 120px)',
+            height: '20px',
+            backgroundColor: '#34c759',
+            display: 'block',
+          },
+        },
+      ],
+    },
+  },
+  {
+    name: 'math-nested-functions-centre-a-column',
+    withText: false,
+    section: 'Math functions',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          m: 'column',
+          style: {
+            width: '200px',
+            height: '20px',
+            backgroundColor: '#ff9500',
+            display: 'block',
+            marginLeft: 'max(0px, calc((100% - 200px) / 2))',
+          },
+        },
+      ],
+    },
+  },
+  {
+    name: 'math-calc-height-resolves-against-a-definite-parent',
+    withText: false,
+    section: 'Math functions',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          m: 'parent',
+          style: {
+            display: 'block',
+            height: '80px',
+            backgroundColor: '#30b0c7',
+          },
+          children: [
+            {
+              tag: 'div',
+              m: 'child',
+              style: {
+                display: 'block',
+                height: 'calc(50% + 5px)',
+                backgroundColor: '#ff3b30',
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: 'an-inline-flex-box-on-a-line-is-as-wide-as-its-content',
+    withText: false,
+    section: 'Inline formatting',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'span',
+          m: 'badge',
+          style: {
+            display: 'inline-flex',
+            paddingLeft: '8px',
+            paddingRight: '8px',
+            verticalAlign: 'top',
+            backgroundColor: '#34c759',
+          },
+          children: [
+            {
+              tag: 'span',
+              m: 'content',
+              style: {
+                display: 'inline-block',
+                width: '40px',
+                height: '20px',
+                verticalAlign: 'top',
+                backgroundColor: '#af52de',
+              },
+            },
+          ],
+        },
+        {
+          tag: 'span',
+          m: 'after',
+          style: {
+            display: 'inline-block',
+            width: '20px',
+            height: '20px',
+            verticalAlign: 'top',
+            backgroundColor: '#ff3b30',
+          },
+        },
+      ],
+    },
+  },
+  {
+    name: 'an-inline-box-of-any-element-takes-its-padding-border-and-margin',
+    withText: false,
+    section: 'Inline formatting',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'div',
+          style: {
+            display: 'inline',
+            paddingLeft: '4px',
+            paddingRight: '4px',
+            borderStyle: 'solid',
+            borderWidth: '0px',
+            borderLeftWidth: '2px',
+            borderColor: '#ff9500',
+            marginRight: '3px',
+            backgroundColor: '#ffe0b2',
+          },
+          children: [
+            {
+              tag: 'span',
+              m: 'inner',
+              style: {
+                display: 'inline-block',
+                width: '40px',
+                height: '20px',
+                verticalAlign: 'top',
+                backgroundColor: '#30b0c7',
+              },
+            },
+          ],
+        },
+        {
+          tag: 'span',
+          m: 'after',
+          style: {
+            display: 'inline-block',
+            width: '20px',
+            height: '20px',
+            verticalAlign: 'top',
+            backgroundColor: '#0a84ff',
+          },
+        },
+      ],
+    },
+  },
+  {
+    name: 'inline-padding-at-the-start-of-a-line-is-reserved-once',
+    withText: false,
+    section: 'Inline formatting',
+    tree: {
+      tag: 'div',
+      m: 'root',
+      style: {
+        width: '300px',
+        lineHeight: '20px',
+        fontSize: '16px',
+      },
+      children: [
+        {
+          tag: 'span',
+          style: {
+            paddingLeft: '10px',
+            paddingRight: '10px',
+          },
+          children: [
+            {
+              tag: 'span',
+              m: 'inner',
+              style: {
+                display: 'inline-block',
+                width: '40px',
+                height: '20px',
+                verticalAlign: 'top',
+                backgroundColor: '#34c759',
+              },
+            },
+          ],
+        },
+        {
+          tag: 'span',
+          m: 'after',
+          style: {
+            display: 'inline-block',
+            width: '40px',
+            height: '20px',
+            verticalAlign: 'top',
+            backgroundColor: '#ff9500',
+          },
+        },
+      ],
+    },
+  },
 ];
 
 // The section order, so the screen reads in the order the corpus was written
@@ -5522,6 +5873,7 @@ const SECTION_ORDER = [
   'Floats and clearance',
   'Positioning',
   'display: contents',
+  'Math functions',
   'Box model and sizing',
   'em and rem',
   'Inline formatting',

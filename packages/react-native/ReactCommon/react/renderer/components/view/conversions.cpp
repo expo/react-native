@@ -16,15 +16,330 @@
 #include <react/renderer/css/CSSTransform.h>
 #include <react/renderer/css/CSSTransformOrigin.h>
 #include <react/renderer/css/CSSValueParser.h>
+#include <yoga/style/StyleCalc.h>
+#include <algorithm>
+#include <array>
+#include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <variant>
 #include <vector>
 
 namespace facebook::react {
+
+namespace {
+
+/*
+ * `calc()`, `min()`, `max()` and `clamp()` over `px` lengths, percentages and
+ * numbers (css-values-4 §10), as the steps Yoga evaluates once layout knows the
+ * size the percentages are of. Other units are not lengths here: the style
+ * engine writes them as `px` before a value reaches props.
+ */
+class CalcLengthParser {
+ public:
+  explicit CalcLengthParser(std::string_view source) : source_(source) {}
+
+  std::optional<yoga::CalcExpression> parse() {
+    skipWhitespace();
+    auto type = function();
+    skipWhitespace();
+    if (!type || *type != Type::Length || position_ != source_.size()) {
+      return std::nullopt;
+    }
+    return std::move(steps_);
+  }
+
+ private:
+  enum class Type { Number, Length };
+
+  std::optional<Type> function() {
+    static constexpr std::array<std::string_view, 4> names = {
+        "calc(", "min(", "max(", "clamp("};
+    for (const auto name : names) {
+      if (!startsWithCaseless(name)) {
+        continue;
+      }
+      position_ += name.size();
+      std::optional<Type> type;
+      size_t count = 0;
+      do {
+        auto argument = sum();
+        if (!argument || (type && *type != *argument)) {
+          return std::nullopt;
+        }
+        type = argument;
+        count++;
+        skipWhitespace();
+      } while (name != "calc(" && consume(','));
+      if (!consume(')')) {
+        return std::nullopt;
+      }
+      if (name == "calc(") {
+        return count == 1 ? type : std::nullopt;
+      }
+      if (name == "clamp(") {
+        if (count != 3) {
+          return std::nullopt;
+        }
+        emit(yoga::CalcStep::Kind::Clamp);
+        return type;
+      }
+      if (count > UINT8_MAX) {
+        return std::nullopt;
+      }
+      emit(
+          name == "min(" ? yoga::CalcStep::Kind::Min
+                         : yoga::CalcStep::Kind::Max,
+          static_cast<uint8_t>(count));
+      return type;
+    }
+    return std::nullopt;
+  }
+
+  std::optional<Type> sum() {
+    auto type = product();
+    while (type) {
+      skipWhitespace();
+      const bool add = consume('+');
+      if (!add && !consume('-')) {
+        return type;
+      }
+      auto right = product();
+      if (!right || *right != *type) {
+        return std::nullopt;
+      }
+      emit(add ? yoga::CalcStep::Kind::Add : yoga::CalcStep::Kind::Subtract);
+    }
+    return type;
+  }
+
+  std::optional<Type> product() {
+    auto type = value();
+    while (type) {
+      skipWhitespace();
+      const bool multiply = consume('*');
+      if (!multiply && !consume('/')) {
+        return type;
+      }
+      auto right = value();
+      // A length times a number, a number times a length, or either over a
+      // number
+      if (!right ||
+          (*right == Type::Length && (!multiply || *type == Type::Length))) {
+        return std::nullopt;
+      }
+      emit(
+          multiply ? yoga::CalcStep::Kind::Multiply
+                   : yoga::CalcStep::Kind::Divide);
+      type = *type == Type::Length || *right == Type::Length ? Type::Length
+                                                             : Type::Number;
+    }
+    return type;
+  }
+
+  std::optional<Type> value() {
+    skipWhitespace();
+    if (consume('(')) {
+      auto type = sum();
+      skipWhitespace();
+      return type && consume(')') ? type : std::nullopt;
+    }
+    if (position_ < source_.size() &&
+        std::isalpha(static_cast<unsigned char>(source_[position_]))) {
+      return function();
+    }
+    const char* start = source_.data() + position_;
+    char* end = nullptr;
+    const float number = std::strtof(start, &end);
+    if (end == start) {
+      return std::nullopt;
+    }
+    position_ += static_cast<size_t>(end - start);
+    if (consume('%')) {
+      emit(yoga::CalcStep::Kind::Percent, 0, number);
+      return Type::Length;
+    }
+    if (startsWithCaseless("px")) {
+      position_ += 2;
+      emit(yoga::CalcStep::Kind::Points, 0, number);
+      return Type::Length;
+    }
+    if (position_ < source_.size() &&
+        std::isalpha(static_cast<unsigned char>(source_[position_]))) {
+      return std::nullopt;
+    }
+    emit(yoga::CalcStep::Kind::Number, 0, number);
+    return Type::Number;
+  }
+
+  void emit(yoga::CalcStep::Kind kind, uint8_t count = 0, float value = 0) {
+    steps_.push_back(
+        yoga::CalcStep{.kind = kind, .count = count, .value = value});
+  }
+
+  bool consume(char character) {
+    skipWhitespace();
+    if (position_ < source_.size() && source_[position_] == character) {
+      position_++;
+      return true;
+    }
+    return false;
+  }
+
+  bool startsWithCaseless(std::string_view prefix) const {
+    if (source_.size() - position_ < prefix.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < prefix.size(); i++) {
+      if (std::tolower(static_cast<unsigned char>(source_[position_ + i])) !=
+          prefix[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void skipWhitespace() {
+    while (position_ < source_.size() &&
+           std::isspace(static_cast<unsigned char>(source_[position_]))) {
+      position_++;
+    }
+  }
+
+  std::string_view source_;
+  size_t position_{0};
+  yoga::CalcExpression steps_;
+};
+
+// css-env-1 substitutes environment values before the surrounding math is
+// parsed. Keep percentages unresolved for Yoga's containing-block calculation.
+std::optional<std::string> substituteEnvironment(
+    const std::string& value,
+    const EnvironmentValues& environment) {
+  std::string result;
+  size_t position = 0;
+  while (true) {
+    const auto start = value.find("env(", position);
+    if (start == std::string::npos) {
+      result.append(value, position);
+      return result;
+    }
+    result.append(value, position, start - position);
+    const auto end = value.find(')', start);
+    if (end == std::string::npos) {
+      return std::nullopt;
+    }
+    auto parsed = parseEnvironmentFunction(
+        std::string_view(value).substr(start, end - start + 1));
+    if (!parsed) {
+      return std::nullopt;
+    }
+    const Float number = environment.generation == 0
+        ? parsed->fallback
+        : environment.resolve(parsed->variable);
+    result += std::to_string(number) + "px";
+    position = end + 1;
+  }
+}
+
+bool collectEnvironmentExpression(const std::string& value) {
+  if (value.find("env(") == std::string::npos ||
+      currentEnvironmentCollector == nullptr ||
+      currentConvertedPropName == nullptr) {
+    return false;
+  }
+  auto substituted = substituteEnvironment(value, {});
+  if (!substituted || !CalcLengthParser(*substituted).parse()) {
+    return false;
+  }
+  const auto target = environmentTargetForProperty(currentConvertedPropName);
+  if (!target) {
+    return false;
+  }
+  currentEnvironmentCollector->push_back(
+      EnvironmentDependency{
+          .target = target->target, .slot = target->slot, .expression = value});
+  return true;
+}
+
+// A math function as the length it is: points when it has no percentage
+template <typename LengthT>
+std::optional<LengthT> calcLengthFromString(const std::string& value) {
+  auto steps = CalcLengthParser(value).parse();
+  if (!steps) {
+    return std::nullopt;
+  }
+  const bool relative =
+      std::any_of(steps->begin(), steps->end(), [](const auto& step) {
+        return step.kind == yoga::CalcStep::Kind::Percent;
+      });
+  if (!relative) {
+    auto points = yoga::evaluateCalc(*steps, 0);
+    return points.isDefined()
+        ? std::optional<LengthT>{LengthT::points(points.unwrap())}
+        : std::nullopt;
+  }
+  if (steps->size() == 1) {
+    return LengthT::percent(steps->front().value);
+  }
+  return LengthT::calc(yoga::CalcRegistry::intern(*steps));
+}
+
+} // namespace
+
+void applyEnvironmentExpression(
+    yoga::Style& style,
+    const EnvironmentDependency& dependency,
+    const EnvironmentValues& environment) {
+  const auto value = substituteEnvironment(dependency.expression, environment);
+  if (!value) {
+    return;
+  }
+  const auto length = calcLengthFromString<yoga::StyleLength>(*value);
+  const auto size = calcLengthFromString<yoga::StyleSizeLength>(*value);
+  if (!length || !size) {
+    return;
+  }
+  switch (dependency.target) {
+    case EnvironmentTarget::Padding:
+      style.setPadding((yoga::Edge)dependency.slot, *length);
+      break;
+    case EnvironmentTarget::Margin:
+      style.setMargin((yoga::Edge)dependency.slot, *length);
+      break;
+    case EnvironmentTarget::Position:
+      style.setPosition((yoga::Edge)dependency.slot, *length);
+      break;
+    case EnvironmentTarget::Border:
+      style.setBorder((yoga::Edge)dependency.slot, *length);
+      break;
+    case EnvironmentTarget::Gap:
+      style.setGap((yoga::Gutter)dependency.slot, *length);
+      break;
+    case EnvironmentTarget::Dimension:
+      style.setDimension((yoga::Dimension)dependency.slot, *size);
+      break;
+    case EnvironmentTarget::MinDimension:
+      style.setMinDimension((yoga::Dimension)dependency.slot, *size);
+      break;
+    case EnvironmentTarget::MaxDimension:
+      style.setMaxDimension((yoga::Dimension)dependency.slot, *size);
+      break;
+    case EnvironmentTarget::FlexBasis:
+      style.setFlexBasis(*size);
+      break;
+  }
+}
+
+std::optional<yoga::StyleSizeLength> sizeLengthFromMathFunction(
+    const std::string& value) {
+  return calcLengthFromString<yoga::StyleSizeLength>(value);
+}
 
 void fromRawValue(
     const PropsParserContext& /*context*/,
@@ -51,6 +366,15 @@ void fromRawValue(
       return;
     } else if (stringValue == "fit-content") {
       result = yoga::StyleSizeLength::ofFitContent();
+      return;
+    } else if (collectEnvironmentExpression(stringValue)) {
+      result = calcLengthFromString<yoga::StyleSizeLength>(
+                   *substituteEnvironment(stringValue, {}))
+                   .value_or(yoga::StyleSizeLength::undefined());
+      return;
+    } else if (
+        auto calc = calcLengthFromString<yoga::StyleSizeLength>(stringValue)) {
+      result = *calc;
       return;
     } else {
       auto parsed = parseCSSProperty<CSSNumber, CSSPercentage>(stringValue);
@@ -84,6 +408,15 @@ void fromRawValue(
     } else if (Float fallback = 0;
                collectEnvironmentDependency(stringValue, fallback)) {
       result = yoga::StyleLength::points((float)fallback);
+      return;
+    } else if (collectEnvironmentExpression(stringValue)) {
+      result = calcLengthFromString<yoga::StyleLength>(
+                   *substituteEnvironment(stringValue, {}))
+                   .value_or(yoga::StyleLength::undefined());
+      return;
+    } else if (
+        auto calc = calcLengthFromString<yoga::StyleLength>(stringValue)) {
+      result = *calc;
       return;
     } else {
       auto parsed = parseCSSProperty<CSSNumber, CSSPercentage>(stringValue);
