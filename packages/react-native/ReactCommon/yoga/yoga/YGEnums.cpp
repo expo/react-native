@@ -299,6 +299,8 @@ const char* YGUnitToString(const YGUnit value) {
       return "fit-content";
     case YGUnitStretch:
       return "stretch";
+    case YGUnitCalc:
+      return "calc";
   }
   return "unknown";
 }

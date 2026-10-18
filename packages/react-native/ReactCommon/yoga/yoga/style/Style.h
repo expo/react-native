@@ -976,6 +976,11 @@ class YG_EXPORT Style {
       return FloatOptional{
           pool_.getStoredValue(handle) * referenceLength * 0.01f};
     }
+    if (handle.isCalc()) {
+      return CalcRegistry::evaluate(
+          static_cast<uint32_t>(pool_.getStoredValue(handle)),
+          referenceLength);
+    }
     return FloatOptional{};
   }
 

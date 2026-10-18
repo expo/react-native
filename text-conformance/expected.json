@@ -176,11 +176,11 @@
       "x": 0,
       "y": 0,
       "width": 300,
-      "height": 64
+      "height": 63.95
     },
     "plain": {
       "x": 0,
-      "y": 24,
+      "y": 23.95,
       "width": 40,
       "height": 40
     },
@@ -2312,7 +2312,7 @@
     },
     "short": {
       "x": 40,
-      "y": 1.78,
+      "y": 1.83,
       "width": 40,
       "height": 20
     }
@@ -2322,7 +2322,7 @@
       "x": 0,
       "y": 0,
       "width": 300,
-      "height": 44
+      "height": 43.95
     },
     "only": {
       "x": 0,
@@ -2636,15 +2636,15 @@
     },
     "sup": {
       "x": 8.08,
-      "y": 2,
+      "y": 2.15,
       "width": 7.95,
-      "height": 16
+      "height": 15.7
     },
     "sub": {
       "x": 24.4,
-      "y": 12.53,
+      "y": 12.68,
       "width": 8.26,
-      "height": 16
+      "height": 15.7
     }
   },
   "em-margin-resolves-against-the-elements-own-size": {
@@ -2849,6 +2849,180 @@
     "after": {
       "x": 0,
       "y": 80,
+      "width": 40,
+      "height": 20
+    }
+  },
+  "math-calc-subtracts-a-length-from-a-percentage": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "narrowed": {
+      "x": 0,
+      "y": 0,
+      "width": 260,
+      "height": 20
+    }
+  },
+  "math-max-is-the-larger-of-a-percentage-and-a-length": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "percentage": {
+      "x": 0,
+      "y": 0,
+      "width": 150,
+      "height": 20
+    },
+    "length": {
+      "x": 0,
+      "y": 20,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "math-min-is-the-smaller-of-a-percentage-and-a-length": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "length": {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    },
+    "percentage": {
+      "x": 0,
+      "y": 20,
+      "width": 150,
+      "height": 20
+    }
+  },
+  "math-clamp-keeps-a-percentage-between-two-lengths": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40
+    },
+    "upper": {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 20
+    },
+    "lower": {
+      "x": 0,
+      "y": 20,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "math-nested-functions-centre-a-column": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "column": {
+      "x": 50,
+      "y": 0,
+      "width": 200,
+      "height": 20
+    }
+  },
+  "math-calc-height-resolves-against-a-definite-parent": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 80
+    },
+    "parent": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 80
+    },
+    "child": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 45
+    }
+  },
+  "an-inline-flex-box-on-a-line-is-as-wide-as-its-content": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "badge": {
+      "x": 0,
+      "y": 0,
+      "width": 56,
+      "height": 20
+    },
+    "content": {
+      "x": 8,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 56,
+      "y": 0,
+      "width": 20,
+      "height": 20
+    }
+  },
+  "an-inline-box-of-any-element-takes-its-padding-border-and-margin": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "inner": {
+      "x": 6,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 53,
+      "y": 0,
+      "width": 20,
+      "height": 20
+    }
+  },
+  "inline-padding-at-the-start-of-a-line-is-reserved-once": {
+    "root": {
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 20
+    },
+    "inner": {
+      "x": 10,
+      "y": 0,
+      "width": 40,
+      "height": 20
+    },
+    "after": {
+      "x": 60,
+      "y": 0,
       "width": 40,
       "height": 20
     }
