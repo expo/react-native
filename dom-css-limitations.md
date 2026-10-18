@@ -58,11 +58,6 @@ declares its tokens on `[data-astryx-theme="…"]`. The limit is not applied: a
 scoped rule still reaches past a nested root (a second theme inside the
 first), and a `&` in a scoped selector is not resolved.
 
-**`env-calc-is-an-offset`** — `ReactCommon/react/renderer/components/view/EnvironmentDependency.h`
-Inside `calc()`, `env()` works only with a pixel length added or subtracted:
-`calc(env(safe-area-inset-bottom) + 8px)`. Any other expression, and `min()`,
-`max()` or `clamp()` around an `env()`, computes to nothing.
-
 **`clearance-on-an-empty-box`** — `yoga/algorithm/CalculateLayout.cpp`
 An empty box with `clear` still lets its margins collapse past it, so the
 content after it sits higher than in a browser. Boxes with content clear

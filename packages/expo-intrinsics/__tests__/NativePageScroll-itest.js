@@ -41,6 +41,7 @@ function page(automaticInsets: $FlowFixMe = true, options: $FlowFixMe = {}) {
   });
   return {
     root,
+    scroll: () => nullthrows(scroll.current),
     rect: () => nullthrows(content.current).getBoundingClientRect(),
     setLocalInsets: (left: number, right: number, top: number = 0) => {
       const viewport = nullthrows(scroll.current).parentElement;
@@ -51,7 +52,7 @@ function page(automaticInsets: $FlowFixMe = true, options: $FlowFixMe = {}) {
   };
 }
 
-describe('a page reserves its own side safe areas in layout', () => {
+describe('a full-size page fits its content between native side insets', () => {
   it('narrows the first layout for a side status bar', () => {
     const test = page();
     expect(test.rect().x).toBe(0);
@@ -61,7 +62,7 @@ describe('a page reserves its own side safe areas in layout', () => {
   it('handles different left and right insets when the viewport changes', () => {
     const test = page();
     test.setLocalInsets(73, 11);
-    expect(test.rect().x).toBe(73);
+    expect(test.rect().x).toBe(0);
     expect(test.rect().width).toBe(382);
     test.setLocalInsets(0, 84);
     expect(test.rect().x).toBe(0);
@@ -85,8 +86,16 @@ describe('a page reserves its own side safe areas in layout', () => {
   it('adds authored padding inside the safe column', () => {
     const test = page(true, {contentContainerStyle: {paddingHorizontal: 16}});
     test.setLocalInsets(73, 11);
-    expect(test.rect().x).toBe(89);
+    expect(test.rect().x).toBe(16);
     expect(test.rect().width).toBe(350);
+  });
+
+  it('adds authored side insets without adding them as padding', () => {
+    const test = page(true, {contentInset: {left: 12, right: 8}});
+    test.setLocalInsets(73, 11);
+    expect(test.scroll().getBoundingClientRect().width).toBe(466);
+    expect(test.rect().x).toBe(0);
+    expect(test.rect().width).toBe(362);
   });
 
   it('declares one document rectangle and its remaining environment', () => {

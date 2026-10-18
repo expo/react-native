@@ -86,6 +86,7 @@ CGFloat RCTCoreGraphicsFloatFromYogaValue(YGValue value, CGFloat baseFloatValue)
     case YGUnitMaxContent:
     case YGUnitFitContent:
     case YGUnitStretch:
+    case YGUnitCalc:
       return baseFloatValue;
   }
 }

@@ -183,7 +183,7 @@ describe('env() inside calc()', () => {
     expect(renderedHeight('calc(env(safe-area-inset-bottom) - 4px)')).toBe(30);
   });
 
-  it('computes to nothing for any other expression', () => {
-    expect(renderedHeight('calc(env(safe-area-inset-bottom) * 2)')).toBe(0);
+  it('substitutes the inset before applying multiplication', () => {
+    expect(renderedHeight('calc(env(safe-area-inset-bottom) * 2)')).toBe(68);
   });
 });

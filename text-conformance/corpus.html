@@ -5,19 +5,15 @@
   body { font-family: -apple-system, sans-serif; padding: 16px; }
   .intro { font-size: 11px; color: #8E8E93; margin-bottom: 8px; }
   /*
-   * A case title is read, not glanced at: it is how you find the case you came
-   * for among 134, and how you say which one disagrees. Full-contrast body
-   * colour rather than the quiet grey the captions use — the same call the
-   * device screen makes in choosing its primary label colour over the tertiary
-   * one, so the two presentations of one corpus keep reading the same.
-   *
-   * No backticks in this comment: it lives inside a template literal.
+   * Case titles in full-contrast body colour, as the device screen's primary
+   * label, so the two presentations read the same. (No backticks in this
+   * comment: it lives inside a template literal.)
    */
   .case-label { font-size: 10px; color: #1C1C1E; margin-bottom: 2px; }
   section { margin-bottom: 24px; }
 </style>
 </head><body>
-<div class="intro">134 cases — one corpus (cases.js), rendered by this browser and by the device screens from the same trees.</div>
+<div class="intro">143 cases — one corpus (cases.js), rendered by this browser and by the device screens from the same trees.</div>
 
     <section data-case="PROBE-text-align-center-centres-the-line">
       <div class="case-label">PROBE-text-align-center-centres-the-line</div>
@@ -687,5 +683,50 @@
     <section data-case="margin-collapses-out-of-a-block-containers-bottom-edge">
       <div class="case-label">margin-collapses-out-of-a-block-containers-bottom-edge</div>
       <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:40px;height:20px;background-color:#ff3b30" data-m="before"></div><div style="width:40px;height:20px;background-color:#30b0c7;display:block;margin-block:20px" data-m="measured"></div><div style="width:40px;height:20px;background-color:#0a84ff" data-m="after"></div></div>
+    </section>
+
+    <section data-case="math-calc-subtracts-a-length-from-a-percentage">
+      <div class="case-label">math-calc-subtracts-a-length-from-a-percentage</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:calc(100% - 40px);height:20px;background-color:#34c759;display:block" data-m="narrowed"></div></div>
+    </section>
+
+    <section data-case="math-max-is-the-larger-of-a-percentage-and-a-length">
+      <div class="case-label">math-max-is-the-larger-of-a-percentage-and-a-length</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:999px;height:20px;background-color:#ff9500;display:block;max-width:max(50%, 100px)" data-m="percentage"></div><div style="width:999px;height:20px;background-color:#af52de;display:block;max-width:max(20%, 100px)" data-m="length"></div></div>
+    </section>
+
+    <section data-case="math-min-is-the-smaller-of-a-percentage-and-a-length">
+      <div class="case-label">math-min-is-the-smaller-of-a-percentage-and-a-length</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:min(100%, 200px);height:20px;background-color:#ff3b30;display:block" data-m="length"></div><div style="width:min(50%, 200px);height:20px;background-color:#30b0c7;display:block" data-m="percentage"></div></div>
+    </section>
+
+    <section data-case="math-clamp-keeps-a-percentage-between-two-lengths">
+      <div class="case-label">math-clamp-keeps-a-percentage-between-two-lengths</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:clamp(100px, 50%, 120px);height:20px;background-color:#0a84ff;display:block" data-m="upper"></div><div style="width:clamp(100px, 20%, 120px);height:20px;background-color:#34c759;display:block" data-m="lower"></div></div>
+    </section>
+
+    <section data-case="math-nested-functions-centre-a-column">
+      <div class="case-label">math-nested-functions-centre-a-column</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="width:200px;height:20px;background-color:#ff9500;display:block;margin-left:max(0px, calc((100% - 200px) / 2))" data-m="column"></div></div>
+    </section>
+
+    <section data-case="math-calc-height-resolves-against-a-definite-parent">
+      <div class="case-label">math-calc-height-resolves-against-a-definite-parent</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:block;height:80px;background-color:#30b0c7" data-m="parent"><div style="display:block;height:calc(50% + 5px);background-color:#ff3b30" data-m="child"></div></div></div>
+    </section>
+
+    <section data-case="an-inline-flex-box-on-a-line-is-as-wide-as-its-content">
+      <div class="case-label">an-inline-flex-box-on-a-line-is-as-wide-as-its-content</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="display:inline-flex;padding-left:8px;padding-right:8px;vertical-align:top;background-color:#34c759" data-m="badge"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#af52de" data-m="content"></span></span><span style="display:inline-block;width:20px;height:20px;vertical-align:top;background-color:#ff3b30" data-m="after"></span></div>
+    </section>
+
+    <section data-case="an-inline-box-of-any-element-takes-its-padding-border-and-margin">
+      <div class="case-label">an-inline-box-of-any-element-takes-its-padding-border-and-margin</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><div style="display:inline;padding-left:4px;padding-right:4px;border-style:solid;border-width:0px;border-left-width:2px;border-color:#ff9500;margin-right:3px;background-color:#ffe0b2"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#30b0c7" data-m="inner"></span></div><span style="display:inline-block;width:20px;height:20px;vertical-align:top;background-color:#0a84ff" data-m="after"></span></div>
+    </section>
+
+    <section data-case="inline-padding-at-the-start-of-a-line-is-reserved-once">
+      <div class="case-label">inline-padding-at-the-start-of-a-line-is-reserved-once</div>
+      <div style="width:300px;line-height:20px;font-size:16px" data-m="root"><span style="padding-left:10px;padding-right:10px"><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#34c759" data-m="inner"></span></span><span style="display:inline-block;width:40px;height:20px;vertical-align:top;background-color:#ff9500" data-m="after"></span></div>
     </section>
 </body></html>

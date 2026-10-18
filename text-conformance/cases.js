@@ -158,6 +158,7 @@ const SECTIONS = [
     /^(an-)?absolute|^absolute-|^relative-|^a-relative-|^opposite-offsets/,
   ],
   ['display: contents', /^contents-|display-contents/],
+  ['Math functions', /^math-/],
   [
     'Box model and sizing',
     /^(a-)?(percentage|max-|min-|nested-percentage)|border-box|content-box|aspect-ratio|^a-block-container-ignores-gap|^an-auto-width|^auto-inline-margins|^one-auto-inline-margin|^a-negative-inline-margin|^percentage-|^min-width|^min-height|^max-height/,
@@ -2918,6 +2919,153 @@ const CASES = [
         marginBlock: '20px',
       }),
       marginBox('after', 40, 20),
+    ]),
+  },
+
+  /* ------------------------------------------------------ math functions -- */
+  /*
+   * `calc()`, `min()`, `max()` and `clamp()` with a percentage in them
+   * (css-values-4 §10). The percentage is of the containing block, as a bare
+   * one is, so only layout can resolve them; each box here is sized by one.
+   */
+  {
+    name: 'math-calc-subtracts-a-length-from-a-percentage',
+    why: 'calc(100% - 40px) as a width in a 300pt container is 260 (css-values-4 §10.1).',
+    tree: root([
+      marginBox('narrowed', 999, 20, {
+        display: 'block',
+        width: 'calc(100% - 40px)',
+      }),
+    ]),
+  },
+  {
+    name: 'math-max-is-the-larger-of-a-percentage-and-a-length',
+    why: 'max(50%, 100px) caps a box at 150 in a 300pt container, and max(20%, 100px) at 100: whichever argument is larger (css-values-4 §10.2).',
+    tree: root([
+      marginBox('percentage', 999, 20, {
+        display: 'block',
+        maxWidth: 'max(50%, 100px)',
+      }),
+      marginBox('length', 999, 20, {
+        display: 'block',
+        maxWidth: 'max(20%, 100px)',
+      }),
+    ]),
+  },
+  {
+    name: 'math-min-is-the-smaller-of-a-percentage-and-a-length',
+    why: 'min(100%, 200px) as a width is 200 in a 300pt container, and min(50%, 200px) is 150 (css-values-4 §10.2).',
+    tree: root([
+      marginBox('length', 999, 20, {
+        display: 'block',
+        width: 'min(100%, 200px)',
+      }),
+      marginBox('percentage', 999, 20, {
+        display: 'block',
+        width: 'min(50%, 200px)',
+      }),
+    ]),
+  },
+  {
+    name: 'math-clamp-keeps-a-percentage-between-two-lengths',
+    why: 'clamp(100px, 50%, 120px) is 120 in a 300pt container, where 50% is 150, and clamp(100px, 20%, 120px) is 100, where 20% is 60 (css-values-4 §10.3).',
+    tree: root([
+      marginBox('upper', 999, 20, {
+        display: 'block',
+        width: 'clamp(100px, 50%, 120px)',
+      }),
+      marginBox('lower', 999, 20, {
+        display: 'block',
+        width: 'clamp(100px, 20%, 120px)',
+      }),
+    ]),
+  },
+  {
+    name: 'math-nested-functions-centre-a-column',
+    why: 'max(0px, calc((100% - 200px) / 2)) as the start margin of a 200pt column in a 300pt container is 50, which centres it (css-values-4 §10.1, §10.2).',
+    tree: root([
+      marginBox('column', 200, 20, {
+        display: 'block',
+        marginLeft: 'max(0px, calc((100% - 200px) / 2))',
+      }),
+    ]),
+  },
+  {
+    name: 'math-calc-height-resolves-against-a-definite-parent',
+    why: 'calc(50% + 5px) as a height is 45 under an 80pt parent: its percentage is of the containing block height, as a bare one is (CSS2 §10.5, css-values-4 §10.1).',
+    tree: root([
+      {
+        tag: 'div',
+        m: 'parent',
+        style: {display: 'block', height: '80px', backgroundColor: '#30b0c7'},
+        children: [
+          {
+            tag: 'div',
+            m: 'child',
+            style: {
+              display: 'block',
+              height: 'calc(50% + 5px)',
+              backgroundColor: '#ff3b30',
+            },
+          },
+        ],
+      },
+    ]),
+  },
+
+  /* ----------------------------------------------- inline boxes of a kind -- */
+  {
+    name: 'an-inline-flex-box-on-a-line-is-as-wide-as-its-content',
+    why: 'An inline-flex box is an atomic inline (css-display-3 §2.4): on a line of a block container it is as wide as its content and padding, 8 + 40 + 8, not the container.',
+    tree: root([
+      {
+        tag: 'span',
+        m: 'badge',
+        style: {
+          display: 'inline-flex',
+          paddingLeft: '8px',
+          paddingRight: '8px',
+          verticalAlign: 'top',
+          backgroundColor: '#34c759',
+        },
+        children: [box('content', 40, 20)],
+      },
+      box('after', 20, 20),
+    ]),
+  },
+  {
+    name: 'an-inline-box-of-any-element-takes-its-padding-border-and-margin',
+    why: 'A display: inline element is an inline box whatever its tag (CSS2 §9.2.2), and its inline padding, border and margin add to the line at its edges (CSS2 §10.6.1): the box inside starts at 2 + 4, and the box after it at 2 + 4 + 40 + 4 + 3.',
+    /*
+     * The inline element itself is not measured: its box is as tall as the
+     * font's content area, which is a fact about a font file. The boxes inside
+     * and after it are atomic and sized, so CSS fixes where they sit.
+     */
+    tree: root([
+      {
+        tag: 'div',
+        style: {
+          display: 'inline',
+          paddingLeft: '4px',
+          paddingRight: '4px',
+          borderStyle: 'solid',
+          borderWidth: '0px',
+          borderLeftWidth: '2px',
+          borderColor: '#ff9500',
+          marginRight: '3px',
+          backgroundColor: '#ffe0b2',
+        },
+        children: [box('inner', 40, 20)],
+      },
+      box('after', 20, 20),
+    ]),
+  },
+  {
+    name: 'inline-padding-at-the-start-of-a-line-is-reserved-once',
+    why: 'An inline box that starts a line takes its start padding once (css-inline-3): the inner box sits at the padding, 10, and the box after it at 10 + 40 + 10.',
+    tree: root([
+      span([box('inner', 40, 20)], {paddingLeft: '10px', paddingRight: '10px'}),
+      box('after', 40, 20),
     ]),
   },
 ];

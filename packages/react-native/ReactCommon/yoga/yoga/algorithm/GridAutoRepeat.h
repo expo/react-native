@@ -39,12 +39,14 @@ namespace detail {
 inline float autoRepeatTrackSize(
     const GridTrackSize& track,
     const float availableSize) {
+  // A percentage, or a math function with one, is definite against a
+  // definite container size
   auto definiteSize = [&](const StyleSizeLength& length) -> float {
     if (length.isPoints()) {
       return length.value().unwrap();
     }
-    if (length.isPercent() && yoga::isDefined(availableSize)) {
-      return length.value().unwrap() / 100.0f * availableSize;
+    if (length.isRelative() && yoga::isDefined(availableSize)) {
+      return length.resolve(availableSize).unwrap();
     }
     return YGUndefined;
   };

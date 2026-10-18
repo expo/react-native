@@ -9,6 +9,7 @@
 
 #include <yoga/enums/Unit.h>
 #include <yoga/numeric/FloatOptional.h>
+#include <yoga/style/StyleCalc.h>
 
 namespace facebook::yoga {
 
@@ -41,6 +42,14 @@ class StyleLength {
         : StyleLength{FloatOptional{value}, Unit::Percent};
   }
 
+  // A math function with percentages, by the id `CalcRegistry` gave it; its
+  // `value()` is that id
+  constexpr static StyleLength calc(uint32_t id) {
+    return id == CalcRegistry::kInvalidId
+        ? undefined()
+        : StyleLength{FloatOptional{static_cast<float>(id)}, Unit::Calc};
+  }
+
   constexpr static StyleLength ofAuto() {
     return StyleLength{{}, Unit::Auto};
   }
@@ -65,6 +74,16 @@ class StyleLength {
     return unit_ == Unit::Percent;
   }
 
+  constexpr bool isCalc() const {
+    return unit_ == Unit::Calc;
+  }
+
+  // Whether layout resolves the length against a reference length: a
+  // percentage, or a math function with one
+  constexpr bool isRelative() const {
+    return unit_ == Unit::Percent || unit_ == Unit::Calc;
+  }
+
   constexpr bool isDefined() const {
     return !isUndefined();
   }
@@ -86,6 +105,9 @@ class StyleLength {
         return value_;
       case Unit::Percent:
         return FloatOptional{value_.unwrap() * referenceLength * 0.01f};
+      case Unit::Calc:
+        return CalcRegistry::evaluate(
+            static_cast<uint32_t>(value_.unwrap()), referenceLength);
       default:
         return FloatOptional{};
     }

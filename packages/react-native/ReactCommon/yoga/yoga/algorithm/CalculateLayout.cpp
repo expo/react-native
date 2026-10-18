@@ -119,8 +119,8 @@ static bool hasPercentageLength(const Style& style) {
       Edge::Vertical,
       Edge::All};
   for (const auto edge : edges) {
-    if (style.margin(edge).isPercent() || style.position(edge).isPercent() ||
-        style.padding(edge).isPercent() || style.border(edge).isPercent()) {
+    if (style.margin(edge).isRelative() || style.position(edge).isRelative() ||
+        style.padding(edge).isRelative() || style.border(edge).isRelative()) {
       return true;
     }
   }
@@ -128,16 +128,16 @@ static bool hasPercentageLength(const Style& style) {
   constexpr std::array<Dimension, 2> dimensions = {
       Dimension::Width, Dimension::Height};
   for (const auto dimension : dimensions) {
-    if (style.dimension(dimension).isPercent() ||
-        style.minDimension(dimension).isPercent() ||
-        style.maxDimension(dimension).isPercent()) {
+    if (style.dimension(dimension).isRelative() ||
+        style.minDimension(dimension).isRelative() ||
+        style.maxDimension(dimension).isRelative()) {
       return true;
     }
   }
 
-  return style.flexBasis().isPercent() ||
-      style.gap(Gutter::Column).isPercent() ||
-      style.gap(Gutter::Row).isPercent() || style.gap(Gutter::All).isPercent();
+  return style.flexBasis().isRelative() ||
+      style.gap(Gutter::Column).isRelative() ||
+      style.gap(Gutter::Row).isRelative() || style.gap(Gutter::All).isRelative();
 }
 
 static bool hasNonZeroFlex(const yoga::Node& node) {
@@ -161,10 +161,10 @@ static bool isHeightFitContentIndependent(const yoga::Node& node) {
   const auto height = style.dimension(Dimension::Height);
   const auto flexBasis = style.flexBasis();
   const bool hasRelativePercentPosition =
-      style.position(Edge::Top).isPercent() ||
-      style.position(Edge::Bottom).isPercent() ||
-      style.position(Edge::Vertical).isPercent() ||
-      style.position(Edge::All).isPercent();
+      style.position(Edge::Top).isRelative() ||
+      style.position(Edge::Bottom).isRelative() ||
+      style.position(Edge::Vertical).isRelative() ||
+      style.position(Edge::All).isRelative();
   return !node.hasMeasureFunc() && !node.hasMinContentMeasureFunc() &&
       !node.hasBaselineFunc() && !node.isReferenceBaseline() &&
       (height.isAuto() || height.isUndefined()) &&
@@ -1264,7 +1264,7 @@ static float distributeFreeSpaceSecondPass(
           marginCross;
       const bool isLoosePercentageMeasurement =
           currentLineChild->getProcessedDimension(dimension(crossAxis))
-              .isPercent() &&
+              .isRelative() &&
           sizingModeCrossDim != SizingMode::StretchFit;
       childCrossSizingMode =
           yoga::isUndefined(childCrossSize) || isLoosePercentageMeasurement
@@ -3976,9 +3976,9 @@ bool calculateLayoutInternal(
   // that height
   const bool percentOwnerChanged =
       !yoga::inexactEquals(layout->lastOwnerHeight, ownerHeight) &&
-      (node->style().dimension(Dimension::Height).isPercent() ||
-       node->style().minDimension(Dimension::Height).isPercent() ||
-       node->style().maxDimension(Dimension::Height).isPercent());
+      (node->style().dimension(Dimension::Height).isRelative() ||
+       node->style().minDimension(Dimension::Height).isRelative() ||
+       node->style().maxDimension(Dimension::Height).isRelative());
   layout->lastOwnerHeight = ownerHeight;
 
   const bool needToVisitNode =

@@ -67,9 +67,9 @@ export function usePageViewport(): [
 }
 
 /**
- * A vertically scrolling page. Native scrolling reserves the top/bottom;
- * side reservations narrow the content's layout, rather than extending its
- * horizontal scroll range. Authored content padding is inside that column.
+ * A vertically scrolling page with a full-size native viewport. All reserved
+ * edges are native content insets; the content width excludes the side insets
+ * so there is no horizontal scroll range. Authored padding is inside it.
  *
  * The document rectangle and its env() values describe the same viewport:
  * an edge already excluded from the rectangle has no remaining unsafe area.
@@ -77,6 +77,8 @@ export function usePageViewport(): [
 export default function NativePageScroll({
   children,
   contentContainerStyle,
+  contentInset,
+  scrollIndicatorInsets = OUTSIDE_INDICATOR,
   automaticInsets = true,
   onContentViewportChange,
   style,
@@ -90,8 +92,9 @@ export default function NativePageScroll({
   callbackRef.current = onContentViewportChange;
   // Only the sides affect this component's React layout. A collapsing title
   // or keyboard must not re-render it just because a vertical inset changed.
-  const [sides, setSides] =
-    React.useState<?{left: number, right: number}>(null);
+  const [reservedSides, setReservedSides] = React.useState<?number>(null);
+  const authoredLeft = contentInset?.left ?? 0;
+  const authoredRight = contentInset?.right ?? 0;
   const enabled = (edge: 'top' | 'right' | 'bottom' | 'left') =>
     typeof automaticInsets === 'boolean'
       ? automaticInsets
@@ -103,7 +106,7 @@ export default function NativePageScroll({
   const publish = React.useCallback(() => {
     const node = viewportRef.current;
     const insets = insetsRef.current;
-    if (callbackRef.current == null || node == null || insets == null) {
+    if (node == null || insets == null) {
       return;
     }
     const frame = node.getBoundingClientRect();
@@ -111,19 +114,25 @@ export default function NativePageScroll({
       return;
     }
     const reserved = {
-      left: leftEnabled ? insets.left : 0,
-      right: rightEnabled ? insets.right : 0,
+      left: authoredLeft + (leftEnabled ? insets.left : 0),
+      right: authoredRight + (rightEnabled ? insets.right : 0),
       top: topEnabled ? insets.top : 0,
       bottom: bottomEnabled ? insets.bottom : 0,
     };
+    const width = Math.max(0, frame.width - reserved.left - reserved.right);
+    const sides = reserved.left + reserved.right;
+    setReservedSides(previous => (previous === sides ? previous : sides));
+    if (callbackRef.current == null) {
+      return;
+    }
     const next: PageViewport = {
       x: frame.x + reserved.left,
       y: frame.y + reserved.top,
-      width: Math.max(0, frame.width - reserved.left - reserved.right),
+      width,
       height: Math.max(0, frame.height - reserved.top - reserved.bottom),
       safeAreaInsets: {
-        left: insets.left - reserved.left,
-        right: insets.right - reserved.right,
+        left: Math.max(0, insets.left - reserved.left),
+        right: Math.max(0, insets.right - reserved.right),
         top: insets.top - reserved.top,
         bottom: insets.bottom - reserved.bottom,
       },
@@ -133,16 +142,18 @@ export default function NativePageScroll({
       publishedRef.current = next;
       callbackRef.current(next);
     }
-  }, [topEnabled, bottomEnabled, leftEnabled, rightEnabled]);
+  }, [
+    topEnabled,
+    bottomEnabled,
+    leftEnabled,
+    rightEnabled,
+    authoredLeft,
+    authoredRight,
+  ]);
   const onSafeAreaInsetsChange = React.useCallback(
     (event: SafeAreaInsetsChangeEvent) => {
       const next = event.nativeEvent.insets;
       insetsRef.current = next;
-      setSides(previous =>
-        previous?.left === next.left && previous?.right === next.right
-          ? previous
-          : {left: next.left, right: next.right},
-      );
       publish();
     },
     [publish],
@@ -152,19 +163,24 @@ export default function NativePageScroll({
     () => ({
       top: topEnabled,
       bottom: bottomEnabled,
-      left: false,
-      right: false,
+      left: leftEnabled,
+      right: rightEnabled,
     }),
-    [topEnabled, bottomEnabled],
+    [topEnabled, bottomEnabled, leftEnabled, rightEnabled],
   );
-  const left = leftEnabled ? sides?.left : 0;
-  const right = rightEnabled ? sides?.right : 0;
-  const padding = React.useMemo(
+  // The scroll viewport stays full size. Its native contentInset positions
+  // this narrower content box; putting the same reservation in padding would
+  // count it twice. Seed from env() until the local native insets arrive.
+  const initialLeft = leftEnabled ? env('safe-area-inset-left') : '0px';
+  const initialRight = rightEnabled ? env('safe-area-inset-right') : '0px';
+  const contentSize = React.useMemo(
     () => ({
-      paddingLeft: left ?? env('safe-area-inset-left'),
-      paddingRight: right ?? env('safe-area-inset-right'),
+      width:
+        reservedSides == null
+          ? `calc(100% - ${initialLeft} - ${initialRight} - ${authoredLeft + authoredRight}px)`
+          : `calc(100% - ${reservedSides}px)`,
     }),
-    [left, right],
+    [reservedSides, initialLeft, initialRight, authoredLeft, authoredRight],
   );
   return (
     <View
@@ -177,7 +193,9 @@ export default function NativePageScroll({
         ref={ref}
         style={[FILL, style]}
         automaticInsets={nativeInsets}
-        contentContainerStyle={padding}>
+        contentInset={contentInset}
+        scrollIndicatorInsets={scrollIndicatorInsets}
+        contentContainerStyle={contentSize}>
         <View style={[COLUMN, contentContainerStyle]}>{children}</View>
       </NativeScroll>
     </View>
@@ -186,3 +204,4 @@ export default function NativePageScroll({
 
 const FILL = {flex: 1, minWidth: 0, minHeight: 0};
 const COLUMN = {minWidth: 0};
+const OUTSIDE_INDICATOR = {left: 0, right: 0};

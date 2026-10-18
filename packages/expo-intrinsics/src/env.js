@@ -36,8 +36,8 @@ export type EnvironmentVariable =
  * `fallback` is css-values-4's second argument: what the length computes to
  * where nothing has been published, not a minimum. Supported on the
  * length-valued layout properties (padding, margin, the inset offsets, border
- * widths, gaps, width and height); not inside `calc()` and not on the logical
- * `*Block`/`*Inline` aliases, see `EnvironmentDependency.h`.
+ * widths, gaps, width and height), including CSS math functions. The logical
+ * `*Block`/`*Inline` aliases are not supported; see `EnvironmentDependency.h`.
  */
 export default function env(
   variable: EnvironmentVariable,

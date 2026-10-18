@@ -78,6 +78,8 @@ inline folly::dynamic toDynamic(const YGValue &dimension)
       return "fit-content";
     case YGUnitStretch:
       return "stretch";
+    case YGUnitCalc:
+      return "calc";
     case YGUnitPoint:
       return dimension.value;
     case YGUnitPercent:
