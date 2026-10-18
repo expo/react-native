@@ -57,6 +57,10 @@ class StyleValueHandle {
     return type() == Type::Point;
   }
 
+  constexpr bool isCalc() const {
+    return type() == Type::Calc;
+  }
+
  private:
   friend class StyleValuePool;
 
@@ -70,7 +74,9 @@ class StyleValueHandle {
     Percent,
     Number,
     Auto,
-    Keyword
+    Keyword,
+    // A math function's id in `CalcRegistry`, stored as a number is
+    Calc
   };
 
   // Intentionally leaving out auto as a fast path

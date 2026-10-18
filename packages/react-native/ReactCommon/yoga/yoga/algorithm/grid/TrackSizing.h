@@ -1388,7 +1388,7 @@ struct TrackSizing {
 
     // If preferred size is definite (not auto/percent), use min-content
     // contribution
-    if (!preferredSize.isAuto() && !preferredSize.isPercent()) {
+    if (!preferredSize.isAuto() && !preferredSize.isRelative()) {
       return minContentContribution(item, dimension, itemConstraints);
     }
 
@@ -1553,7 +1553,7 @@ struct TrackSizing {
       const StyleSizeLength& sizingFunction,
       float referenceLength) {
     return sizingFunction.isAuto() ||
-        (sizingFunction.isPercent() && !yoga::isDefined(referenceLength));
+        (sizingFunction.isRelative() && !yoga::isDefined(referenceLength));
   }
 
   static bool isFlexibleSizingFunction(const StyleSizeLength& sizingFunction) {
@@ -1562,7 +1562,7 @@ struct TrackSizing {
 
   static bool isPercentageSizingFunction(
       const StyleSizeLength& sizingFunction) {
-    return sizingFunction.isPercent();
+    return sizingFunction.isRelative();
   }
 
   float getTotalBaseSize(Dimension dimension) {
@@ -1976,7 +1976,7 @@ struct TrackSizing {
 
   bool itemSizeDependsOnIntrinsicTracks(const GridItem& item) const {
     auto heightStyle = item.node->style().dimension(Dimension::Height);
-    if (heightStyle.isPercent()) {
+    if (heightStyle.isRelative()) {
       for (size_t i = item.rowStart; i < item.rowEnd && i < rowTracks.size();
            i++) {
         if (isIntrinsicSizingFunction(

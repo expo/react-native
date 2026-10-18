@@ -48,9 +48,16 @@ struct EnvironmentDependency {
   Float fallback{0};
   // From `calc(env(<name>) + <length>)`
   Float offset{0};
+  // A CSS math expression containing one or more env() substitutions.
+  std::string expression{};
 
   bool operator==(const EnvironmentDependency &other) const = default;
 };
+
+void applyEnvironmentExpression(
+    yoga::Style &style,
+    const EnvironmentDependency &dependency,
+    const EnvironmentValues &environment);
 
 inline void applyEnvironmentDependency(yoga::Style &style, const EnvironmentDependency &dependency, Float variable)
 {
@@ -223,9 +230,9 @@ inline std::optional<EnvironmentValue> parseEnvironmentFunction(std::string_view
 /*
  * `env()` on its own, or `calc()` adding or subtracting a pixel length
  * (`calc(env(safe-area-inset-bottom) + 8px)`, `calc(8px + env(…))`).
- * DOM-CSS-LIMITATION(env-calc-is-an-offset): no other `calc()` around an
- * `env()` is understood, nor `min()`, `max()` or `clamp()`; such a value
- * computes to nothing. `std::nullopt` for anything that is not an `env()`.
+ * The fast path for a single environment length plus a pixel offset. Other
+ * math expressions are substituted and parsed by conversions.cpp.
+ * `std::nullopt` when this fast path does not apply.
  */
 inline std::optional<EnvironmentValue> parseEnvironmentValue(std::string_view value)
 {

@@ -166,10 +166,10 @@ async function main() {
     ) && ok;
   ok = check('unknown area: grid height', grid.unknownGrid.h, 80) && ok;
 
-  // `calc(env(...) + 8px)` is the inset plus 8; another expression falls back
-  // to the bar's 2pt minimum. The plain bar cannot show an inset under that
-  // minimum (Android's is 0 when the app is not edge to edge), so then only
-  // bound the sum by it.
+  // `calc(env(...) + 8px)` is the inset plus 8, and `calc(env(...) * 2)` twice
+  // the inset. The plain bar cannot show an inset under its 2pt minimum
+  // (Android's is 0 when the app is not edge to edge), so then only bound the
+  // sum by it.
   const MINIMUM_BAR = 2;
   if (env.envTop.h > MINIMUM_BAR + 0.5) {
     ok =
@@ -187,8 +187,14 @@ async function main() {
         MINIMUM_BAR / 2,
       ) && ok;
   }
+  // The `+ 8px` bar is never under the minimum, so it gives the inset exactly
+  const inset = env.envTopPlus8.h - 8;
   ok =
-    check('calc(env() * 2) computes to nothing', env.envTopTimes2.h, 2) && ok;
+    check(
+      'calc(env() * 2) is twice the inset',
+      env.envTopTimes2.h,
+      Math.max(MINIMUM_BAR, 2 * inset),
+    ) && ok;
 
   console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
   process.exit(ok ? 0 : 1);

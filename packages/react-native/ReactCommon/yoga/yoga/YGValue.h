@@ -71,6 +71,7 @@ inline bool operator==(const YGValue& lhs, const YGValue& rhs) {
       return true;
     case YGUnitPoint:
     case YGUnitPercent:
+    case YGUnitCalc:
       return lhs.value == rhs.value;
     default:
       return false;

@@ -41,7 +41,9 @@ it('centers the readable transcript after reserving each safe edge exactly once'
       ),
     );
     const rect = content.current.getBoundingClientRect();
-    expect(rect.x).toBe(expectedX);
+    // Fantom runs Yoga without UIKit's contentOffset or Android's native
+    // translation. The platform positions this fitted column at the left inset.
+    expect(rect.x + left).toBe(expectedX);
     expect(rect.width).toBe(expectedWidth);
   }
 });

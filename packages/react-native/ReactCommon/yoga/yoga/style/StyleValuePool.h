@@ -34,6 +34,7 @@ class StyleValuePool {
       handle.setType(StyleValueHandle::Type::Auto);
     } else {
       auto type = length.isPoints() ? StyleValueHandle::Type::Point
+          : length.isCalc()         ? StyleValueHandle::Type::Calc
                                     : StyleValueHandle::Type::Percent;
       storeValue(handle, length.value().unwrap(), type);
     }
@@ -52,6 +53,7 @@ class StyleValuePool {
       storeKeyword(handle, StyleValueHandle::Keyword::FitContent);
     } else {
       auto type = sizeValue.isPoints() ? StyleValueHandle::Type::Point
+          : sizeValue.isCalc()         ? StyleValueHandle::Type::Calc
                                        : StyleValueHandle::Type::Percent;
       storeValue(handle, sizeValue.value().unwrap(), type);
     }
@@ -73,11 +75,15 @@ class StyleValuePool {
     } else {
       assert(
           handle.type() == StyleValueHandle::Type::Point ||
-          handle.type() == StyleValueHandle::Type::Percent);
+          handle.type() == StyleValueHandle::Type::Percent ||
+          handle.type() == StyleValueHandle::Type::Calc);
       float value = (handle.isValueIndexed())
           ? std::bit_cast<float>(buffer_.get32(handle.value()))
           : unpackInlineInteger(handle.value());
 
+      if (handle.type() == StyleValueHandle::Type::Calc) {
+        return StyleLength::calc(static_cast<uint32_t>(value));
+      }
       return handle.type() == StyleValueHandle::Type::Point
           ? StyleLength::points(value)
           : StyleLength::percent(value);
@@ -98,11 +104,15 @@ class StyleValuePool {
     } else {
       assert(
           handle.type() == StyleValueHandle::Type::Point ||
-          handle.type() == StyleValueHandle::Type::Percent);
+          handle.type() == StyleValueHandle::Type::Percent ||
+          handle.type() == StyleValueHandle::Type::Calc);
       float value = (handle.isValueIndexed())
           ? std::bit_cast<float>(buffer_.get32(handle.value()))
           : unpackInlineInteger(handle.value());
 
+      if (handle.type() == StyleValueHandle::Type::Calc) {
+        return StyleSizeLength::calc(static_cast<uint32_t>(value));
+      }
       return handle.type() == StyleValueHandle::Type::Point
           ? StyleSizeLength::points(value)
           : StyleSizeLength::percent(value);
@@ -125,7 +135,8 @@ class StyleValuePool {
     assert(
         handle.type() == StyleValueHandle::Type::Point ||
         handle.type() == StyleValueHandle::Type::Percent ||
-        handle.type() == StyleValueHandle::Type::Number);
+        handle.type() == StyleValueHandle::Type::Number ||
+        handle.type() == StyleValueHandle::Type::Calc);
     return handle.isValueIndexed()
         ? std::bit_cast<float>(buffer_.get32(handle.value()))
         : unpackInlineInteger(handle.value());

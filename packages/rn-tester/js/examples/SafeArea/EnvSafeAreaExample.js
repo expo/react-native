@@ -215,8 +215,8 @@ function InsideCalc() {
   return (
     <View style={styles.section}>
       <Text style={styles.lead}>
-        Inside `calc()`, `env()` works with a pixel length added or subtracted,
-        on either side. The second bar is 8pt taller than the first.
+        Inside `calc()`, `env()` is a length like any other. The second bar is
+        8pt taller than the first.
       </Text>
       <View
         ref={envRef}
@@ -233,8 +233,7 @@ function InsideCalc() {
         height: 'calc(env(safe-area-inset-top) + 8px)'
       </Text>
       <Text style={styles.lead}>
-        Any other expression computes to nothing, so this bar has no height of
-        its own beyond its 2pt minimum.
+        It multiplies too: this bar is twice as tall as the first.
       </Text>
       <View
         ref={envOtherRef}
