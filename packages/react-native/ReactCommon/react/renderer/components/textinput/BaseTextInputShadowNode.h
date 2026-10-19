@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <limits>
+
 #include <react/cxxstableapi/FrameworksGuard.h>
 
 #include <glog/logging.h>
@@ -77,6 +79,27 @@ class BaseTextInputShadowNode
         .pointScaleFactor = layoutContext.pointScaleFactor,
         .surfaceId = BaseShadowNode::getSurfaceId(),
     };
+
+    // Yoga's automatic-minimum probe (css-flexbox-1 §4.5) measures with no
+    // width to learn a box's min-content width. A text control's size is the
+    // user agent's, not its value's (HTML §4.10.11: a `<textarea>` is `cols`
+    // wide whatever it holds), so the probe sees an empty field: no width of
+    // its own, and the height of its text laid out unbounded, which is one
+    // line. Measured as text, a long unbreakable word in a composer's field
+    // widened the field past its send button.
+    if (layoutConstraints.maximumSize.width <= 0) {
+      auto unbounded = textConstraints;
+      unbounded.maximumSize.width = std::numeric_limits<Float>::infinity();
+      auto textSize = textLayoutManager_
+                          ->measure(
+                              attributedStringBoxToMeasure(layoutContext),
+                              props.paragraphAttributes,
+                              textLayoutContext,
+                              unbounded)
+                          .size;
+      return layoutConstraints.clamp(Size{0, textSize.height});
+    }
+
     auto textSize = textLayoutManager_
                         ->measure(
                             attributedStringBoxToMeasure(layoutContext),

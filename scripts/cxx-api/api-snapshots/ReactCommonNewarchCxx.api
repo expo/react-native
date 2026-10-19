@@ -227,6 +227,7 @@ Float facebook::react::floatFromYogaOptionalFloat(facebook::yoga::FloatOptional 
 Float facebook::react::parseTransitionTime(const std::string& value);
 YGDirection facebook::react::yogaDirectionFromLayoutDirection(facebook::react::LayoutDirection direction);
 bool facebook::react::areBorderRadiiCircular(const facebook::react::BorderRadii& borderRadii);
+bool facebook::react::breaksAnywhere(facebook::react::OverflowWrap overflowWrap);
 bool facebook::react::collectEnvironmentDependency(const std::string& stringValue, Float& fallbackOut);
 bool facebook::react::elementStatesBlockPadding(const facebook::react::YogaStylableProps& props);
 bool facebook::react::elementStatesInlinePadding(const facebook::react::YogaStylableProps& props);
@@ -300,6 +301,7 @@ std::optional<facebook::react::EnvironmentValue> facebook::react::parseEnvironme
 std::optional<facebook::react::EnvironmentVariable> facebook::react::environmentVariableFromName(std::string_view name);
 std::optional<facebook::react::FilterType> facebook::react::filterTypeFromString(std::string_view filterName);
 std::optional<facebook::react::Isolation> facebook::react::isolationFromString(std::string_view isolationSetting);
+std::optional<facebook::react::Size> facebook::react::measureTextMinContent(const TextLayoutManager& textLayoutManager, const facebook::react::AttributedString& attributedString, const facebook::react::ParagraphAttributes& paragraphAttributes, const facebook::react::TextLayoutContext& textLayoutContext, const facebook::react::LayoutConstraints& layoutConstraints);
 std::optional<facebook::react::TransitionProperty> facebook::react::parseTransitionProperty(const std::string& value);
 std::optional<facebook::yoga::StyleSizeLength> facebook::react::sizeLengthFromMathFunction(const std::string& value);
 std::optional<std::array<float, 3>> facebook::react::toExtendedLinearSRGB(const facebook::react::ColorSpaceValue& value);
@@ -623,6 +625,7 @@ class facebook::react::BaseViewProps : public facebook::react::YogaStylableProps
   public std::optional<facebook::react::FontVariant> inheritedFontVariant;
   public std::optional<facebook::react::FontWeight> inheritedFontWeight;
   public std::optional<facebook::react::FontWeight> uaFontWeight;
+  public std::optional<facebook::react::OverflowWrap> inheritedOverflowWrap;
   public std::optional<facebook::react::TextAlignment> inheritedTextAlign;
   public std::optional<facebook::react::TextTransform> inheritedTextTransform;
   public std::optional<facebook::react::WhiteSpace> inheritedWhiteSpace;
@@ -2061,6 +2064,7 @@ class facebook::react::TextAttributes : public facebook::react::DebugStringConve
   public std::optional<facebook::react::LayoutDirection> layoutDirection;
   public std::optional<facebook::react::LineBreakMode> lineBreakMode;
   public std::optional<facebook::react::LineBreakStrategy> lineBreakStrategy;
+  public std::optional<facebook::react::OverflowWrap> overflowWrap;
   public std::optional<facebook::react::Role> role;
   public std::optional<facebook::react::Size> textShadowOffset;
   public std::optional<facebook::react::TextAlignment> alignment;
@@ -2761,6 +2765,12 @@ enum facebook::react::OutlineStyle : uint8_t {
   Dashed,
   Dotted,
   Solid,
+}
+
+enum facebook::react::OverflowWrap : uint8_t {
+  Anywhere,
+  BreakWord,
+  Normal,
 }
 
 enum facebook::react::PointerEventsMode : uint8_t {
@@ -6028,6 +6038,7 @@ facebook::yoga::SizingMode facebook::yoga::sizingMode(facebook::yoga::MeasureMod
 float facebook::yoga::boundAxis(const facebook::yoga::Node *const node, const facebook::yoga::FlexDirection axis, const facebook::yoga::Direction direction, const float value, const float axisSize, const float widthSize);
 float facebook::yoga::calculateAvailableInnerDimension(const facebook::yoga::Node *const node, const facebook::yoga::Direction direction, const facebook::yoga::Dimension dimension, const float availableDim, float paddingAndBorder, const float ownerDim, const float ownerWidth);
 float facebook::yoga::calculateBaseline(const facebook::yoga::Node* node);
+float facebook::yoga::calculateMinContentContribution(facebook::yoga::Node* node, facebook::yoga::FlexDirection axis, facebook::yoga::Direction direction, float ownerWidth, float ownerHeight, uint32_t generationCount);
 float facebook::yoga::getPositionOfOppositeEdge(float position, facebook::yoga::FlexDirection axis, const facebook::yoga::Node *const containingNode, const facebook::yoga::Node *const node);
 float facebook::yoga::paddingAndBorderForAxis(const facebook::yoga::Node *const node, const facebook::yoga::FlexDirection axis, const facebook::yoga::Direction direction, const float widthSize);
 float facebook::yoga::roundValueToPixelGrid(double value, double pointScaleFactor, bool forceCeil, bool forceFloor);
@@ -6215,6 +6226,7 @@ class facebook::yoga::Style {
   public bool isInlineStartPositionAuto(facebook::yoga::FlexDirection axis, facebook::yoga::Direction direction) const;
   public bool isInlineStartPositionDefined(facebook::yoga::FlexDirection axis, facebook::yoga::Direction direction) const;
   public bool operator==(const facebook::yoga::Style& other) const;
+  public bool overflowClip() const;
   public bool resolvesAgainstOwnerHeight() const;
   public bool resolvesAgainstOwnerWidth() const;
   public bool verticalInsetsDefined() const;
@@ -6342,6 +6354,7 @@ class facebook::yoga::Style {
   public void setMinDimension(facebook::yoga::Dimension axis, facebook::yoga::Style::SizeLength value);
   public void setOrder(int32_t value);
   public void setOverflow(facebook::yoga::Overflow value);
+  public void setOverflowClip(bool value);
   public void setPadding(facebook::yoga::Edge edge, facebook::yoga::Style::Length value);
   public void setPosition(facebook::yoga::Edge edge, facebook::yoga::Style::Length value);
   public void setPositionType(facebook::yoga::PositionType value);
@@ -6897,6 +6910,7 @@ struct facebook::yoga::LayoutData {
 }
 
 struct facebook::yoga::LayoutResults {
+  public bool computedAutoMinMainSizePending;
   public bool hadOverflow() const;
   public bool hasClearance() const;
   public bool operator==(const facebook::yoga::LayoutResults& layout) const;
@@ -6905,6 +6919,7 @@ struct facebook::yoga::LayoutResults {
   public facebook::yoga::CachedMeasurement cachedLayout;
   public facebook::yoga::Direction direction() const;
   public facebook::yoga::Direction lastOwnerDirection;
+  public facebook::yoga::Direction minContentOwnerDirection;
   public facebook::yoga::FloatOptional computedAutoMinMainSize;
   public facebook::yoga::FloatOptional computedFlexBasis;
   public facebook::yoga::FloatOptional staticPositionBlockStart;
@@ -6913,18 +6928,19 @@ struct facebook::yoga::LayoutResults {
   public float lastOwnerHeight;
   public float margin(facebook::yoga::PhysicalEdge physicalEdge) const;
   public float measuredDimension(facebook::yoga::Dimension axis) const;
+  public float minContentOwnerHeight;
+  public float minContentOwnerWidth;
   public float padding(facebook::yoga::PhysicalEdge physicalEdge) const;
   public float position(facebook::yoga::PhysicalEdge physicalEdge) const;
   public float rawDimension(facebook::yoga::Dimension axis) const;
   public static constexpr int32_t MaxCachedMeasurements;
   public std::array<facebook::yoga::CachedMeasurement, facebook::yoga::LayoutResults::MaxCachedMeasurements> cachedMeasurements;
-  public std::array<float, 2> minContent;
-  public std::array<float, 2> minContentOwnerWidth;
-  public std::array<uint32_t, 2> minContentGeneration;
+  public std::array<float, 2> minContentSize;
   public uint8_t nextCachedMeasurementsIndex;
   public uint32_t computedFlexBasisGeneration;
   public uint32_t configVersion;
   public uint32_t generationCount;
+  public uint32_t minContentGeneration;
   public void setBorder(facebook::yoga::PhysicalEdge physicalEdge, float dimension);
   public void setDimension(facebook::yoga::Dimension axis, float dimension);
   public void setDirection(facebook::yoga::Direction direction);

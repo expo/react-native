@@ -153,6 +153,15 @@ class YG_EXPORT Style {
   void setOverflow(Overflow value) {
     overflow_ = value;
   }
+  // `clip` paints like hidden but is not scrollable (CSS Overflow §3).
+  // Keep the native clipping enum stable while preserving that distinction
+  // for automatic minimum sizing and block formatting contexts.
+  bool overflowClip() const {
+    return overflowClip_;
+  }
+  void setOverflowClip(bool value) {
+    overflowClip_ = value;
+  }
 
   Display display() const {
     return display_;
@@ -756,7 +765,8 @@ class YG_EXPORT Style {
         floatSide_ == other.floatSide_ && clear_ == other.clear_ &&
         formattingContextRoot_ == other.formattingContextRoot_ &&
         flexWrap_ == other.flexWrap_ &&
-        overflow_ == other.overflow_ && display_ == other.display_ &&
+        overflow_ == other.overflow_ && overflowClip_ == other.overflowClip_ &&
+        display_ == other.display_ &&
         boxSizing_ == other.boxSizing_ &&
         numbersEqual(flex_, pool_, other.flex_, other.pool_) &&
         numbersEqual(flexGrow_, pool_, other.flexGrow_, other.pool_) &&
@@ -1027,6 +1037,7 @@ class YG_EXPORT Style {
   FloatSide floatSide_ : bitCount<FloatSide>() = FloatSide::None;
   Clear clear_ : bitCount<Clear>() = Clear::None;
   bool formattingContextRoot_ : 1 = false;
+  bool overflowClip_ : 1 = false;
   BoxSizing boxSizing_ : bitCount<BoxSizing>() = BoxSizing::BorderBox;
 
   StyleValueHandle flex_{};

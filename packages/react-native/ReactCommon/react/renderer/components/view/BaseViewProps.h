@@ -132,6 +132,10 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // `white-space`, inherited like the rest of these: a View sets it and
   // every run inside keeps it.
   std::optional<WhiteSpace> inheritedWhiteSpace{};
+  // `overflow-wrap` (and its alias `word-wrap`), inherited the same way: it
+  // decides whether a run's min-content size is its longest word or its
+  // widest grapheme.
+  std::optional<OverflowWrap> inheritedOverflowWrap{};
   /*
    * Whether a run that WRAPS reports the width of its longest line instead of
    * the width it was given.

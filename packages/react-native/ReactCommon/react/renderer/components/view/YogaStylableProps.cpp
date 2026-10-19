@@ -55,7 +55,13 @@ yoga::Style convertYogaStyleCollectingEnvironment(
     const yoga::Style& sourceValue,
     std::vector<EnvironmentDependency>& dependencies) {
   ScopedEnvironmentCollector scopedCollector{dependencies};
-  return convertRawProp(context, rawProps, sourceValue);
+  auto style = convertRawProp(context, rawProps, sourceValue);
+  if (const auto* overflow = rawProps.at("overflow", nullptr, nullptr)) {
+    style.setOverflowClip(
+        overflow->hasValue() && overflow->hasType<std::string>() &&
+        (std::string)*overflow == "clip");
+  }
+  return style;
 }
 
 } // namespace
@@ -324,6 +330,11 @@ void YogaStylableProps::setProp(
       RAW_SET_PROP_SWITCH_CASE(paddingBlock, "paddingBlock");
       RAW_SET_PROP_SWITCH_CASE(paddingBlockStart, "paddingBlockStart");
       RAW_SET_PROP_SWITCH_CASE(paddingBlockEnd, "paddingBlockEnd");
+  }
+  if (hash == RAW_PROPS_KEY_HASH("overflow")) {
+    yogaStyle.setOverflowClip(
+        value.hasValue() && value.hasType<std::string>() &&
+        (std::string)value == "clip");
   }
 }
 

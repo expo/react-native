@@ -422,6 +422,8 @@ export default RNTesterApp;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    flexShrink: 1,
+    minHeight: 0,
   },
   bottomNavbar: {
     height: navBarHeight,

@@ -55,6 +55,16 @@ float calculateAvailableInnerDimension(
 
 void zeroOutLayoutRecursively(yoga::Node* const node);
 
+// The min-content contribution of `node` along `axis`, without its margins
+// (css-sizing-3 §5.1), as the automatic minimum's probe finds it
+float calculateMinContentContribution(
+    yoga::Node* node,
+    FlexDirection axis,
+    Direction direction,
+    float ownerWidth,
+    float ownerHeight,
+    uint32_t generationCount);
+
 void cleanupContentsNodesRecursively(yoga::Node* node, bool didPerformLayout);
 
 } // namespace facebook::yoga

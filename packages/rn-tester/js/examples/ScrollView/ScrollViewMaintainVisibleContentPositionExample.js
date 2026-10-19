@@ -114,7 +114,10 @@ function ScrollView_maintainVisibleContentPosition(): React.Node {
 
 const styles = StyleSheet.create({
   root: {
+    display: 'flex',
     flex: 1,
+    flexShrink: 1,
+    minHeight: 0,
     padding: 16,
   },
   scrollView: {
@@ -134,6 +137,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   controlsContainer: {
+    display: 'flex',
     position: 'absolute',
     bottom: 0,
     left: 0,

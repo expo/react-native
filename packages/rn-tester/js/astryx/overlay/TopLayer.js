@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   // Fills its parent, because this is mounted at the app root: the top layer
   // is document-level on the web, so the box it positions overlays against has
   // to be the screen
-  root: {flex: 1},
+  root: {flex: 1, flexShrink: 1, minWidth: 0, minHeight: 0},
   // The web's default ::backdrop for a modal dialog.
   modalBackdrop: {backgroundColor: 'rgba(0, 0, 0, 0.35)'},
   /*

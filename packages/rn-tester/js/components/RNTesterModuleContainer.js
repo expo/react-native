@@ -171,8 +171,11 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   examplesContainer: {
+    display: 'flex',
     flexGrow: 1,
     flex: 1,
+    flexShrink: 1,
+    minHeight: 0,
   },
   // Opened on its own, an example has no RNTesterBlock around it, so it would
   // otherwise run edge to edge. Matches the inset the card gives it in the
