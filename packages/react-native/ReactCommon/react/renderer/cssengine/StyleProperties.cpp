@@ -863,6 +863,8 @@ bool isInheritedProperty(std::string_view property) {
       "textAlign",
       "textTransform",
       "whiteSpace",
+      "overflowWrap",
+      "wordWrap",
       "writingDirection",
       "direction",
       "visibility",
@@ -903,9 +905,7 @@ bool isDroppedProperty(std::string_view property) {
       "touchAction",
       "resize",
       "hyphens",
-      "overflowWrap",
       "wordBreak",
-      "wordWrap",
       "textOverflow",
       "speak",
       "quotes",
@@ -1733,6 +1733,8 @@ const std::unordered_set<std::string_view>& passedThroughStrings() {
       "fontStyle",
       "fontFamily",
       "whiteSpace",
+      "overflowWrap",
+      "wordWrap",
       "verticalAlign",
       "textDecorationLine",
       "textDecorationStyle",
@@ -2147,9 +2149,12 @@ void convertLonghands(
     auto scrolls = [](const std::string& v) {
       return v == "scroll" || v == "auto";
     };
-    props["overflow"] = clips(x) || clips(y) ? "hidden"
-        : scrolls(x) || scrolls(y)           ? "scroll"
-                                             : "visible";
+    props["overflow"] = (x == "clip" && (y == "clip" || y == "visible")) ||
+            (y == "clip" && (x == "clip" || x == "visible"))
+        ? "clip"
+        : clips(x) || clips(y)     ? "hidden"
+        : scrolls(x) || scrolls(y) ? "scroll"
+                                   : "visible";
   }
 
   // `visibility: hidden` draws nothing and takes no touches.

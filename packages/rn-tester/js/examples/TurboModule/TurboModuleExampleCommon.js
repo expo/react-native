@@ -13,6 +13,7 @@ import {Platform, StyleSheet} from 'react-native';
 // $FlowFixMe[value-as-type]
 const styles: StyleSheet = StyleSheet.create({
   container: {
+    display: 'flex',
     flex: 1,
   },
   item: {
@@ -26,6 +27,7 @@ const styles: StyleSheet = StyleSheet.create({
     paddingRight: 5,
   },
   result: {
+    display: 'flex',
     alignItems: 'stretch',
     justifyContent: 'space-between',
   },

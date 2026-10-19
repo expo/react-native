@@ -1311,8 +1311,11 @@ struct TrackSizing {
   // 4. limitedMinContentContribution - min-content clamped by fixed track
   // limits
 
-  // TODO: Yoga does not support min-content constraint yet so we use the
-  // max-content size contributions here
+  // LOCAL FIX (see README-VENDORED.md): in the inline axis an item's
+  // min-content contribution is its min-content width, which the automatic
+  // minimum's probe answers (a text's longest word), where the vendored code
+  // measured its max-content width. In the block axis the measured height is
+  // the min-content height at the width the item is given.
   float minContentContribution(
       const GridItem& item,
       Dimension dimension,
@@ -1321,6 +1324,17 @@ struct TrackSizing {
         dimension == Dimension::Width ? FlexDirection::Row
                                       : FlexDirection::Column,
         itemConstraints.containingBlockWidth);
+
+    if (dimension == Dimension::Width) {
+      return calculateMinContentContribution(
+                 item.node,
+                 FlexDirection::Row,
+                 direction,
+                 ownerWidth,
+                 ownerHeight,
+                 generationCount) +
+          marginForAxis;
+    }
 
     float contribution =
         measureItem(item, dimension, itemConstraints) + marginForAxis;
@@ -1464,7 +1478,19 @@ struct TrackSizing {
       const ItemConstraint& itemConstraints,
       const std::vector<GridTrack>& tracks,
       float containerSize) {
-    float result = measureItem(item, dimension, itemConstraints);
+    // LOCAL FIX (see README-VENDORED.md): the content size suggestion is the
+    // item's min-content size (css-grid-2 §6.6), which in the inline axis the
+    // automatic minimum's probe answers; the vendored code measured its
+    // max-content size
+    float result = dimension == Dimension::Width
+        ? calculateMinContentContribution(
+              item.node,
+              FlexDirection::Row,
+              direction,
+              ownerWidth,
+              ownerHeight,
+              generationCount)
+        : measureItem(item, dimension, itemConstraints);
     // Clamp by fixed track limit if all spanned tracks have fixed max sizing
     // function
     auto fixedLimit =

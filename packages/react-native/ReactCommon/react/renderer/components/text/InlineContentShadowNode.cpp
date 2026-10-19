@@ -32,6 +32,7 @@
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/components/text/BaseTextProps.h>
 #include <react/renderer/components/text/BaseTextShadowNode.h>
+#include <react/renderer/components/text/TextMinContent.h>
 #include <react/renderer/components/text/TextShadowNode.h>
 #include <react/renderer/components/text/WhiteSpaceConstraints.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
@@ -1274,6 +1275,32 @@ Size InlineContentShadowNode::measureContent(
 
   auto measureConstraints =
       constraintsForWhiteSpace(textAttributes.whiteSpace, layoutConstraints);
+
+  // Yoga's automatic-minimum probe asks for the run at width 0: its
+  // min-content size, the widest word. The build above is kept for the next
+  // measure; the probe's rects are not, since they describe no width the run
+  // will be laid out at.
+  if (measureConstraints.maximumSize.width <= 0) {
+    if (auto minContent = measureTextMinContent(
+            *textLayoutManager_,
+            attributedString,
+            ParagraphAttributes{},
+            textLayoutContext,
+            measureConstraints)) {
+      if (rebuilt) {
+        memoize(
+            textAttributes,
+            attributedString,
+            rebuiltAttachments,
+            {},
+            std::numeric_limits<Float>::quiet_NaN());
+      }
+      const auto probeShiftInk = attributedString.baselineShiftInkOverflow();
+      minContent->height += probeShiftInk.top + probeShiftInk.bottom;
+      return *minContent;
+    }
+  }
+
   // A run is as tall as its lines. The platform's text measure clamps its
   // answer to the constraint (React Native's own Text truncates to its box),
   // but a line box is never shorter than its line-height (CSS2 §10.8): in a

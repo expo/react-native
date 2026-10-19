@@ -87,10 +87,12 @@ struct LayoutResults {
   // Memoized min-content sizes for §4.5, indexed by dimension, with the layout
   // generation each was computed in (0 for none). Like `cachedMeasurements`,
   // they hold until the node, its config or its direction changes. A leaf
-  // stores its measured min-content without padding and border, which doesn't
-  // depend on the owner. A container stores its full min-content, which
-  // depends on `minContentOwnerWidth` when its own percentage padding, or a
-  // percentage padding or margin below it, resolves against it
+  // stores its measured min-content without padding and border; its block
+  // minimum is measured at `minContentOwnerWidth`, the available inline size,
+  // and its inline minimum doesn't depend on the owner. A container stores its
+  // full min-content, which depends on `minContentOwnerWidth` when its own
+  // percentage padding, a percentage padding or margin below it, or a leaf's
+  // block minimum below it resolves against it
   // (`minContentResolvesAgainstOwnerWidth`).
   std::array<uint32_t, 2> minContentGeneration = {};
   std::array<float, 2> minContentOwnerWidth = {{YGUndefined, YGUndefined}};

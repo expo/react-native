@@ -134,6 +134,9 @@ void TextAttributes::apply(TextAttributes textAttributes) {
       : textTransform;
   whiteSpace = textAttributes.whiteSpace.has_value() ? textAttributes.whiteSpace
                                                      : whiteSpace;
+  overflowWrap = textAttributes.overflowWrap.has_value()
+      ? textAttributes.overflowWrap
+      : overflowWrap;
   hugsWrappedLines = textAttributes.hugsWrappedLines.has_value()
       ? textAttributes.hugsWrappedLines
       : hugsWrappedLines;
@@ -237,6 +240,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              role,
              textTransform,
              whiteSpace,
+             overflowWrap,
              hugsWrappedLines,
              dynamicRangeLimit,
              textEffects) ==
@@ -266,6 +270,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              rhs.role,
              rhs.textTransform,
              rhs.whiteSpace,
+             rhs.overflowWrap,
              rhs.hugsWrappedLines,
              rhs.dynamicRangeLimit,
              rhs.textEffects) &&

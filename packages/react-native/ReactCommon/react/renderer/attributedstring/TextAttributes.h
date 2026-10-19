@@ -177,6 +177,9 @@ class TextAttributes : public DebugStringConvertible {
   std::optional<LineBreakMode> lineBreakMode{};
   // `white-space`. Inherited, so a container passes it to every run inside it.
   std::optional<WhiteSpace> whiteSpace{};
+  // `overflow-wrap`. Inherited like `white-space`; `Anywhere` is what makes a
+  // run's min-content size its widest grapheme rather than its longest word.
+  std::optional<OverflowWrap> overflowWrap{};
   /*
    * Whether a run that wraps reports its longest line rather than the width it
    * was given — see `inheritedHugsWrappedLines` in `BaseViewProps.h`. Inherited
@@ -299,6 +302,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.allowFontScaling,
         textAttributes.textTransform,
         textAttributes.whiteSpace,
+        textAttributes.overflowWrap,
         textAttributes.hugsWrappedLines,
         textAttributes.dynamicRangeLimit,
         textAttributes.alignment,

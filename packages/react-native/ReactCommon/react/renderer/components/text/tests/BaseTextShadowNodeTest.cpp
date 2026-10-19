@@ -9,6 +9,8 @@
 #include <react/renderer/element/ComponentBuilder.h>
 
 #include <gtest/gtest.h>
+#include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/featureflags/ReactNativeFeatureFlagsDefaults.h>
 #include <react/renderer/attributedstring/conversions.h>
 #include <react/renderer/components/text/InlineContentShadowNode.h>
 #include <react/renderer/components/text/InlineTextTagShadowNodes.h>
@@ -74,6 +76,101 @@ std::shared_ptr<TextProps> textPropsWithRawFontVariationSettings(
 }
 
 } // namespace
+
+namespace {
+
+class ParagraphLayoutFlags : public ReactNativeFeatureFlagsDefaults {
+ public:
+  explicit ParagraphLayoutFlags(bool stringChildren)
+      : stringChildren_(stringChildren) {}
+
+  bool enableStringChildren() override {
+    return stringChildren_;
+  }
+
+ private:
+  bool stringChildren_;
+};
+
+class ParagraphAttachmentLifetimeTest : public testing::TestWithParam<bool> {
+ protected:
+  void SetUp() override {
+    ReactNativeFeatureFlags::dangerouslyReset();
+    ReactNativeFeatureFlags::override(
+        std::make_unique<ParagraphLayoutFlags>(GetParam()));
+  }
+
+  void TearDown() override {
+    ReactNativeFeatureFlags::dangerouslyReset();
+  }
+};
+
+} // namespace
+
+TEST_P(ParagraphAttachmentLifetimeTest, remeasureLaidOutParagraph) {
+  auto builder = simpleComponentBuilder();
+  auto attachmentProps = std::make_shared<ViewProps>();
+  attachmentProps->yogaStyle.setDimension(
+      yoga::Dimension::Width, yoga::StyleSizeLength::points(32));
+  attachmentProps->yogaStyle.setDimension(
+      yoga::Dimension::Height, yoga::StyleSizeLength::points(16));
+  auto paragraph = builder.build(
+      Element<ParagraphShadowNode>().tag(1).children({
+          Element<TextShadowNode>().tag(2).children({
+              rawTextElement("before "),
+              Element<ViewShadowNode>().tag(3).props(attachmentProps),
+              rawTextElement(" after"),
+          }),
+      }));
+  paragraph->getChildren()[0]->sealRecursive();
+  auto originalAttachment = std::weak_ptr<const ShadowNode>{
+      paragraph->getChildren()[0]->getChildren()[1]};
+  const auto attachmentFamily =
+      paragraph->getChildren()[0]->getChildren()[1]->getFamilyShared();
+  LayoutContext context{.pointScaleFactor = 1};
+  LayoutConstraints constraints{
+      .minimumSize = {200, 200}, .maximumSize = {200, 200}};
+
+  paragraph->layoutTree(context, constraints);
+  // Layout replaces the attachment with a clone. No old revision should be
+  // needed to measure the paragraph's current children.
+  EXPECT_TRUE(originalAttachment.expired());
+  originalAttachment.reset();
+  auto currentAttachment = paragraph->getChildren()[0]->getChildren()[1];
+  EXPECT_EQ(currentAttachment->getFamilyShared(), attachmentFamily);
+  const auto attachmentSize =
+      static_cast<const ViewShadowNode&>(*currentAttachment)
+          .getLayoutMetrics()
+          .frame.size;
+  if (GetParam()) {
+    EXPECT_GE(attachmentSize.width, 32);
+    EXPECT_LE(attachmentSize.width, 33);
+    EXPECT_GE(attachmentSize.height, 16);
+    EXPECT_LE(attachmentSize.height, 17);
+  }
+
+  // A sealed paragraph may be remeasured by an ancestor's layout. Compare
+  // with a fresh revision of the same DOM subtree, at different constraints
+  // so a text measurement cache hit cannot hide stale attachment pointers.
+  paragraph->sealRecursive();
+  constraints.minimumSize = {0, 0};
+  auto fresh =
+      std::static_pointer_cast<ParagraphShadowNode>(paragraph->clone({}));
+  for (auto width : {80.0f, 0.0f, 400.0f}) {
+    constraints.maximumSize = {width, 1000};
+    const auto measured = paragraph->measureContent(context, constraints);
+    EXPECT_EQ(measured, fresh->measureContent(context, constraints));
+    if (width == 0) {
+      // An atomic inline box contributes its own width to min-content sizing.
+      EXPECT_GE(measured.width, 32);
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TextModes,
+    ParagraphAttachmentLifetimeTest,
+    testing::Bool());
 
 TEST(BaseTextShadowNodeTest, textAlignmentStartAndEndRoundTrip) {
   EXPECT_EQ(roundTripTextAlignment("start"), "start");

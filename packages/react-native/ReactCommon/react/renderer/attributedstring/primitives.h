@@ -213,6 +213,28 @@ enum class WhiteSpace : uint8_t {
 };
 
 /*
+ * `overflow-wrap` (css-text-3 §5.5): whether an otherwise unbreakable run of
+ * characters may be broken to keep a line within its box. `BreakWord` breaks
+ * one only when the whole line would otherwise overflow and does not change
+ * the text's min-content size; `Anywhere` counts the break opportunities it
+ * adds, so the min-content size is the widest grapheme.
+ */
+enum class OverflowWrap : uint8_t {
+  Normal,
+  BreakWord,
+  Anywhere,
+};
+
+/*
+ * Whether the text's min-content size counts a break opportunity between any
+ * two characters.
+ */
+inline bool breaksAnywhere(OverflowWrap overflowWrap)
+{
+  return overflowWrap == OverflowWrap::Anywhere;
+}
+
+/*
  * Whether a segment break in the source is content that ends a line, rather
  * than collapsible whitespace that becomes a single space.
  */

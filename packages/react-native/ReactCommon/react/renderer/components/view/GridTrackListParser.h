@@ -176,12 +176,11 @@ inline bool parseBreadth(std::string_view token, yoga::StyleSizeLength &out)
     return false;
   }
   if (equalsIgnoreCase(token, "min-content")) {
-    // Yoga has no distinct min-content sizing function, nor a min-content
-    // measure: the track-sizing pass takes an item's max-content size where
-    // the spec asks for min-content (TrackSizing.h, minContentContribution),
-    // so `auto` is the closest available.
-    // DOM-CSS-LIMITATION(grid-min-content): min-content measures as
-    // max-content, and a min-content MAXIMUM is not distinguishable from auto.
+    // Yoga has no distinct min-content sizing function, so `auto` is the
+    // closest available: as a minimum it takes the items' min-content
+    // contributions (TrackSizing.h, minContentContribution).
+    // DOM-CSS-LIMITATION(grid-min-content): a min-content MAXIMUM is not
+    // distinguishable from auto.
     out = yoga::StyleSizeLength::ofAuto();
     return true;
   }

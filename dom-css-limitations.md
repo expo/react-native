@@ -543,22 +543,58 @@ a real screen first. Background in `element-model-design.md`.
   scroll view, its `scroll` events, `scrollTop`, `scrollHeight` and
   `scrollTo` are the scroll view's; a region that grows instead has nothing
   to scroll.
+- **`DOM-CSS-LIMITATION(scroll-container-min-content)` — a scroll
+  container contributes nothing of its content to an ancestor's automatic
+  minimum size.** On the web a flex item's automatic minimum (css-flexbox-1
+  §4.5) is its min-content size, and an auto-height scroll container inside it
+  is as tall as what it holds, so a wrapper around a list stands as tall as
+  the list and overflows the screen unless the author writes `min-height: 0`
+  on every flex item between the two. An app screen is a definite viewport
+  and its lists scroll, so the fork's min-content probe
+  (`computeMinContentMainSize` in `CalculateLayout.cpp`) stops at a box that
+  scrolls, and at a box that clips in the block axis, and counts only its
+  padding and border: what scrolls or is clipped asks no room outside its
+  box, the reason the spec gives the scroll container itself a zero minimum.
+  A wrapper whose scroll view is its only content therefore keeps the room
+  its column gives it without `min-height: 0`; a box with visible overflow
+  still contributes its content, as on the web, and so does a box that clips
+  in the inline axis: a tab whose label is clipped to an ellipsis stays as
+  wide as its label, and a strip of such tabs overflows its row as on the
+  web.
+- **`DOM-CSS-LIMITATION(intrinsic-minimum-in-flex)` — a flex container gives
+  a box with an intrinsic `min-height` none of the room it needs.** A
+  `min-height` of `min-content`, `max-content` or `fit-content` is the height
+  the box's content takes at its width (css-sizing-3 §5.2), and the box is
+  laid out at that height when it is offered less (`calculateLayoutInternal`
+  in `CalculateLayout.cpp`). Flex distribution reads only a minimum stated as
+  a length, so it has shrunk or stretched the box as though it had none: the
+  items after it move down by what it needed and the line overflows its
+  container, where the web freezes the box at its minimum and takes the
+  difference from the other flexible items (css-flexbox-1 §9.7). In a block
+  container, where a bottom sheet's body has it, the box is as on the web.
+- **`DOM-CSS-LIMITATION(min-content-probe-simplifications)` — the min-content
+  probe approximates three kinds of container.** It sizes a grid container's
+  tracks from min-content contributions alone, so a `max-content` minimum
+  counts its items' min-content, an item spanning tracks gives what they lack
+  to them in equal shares, and an auto-repeat counts once even where the
+  container has a maximum size. A block container's children add their margins
+  without collapsing them, and a `grid-lanes` container is probed as a flex
+  line. Each can leave a shrinking flex item a little wider or narrower than
+  the browser's.
 - **`DOM-CSS-LIMITATION(visibility-is-opacity)` — `visibility: hidden` is
   `opacity: 0` plus `pointer-events: none`.** The platform has no visibility
   property. The box stays in layout and draws nothing, which is what a hidden
   label sizer (Tab's bold-width reserve) needs; unlike the web it is not
   hidden from assistive technology, and `visible` on a descendant cannot
   show it again inside a hidden ancestor.
-- **`DOM-CSS-LIMITATION(grid-min-content)` — `min-content` measures as
-  max-content.** Yoga has no min-content measure, so the track-sizing pass
-  takes an item's max-content size wherever the spec asks for its min-content
-  size (`minContentContribution` in `TrackSizing.h`). That reaches the
-  automatic minimum of every `auto` and `1fr` track: an item holding text is
-  as wide as its longest line unwrapped, where the web would let the text wrap
-  down to its longest word. Two `1fr` columns of cards with a long caption
-  each are wider than the phone and overflow it; a grid item with
-  `min-width: 0` opts out, as on the web. `min-content` as a MAXIMUM sizing
-  function behaves as `auto` for the same reason.
+- **`DOM-CSS-LIMITATION(grid-min-content)` — a `min-content` size or track
+  maximum measures as max-content.** Yoga has no min-content sizing mode. A
+  grid item's min-content width comes from the automatic minimum's probe, so
+  `auto` and `1fr` columns wrap their text and chips as on the web, but
+  `width: min-content` is read as `max-content`, `min-content` as a track's
+  MAXIMUM sizing function behaves as `auto`, and a `max-content` track is not
+  sized from its items' max-content contributions. The block axis takes an
+  item's measured height, which is the min-content height at its width.
 - **`grid-auto-flow` is fully implemented** — `row`, `column`, and either with
   `dense`. Column flow runs the row algorithm in transposed space rather than
   duplicating it: every axis-specific read is swapped on the way in and the

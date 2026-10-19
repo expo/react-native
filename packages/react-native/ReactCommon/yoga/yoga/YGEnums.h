@@ -80,7 +80,8 @@ YG_ENUM_DECL(
     YGExperimentalFeatureWebFlexBasis,
     YGExperimentalFeatureFixFlexBasisFitContent,
     YGExperimentalFeatureWebPercentageHeights,
-    YGExperimentalFeatureWebDefiniteFlexBasis)
+    YGExperimentalFeatureWebDefiniteFlexBasis,
+    YGExperimentalFeatureWebFitContentMainSize)
 
 YG_ENUM_DECL(
     YGFlexDirection,

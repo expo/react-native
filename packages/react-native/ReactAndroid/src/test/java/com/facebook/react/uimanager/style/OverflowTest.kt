@@ -21,6 +21,12 @@ class OverflowTest {
   }
 
   @Test
+  fun clipClipsLikeHidden() {
+    assertThat(Overflow.fromString("clip")).isEqualTo(Overflow.HIDDEN)
+    assertThat(Overflow.fromString("CLIP", Overflow.SCROLL)).isEqualTo(Overflow.HIDDEN)
+  }
+
+  @Test
   fun nullDefaultsToVisible() {
     assertThat(Overflow.fromString(null)).isEqualTo(Overflow.VISIBLE)
   }
