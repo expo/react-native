@@ -75,12 +75,28 @@ struct LayoutResults {
   FloatOptional computedFlexBasis = {};
 
   // Per-flex-item floor along the main axis derived from CSS Flexbox §4.5
-  // automatic minimum sizing. Set by `resolveFlexibleLength` when the parent's
-  // config does NOT carry the `MinSizeUndefinedInsteadOfAuto` errata and the
-  // item has no explicit main-axis `min-{width,height}`. Read by the
-  // shrink/bound machinery to keep items at least this large. `Undefined`
-  // means "no auto-min applies."
+  // automatic minimum sizing, when the parent's config does NOT carry the
+  // `MinSizeUndefinedInsteadOfAuto` errata and the item has no explicit
+  // main-axis `min-{width,height}`. Read by the shrink/bound machinery to keep
+  // items at least this large. `Undefined` means "no auto-min applies."
   FloatOptional computedAutoMinMainSize = {};
+  // Whether `computedAutoMinMainSize` is still to be computed for the line
+  // `resolveFlexibleLength` is distributing: it is computed when the item is
+  // first given a share of the free space, since most items never are
+  bool computedAutoMinMainSizePending = false;
+
+  // The min-content size `computeMinContentMainSize` found for this node, per
+  // axis, in the layout pass `minContentGeneration`. The probe walks the whole
+  // subtree, and every node's layout asks it for every child in both of its
+  // own passes (measure and layout), so without this memo the work doubles at
+  // each level of the tree: a page of nesting depth 30 never finishes. Within
+  // one pass nothing the probe reads can change, so the first answer stands
+  // for the pass. The owner sizes are part of the key because percentages in
+  // the subtree resolve against them.
+  uint32_t minContentGeneration = 0;
+  float minContentOwnerWidth = YGUndefined;
+  float minContentOwnerHeight = YGUndefined;
+  std::array<float, 2> minContentSize = {YGUndefined, YGUndefined};
 
   // The two float lists a node in a shared formatting context needs. They live
   // together behind one pointer because both are empty for almost every node:

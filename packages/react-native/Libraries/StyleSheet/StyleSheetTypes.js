@@ -1180,6 +1180,17 @@ export type ____ViewStyle_InternalBase = Readonly<{
     'normal' | 'pre' | 'pre-wrap' | 'pre-line' | 'nowrap' | 'break-spaces',
 
   /**
+   * `overflow-wrap` (css-text-3 §5.5): whether a run of characters with no
+   * break opportunity may be broken to keep a line in its box, and whether
+   * those breaks count in the text's min-content size. `break-word` breaks
+   * only a line that would otherwise overflow and keeps the longest word as
+   * the minimum; `anywhere` makes the widest glyph the minimum. Inherited,
+   * declared on the view style like `whiteSpace`. `wordWrap` is its alias.
+   */
+  overflowWrap?: 'normal' | 'break-word' | 'anywhere',
+  wordWrap?: 'normal' | 'break-word' | 'anywhere',
+
+  /**
    * Whether a box whose text WRAPS shrinks to its longest line instead of
    * standing at the width it was given.
    *

@@ -67,10 +67,9 @@ export default function Home(): React.Node {
       <VStack gap={4}>
         <Grid columns={2} gap={3}>
           {templates.map(t => (
-            // `minWidth: 0` because the fork sizes a `1fr` track's automatic
-            // minimum from the item's max-content width, not its min-content
-            // width, so a tile with a long category name would widen its
-            // column past the screen; see DOM-CSS-LIMITATION(grid-min-content).
+            // `minWidth: 0` so a `1fr` column's automatic minimum (its tile's
+            // min-content width, css-grid-2 §6.6) cannot widen it past the
+            // screen when a category name is one long word
             // `overflow: hidden` because the link lays its peek preview out
             // here, absolutely, at the preview's full height: the platform
             // takes the view for the platter, but its layout stayed in the

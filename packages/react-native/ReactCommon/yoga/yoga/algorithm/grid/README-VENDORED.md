@@ -97,6 +97,18 @@ Only the inline axis is measured under a real max-content constraint now
 infinite free space, which is how `auto` rows grow to their items. Pinned by
 `Libraries/Components/View/__tests__/GridZeroFrRow-itest.js`.
 
+**`TrackSizing.h` — an item's min-content contribution in the inline axis.**
+`minContentContribution` and `contentBasedMinimum` measured an item's
+max-content size where §12 asks for its min-content size, with a TODO for a
+min-content constraint Yoga does not have. The inline axis now takes the
+min-content width the automatic minimum's probe finds
+(`calculateMinContentContribution` in `CalculateLayout.cpp`: a text's longest
+word, a box's stated width), so an `auto` or `1fr` column of chips that wrap
+starts at the widest chip and grows only as far as the grid has room, where it
+held them on one line past the grid's edge. The block axis keeps the measured
+height, which is the min-content height at the width the item is given.
+Pinned by `packages/expo-intrinsics/__tests__/AGridColumnWrapsItsContent-itest.js`.
+
 **`TrackSizing.h` — a math function with a percentage is a percentage.** Our
 Yoga has a unit the PR does not know, `Unit::Calc`, for `calc()`, `min()`,
 `max()` and `clamp()` over a percentage. Track sizing asked `isPercent()` to

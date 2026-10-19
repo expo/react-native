@@ -26,6 +26,7 @@
 #include <yoga/algorithm/CalculateLayout.h>
 #include <yoga/algorithm/FlexDirection.h>
 #include <yoga/algorithm/FlexLine.h>
+#include <yoga/algorithm/GridAutoRepeat.h>
 #include <yoga/algorithm/PixelGrid.h>
 #include <yoga/algorithm/SizingMode.h>
 #include <yoga/algorithm/TrailingPosition.h>
@@ -883,12 +884,80 @@ static float computeFlexBasisForChildren(
 // would invoke). Roughly equivalent to FlexLayout's dedicated
 // `computeMinContentSize` cost: one measure call per leaf + linear walk
 // per container.
+static float computeMinContentMainSizeUncached(
+    yoga::Node* node,
+    FlexDirection requestedAxis,
+    Direction ownerDirection,
+    float ownerWidth,
+    float ownerHeight,
+    uint32_t generationCount);
+
+static float computeGridMinContentSize(
+    yoga::Node* node,
+    FlexDirection requestedAxis,
+    Direction direction,
+    float ownerWidth,
+    float ownerHeight,
+    uint32_t generationCount);
+
+static float minContentContribution(
+    yoga::Node* item,
+    FlexDirection axis,
+    Direction direction,
+    float ownerWidth,
+    float ownerHeight,
+    uint32_t generationCount);
+
+static FloatOptional statedLength(
+    const Style& style,
+    Direction direction,
+    Dimension dimension,
+    StyleSizeLength length,
+    float ownerWidth);
+
+// The min-content size of `node` along `requestedAxis`, memoized for the
+// layout pass; see `LayoutResults::minContentGeneration` for why the memo is
+// what makes the probe affordable.
 static float computeMinContentMainSize(
     yoga::Node* const node,
     const FlexDirection requestedAxis,
     const Direction ownerDirection,
     const float ownerWidth,
-    const float ownerHeight) {
+    const float ownerHeight,
+    const uint32_t generationCount) {
+  auto& layout = node->getLayout();
+  const size_t axisIndex = isRow(requestedAxis) ? 0 : 1;
+  const bool sameOwner =
+      yoga::inexactEquals(layout.minContentOwnerWidth, ownerWidth) &&
+      yoga::inexactEquals(layout.minContentOwnerHeight, ownerHeight);
+  if (layout.minContentGeneration == generationCount && sameOwner &&
+      yoga::isDefined(layout.minContentSize[axisIndex])) {
+    return layout.minContentSize[axisIndex];
+  }
+  const float size = computeMinContentMainSizeUncached(
+      node,
+      requestedAxis,
+      ownerDirection,
+      ownerWidth,
+      ownerHeight,
+      generationCount);
+  if (layout.minContentGeneration != generationCount || !sameOwner) {
+    layout.minContentGeneration = generationCount;
+    layout.minContentOwnerWidth = ownerWidth;
+    layout.minContentOwnerHeight = ownerHeight;
+    layout.minContentSize = {YGUndefined, YGUndefined};
+  }
+  layout.minContentSize[axisIndex] = size;
+  return size;
+}
+
+static float computeMinContentMainSizeUncached(
+    yoga::Node* const node,
+    const FlexDirection requestedAxis,
+    const Direction ownerDirection,
+    const float ownerWidth,
+    const float ownerHeight,
+    const uint32_t generationCount) {
   const bool wantRow = isRow(requestedAxis);
 
   // 1. Static value wins for any node (leaf or container). Short-circuits
@@ -900,6 +969,26 @@ static float computeMinContentMainSize(
       wantRow ? node->getMinContentWidth() : node->getMinContentHeight();
   if (staticMin.isDefined()) {
     return staticMin.unwrap();
+  }
+
+  // 2. A scroll container contributes its edges and nothing of what it
+  // holds: that scrolls inside its scrollport and asks no room of an
+  // ancestor, the reason css-flexbox-1 §4.5 gives a scroll container itself
+  // a zero automatic minimum. (The web still sizes an auto-height scroll
+  // container to its content, so a flex item holding one must say
+  // `min-height: 0` there; the fork does not ask that of an app. See
+  // DOM-CSS-LIMITATION(scroll-container-min-content).) Not walking into it
+  // also keeps the probe off the one subtree that is large by design. A box
+  // that clips without scrolling asks its content's room in the inline axis,
+  // as on the web: a tab's label clipped to an ellipsis keeps the tab at its
+  // label's width, so a strip of tabs too wide for its row overflows it.
+  if (node->style().overflow() == Overflow::Scroll ||
+      (node->style().overflow() == Overflow::Hidden && !wantRow)) {
+    const Direction direction = node->resolveDirection(ownerDirection);
+    return node->style().computeFlexStartPaddingAndBorder(
+               requestedAxis, direction, ownerWidth) +
+        node->style().computeFlexEndPaddingAndBorder(
+               requestedAxis, direction, ownerWidth);
   }
 
   if (node->hasMeasureFunc()) {
@@ -933,13 +1022,33 @@ static float computeMinContentMainSize(
   }
 
   const Direction direction = node->resolveDirection(ownerDirection);
-  const FlexDirection nodeMainAxis =
-      resolveDirection(node->style().flexDirection(), direction);
+  // DOM-CSS-LIMITATION(min-content-probe-simplifications): a grid-lanes
+  // container is probed as a flex line
+  if (node->style().display() == Display::Grid) {
+    return computeGridMinContentSize(
+        node,
+        requestedAxis,
+        direction,
+        ownerWidth,
+        ownerHeight,
+        generationCount);
+  }
+  // A block container stacks its in-flow children in the block axis (CSS2
+  // §9.4.1), so it is as wide as its widest child and as tall as all of them
+  // whatever its `flex-direction`, and `gap` and `flex-wrap` do not apply to
+  // it. DOM-CSS-LIMITATION(min-content-probe-simplifications): their margins
+  // add up without collapsing.
+  const bool isBlockContainer = node->style().display() == Display::Block;
+  const FlexDirection nodeMainAxis = isBlockContainer
+      ? FlexDirection::Column
+      : resolveDirection(node->style().flexDirection(), direction);
   const FlexDirection nodeCrossAxis =
       resolveCrossDirection(nodeMainAxis, direction);
 
   float mainTotal = 0.0f;
+  float mainMax = 0.0f;
   float crossMax = 0.0f;
+  size_t itemCount = 0;
 
   for (size_t i = 0; i < node->getChildCount(); i++) {
     auto* const child = node->getChild(i);
@@ -947,18 +1056,42 @@ static float computeMinContentMainSize(
         child->style().positionType() == PositionType::Absolute) {
       continue;
     }
+    itemCount++;
 
-    float childMain = computeMinContentMainSize(
-        child, nodeMainAxis, direction, ownerWidth, ownerHeight);
-    childMain += child->style().computeMarginForAxis(nodeMainAxis, ownerWidth);
-
-    float childCross = computeMinContentMainSize(
-        child, nodeCrossAxis, direction, ownerWidth, ownerHeight);
-    childCross +=
+    const float childMain = minContentContribution(
+                                child,
+                                nodeMainAxis,
+                                direction,
+                                ownerWidth,
+                                ownerHeight,
+                                generationCount) +
+        child->style().computeMarginForAxis(nodeMainAxis, ownerWidth);
+    const float childCross = minContentContribution(
+                                 child,
+                                 nodeCrossAxis,
+                                 direction,
+                                 ownerWidth,
+                                 ownerHeight,
+                                 generationCount) +
         child->style().computeMarginForAxis(nodeCrossAxis, ownerWidth);
 
     mainTotal += childMain;
+    mainMax = std::max(mainMax, childMain);
     crossMax = std::max(crossMax, childCross);
+  }
+
+  // A single line's items sit side by side with a gap between each two; a
+  // wrapping container's min-content size puts each item on a line of its
+  // own, so it is the largest of them (css-flexbox-1 §9.9.1). A percentage
+  // gap resolves against the size being found, which is cyclic, so it counts
+  // as zero here (css-sizing-3 §5.2.1).
+  if (isBlockContainer) {
+    // Its children are not flex items
+  } else if (node->style().flexWrap() != Wrap::NoWrap) {
+    mainTotal = mainMax;
+  } else if (itemCount > 1) {
+    mainTotal += node->style().computeGapForAxis(nodeMainAxis, 0.0f) *
+        static_cast<float>(itemCount - 1);
   }
 
   mainTotal += node->style().computeFlexStartPaddingAndBorder(
@@ -974,6 +1107,224 @@ static float computeMinContentMainSize(
   const float widthMin = nodeMainIsRow ? mainTotal : crossMax;
   const float heightMin = nodeMainIsRow ? crossMax : mainTotal;
   return wantRow ? widthMin : heightMin;
+}
+
+// The min-content size of a grid container along `requestedAxis`: its tracks
+// in that axis sized under a min-content constraint, and the gaps between
+// them (css-grid-2 §12.3). That constraint leaves no free space to grow a
+// track into (§12.6) or to give an `fr` (§12.7.1), so each track keeps its
+// base size: its minimum where that is a length, else the largest min-content
+// contribution of the items in it (§12.5), limited by a length maximum. Items
+// that share a track therefore count once, where a flex line counts each.
+//
+// DOM-CSS-LIMITATION(min-content-probe-simplifications): the tracks are sized
+// from min-content contributions alone, so a `max-content` minimum counts its
+// items' min-content; an item spanning several tracks gives what they lack to
+// those with an intrinsic minimum in equal shares, ignoring their limits; and
+// an auto-repeat counts once even where the container has a maximum size.
+static float computeGridMinContentSize(
+    yoga::Node* const node,
+    const FlexDirection requestedAxis,
+    const Direction direction,
+    const float ownerWidth,
+    const float ownerHeight,
+    const uint32_t generationCount) {
+  const auto& style = node->style();
+  const bool wantRow = isRow(requestedAxis);
+  const FlexDirection axis =
+      wantRow ? FlexDirection::Row : FlexDirection::Column;
+
+  // A percentage gap resolves against the size being found, which is cyclic,
+  // so it counts as zero (css-sizing-3 §5.2.1)
+  const float columnGap = style.computeGapForAxis(FlexDirection::Row, 0.0f);
+  const float rowGap = style.computeGapForAxis(FlexDirection::Column, 0.0f);
+  GridTrackList columns = expandAutoRepeat(
+      style.gridTemplateColumns(),
+      style.gridTemplateColumnsAutoRepeat(),
+      YGUndefined,
+      columnGap);
+  GridTrackList rows = expandAutoRepeat(
+      style.gridTemplateRows(),
+      style.gridTemplateRowsAutoRepeat(),
+      YGUndefined,
+      rowGap);
+  // `grid-template-areas` sizes the explicit grid too (§7.3)
+  const auto& templateAreas = style.gridTemplateAreas();
+  while (columns.size() < templateAreas.columnCount) {
+    columns.push_back(GridTrackSize::auto_());
+  }
+  while (rows.size() < templateAreas.rowCount) {
+    rows.push_back(GridTrackSize::auto_());
+  }
+  const auto placement = ResolvedAutoPlacement::resolveGridItemPlacements(
+      node, columns.size(), rows.size());
+  const GridTracks gridTracks =
+      createGridTracks(node, placement, columns, rows);
+  const std::vector<GridTrack>& tracks =
+      wantRow ? gridTracks.columnTracks : gridTracks.rowTracks;
+
+  // A percentage track size is `auto` here, as its basis is the size being
+  // found (§7.2.1)
+  std::vector<float> sizes(tracks.size(), 0.0f);
+  for (size_t i = 0; i < tracks.size(); i++) {
+    if (tracks[i].minSizingFunction.isPoints()) {
+      sizes[i] = tracks[i].minSizingFunction.value().unwrap();
+    }
+  }
+  const auto hasIntrinsicMinimum = [&](size_t i) {
+    return !tracks[i].minSizingFunction.isPoints();
+  };
+
+  const auto contribution = [&](yoga::Node* item) {
+    return minContentContribution(
+               item,
+               axis,
+               direction,
+               ownerWidth,
+               ownerHeight,
+               generationCount) +
+        item->style().computeMarginForAxis(axis, ownerWidth);
+  };
+
+  std::vector<const GridItem*> spanning;
+  for (const GridItem& item : placement.gridItems) {
+    const size_t start = wantRow ? item.columnStart : item.rowStart;
+    const size_t end = wantRow ? item.columnEnd : item.rowEnd;
+    if (end - start != 1) {
+      spanning.push_back(&item);
+      continue;
+    }
+    if (!hasIntrinsicMinimum(start)) {
+      continue;
+    }
+    float size = contribution(item.node);
+    const auto& maximum = tracks[start].maxSizingFunction;
+    if (maximum.isPoints()) {
+      size = std::min(size, maximum.value().unwrap());
+    }
+    sizes[start] = std::max(sizes[start], size);
+  }
+
+  // Spanning items go after the items in single tracks, the fewest tracks
+  // first (§12.5)
+  const auto spanOf = [&](const GridItem* item) {
+    return wantRow ? item->columnEnd - item->columnStart
+                   : item->rowEnd - item->rowStart;
+  };
+  std::stable_sort(
+      spanning.begin(), spanning.end(), [&](const auto* a, const auto* b) {
+        return spanOf(a) < spanOf(b);
+      });
+  const float gap = wantRow ? columnGap : rowGap;
+  for (const GridItem* item : spanning) {
+    const size_t start = wantRow ? item->columnStart : item->rowStart;
+    const size_t end = wantRow ? item->columnEnd : item->rowEnd;
+    float spanned = gap * static_cast<float>(end - start - 1);
+    size_t growable = 0;
+    for (size_t i = start; i < end; i++) {
+      spanned += sizes[i];
+      growable += hasIntrinsicMinimum(i) ? 1 : 0;
+    }
+    const float lacking = contribution(item->node) - spanned;
+    if (growable == 0 || lacking <= 0.0f) {
+      continue;
+    }
+    for (size_t i = start; i < end; i++) {
+      if (hasIntrinsicMinimum(i)) {
+        sizes[i] += lacking / static_cast<float>(growable);
+      }
+    }
+  }
+
+  float total = 0.0f;
+  for (const float size : sizes) {
+    total += size;
+  }
+  if (sizes.size() > 1) {
+    total += gap * static_cast<float>(sizes.size() - 1);
+  }
+  return total +
+      style.computeFlexStartPaddingAndBorder(axis, direction, ownerWidth) +
+      style.computeFlexEndPaddingAndBorder(axis, direction, ownerWidth);
+}
+
+// The min-content contribution of `item` along `axis`, without its margins
+// (css-sizing-3 §5.1): the size it states where it states one, else its
+// content's min-content size, or the size its aspect ratio transfers from a
+// size it states across `axis` where that is larger (css-sizing-4 §5.2),
+// clamped by the minimum and maximum it states. The sizes are read from the
+// style, as the layout processes a box's dimensions only when it reaches the
+// box and the probe runs ahead of it. A percentage resolves against the size
+// being found, so it is cyclic here and counts as `auto`, or as no limit
+// (css-sizing-3 §5.2.1).
+static float minContentContribution(
+    yoga::Node* const item,
+    const FlexDirection axis,
+    const Direction direction,
+    const float ownerWidth,
+    const float ownerHeight,
+    const uint32_t generationCount) {
+  const Style& style = item->style();
+  const Dimension dimension =
+      isRow(axis) ? Dimension::Width : Dimension::Height;
+  const Dimension across = isRow(axis) ? Dimension::Height : Dimension::Width;
+  FloatOptional size = statedLength(
+      style, direction, dimension, style.dimension(dimension), ownerWidth);
+  if (size.isUndefined()) {
+    float content = computeMinContentMainSize(
+        item, axis, direction, ownerWidth, ownerHeight, generationCount);
+    const FloatOptional ratio = style.aspectRatio();
+    const FloatOptional other = statedLength(
+        style, direction, across, style.dimension(across), ownerWidth);
+    if (ratio.isDefined() && other.isDefined()) {
+      content = std::max(
+          content,
+          isRow(axis) ? other.unwrap() * ratio.unwrap()
+                      : other.unwrap() / ratio.unwrap());
+    }
+    size = FloatOptional{content};
+  }
+  const FloatOptional maximum = statedLength(
+      style, direction, dimension, style.maxDimension(dimension), ownerWidth);
+  if (maximum.isDefined() && size > maximum) {
+    size = maximum;
+  }
+  const FloatOptional minimum = statedLength(
+      style, direction, dimension, style.minDimension(dimension), ownerWidth);
+  if (minimum.isDefined() && size < minimum) {
+    size = minimum;
+  }
+  return size.unwrap();
+}
+
+float calculateMinContentContribution(
+    yoga::Node* const node,
+    const FlexDirection axis,
+    const Direction direction,
+    const float ownerWidth,
+    const float ownerHeight,
+    const uint32_t generationCount) {
+  return minContentContribution(
+      node, axis, direction, ownerWidth, ownerHeight, generationCount);
+}
+
+// A size a box states on `dimension` as a length, with the padding and border
+// a content-box size leaves out
+static FloatOptional statedLength(
+    const Style& style,
+    const Direction direction,
+    const Dimension dimension,
+    const StyleSizeLength length,
+    const float ownerWidth) {
+  if (!length.isPoints()) {
+    return FloatOptional{};
+  }
+  if (style.boxSizing() == BoxSizing::BorderBox) {
+    return length.value();
+  }
+  return length.value() +
+      FloatOptional{style.computePaddingAndBorderForDimension(
+          direction, dimension, ownerWidth)};
 }
 
 // Computes the CSS Flexbox §4.5 automatic minimum main-axis size for
@@ -992,7 +1343,8 @@ static FloatOptional computeAutoMinMainSize(
     const Direction direction,
     const float ownerMainAxisSize,
     const float ownerWidth,
-    const float ownerHeight) {
+    const float ownerHeight,
+    const uint32_t generationCount) {
   if (child->hasErrata(Errata::MinSizeUndefinedInsteadOfAuto)) {
     return FloatOptional{};
   }
@@ -1037,7 +1389,7 @@ static FloatOptional computeAutoMinMainSize(
 
   // Content size suggestion: probe via min-content recursion.
   const FloatOptional contentMain = FloatOptional{computeMinContentMainSize(
-      child, mainAxis, direction, ownerWidth, ownerHeight)};
+      child, mainAxis, direction, ownerWidth, ownerHeight, generationCount)};
 
   // Combine per §4.5: floor = min(content, specified) when specified is
   // definite; otherwise floor = min(content, transferred) when transferred
@@ -1067,19 +1419,45 @@ static FloatOptional computeAutoMinMainSize(
   return floor;
 }
 
-// boundAxis with an additional lower bound from `child`'s cached
-// `computedAutoMinMainSize`, applied on the main axis only. Used inside
-// the flex-shrink distribution to honor CSS §4.5 auto-min while preserving
-// the existing min/max/padding-and-border clamping.
+// What a flex item's automatic minimum main size is computed from: the
+// line's axis and direction, and the owner sizes `resolveFlexibleLength` was
+// given
+struct AutoMinSizeInputs {
+  FlexDirection mainAxis;
+  Direction direction;
+  float ownerMainAxisSize;
+  float ownerWidth;
+  float ownerHeight;
+  uint32_t generationCount;
+};
+
+// boundAxis with an additional lower bound from `child`'s
+// `computedAutoMinMainSize`, applied on the main axis only, and computed here
+// the first time the line asks. Used inside the flex-shrink and flex-grow
+// distribution to honor CSS §4.5 auto-min while preserving the existing
+// min/max/padding-and-border clamping.
 static float boundAxisWithAutoMin(
-    const yoga::Node* const child,
+    yoga::Node* const child,
     const FlexDirection axis,
     const Direction direction,
     const float value,
     const float axisSize,
-    const float widthSize) {
+    const float widthSize,
+    const AutoMinSizeInputs& autoMinInputs) {
   float bounded = boundAxis(child, axis, direction, value, axisSize, widthSize);
-  const FloatOptional autoMin = child->getLayout().computedAutoMinMainSize;
+  auto& layout = child->getLayout();
+  if (layout.computedAutoMinMainSizePending) {
+    layout.computedAutoMinMainSizePending = false;
+    layout.computedAutoMinMainSize = computeAutoMinMainSize(
+        child,
+        autoMinInputs.mainAxis,
+        autoMinInputs.direction,
+        autoMinInputs.ownerMainAxisSize,
+        autoMinInputs.ownerWidth,
+        autoMinInputs.ownerHeight,
+        autoMinInputs.generationCount);
+  }
+  const FloatOptional autoMin = layout.computedAutoMinMainSize;
   if (autoMin.isDefined() && bounded < autoMin.unwrap()) {
     bounded = autoMin.unwrap();
   }
@@ -1109,7 +1487,8 @@ static float distributeFreeSpaceSecondPass(
     const bool performLayout,
     LayoutData& layoutMarkerData,
     const uint32_t depth,
-    const uint32_t generationCount) {
+    const uint32_t generationCount,
+    const AutoMinSizeInputs& autoMinInputs) {
   float childFlexBasis = 0;
   float flexShrinkScaledFactor = 0;
   float flexGrowFactor = 0;
@@ -1159,7 +1538,8 @@ static float distributeFreeSpaceSecondPass(
             direction,
             childSize,
             availableInnerMainDim,
-            availableInnerWidth);
+            availableInnerWidth,
+            autoMinInputs);
       }
     } else if (
         yoga::isDefined(flexLine.layout.remainingFreeSpace) &&
@@ -1176,7 +1556,8 @@ static float distributeFreeSpaceSecondPass(
                 flexLine.layout.remainingFreeSpace /
                     flexLine.layout.totalFlexGrowFactors * flexGrowFactor,
             availableInnerMainDim,
-            availableInnerWidth);
+            availableInnerWidth,
+            autoMinInputs);
       }
     }
 
@@ -1306,12 +1687,18 @@ static void distributeFreeSpaceFirstPass(
     const float ownerWidth,
     const float mainAxisOwnerSize,
     const float availableInnerMainDim,
-    const float availableInnerWidth) {
+    const float availableInnerWidth,
+    const AutoMinSizeInputs& autoMinInputs) {
   float flexShrinkScaledFactor = 0;
   float flexGrowFactor = 0;
   float baseMainSize = 0;
   float boundMainSize = 0;
   float deltaFreeSpace = 0;
+  // How many items could take a share of the space, and how many of those a
+  // min/max constraint froze; see the end of the pass
+  size_t flexibleItems = 0;
+  size_t frozenItems = 0;
+  const bool shrinking = flexLine.layout.remainingFreeSpace < 0;
 
   // The first pass performs a single distribution of the free space over all
   // of the line's flexible items, so every item's tentative size must be
@@ -1349,6 +1736,7 @@ static void distributeFreeSpaceFirstPass(
       // Is this child able to shrink?
       if (yoga::isDefined(flexShrinkScaledFactor) &&
           flexShrinkScaledFactor != 0) {
+        flexibleItems++;
         baseMainSize = childFlexBasis +
             flexLine.layout.remainingFreeSpace /
                 (useRunningTotals ? flexLine.layout.totalFlexShrinkScaledFactors
@@ -1360,7 +1748,8 @@ static void distributeFreeSpaceFirstPass(
             direction,
             baseMainSize,
             availableInnerMainDim,
-            availableInnerWidth);
+            availableInnerWidth,
+            autoMinInputs);
         if (yoga::isDefined(baseMainSize) && yoga::isDefined(boundMainSize) &&
             baseMainSize != boundMainSize) {
           // By excluding this item's size and flex factor from remaining, this
@@ -1371,6 +1760,7 @@ static void distributeFreeSpaceFirstPass(
           flexLine.layout.totalFlexShrinkScaledFactors -=
               (-currentLineChild->resolveFlexShrink() *
                currentLineChild->getLayout().computedFlexBasis.unwrap());
+          frozenItems++;
         }
       }
     } else if (
@@ -1380,6 +1770,7 @@ static void distributeFreeSpaceFirstPass(
 
       // Is this child able to grow?
       if (yoga::isDefined(flexGrowFactor) && flexGrowFactor != 0) {
+        flexibleItems++;
         baseMainSize = childFlexBasis +
             flexLine.layout.remainingFreeSpace /
                 (useRunningTotals ? flexLine.layout.totalFlexGrowFactors
@@ -1401,11 +1792,27 @@ static void distributeFreeSpaceFirstPass(
           // first and second passes.
           deltaFreeSpace += boundMainSize - childFlexBasis;
           flexLine.layout.totalFlexGrowFactors -= flexGrowFactor;
+          frozenItems++;
         }
       }
     }
   }
   flexLine.layout.remainingFreeSpace -= deltaFreeSpace;
+
+  // Zero the total exactly when a constraint froze every flexible item: no
+  // item is left to take a share (css-flexbox-1 §9.7 distributes over the
+  // unfrozen items only). Subtracting each frozen item's factor from a running
+  // sum leaves a rounding residue instead, a few units in the last place of
+  // the original total, and the second pass divides by it: a residue of the
+  // wrong sign sends a shrinking item millions of points past the minimum it
+  // was frozen at, beyond any threshold the division's own guard can choose.
+  if (flexibleItems > 0 && frozenItems == flexibleItems) {
+    if (shrinking) {
+      flexLine.layout.totalFlexShrinkScaledFactors = 0;
+    } else {
+      flexLine.layout.totalFlexGrowFactors = 0;
+    }
+  }
 }
 
 // Do two passes over the flex items to figure out how to distribute the
@@ -1452,27 +1859,28 @@ static void resolveFlexibleLength(
     const uint32_t generationCount) {
   const float originalFreeSpace = flexLine.layout.remainingFreeSpace;
 
-  // CSS Flexbox §4.5: compute each item's automatic minimum main-axis size
-  // up front so the bounding helpers below can floor shrunk values.
-  // computeAutoMinMainSize returns Undefined when the feature is off or an
-  // explicit `min-{w,h}` already pins the floor, in which case the cached
-  // value is also Undefined and `boundAxisWithAutoMin` reduces to `boundAxis`.
-  if (!node->hasErrata(Errata::MinSizeUndefinedInsteadOfAuto)) {
-    for (auto currentLineChild : flexLine.itemsInFlow) {
-      currentLineChild->getLayout().computedAutoMinMainSize =
-          computeAutoMinMainSize(
-              currentLineChild,
-              mainAxis,
-              direction,
-              mainAxisOwnerSize,
-              availableInnerWidth,
-              availableInnerHeight);
-    }
-  } else {
-    for (auto currentLineChild : flexLine.itemsInFlow) {
-      currentLineChild->getLayout().computedAutoMinMainSize = FloatOptional{};
-    }
+  // CSS Flexbox §4.5: an item's automatic minimum main-axis size floors the
+  // share of the free space it is given. It is a min-content probe of the
+  // item's subtree, so it is computed when the item is first given a share
+  // (`boundAxisWithAutoMin`) rather than for every item up front: in a line
+  // with no free space to give, and for an item that neither grows nor
+  // shrinks, it is never read. It is Undefined when the feature is off or an
+  // explicit `min-{w,h}` already pins the floor, and `boundAxisWithAutoMin`
+  // then reduces to `boundAxis`.
+  const bool autoMinApplies =
+      !node->hasErrata(Errata::MinSizeUndefinedInsteadOfAuto);
+  for (auto currentLineChild : flexLine.itemsInFlow) {
+    auto& layout = currentLineChild->getLayout();
+    layout.computedAutoMinMainSize = FloatOptional{};
+    layout.computedAutoMinMainSizePending = autoMinApplies;
   }
+  const AutoMinSizeInputs autoMinInputs{
+      .mainAxis = mainAxis,
+      .direction = direction,
+      .ownerMainAxisSize = mainAxisOwnerSize,
+      .ownerWidth = availableInnerWidth,
+      .ownerHeight = availableInnerHeight,
+      .generationCount = generationCount};
 
   // First pass: detect the flex items whose min/max constraints trigger
   distributeFreeSpaceFirstPass(
@@ -1483,7 +1891,8 @@ static void resolveFlexibleLength(
       ownerWidth,
       mainAxisOwnerSize,
       availableInnerMainDim,
-      availableInnerWidth);
+      availableInnerWidth,
+      autoMinInputs);
 
   // Second pass: resolve the sizes of the flexible items
   const float distributedFreeSpace = distributeFreeSpaceSecondPass(
@@ -1505,7 +1914,8 @@ static void resolveFlexibleLength(
       performLayout,
       layoutMarkerData,
       depth,
-      generationCount);
+      generationCount,
+      autoMinInputs);
 
   flexLine.layout.remainingFreeSpace = originalFreeSpace - distributedFreeSpace;
 }
@@ -3207,6 +3617,9 @@ static void calculateLayoutImpl(
     // length, so there's no more space left to distribute.
 
     bool sizeBasedOnContent = false;
+    // Whether the line's items keep the free space they are offered for
+    // shrinking only (WebFitContentMainSize, below)
+    bool shrinksOnly = false;
     // If we don't measure with exact main dimension we want to ensure we don't
     // violate min and max
     if (sizingModeMainDim != SizingMode::StretchFit) {
@@ -3264,12 +3677,30 @@ static void calculateLayoutImpl(
         }
 
         sizeBasedOnContent = !useLegacyStretchBehaviour;
+
+        // A flex container sized to fit its content in its main axis is as
+        // large as its content where the content fits the space it is offered
+        // (css-sizing-3 §5.2, css-flexbox-1 §9.9.1), so its flexible items
+        // have no free space to grow into; content that does not fit still
+        // shrinks to that space. The legacy behaviour grew the items to the
+        // space offered: a dialog centred in a page's height, its body a
+        // flexible item, stood as tall as the page with its body's content at
+        // the top. Without the erratum, Yoga does not shrink the items where
+        // the content does not fit either.
+        shrinksOnly = useLegacyStretchBehaviour &&
+            sizingModeMainDim == SizingMode::FitContent &&
+            node->getConfig()->isExperimentalFeatureEnabled(
+                ExperimentalFeature::WebFitContentMainSize);
       }
     }
 
     if (!sizeBasedOnContent && yoga::isDefined(availableInnerMainDim)) {
       flexLine.layout.remainingFreeSpace =
           availableInnerMainDim - flexLine.sizeConsumed;
+      if (shrinksOnly) {
+        flexLine.layout.remainingFreeSpace =
+            std::min(flexLine.layout.remainingFreeSpace, 0.0f);
+      }
     } else if (flexLine.sizeConsumed < 0) {
       // availableInnerMainDim is indefinite which means the node is being sized
       // based on its content. sizeConsumed is negative which means
@@ -3874,6 +4305,15 @@ static void calculateLayoutImpl(
 //  Input parameters are the same as calculateLayoutImpl (see above)
 //  Return parameter is true if layout was performed, false if skipped
 //
+// Whether a box's minimum height is an intrinsic size (css-sizing-3 §3.2),
+// `max-content` or `fit-content`, either of which in the block axis is the
+// height its content takes at the box's width (§5.2); a `min-content` minimum,
+// the same height, arrives as `max-content`
+static bool hasIntrinsicMinimumHeight(const yoga::Node* node) {
+  const auto& minimum = node->style().minDimension(Dimension::Height);
+  return minimum.isMaxContent() || minimum.isFitContent();
+}
+
 bool calculateLayoutInternal(
     yoga::Node* const node,
     const float availableWidth,
@@ -3888,6 +4328,51 @@ bool calculateLayoutInternal(
     LayoutData& layoutMarkerData,
     uint32_t depth,
     const uint32_t generationCount) {
+  // A box offered a height but whose minimum height is its content's is laid
+  // out at the taller of the two: its content is measured first, at no height
+  // and the box's width, and a content taller than the offer is the height
+  // the box is laid out at. A body of `height: 100%; min-height: min-content`
+  // is the height of its scroll view until its content is taller, and then
+  // its content's, so the scroll view can reach it. A flex container has
+  // shared out its line by then as though the box had no minimum
+  // (DOM-CSS-LIMITATION(intrinsic-minimum-in-flex)).
+  if (heightSizingMode != SizingMode::MaxContent &&
+      hasIntrinsicMinimumHeight(node)) {
+    calculateLayoutInternal(
+        node,
+        availableWidth,
+        YGUndefined,
+        ownerDirection,
+        widthSizingMode,
+        SizingMode::MaxContent,
+        ownerWidth,
+        ownerHeight,
+        /*performLayout*/ false,
+        LayoutPassReason::kMeasureChild,
+        layoutMarkerData,
+        depth,
+        generationCount);
+    const float contentHeight =
+        node->getLayout().measuredDimension(Dimension::Height) +
+        node->style().computeMarginForAxis(FlexDirection::Column, ownerWidth);
+    if (contentHeight > availableHeight) {
+      return calculateLayoutInternal(
+          node,
+          availableWidth,
+          contentHeight,
+          ownerDirection,
+          widthSizingMode,
+          SizingMode::StretchFit,
+          ownerWidth,
+          ownerHeight,
+          performLayout,
+          reason,
+          layoutMarkerData,
+          depth,
+          generationCount);
+    }
+  }
+
   LayoutResults* layout = &node->getLayout();
 
   depth++;

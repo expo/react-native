@@ -7,6 +7,7 @@
 
 #include "YogaLayoutableShadowNode.h"
 
+#include <react/renderer/components/view/InlineTextContentAccessor.h>
 #include <react/renderer/components/view/ViewPropsOf.h>
 
 #include <cxxreact/TraceSection.h>
@@ -1835,6 +1836,51 @@ YGErrata YogaLayoutableShadowNode::resolveErrata(YGErrata defaultErrata) const {
     }
   }
 
+  // An anonymous inline run is its box's own text, not a flex item
+  // (css-flexbox-1 §4 makes items of a flex container's children, and a block
+  // container's text is not one), so the automatic minimum below is not its:
+  // the run wraps at the width its box gives it. With the minimum, a run
+  // stood at its longest word past its box's `max-width`, and a message a
+  // third of a point too wide for its balloon's column landed on one line
+  // where the composer had shown it on two. The run's content still reaches
+  // the box's own minimum through the probe, which walks into it. The bit is
+  // set here rather than left as it came: a parent hands its children the
+  // errata it resolved for itself, with the bit already cleared.
+  if (dynamic_cast<const InlineTextContentAccessor*>(this) != nullptr) {
+    return defaultErrata | YGErrataMinSizeUndefinedInsteadOfAuto;
+  }
+
+  // The web's automatic minimum size (css-flexbox-1 §4.5): a flex item does
+  // not shrink below its content unless it says so (`min-width: 0`, or an
+  // overflow that is not visible). Yoga keeps the legacy errata that leaves an
+  // unset minimum at nothing; with it, a row that ran out of room squeezed a
+  // toolbar's tabs and a wizard's step labels to nothing where a browser
+  // overflows, and a `<button>` had to refuse to shrink at all to keep its
+  // label whole. The fork's web layout turns the minimum on with its other
+  // web behaviours.
+  //
+  // It also shares a line's free space the way css-flexbox-1 §9.7 does, by
+  // every flexible item's factor. Yoga's legacy first pass divides each
+  // item's share by a total that drops as the items before it freeze, so an
+  // item frozen at its minimum hands the next a larger share, which can
+  // freeze it too: a settings dialog's row of section buttons froze every
+  // button at its padding, the line then had room to spare, and every button
+  // went back to its full label.
+  //
+  // And it places an absolutely positioned box against the web's containing
+  // block (CSS2 §10.1, css-position-3 §4.1): the padding box of its nearest
+  // positioned ancestor, which its percentages are of, with the box at the
+  // content edge where it states no inset. Yoga's legacy errata take the
+  // percentages of the content box and leave the box at the padding edge: a
+  // tab's hover pill, `inset: 0` with `width: 100%`, stopped short of the tab's
+  // label by its padding.
+  if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
+    return defaultErrata &
+        ~(YGErrataMinSizeUndefinedInsteadOfAuto |
+          YGErrataFlexFirstPassUsesRunningTotals |
+          YGErrataAbsolutePercentAgainstInnerSize |
+          YGErrataAbsolutePositionWithoutInsetsExcludesPadding);
+  }
   return defaultErrata;
 }
 
@@ -2397,11 +2443,16 @@ yoga::Config& YogaLayoutableShadowNode::initializeYogaConfig(
   // And the web's flex basis: a length is the flex base size even in a row
   // sized by its content, such as a horizontal scroll view's. See
   // WebDefiniteFlexBasis in CalculateLayout.cpp.
+  // And a container sized by its content is as large as its content where it
+  // fits, so its flexible items do not grow into the space it was offered.
+  // See WebFitContentMainSize in CalculateLayout.cpp.
   if (ReactNativeFeatureFlags::enableYogaDisplayBlock()) {
     YGConfigSetExperimentalFeatureEnabled(
         &config, YGExperimentalFeatureWebPercentageHeights, true);
     YGConfigSetExperimentalFeatureEnabled(
         &config, YGExperimentalFeatureWebDefiniteFlexBasis, true);
+    YGConfigSetExperimentalFeatureEnabled(
+        &config, YGExperimentalFeatureWebFitContentMainSize, true);
   }
 
   return config;

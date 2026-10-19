@@ -235,6 +235,20 @@ BaseViewProps::BaseViewProps(
                     sourceProps.inheritedWhiteSpace,
                     {})
               : sourceProps.inheritedWhiteSpace),
+      inheritedOverflowWrap(
+          parseInheritedTextProps && stringChildrenEnabled
+              ? convertRawProp(
+                    context,
+                    rawProps,
+                    "overflowWrap",
+                    convertRawProp(
+                        context,
+                        rawProps,
+                        "wordWrap",
+                        sourceProps.inheritedOverflowWrap,
+                        {}),
+                    {})
+              : sourceProps.inheritedOverflowWrap),
       inheritedHugsWrappedLines(
           parseInheritedTextProps && stringChildrenEnabled
               ? convertRawProp(
@@ -702,7 +716,8 @@ bool BaseViewProps::computeHasInheritedTextProps() const {
       inheritedFontStyle.has_value() || inheritedFontVariant.has_value() ||
       !std::isnan(inheritedLetterSpacing) || !std::isnan(inheritedLineHeight) ||
       inheritedTextAlign.has_value() || inheritedTextTransform.has_value() ||
-      inheritedWhiteSpace.has_value() || inheritedDynamicTypeRamp.has_value() ||
+      inheritedWhiteSpace.has_value() || inheritedOverflowWrap.has_value() ||
+      inheritedDynamicTypeRamp.has_value() ||
       inheritedHugsWrappedLines.has_value() ||
       inheritedDynamicRangeLimit.has_value();
 }
@@ -758,6 +773,8 @@ void BaseViewProps::setProp(
     INHERITED_TEXT_PROP_SET_CASE(inheritedTextAlign, "textAlign");
     INHERITED_TEXT_PROP_SET_CASE(inheritedTextTransform, "textTransform");
     INHERITED_TEXT_PROP_SET_CASE(inheritedWhiteSpace, "whiteSpace");
+    INHERITED_TEXT_PROP_SET_CASE(inheritedOverflowWrap, "overflowWrap");
+    INHERITED_TEXT_PROP_SET_CASE(inheritedOverflowWrap, "wordWrap");
     INHERITED_TEXT_PROP_SET_CASE(
         inheritedHugsWrappedLines, "experimental_hugsWrappedLines");
     INHERITED_TEXT_PROP_SET_CASE(inheritedDynamicTypeRamp, "dynamicTypeRamp");
@@ -1104,6 +1121,9 @@ void BaseViewProps::applyInheritedTextAttributes(
   }
   if (inheritedWhiteSpace) {
     textAttributes.whiteSpace = inheritedWhiteSpace;
+  }
+  if (inheritedOverflowWrap) {
+    textAttributes.overflowWrap = inheritedOverflowWrap;
   }
   if (inheritedHugsWrappedLines) {
     textAttributes.hugsWrappedLines = inheritedHugsWrappedLines;

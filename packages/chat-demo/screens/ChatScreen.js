@@ -3664,6 +3664,13 @@ const styles = StyleSheet.create({
     // Keeps typed newlines and repeated spaces; `<p>` collapses them by
     // default.
     whiteSpace: 'pre-wrap',
+    /*
+     * Native Messages breaks a word that does not fit the balloon's column
+     * between characters, as the composer's field does, so the text's minimum
+     * is its widest glyph rather than its longest word: a message a hair wider
+     * than the column wraps the same way in both. `WrapCheck.swift` checks it.
+     */
+    overflowWrap: 'anywhere',
   },
   stackMine: {alignItems: 'flex-end'},
   stackTheirs: {alignItems: 'flex-start'},

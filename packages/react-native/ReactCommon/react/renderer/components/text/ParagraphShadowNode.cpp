@@ -6,8 +6,11 @@
  */
 
 #include "ParagraphShadowNode.h"
-
 #include <react/renderer/components/view/CloneWithLayoutMetrics.h>
+
+#include <limits>
+#include <optional>
+#include <react/renderer/components/text/TextMinContent.h>
 
 #include <react/renderer/components/text/InlineElementMetrics.h>
 #include <react/renderer/components/text/WhiteSpaceConstraints.h>
@@ -263,6 +266,20 @@ Size ParagraphShadowNode::measureContent(
   const auto layoutConstraints = constraintsForWhiteSpace(
       getConcreteProps().inheritedWhiteSpace, outerLayoutConstraints);
 
+  // Yoga's automatic-minimum probe (css-flexbox-1 §4.5) measures with no
+  // width and expects a text's min-content: its longest unbreakable word, as
+  // a browser's text engine answers. TextKit, Android's layout and the
+  // deterministic measurer break a word that does not fit between its
+  // characters instead, and a `<button>` in a tight row would wrap its label
+  // one letter to a line. The answer is made here, where every platform's
+  // paragraph and every inline run measures: the widest of the longest words,
+  // each measured alone, and the height of the text wrapped to it.
+  if (layoutConstraints.maximumSize.width <= 0) {
+    if (auto minContent = measureMinContent(layoutContext, layoutConstraints)) {
+      return *minContent;
+    }
+  }
+
   if constexpr (TextLayoutManagerExtended::supportsPreparedTextLayout()) {
     for (const auto& layout : measuredLayouts_) {
       if (layout.layoutConstraints == layoutConstraints) {
@@ -313,6 +330,26 @@ Size ParagraphShadowNode::measureContent(
                   .size;
   assert_valid_size(size, layoutConstraints);
   return size;
+}
+
+std::optional<Size> ParagraphShadowNode::measureMinContent(
+    const LayoutContext& layoutContext,
+    const LayoutConstraints& layoutConstraints) const {
+  // The attachments are measured unbounded so each reserves its own width;
+  // their boxes are words of the probe
+  auto unbounded = layoutConstraints;
+  unbounded.maximumSize.width = std::numeric_limits<Float>::infinity();
+  auto content = getContentWithMeasuredAttachments(layoutContext, unbounded);
+  TextLayoutContext textLayoutContext{
+      .pointScaleFactor = layoutContext.pointScaleFactor,
+      .surfaceId = getSurfaceId(),
+  };
+  return measureTextMinContent(
+      *textLayoutManager_,
+      content.attributedString,
+      content.paragraphAttributes,
+      textLayoutContext,
+      layoutConstraints);
 }
 
 Float ParagraphShadowNode::lastLineBaseline(

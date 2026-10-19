@@ -519,13 +519,13 @@ function buttonSheetEntry(): UAStyle {
      * not anything a control reports, so there is nothing to ask.
      */
     minHeight: BUTTON_CHROME.minHeight,
-    // On the web a flex item's implied `min-width: auto` (its min-content)
-    // stops a shrunk button collapsing below its label. Yoga has no
-    // automatic minimum, so the flex-shrink:1 initial the elements state
-    // let a tight row wrap "Submit" onto two lines. Not shrinking is the
-    // Yoga-expressible half of CSS's floor for a control whose whole width
-    // IS its label; an author flexShrink still wins.
-    flexShrink: 0,
+    // A button is a flex item like any other: it shrinks when its row runs
+    // out of room (`flex-shrink: 1`, the initial every element states) and
+    // its implied `min-width: auto` — Yoga's automatic minimum size,
+    // css-flexbox-1 §4.5 — keeps it from collapsing below its label. It used
+    // to state `flexShrink: 0` from before Yoga had that minimum, which kept a
+    // `width: 100%` sort button at its full width beside the filter button
+    // that then sat outside the header cell, where no tap could reach it.
   };
   if (BUTTON_CHROME.fontSize != null) {
     entry.fontSize = BUTTON_CHROME.fontSize;

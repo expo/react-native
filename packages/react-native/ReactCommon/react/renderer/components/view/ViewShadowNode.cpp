@@ -233,8 +233,10 @@ const char ElementFileInputComponentName[] = "element-file-input";
 // color object there, not a packed int32), so the same structs measure bigger
 // under an iphoneos or iphonesimulator target.
 #if TARGET_OS_OSX || (!TARGET_OS_IPHONE && !TARGET_OS_TV && !TARGET_OS_WATCH)
+// 1024 + 24 for the min-content memo in `yoga::LayoutResults`, which spares
+// the automatic-minimum probe from walking a subtree once per ancestor pass
 static_assert(
-    sizeof(ViewShadowNode) <= 1024,
+    sizeof(ViewShadowNode) <= 1048,
     "ViewShadowNode grew past its memory budget");
 static_assert(
     sizeof(TextAttributes) <= 248,
@@ -244,8 +246,10 @@ static_assert(
     "ViewProps grew; every mounted View holds one, plus one per pending "
     "generation during commits");
 #else
+// 1080 + 24 for the min-content memo in `yoga::LayoutResults`, which spares
+// the automatic-minimum probe from walking a subtree once per ancestor pass
 static_assert(
-    sizeof(ViewShadowNode) <= 1080,
+    sizeof(ViewShadowNode) <= 1104,
     "ViewShadowNode grew past its memory budget");
 static_assert(
     // Sized for the numeric `baselineShift` (symbolic list
@@ -285,7 +289,12 @@ static_assert(
     // A fragment's own attributes are therefore the only thing that travels
     // with a range of glyphs, which makes this the right home and not a
     // shortcut.
-    sizeof(TextAttributes) <= 376,
+    //
+    // Sized for `overflowWrap`: a one-byte optional enum that lands in a new
+    // alignment group, so the struct grows by eight. It is inherited text
+    // state (css-text-3 §5.5) and decides whether a paragraph's min-content
+    // width is its longest word or its widest grapheme.
+    sizeof(TextAttributes) <= 384,
     "TextAttributes grew; it is copied and compared throughout the text stack");
 static_assert(
     sizeof(ViewProps) <= 2200,
