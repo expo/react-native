@@ -350,6 +350,8 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   // inheritable text properties reach native as top-level props, and a key
   // missing from this table is dropped before it ever gets there.
   whiteSpace: true,
+  overflowWrap: true,
+  wordWrap: true,
   // Whether a wrapped box shrinks to its longest line; see StyleSheetTypes.
   // Registered here for the same reason `whiteSpace` is — an inheritable text
   // property reaches native as a top-level prop, and a key missing from this

@@ -442,7 +442,7 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
     result = yoga::Overflow::Visible;
     return;
   }
-  if (stringValue == "hidden") {
+  if (stringValue == "hidden" || stringValue == "clip") {
     result = yoga::Overflow::Hidden;
     return;
   }

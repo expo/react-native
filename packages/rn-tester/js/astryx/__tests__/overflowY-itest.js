@@ -159,4 +159,56 @@ describe("Astryx's Dialog, drawn inline", () => {
     Fantom.scrollTo(scrollView, {x: 0, y: 200});
     expect(body.current.scrollTop).toBe(200);
   });
+  it('is as tall as its content under a cap it does not reach', () => {
+    // As the template draws it: centred in the page's height, which a
+    // flexible body had stretched the dialog to
+    (globalThis as $FlowFixMe).Intl ??= {};
+    // $FlowFixMe[cannot-resolve-module] the vendored sources are TypeScript
+    const {Dialog} = require('../vendor/Dialog');
+    // $FlowFixMe[cannot-resolve-module] the vendored sources are TypeScript
+    const {Layout, LayoutContent, LayoutFooter} = require('../vendor/Layout');
+    const page = elementRef();
+    const body = elementRef();
+    const footer = elementRef();
+    const root = Fantom.createRoot();
+    Fantom.runTask(() => {
+      root.render(
+        jsx('div', {
+          ref: page,
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 800,
+          },
+          children: jsx(Dialog, {
+            isOpen: true,
+            isInline: true,
+            onOpenChange: () => {},
+            width: 360,
+            maxHeight: 2000,
+            children: jsx(Layout, {
+              height: 'fill',
+              content: jsx(LayoutContent, {
+                ref: body,
+                children: jsx('div', {style: {height: 100}}),
+              }),
+              footer: jsx(LayoutFooter, {
+                ref: footer,
+                children: jsx('div', {style: {height: 40}}),
+              }),
+            }),
+          }),
+        }) as $FlowFixMe,
+      );
+    });
+    const dialogBox = page.current.children[0].getBoundingClientRect();
+    const bodyBox = body.current.getBoundingClientRect();
+    const footerBox = footer.current.getBoundingClientRect();
+    expect(dialogBox.height).toBeLessThan(400);
+    expect(footerBox.top).toBeCloseTo(bodyBox.bottom, 3);
+    expect(footerBox.bottom).toBeCloseTo(dialogBox.bottom, 3);
+    // Centred in the page's height
+    expect(dialogBox.top).toBeCloseTo((800 - dialogBox.height) / 2, 3);
+  });
 });

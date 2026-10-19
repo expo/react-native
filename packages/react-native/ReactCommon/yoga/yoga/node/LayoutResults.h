@@ -75,21 +75,26 @@ struct LayoutResults {
   FloatOptional computedFlexBasis = {};
 
   // Per-flex-item floor along the main axis derived from CSS Flexbox §4.5
-  // automatic minimum sizing. Set by `resolveFlexibleLength` when the parent's
-  // config does NOT carry the `MinSizeUndefinedInsteadOfAuto` errata and the
-  // item has no explicit main-axis `min-{width,height}`. Read by the
-  // shrink/bound machinery to keep items at least this large. `Undefined`
-  // means "no auto-min applies."
+  // automatic minimum sizing, when the parent's config does NOT carry the
+  // `MinSizeUndefinedInsteadOfAuto` errata and the item has no explicit
+  // main-axis `min-{width,height}`. Read by the shrink/bound machinery to keep
+  // items at least this large. `Undefined` means "no auto-min applies."
   FloatOptional computedAutoMinMainSize = {};
+  // Whether `computedAutoMinMainSize` is still to be computed for the line
+  // `resolveFlexibleLength` is distributing: it is computed when the item is
+  // first given a share of the free space, since most items never are
+  bool computedAutoMinMainSizePending = false;
+  Direction minContentOwnerDirection = Direction::Inherit;
 
-  // Memoized min-content sizes for §4.5, indexed by dimension and valid only
-  // during layout generation `minContentGeneration`. A leaf stores its measured
-  // min-content without padding and border, which doesn't depend on the owner.
-  // A container stores its full min-content, which depends on
-  // `minContentOwnerWidth` through percentage padding and margins.
-  std::array<uint32_t, 2> minContentGeneration = {};
-  std::array<float, 2> minContentOwnerWidth = {{YGUndefined, YGUndefined}};
-  std::array<float, 2> minContent = {{YGUndefined, YGUndefined}};
+  // Memoized min-content sizes for §4.5, indexed by dimension. A dirty node
+  // reuses them only within minContentGeneration; a clean node can reuse them
+  // across passes with the same owner size and direction. Leaves exclude their
+  // padding and border; their block minimum depends on available inline size.
+  // Containers include percentage sizes, padding and margins on both axes.
+  uint32_t minContentGeneration = 0;
+  float minContentOwnerWidth = YGUndefined;
+  float minContentOwnerHeight = YGUndefined;
+  std::array<float, 2> minContentSize = {YGUndefined, YGUndefined};
 
   // The two float lists a node in a shared formatting context needs. They live
   // together behind one pointer because both are empty for almost every node:

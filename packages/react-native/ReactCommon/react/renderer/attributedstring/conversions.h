@@ -903,6 +903,42 @@ inline void fromRawValue(const PropsParserContext &context, const RawValue &valu
   result = LineBreakStrategy::None;
 }
 
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, OverflowWrap &result)
+{
+  react_native_expect(value.hasType<std::string>());
+  if (value.hasType<std::string>()) {
+    auto string = (std::string)value;
+    if (string == "normal") {
+      result = OverflowWrap::Normal;
+      return;
+    }
+    if (string == "break-word") {
+      result = OverflowWrap::BreakWord;
+      return;
+    }
+    if (string == "anywhere") {
+      result = OverflowWrap::Anywhere;
+      return;
+    }
+  }
+  LOG(ERROR) << "Could not parse OverflowWrap: " << (std::string)value;
+  react_native_expect(false);
+  result = OverflowWrap::Normal;
+}
+
+inline std::string toString(const OverflowWrap &overflowWrap)
+{
+  switch (overflowWrap) {
+    case OverflowWrap::Normal:
+      return "normal";
+    case OverflowWrap::BreakWord:
+      return "break-word";
+    case OverflowWrap::Anywhere:
+      return "anywhere";
+  }
+  return "normal";
+}
+
 inline std::string toString(const WhiteSpace &whiteSpace)
 {
   switch (whiteSpace) {

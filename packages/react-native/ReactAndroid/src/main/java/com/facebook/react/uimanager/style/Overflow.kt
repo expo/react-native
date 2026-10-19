@@ -34,7 +34,8 @@ internal enum class Overflow {
     fun fromString(overflow: String?, default: Overflow = VISIBLE): Overflow =
         when (overflow?.lowercase()) {
           "visible" -> VISIBLE
-          "hidden" -> HIDDEN
+          // CSS `overflow: clip` clips like `hidden`; only scrolling differs, and a view never scrolls
+          "hidden", "clip" -> HIDDEN
           "scroll" -> SCROLL
           else -> default
         }

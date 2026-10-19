@@ -143,6 +143,8 @@ const char* YGExperimentalFeatureToString(const YGExperimentalFeature value) {
       return "web-percentage-heights";
     case YGExperimentalFeatureWebDefiniteFlexBasis:
       return "web-definite-flex-basis";
+    case YGExperimentalFeatureWebFitContentMainSize:
+      return "web-fit-content-main-size";
   }
   return "unknown";
 }

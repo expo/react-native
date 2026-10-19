@@ -250,6 +250,9 @@ const validAttributesForNonEventProps = {
   textTransform: true,
   // `white-space`: inherited like the rest of this group.
   whiteSpace: true,
+  // `overflow-wrap`, and its alias `word-wrap`: inherited the same way
+  overflowWrap: true,
+  wordWrap: true,
   // Whether a wrapped box shrinks to its longest line; see StyleSheetTypes.
   experimental_hugsWrappedLines: true,
   // The platform's own name for the text's ROLE, from which the platform

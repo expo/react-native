@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <optional>
 #include <react/cxxstableapi/FrameworksGuard.h>
 
 #include <React/RendererCore.h>
@@ -84,6 +85,15 @@ class ParagraphShadowNode
   Size measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const override;
 
   Float baseline(const LayoutContext &layoutContext, Size size) const override;
+
+  /*
+   * The paragraph's min-content size, for Yoga's automatic-minimum probe: the
+   * widest of its longest words measured alone, and the height of the text
+   * wrapped to that width. Nothing when there is no text to measure.
+   */
+  std::optional<Size> measureMinContent(
+      const LayoutContext& layoutContext,
+      const LayoutConstraints& layoutConstraints) const;
 
   Float lastLineBaseline(const LayoutContext &layoutContext, Size size) const override;
 
