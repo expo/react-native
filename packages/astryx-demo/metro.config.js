@@ -232,6 +232,30 @@ const config = {
           platform,
         );
       }
+      // Astryx's chat layout and composer input have React Native versions:
+      // the screen's scroll view holds the transcript, the composer rides the
+      // keyboard as a native accessory, and the field is the platform's (see
+      // packages/rn-tester/js/astryx/native-chat). The versions themselves
+      // import the vendored modules, so their own requests resolve as written.
+      if (/\/(ChatLayout|ChatComposerInput)$/.test(moduleName)) {
+        const resolved = context.resolveRequest(context, moduleName, platform);
+        const replaced =
+          resolved.type === 'sourceFile'
+            ? /\/js\/astryx\/vendor\/Chat\/(ChatLayout|ChatComposerInput)\.tsx$/.exec(
+                resolved.filePath,
+              )
+            : null;
+        if (
+          replaced != null &&
+          !context.originModulePath.includes('/js/astryx/native-chat/')
+        ) {
+          return {
+            type: 'sourceFile',
+            filePath: path.join(astryx, 'native-chat', `${replaced[1]}.tsx`),
+          };
+        }
+        return resolved;
+      }
       // Astryx's `Layer/useLayer` imports `createPortal` from react-dom on a
       // branch this renderer never takes; the import still has to resolve
       if (moduleName === 'react-dom' || moduleName === 'react-dom/client') {

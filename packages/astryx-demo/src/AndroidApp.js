@@ -12,6 +12,10 @@ import NativePageScroll, {
   usePageViewport,
 } from '../../expo-intrinsics/src/NativePageScroll';
 import NativeSafeArea from '../../expo-intrinsics/src/NativeSafeArea';
+import {
+  ScreenScrollContext,
+  useScreenScrollProvider,
+} from '../../rn-tester/js/astryx/native-chat/ScreenScroll';
 import navigation from '../../rn-tester/js/astryx/native-screen/NativePaneController';
 import AstryxHost from './AstryxHost';
 import GalleryGrid from './GalleryGrid';
@@ -172,6 +176,10 @@ function TemplateScreen({
   const info = templateInfo(slug);
   const ref = React.useRef((null: any));
   const [viewport, onViewport] = usePageViewport();
+  const screenScroll = useScreenScrollProvider(
+    ref,
+    viewport?.hostSafeAreaInsets,
+  );
   return (
     <View style={styles.screen}>
       <NativeSafeArea edges={{bottom: false}} style={styles.header}>
@@ -191,6 +199,8 @@ function TemplateScreen({
       <NativePageScroll
         key={slug}
         ref={ref}
+        contentAnchor={screenScroll.contentAnchor}
+        onScroll={screenScroll.onScroll}
         contentContainerStyle={styles.content}
         onContentViewportChange={onViewport}>
         {/* The page's viewport is the scroll view's frame, which `dvh`
@@ -198,10 +208,13 @@ function TemplateScreen({
             surface's own height stood in: the window's, taller than the frame
             by the bar, and then that of the last page the surface held. The
             page renders once it is known, so it renders once. */}
-        <AstryxHost viewport={viewport}>
-          {viewport != null ? page : null}
-        </AstryxHost>
+        <ScreenScrollContext value={screenScroll.value}>
+          <AstryxHost viewport={viewport}>
+            {viewport != null ? page : null}
+          </AstryxHost>
+        </ScreenScrollContext>
       </NativePageScroll>
+      {screenScroll.accessories}
     </View>
   );
 }
