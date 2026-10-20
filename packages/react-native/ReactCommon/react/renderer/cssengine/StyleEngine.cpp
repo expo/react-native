@@ -299,7 +299,7 @@ void parseConditions(
       continue;
     }
     AuthorEntry entry;
-    entry.key = pair[0].getString();
+    entry.key = std::string(cssengine::canonicalPropertyName(pair[0].getString()));
     classifyCondition(entry);
     parseValue(property, pair[1], entry);
     out.push_back(std::move(entry));
@@ -363,7 +363,7 @@ void parseDeclarations(
       continue;
     }
     AuthorEntry entry;
-    entry.key = pair[0].getString();
+    entry.key = std::string(cssengine::canonicalPropertyName(pair[0].getString()));
     const folly::dynamic& value = pair[1];
     if (startsWith(entry.key, ":") || startsWith(entry.key, "@")) {
       // Skip a value under a condition with no property to give it to
@@ -2062,7 +2062,7 @@ static folly::dynamic reactInlineValue(
   folly::dynamic value = nullptr;
   for (const auto& pair : inlineStyle) {
     if (pair.isArray() && pair.size() == 2 && pair[0].isString() &&
-        pair[0].getString() == property) {
+        cssengine::canonicalPropertyName(pair[0].getString()) == property) {
       value = pair[1];
     }
   }
@@ -4162,7 +4162,8 @@ void StyleEngine::setScriptStyles(
           if (!pair.isArray() || pair.size() != 2 || !pair[0].isString()) {
             continue;
           }
-          std::string property(pair[0].getString());
+          std::string property(
+              cssengine::canonicalPropertyName(pair[0].getString()));
           // The React value the write overrides: the one it had when script
           // wrote this value, or React's value now for a new write
           const ScriptWrites::Declaration* before = nullptr;

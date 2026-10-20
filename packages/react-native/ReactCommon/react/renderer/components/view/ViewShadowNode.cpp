@@ -1006,6 +1006,7 @@ void AbstractViewShadowNode<
             .attributedString = std::move(contentString),
             .accessibilityContent = std::move(accessibilityContent),
             .frame = contentFrame,
+            .paragraphAttributes = contentAccessor->getContentParagraphAttributes(),
             .documentOrder = documentOrder,
             // Leave the marker run above untagged: it shares this box's tag
             // and would collide in the run-layout handoff registry

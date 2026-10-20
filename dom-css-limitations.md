@@ -734,6 +734,7 @@ rather than going quiet.
 - `table-layout-auto-is-fixed` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-percent-columns-need-the-width` — limitation, `packages/expo-intrinsics/src/Table.js`
 - `table-rowspan` — limitation, `packages/expo-intrinsics/src/Table.js`
+- `text-overflow-per-line` — limitation, `ReactCommon/react/renderer/components/view/BaseViewProps.cpp`
 - `unanswered-pseudo-classes` — limitation, `packages/react-native/ReactCommon/react/renderer/cssengine/StyleSheetParser.cpp`
 - `view-style-text-inheritance` — limitation, `packages/rn-tester/js/examples/Lists/ListsExample.js`
 - `when-relations-need-has` — limitation, `ReactCommon/react/renderer/cssengine/StyleEngine.cpp`
@@ -894,3 +895,34 @@ Still absent, and for a reason rather than an oversight: `width`, `margin`,
 glide. The mechanism is not specific to height — `isLayoutAffecting` is one line
 and `AnimatedPropsBuilder` already has the setters — so each is small. What each
 one costs is a case to justify it.
+
+## DOM-CSS-LIMITATION(text-overflow-per-line)
+
+`text-overflow: ellipsis` ellipsizes the one line of a `white-space: nowrap`
+block whose `overflow` is other than `visible`, and does nothing for a block
+whose text wraps or is `pre`.
+
+CSS applies the ellipsis per line box: a wrapping block shows one wherever a
+line overflows its end edge, which happens only on an unbreakable word longer
+than the line. The platforms ellipsize a paragraph only under a line limit
+(TextKit's `maximumNumberOfLines` with a truncating line-break mode,
+`StaticLayout.setMaxLines` with `setEllipsize`), so the run's paragraph
+attributes carry a limit of one line for `nowrap` and nothing otherwise: a
+long word in a wrapping block keeps its clip, as before, and so does each line
+of a `pre` block, which a limit of one line would hide. A `<br>` inside a
+`nowrap` block likewise hides the lines after it.
+
+`line-clamp` (and `-webkit-line-clamp`, which the templates write) is the same
+limit with a count, and applies on its own: the web requires
+`display: -webkit-box` with `-webkit-box-orient: vertical` for the prefixed
+form, which the engine already reads as `flex`. The clamp applies to the
+block's own anonymous runs; a nested block's lines are not counted toward it,
+where the web counts every line in the box.
+
+## DOM-CSS-LIMITATION(android-run-paragraph-attributes)
+
+A text run rebuilt on Android's UI thread (when the layout the measure pass
+handed off cannot be reused) is built with its alignment, justification and
+line limit only. Break strategy, hyphenation and font padding are read from
+paragraph attributes the run does not carry, so such a rebuild can break lines
+differently from the measured layout. See `ReactViewManager.kt`.

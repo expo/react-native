@@ -874,6 +874,13 @@ bool isInheritedProperty(std::string_view property) {
   return inherited.count(property) != 0;
 }
 
+std::string_view canonicalPropertyName(std::string_view property) {
+  if (property == "WebkitLineClamp") {
+    return "lineClamp";
+  }
+  return property;
+}
+
 bool isDroppedProperty(std::string_view property) {
   static const std::vector<std::string_view> prefixes = {
       "cursor",
@@ -906,7 +913,6 @@ bool isDroppedProperty(std::string_view property) {
       "resize",
       "hyphens",
       "wordBreak",
-      "textOverflow",
       "speak",
       "quotes",
       "caretColor",
@@ -1735,6 +1741,7 @@ const std::unordered_set<std::string_view>& passedThroughStrings() {
       "whiteSpace",
       "overflowWrap",
       "wordWrap",
+      "textOverflow",
       "verticalAlign",
       "textDecorationLine",
       "textDecorationStyle",
@@ -1910,6 +1917,16 @@ void convertLonghands(
         props["zIndex"] = static_cast<int64_t>(std::round(*number));
       } else if (keyword == "auto") {
         props["zIndex"] = nullptr;
+      }
+      return;
+    }
+    if (property == "lineClamp") {
+      // `line-clamp: <integer>` (css-overflow-4 §5), `none` for no limit
+      auto number = numberValue(keyword);
+      if (number && *number >= 1) {
+        props["lineClamp"] = static_cast<int64_t>(std::floor(*number));
+      } else if (keyword == "none") {
+        props["lineClamp"] = nullptr;
       }
       return;
     }

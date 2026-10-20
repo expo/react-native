@@ -528,7 +528,10 @@ void placeAttachments(
 TextMeasurement measureDeterministically(
     const AttributedStringBox& attributedStringBox,
     const LayoutConstraints& layoutConstraints,
-    TextMeasurement::Attachments attachments) {
+    TextMeasurement::Attachments attachments,
+    // The paragraph's line limit (`line-clamp`, `numberOfLines`); 0 for none.
+    // The lines past it are not laid out, so they add no height.
+    int maximumNumberOfLines = 0) {
   size_t characterCount = 0;
   Float intrinsicWidth = 0;
   for (const auto& fragment : attributedStringBox.getValue().getFragments()) {
@@ -639,8 +642,17 @@ TextMeasurement measureDeterministically(
       &lineHeightsByLine);
   placeAttachments(attributedStringBox, rects, lines, attachments);
 
+  auto totalHeight = lines.totalHeight;
+  if (maximumNumberOfLines > 0 &&
+      static_cast<size_t>(maximumNumberOfLines) < lineHeightsByLine.size()) {
+    totalHeight = 0;
+    for (size_t i = 0; i < static_cast<size_t>(maximumNumberOfLines); ++i) {
+      totalHeight += lineHeightsByLine[i];
+    }
+  }
+
   return TextMeasurement{
-      .size = layoutConstraints.clamp({width, lines.totalHeight}),
+      .size = layoutConstraints.clamp({width, totalHeight}),
       .attachments = std::move(attachments),
       .fragmentRects = std::move(rects)};
 }
@@ -653,7 +665,7 @@ TextLayoutManager::TextLayoutManager(
 
 TextMeasurement TextLayoutManager::measure(
     const AttributedStringBox& attributedStringBox,
-    const ParagraphAttributes& /*paragraphAttributes*/,
+    const ParagraphAttributes& paragraphAttributes,
     const TextLayoutContext& /*layoutContext*/,
     const LayoutConstraints& layoutConstraints) const {
   TextMeasurement::Attachments attachments;
@@ -670,7 +682,10 @@ TextMeasurement TextLayoutManager::measure(
 
   if (ReactNativeFeatureFlags::enableStringChildren()) {
     return measureDeterministically(
-        attributedStringBox, layoutConstraints, std::move(attachments));
+        attributedStringBox,
+        layoutConstraints,
+        std::move(attachments),
+        paragraphAttributes.maximumNumberOfLines);
   }
 
   return TextMeasurement{

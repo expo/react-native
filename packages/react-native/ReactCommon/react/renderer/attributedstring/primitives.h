@@ -215,6 +215,17 @@ inline bool breaksAnywhere(OverflowWrap overflowWrap)
 }
 
 /*
+ * `text-overflow` (css-overflow-3 §5.1): what a block container shows where
+ * its inline content overflows its end edge: nothing but the clip, or an
+ * ellipsis in place of the clipped characters. It belongs to the block, not
+ * to the text, and is not inherited.
+ */
+enum class TextOverflow : uint8_t {
+  Clip,
+  Ellipsis,
+};
+
+/*
  * Whether a segment break in the source is content that ends a line, rather
  * than collapsible whitespace that becomes a single space.
  */

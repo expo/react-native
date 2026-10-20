@@ -1779,7 +1779,7 @@ internal object TextLayoutManager {
       reactTextViewManagerCallback: ReactTextViewManagerCallback?,
       textEffectRegistry: TextEffectRegistry? = null,
       floatExclusionsDip: FloatArray? = null,
-  ): Layout {
+  ): MeasuredLayout {
     val text =
         getOrCreateSpannableForText(
             assets,
@@ -1804,18 +1804,20 @@ internal object TextLayoutManager {
           else scratch
     }
 
-    return createLayout(
-            text,
-            paint,
-            attributedString,
-            paragraphAttributes,
-            width,
-            widthYogaMeasureMode,
-            height,
-            heightYogaMeasureMode,
-            floatExclusionsDip,
-        )
-        .layout
+    val layout =
+        createLayout(
+                text,
+                paint,
+                attributedString,
+                paragraphAttributes,
+                width,
+                widthYogaMeasureMode,
+                height,
+                heightYogaMeasureMode,
+                floatExclusionsDip,
+            )
+            .layout
+    return MeasuredLayout(text, layout)
   }
 
   private fun createLayout(
@@ -2265,7 +2267,7 @@ internal object TextLayoutManager {
       return FloatArray(0)
     }
 
-    val layout =
+    val (_, layout) =
         createLayoutForMeasurement(
             assets,
             0,
@@ -2409,7 +2411,7 @@ internal object TextLayoutManager {
       hugsWrappedLines: Boolean = false,
   ): Long {
     // TODO(5578671): Handle text direction (see View#getTextDirectionHeuristic)
-    val layout =
+    val (spannable, layout) =
         createLayoutForMeasurement(
             assets,
             fontWeightAdjustment,
@@ -2431,6 +2433,7 @@ internal object TextLayoutManager {
       RunLayoutHandoff.store(
           attributedString.getInt(AS_KEY_RUN_TAG),
           attributedString,
+          spannable,
           layout,
           PixelUtil.getDisplayMetricDensity(),
       )
@@ -2798,7 +2801,7 @@ internal object TextLayoutManager {
       reactTextViewManagerCallback: ReactTextViewManagerCallback?,
       textEffectRegistry: TextEffectRegistry? = null,
   ): WritableArray {
-    val layout =
+    val (_, layout) =
         createLayoutForMeasurement(
             assetManager,
             fontWeightAdjustment,
@@ -2836,6 +2839,12 @@ internal object TextLayoutManager {
 
     return metrics
   }
+
+  /**
+   * A measurement's layout with the spannable it was built from, which `layout.text` is not once the
+   * layout ellipsizes; see [RunLayoutHandoff.Entry.spannable]
+   */
+  private data class MeasuredLayout(val spannable: Spannable, val layout: Layout)
 
   private class CreateLayoutResult(
       val layout: Layout,

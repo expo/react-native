@@ -707,7 +707,7 @@ Float InlineContentShadowNode::lineBaseline(
     auto lines = TextLayoutManagerExtended(*textLayoutManager_)
                      .measureLines(
                          AttributedStringBox{attributedString},
-                         ParagraphAttributes{},
+                         paragraphAttributes_,
                          size);
     if (lines.empty()) {
       return 0;
@@ -1024,7 +1024,7 @@ InlineContentShadowNode::getInlineAttachmentPlacements(
   // wrap the elements of a `nowrap` run inside a container one line tall.
   auto measurement = textLayoutManager_->measure(
       AttributedStringBox{attributedString},
-      ParagraphAttributes{},
+      paragraphAttributes_,
       textLayoutContext,
       constraintsForWhiteSpace(
           textAttributes.whiteSpace,
@@ -1173,7 +1173,7 @@ InlineContentShadowNode::stampFromString(
     rects = textLayoutManager_
                 ->measure(
                     AttributedStringBox{attributedString},
-                    ParagraphAttributes{},
+                    paragraphAttributes_,
                     textLayoutContext,
                     placementConstraints)
                 .fragmentRects;
@@ -1307,7 +1307,7 @@ Size InlineContentShadowNode::measureContent(
   }
   const auto measurement = textLayoutManager_->measure(
       AttributedStringBox{attributedString},
-      ParagraphAttributes{},
+      paragraphAttributes_,
       textLayoutContext,
       measureConstraints);
   auto size = measurement.size;

@@ -523,6 +523,7 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
             const_cast<YogaLayoutableShadowNode&>(*layoutableBox);
         mutableBox.receivedTextAttributes_ = cascade;
         mutableBox.setInheritedCascade(cascade);
+        stampRunParagraphAttributes(mutableBox, *cascade);
       }
     }
 
@@ -1461,6 +1462,26 @@ ListMarkerSink* markerSinkOf(const YogaLayoutableShadowNode& item) {
  *
  * It runs before layout, so the marker is part of what the item measures.
  */
+/*
+ * Hands an anonymous box the paragraph attributes this block decided for its
+ * text (`text-overflow`, `line-clamp`), beside the cascade it is configured
+ * with. The attributes depend on this node's own props and on the cascade's
+ * `white-space`, both of which are known wherever the cascade is handed over,
+ * so every handoff site calls this. A no-op for anything but a text run.
+ */
+void YogaLayoutableShadowNode::stampRunParagraphAttributes(
+    YogaLayoutableShadowNode& box,
+    const TextAttributes& cascade) const {
+  auto* accessor = dynamic_cast<InlineTextContentAccessor*>(&box);
+  if (accessor == nullptr) {
+    return;
+  }
+  if (const auto* baseViewProps = viewPropsOf(*this)) {
+    accessor->setContentParagraphAttributes(
+        baseViewProps->runParagraphAttributes(cascade));
+  }
+}
+
 void YogaLayoutableShadowNode::assignListMarkerIfNeeded(
     YogaLayoutableShadowNode& child) {
   if (!listContext_.isList) {
@@ -1722,6 +1743,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
       auto& mutableChild = const_cast<YogaLayoutableShadowNode&>(child);
       if (childObservesCascade) {
         mutableChild.receivedTextAttributes_ = cascadeForChild;
+        stampRunParagraphAttributes(mutableChild, *cascadeForChild);
       }
       // Nesting depth, so a nested `<ul>` can take the next UA bullet without
       // walking ancestors it has no pointer to.
@@ -1746,6 +1768,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
       auto& clonedChild = cloneChildInPlace(i);
       if (childObservesCascade) {
         clonedChild.receivedTextAttributes_ = cascadeForChild;
+        stampRunParagraphAttributes(clonedChild, *cascadeForChild);
       }
       clonedChild.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
       clonedChild.configureYogaTree(
@@ -1765,6 +1788,7 @@ void YogaLayoutableShadowNode::configureYogaTree(
     auto& box = *boxPtr;
     box.ensureUnsealed();
     box.receivedTextAttributes_ = effectiveCascade;
+    stampRunParagraphAttributes(box, *effectiveCascade);
     box.listDepth_ = listDepth_ + (listContext_.isList ? 1 : 0);
     box.configureYogaTree(
         pointScaleFactor,

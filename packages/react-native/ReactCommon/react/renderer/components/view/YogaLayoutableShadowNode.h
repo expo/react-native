@@ -174,6 +174,8 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   void prepareListContext(int depth);
   void assignListMarkerIfNeeded(YogaLayoutableShadowNode &child);
 
+  void stampRunParagraphAttributes(YogaLayoutableShadowNode &box, const TextAttributes &cascade) const;
+
   struct ListContext {
     bool isList{false};
     ListStyleType type{ListStyleType::Disc};
