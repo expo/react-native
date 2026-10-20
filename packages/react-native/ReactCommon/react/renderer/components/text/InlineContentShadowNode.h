@@ -55,6 +55,7 @@ class InlineContentShadowNode final
         // A clone must keep the cascade its source was stamped with: boxes
         // are cloned by state progression, and a fresh default here is text
         // dropping to the default font on re-render.
+        paragraphAttributes_(static_cast<const InlineContentShadowNode &>(sourceShadowNode).paragraphAttributes_),
         inheritedCascade_(static_cast<const InlineContentShadowNode &>(sourceShadowNode).inheritedCascade_),
         // Content depends only on children (fixed at construction; state
         // clones keep them), the cascade, and the list marker — the clone
@@ -74,6 +75,31 @@ class InlineContentShadowNode final
   {
     return &inheritedCascade_;
   }
+
+  void setContentParagraphAttributes(const ParagraphAttributes &paragraphAttributes) override
+  {
+    if (paragraphAttributes_ == paragraphAttributes) {
+      return;
+    }
+    paragraphAttributes_ = paragraphAttributes;
+    // A line limit changes the run's height and which lines are drawn, so
+    // Yoga's cached measure for the box is stale the moment it changes.
+    yogaNode_.markDirtyAndPropagate();
+  }
+
+  const ParagraphAttributes &getContentParagraphAttributes() const override
+  {
+    return paragraphAttributes_;
+  }
+
+  /*
+   * The line limit and ellipsis the owning block decided for its text
+   * (`text-overflow`, `line-clamp`), stamped by its configure pass beside the
+   * cascade. Default-constructed: no limit, clipped. The min-content probe and
+   * the list marker never use it: an intrinsic size ignores truncation
+   * (css-overflow-3 §5.1), and a marker is not a line of the content.
+   */
+  ParagraphAttributes paragraphAttributes_{};
 
   /*
    * The effective inherited cascade, stamped by the owning View's configure

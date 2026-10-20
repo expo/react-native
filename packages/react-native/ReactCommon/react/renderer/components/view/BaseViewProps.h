@@ -11,6 +11,7 @@
 
 #include <limits>
 
+#include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityProps.h>
@@ -330,10 +331,11 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
     bool isEmpty() const
     {
-      return !environmentSafeAreaInsets && transitionPropertyRaw.empty() && transitionDurationRaw.empty() && transitionDelayRaw.empty() &&
-          transitionTimingFunctionRaw.empty() && animationKeyframesRaw.empty() && animationDurationRaw.empty() &&
-          animationDelayRaw.empty() && animationTimingFunctionRaw.empty() && animationIterationCountRaw.empty() &&
-          animationDirectionRaw.empty() && animationFillModeRaw.empty() && startingStyleRaw.empty();
+      return !environmentSafeAreaInsets && transitionPropertyRaw.empty() && transitionDurationRaw.empty() &&
+          transitionDelayRaw.empty() && transitionTimingFunctionRaw.empty() && animationKeyframesRaw.empty() &&
+          animationDurationRaw.empty() && animationDelayRaw.empty() && animationTimingFunctionRaw.empty() &&
+          animationIterationCountRaw.empty() && animationDirectionRaw.empty() && animationFillModeRaw.empty() &&
+          startingStyleRaw.empty();
     }
 
     bool rawsEqual(const CssExtras &other) const
@@ -378,6 +380,13 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
    */
   void applyInheritedTextAttributes(TextAttributes &textAttributes) const;
 
+  /*
+   * The paragraph attributes this block's anonymous text runs measure and
+   * paint with, from `text-overflow` and `line-clamp` and the cascade's
+   * `white-space`: a line limit with an ellipsis, or neither.
+   */
+  ParagraphAttributes runParagraphAttributes(const TextAttributes &cascade) const;
+
   // Borders
   CascadedBorderRadii borderRadii{};
   CascadedBorderColors borderColors{};
@@ -412,6 +421,18 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
    * it does not cascade to descendant Views (see the note on the enum).
    */
   UserSelect userSelect{UserSelect::Auto};
+
+  /*
+   * `text-overflow` and `line-clamp`: what this block does with the text that
+   * does not fit it. NOT inherited (css-overflow-3 §5.1, css-overflow-4 §5):
+   * they describe this box's edge and this box's lines, so a nested block
+   * keeps its own. `lineClamp` is 0 for no limit.
+   *
+   * Declared here because they fit the padding after `userSelect`, so no View
+   * grows for them (iOS Release layout, 2026-10-19).
+   */
+  TextOverflow textOverflow{TextOverflow::Clip};
+  int lineClamp{0};
 
   // Box shadow
   std::vector<BoxShadow> boxShadow{};

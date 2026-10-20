@@ -1189,6 +1189,13 @@ export type ____ViewStyle_InternalBase = Readonly<{
    */
   overflowWrap?: 'normal' | 'break-word' | 'anywhere',
   wordWrap?: 'normal' | 'break-word' | 'anywhere',
+  /**
+   * `text-overflow` and `line-clamp`, on the block that holds the text: an
+   * ellipsis where one line of `nowrap` text is clipped, or at most this many
+   * lines with an ellipsis on the last. Not inherited.
+   */
+  textOverflow?: 'clip' | 'ellipsis',
+  lineClamp?: number,
 
   /**
    * Whether a box whose text WRAPS shrinks to its longest line instead of

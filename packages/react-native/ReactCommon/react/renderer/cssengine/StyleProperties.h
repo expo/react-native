@@ -78,4 +78,11 @@ bool isInheritedProperty(std::string_view property);
  */
 bool isDroppedProperty(std::string_view property);
 
+/*
+ * The standard name of a property the web still writes with a vendor prefix:
+ * `-webkit-line-clamp` is `line-clamp` (css-overflow-4 §5). Any other name is
+ * its own.
+ */
+std::string_view canonicalPropertyName(std::string_view property);
+
 } // namespace facebook::react::cssengine

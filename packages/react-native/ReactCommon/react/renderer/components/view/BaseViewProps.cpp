@@ -447,6 +447,14 @@ BaseViewProps::BaseViewProps(
                                       sourceProps.userSelect,
                                       {})
                                 : sourceProps.userSelect),
+      textOverflow(convertRawProp(
+          context,
+          rawProps,
+          "textOverflow",
+          sourceProps.textOverflow,
+          {})),
+      lineClamp(convertRawProp(
+          context, rawProps, "lineClamp", sourceProps.lineClamp, {})),
       boxShadow(convertRawProp(
           context,
           rawProps,
@@ -821,6 +829,8 @@ void BaseViewProps::setProp(
       RAW_SET_PROP_SWITCH_CASE_BASIC(shouldRasterize);
       RAW_SET_PROP_SWITCH_CASE_BASIC(zIndex);
       RAW_SET_PROP_SWITCH_CASE_BASIC(pointerEvents);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(textOverflow);
+      RAW_SET_PROP_SWITCH_CASE_BASIC(lineClamp);
       RAW_SET_PROP_SWITCH_CASE_BASIC(isolation);
       RAW_SET_PROP_SWITCH_CASE_BASIC(hitSlop);
       RAW_SET_PROP_SWITCH_CASE_BASIC(onLayout);
@@ -1052,6 +1062,32 @@ bool BaseViewProps::getClipsContentToBounds() const {
   return yogaStyle.overflow() != yoga::Overflow::Visible;
 }
 
+ParagraphAttributes BaseViewProps::runParagraphAttributes(
+    const TextAttributes& cascade) const {
+  auto paragraphAttributes = ParagraphAttributes{};
+  // `line-clamp` limits the lines and ends the last with an ellipsis
+  // (css-overflow-4 §5: `max-lines` with `block-ellipsis: auto`)
+  if (lineClamp > 0) {
+    paragraphAttributes.maximumNumberOfLines = lineClamp;
+    paragraphAttributes.ellipsizeMode = EllipsizeMode::Tail;
+    return paragraphAttributes;
+  }
+  // `text-overflow: ellipsis` applies to a box that clips (css-overflow-3
+  // §5.1, "overflow other than visible"). The platforms ellipsize a line
+  // only under a line limit, so it is a limit of one line, which is exactly
+  // `white-space: nowrap` text, the case the property is written for. A
+  // wrapping run overflows only on an unbreakable word, and `pre` keeps
+  // several lines a limit of one would hide; both keep their clip.
+  // DOM-CSS-LIMITATION(text-overflow-per-line).
+  if (textOverflow == TextOverflow::Ellipsis &&
+      yogaStyle.overflow() != yoga::Overflow::Visible &&
+      cascade.whiteSpace.value_or(WhiteSpace::Normal) == WhiteSpace::NoWrap) {
+    paragraphAttributes.maximumNumberOfLines = 1;
+    paragraphAttributes.ellipsizeMode = EllipsizeMode::Tail;
+  }
+  return paragraphAttributes;
+}
+
 void BaseViewProps::applyInheritedTextAttributes(
     TextAttributes& textAttributes) const {
   if (inheritedColor) {
@@ -1206,6 +1242,12 @@ SharedDebugStringConvertibleList BaseViewProps::getDebugProps() const {
               "pointerEvents",
               pointerEvents,
               defaultBaseViewProps.pointerEvents),
+          debugStringConvertibleItem(
+              "textOverflow",
+              textOverflow,
+              defaultBaseViewProps.textOverflow),
+          debugStringConvertibleItem(
+              "lineClamp", lineClamp, defaultBaseViewProps.lineClamp),
           debugStringConvertibleItem(
               "transform", transform, defaultBaseViewProps.transform),
           debugStringConvertibleItem(

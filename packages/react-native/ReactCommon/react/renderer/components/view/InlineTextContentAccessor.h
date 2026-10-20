@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <react/renderer/attributedstring/AttributedString.h>
+#include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/components/view/InlineAccessibilityContent.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/graphics/Rect.h>
@@ -69,6 +70,15 @@ class InlineTextContentAccessor {
   virtual InlineAccessibilityContent getInlineAccessibilityContent(const AttributedString &attributedString) const = 0;
 
   virtual std::shared_ptr<const TextLayoutManager> getContentTextLayoutManager() const = 0;
+
+  /*
+   * The paragraph attributes the run measures and paints with: the line limit
+   * and the ellipsis its block decided (`text-overflow`, `line-clamp`). They
+   * belong to the BLOCK, not to the text, so the owning View sets them when it
+   * configures the box, as it does the cascade; the run only carries them.
+   */
+  virtual void setContentParagraphAttributes(const ParagraphAttributes &paragraphAttributes) = 0;
+  virtual const ParagraphAttributes &getContentParagraphAttributes() const = 0;
 
   /*
    * An `outside` list marker, already measured (css-lists-3 §3.2).
