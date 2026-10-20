@@ -11,6 +11,7 @@
 import type {ContentInsets} from './components/RNTesterTabsIOSNativeComponent';
 import type {RNTesterModuleInfo, ScreenTypes} from './types/RNTesterTypes';
 
+import env from '../../expo-intrinsics/src/env';
 import ReportFullyDrawnView from '../ReportFullyDrawnView/ReportFullyDrawnView';
 import {TopLayerHost} from './astryx/overlay/TopLayer';
 import RNTesterModuleContainer from './components/RNTesterModuleContainer';
@@ -79,8 +80,6 @@ const IOS_TABS = [
   },
 ];
 
-const NO_INSETS: ContentInsets = {top: 0, left: 0, bottom: 0, right: 0};
-
 type BackButton = ({onBack: () => void}) => React.Node;
 
 const RNTesterApp = ({
@@ -104,7 +103,11 @@ const RNTesterApp = ({
     initialNavigationState,
   );
   const colorScheme = useColorScheme();
-  const [contentInsets, setContentInsets] = useState<ContentInsets>(NO_INSETS);
+  // Null until the native tabs report the insets of their content area (the
+  // status bar, the tab bar, a notch). The first frame is drawn before that
+  // event arrives, so until then the window's safe area stands in through
+  // `env()`, which the renderer resolves as it lays out.
+  const [contentInsets, setContentInsets] = useState<?ContentInsets>(null);
 
   const {
     activeModuleKey,
@@ -365,14 +368,16 @@ const RNTesterApp = ({
             <View
               style={StyleSheet.compose(styles.container, {
                 backgroundColor: theme.GroupedBackgroundColor,
-                paddingLeft: contentInsets.left,
-                paddingRight: contentInsets.right,
-                paddingBottom: contentInsets.bottom,
+                paddingLeft: contentInsets?.left ?? env('safe-area-inset-left'),
+                paddingRight:
+                  contentInsets?.right ?? env('safe-area-inset-right'),
+                paddingBottom:
+                  contentInsets?.bottom ?? env('safe-area-inset-bottom'),
               })}>
               <View
                 style={{
                   backgroundColor: theme.SystemBackgroundColor,
-                  paddingTop: contentInsets.top,
+                  paddingTop: contentInsets?.top ?? env('safe-area-inset-top'),
                 }}>
                 {titleBar}
               </View>

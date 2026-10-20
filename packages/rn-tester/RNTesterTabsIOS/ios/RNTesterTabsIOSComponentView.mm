@@ -219,6 +219,11 @@ static constexpr CGFloat LegacyBottomInset = 65;
   CGRect bounds = _tabBarController.view.bounds;
   BOOL hasBottomTabBar = !_tabBarController.tabBar.hidden && CGRectGetWidth(tabBarFrame) >= CGRectGetWidth(bounds) &&
       CGRectGetMaxY(tabBarFrame) >= CGRectGetMaxY(bounds);
+  // Never less at the top than the window's own inset (the status bar, a
+  // notch): the tab's view reports its safe area once with no top inset while
+  // the window is coming up, and RNTester's first frame drew its list 12
+  // points high before the real inset moved it down
+  insets.top = MAX(insets.top, self.window.safeAreaInsets.top);
   if (hasBottomTabBar) {
     insets.top = MAX(insets.top, LegacyTopInset);
     // Never go below the system inset: anything less leaves content under the tab bar, where taps switch tabs.
