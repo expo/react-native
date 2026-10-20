@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <react/renderer/attributedstring/AttributedString.h>
+#include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/components/view/InlineAccessibilityContent.h>
 #include <react/renderer/core/ReactPrimitives.h>
 #include <react/renderer/graphics/DynamicRangeLimit.h>
@@ -37,6 +38,12 @@ class ViewState final {
     Rect frame;
 
     /*
+     * The line limit and ellipsis the run was measured with, so the paint and
+     * the hit-test lay it out the same way (`text-overflow`, `line-clamp`).
+     */
+    ParagraphAttributes paragraphAttributes;
+
+    /*
      * Number of the View's mounted views that paint below this run, which is
      * where the mounting layer places the run's paint view among them (CSS
      * painting order), rather than drawing all text on top.
@@ -54,7 +61,8 @@ class ViewState final {
     bool operator==(const TextRun &other) const
     {
       return attributedString == other.attributedString && accessibilityContent == other.accessibilityContent &&
-          frame == other.frame && documentOrder == other.documentOrder && runTag == other.runTag;
+          frame == other.frame && paragraphAttributes == other.paragraphAttributes &&
+          documentOrder == other.documentOrder && runTag == other.runTag;
     }
     bool operator!=(const TextRun &other) const
     {
@@ -121,6 +129,8 @@ class ViewState final {
    *     18 attachment tags the leaf presents,
    *   7 tags of every inline attachment the run lays out.
    *     Both read by ReactViewManager.readInlineAccessibilityItems.
+   *   8 maximum number of lines (0 for no limit) and 9 the ellipsize mode, in
+   *     the enum's order, the run's paragraph attributes.
    */
   // Top-level key 1: the effective `dynamic-range-limit`, in the enum's order
   constexpr static MapBuffer::Key VS_KEY_DYNAMIC_RANGE_LIMIT = 1;

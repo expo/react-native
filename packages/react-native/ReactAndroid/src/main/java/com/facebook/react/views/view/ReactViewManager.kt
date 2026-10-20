@@ -13,6 +13,7 @@ import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.TextUtils
 import android.view.View
 import androidx.annotation.ColorLong
 import com.facebook.common.logging.FLog
@@ -616,11 +617,19 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
               ?: TextLayoutManager.getOrCreateSpannableForText(assets, attributedString, null)
       val alignment = TextLayoutManager.getRunAlignment(attributedString, spannable)
       val justification = TextLayoutManager.getRunJustificationMode(attributedString)
+      // A line limit with its ellipsis (`line-clamp`, `text-overflow`): the last line ends at
+      // the run's width, so its layout is never width-independent
+      val maximumNumberOfLines = if (runMb.contains(8)) runMb.getInt(8) else 0
 
       val forbidsWrapping = TextLayoutManager.forbidsWrapping(attributedString)
       if (
           handoff != null &&
-              handoff.paintsAsRebuiltAt(ceil(width.toDouble()).toInt(), alignment, forbidsWrapping)
+              handoff.paintsAsRebuiltAt(
+                  ceil(width.toDouble()).toInt(),
+                  alignment,
+                  maximumNumberOfLines,
+                  forbidsWrapping,
+              )
       ) {
         reusedLayout = handoff.layout
       }
@@ -635,23 +644,36 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
         // the next line. Laid out at its own desired width so nothing wraps; the View clips it, as
         // the web does.
         val layoutWidth =
-            if (forbidsWrapping)
+            if (forbidsWrapping && maximumNumberOfLines == 0)
                 ceil(Layout.getDesiredWidth(spannable, paint).toDouble()).toInt()
             else ceil(width.toDouble()).toInt()
         /*
-         * Alignment and justification only.
+         * Alignment, justification, and the line limit with its ellipsis (`line-clamp`,
+         * `text-overflow`), which the run carries from its block.
          *
-         * DOM-CSS-LIMITATION(android-run-paragraph-attributes): everything else the
-         * `<Text>` path sets — break strategy, hyphenation, font padding, ellipsis, max
-         * lines — is read from PARAGRAPH ATTRIBUTES, and a run's entry carries only its
-         * attributed string. So a rebuilt run layout differs from the one the measure pass
-         * handed off, which was built with all of them: that is why the handoff is worth
-         * taking whenever it is still valid, and closing the gap properly means sending the
-         * paragraph attributes along with the run.
+         * DOM-CSS-LIMITATION(android-run-paragraph-attributes): the rest of what the
+         * `<Text>` path sets — break strategy, hyphenation, font padding — is read from
+         * PARAGRAPH ATTRIBUTES the run does not carry. So a rebuilt run layout can differ
+         * from the one the measure pass handed off, which was built with all of them: that
+         * is why the handoff is worth taking whenever it is still valid.
          */
         val builder =
             StaticLayout.Builder.obtain(spannable, 0, spannable.length, paint, layoutWidth)
                 .setAlignment(alignment)
+        if (maximumNumberOfLines > 0) {
+          builder.setMaxLines(maximumNumberOfLines)
+          // The ellipsize mode in the C++ enum's order: clip, head, tail, middle
+          val ellipsize =
+              when (if (runMb.contains(9)) runMb.getInt(9) else 0) {
+                1 -> TextUtils.TruncateAt.START
+                2 -> TextUtils.TruncateAt.END
+                3 -> TextUtils.TruncateAt.MIDDLE
+                else -> null
+              }
+          if (ellipsize != null) {
+            builder.setEllipsize(ellipsize)
+          }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
           builder.setJustificationMode(justification)
         }

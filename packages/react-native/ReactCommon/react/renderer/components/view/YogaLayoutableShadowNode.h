@@ -181,6 +181,8 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode {
   std::optional<ListMarker> nextListMarkerIfChanged(const YogaLayoutableShadowNode &child);
   static void assignListMarker(YogaLayoutableShadowNode &item, const ListMarker &marker);
 
+  void stampRunParagraphAttributes(YogaLayoutableShadowNode &box, const TextAttributes &cascade) const;
+
   struct ListContext {
     bool isList{false};
     ListStyleType type{ListStyleType::Disc};

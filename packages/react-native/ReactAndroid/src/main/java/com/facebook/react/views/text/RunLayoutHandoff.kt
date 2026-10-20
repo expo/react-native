@@ -33,6 +33,12 @@ internal object RunLayoutHandoff {
 
   internal class Entry(
       @JvmField val attributedString: MapBuffer,
+      /**
+       * The spannable the layout was built from. Not `layout.text`: a layout under a line limit with
+       * an ellipsis (`line-clamp`, `text-overflow`) holds the platform's ellipsizer over it, which is
+       * not a [Spannable] and is not the text a rebuilt layout starts from.
+       */
+      @JvmField val spannable: Spannable,
       @JvmField val layout: Layout,
       @JvmField val density: Float,
       /**
@@ -52,20 +58,19 @@ internal object RunLayoutHandoff {
        */
       @JvmField val longestLine: Float,
   ) {
-    val spannable: Spannable
-      get() = layout.text as Spannable
-
     /**
      * Whether the layout paints as the mount's rebuilt one would, a layout at [width] with
-     * [alignment], wrapping unless [forbidsWrapping]. Only at the same alignment, and, unless it is
-     * the default, only at the same width: where the glyphs sit depends on the width once the
-     * alignment is anything but normal. A left-aligned layout with no soft wrap paints the same at
-     * any other width its longest line fits, and at any width when the run does not wrap at all
+     * [alignment] and [maximumNumberOfLines], wrapping unless [forbidsWrapping]. Only at the same
+     * alignment, and, unless it is the default, only at the same width: where the glyphs sit
+     * depends on the width once the alignment is anything but normal, and so does where a line
+     * limit ends the last line. A left-aligned layout with no soft wrap paints the same at any
+     * other width its longest line fits, and at any width when the run does not wrap at all
      * (`white-space: nowrap`, `pre`); at a narrower one a rebuilt layout breaks the line.
      */
     fun paintsAsRebuiltAt(
         width: Int,
         alignment: Layout.Alignment,
+        maximumNumberOfLines: Int,
         forbidsWrapping: Boolean,
     ): Boolean {
       if (layout.alignment != alignment) {
@@ -76,6 +81,7 @@ internal object RunLayoutHandoff {
       }
       return alignment == Layout.Alignment.ALIGN_NORMAL &&
           notSoftWrapped &&
+          maximumNumberOfLines == 0 &&
           (forbidsWrapping || longestLine <= width)
     }
   }
@@ -89,7 +95,13 @@ internal object RunLayoutHandoff {
       }
 
   @JvmStatic
-  fun store(tag: Int, attributedString: MapBuffer, layout: Layout, density: Float) {
+  fun store(
+      tag: Int,
+      attributedString: MapBuffer,
+      spannable: Spannable,
+      layout: Layout,
+      density: Float,
+  ) {
     val text = layout.text
     var notSoftWrapped = true
     for (line in 0 until layout.lineCount - 1) {
@@ -103,7 +115,10 @@ internal object RunLayoutHandoff {
       longestLine = maxOf(longestLine, layout.getLineWidth(line))
     }
     synchronized(entries) {
-      entries.put(tag, Entry(attributedString, layout, density, notSoftWrapped, longestLine))
+      entries.put(
+          tag,
+          Entry(attributedString, spannable, layout, density, notSoftWrapped, longestLine),
+      )
     }
   }
 

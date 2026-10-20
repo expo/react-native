@@ -842,8 +842,9 @@ class StyleSheetParser {
       return std::nullopt;
     }
     Declaration declaration;
-    declaration.property =
-        custom ? name : camelCasePropertyName(lowercase(name));
+    declaration.property = custom
+        ? name
+        : std::string(canonicalPropertyName(camelCasePropertyName(lowercase(name))));
     declaration.value = std::move(value);
     declaration.important = important;
     return declaration;
@@ -1056,7 +1057,8 @@ class StyleSheetParser {
   static bool supportsDeclaration(
       const std::string& property,
       std::string value) {
-    std::string name = camelCasePropertyName(property);
+    std::string name =
+        std::string(canonicalPropertyName(camelCasePropertyName(property)));
     if (name.rfind("--", 0) == 0) {
       return true;
     }
