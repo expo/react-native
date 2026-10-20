@@ -305,6 +305,13 @@ export function hostPropsFor(
     }
     return null;
   }
+  // An empty element something holds a ref to is where a portal can land
+  // (react-dom-shim's `createPortal` takes the element), and only a component
+  // can draw what lands in it. A layer's `<template>` sentinel is held the
+  // same way on every trigger and never receives anything.
+  if (props.ref != null && props.children == null && tag !== 'template') {
+    return null;
+  }
   // One pass over the props: the host's, the attributes selectors read, and
   // the style inputs, with nothing allocated an element without them needs
   const host: {[string]: unknown} = {};
@@ -576,6 +583,11 @@ export default function EngineElement({
     }
   }, [isPopover, popoverOpen]);
 
+  // What other components portal into this element (react-dom-shim's
+  // `createPortal`), drawn after its own children as a portal's are
+  const [portals, setPortals] =
+    React.useState<?ReadonlyMap<string, React.Node>>(null);
+
   const recordHolder = React.useRef<?ElementRecord>(null);
   const instanceRef = React.useRef<$FlowFixMe>(null);
   const authorRef = rest.ref;
@@ -689,6 +701,7 @@ export default function EngineElement({
     setDialogMode,
     returnValue: recordHolder.current?.returnValue ?? '',
     engine: true,
+    setPortals,
   };
   // The style the engine resolved, read when asked
   Object.defineProperty(record, 'style', {
@@ -739,6 +752,15 @@ export default function EngineElement({
     hostProps.cssTag = tag;
   }
 
+  let content =
+    portals == null || portals.size === 0
+      ? children
+      : [
+          children,
+          ...Array.from(portals, ([id, node]) =>
+            reactJsx(React.Fragment, {children: node}, id),
+          ),
+        ];
   // A container that may clip its block axis tells the regions below it to
   // scroll, kept once it has, so its children are not remounted if its style
   // stops clipping
@@ -750,9 +772,12 @@ export default function EngineElement({
   ) {
     clipsBelowRef.current = true;
   }
-  const content = clipsBelowRef.current
-    ? reactJsx(ClipsBlockContext.Provider, {value: true, children})
-    : children;
+  if (clipsBelowRef.current) {
+    content = reactJsx(ClipsBlockContext.Provider, {
+      value: true,
+      children: content,
+    });
+  }
 
   let element: React.Node;
   const Mapped = mappedComponentFor(tag, rest.type);

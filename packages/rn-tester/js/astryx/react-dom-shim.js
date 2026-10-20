@@ -8,6 +8,13 @@
  * @format
  */
 
+import type {ElementRecord} from './elementRegistry';
+
+import {recordOf} from './elementRegistry';
+import * as React from 'react';
+// $FlowFixMe[untyped-import] React's JSX runtime ships no types
+import {jsx as reactJsx} from 'react/jsx-runtime';
+
 /**
  * What `react-dom` resolves to here. Astryx's `Layer/useLayer` imports
  * `createPortal` to mount a layer into a portal target when it has one;
@@ -20,9 +27,17 @@
  */
 
 /**
- * Renders `children` where they are: React Native has no DOM and no
- * `createPortal` for host components, so the children come back as they are,
- * which is what `useLayer` renders on its own side of the null check.
+ * Moves `children` into `container` when the container is an element the
+ * renderer's style engine draws (its record has an outlet): the element draws
+ * them after its own children, where a portal's go in the DOM. That is how
+ * Astryx's Stepper puts the current step's label in the row under a collapsed
+ * track. React Native has no `createPortal` for host components, so this is a
+ * component's, and the moved content reads the React context of the element
+ * it lands in rather than of the place it was declared.
+ *
+ * Anything else comes back where it is: a container that is no such element
+ * (a node created imperatively), and content the top layer draws (a popover,
+ * a dialog), which needs its context and is lifted out anyway.
  *
  * Since Astryx 0.7.0 the target is not always null: `Layer/layerHost.ts`
  * walks `parentElement` and `tagName`, both of which this platform's
@@ -36,8 +51,71 @@
  * inline formatting ancestor. The mechanism that escapes an ancestor on this
  * platform is `overlay/TopLayer.js`.
  */
-export function createPortal(children: unknown, container: unknown): unknown {
-  return children;
+export function createPortal(
+  children: unknown,
+  container: unknown,
+  key?: ?string,
+): unknown {
+  const setPortals = recordOf(container)?.setPortals;
+  if (setPortals == null || drawnInTheTopLayer(children)) {
+    return children;
+  }
+  return reactJsx(
+    PortalSource,
+    {setPortals, children: children as $FlowFixMe},
+    key ?? undefined,
+  );
+}
+
+/**
+ * Whether a portal's content is a popover or a dialog, which the top layer
+ * draws above the page wherever it sits in the tree: it stays where it is,
+ * so the React context it reads keeps flowing to it (Astryx's layers find
+ * their depth and their dismissal through context)
+ */
+function drawnInTheTopLayer(children: unknown): boolean {
+  if (!React.isValidElement(children)) {
+    return false;
+  }
+  const element = children as $FlowFixMe;
+  const popover = element.props?.popover;
+  return (popover != null && popover !== false) || element.type === 'dialog';
+}
+
+/**
+ * Hands its children to the container's element, which draws them after its
+ * own (a portal's place in the DOM), and takes them back when it unmounts.
+ * It renders nothing where it is.
+ */
+function PortalSource({
+  setPortals,
+  children,
+}: {
+  setPortals: NonNullable<ElementRecord['setPortals']>,
+  children?: React.Node,
+}): React.Node {
+  const id = React.useId();
+  React.useLayoutEffect(() => {
+    setPortals(previous => {
+      const next = new Map(previous ?? []);
+      next.set(id, children);
+      return next;
+    });
+  }, [setPortals, id, children]);
+  React.useLayoutEffect(
+    () => () => {
+      setPortals(previous => {
+        if (previous == null || !previous.has(id)) {
+          return previous;
+        }
+        const next = new Map(previous);
+        next.delete(id);
+        return next;
+      });
+    },
+    [setPortals, id],
+  );
+  return null;
 }
 
 /**

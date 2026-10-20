@@ -39,6 +39,12 @@ export type ElementRecord = {
   // element rendered, so the engine's committed tree does not have the change
   // yet; the record, made anew each render, does
   uncommitted?: boolean,
+  // Sets what is portaled into the element (react-dom-shim's `createPortal`)
+  setPortals?: (
+    update: (
+      previous: ?ReadonlyMap<string, React.Node>,
+    ) => ?ReadonlyMap<string, React.Node>,
+  ) => void,
   // The platform scroll view a scroll container lays its content out in, whose
   // offsets and sizes are the element's `scrollTop`, `scrollHeight` and kin
   scrollView?: ?Object,
