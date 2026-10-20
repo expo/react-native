@@ -104,3 +104,20 @@ export function recordOf(instance: unknown): ElementRecord | null {
   }
   return records.get(instance)?.current ?? recordFallback?.(instance) ?? null;
 }
+
+const generatedContent: WeakSet<Object> = new WeakSet();
+
+/*
+ * Marks a `::before` or `::after` box's host instance, which the DOM leaves
+ * out of its parent's children: a generated box is not an element
+ * (css-pseudo-4 §2). A ref callback.
+ */
+export function markGeneratedContent(instance: unknown): void {
+  if (instance != null && typeof instance === 'object') {
+    generatedContent.add(instance);
+  }
+}
+
+export function isGeneratedContent(node: unknown): boolean {
+  return node != null && typeof node === 'object' && generatedContent.has(node);
+}

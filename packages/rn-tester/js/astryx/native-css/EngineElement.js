@@ -26,8 +26,14 @@
 
 import type {ElementDescriptor} from '../css';
 import type {ElementRecord} from '../elementRegistry';
+import type {GeneratedContent} from '../stylex-rn';
 
-import {recordOf, registerElement, setRecordFallback} from '../elementRegistry';
+import {
+  markGeneratedContent,
+  recordOf,
+  registerElement,
+  setRecordFallback,
+} from '../elementRegistry';
 import CheckableInput from '../elements/CheckableInput';
 import Input from '../elements/Input';
 import TextArea from '../elements/TextArea';
@@ -334,6 +340,10 @@ export function hostPropsFor(
     if (key === '__cssBackdrop') {
       continue;
     }
+    if ((key === '__cssBefore' || key === '__cssAfter') && value != null) {
+      // A `::before` or `::after` box is a child the component draws
+      return null;
+    }
     if (key === '__cssMarker') {
       // A marker is a class a `when.*` condition's selector names, and the
       // element reports its states for it
@@ -528,6 +538,9 @@ type Props = {
   // The host to render, where it is not the tag: `<svg>` is drawn by a box
   // whose children are its shapes
   __hostTag?: string,
+  // The boxes `::before` and `::after` generate, from `props()`
+  __cssBefore?: GeneratedContent,
+  __cssAfter?: GeneratedContent,
   [string]: unknown,
 };
 
@@ -542,6 +555,8 @@ export default function EngineElement({
     __cssStyle,
     __cssBackdrop,
     __cssMarker,
+    __cssBefore,
+    __cssAfter,
     className,
     children,
     ...rest
@@ -752,14 +767,26 @@ export default function EngineElement({
     hostProps.cssTag = tag;
   }
 
+  const beforeBox =
+    __cssBefore != null
+      ? generatedBox(__cssBefore, '::before', states, rest)
+      : null;
+  const afterBox =
+    __cssAfter != null
+      ? generatedBox(__cssAfter, '::after', states, rest)
+      : null;
   let content =
-    portals == null || portals.size === 0
+    (portals == null || portals.size === 0) &&
+    beforeBox == null &&
+    afterBox == null
       ? children
       : [
+          beforeBox,
           children,
-          ...Array.from(portals, ([id, node]) =>
+          ...Array.from(portals ?? [], ([id, node]) =>
             reactJsx(React.Fragment, {children: node}, id),
           ),
+          afterBox,
         ];
   // A container that may clip its block axis tells the regions below it to
   // scroll, kept once it has, so its children are not remounted if its style
@@ -886,4 +913,35 @@ function clickOnTheElementItself(handler: unknown, instance: unknown): void {
     isPropagationStopped: (): boolean => propagationStopped,
     persist(): void {},
   });
+}
+
+/*
+ * A `::before` or `::after` box (css-pseudo-4 §2): the first or last child of
+ * the element it is generated for, styled under its own id with the element's
+ * states (its `:hover` is the element's), and named `::before` or `::after`
+ * so that no tag selector matches it. It is not an element: the style engine
+ * leaves it out of its siblings' positions (`cssPseudo`) and the DOM leaves it
+ * out of its parent's children (`markGeneratedContent`).
+ */
+function generatedBox(
+  box: GeneratedContent,
+  name: '::before' | '::after',
+  states: number,
+  attributes: {readonly [string]: unknown},
+): React.Node {
+  const text = box.attr != null ? String(attributes[box.attr] ?? '') : box.text;
+  return reactJsx(
+    'span',
+    {
+      ref: markGeneratedContent,
+      cssEngine: true,
+      cssTag: name,
+      cssStyle: box.id,
+      cssStates: states,
+      cssPseudo: name === '::before' ? 1 : 2,
+      cssBox: (hintsFor(name, '', null, '', box.id) & HINT_BOX) !== 0,
+      children: text === '' ? null : text,
+    },
+    name,
+  );
 }

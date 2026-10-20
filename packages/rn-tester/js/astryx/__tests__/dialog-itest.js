@@ -234,9 +234,18 @@ describe('a modal dialog in the top layer', () => {
     const dialog = elementRef();
     const root = render(modalDialog({dialog, style: styles.dialog}));
     const [backdrop] = topLayerOf(root);
-    // The author's backdrop, in place of the user agent's
-    expect(backdrop.props.backgroundColor).toBeUndefined();
-    expect(JSON.stringify(backdrop)).toContain('rgba(255, 0, 0, 1)');
+    // The author's backdrop, over the user agent's
+    expect(backdrop.props.backgroundColor).toBe('rgba(255, 0, 0, 1)');
+  });
+
+  it('keeps the user agent’s backdrop colour under an author ::backdrop that sets none', () => {
+    const styles = stylex.create({
+      dialog: {'::backdrop': {opacity: 0.5}},
+    });
+    const dialog = elementRef();
+    const root = render(modalDialog({dialog, style: styles.dialog}));
+    const [backdrop] = topLayerOf(root);
+    expect(backdrop.props.backgroundColor).toMatch(/^rgba\(0, 0, 0, 0\.1/);
   });
 
   it('resolves a theme token in its ::backdrop', () => {
@@ -244,6 +253,19 @@ describe('a modal dialog in the top layer', () => {
     const colors = stylex.defineVars({'--dialog-overlay': 'rgb(1, 2, 3)'});
     const styles = stylex.create({
       dialog: {'::backdrop': {backgroundColor: colors['--dialog-overlay']}},
+    });
+    const dialog = elementRef();
+    const root = render(modalDialog({dialog, style: styles.dialog}));
+    const [backdrop] = topLayerOf(root);
+    expect(JSON.stringify(backdrop)).toContain('rgba(1, 2, 3, 1)');
+  });
+
+  it('resolves its backdrop’s var()s against the dialog, which it inherits from', () => {
+    const styles = stylex.create({
+      dialog: {
+        '--overlay': 'rgb(1, 2, 3)',
+        '::backdrop': {backgroundColor: 'var(--overlay)'},
+      },
     });
     const dialog = elementRef();
     const root = render(modalDialog({dialog, style: styles.dialog}));

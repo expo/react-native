@@ -15,7 +15,7 @@ import {anchorElement} from './anchorNames';
 import {registerTopLayerHandle} from './topLayerHandles';
 import {placeInTopLayer} from './topLayerPlacement';
 import * as React from 'react';
-import {Dimensions, Pressable, StyleSheet} from 'react-native';
+import {Dimensions} from 'react-native';
 import {jsx as reactJsx} from 'react/jsx-runtime';
 
 /**
@@ -185,17 +185,19 @@ export default function TopLayerElement({
 
   // Under the element, covering the window from the handle's place in it; the
   // slot is held while closed, so opening does not move the element in the
-  // handle's children
+  // handle's children. The element's sibling before it, which the style
+  // engine styles as the element's `::backdrop` (`cssPseudo`), inheriting
+  // from it.
   let backdropBox: React.Node = null;
   if (open && (backdrop != null || backdropStyleId != null)) {
     // Over the page's viewport, which the dialog is placed in, as a browser's
     // `::backdrop` covers its viewport and not its own chrome
     const area = pageViewport(pageArea);
-    backdropBox = reactJsx(Pressable, {
-      accessible: false,
-      onPress: () => onBackdropPress?.(),
+    backdropBox = reactJsx('div', {
+      onClick: () => onBackdropPress?.(),
+      // The user agent's backdrop, under the author's
       style: [
-        backdropStyleId == null ? backdrop : null,
+        backdrop,
         {
           position: 'absolute',
           left: area.x - (placement?.originX ?? 0),
@@ -204,14 +206,9 @@ export default function TopLayerElement({
           height: area.height,
         },
       ],
-      children:
-        backdropStyleId != null
-          ? reactJsx('div', {
-              cssEngine: true,
-              cssStyle: backdropStyleId,
-              style: StyleSheet.absoluteFill,
-            })
-          : null,
+      ...(backdropStyleId != null
+        ? {cssEngine: true, cssStyle: backdropStyleId, cssPseudo: 3}
+        : null),
     });
   }
 

@@ -144,6 +144,21 @@ export type StyleXProps = {
   __cssBackdrop?: number,
   // The marker this element carries, a class the `when.*` conditions name
   __cssMarker?: string,
+  // The `::before` and `::after` boxes, each styled under its own id, with
+  // the text its `content` generates
+  __cssBefore?: GeneratedContent,
+  __cssAfter?: GeneratedContent,
+};
+
+/**
+ * A `::before` or `::after` box (css-pseudo-4 §2): the id its declarations
+ * are registered under, and its `content` (css-content-3 §2), a string or an
+ * attribute of the element it is generated for.
+ */
+export type GeneratedContent = {
+  readonly id: number,
+  readonly text: string,
+  readonly attr: ?string,
 };
 
 export type InteractionState = {
@@ -289,6 +304,11 @@ function engineProps(items: Array<unknown>): StyleXProps {
   // A dialog's `::backdrop` is a box of its own, styled under its own id
   const backdrop = merged['::backdrop'];
   delete merged['::backdrop'];
+  // So are `::before` and `::after`, which the element draws first and last
+  const before = merged['::before'];
+  delete merged['::before'];
+  const after = merged['::after'];
+  delete merged['::after'];
   // A marker is a class the element carries, which a `when.*` condition's
   // selector names
   const marker = merged.marker;
@@ -312,7 +332,54 @@ function engineProps(items: Array<unknown>): StyleXProps {
       result.__cssBackdrop = backdropId;
     }
   }
+  const beforeBox = generatedContent(before);
+  if (beforeBox != null) {
+    result.__cssBefore = beforeBox;
+  }
+  const afterBox = generatedContent(after);
+  if (afterBox != null) {
+    result.__cssAfter = afterBox;
+  }
   return result;
+}
+
+/*
+ * The box a `::before` or `::after` block generates, or null where it
+ * generates none: `content` is `none` or `normal` or not stated (which is
+ * `normal`, and computes to `none` on these two; css-content-3 §2), or is a
+ * value this renderer draws nothing for (a counter, an image).
+ */
+function generatedContent(declarations: unknown): ?GeneratedContent {
+  if (declarations == null || typeof declarations !== 'object') {
+    return null;
+  }
+  const block = declarations as {readonly [string]: unknown};
+  let content = block.content;
+  // A value set per condition generates by its default
+  if (
+    content != null &&
+    typeof content === 'object' &&
+    !Array.isArray(content)
+  ) {
+    content = (content as {readonly [string]: unknown}).default;
+  }
+  if (typeof content !== 'string') {
+    return null;
+  }
+  const value = content.trim();
+  const attribute = /^attr\(\s*([\w-]+)\s*\)$/.exec(value);
+  const quoted = /^(['"])([\s\S]*)\1$/.exec(value);
+  if (attribute == null && quoted == null) {
+    return null;
+  }
+  const {content: _content, ...rest} = block;
+  // $FlowFixMe[incompatible-call] the block's declarations
+  const id = registerEngineStyle(rest);
+  return {
+    id,
+    text: quoted != null ? quoted[2] : '',
+    attr: attribute != null ? attribute[1] : null,
+  };
 }
 
 export function attrs(...items: Array<unknown>): StyleXProps {

@@ -17,7 +17,11 @@ import {currentContext} from './css';
 import {selectorMatches} from './css/match';
 import {compileSelector} from './css/parse';
 import {forwardShimEventsTo} from './document-shim';
-import {observeRegistrations, recordOf} from './elementRegistry';
+import {
+  isGeneratedContent,
+  observeRegistrations,
+  recordOf,
+} from './elementRegistry';
 import {checkednessOf} from './elements/checkedness';
 import {
   customProperty as engineCustomProperty,
@@ -626,14 +630,22 @@ for (const name of ['parentNode', 'parentElement']) {
 for (const name of ['childNodes', 'children']) {
   replaceGetter(name, read => node => {
     const nodes = read(node) as $FlowFixMe;
-    if (nodes == null || !Array.from(nodes).some(isTopLayerHandle)) {
+    if (
+      nodes == null ||
+      !Array.from(nodes).some(
+        child => isTopLayerHandle(child) || isGeneratedContent(child),
+      )
+    ) {
       return nodes;
     }
     const flattened: Array<unknown> = [];
     const add = (child: $FlowFixMe) => {
       if (isTopLayerHandle(child)) {
         Array.from(read(child) as $FlowFixMe).forEach(add);
-      } else {
+      } else if (!isGeneratedContent(child)) {
+        // Skip a `::before` or `::after` box, which is drawn as a child but is
+        // not one. DOM-CSS-LIMITATION(generated-content-in-text-content):
+        // `textContent` still counts its text.
         flattened.push(child);
       }
     };

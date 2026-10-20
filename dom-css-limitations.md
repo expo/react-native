@@ -690,6 +690,7 @@ rather than going quiet.
 - `field-value-write-is-not-shown` — limitation, `packages/rn-tester/js/astryx/elements/fieldInstance.js`
 - `fieldset-legend-position` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
 - `fieldset-native-surface` — deviation, `packages/expo-intrinsics/__tests__/Tier1Elements-itest.js`
+- `generated-content-in-text-content` — limitation, `packages/rn-tester/js/astryx/dom-compat.js`
 - `glass-surface-press-is-the-platforms` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPMaterialSurface.mm`
 - `glyph-markers-not-painted` — deviation, `ReactCommon/react/renderer/components/view/ListStyle.h`
 - `grid-fit-content-limit` — limitation, `ReactCommon/react/renderer/components/view/GridTrackListParser.h`
@@ -926,3 +927,16 @@ handed off cannot be reused) is built with its alignment, justification and
 line limit only. Break strategy, hyphenation and font padding are read from
 paragraph attributes the run does not carry, so such a rebuild can break lines
 differently from the measured layout. See `ReactViewManager.kt`.
+
+## DOM-CSS-LIMITATION(generated-content-in-text-content)
+
+A `::before` or `::after` box's text is part of its element's `textContent`.
+
+The boxes are drawn as children of the element (`EngineElement`), styled from
+their own StyleX block and left out of the element's `childNodes`, `children`
+and its children's sibling positions, so selectors and DOM traversal see the
+element's real children. `textContent` is computed by the platform's DOM from
+every descendant text node, and the generated text is one of them: a line of
+Astryx's code block numbered by `content: attr(data-line)` reads `12const a`
+where the web reads `const a`. Stylesheet rules with a pseudo-element subject
+(`.x::before` in CSS text) are still skipped; only StyleX's blocks generate.
