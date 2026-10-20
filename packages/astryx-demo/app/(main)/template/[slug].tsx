@@ -8,6 +8,10 @@
  * @noflow
  */
 
+import {
+  ScreenScrollContext,
+  useScreenScrollProvider,
+} from '../../../../rn-tester/js/astryx/native-chat/ScreenScroll';
 import AstryxHost from '../../../src/AstryxHost';
 import {templateComponent, templateInfo} from '../../../src/templates';
 import {
@@ -44,6 +48,10 @@ export default function TemplateScreen(): React.Node {
   // later rendered all of itself twice. A screen after the first knows it from
   // its first render.
   const viewportKnown = viewport.height != null;
+  // The screen's scroll view, as a page's layout asks for it: a chat holds
+  // its newest message in view and returns to it (ScreenScroll.js)
+  const scrollRef = React.useRef<any>(null);
+  const screenScroll = useScreenScrollProvider(scrollRef);
   return (
     <>
       <Stack.Screen
@@ -63,18 +71,23 @@ export default function TemplateScreen(): React.Node {
         // A template is a page of its own: the router keeps this screen when a
         // link names another template, and the new page starts at its top
         key={slug}
+        ref={scrollRef}
+        contentAnchor={screenScroll.contentAnchor}
+        onScroll={screenScroll.onScroll}
         contentContainerStyle={viewport.height == null ? fillStyle : null}
         automaticInsets={TOP_AND_SIDES}
         onLayout={viewport.onLayout}
         onInsetChange={viewport.onInsetChange}
         edgeEffects={EDGE_EFFECTS}>
-        <AstryxHost
-          initialSize={viewport.initialSize}
-          viewportHeight={viewport.height}
-          onSurfaceHeight={viewport.onSurfaceHeight}
-          bottomInset={viewport.bottomInset}>
-          {rendersPage && viewportKnown ? page : null}
-        </AstryxHost>
+        <ScreenScrollContext value={screenScroll.value}>
+          <AstryxHost
+            initialSize={viewport.initialSize}
+            viewportHeight={viewport.height}
+            onSurfaceHeight={viewport.onSurfaceHeight}
+            bottomInset={viewport.bottomInset}>
+            {rendersPage && viewportKnown ? page : null}
+          </AstryxHost>
+        </ScreenScrollContext>
       </native:scroll>
     </>
   );
