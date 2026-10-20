@@ -26,6 +26,9 @@ MapBuffer ViewState::getMapBuffer() const {
     runBuilder.putDouble(3, run.frame.size.width);
     runBuilder.putDouble(4, run.frame.size.height);
     runBuilder.putInt(5, run.documentOrder);
+    runBuilder.putInt(8, run.paragraphAttributes.maximumNumberOfLines);
+    runBuilder.putInt(
+        9, static_cast<int>(run.paragraphAttributes.ellipsizeMode));
     std::vector<MapBuffer> accessibilityElements;
     accessibilityElements.reserve(run.accessibilityContent.elements.size());
     for (const auto& element : run.accessibilityContent.elements) {

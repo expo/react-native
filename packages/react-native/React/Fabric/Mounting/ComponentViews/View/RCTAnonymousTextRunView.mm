@@ -44,6 +44,21 @@ using namespace facebook::react;
 @end
 
 /*
+ * Whether a run's lines may run past its box's end edge: text that does not
+ * wrap (`white-space: nowrap` or `pre`), which is laid out at unbounded width
+ * and painted past the box as CSS's `overflow: visible` paints it. A run
+ * with a line limit (`text-overflow: ellipsis`, `line-clamp`) is the
+ * exception: its last line ends in an ellipsis AT the box's edge, which
+ * TextKit draws only when it lays the line out at that width.
+ */
+static BOOL RCTRunOverflowsItsBox(const facebook::react::ViewState::TextRun &run)
+{
+  return !facebook::react::wrapsText(
+             run.attributedString.getBaseTextAttributes().whiteSpace.value_or(facebook::react::WhiteSpace::Normal)) &&
+      run.paragraphAttributes.maximumNumberOfLines == 0;
+}
+
+/*
  * Whether any of a run's text has the link role, which is what
  * `-linkRectGroups` finds its rects by, read from the fragments as
  * `RCTNSTextAttributesFromTextAttributes` writes it: `role` first, then
@@ -362,13 +377,11 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
    * for the measurement: an ordinary run's lines end at the container by
    * construction and `trailing` stays 0 without any text work.
    */
-  const bool wraps = facebook::react::wrapsText(
-      _run.attributedString.getBaseTextAttributes().whiteSpace.value_or(facebook::react::WhiteSpace::Normal));
   RCTTextLayoutManager *layoutManager = self.nativeTextLayoutManager;
-  if (!wraps && layoutManager != nil) {
+  if (RCTRunOverflowsItsBox(_run) && layoutManager != nil) {
     CGRect runFrame = RCTCGRectFromRect(_run.frame);
     auto measurement = [layoutManager measureAttributedString:_run.attributedString
-        paragraphAttributes:facebook::react::ParagraphAttributes {}
+        paragraphAttributes:_run.paragraphAttributes
         layoutContext:facebook::react::TextLayoutContext {}
         layoutConstraints:facebook::react::LayoutConstraints{
                               .maximumSize = {
@@ -470,8 +483,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   // `overflow: visible` lets them overflow instead. Widening only the draw
   // width keeps geometry, hit-testing and the tripwire above on the Yoga
   // frame; `setContainerBounds` grows the canvas to fit.
-  if (!facebook::react::wrapsText(
-          _run.attributedString.getBaseTextAttributes().whiteSpace.value_or(facebook::react::WhiteSpace::Normal))) {
+  if (RCTRunOverflowsItsBox(_run)) {
     frame.size.width = CGFLOAT_MAX;
   }
 
@@ -512,7 +524,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
                            drawHighlightPath:nil];
   } else {
     [nativeTextLayoutManager drawAttributedString:_run.attributedString
-                              paragraphAttributes:facebook::react::ParagraphAttributes {}
+                              paragraphAttributes:_run.paragraphAttributes
                                             frame:frame
                                 drawHighlightPath:nil];
   }
@@ -679,7 +691,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   const CGPoint offset = [self textOriginInRunView];
 
   [nativeTextLayoutManager getLineRectGroupsWithAttributedString:_run.attributedString
-      paragraphAttributes:facebook::react::ParagraphAttributes {}
+      paragraphAttributes:_run.paragraphAttributes
       enumerateAttribute:RCTTextAttributesAccessibilityRoleAttributeName
       frame:CGRectMake(0, 0, frame.size.width, frame.size.height)
       usingBlock:^(NSArray<NSValue *> *lineRects, NSString *value) {
@@ -822,7 +834,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   const CGPoint origin = [self textOriginInRunView];
   const auto fragmentRects = nativeTextLayoutManager != nil
       ? [nativeTextLayoutManager getFragmentRectsWithAttributedString:_run.attributedString
-                                                  paragraphAttributes:ParagraphAttributes {}
+                                                  paragraphAttributes:_run.paragraphAttributes
                                                                  size:frame.size
                                                            exclusions:std::vector<FloatExclusion>{}]
       : std::vector<facebook::react::Rect>{};
@@ -903,7 +915,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   NSMutableArray<NSValue *> *localRects = outRects != nil ? [NSMutableArray array] : nil;
   CGPoint localPoint = CGPointMake(point.x - frame.origin.x, point.y - frame.origin.y);
   id link = [nativeTextLayoutManager getLinkWithAttributedString:_run.attributedString
-                                             paragraphAttributes:facebook::react::ParagraphAttributes {}
+                                             paragraphAttributes:_run.paragraphAttributes
                                                            frame:frame
                                                          atPoint:localPoint
                                                            rects:localRects];
@@ -947,7 +959,7 @@ static BOOL RCTRunGeometryMatchesYogaFrame(CGRect frame, facebook::react::Rect y
   CGPoint localPoint = CGPointMake(point.x - frame.origin.x, point.y - frame.origin.y);
   auto eventEmitter =
       [nativeTextLayoutManager getEventEmitterWithAttributeString:_run.attributedString
-                                              paragraphAttributes:facebook::react::ParagraphAttributes {}
+                                              paragraphAttributes:_run.paragraphAttributes
                                                             frame:frame
                                                           atPoint:localPoint];
   return std::dynamic_pointer_cast<const facebook::react::TouchEventEmitter>(eventEmitter);

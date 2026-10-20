@@ -361,6 +361,8 @@ const ReactNativeStyleAttributes: {[key: string]: AnyAttributeType, ...} = {
   whiteSpace: true,
   overflowWrap: true,
   wordWrap: true,
+  textOverflow: true,
+  lineClamp: true,
   // Whether a wrapped box shrinks to its longest line; see StyleSheetTypes.
   // Registered here for the same reason `whiteSpace` is — an inheritable text
   // property reaches native as a top-level prop, and a key missing from this

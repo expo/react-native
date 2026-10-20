@@ -939,6 +939,36 @@ inline std::string toString(const OverflowWrap &overflowWrap)
   return "normal";
 }
 
+inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, TextOverflow &result)
+{
+  react_native_expect(value.hasType<std::string>());
+  if (value.hasType<std::string>()) {
+    auto string = (std::string)value;
+    if (string == "clip") {
+      result = TextOverflow::Clip;
+      return;
+    }
+    if (string == "ellipsis") {
+      result = TextOverflow::Ellipsis;
+      return;
+    }
+  }
+  LOG(ERROR) << "Could not parse TextOverflow: " << (std::string)value;
+  react_native_expect(false);
+  result = TextOverflow::Clip;
+}
+
+inline std::string toString(const TextOverflow &textOverflow)
+{
+  switch (textOverflow) {
+    case TextOverflow::Clip:
+      return "clip";
+    case TextOverflow::Ellipsis:
+      return "ellipsis";
+  }
+  return "clip";
+}
+
 inline std::string toString(const WhiteSpace &whiteSpace)
 {
   switch (whiteSpace) {
