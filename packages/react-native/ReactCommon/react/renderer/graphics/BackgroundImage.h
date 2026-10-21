@@ -12,9 +12,32 @@
 #include <react/renderer/graphics/LinearGradient.h>
 #include <react/renderer/graphics/RadialGradient.h>
 
+#include <string>
+
 namespace facebook::react {
 
-using BackgroundImage = std::variant<LinearGradient, RadialGradient>;
+/*
+ * An image named by its URL, `url(photo.png)`, which the platform loads as it
+ * loads an image's source. Its natural size, once loaded, is what
+ * `background-size: auto` and the cover and contain keywords measure. With no
+ * URL it is a `none` layer, which draws nothing and keeps the layers after it
+ * at their places in the size, position and repeat lists.
+ */
+struct UrlImage {
+  std::string uri;
+
+  bool operator==(const UrlImage &other) const = default;
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic toDynamic() const;
+#endif
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+  void toString(std::stringstream &ss) const;
+#endif
+};
+
+using BackgroundImage = std::variant<LinearGradient, RadialGradient, UrlImage>;
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic toDynamic(const BackgroundImage &backgroundImage);
@@ -36,6 +59,8 @@ inline std::string toString(std::vector<BackgroundImage> &value)
       std::get<LinearGradient>(backgroundImage).toString(ss);
     } else if (std::holds_alternative<RadialGradient>(backgroundImage)) {
       std::get<RadialGradient>(backgroundImage).toString(ss);
+    } else if (std::holds_alternative<UrlImage>(backgroundImage)) {
+      std::get<UrlImage>(backgroundImage).toString(ss);
     }
   }
   ss << "]";

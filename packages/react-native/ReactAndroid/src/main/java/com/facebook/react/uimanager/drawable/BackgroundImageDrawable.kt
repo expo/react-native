@@ -16,20 +16,26 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
 import com.facebook.react.uimanager.FloatUtil
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.style.BackgroundImageLayer
+import com.facebook.react.uimanager.style.BackgroundImageProvider
 import com.facebook.react.uimanager.style.BackgroundPosition
 import com.facebook.react.uimanager.style.BackgroundRepeat
 import com.facebook.react.uimanager.style.BackgroundRepeatKeyword
 import com.facebook.react.uimanager.style.BackgroundSize
 import com.facebook.react.uimanager.style.BorderInsets
 import com.facebook.react.uimanager.style.BorderRadiusStyle
+import java.io.Closeable
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.round
 
 internal class BackgroundImageDrawable(
@@ -50,9 +56,16 @@ internal class BackgroundImageDrawable(
     set(value) {
       if (field != value) {
         field = value
+        loadImages()
         invalidateSelf()
       }
     }
+
+  // The loads of the images the `url()` layers name, each open for as long as its image is drawn,
+  // and the images they brought, by URL
+  private val imageLoads = HashMap<String, Closeable>()
+  private val images = HashMap<String, LoadedImage>()
+  private val releaseImages = Runnable { loadImages() }
 
   var backgroundSize: List<BackgroundSize>? = null
     set(value) {
@@ -96,6 +109,61 @@ internal class BackgroundImageDrawable(
   override fun invalidateSelf() {
     needUpdatePath = true
     super.invalidateSelf()
+  }
+
+  /*
+   * A background that stops showing (its view detached or hidden) lets its images go, a frame later:
+   * a view that swaps its composite background hides this drawable in the old one and shows it in
+   * the new one at once, and keeps its images.
+   */
+  override fun setVisible(visible: Boolean, restart: Boolean): Boolean {
+    val changed = super.setVisible(visible, restart)
+    if (changed) {
+      mainHandler.removeCallbacks(releaseImages)
+      if (visible) {
+        loadImages()
+      } else {
+        mainHandler.post(releaseImages)
+      }
+    }
+    return changed
+  }
+
+  /*
+   * Opens a load for each image the `url()` layers name that has none, while the background shows,
+   * and closes the loads of those it no longer names or of all when it does not show. An image may
+   * arrive before its load is returned, from the provider's cache.
+   */
+  private fun loadImages() {
+    val uris =
+        if (isVisible) {
+          backgroundImageLayers?.mapNotNullTo(HashSet()) { it.uri?.takeIf(String::isNotEmpty) }
+        } else {
+          null
+        }
+    val loads = imageLoads.entries.iterator()
+    while (loads.hasNext()) {
+      val (uri, load) = loads.next()
+      if (uris == null || uri !in uris) {
+        load.close()
+        loads.remove()
+        images.remove(uri)
+      }
+    }
+    val provider = BackgroundImageProvider.current ?: return
+    uris?.forEach { uri ->
+      if (uri !in imageLoads) {
+        imageLoads[uri] = provider.requestImage(context, uri) { image -> onImageLoaded(uri, image) }
+      }
+    }
+  }
+
+  private fun onImageLoaded(uri: String, image: BackgroundImageProvider.Image?) {
+    if (image == null || !isVisible || backgroundImageLayers?.any { it.uri == uri } != true) {
+      return
+    }
+    images[uri] = LoadedImage(image.naturalWidth, image.naturalHeight, image.newDrawable())
+    invalidateSelf()
   }
 
   override fun onBoundsChange(bounds: Rect) {
@@ -146,6 +214,12 @@ internal class BackgroundImageDrawable(
       // So we draw in reverse (last drawn in canvas appears closest)
       for (index in layers.indices.reversed()) {
         val backgroundImageLayer = layers[index]
+        // An image layer draws once its image has loaded, measured by its natural size; a gradient
+        // has none
+        val image = backgroundImageLayer.uri?.let { images[it] }
+        if (backgroundImageLayer.uri != null && image == null) {
+          continue
+        }
         val size = backgroundSize?.takeIf { it.isNotEmpty() }?.let { it.getOrNull(index % it.size) }
         val repeat =
             backgroundRepeat?.takeIf { it.isNotEmpty() }?.let { it.getOrNull(index % it.size) }
@@ -157,8 +231,9 @@ internal class BackgroundImageDrawable(
             calculateBackgroundImageSize(
                 backgroundPositioningArea.width(),
                 backgroundPositioningArea.height(),
-                backgroundPositioningArea.width(),
-                backgroundPositioningArea.height(),
+                image?.naturalWidth?.dpToPx() ?: backgroundPositioningArea.width(),
+                image?.naturalHeight?.dpToPx() ?: backgroundPositioningArea.height(),
+                image != null,
                 size,
                 repeat,
             )
@@ -167,8 +242,14 @@ internal class BackgroundImageDrawable(
           continue
         }
 
-        // 3. Set paint shader
-        backgroundPaint.setShader(backgroundImageLayer.getShader(tileWidth, tileHeight))
+        // 3. Set paint shader, or size the image's drawable to a tile: its whole pixels, scaled to
+        // the tile's fraction when it is drawn
+        if (image == null) {
+          backgroundPaint.setShader(backgroundImageLayer.getShader(tileWidth, tileHeight))
+        } else {
+          image.drawable.setBounds(0, 0, ceil(tileWidth).toInt(), ceil(tileHeight).toInt())
+          image.drawable.alpha = backgroundPaint.alpha
+        }
 
         // 4. Calculate spacing, x and y tiles count and position for tiles
         var (initialX, initialY) = calculateBackgroundPosition(tileWidth, tileHeight, position)
@@ -267,7 +348,13 @@ internal class BackgroundImageDrawable(
           repeat(yTilesCount) {
             canvas.save()
             canvas.translate(translateX, translateY)
-            canvas.drawRect(0f, 0f, tileWidth, tileHeight, backgroundPaint)
+            if (image == null) {
+              canvas.drawRect(0f, 0f, tileWidth, tileHeight, backgroundPaint)
+            } else {
+              val bounds = image.drawable.bounds
+              canvas.scale(tileWidth / bounds.width(), tileHeight / bounds.height())
+              image.drawable.draw(canvas)
+            }
             canvas.restore()
             translateY += tileHeight + ySpacing
           }
@@ -358,24 +445,58 @@ internal class BackgroundImageDrawable(
         lengthPercentage.resolve(availableSpace).dpToPx()
       }
 
+  /*
+   * The size of one tile (css-backgrounds-3 §3.9). An image has a natural size
+   * ([hasNaturalSize]), which `auto`, `cover` and `contain` measure and whose ratio a single `auto`
+   * keeps; a gradient has none, and fills the positioning area where it is not sized.
+   */
   private fun calculateBackgroundImageSize(
       containerWidth: Float,
       containerHeight: Float,
       imageWidth: Float,
       imageHeight: Float,
+      hasNaturalSize: Boolean,
       backgroundSize: BackgroundSize?,
       repeat: BackgroundRepeat?,
   ): Pair<Float, Float> {
     var finalWidth = imageWidth
     var finalHeight = imageHeight
 
-    if (backgroundSize is BackgroundSize.LengthPercentageAuto) {
-      val w = backgroundSize.lengthPercentage.x
-      val h = backgroundSize.lengthPercentage.y
-      if (w != null && h != null) {
-        finalWidth = positionToPixels(w, containerWidth)
-        finalHeight = positionToPixels(h, containerHeight)
+    when (backgroundSize) {
+      is BackgroundSize.Cover,
+      is BackgroundSize.Contain -> {
+        if (hasNaturalSize && imageWidth > 0 && imageHeight > 0) {
+          val widthRatio = containerWidth / imageWidth
+          val heightRatio = containerHeight / imageHeight
+          val scale =
+              if (backgroundSize is BackgroundSize.Cover) max(widthRatio, heightRatio)
+              else min(widthRatio, heightRatio)
+          finalWidth = imageWidth * scale
+          finalHeight = imageHeight * scale
+        } else {
+          finalWidth = containerWidth
+          finalHeight = containerHeight
+        }
       }
+      is BackgroundSize.LengthPercentageAuto -> {
+        val w = backgroundSize.lengthPercentage.x
+        val h = backgroundSize.lengthPercentage.y
+        if (w != null) {
+          finalWidth = positionToPixels(w, containerWidth)
+        }
+        if (h != null) {
+          finalHeight = positionToPixels(h, containerHeight)
+        }
+        // One `auto` keeps the image's ratio
+        if (hasNaturalSize && imageWidth > 0 && imageHeight > 0) {
+          if (w != null && h == null) {
+            finalHeight = finalWidth * imageHeight / imageWidth
+          } else if (h != null && w == null) {
+            finalWidth = finalHeight * imageWidth / imageHeight
+          }
+        }
+      }
+      null -> {}
     }
 
     if (repeat?.x == BackgroundRepeatKeyword.Round && finalWidth > 0) {
@@ -426,5 +547,15 @@ internal class BackgroundImageDrawable(
         } + backgroundPositioningArea.top
 
     return translateX to translateY
+  }
+
+  private class LoadedImage(
+      val naturalWidth: Float,
+      val naturalHeight: Float,
+      val drawable: Drawable,
+  )
+
+  private companion object {
+    val mainHandler = Handler(Looper.getMainLooper())
   }
 }

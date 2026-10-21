@@ -7,6 +7,7 @@
 
 #import <UIKit/UIKit.h>
 
+#import <React/RCTBackgroundImageProvider.h>
 #import <React/RCTComponentViewProtocol.h>
 #import <React/RCTConstants.h>
 #import <React/RCTTouchableComponentViewProtocol.h>
@@ -118,6 +119,13 @@ NS_ASSUME_NONNULL_BEGIN
  * Defaults to `nil`. Assign `nil` to remove view as subview.
  */
 @property (nonatomic, strong, nullable) UIView *contentView;
+
+/**
+ * Loads and draws the images this view's `background-image: url()` layers
+ * name; set by the registry that hands the view out (see
+ * `RCTMountingManager.backgroundImageProvider`).
+ */
+@property (nonatomic, strong, nullable) id<RCTBackgroundImageProvider> backgroundImageProvider;
 
 /**
  * Provides access to `nativeId` prop of the component.

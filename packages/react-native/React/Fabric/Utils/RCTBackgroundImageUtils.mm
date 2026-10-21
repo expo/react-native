@@ -150,18 +150,35 @@
 
 + (CGSize)calculateBackgroundImageSize:(const CGRect &)positioningArea
                      itemIntrinsicSize:(CGSize)itemIntrinsicSize
+                    itemHasNaturalSize:(BOOL)itemHasNaturalSize
                         backgroundSize:(const facebook::react::BackgroundSize &)backgroundSize
                       backgroundRepeat:(const facebook::react::BackgroundRepeat &)backgroundRepeat
 {
-  if (CGSizeEqualToSize(itemIntrinsicSize, CGSizeZero) || CGRectIsEmpty(positioningArea)) {
+  if (itemIntrinsicSize.width <= 0 || itemIntrinsicSize.height <= 0 || CGRectIsEmpty(positioningArea)) {
     return CGSizeZero;
   }
 
   CGSize itemFinalSize = itemIntrinsicSize;
   CGSize positioningAreaSize = positioningArea.size;
 
-  if (std::holds_alternative<facebook::react::BackgroundSizeLengthPercentage>(backgroundSize)) {
+  if (std::holds_alternative<facebook::react::BackgroundSizeKeyword>(backgroundSize)) {
+    // The largest size that fits (`contain`) or the smallest that covers
+    // (`cover`), at the image's own ratio; a gradient has none, and is the area
+    if (itemHasNaturalSize) {
+      CGFloat widthRatio = positioningAreaSize.width / itemIntrinsicSize.width;
+      CGFloat heightRatio = positioningAreaSize.height / itemIntrinsicSize.height;
+      CGFloat scale = std::get<facebook::react::BackgroundSizeKeyword>(backgroundSize) ==
+              facebook::react::BackgroundSizeKeyword::Cover
+          ? MAX(widthRatio, heightRatio)
+          : MIN(widthRatio, heightRatio);
+      itemFinalSize = CGSizeMake(itemIntrinsicSize.width * scale, itemIntrinsicSize.height * scale);
+    } else {
+      itemFinalSize = positioningAreaSize;
+    }
+  } else if (std::holds_alternative<facebook::react::BackgroundSizeLengthPercentage>(backgroundSize)) {
     auto backgroundSizeLengthPercentage = std::get<facebook::react::BackgroundSizeLengthPercentage>(backgroundSize);
+    bool widthSet = false;
+    bool heightSet = false;
     if (std::holds_alternative<facebook::react::ValueUnit>(backgroundSizeLengthPercentage.x)) {
       auto xValue = std::get<facebook::react::ValueUnit>(backgroundSizeLengthPercentage.x);
       if (xValue.unit == facebook::react::UnitType::Percent) {
@@ -169,6 +186,7 @@
       } else {
         itemFinalSize.width = xValue.value;
       }
+      widthSet = true;
     }
 
     if (std::holds_alternative<facebook::react::ValueUnit>(backgroundSizeLengthPercentage.y)) {
@@ -178,6 +196,14 @@
       } else {
         itemFinalSize.height = yValue.value;
       }
+      heightSet = true;
+    }
+
+    // One `auto` keeps the image's ratio
+    if (itemHasNaturalSize && widthSet && !heightSet) {
+      itemFinalSize.height = itemFinalSize.width * itemIntrinsicSize.height / itemIntrinsicSize.width;
+    } else if (itemHasNaturalSize && heightSet && !widthSet) {
+      itemFinalSize.width = itemFinalSize.height * itemIntrinsicSize.width / itemIntrinsicSize.height;
     }
   }
 
