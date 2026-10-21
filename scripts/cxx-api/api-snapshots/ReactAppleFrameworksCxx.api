@@ -848,7 +848,7 @@ interface RCTBackedTextViewDelegateAdapter : public NSObject {
 
 interface RCTBackgroundImageUtils : public NSObject {
   public virtual static CALayer* createBackgroundImageLayerWithSize:paintingArea:itemSize:backgroundPosition:backgroundRepeat:itemLayer:(const CGRect& positioningArea, const CGRect& paintingArea, const CGSize& itemSize, const facebook::react::BackgroundPosition& backgroundPosition, const facebook::react::BackgroundRepeat& backgroundRepeat, CALayer* itemLayer);
-  public virtual static CGSize calculateBackgroundImageSize:itemIntrinsicSize:backgroundSize:backgroundRepeat:(const CGRect& positioningArea, CGSize itemIntrinsicSize, const facebook::react::BackgroundSize& backgroundSize, const facebook::react::BackgroundRepeat& backgroundRepeat);
+  public virtual static CGSize calculateBackgroundImageSize:itemIntrinsicSize:itemHasNaturalSize:backgroundSize:backgroundRepeat:(const CGRect& positioningArea, CGSize itemIntrinsicSize, BOOL itemHasNaturalSize, const facebook::react::BackgroundSize& backgroundSize, const facebook::react::BackgroundRepeat& backgroundRepeat);
 }
 
 interface RCTBlobManager : public NSObject <RCTBridgeModule, RCTURLRequestHandler, RCTInitializing> {
@@ -1016,6 +1016,7 @@ interface RCTComponentViewFactory : public NSObject {
 }
 
 interface RCTComponentViewRegistry : public NSObject {
+  public @property (strong) id<RCTBackgroundImageProvider> backgroundImageProvider;
   public @property (strong, readonly) RCTComponentViewFactory* componentViewFactory;
   public virtual _Nullable UIView<RCTComponentViewProtocol>* findComponentViewWithTag:(facebook::react::Tag tag);
   public virtual const RCTComponentViewDescriptor& componentViewDescriptorWithTag:(facebook::react::Tag tag);
@@ -1385,6 +1386,10 @@ interface RCTImageLoader : public NSObject <RCTBridgeModule, RCTImageLoaderProto
   public virtual instancetype initWithRedirectDelegate:loadersProvider:decodersProvider:(id<RCTImageRedirectProtocol> redirectDelegate, NSArray<id<RCTImageURLLoader>>*(^)(RCTModuleRegistry*) getLoaders, NSArray<id<RCTImageDataDecoder>>*(^)(RCTModuleRegistry*) getDecoders);
 }
 
+interface RCTImageManagerBackgroundImageProvider : public NSObject <RCTBackgroundImageProvider> {
+  public virtual _Nullable instancetype initWithContextContainer:(const std::shared_ptr<const facebook::react::ContextContainer>& contextContainer);
+}
+
 interface RCTImageSource : public NSObject {
   public @property (assign, readonly) CGFloat scale;
   public @property (assign, readonly) CGSize size;
@@ -1616,6 +1621,7 @@ interface RCTModuloAnimatedNode : public RCTValueAnimatedNode {
 
 interface RCTMountingManager : public NSObject {
   public @property (strong) RCTComponentViewRegistry* componentViewRegistry;
+  public @property (strong) id<RCTBackgroundImageProvider> backgroundImageProvider;
   public @property (weak) id<RCTMountingManagerDelegate> delegate;
   public virtual void attachSurfaceToView:surfaceId:(UIView* view, facebook::react::SurfaceId surfaceId);
   public virtual void detachSurfaceFromView:surfaceId:(UIView* view, facebook::react::SurfaceId surfaceId);
@@ -2325,6 +2331,7 @@ interface RCTViewComponentView : public UIView <RCTComponentViewProtocol, RCTTou
   public @property (assign, readonly) UIView* _Nonnull chromeContainerView;
   public @property (strong) NSString* nativeId;
   public @property (strong) UIView* contentView;
+  public @property (strong) id<RCTBackgroundImageProvider> backgroundImageProvider;
   public @property (strong, readonly) NSObject* accessibilityElement;
   public FOUNDATION_EXPORT BOOL EXPAnyFixedBackgrounds(void);
   public virtual BOOL isHostChromeSubview:(UIView* _Nonnull view);
@@ -2836,6 +2843,15 @@ protocol RCTBackedTextInputViewProtocol : public UITextInput {
   public @property (weak) id<RCTBackedTextInputDelegate> textInputDelegate;
   public virtual void scrollRangeToVisible:(NSRange selectedTextRange);
   public virtual void setSelectedTextRange:notifyDelegate:(_Nullable UITextRange* selectedTextRange, BOOL notifyDelegate);
+}
+
+protocol RCTBackgroundImage : public NSObject {
+  public @property (assign, readonly) CGSize naturalSize;
+  public virtual CALayer* makeLayer();
+}
+
+protocol RCTBackgroundImageProvider : public NSObject {
+  public virtual id requestImageWithURI:completion:(NSString* uri, void(^)(id<RCTBackgroundImage> _Nullable image) completion);
 }
 
 protocol RCTBridgeDelegate : public NSObject {
@@ -3613,14 +3629,14 @@ using facebook::react::ActivityIndicatorViewState = facebook::react::StateData;
 using facebook::react::AnimationEndCallback = facebook::react::AsyncCallback<facebook::react::EndResult>;
 using facebook::react::AnimationTimestamp = std::chrono::duration<double, std::milli>;
 using facebook::react::BackgroundExecutor = std::function<void(std::function<void()>&& callback)>;
-using facebook::react::BackgroundImage = std::variant<facebook::react::LinearGradient, facebook::react::RadialGradient>;
+using facebook::react::BackgroundImage = std::variant<facebook::react::LinearGradient, facebook::react::RadialGradient, facebook::react::UrlImage>;
 using facebook::react::BackgroundSize = std::variant<facebook::react::BackgroundSizeKeyword, facebook::react::BackgroundSizeLengthPercentage>;
 using facebook::react::BorderColors = facebook::react::RectangleEdges<facebook::react::SharedColor>;
 using facebook::react::BorderCurves = facebook::react::RectangleCorners<facebook::react::BorderCurve>;
 using facebook::react::BorderRadii = facebook::react::RectangleCorners<facebook::react::CornerRadii>;
 using facebook::react::BorderStyles = facebook::react::RectangleEdges<facebook::react::BorderStyle>;
 using facebook::react::BorderWidths = facebook::react::RectangleEdges<facebook::react::Float>;
-using facebook::react::CSSBackgroundImage = facebook::react::CSSCompoundDataType<facebook::react::CSSLinearGradientFunction, facebook::react::CSSRadialGradientFunction>;
+using facebook::react::CSSBackgroundImage = facebook::react::CSSCompoundDataType<facebook::react::CSSLinearGradientFunction, facebook::react::CSSRadialGradientFunction, facebook::react::CSSUrl, facebook::react::CSSBackgroundImageNone>;
 using facebook::react::CSSBackgroundImageList = facebook::react::CSSCommaSeparatedList<facebook::react::CSSBackgroundImage>;
 using facebook::react::CSSFilterFunction = facebook::react::CSSCompoundDataType<facebook::react::CSSBlurFilter, facebook::react::CSSBrightnessFilter, facebook::react::CSSContrastFilter, facebook::react::CSSDropShadowFilter, facebook::react::CSSGrayscaleFilter, facebook::react::CSSHueRotateFilter, facebook::react::CSSInvertFilter, facebook::react::CSSOpacityFilter, facebook::react::CSSSaturateFilter, facebook::react::CSSSepiaFilter>;
 using facebook::react::CSSFilterList = facebook::react::CSSWhitespaceSeparatedList<facebook::react::CSSFilterFunction>;
@@ -7984,6 +8000,10 @@ enum facebook::react::CSSAngleUnit : uint8_t {
   Turn,
 }
 
+enum facebook::react::CSSBackgroundImageNone : std::underlying_type_t<facebook::react::CSSKeyword> {
+  None,
+}
+
 enum facebook::react::CSSDelimiter {
   Comma,
   CommaOrWhitespace,
@@ -8221,6 +8241,8 @@ enum facebook::react::CSSRadialGradientSizeKeyword : uint8_t {
 }
 
 enum facebook::react::CSSTokenType {
+  BadString,
+  BadUrl,
   CloseCurly,
   CloseParen,
   CloseSquare,
@@ -8236,6 +8258,8 @@ enum facebook::react::CSSTokenType {
   OpenParen,
   OpenSquare,
   Percentage,
+  String,
+  Url,
   WhiteSpace,
 }
 
@@ -9543,6 +9567,11 @@ struct facebook::react::CSSTranslateY {
   public std::variant<facebook::react::CSSLength, facebook::react::CSSPercentage> value;
 }
 
+struct facebook::react::CSSUrl {
+  public bool operator==(const facebook::react::CSSUrl& rhs) const = default;
+  public std::string url;
+}
+
 struct facebook::react::CSSZero {
   public constexpr bool operator==(const facebook::react::CSSZero& rhs) const = default;
 }
@@ -10437,6 +10466,11 @@ struct facebook::react::TransitionValue {
   public facebook::yoga::GridTrackList tracks;
   public facebook::yoga::Style::Length paddingLength;
   public facebook::yoga::Style::SizeLength length;
+}
+
+struct facebook::react::UrlImage {
+  public bool operator==(const facebook::react::UrlImage& other) const = default;
+  public std::string uri;
 }
 
 struct facebook::react::ValueUnit {
@@ -11931,6 +11965,11 @@ struct facebook::react::CSSDataTypeParser<facebook::react::CSSTranslateX> : publ
 }
 
 struct facebook::react::CSSDataTypeParser<facebook::react::CSSTranslateY> : public facebook::react::detail::CSSVariantComponentTransformParser<facebook::react::CSSTranslateY, "translateY", facebook::react::CSSLength, facebook::react::CSSPercentage> {
+}
+
+struct facebook::react::CSSDataTypeParser<facebook::react::CSSUrl> {
+  public static std::optional<facebook::react::CSSUrl> consumeFunctionBlock(const facebook::react::CSSFunctionBlock& func, facebook::react::CSSValueParser& parser);
+  public static std::optional<facebook::react::CSSUrl> consumePreservedToken(const facebook::react::CSSPreservedToken& token);
 }
 
 struct facebook::react::CSSDataTypeParser<facebook::react::CSSZero> {

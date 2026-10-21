@@ -69,6 +69,9 @@ class CSSTokenizer {
         } else {
           return consumeDelim();
         }
+      case '"':
+      case '\'':
+        return consumeString(nextChar);
       default:
         break;
     }
@@ -187,10 +190,109 @@ class CSSTokenizer {
     if (peek() == '(') {
       advance();
       consumeRunningValue();
+      if (isUrlName(ident.stringValue())) {
+        // A quoted URL is a `url` function holding a string; an unquoted one
+        // is a url token
+        size_t offset = 0;
+        while (isWhitespace(peek(offset))) {
+          offset++;
+        }
+        if (peek(offset) != '"' && peek(offset) != '\'') {
+          return consumeUrl();
+        }
+      }
       return {CSSTokenType::Function, ident.stringValue()};
     }
 
     return ident;
+  }
+
+  constexpr CSSToken consumeString(char ending)
+  {
+    // https://www.w3.org/TR/css-syntax-3/#consume-string-token, with the
+    // contents kept as written.
+    // DOM-CSS-LIMITATION(css-url-escapes-kept): an escape is not decoded, as a
+    // token is a view of the source with no room for decoded text
+    advance();
+    consumeRunningValue();
+    while (true) {
+      char c = peek();
+      if (c == ending || c == '\0') {
+        auto contents = consumeRunningValue();
+        if (c == ending) {
+          advance();
+          consumeRunningValue();
+        }
+        return {CSSTokenType::String, contents};
+      }
+      if (c == '\n' || c == '\r') {
+        return {CSSTokenType::BadString, consumeRunningValue()};
+      }
+      if (c == '\\' && peek(1) != '\0') {
+        advance();
+      }
+      advance();
+    }
+  }
+
+  constexpr CSSToken consumeUrl()
+  {
+    // https://www.w3.org/TR/css-syntax-3/#consume-url-token, after `url(`,
+    // with the contents kept as written: an escape is not decoded (see
+    // `consumeString`)
+    while (isWhitespace(peek())) {
+      advance();
+    }
+    consumeRunningValue();
+    while (true) {
+      char c = peek();
+      if (c == ')' || c == '\0') {
+        auto contents = consumeRunningValue();
+        if (c == ')') {
+          advance();
+          consumeRunningValue();
+        }
+        return {CSSTokenType::Url, contents};
+      }
+      if (isWhitespace(c)) {
+        auto contents = consumeRunningValue();
+        while (isWhitespace(peek())) {
+          advance();
+        }
+        if (peek() == ')' || peek() == '\0') {
+          if (peek() == ')') {
+            advance();
+          }
+          consumeRunningValue();
+          return {CSSTokenType::Url, contents};
+        }
+        return consumeBadUrlRemnants();
+      }
+      if (c == '"' || c == '\'' || c == '(' || isNonPrintable(c)) {
+        return consumeBadUrlRemnants();
+      }
+      if (c == '\\' && peek(1) != '\0' && peek(1) != '\n') {
+        advance();
+      } else if (c == '\\') {
+        return consumeBadUrlRemnants();
+      }
+      advance();
+    }
+  }
+
+  constexpr CSSToken consumeBadUrlRemnants()
+  {
+    // https://www.w3.org/TR/css-syntax-3/#consume-the-remnants-of-a-bad-url
+    while (peek() != ')' && peek() != '\0') {
+      if (peek() == '\\' && peek(1) != '\0') {
+        advance();
+      }
+      advance();
+    }
+    if (peek() == ')') {
+      advance();
+    }
+    return {CSSTokenType::BadUrl, consumeRunningValue()};
   }
 
   constexpr CSSToken consumeIdentSequence()
@@ -244,6 +346,18 @@ class CSSTokenizer {
   {
     // https://www.w3.org/TR/css-syntax-3/#whitespace
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+  }
+
+  static constexpr bool isNonPrintable(char c)
+  {
+    // https://www.w3.org/TR/css-syntax-3/#non-printable-code-point
+    return (c >= '\x00' && c <= '\x08') || c == '\x0B' || (c >= '\x0E' && c <= '\x1F') || c == '\x7F';
+  }
+
+  static constexpr bool isUrlName(std::string_view name)
+  {
+    return name.size() == 3 && (name[0] == 'u' || name[0] == 'U') && (name[1] == 'r' || name[1] == 'R') &&
+        (name[2] == 'l' || name[2] == 'L');
   }
 
   std::string_view remainingCharacters_;

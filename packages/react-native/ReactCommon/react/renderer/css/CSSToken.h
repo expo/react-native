@@ -34,6 +34,13 @@ enum class CSSTokenType {
   Percentage,
   WhiteSpace,
   Hash,
+  // A quoted string's contents, and one a newline cut short (§4.3.5)
+  String,
+  BadString,
+  // An unquoted `url(…)`'s contents (§4.3.6); a quoted one is a `url`
+  // function holding a string
+  Url,
+  BadUrl,
 };
 
 /*

@@ -114,7 +114,7 @@ static const facebook::react::LayoutMetrics facebook::react::EmptyLayoutMetrics;
 static const facebook::react::TelemetryTimePoint facebook::react::kTelemetryUndefinedTimePoint;
 static constexpr auto facebook::react::kPropNameLengthHardCap;
 static constexpr facebook::react::RawPropsValueIndex facebook::react::kRawPropsValueIndexEmpty;
-using facebook::react::BackgroundImage = std::variant<facebook::react::LinearGradient, facebook::react::RadialGradient>;
+using facebook::react::BackgroundImage = std::variant<facebook::react::LinearGradient, facebook::react::RadialGradient, facebook::react::UrlImage>;
 using facebook::react::BackgroundSize = std::variant<facebook::react::BackgroundSizeKeyword, facebook::react::BackgroundSizeLengthPercentage>;
 using facebook::react::BorderColors = facebook::react::RectangleEdges<facebook::react::SharedColor>;
 using facebook::react::BorderCurves = facebook::react::RectangleCorners<facebook::react::BorderCurve>;
@@ -3706,6 +3706,11 @@ struct facebook::react::TransitionValue {
   public facebook::yoga::GridTrackList tracks;
   public facebook::yoga::Style::Length paddingLength;
   public facebook::yoga::Style::SizeLength length;
+}
+
+struct facebook::react::UrlImage {
+  public bool operator==(const facebook::react::UrlImage& other) const = default;
+  public std::string uri;
 }
 
 struct facebook::react::ValueUnit {

@@ -7,6 +7,7 @@
 
 #import <UIKit/UIKit.h>
 
+#import <React/RCTBackgroundImageProvider.h>
 #import <React/RCTComponentViewDescriptor.h>
 #import <React/RCTComponentViewFactory.h>
 #import <React/RCTComponentViewProtocol.h>
@@ -21,6 +22,12 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RCTComponentViewRegistry : NSObject
 
 @property (nonatomic, strong, readonly) RCTComponentViewFactory *componentViewFactory;
+
+/**
+ * What the views this registry hands out load and draw `background-image:
+ * url()` with; see `RCTMountingManager.backgroundImageProvider`.
+ */
+@property (nonatomic, strong, nullable) id<RCTBackgroundImageProvider> backgroundImageProvider;
 
 /**
  * Returns a descriptor referring to a native view instance from the recycle pool (or being created on demand)
