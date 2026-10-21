@@ -7,6 +7,7 @@
 
 #import <UIKit/UIKit.h>
 
+#import <React/RCTBackgroundImageProvider.h>
 #import <React/RCTMountingManagerDelegate.h>
 #import <React/RCTPrimitives.h>
 #import <React/RendererCore.h>
@@ -25,6 +26,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, weak) id<RCTMountingManagerDelegate> delegate;
 @property (nonatomic, strong) RCTComponentViewRegistry *componentViewRegistry;
+
+/**
+ * Loads and draws the images `background-image: url()` names, for the views
+ * mounted from here on. React Native's own provider, which loads through the
+ * image manager, is set with the context container; a framework that loads
+ * and draws images its own way sets its provider after that.
+ */
+@property (nonatomic, strong, nullable) id<RCTBackgroundImageProvider> backgroundImageProvider;
 
 - (void)setContextContainer:(std::shared_ptr<const facebook::react::ContextContainer>)contextContainer;
 

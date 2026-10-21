@@ -84,6 +84,13 @@ and a url() layered with a gradient or a second image are not drawn: the
 first url() is the layer, and the gradients go with it. A block that scrolls
 (`overflow: auto`) does not take the layer.
 
+**`css-url-escapes-kept`** — `ReactCommon/react/renderer/css/CSSTokenizer.h`
+
+A `url()` or a string keeps its escapes as written, so `url(a\)b.png)` names
+`a\)b.png`: the tokenizer's tokens are views of the source, with no room for
+decoded text. The runtime percent-encodes what would need escaping in the URLs
+it resolves, so only a URL written with an escape is affected.
+
 **`clearance-on-an-empty-box`** — `yoga/algorithm/CalculateLayout.cpp`
 An empty box with `clear` still lets its margins collapse past it, so the
 content after it sits higher than in a browser. Boxes with content clear
@@ -634,6 +641,7 @@ rather than going quiet.
 - `compact-menu-row-holds-four` — limitation, `packages/chat-demo/screens/ChatScreen.js`
 - `corner-shape-clips-border-and-shadow` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
 - `corner-shape-ios-only` — limitation, `React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm`
+- `css-url-escapes-kept` — limitation, `ReactCommon/react/renderer/css/CSSTokenizer.h`
 - `display-on-inline-text-elements` — limitation, `packages/rn-tester/js/astryx/radix/toggles.js`
 - `document-is-a-stub` — limitation, `packages/rn-tester/js/astryx/document-shim.js`
 - `dom-methods-are-a-subset` — limitation, `packages/rn-tester/js/astryx/dom-compat.js`
