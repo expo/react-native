@@ -68,12 +68,21 @@ bool hasHighDynamicRangeColor(const ViewProps& viewProps) {
     }
   }
   for (const auto& image : viewProps.backgroundImage) {
-    const auto& stops = std::visit(
-        [](const auto& gradient) -> const std::vector<ColorStop>& {
-          return gradient.colorStops;
+    // An image layer has no stops: the platform reads how bright its pixels
+    // are as it draws them
+    const auto* stops = std::visit(
+        [](const auto& layer) -> const std::vector<ColorStop>* {
+          if constexpr (std::is_same_v<std::decay_t<decltype(layer)>, UrlImage>) {
+            return nullptr;
+          } else {
+            return &layer.colorStops;
+          }
         },
         image);
-    for (const auto& stop : stops) {
+    if (stops == nullptr) {
+      continue;
+    }
+    for (const auto& stop : *stops) {
       if (stop.color && isHighDynamicRangeColor(*stop.color)) {
         return true;
       }

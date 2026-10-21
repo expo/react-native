@@ -192,6 +192,13 @@ static BOOL RCTViewIsInteractiveAccessibilityElement(UIView *view, const ViewPro
   NSMutableArray<CALayer *> *_boxShadowLayers;
   CALayer *_filterLayer;
   NSMutableArray<CALayer *> *_backgroundImageLayers;
+  // The URLs the background's `url()` layers name, the loads still running
+  // for them and the images they brought, each by URL
+  NSSet<NSString *> *_backgroundImageURIs;
+  NSMutableDictionary<NSString *, id> *_backgroundImageRequests;
+  NSMutableDictionary<NSString *, id<RCTBackgroundImage>> *_backgroundImages;
+  // Set while the provider is asked, when a cached image may arrive at once
+  BOOL _requestingBackgroundImages;
   BOOL _needsInvalidateLayer;
   BOOL _isJSResponder;
   BOOL _blocksNativeResponder;
@@ -1383,6 +1390,9 @@ static CGRect RCTUntransformedFrame(UIView *view)
       oldViewProps.backgroundSize != newViewProps.backgroundSize) {
     needsInvalidateLayer = YES;
   }
+  // Asked on every update, as a recycle lets the images go while the props
+  // it keeps still name them
+  [self rct_loadBackgroundImages:newViewProps.backgroundImage];
 
   // `boxShadow`
   if (oldViewProps.boxShadow != newViewProps.boxShadow) {
@@ -1713,6 +1723,9 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
   [_filterLayer removeFromSuperlayer];
   _filterLayer = nil;
   [self clearExistingBackgroundImageLayers];
+  _backgroundImageURIs = nil;
+  [_backgroundImageRequests removeAllObjects];
+  [_backgroundImages removeAllObjects];
   _removeClippedSubviews = NO;
 
   _propsAreStaleFromRecycle = YES;
@@ -2583,33 +2596,48 @@ static void EXPRepositionFixedBackgroundsIn(UIView *view)
         backgroundRepeat = _props->backgroundRepeat[imageIndex % _props->backgroundRepeat.size()];
       }
 
-      CGSize backgroundImageSize = [RCTBackgroundImageUtils calculateBackgroundImageSize:backgroundPositioningArea
-                                                                       itemIntrinsicSize:backgroundPositioningArea.size
-                                                                          backgroundSize:backgroundSize
-                                                                        backgroundRepeat:backgroundRepeat];
+      // An image is measured by its natural size, once it has loaded; a
+      // gradient has none
+      id<RCTBackgroundImage> image = nil;
+      if (std::holds_alternative<UrlImage>(backgroundImage)) {
+        image = _backgroundImages[RCTNSStringFromString(std::get<UrlImage>(backgroundImage).uri)];
+      }
 
-      CALayer *gradientLayer;
+      CGSize backgroundImageSize =
+          [RCTBackgroundImageUtils calculateBackgroundImageSize:backgroundPositioningArea
+                                              itemIntrinsicSize:image != nil ? image.naturalSize
+                                                                             : backgroundPositioningArea.size
+                                             itemHasNaturalSize:image != nil
+                                                 backgroundSize:backgroundSize
+                                               backgroundRepeat:backgroundRepeat];
+
+      CALayer *itemLayer;
 
       if (std::holds_alternative<LinearGradient>(backgroundImage)) {
         const auto &linearGradient = std::get<LinearGradient>(backgroundImage);
-        gradientLayer = [RCTLinearGradient gradientLayerWithSize:backgroundImageSize gradient:linearGradient];
+        itemLayer = [RCTLinearGradient gradientLayerWithSize:backgroundImageSize gradient:linearGradient];
       } else if (std::holds_alternative<RadialGradient>(backgroundImage)) {
         const auto &radialGradient = std::get<RadialGradient>(backgroundImage);
-        gradientLayer = [RCTRadialGradient gradientLayerWithSize:backgroundImageSize gradient:radialGradient];
+        itemLayer = [RCTRadialGradient gradientLayerWithSize:backgroundImageSize gradient:radialGradient];
+      } else if (image != nil) {
+        itemLayer = [image makeLayer];
+        itemLayer.frame = CGRectMake(0, 0, backgroundImageSize.width, backgroundImageSize.height);
       }
 
-      if (gradientLayer != nil) {
-        [self rct_applyDynamicRange:RCTGradientHasHighDynamicRangeStop(backgroundImage)
-                           headroom:0
-                            toLayer:gradientLayer
-                              drawn:NO];
+      if (itemLayer != nil) {
+        if (image == nil) {
+          [self rct_applyDynamicRange:RCTGradientHasHighDynamicRangeStop(backgroundImage)
+                             headroom:0
+                              toLayer:itemLayer
+                                drawn:NO];
+        }
         CALayer *backgroundImageLayer =
             [RCTBackgroundImageUtils createBackgroundImageLayerWithSize:backgroundPositioningArea
                                                            paintingArea:backgroundPaintingArea
                                                                itemSize:backgroundImageSize
                                                      backgroundPosition:backgroundPosition
                                                        backgroundRepeat:backgroundRepeat
-                                                              itemLayer:gradientLayer];
+                                                              itemLayer:itemLayer];
         [self shapeLayerToMatchView:backgroundImageLayer borderMetrics:borderMetricsBI];
         backgroundImageLayer.masksToBounds = YES;
         backgroundImageLayer.zPosition = BACKGROUND_COLOR_ZPOSITION;
@@ -2781,6 +2809,71 @@ static void EXPRepositionFixedBackgroundsIn(UIView *view)
   maskLayer.path = path;
   CGPathRelease(path);
   return maskLayer;
+}
+
+/*
+ * Asks the provider for each image the background's `url()` layers name that
+ * is neither loaded nor loading, and lets go of those it no longer names. An
+ * image arrives on the main queue and redraws the background; one in the
+ * provider's cache may arrive before the provider returns, in an update that
+ * redraws anyway.
+ */
+- (void)rct_loadBackgroundImages:(const std::vector<BackgroundImage> &)layers
+{
+  NSMutableSet<NSString *> *uris = nil;
+  for (const auto &layer : layers) {
+    if (std::holds_alternative<UrlImage>(layer) && !std::get<UrlImage>(layer).uri.empty()) {
+      uris = uris ?: [NSMutableSet new];
+      [uris addObject:RCTNSStringFromString(std::get<UrlImage>(layer).uri)];
+    }
+  }
+  if (uris == nil && _backgroundImageURIs.count == 0) {
+    return;
+  }
+  _backgroundImageURIs = uris;
+  for (NSString *uri in _backgroundImageRequests.allKeys) {
+    if (![uris containsObject:uri]) {
+      [_backgroundImageRequests removeObjectForKey:uri];
+    }
+  }
+  for (NSString *uri in _backgroundImages.allKeys) {
+    if (![uris containsObject:uri]) {
+      [_backgroundImages removeObjectForKey:uri];
+    }
+  }
+  if (uris == nil || _backgroundImageProvider == nil) {
+    return;
+  }
+  _backgroundImageRequests = _backgroundImageRequests ?: [NSMutableDictionary new];
+  _backgroundImages = _backgroundImages ?: [NSMutableDictionary new];
+  for (NSString *uri in uris) {
+    if (_backgroundImageRequests[uri] != nil || _backgroundImages[uri] != nil) {
+      continue;
+    }
+    __weak RCTViewComponentView *weakSelf = self;
+    _requestingBackgroundImages = YES;
+    id request = [_backgroundImageProvider requestImageWithURI:uri
+                                                    completion:^(id<RCTBackgroundImage> _Nullable image) {
+                                                      [weakSelf rct_didLoadBackgroundImage:image uri:uri];
+                                                    }];
+    _requestingBackgroundImages = NO;
+    // A failed load keeps its request, so the URL is not asked for again
+    if (_backgroundImages[uri] == nil && request != nil) {
+      _backgroundImageRequests[uri] = request;
+    }
+  }
+}
+
+- (void)rct_didLoadBackgroundImage:(nullable id<RCTBackgroundImage>)image uri:(NSString *)uri
+{
+  if (image == nil || ![_backgroundImageURIs containsObject:uri]) {
+    return;
+  }
+  _backgroundImages[uri] = image;
+  [_backgroundImageRequests removeObjectForKey:uri];
+  if (!_requestingBackgroundImages) {
+    [self invalidateLayer];
+  }
 }
 
 - (void)clearExistingBackgroundImageLayers

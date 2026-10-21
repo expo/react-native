@@ -32,6 +32,7 @@
 #import <React/RCTComponentViewProtocol.h>
 #import <React/RCTComponentViewRegistry.h>
 #import <React/RCTConversions.h>
+#import <React/RCTImageManagerBackgroundImageProvider.h>
 #import <React/RCTMountingTransactionObserverCoordinator.h>
 #import <React/RCTScrollViewComponentView.h>
 #import <React/RCTViewComponentView.h>
@@ -374,6 +375,20 @@ static void RCTPerformMountInstructions(
 - (void)setContextContainer:(std::shared_ptr<const ContextContainer>)contextContainer
 {
   _contextContainer = contextContainer;
+  if (self.backgroundImageProvider == nil) {
+    self.backgroundImageProvider =
+        [[RCTImageManagerBackgroundImageProvider alloc] initWithContextContainer:contextContainer];
+  }
+}
+
+- (id<RCTBackgroundImageProvider>)backgroundImageProvider
+{
+  return _componentViewRegistry.backgroundImageProvider;
+}
+
+- (void)setBackgroundImageProvider:(id<RCTBackgroundImageProvider>)backgroundImageProvider
+{
+  _componentViewRegistry.backgroundImageProvider = backgroundImageProvider;
 }
 
 - (void)attachSurfaceToView:(UIView *)view surfaceId:(SurfaceId)surfaceId

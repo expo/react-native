@@ -13,20 +13,29 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 
 /**
- * Represents a single layer of a background image, typically containing a gradient.
+ * Represents a single layer of a background image: a gradient, or an image named by its URL.
  *
  * This class encapsulates gradient definitions (linear or radial) that can be applied as background
- * layers to React Native views. It provides parsing from React Native bridge data and shader
- * generation for rendering.
+ * layers to React Native views, and the URL of an image layer, which the background loads through
+ * its [BackgroundImageProvider]. It provides parsing from React Native bridge data and shader
+ * generation for rendering a gradient.
  *
  * @see LinearGradient
  * @see RadialGradient
  */
 public class BackgroundImageLayer() {
-  private lateinit var gradient: Gradient
+  private var gradient: Gradient? = null
+
+  /** The URL of an image layer, `url(…)`, empty for `none`; null for a gradient */
+  public var uri: String? = null
+    private set
 
   private constructor(gradient: Gradient) : this() {
     this.gradient = gradient
+  }
+
+  private constructor(uri: String) : this() {
+    this.uri = uri
   }
 
   /** The stops in their own color space, as color longs */
@@ -42,7 +51,7 @@ public class BackgroundImageLayer() {
      * Parses a ReadableMap into a BackgroundImageLayer.
      *
      * The map should contain gradient configuration including a "type" key specifying either
-     * "linear-gradient" or "radial-gradient".
+     * "linear-gradient" or "radial-gradient", or an image's: a "type" of "url" and its "uri".
      *
      * @param gradientMap The map containing gradient configuration
      * @param context Android context for resource resolution
@@ -51,6 +60,17 @@ public class BackgroundImageLayer() {
     public fun parse(gradientMap: ReadableMap?, context: Context): BackgroundImageLayer? {
       if (gradientMap == null) {
         return null
+      }
+      if (
+          gradientMap.hasKey("type") &&
+              gradientMap.getType("type") == ReadableType.String &&
+              gradientMap.getString("type") == "url"
+      ) {
+        // No URL is a `none` layer, which draws nothing and keeps the layers after it at their
+        // places in the size, position and repeat lists
+        return BackgroundImageLayer(
+            if (gradientMap.hasKey("uri")) gradientMap.getString("uri") ?: "" else ""
+        )
       }
       val gradient = parseGradient(gradientMap, context) ?: return null
       return BackgroundImageLayer(gradient)
@@ -70,11 +90,12 @@ public class BackgroundImageLayer() {
   }
 
   /**
-   * Creates a shader for rendering this background layer.
+   * Creates a shader for rendering this background layer's gradient; an image layer has none.
    *
    * @param width The width of the area to fill
    * @param height The height of the area to fill
    * @return A Shader instance for rendering the gradient
    */
-  public fun getShader(width: Float, height: Float): Shader = gradient.getShader(width, height)
+  public fun getShader(width: Float, height: Float): Shader =
+      checkNotNull(gradient) { "An image layer, url($uri), has no shader" }.getShader(width, height)
 }

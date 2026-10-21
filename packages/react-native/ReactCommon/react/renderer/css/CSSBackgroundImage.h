@@ -21,6 +21,7 @@
 #include <react/renderer/css/CSSLengthPercentage.h>
 #include <react/renderer/css/CSSList.h>
 #include <react/renderer/css/CSSPercentage.h>
+#include <react/renderer/css/CSSUrl.h>
 #include <react/renderer/css/CSSValueParser.h>
 #include <react/utils/iequals.h>
 
@@ -824,10 +825,21 @@ struct CSSDataTypeParser<CSSLinearGradientFunction> {
 static_assert(CSSDataType<CSSLinearGradientFunction>);
 
 /**
- * Representation of <background-image>
+ * A layer of <background-image> that draws nothing
+ */
+enum class CSSBackgroundImageNone : std::underlying_type_t<CSSKeyword> {
+  None = to_underlying(CSSKeyword::None),
+};
+
+static_assert(CSSDataType<CSSBackgroundImageNone>);
+
+/**
+ * Representation of <background-image>: a gradient, an image named by its
+ * URL, or `none`
  * https://www.w3.org/TR/css-backgrounds-3/#background-image
  */
-using CSSBackgroundImage = CSSCompoundDataType<CSSLinearGradientFunction, CSSRadialGradientFunction>;
+using CSSBackgroundImage =
+    CSSCompoundDataType<CSSLinearGradientFunction, CSSRadialGradientFunction, CSSUrl, CSSBackgroundImageNone>;
 
 /**
  * Representation of <background-image-list>

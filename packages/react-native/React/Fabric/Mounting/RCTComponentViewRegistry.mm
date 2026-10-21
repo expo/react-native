@@ -51,6 +51,9 @@ const NSInteger RCTComponentViewRegistryRecyclePoolMaxSize = 1024;
 
   auto componentViewDescriptor = [self _dequeueComponentViewWithComponentHandle:componentHandle];
   componentViewDescriptor.view.tag = tag;
+  if ([componentViewDescriptor.view isKindOfClass:[RCTViewComponentView class]]) {
+    ((RCTViewComponentView *)componentViewDescriptor.view).backgroundImageProvider = _backgroundImageProvider;
+  }
   auto it = _registry.insert({tag, componentViewDescriptor});
   return it.first->second;
 }

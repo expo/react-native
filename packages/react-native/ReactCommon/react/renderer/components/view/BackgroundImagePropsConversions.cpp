@@ -68,6 +68,14 @@ void parseProcessedBackgroundImage(
     }
 
     std::string type = (std::string)(typeIt->second);
+    if (type == "url") {
+      auto uriIt = rawBackgroundImageMap.find("uri");
+      bool named = uriIt != rawBackgroundImageMap.end() &&
+          uriIt->second.hasType<std::string>();
+      backgroundImage.emplace_back(
+          UrlImage{.uri = named ? (std::string)(uriIt->second) : ""});
+      continue;
+    }
     std::vector<ColorStop> colorStops;
 
     auto colorStopsIt = rawBackgroundImageMap.find("colorStops");
@@ -590,6 +598,12 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
     }
 
     return BackgroundImage{radialGradient};
+  } else if (std::holds_alternative<CSSUrl>(cssBackgroundImage)) {
+    return BackgroundImage{
+        UrlImage{.uri = std::get<CSSUrl>(cssBackgroundImage).url}};
+  } else if (std::holds_alternative<CSSBackgroundImageNone>(
+                 cssBackgroundImage)) {
+    return BackgroundImage{UrlImage{}};
   }
 
   return std::nullopt;
@@ -606,9 +620,12 @@ void parseUnprocessedBackgroundImageString(
   }
 
   std::vector<BackgroundImage> backgroundImages;
+  bool drawsAnything = false;
   for (const auto& cssBackgroundImage :
        std::get<CSSBackgroundImageList>(backgroundImageList)) {
     if (auto backgroundImage = fromCSSBackgroundImage(cssBackgroundImage)) {
+      drawsAnything = drawsAnything ||
+          !std::holds_alternative<CSSBackgroundImageNone>(cssBackgroundImage);
       backgroundImages.push_back(std::move(*backgroundImage));
     } else {
       result = {};
@@ -616,7 +633,9 @@ void parseUnprocessedBackgroundImageString(
     }
   }
 
-  result = std::move(backgroundImages);
+  // Layers that are all `none` are no background image
+  result = drawsAnything ? std::move(backgroundImages)
+                         : std::vector<BackgroundImage>{};
 }
 
 } // namespace facebook::react

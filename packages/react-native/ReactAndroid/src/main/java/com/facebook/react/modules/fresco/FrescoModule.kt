@@ -26,6 +26,8 @@ import com.facebook.react.modules.network.CookieJarContainer
 import com.facebook.react.modules.network.ForwardingCookieHandler
 import com.facebook.react.modules.network.OkHttpClientProvider
 import com.facebook.react.turbomodule.core.interfaces.TurboModule
+import com.facebook.react.uimanager.style.BackgroundImageProvider
+import com.facebook.react.views.image.FrescoBackgroundImageProvider
 import okhttp3.JavaNetCookieJar
 
 /**
@@ -92,6 +94,11 @@ constructor(
       )
     }
     config = null
+    // Fresco loads the images `background-image: url()` names too, unless a framework set its own
+    // provider first
+    if (BackgroundImageProvider.current == null) {
+      BackgroundImageProvider.current = FrescoBackgroundImageProvider()
+    }
   }
 
   override fun getName(): String = NAME

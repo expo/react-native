@@ -110,8 +110,8 @@ internal class BackgroundSizeLengthPercentage(
 /**
  * Sealed class representing CSS background-size property values.
  *
- * This class models the different ways a background size can be specified in CSS, currently
- * supporting length/percentage/auto values for both dimensions.
+ * This class models the different ways a background size can be specified in CSS: length,
+ * percentage or auto values for both dimensions, and the cover and contain keywords.
  *
  * @see BackgroundSizeLengthPercentage
  */
@@ -124,11 +124,17 @@ internal sealed class BackgroundSize {
   class LengthPercentageAuto(val lengthPercentage: BackgroundSizeLengthPercentage) :
       BackgroundSize()
 
+  /** `cover`: the smallest size at the image's ratio that covers the positioning area */
+  object Cover : BackgroundSize()
+
+  /** `contain`: the largest size at the image's ratio that fits in the positioning area */
+  object Contain : BackgroundSize()
+
   companion object {
     /**
      * Parses a Dynamic value into a BackgroundSize.
      *
-     * Currently supports map values containing x/y dimensions.
+     * Supports map values containing x/y dimensions, and the strings "cover" and "contain".
      *
      * @param backgroundSizeValue The dynamic value to parse
      * @return A BackgroundSize instance, or null if parsing fails
@@ -146,6 +152,12 @@ internal sealed class BackgroundSize {
             null
           }
         }
+        ReadableType.String ->
+            when (backgroundSizeValue.asString()) {
+              "cover" -> Cover
+              "contain" -> Contain
+              else -> null
+            }
         else -> null
       }
     }
