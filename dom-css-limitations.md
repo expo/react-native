@@ -525,11 +525,14 @@ a real screen first. Background in `element-model-design.md`.
   inline axis is the exception: an explicit `overflow-x: auto | scroll` (a
   wide table, a File Explorer's row of columns) scrolls sideways through the
   platform's horizontal scroll view, which reserves no safe area and does not
-  bounce when its content fits. The `overflow` shorthand does so only on a
-  flex row that does not wrap (a strip of document tabs), whose items sit
-  side by side with their own widths; elsewhere a fixed-height card's text
-  would be measured without a width inside a horizontal scroll view and never
-  wrap, so the shorthand's inline axis clips with the box. The top layer is
+  bounce when its content fits. Its content is laid out at its own width, as
+  a scroll container's is, and the scroll view scrolls over what overflows
+  that width, its scrollable overflow area (`contentSizeIncludesOverflow` on
+  the scroll view, `ScrollViewShadowNode`). The `overflow` shorthand does so
+  only on a flex row that does not wrap (a strip of document tabs), whose
+  items sit side by side; elsewhere its inline axis clips with the box, since
+  a native scroll view for every card that sets the shorthand would cost a
+  view each and take the sideways part of the page's pan. The top layer is
   the other exception: a dialog, a sheet or a
   menu drawn there has no page to grow into, so a region in it with
   `overflow: auto | scroll` on the block axis scrolls through a vertical
@@ -724,6 +727,7 @@ rather than going quiet.
 - `relative-url-has-no-base` — limitation, `packages/rn-tester/js/astryx/native-css/engine.js`
 - `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`
 - `rtl-inline-run-not-reordered` — limitation, `ReactCommon/react/renderer/components/text/InlineContentShadowNode.cpp`
+- `scroll-overflow-end-edge` — limitation, `ReactCommon/react/renderer/components/scrollview/ScrollViewShadowNode.cpp`
 - `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
 - `svg-paint-read-after-layout` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
@@ -936,3 +940,24 @@ every descendant text node, and the generated text is one of them: a line of
 Astryx's code block numbered by `content: attr(data-line)` reads `12const a`
 where the web reads `const a`. Stylesheet rules with a pseudo-element subject
 (`.x::before` in CSS text) are still skipped; only StyleX's blocks generate.
+
+## DOM-CSS-LIMITATION(scroll-overflow-end-edge)
+
+A sideways scroller whose content overflows its left edge, as a
+`direction: rtl` one's does, cannot be scrolled to that content.
+
+A scroll container's scrollable overflow area reaches its content wherever the
+content goes (css-overflow-3 §2.2). In a right-to-left box the content starts
+at the right edge, so a row of columns too wide for an `overflow-x: auto` box
+overflows past its left edge. The platforms' scroll views scroll over a
+content view from its origin, and `ScrollViewShadowNode` extends that view
+across what overflows past its end edges, the right and the bottom, with the
+scroll container's end padding after it. Overflow past the left edge
+(`overflowInset.left`) stays outside the content view, so it is clipped.
+
+Reaching it takes the content view extended leftwards with its content
+shifted by as much, the scroll view starting at its right end, and
+`scrollLeft` read and written as CSSOM View defines it for a right-to-left
+box: zero at the right end and negative leftwards. *Lower priority*: the
+demos lay out left to right, and a right-to-left scroller whose content fits,
+or overflows only at the bottom, is unaffected.

@@ -58,6 +58,13 @@ public class ExpoScrollViewManager : ViewGroupManager<ExpoScrollView>() {
   // Commands rather than props, because these are events, not states
   override fun receiveCommand(view: ExpoScrollView, commandId: String, args: ReadableArray?) {
     when (commandId) {
+      "scrollTo" -> {
+        if (args != null && args.size() >= 3) {
+          val x = PixelUtil.toPixelFromDIP(args.getDouble(0)).toInt()
+          val y = PixelUtil.toPixelFromDIP(args.getDouble(1)).toInt()
+          if (args.getBoolean(2)) view.smoothScrollTo(x, y) else view.scrollTo(x, y)
+        }
+      }
       "scrollToLatest" -> view.scrollToLatest(args?.takeIf { it.size() > 0 }?.getBoolean(0) ?: true)
       "scrollToTop" -> view.scrollToTop(args?.takeIf { it.size() > 0 }?.getBoolean(0) ?: true)
       else -> super.receiveCommand(view, commandId, args)

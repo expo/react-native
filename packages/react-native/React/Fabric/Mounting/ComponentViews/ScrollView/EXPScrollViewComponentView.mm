@@ -1406,6 +1406,18 @@ static facebook::react::TransitionTimingFunction ExpoScrollRiseCurve()
 
 - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args
 {
+  if ([commandName isEqualToString:@"scrollTo"] && args.count >= 3) {
+    const CGFloat minX = -_scrollView.adjustedContentInset.left;
+    const CGFloat maxX = MAX(
+        minX, _scrollView.contentSize.width - _scrollView.bounds.size.width + _scrollView.adjustedContentInset.right);
+    const CGFloat minY = -_scrollView.adjustedContentInset.top;
+    const CGFloat maxY = MAX(minY, [self _maxOffsetY]);
+    [_scrollView
+        setContentOffset:CGPointMake(
+                             MAX(minX, MIN(maxX, [args[0] doubleValue])), MAX(minY, MIN(maxY, [args[1] doubleValue])))
+                animated:[args[2] boolValue]];
+    return;
+  }
   BOOL animated = args.count > 0 ? [args[0] boolValue] : YES;
   if ([commandName isEqualToString:@"scrollToLatest"]) {
     [self _scrollToLatestAnimated:animated];

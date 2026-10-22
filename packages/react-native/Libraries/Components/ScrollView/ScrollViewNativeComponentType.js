@@ -35,6 +35,9 @@ export type ScrollViewNativeProps = Readonly<{
     'automatic' | 'scrollableAxes' | 'never' | 'always'
   ),
   contentOffset?: ?PointProp,
+  contentSizeIncludesOverflow?: ?boolean,
+  /** Expands an inner viewport along the axis owned by its outer scroll view. */
+  expandCrossAxisToContent?: ?boolean,
   decelerationRate?: ?('fast' | 'normal' | number),
   directionalLockEnabled?: ?boolean,
   disableIntervalMomentum?: ?boolean,

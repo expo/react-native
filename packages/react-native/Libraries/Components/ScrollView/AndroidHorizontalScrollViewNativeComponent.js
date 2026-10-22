@@ -20,6 +20,8 @@ export const __INTERNAL_VIEW_CONFIG: PartialViewConfig = {
   bubblingEventTypes: {},
   directEventTypes: {},
   validAttributes: {
+    contentSizeIncludesOverflow: true,
+    expandCrossAxisToContent: true,
     decelerationRate: true,
     disableIntervalMomentum: true,
     maintainVisibleContentPosition: true,
