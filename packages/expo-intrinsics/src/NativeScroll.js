@@ -11,6 +11,24 @@
 import * as React from 'react';
 import {UIManager, View, findNodeHandle} from 'react-native';
 
+// Geometry the native viewport owns, including its safe area and keyboard
+// obstruction. DOM scrolling uses it without measuring through UIKit or
+// introducing React state into the scroll path.
+const scrollGeometry: Map<Object, Object> = new Map();
+export function nativeScrollGeometry(instance: Object): ?Object {
+  return scrollGeometry.get(instance);
+}
+
+export function nativeScrollDocuments(): Array<Object> {
+  return Array.from(
+    new Set(
+      Array.from(scrollGeometry.keys(), node => node.ownerDocument).filter(
+        Boolean,
+      ),
+    ),
+  );
+}
+
 /**
  * `<native:scroll>`: a scroll view with its own native view on each platform.
  * Not a configured `ScrollView`, whose Android view is an
@@ -31,10 +49,29 @@ export default function NativeScroll({
   children,
   contentContainerStyle,
   contentRef,
+  onInsetChange,
   ref,
   ...props
 }: $FlowFixMe): React.Node {
   const hostRef = React.useRef<$FlowFixMe>(null);
+  const setHost = React.useCallback((node: $FlowFixMe) => {
+    if (hostRef.current != null) {
+      scrollGeometry.delete(hostRef.current);
+    }
+    hostRef.current = node;
+    if (node != null) {
+      scrollGeometry.set(node, {});
+    }
+  }, []);
+  const insetChanged = React.useCallback(
+    (event: $FlowFixMe) => {
+      if (hostRef.current != null) {
+        scrollGeometry.set(hostRef.current, event.nativeEvent);
+      }
+      onInsetChange?.(event);
+    },
+    [onInsetChange],
+  );
 
   /*
    * `scrollToLatest()` and `scrollToTop()` on the ref, on top of the host
@@ -81,7 +118,7 @@ export default function NativeScroll({
 
   return (
     // $FlowFixMe[not-a-function] a registered host element is a string tag
-    <native-scroll {...props} ref={hostRef}>
+    <native-scroll {...props} ref={setHost} onInsetChange={insetChanged}>
       {/*
         `collapsable={false}` is load-bearing, not defensive. A container with
         no style of its own has nothing to draw, so the renderer flattens it

@@ -13,6 +13,10 @@
 import type {ElementDescriptor} from './css';
 import type {ElementRecord} from './elementRegistry';
 
+import {
+  nativeScrollDocuments,
+  nativeScrollGeometry,
+} from '../../../expo-intrinsics/src/NativeScroll';
 import {currentContext} from './css';
 import {selectorMatches} from './css/match';
 import {compileSelector} from './css/parse';
@@ -34,6 +38,7 @@ import {
 } from './native-css/engine';
 import {setAnchorNames} from './overlay/anchorNames';
 import {isTopLayerHandle} from './overlay/topLayerHandles';
+import scrollAlignment from './scrollAlignment';
 import {Platform, StyleSheet} from 'react-native';
 import {getFabricUIManager} from 'react-native/Libraries/ReactNative/FabricUIManager';
 import LegacySyntheticEvent from 'react-native/src/private/renderer/events/LegacySyntheticEvent';
@@ -67,8 +72,8 @@ import './imperativeEvents';
  * - `element.style` writes as the element's inline style, which the engine
  *   styles over React's `style`.
  *
- * DOM-CSS-LIMITATION(dom-methods-are-a-subset): `scrollIntoView` and
- * `animate` do nothing here, `scrollTo` and `scrollBy` move only a scroll
+ * DOM-CSS-LIMITATION(dom-methods-are-a-subset): `animate` does nothing here,
+ * `scrollTo` and `scrollBy` move only a scroll
  * container the runtime lays out in a platform scroll view, and an attribute
  * written with `setAttribute` is read and matched but reaches no native prop
  * (a script's `aria-label` is not what the accessibility tree reads), nor
@@ -494,6 +499,8 @@ define(
 // and the stub document's elements would never be found
 const nativeGetElementById: ?(id: string) => ?Object =
   documentPrototype.getElementById;
+const globalShim = shimDocument();
+const shimGetElementById = globalShim?.getElementById.bind(globalShim);
 Object.defineProperty(documentPrototype, 'getElementById', {
   value: function (this: Object, id: string): ?Object {
     // The rendered elements whose id reached the native tree
@@ -504,7 +511,7 @@ Object.defineProperty(documentPrototype, 'getElementById', {
     // The stub document's own elements: the `<style>` sheets the sources
     // append to `head`, which they look up by id before appending again (each
     // Layer's `ensureSlideRules`)
-    const shimElement = shimDocument()?.getElementById(id);
+    const shimElement = shimGetElementById?.(id);
     if (shimElement != null) {
       return shimElement;
     }
@@ -539,6 +546,46 @@ for (const method of ['createElement', 'createElementNS', 'createTextNode']) {
       return shim == null ? null : shim[method](...args);
     },
   );
+}
+
+// The global facade owns injected sheets and unattached nodes. Rendered
+// lookups use Fabric's real documents, discovered from mounted viewports.
+// Ref cleanup removes a viewport when its native tree leaves.
+if (globalShim != null) {
+  globalShim.getElementById = (id: string): ?Object => {
+    const own = shimGetElementById?.(id);
+    if (own != null) {
+      return own;
+    }
+    for (const document of nativeScrollDocuments()) {
+      const found = document.getElementById(id);
+      if (found != null) {
+        return found;
+      }
+    }
+    return null;
+  };
+  const shimQuerySelector = globalShim.querySelector.bind(globalShim);
+  const shimQuerySelectorAll = globalShim.querySelectorAll.bind(globalShim);
+  globalShim.querySelector = (selector: string): ?Object => {
+    const own = shimQuerySelector(selector);
+    if (own != null) {
+      return own;
+    }
+    for (const document of nativeScrollDocuments()) {
+      const found = document.querySelector(selector);
+      if (found != null) {
+        return found;
+      }
+    }
+    return null;
+  };
+  globalShim.querySelectorAll = (selector: string): Array<Object> => [
+    ...shimQuerySelectorAll(selector),
+    ...nativeScrollDocuments().flatMap(document =>
+      document.querySelectorAll(selector),
+    ),
+  ];
 }
 
 function shimDocument(): ?Object {
@@ -879,7 +926,6 @@ function kebab(name: string): string {
 // ---- the rest ------------------------------------------------------------
 
 const noop = () => {};
-define(elementPrototype, 'scrollIntoView', noop);
 
 /*
  * A scroll container the runtime lays out in a platform scroll view
@@ -891,8 +937,13 @@ define(elementPrototype, 'scrollIntoView', noop);
  * pull on scrolled content dragged the sheet as well as the content. Any other
  * element answers as React Native's element does.
  */
-function scrollViewOf(element: Object): ?Object {
-  return recordOf(element)?.scrollView ?? null;
+function scrollViewOf(element: Object, horizontal: boolean = false): ?Object {
+  const record = recordOf(element);
+  return (
+    (horizontal ? record?.horizontalScrollView : null) ??
+    record?.scrollView ??
+    null
+  );
 }
 
 const readOnlyElementPrototype = Object.getPrototypeOf(elementPrototype);
@@ -906,7 +957,10 @@ for (const name of ['scrollTop', 'scrollLeft', 'scrollHeight', 'scrollWidth']) {
   Object.defineProperty(elementPrototype, name, {
     configurable: true,
     get: function (this: Object): unknown {
-      return get.call(scrollViewOf(this) ?? this);
+      return get.call(
+        scrollViewOf(this, name === 'scrollLeft' || name === 'scrollWidth') ??
+          this,
+      );
     },
     set: function (this: Object, value: unknown): void {
       if (axis != null && typeof value === 'number') {
@@ -933,8 +987,12 @@ function scrollViewTo(
   if (view == null) {
     return;
   }
+  const horizontal = scrollViewOf(element, true);
+  if (horizontal != null && horizontal !== view && left != null) {
+    horizontal.scrollTo({x: left, y: horizontal.scrollTop, animated});
+  }
   view.scrollTo({
-    x: left ?? view.scrollLeft,
+    x: horizontal === view ? (left ?? view.scrollLeft) : view.scrollLeft,
     y: top ?? view.scrollTop,
     animated,
   });
@@ -982,10 +1040,105 @@ define(
     const {left, top, animated} = scrollOptions(args);
     scrollViewTo(
       this,
-      left == null ? null : view.scrollLeft + left,
-      top == null ? null : view.scrollTop + top,
+      left == null ? null : this.scrollLeft + left,
+      top == null ? null : this.scrollTop + top,
       animated,
     );
+  },
+);
+
+// CSSOM View §6.1: visit scroll boxes from the target outwards. Geometry
+// comes from Fabric; the host performs the scroll and clamps its range.
+define(
+  elementPrototype,
+  'scrollIntoView',
+  function (this: Object, argument?: boolean | {[string]: unknown}): void {
+    const options =
+      typeof argument === 'object' && argument != null ? argument : {};
+    const block = options.block ?? (argument === false ? 'end' : 'start');
+    const inline = options.inline ?? 'nearest';
+    for (const alignment of [block, inline]) {
+      if (!['start', 'center', 'end', 'nearest'].includes(alignment)) {
+        throw new TypeError('Invalid scrollIntoView alignment');
+      }
+    }
+    const animated = options.behavior === 'smooth';
+    let target = this.getBoundingClientRect();
+    for (
+      let ancestor = this.parentElement;
+      ancestor != null;
+      ancestor = ancestor.parentElement
+    ) {
+      const geometry = nativeScrollGeometry(ancestor);
+      const view = geometry != null ? ancestor : scrollViewOf(ancestor);
+      if (view == null) {
+        continue;
+      }
+      const frame = view.getBoundingClientRect();
+      const inset = geometry?.inset;
+      const shift = geometry?.contentShift;
+      const dx =
+        ancestor.scrollWidth > view.clientWidth
+          ? scrollAlignment(
+              target.left - (shift?.x ?? 0),
+              target.right - (shift?.x ?? 0),
+              frame.left + (inset?.left ?? 0),
+              frame.right - (inset?.right ?? 0),
+              inline,
+            )
+          : 0;
+      const dy =
+        view.scrollHeight > view.clientHeight
+          ? scrollAlignment(
+              target.top - (shift?.y ?? 0),
+              target.bottom - (shift?.y ?? 0),
+              frame.top + (inset?.top ?? 0),
+              frame.bottom - (inset?.bottom ?? 0),
+              block,
+            )
+          : 0;
+      const currentLeft = ancestor.scrollLeft + (shift?.x ?? 0);
+      const currentTop = ancestor.scrollTop + (shift?.y ?? 0);
+      const minLeft = -(inset?.left ?? 0);
+      const minTop = -(inset?.top ?? 0);
+      const maxLeft = Math.max(
+        minLeft,
+        ancestor.scrollWidth - view.clientWidth + (inset?.right ?? 0),
+      );
+      const maxTop = Math.max(
+        minTop,
+        ancestor.scrollHeight - view.clientHeight + (inset?.bottom ?? 0),
+      );
+      const left = Math.max(minLeft, Math.min(maxLeft, currentLeft + dx));
+      const top = Math.max(minTop, Math.min(maxTop, currentTop + dy));
+      const movedX = left - currentLeft;
+      const movedY = top - currentTop;
+      if (movedX !== 0 || movedY !== 0) {
+        if (geometry != null) {
+          const node = getNativeElementReference(view);
+          if (node != null) {
+            getFabricUIManager()?.dispatchCommand(node, 'scrollTo', [
+              left,
+              top,
+              animated,
+            ]);
+          }
+        } else {
+          scrollViewTo(ancestor, left, top, animated);
+        }
+        // An outer box must see where the target will be after the inner
+        // scroll, including when that scroll is animated.
+        target = {
+          left: target.left - movedX,
+          right: target.right - movedX,
+          top: target.top - movedY,
+          bottom: target.bottom - movedY,
+        };
+      }
+      if (options.container === 'nearest') {
+        break;
+      }
+    }
   },
 );
 

@@ -70,6 +70,130 @@ function heightOf(ref: {current: $FlowFixMe}): number {
 }
 
 describe('a region that scrolls in the block axis', () => {
+  it('invalidates intrinsic minima when content or its available width changes', () => {
+    const root = Fantom.createRoot();
+    const item = elementRef();
+    const render = (width, gap, childWidth) =>
+      Fantom.runTask(() =>
+        root.render(
+          jsxs('div', {
+            style: {width, display: 'flex', flexDirection: 'row'},
+            children: [
+              jsxs('div', {
+                ref: item,
+                style: {display: 'flex', flexDirection: 'row', gap},
+                children: [
+                  jsx('div', {
+                    style: {width: childWidth, height: 20, flexShrink: 0},
+                  }),
+                  jsx('div', {
+                    style: {width: '25%', height: 20, flexShrink: 0},
+                  }),
+                ],
+              }),
+              jsx('div', {style: {width, height: 20, flexShrink: 0}}),
+            ],
+          }) as $FlowFixMe,
+        ),
+      );
+    render(200, 20, 50);
+    const first = item.current.getBoundingClientRect().width;
+    render(200, 30, 90);
+    expect(item.current.getBoundingClientRect().width).toBeGreaterThan(first);
+    render(400, 30, 90);
+    expect(item.current.getBoundingClientRect().width).toBeGreaterThan(
+      first + 40,
+    );
+  });
+
+  it('keeps both axes reachable when content overflows a bounded code pane', () => {
+    const root = Fantom.createRoot();
+    const region = elementRef();
+    Fantom.runTask(() =>
+      root.render(
+        jsx('div', {
+          style: {width: 200, height: 100, overflow: 'clip'},
+          children: jsx('div', {
+            ref: region,
+            style: {height: '100%', overflowX: 'auto', overflowY: 'auto'},
+            children: jsx('div', {style: {width: 500, height: 300}}),
+          }),
+        }) as $FlowFixMe,
+      ),
+    );
+    expect(region.current.getBoundingClientRect().height).toBe(100);
+    expect(region.current.scrollWidth).toBe(500);
+    expect(region.current.scrollHeight).toBe(300);
+  });
+
+  it('keeps percentage heights tied to the scrollport when mounted overflow expands', () => {
+    const root = Fantom.createRoot();
+    const marker = elementRef();
+    const region = elementRef();
+    Fantom.runTask(() =>
+      root.render(
+        jsx('div', {
+          style: {width: 200, height: 100, overflow: 'clip'},
+          children: jsx('div', {
+            ref: region,
+            style: {height: '100%', overflowX: 'auto', overflowY: 'auto'},
+            children: [
+              jsx('div', {style: {width: 500, height: 300}}, 'wide'),
+              jsx(
+                'div',
+                {ref: marker, style: {height: '100%', width: 20}},
+                'marker',
+              ),
+            ],
+          }),
+        }) as $FlowFixMe,
+      ),
+    );
+    expect(heightOf(marker)).toBe(100);
+    expect(region.current.scrollHeight).toBe(400);
+  });
+
+  it('lets its content grow instead of shrinking clipped cards and headings', () => {
+    const root = Fantom.createRoot();
+    const region = elementRef();
+    const card = elementRef();
+    Fantom.runTask(() => {
+      root.render(
+        jsx('div', {
+          style: {overflow: 'hidden', height: 100, width: 200},
+          children: jsx('div', {
+            ref: region,
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              overflowY: 'auto',
+              height: '100%',
+            },
+            children: [
+              jsx(
+                'div',
+                {style: {lineHeight: '20px'}, children: 'Heading'},
+                'heading',
+              ),
+              jsx(
+                'div',
+                {
+                  ref: card,
+                  style: {overflow: 'clip'},
+                  children: jsx('div', {style: {height: 200}}),
+                },
+                'card',
+              ),
+            ],
+          }),
+        }) as $FlowFixMe,
+      );
+    });
+    expect(heightOf(region)).toBe(100);
+    expect(heightOf(card)).toBe(200);
+    expect(region.current.scrollHeight).toBe(220);
+  });
+
   it('grows to its content in the page', () => {
     const {root, region} = renderRegion({});
     expect(heightOf(region)).toBe(300);
@@ -211,4 +335,54 @@ describe("Astryx's Dialog, drawn inline", () => {
     // Centred in the page's height
     expect(dialogBox.top).toBeCloseTo((800 - dialogBox.height) / 2, 3);
   });
+});
+
+it('resolves percentage heights inside a bounded editor and keeps its terminal visible', () => {
+  const root = Fantom.createRoot();
+  const editor = elementRef();
+  const terminal = elementRef();
+  const render = (terminalHeight: number) =>
+    Fantom.runTask(() => {
+      root.render(
+        jsx('div', {
+          style: {height: 400, overflow: 'clip'},
+          children: jsx('div', {
+            style: {height: '100%', overflowY: 'auto'},
+            children: jsx('div', {
+              style: {height: '100%', display: 'flex', flexDirection: 'column'},
+              children: [
+                jsx(
+                  'div',
+                  {
+                    ref: editor,
+                    style: {flex: 1, minHeight: 0, overflowY: 'auto'},
+                    children: jsx('div', {style: {height: 1000}}),
+                  },
+                  'editor',
+                ),
+                jsx(
+                  'div',
+                  {
+                    ref: terminal,
+                    style: {height: terminalHeight, flexShrink: 0},
+                    children: 'Terminal',
+                  },
+                  'terminal',
+                ),
+              ],
+            }),
+          }),
+        }),
+      );
+    });
+  render(100);
+  expect(heightOf(editor)).toBe(300);
+  expect(terminal.current.getBoundingClientRect().bottom).toBe(400);
+  expect(editor.current.scrollHeight).toBe(1000);
+  Fantom.scrollTo(editor.current.childNodes[0], {x: 0, y: 200});
+  expect(editor.current.scrollTop).toBe(200);
+  expect(terminal.current.getBoundingClientRect().top).toBe(300);
+  render(200);
+  expect(heightOf(editor)).toBe(200);
+  expect(terminal.current.getBoundingClientRect().bottom).toBe(400);
 });

@@ -1485,7 +1485,7 @@ bool isScrollViewportProp(const std::string& key) {
  * box's own height was auto (Yoga's legacy stretch), so a code block in a
  * shrink-to-fit chat bubble was thousands of points tall.
  */
-folly::dynamic splitScrollContainer(folly::dynamic& props) {
+folly::dynamic splitScrollContainer(folly::dynamic& props, bool blockAxis) {
   folly::dynamic content = folly::dynamic::object();
   folly::dynamic viewport = folly::dynamic::object();
   for (const auto& [key, value] : props.items()) {
@@ -1507,6 +1507,12 @@ folly::dynamic splitScrollContainer(folly::dynamic& props) {
   viewport["gridTemplateColumns"] = "minmax(0, 1fr)";
   viewport["gridTemplateRows"] = "minmax(0, 1fr)";
   content["flexGrow"] = 1;
+  if (blockAxis) {
+    // The extra native wrappers are not CSS containing blocks. Percentages
+    // still resolve against the scrollport, while overflow extends the
+    // mounted content frame without changing that layout size.
+    content["height"] = "100%";
+  }
   props = std::move(viewport);
   return content;
 }
@@ -2746,7 +2752,7 @@ static Resolution resolveElement(
     }
     if (inputs.scrollPart == 1 || inputs.scrollPart == 2) {
       element.scrollContent = std::make_shared<const folly::dynamic>(
-          splitScrollContainer(resolution.props));
+          splitScrollContainer(resolution.props, inputs.scrollPart == 2));
     }
   }
   // `inherit` on a property that does not inherit takes the parent's value

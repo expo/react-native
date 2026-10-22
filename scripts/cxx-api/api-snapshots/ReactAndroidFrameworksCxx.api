@@ -1627,8 +1627,10 @@ class facebook::react::BaseScrollViewProps : public facebook::react::HostPlatfor
   public bool bouncesZoom;
   public bool canCancelContentTouches;
   public bool centerContent;
+  public bool contentSizeIncludesOverflow;
   public bool directionalLockEnabled;
   public bool disableIntervalMomentum;
+  public bool expandCrossAxisToContent;
   public bool horizontal;
   public bool isInvertedVirtualizedList;
   public bool pagingEnabled;

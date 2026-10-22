@@ -500,6 +500,18 @@ type ScrollViewBaseProps = Readonly<{
    * @default `{x: 0, y: 0}`
    */
   contentOffset?: ?PointProp,
+  /**
+   * When true, the scroll view scrolls over what its content overflows the
+   * content container by, toward the end of its scroll axis, as a CSS scroll
+   * container scrolls over its scrollable overflow area: content laid out at
+   * the scroll view's width (`contentContainerStyle={{width: '100%'}}`)
+   * scrolls to a child wider than it.
+   *
+   * @default `false`
+   */
+  contentSizeIncludesOverflow?: ?boolean,
+  /** Expands an inner viewport along the axis owned by its outer scroll view. */
+  expandCrossAxisToContent?: ?boolean,
 
   /**
    * When true, the scroll view stops on the next index (in relation to scroll

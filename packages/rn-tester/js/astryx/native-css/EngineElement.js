@@ -18,10 +18,9 @@
  * dialogs in the top layer, a scroll container's platform scroll view, and
  * the element's record for the DOM methods.
  *
- * It reads no context but one, whether it is in the top layer, and provides
- * none: what an element inherits from its ancestors (custom properties,
- * `color`, font size, what selectors match) the engine reads from the tree it
- * commits.
+ * Native scroll and top-layer contexts supply hosting geometry. Inherited
+ * CSS (custom properties, color, font size and selectors) comes from the
+ * committed renderer tree.
  */
 
 import type {ElementDescriptor} from '../css';
@@ -62,6 +61,7 @@ import {
   isPressReadThroughMarker,
   styleInputsOf,
 } from './engine';
+import ScrollSafeAreaContext from './ScrollSafeArea';
 import * as React from 'react';
 import {ScrollView} from 'react-native';
 import Event from 'react-native/src/private/webapis/dom/events/Event';
@@ -176,8 +176,18 @@ function mappedComponentFor(
 }
 
 const SCROLL_VIEW_STYLE = {flexGrow: 1, flexShrink: 1};
-const HORIZONTAL_CONTENT_CONTAINER = {minWidth: '100%'};
-const VERTICAL_CONTENT_CONTAINER = {minHeight: '100%'};
+// A scroll container's content is laid out at the container's width and
+// scrolls over what overflows it (css-overflow-3 §2.2): the content container
+// is as wide as the scroll view, a column that stretches the element inside
+// it to that width, and the scroll view reaches over its overflow
+// (`contentSizeIncludesOverflow`). The row a horizontal scroll view lays its
+// content out in measured everything inside at max-content: a paragraph
+// never wrapped, and a table's columns sized from their cells' longest lines.
+const HORIZONTAL_CONTENT_CONTAINER = {width: '100%', flexDirection: 'column'};
+// A definite block size lets nested percentage-height layouts share the
+// viewport (an editor above a terminal). Overflow extends the mounted frame,
+// just as in the inline axis, without changing that containing block.
+const VERTICAL_CONTENT_CONTAINER = {height: '100%'};
 
 type Attributes = {[string]: unknown};
 
@@ -685,6 +695,7 @@ export default function EngineElement({
   // The platform scroll view of a scroll container, which dom-compat.js answers
   // the element's scroll offsets and sizes from
   const scrollViewRef = React.useRef<?Object>(null);
+  const horizontalScrollViewRef = React.useRef<?Object>(null);
   // The element's `scroll` event (cssom-view-1 §13.1), which does not bubble:
   // `useScrollOverflow` and a sticky header listen for it
   const dispatchScroll = React.useCallback(() => {
@@ -727,6 +738,9 @@ export default function EngineElement({
     get: () => scrollViewRef.current,
     enumerable: true,
   });
+  Object.defineProperty(record, 'horizontalScrollView', {
+    get: () => horizontalScrollViewRef.current,
+  });
   recordHolder.current = record;
 
   const inTopLayer = inTopLayerAbove || opensTopLayer;
@@ -762,6 +776,27 @@ export default function EngineElement({
   }
   const scrollsSideways = scrollRef.current === 1;
   const scrollsInBlockAxis = scrollRef.current === 2;
+  // An explicit page-edge scroller may extend beneath native side controls.
+  // Its CSS box and native viewport widen together; the content still lays
+  // out at the safe width. Ordinary nested scrollers keep their own clips.
+  const scrollSafeArea =
+    scrollsSideways &&
+    !inTopLayer &&
+    rest['data-scroll-safe-area'] === 'horizontal'
+      ? React.use(ScrollSafeAreaContext)
+      : null;
+  const scrollGutter =
+    (scrollSafeArea?.left ?? 0) + (scrollSafeArea?.right ?? 0);
+  if (scrollSafeArea != null && scrollGutter > 0) {
+    hostProps.cssInline = [
+      ...(inlineEntries ?? []),
+      ...encodeInline({
+        width: `calc(100% + ${scrollGutter}px)`,
+        marginLeft: -scrollSafeArea.left,
+        marginRight: -scrollSafeArea.right,
+      }),
+    ];
+  }
 
   if (hostTag !== tag) {
     hostProps.cssTag = tag;
@@ -822,14 +857,59 @@ export default function EngineElement({
     // the element's styles between the two.
     // DOM-CSS-LIMITATION(no-nested-vertical-scroll)
     hostProps.cssScroll = scrollsSideways ? 1 : 2;
+    const scrollContent = reactJsx('div', {
+      cssEngine: true,
+      cssScroll: 3,
+      children: content,
+    });
+    // Android's native scroll widgets each own one axis. Compose them when
+    // CSS scrolls both axes, retaining a single CSS box and containing block.
+    const twoAxes = scrollsInBlockAxis && (hints & HINT_SCROLL) !== 0;
+    const nativeContent = twoAxes
+      ? reactJsx(ScrollView, {
+          ref: horizontalScrollViewRef,
+          horizontal: true,
+          expandCrossAxisToContent: true,
+          style: {flexGrow: 1, flexShrink: 0, minHeight: '100%'},
+          contentContainerStyle: {
+            ...HORIZONTAL_CONTENT_CONTAINER,
+            height: '100%',
+          },
+          contentSizeIncludesOverflow: true,
+          contentInsetAdjustmentBehavior: 'never',
+          nestedScrollEnabled: true,
+          onScroll: dispatchScroll,
+          alwaysBounceHorizontal: false,
+          alwaysBounceVertical: false,
+          children: scrollContent,
+        })
+      : scrollContent;
     hostProps.children = reactJsx(ScrollView, {
       ref: scrollViewRef,
       onScroll: dispatchScroll,
       horizontal: scrollsSideways,
+      contentInset:
+        scrollSafeArea == null
+          ? undefined
+          : {
+              top: 0,
+              bottom: 0,
+              left: scrollSafeArea.left,
+              right: scrollSafeArea.right,
+            },
+      contentOffset:
+        scrollSafeArea == null ? undefined : {x: -scrollSafeArea.left, y: 0},
+      contentInsetAdjustmentBehavior: 'never',
       style: SCROLL_VIEW_STYLE,
       contentContainerStyle: scrollsSideways
-        ? HORIZONTAL_CONTENT_CONTAINER
+        ? scrollGutter > 0
+          ? {
+              ...HORIZONTAL_CONTENT_CONTAINER,
+              width: `calc(100% - ${scrollGutter}px)`,
+            }
+          : HORIZONTAL_CONTENT_CONTAINER
         : VERTICAL_CONTENT_CONTAINER,
+      contentSizeIncludesOverflow: true,
       // A region below a clip scrolls inside the screen's scroll view, which
       // on Android takes a vertical drag from a scroll view inside it that
       // does not ask for nested scrolling
@@ -837,11 +917,7 @@ export default function EngineElement({
       showsHorizontalScrollIndicator: false,
       alwaysBounceHorizontal: false,
       alwaysBounceVertical: false,
-      children: reactJsx('div', {
-        cssEngine: true,
-        cssScroll: 3,
-        children: content,
-      }),
+      children: nativeContent,
     });
     element = reactJsx(hostTag, hostProps);
   } else {
