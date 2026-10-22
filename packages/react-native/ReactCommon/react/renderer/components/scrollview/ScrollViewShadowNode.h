@@ -47,6 +47,7 @@ class ScrollViewShadowNode final
  private:
   void updateStateIfNeeded();
   void updateScrollContentOffsetIfNeeded();
+  void extendContentOverOverflowIfNeeded();
 };
 
 } // namespace facebook::react

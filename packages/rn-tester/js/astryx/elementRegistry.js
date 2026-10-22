@@ -49,6 +49,10 @@ export type ElementRecord = {
   // The platform scroll view a scroll container lays its content out in, whose
   // offsets and sizes are the element's `scrollTop`, `scrollHeight` and kin
   scrollView?: ?ScrollViewInstance,
+  // The horizontal scroll view inside it when the container scrolls both
+  // axes, whose offsets and sizes are the element's `scrollLeft` and
+  // `scrollWidth`
+  horizontalScrollView?: ?ScrollViewInstance,
 };
 
 // An attribute as script wrote it (null for one it removed), and the value
