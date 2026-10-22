@@ -530,11 +530,14 @@ a real screen first. Background in `element-model-design.md`.
   inline axis is the exception: an explicit `overflow-x: auto | scroll` (a
   wide table, a File Explorer's row of columns) scrolls sideways through the
   platform's horizontal scroll view, which reserves no safe area and does not
-  bounce when its content fits. The `overflow` shorthand does so only on a
-  flex row that does not wrap (a strip of document tabs), whose items sit
-  side by side with their own widths; elsewhere a fixed-height card's text
-  would be measured without a width inside a horizontal scroll view and never
-  wrap, so the shorthand's inline axis clips with the box. The top layer is
+  bounce when its content fits. Its content is laid out at its own width, as
+  a scroll container's is, and the scroll view scrolls over what overflows
+  that width, its scrollable overflow area (`contentSizeIncludesOverflow` on
+  the scroll view, `ScrollViewShadowNode`). The `overflow` shorthand does so
+  only on a flex row that does not wrap (a strip of document tabs), whose
+  items sit side by side; elsewhere its inline axis clips with the box, since
+  a native scroll view for every card that sets the shorthand would cost a
+  view each and take the sideways part of the page's pan. The top layer is
   the other exception: a dialog, a sheet or a
   menu drawn there has no page to grow into, so a region in it with
   `overflow: auto | scroll` on the block axis scrolls through a vertical
@@ -728,6 +731,7 @@ rather than going quiet.
 - `relative-url-has-no-base` — limitation, `packages/rn-tester/js/astryx/native-css/engine.js`
 - `root-font-size-is-native-not-16px` — deviation, `Libraries/Text/__tests__/RelativeFontSize-itest.js`
 - `rtl-inline-run-not-reordered` — limitation, `ReactCommon/react/renderer/components/text/InlineContentShadowNode.cpp`
+- `scroll-overflow-end-edge` — limitation, `ReactCommon/react/renderer/components/scrollview/ScrollViewShadowNode.cpp`
 - `select-dismissal-ghost` — deviation, `React/Fabric/Mounting/ComponentViews/View/EXPElementSelectComponentView.mm`
 - `svg-paint-read-after-layout` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`
 - `svg-subset` — limitation, `packages/rn-tester/js/astryx/svg/Svg.js`

@@ -57,6 +57,13 @@ class BaseScrollViewProps : public ViewProps {
   bool showsVerticalScrollIndicator{true};
   bool persistentScrollbar{false};
   bool horizontal{false};
+  /*
+   * Whether the content container reaches over what its content overflows it
+   * by toward the end of the scroll axis, so the scroll view scrolls to it: the
+   * scrollable overflow area of a CSS scroll container (css-overflow-3 §2.2),
+   * whose content is laid out at the container's width and may overflow it.
+   */
+  bool contentSizeIncludesOverflow{false};
   Float scrollEventThrottle{};
   Float zoomScale{1.0f};
   EdgeInsets contentInset{};

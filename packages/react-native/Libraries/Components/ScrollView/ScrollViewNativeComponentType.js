@@ -35,6 +35,7 @@ export type ScrollViewNativeProps = Readonly<{
     'automatic' | 'scrollableAxes' | 'never' | 'always'
   ),
   contentOffset?: ?PointProp,
+  contentSizeIncludesOverflow?: ?boolean,
   decelerationRate?: ?('fast' | 'normal' | number),
   directionalLockEnabled?: ?boolean,
   disableIntervalMomentum?: ?boolean,

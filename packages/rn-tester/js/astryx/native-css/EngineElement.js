@@ -176,7 +176,14 @@ function mappedComponentFor(
 }
 
 const SCROLL_VIEW_STYLE = {flexGrow: 1, flexShrink: 1};
-const HORIZONTAL_CONTENT_CONTAINER = {minWidth: '100%'};
+// A scroll container's content is laid out at the container's width and
+// scrolls over what overflows it (css-overflow-3 §2.2): the content container
+// is as wide as the scroll view, a column that stretches the element inside
+// it to that width, and the scroll view reaches over its overflow
+// (`contentSizeIncludesOverflow`). The row a horizontal scroll view lays its
+// content out in measured everything inside at max-content: a paragraph
+// never wrapped, and a table's columns sized from their cells' longest lines.
+const HORIZONTAL_CONTENT_CONTAINER = {width: '100%', flexDirection: 'column'};
 const VERTICAL_CONTENT_CONTAINER = {minHeight: '100%'};
 
 type Attributes = {[string]: unknown};
@@ -830,6 +837,7 @@ export default function EngineElement({
       contentContainerStyle: scrollsSideways
         ? HORIZONTAL_CONTENT_CONTAINER
         : VERTICAL_CONTENT_CONTAINER,
+      contentSizeIncludesOverflow: true,
       // A region below a clip scrolls inside the screen's scroll view, which
       // on Android takes a vertical drag from a scroll view inside it that
       // does not ask for nested scrolling

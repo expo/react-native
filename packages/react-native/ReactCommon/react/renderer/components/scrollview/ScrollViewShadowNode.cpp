@@ -61,7 +61,48 @@ ScrollViewState ScrollViewShadowNode::initialStateData(
 void ScrollViewShadowNode::layout(LayoutContext layoutContext) {
   ConcreteViewShadowNode::layout(layoutContext);
   updateScrollContentOffsetIfNeeded();
+  extendContentOverOverflowIfNeeded();
   updateStateIfNeeded();
+}
+
+/*
+ * With `contentSizeIncludesOverflow`, the content container's frame reaches
+ * over what its content overflows it by toward the end of the scroll axis (a
+ * row's for a horizontal scroll view), the platform views' scrolling extent
+ * on both platforms. CSS lays a scroll container's content out at its width
+ * and scrolls to what overflows it (css-overflow-3 §2.2); laid out at its
+ * max-content width instead, a paragraph in a sideways scroller never wrapped
+ * and a table at `width: 100%` was measured against no width at all.
+ * DOM-CSS-LIMITATION(scroll-overflow-end-edge): only the overflow past the
+ * end edge is reached, so a `direction: rtl` scroller's overflow, past its
+ * left edge, is not, and the scroll container's end padding is not added
+ * past its content's overflow as css-overflow-3 §2.2 adds it.
+ */
+void ScrollViewShadowNode::extendContentOverOverflowIfNeeded() {
+  if (!getConcreteProps().contentSizeIncludesOverflow) {
+    return;
+  }
+  const auto direction = getConcreteProps().yogaStyle.flexDirection();
+  const bool horizontal = direction == yoga::FlexDirection::Row ||
+      direction == yoga::FlexDirection::RowReverse;
+  for (const auto& childNode : getLayoutableChildNodes()) {
+    auto metrics = childNode->getLayoutMetrics();
+    const Float overflow = horizontal ? -metrics.overflowInset.right
+                                      : -metrics.overflowInset.bottom;
+    // A child this pass did not lay out is shared with a committed tree, and
+    // keeps the frame it was given when it was laid out
+    if (overflow <= 0 || childNode->isPublished()) {
+      continue;
+    }
+    if (horizontal) {
+      metrics.frame.size.width += overflow;
+      metrics.overflowInset.right = 0;
+    } else {
+      metrics.frame.size.height += overflow;
+      metrics.overflowInset.bottom = 0;
+    }
+    childNode->setLayoutMetrics(metrics);
+  }
 }
 
 Point ScrollViewShadowNode::getContentOriginOffset(

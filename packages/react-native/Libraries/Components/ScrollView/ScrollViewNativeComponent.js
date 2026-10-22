@@ -43,6 +43,7 @@ export const __INTERNAL_VIEW_CONFIG: PartialViewConfig =
           contentOffset: {
             diff: require('../../Utilities/differ/pointsDiffer').default,
           },
+          contentSizeIncludesOverflow: true,
           decelerationRate: true,
           disableIntervalMomentum: true,
           maintainVisibleContentPosition: true,
@@ -120,6 +121,7 @@ export const __INTERNAL_VIEW_CONFIG: PartialViewConfig =
             diff: require('../../Utilities/differ/pointsDiffer').default,
           },
           contentInsetAdjustmentBehavior: true,
+          contentSizeIncludesOverflow: true,
           decelerationRate: true,
           endDraggingSensitivityMultiplier: true,
           directionalLockEnabled: true,
