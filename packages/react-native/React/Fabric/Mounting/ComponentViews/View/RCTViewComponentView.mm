@@ -2664,7 +2664,11 @@ static void EXPRepositionFixedBackgroundsIn(UIView *view)
           RCTCornerRadiiFromBorderRadii(borderMetrics.borderRadii),
           RCTUIEdgeInsetsFromEdgeInsets(borderMetrics.borderWidths),
           self.layer.bounds.size);
-      shadowLayer.zPosition = _borderLayer.zPosition;
+      // Places the shadow above the background and below the border, the outline and the children, where CSS
+      // paints it (css-backgrounds-3 §7.1.1). An outer shadow is masked to outside the box, so only an inset one
+      // meets them: drawn at the border layer's height, or at the children's with no border layer, it covered the
+      // children, and a selected card's inset ring showed over the image that hides it on the web.
+      shadowLayer.zPosition = BACKGROUND_COLOR_ZPOSITION + 0.5;
       // An HDR outer shadow is a drawn store (`RCTGetBoxShadowLayer`); the rest are layer shadows
       const BOOL brightShadow = it->color && isHighDynamicRangeColor(*it->color);
       [self rct_applyDynamicRange:brightShadow
