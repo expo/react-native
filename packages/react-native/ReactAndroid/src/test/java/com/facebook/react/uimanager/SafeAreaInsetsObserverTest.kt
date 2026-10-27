@@ -532,6 +532,44 @@ class SafeAreaInsetsObserverTest {
   }
 
   @Test
+  @Suppress("DEPRECATION")
+  @SuppressLint("DeprecatedMethod")
+  fun lastPixelOfASlideIn_isReportedOnceTheViewHoldsStill() {
+    // A screen sliding in from the right: its last frame moves it one pixel, which is within the
+    // threshold of the frame before. Dropping it left the screen reporting that pixel for good.
+    DisplayMetricsHolder.setScreenDisplayMetrics(DisplayMetrics().apply { density = 2f })
+    val view = addView(root, 40, 100, 460, 900)
+    val observer = observe(view)
+    view.translationX = 3f
+    observer.onPreDraw()
+    view.translationX = 1f
+    observer.onPreDraw()
+    view.translationX = 0f
+    observer.onPreDraw()
+    assertThat(events).hasSize(2)
+
+    observer.onPreDraw()
+    assertThat(events).hasSize(3)
+    val emitter = mock<RCTModernEventEmitter>()
+    val payload = argumentCaptor<WritableMap>()
+    events.last().dispatchModern(emitter)
+    verify(emitter)
+        .receiveEvent(
+            eq(1),
+            eq(2),
+            eq("topSafeAreaInsetsChange"),
+            any(),
+            any(),
+            payload.capture(),
+            any(),
+        )
+    assertThat(checkNotNull(payload.firstValue.getMap("insets")).getDouble("right")).isEqualTo(0.0)
+
+    observer.onPreDraw()
+    assertThat(events).hasSize(3)
+  }
+
+  @Test
   fun supportedUnsupportedSupported_reEmitsAfterRecovery() {
     val view = addView(root, 0, 0, 500, 1000)
     val observer = observe(view)
