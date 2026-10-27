@@ -732,6 +732,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 {
   [super didMoveToWindow];
   if ([self _observesSafeAreaInsets]) {
+    [self _setSafeAreaInsetsUnreadInWindow:YES];
     [self setNeedsLayout];
   }
   if (self.window == nil) {
@@ -1485,6 +1486,18 @@ static CGRect RCTUntransformedFrame(UIView *view)
       self, @selector(_lastSentSafeAreaInsets), lastSentSafeAreaInsets, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
+// From when the view moves into a window until its insets are read there.
+- (BOOL)_safeAreaInsetsUnreadInWindow
+{
+  return [objc_getAssociatedObject(self, _cmd) boolValue];
+}
+
+- (void)_setSafeAreaInsetsUnreadInWindow:(BOOL)unread
+{
+  objc_setAssociatedObject(
+      self, @selector(_safeAreaInsetsUnreadInWindow), unread ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
 static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, CGFloat threshold)
 {
   return ABS(lhs.left - rhs.left) <= threshold && ABS(lhs.top - rhs.top) <= threshold &&
@@ -1507,6 +1520,11 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
     return;
   }
 
+  const BOOL arrived = [self _safeAreaInsetsUnreadInWindow];
+  if (arrived) {
+    [self _setSafeAreaInsetsUnreadInWindow:NO];
+  }
+
   UIEdgeInsets insets = self.safeAreaInsets;
   NSValue *lastSentSafeAreaInsets = [self _lastSentSafeAreaInsets];
   if (lastSentSafeAreaInsets != nil &&
@@ -1516,13 +1534,25 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
 
   [self _setLastSentSafeAreaInsets:[NSValue valueWithUIEdgeInsets:insets]];
 
-  static_cast<const ViewEventEmitter &>(*_eventEmitter)
-      .onSafeAreaInsetsChange(
-          EdgeInsets{
-              .left = (Float)insets.left,
-              .top = (Float)insets.top,
-              .right = (Float)insets.right,
-              .bottom = (Float)insets.bottom});
+  const auto &eventEmitter = static_cast<const ViewEventEmitter &>(*_eventEmitter);
+  const auto edgeInsets = EdgeInsets{
+      .left = (Float)insets.left,
+      .top = (Float)insets.top,
+      .right = (Float)insets.right,
+      .bottom = (Float)insets.bottom};
+  // A change UIKit animates for a view already on screen (a rotation, or a
+  // split column or a fold resizing this view) is answered before this layout
+  // pass returns, so what JavaScript renders for it mounts inside the
+  // animation. Otherwise the handler runs at the end of the frame, outside the
+  // animation, and its layout lands in one step while the native views around
+  // it are still moving. Not so for a view's first insets, or its first in a
+  // window it has just moved into (a pushed or presented screen, a column
+  // being shown): the view is arriving, and its content would animate in.
+  if (lastSentSafeAreaInsets != nil && !arrived && UIView.inheritedAnimationDuration > 0 &&
+      eventEmitter.experimental_dispatchSyncNow([&]() { eventEmitter.onSafeAreaInsetsChange(edgeInsets); })) {
+    return;
+  }
+  eventEmitter.onSafeAreaInsetsChange(edgeInsets);
 }
 
 - (BOOL)_observesSafeAreaInsets

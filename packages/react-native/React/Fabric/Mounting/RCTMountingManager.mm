@@ -299,12 +299,23 @@ static void RCTPerformMountInstructions(
 
         RCTAssert(newChildShadowView.props, @"`newChildShadowView.props` must not be null.");
 
-        [newChildComponentView updateProps:newChildShadowView.props oldProps:nullptr];
-        [newChildComponentView updateEventEmitter:newChildShadowView.eventEmitter];
-        [newChildComponentView updateState:newChildShadowView.state oldState:nullptr];
-        [newChildComponentView updateLayoutMetrics:newChildShadowView.layoutMetrics
-                                  oldLayoutMetrics:EmptyLayoutMetrics];
-        [newChildComponentView finalizeUpdates:RNComponentViewUpdateMaskAll];
+        const ShadowView *shadowView = &newChildShadowView;
+        auto applyFirstUpdates = ^{
+          [newChildComponentView updateProps:shadowView->props oldProps:nullptr];
+          [newChildComponentView updateEventEmitter:shadowView->eventEmitter];
+          [newChildComponentView updateState:shadowView->state oldState:nullptr];
+          [newChildComponentView updateLayoutMetrics:shadowView->layoutMetrics oldLayoutMetrics:EmptyLayoutMetrics];
+          [newChildComponentView finalizeUpdates:RNComponentViewUpdateMaskAll];
+        };
+        // A view inserted by a mount inside a UIKit animation (one that follows
+        // a rotation, a split column or a fold) takes its first frame and props
+        // directly. Animated, it would grow from an empty frame, or from the one
+        // it had before it was recycled.
+        if (UIView.inheritedAnimationDuration > 0) {
+          [UIView performWithoutAnimation:applyFirstUpdates];
+        } else {
+          applyFirstUpdates();
+        }
 
         [parentViewDescriptor.view mountChildComponentView:newChildComponentView index:mutation.index];
         break;
