@@ -257,6 +257,36 @@ static void EXPRecordMountingTransaction(const ShadowViewMutationList &mutations
   }
 }
 
+/*
+ * Inside a UIKit animation (a rotation, a split column or a fold that this
+ * mount follows), every frame the mount changes animates along with it. Two
+ * kinds of view need not. One that has not been drawn yet (it has no
+ * presentation layer), such as the content of a column being shown, would move
+ * from a frame that was never on screen. One that is outside the window before
+ * and after costs the frame that starts the transition its animations for
+ * nothing anyone sees, and a long page lays out many such views (the rows below
+ * the fold of a gallery). Before is where the view was last drawn; after is its
+ * new frame in its superview, which a mount updates before its subviews. A view
+ * that comes into the window or leaves it is animated as before, and the margin
+ * covers a spring's overshoot.
+ */
+static BOOL RCTViewMovesUnseen(UIView *view, const LayoutMetrics &newLayoutMetrics)
+{
+  CALayer *drawn = view.layer.presentationLayer;
+  if (drawn == nil) {
+    return YES;
+  }
+  UIWindow *window = view.window;
+  UIView *superview = view.superview;
+  if (window == nil || superview == nil) {
+    return NO;
+  }
+  CALayer *windowDrawn = window.layer.presentationLayer ?: window.layer;
+  CGRect before = [drawn convertRect:drawn.bounds toLayer:windowDrawn];
+  CGRect after = [superview convertRect:RCTCGRectFromRect(newLayoutMetrics.frame) toView:nil];
+  return !CGRectIntersectsRect(CGRectUnion(before, after), CGRectInset(window.bounds, -16, -16));
+}
+
 static void RCTPerformMountInstructions(
     const ShadowViewMutationList &mutations,
     RCTComponentViewRegistry *registry,
@@ -354,14 +384,31 @@ static void RCTPerformMountInstructions(
           mask |= RNComponentViewUpdateMaskState;
         }
 
+        BOOL withoutAnimation = NO;
         if (oldChildShadowView.layoutMetrics != newChildShadowView.layoutMetrics) {
-          [newChildComponentView updateLayoutMetrics:newChildShadowView.layoutMetrics
-                                    oldLayoutMetrics:oldChildShadowView.layoutMetrics];
+          const LayoutMetrics *newLayoutMetrics = &newChildShadowView.layoutMetrics;
+          const LayoutMetrics *oldLayoutMetrics = &oldChildShadowView.layoutMetrics;
+          auto updateLayoutMetrics = ^{
+            [newChildComponentView updateLayoutMetrics:*newLayoutMetrics oldLayoutMetrics:*oldLayoutMetrics];
+          };
+          withoutAnimation = UIView.inheritedAnimationDuration > 0 &&
+              RCTViewMovesUnseen(newChildComponentView, *newLayoutMetrics);
+          if (withoutAnimation) {
+            [UIView performWithoutAnimation:updateLayoutMetrics];
+          } else {
+            updateLayoutMetrics();
+          }
           mask |= RNComponentViewUpdateMaskLayoutMetrics;
         }
 
         if (mask != RNComponentViewUpdateMaskNone) {
-          [newChildComponentView finalizeUpdates:mask];
+          if (withoutAnimation) {
+            [UIView performWithoutAnimation:^{
+              [newChildComponentView finalizeUpdates:mask];
+            }];
+          } else {
+            [newChildComponentView finalizeUpdates:mask];
+          }
         }
 
         break;
