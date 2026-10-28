@@ -30,8 +30,10 @@ internal class SafeAreaInsetsObserver private constructor(private val view: View
   private val geometry = Geometry()
   private val insets = FloatArray(4)
   private val lastInsets = FloatArray(4)
+  private val heldInsets = FloatArray(4)
 
   private var hasLastInsets = false
+  private var hasHeldInsets = false
   private var isListening = false
 
   private fun start() {
@@ -45,6 +47,7 @@ internal class SafeAreaInsetsObserver private constructor(private val view: View
     view.removeOnAttachStateChangeListener(this)
     stopListening()
     hasLastInsets = false
+    hasHeldInsets = false
   }
 
   private fun startListening() {
@@ -74,6 +77,7 @@ internal class SafeAreaInsetsObserver private constructor(private val view: View
   override fun onViewDetachedFromWindow(v: View) {
     stopListening()
     hasLastInsets = false
+    hasHeldInsets = false
   }
 
   override fun onPreDraw(): Boolean {
@@ -87,13 +91,23 @@ internal class SafeAreaInsetsObserver private constructor(private val view: View
     // again.
     if (!computeSafeAreaInsets(view, geometry, insets)) {
       hasLastInsets = false
+      hasHeldInsets = false
       return
     }
-    if (
-        hasLastInsets &&
-            insets.indices.all { abs(insets[it] - lastInsets[it]) <= INSET_CHANGE_THRESHOLD_PX }
-    ) {
-      return
+    if (hasLastInsets && within(insets, lastInsets, INSET_CHANGE_THRESHOLD_PX)) {
+      // A change within the threshold is not reported while the view moves, but it must not be
+      // dropped: the last frame of a transition often moves the view by its last pixel. Hold the
+      // change and draw another frame; if the insets are the same on that frame, report them.
+      if (within(insets, lastInsets, INSET_ROUND_OFF_PX)) {
+        hasHeldInsets = false
+        return
+      }
+      if (!hasHeldInsets || !within(insets, heldInsets, INSET_ROUND_OFF_PX)) {
+        insets.copyInto(heldInsets)
+        hasHeldInsets = true
+        view.postInvalidateOnAnimation()
+        return
+      }
     }
     val eventDispatcher =
         UIManagerHelper.getEventDispatcher(UIManagerHelper.getReactContext(view)) ?: return
@@ -101,6 +115,7 @@ internal class SafeAreaInsetsObserver private constructor(private val view: View
     // above does not permanently swallow this inset value.
     insets.copyInto(lastInsets)
     hasLastInsets = true
+    hasHeldInsets = false
     eventDispatcher.dispatchEvent(
         SafeAreaInsetsChangeEvent(
             surfaceId = UIManagerHelper.getSurfaceId(view),
@@ -112,6 +127,9 @@ internal class SafeAreaInsetsObserver private constructor(private val view: View
         ),
     )
   }
+
+  private fun within(a: FloatArray, b: FloatArray, tolerance: Float): Boolean =
+      a.indices.all { abs(a[it] - b[it]) <= tolerance }
 
   private class Geometry {
     val visibleRect = Rect()
@@ -127,6 +145,8 @@ internal class SafeAreaInsetsObserver private constructor(private val view: View
     private const val LEFT = 3
     // Match iOS notification precision without rounding the emitted measurement.
     private const val INSET_CHANGE_THRESHOLD_PX = 1f
+    // A transformed edge's float round-off, far below any change worth reporting.
+    private const val INSET_ROUND_OFF_PX = 0.01f
     // Bound accumulated transform round-off to one thousandth of a physical pixel.
     private const val MAX_AXIS_ALIGNMENT_ERROR_PX = 0.001f
 
