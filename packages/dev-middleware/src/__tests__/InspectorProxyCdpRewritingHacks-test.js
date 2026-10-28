@@ -28,7 +28,6 @@ jest.useRealTimers();
 
 jest.setTimeout(10000);
 
-const fetchOriginal = fetch;
 const fetchSpy: JestMockFn<
   Parameters<typeof fetch>,
   ReturnType<typeof fetch>,
@@ -39,7 +38,7 @@ describe.each(['HTTP', 'HTTPS'])(
   protocol => {
     // Inspector proxy tests are using a self-signed certificate for HTTPS tests.
     if (protocol === 'HTTPS') {
-      withFetchSelfSignedCertsForAllTests(fetchSpy, fetchOriginal);
+      withFetchSelfSignedCertsForAllTests(fetchSpy);
     }
 
     const serverRef = withServerForEachTest({

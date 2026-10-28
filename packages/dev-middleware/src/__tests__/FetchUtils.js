@@ -62,12 +62,12 @@ export async function fetchJson<T extends JSONSerializable>(
 }
 
 /**
- * Change the global fetch dispatcher to allow self-signed certificates.
- * This runs with Jest's `beforeAll` and `afterAll`, and restores the original dispatcher.
+ * Serve `fetch` calls with undici so that they accept the self-signed
+ * certificate of the HTTPS server created in ServerUtils. This runs with Jest's
+ * `beforeAll` and `afterAll`, and restores the original `fetch`.
  */
 export function withFetchSelfSignedCertsForAllTests(
   fetchSpy: JestMockFn<Parameters<typeof fetch>, ReturnType<typeof fetch>>,
-  fetchOriginal: typeof fetch,
 ) {
   const selfSignedCertDispatcher = new Agent({
     connect: {
@@ -76,16 +76,26 @@ export function withFetchSelfSignedCertsForAllTests(
   });
 
   beforeAll(() => {
-    // For some reason, setting the `selfSignedCertDispatcher` with `setGlobalDispatcher` doesn't work.
-    // Instead of using `setGlobalDispatcher`, we'll use a spy to intercept the fetch calls and add the dispatcher.
-    fetchSpy.mockImplementation((url, options) =>
-      // $FlowFixMe[cannot-spread-interface]
-      fetchOriginal(url, {
+    // Node's global `fetch` is built on the undici bundled with Node, which
+    // does not accept a dispatcher created by the undici in node_modules: on
+    // Node 26 the request fails with "fetch failed". Serve the calls with this
+    // undici's `request`, and return the parts of a `Response` that callers
+    // read.
+    fetchSpy.mockImplementation(async (url, options) => {
+      const {statusCode, body} = await request(url.toString(), {
         ...options,
-        // $FlowFixMe[prop-missing]: dispatcher
-        dispatcher: options?.dispatcher ?? selfSignedCertDispatcher,
-      }),
-    );
+        dispatcher: selfSignedCertDispatcher,
+      });
+      // $FlowFixMe[prop-missing] undici's body has `text()`
+      const text: string = await body.text();
+      // $FlowFixMe[incompatible-type] not a whole `Response`
+      return {
+        ok: statusCode >= 200 && statusCode < 300,
+        status: statusCode,
+        statusText: '',
+        text: async () => text,
+      };
+    });
   });
 
   afterAll(() => {
