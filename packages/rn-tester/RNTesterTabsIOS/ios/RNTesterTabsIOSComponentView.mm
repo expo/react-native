@@ -27,11 +27,32 @@ static constexpr CGFloat LegacyTopInset = 50;
 static constexpr CGFloat LegacyBottomInset = 65;
 
 /**
- * A tab's view controller, which reports when the tab bar or window changes
- * the area its content needs to clear.
+ * Reports each layout pass, after which the tab bar is where the pass put it:
+ * along the bottom, along a side, or replaced by a floating bar.
+ */
+@interface RNTesterTabBarController : UITabBarController
+@property (nonatomic, copy) void (^didLayoutSubviews)(void);
+@end
+
+@implementation RNTesterTabBarController
+
+- (void)viewDidLayoutSubviews
+{
+  [super viewDidLayoutSubviews];
+  if (self.didLayoutSubviews != nil) {
+    self.didLayoutSubviews();
+  }
+}
+
+@end
+
+/**
+ * A tab's view controller, which reports when the area its content needs to
+ * clear changes. Its safe area is updated after the tab bar controller's
+ * layout pass, when its own view is laid out.
  */
 @interface RNTesterTabViewController : UIViewController
-@property (nonatomic, copy) void (^safeAreaInsetsDidChange)(UIEdgeInsets insets);
+@property (nonatomic, copy) void (^safeAreaInsetsDidChange)(void);
 @end
 
 @implementation RNTesterTabViewController
@@ -40,7 +61,7 @@ static constexpr CGFloat LegacyBottomInset = 65;
 {
   [super viewSafeAreaInsetsDidChange];
   if (self.safeAreaInsetsDidChange != nil) {
-    self.safeAreaInsetsDidChange(self.view.safeAreaInsets);
+    self.safeAreaInsetsDidChange();
   }
 }
 
@@ -50,7 +71,7 @@ static constexpr CGFloat LegacyBottomInset = 65;
 @end
 
 @implementation RNTesterTabsIOSComponentView {
-  UITabBarController *_tabBarController;
+  RNTesterTabBarController *_tabBarController;
   // Holds the mounted React children, and moves into the selected tab.
   UIView *_containerView;
   NSArray<NSString *> *_tabKeys;
@@ -77,25 +98,38 @@ static constexpr CGFloat LegacyBottomInset = 65;
     _containerView = [UIView new];
     _containerView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
-    _tabBarController = [UITabBarController new];
+    __weak RNTesterTabsIOSComponentView *weakSelf = self;
+    _tabBarController = [RNTesterTabBarController new];
     _tabBarController.delegate = self;
-    self.contentView = _tabBarController.view;
+    _tabBarController.didLayoutSubviews = ^{
+      [weakSelf updateContentInsets];
+    };
   }
   return self;
 }
 
+// The tab bar controller's view is in the window only while the controller is a child of the view
+// controller above it, so it is laid out, given traits and shown as a contained controller from the
+// start. A tab bar laid out in the window before its controller is contained, and again after, can
+// lose its items, as the iPhone Duo's side tab bar does.
 - (void)didMoveToWindow
 {
   [super didMoveToWindow];
-  if (self.window == nil) {
-    [_tabBarController willMoveToParentViewController:nil];
-    [_tabBarController removeFromParentViewController];
+  UIViewController *parentViewController = self.window != nil ? self.reactViewController : nil;
+  if (_tabBarController.parentViewController == parentViewController) {
     return;
   }
 
-  UIViewController *parentViewController = self.reactViewController;
-  if (parentViewController != nil && _tabBarController.parentViewController == nil) {
+  if (_tabBarController.parentViewController != nil) {
+    [_tabBarController willMoveToParentViewController:nil];
+    self.contentView = nil;
+    [_tabBarController removeFromParentViewController];
+  }
+  if (parentViewController != nil) {
     [parentViewController addChildViewController:_tabBarController];
+    // Sized before it enters the window, which lays it out right away.
+    _tabBarController.view.frame = RCTCGRectFromRect(_layoutMetrics.getContentFrame());
+    self.contentView = _tabBarController.view;
     [_tabBarController didMoveToParentViewController:parentViewController];
   }
 }
@@ -163,8 +197,8 @@ static constexpr CGFloat LegacyBottomInset = 65;
                                       image:[UIImage systemImageNamed:RCTNSStringFromString(tab.systemImage)]
                                         tag:0];
     viewController.tabBarItem.accessibilityIdentifier = RCTNSStringFromString(tab.testID);
-    viewController.safeAreaInsetsDidChange = ^(UIEdgeInsets insets) {
-      [weakSelf tabSafeAreaInsetsDidChange:insets];
+    viewController.safeAreaInsetsDidChange = ^{
+      [weakSelf updateContentInsets];
     };
     [viewControllers addObject:viewController];
   }
@@ -202,23 +236,21 @@ static constexpr CGFloat LegacyBottomInset = 65;
 
 #pragma mark - Insets
 
-- (void)updateEventEmitter:(const EventEmitter::Shared &)eventEmitter
+// Runs after each layout pass of the tab bar controller and after the change of the selected tab's
+// safe area that follows it, so it reads the tab bar and the safe area where the pass left them.
+- (void)updateContentInsets
 {
-  [super updateEventEmitter:eventEmitter];
-  // The insets can settle before the first event emitter arrives.
   UIViewController *selectedViewController = _tabBarController.selectedViewController;
-  if (selectedViewController.isViewLoaded && selectedViewController.view.window != nil) {
-    _contentInsets = UIEdgeInsetsZero;
-    [self tabSafeAreaInsetsDidChange:selectedViewController.view.safeAreaInsets];
+  if (_eventEmitter == nullptr || !selectedViewController.isViewLoaded || selectedViewController.view.window == nil) {
+    return;
   }
-}
-
-- (void)tabSafeAreaInsetsDidChange:(UIEdgeInsets)insets
-{
-  CGRect tabBarFrame = _tabBarController.tabBar.frame;
+  UIEdgeInsets insets = selectedViewController.view.safeAreaInsets;
+  UITabBar *tabBar = _tabBarController.tabBar;
+  CGRect tabBarFrame = tabBar.frame;
   CGRect bounds = _tabBarController.view.bounds;
-  BOOL hasBottomTabBar = !_tabBarController.tabBar.hidden && CGRectGetWidth(tabBarFrame) >= CGRectGetWidth(bounds) &&
-      CGRectGetMaxY(tabBarFrame) >= CGRectGetMaxY(bounds);
+  // Where a floating tab bar along the top replaces it, as on iPad, the tab bar has no window.
+  BOOL hasBottomTabBar = tabBar.window != nil && !tabBar.hidden &&
+      CGRectGetWidth(tabBarFrame) >= CGRectGetWidth(bounds) && CGRectGetMaxY(tabBarFrame) >= CGRectGetMaxY(bounds);
   // Never less at the top than the window's own inset (the status bar, a
   // notch): the tab's view reports its safe area once with no top inset while
   // the window is coming up, and RNTester's first frame drew its list 12
@@ -236,7 +268,7 @@ static constexpr CGFloat LegacyBottomInset = 65;
       insets.top = 16;
     }
   }
-  if (UIEdgeInsetsEqualToEdgeInsets(insets, _contentInsets) || _eventEmitter == nullptr) {
+  if (UIEdgeInsetsEqualToEdgeInsets(insets, _contentInsets)) {
     return;
   }
   _contentInsets = insets;
