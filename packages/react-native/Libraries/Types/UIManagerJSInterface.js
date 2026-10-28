@@ -13,4 +13,10 @@ import type {Spec, ViewManagerConfig} from '../ReactNative/NativeUIManager';
 export interface UIManagerJSInterface extends Spec {
   readonly getViewManagerConfig: (viewManagerName: string) => ViewManagerConfig;
   readonly hasViewManagerConfig: (viewManagerName: string) => boolean;
+  /**
+   * Whether `getViewManagerConfig` can return native view configs at all. On
+   * the new architecture it can only through the legacy view config interop
+   * layer.
+   */
+  readonly unstable_hasNativeViewConfigInterop?: () => boolean;
 }

@@ -339,6 +339,9 @@ const UIManagerJS: UIManagerJSInterface & {[string]: ViewManagerConfig} = {
   hasViewManagerConfig: (viewManagerName: string): boolean => {
     return unstable_hasComponent(viewManagerName);
   },
+  // The legacy view config interop layer installs `getUIManagerConstants`.
+  unstable_hasNativeViewConfigInterop: (): boolean =>
+    getUIManagerConstants != null,
   getConstants: (): UIManagerConstants => {
     if (getUIManagerConstants) {
       return getUIManagerConstantsCached();
