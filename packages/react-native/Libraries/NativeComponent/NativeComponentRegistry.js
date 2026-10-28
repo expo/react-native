@@ -76,6 +76,17 @@ export function get<Config extends {...}>(
     );
 
     if (verify) {
+      // Verification compares the static view config with the native one.
+      // With the new architecture and the legacy view config interop layer
+      // off, no component has a native view config, so skip the comparison
+      // instead of asking for each one, and say once that it was skipped. A
+      // component that uses its native view config (`native: true`) still
+      // asks for it below.
+      if (!native && !canObtainNativeViewConfigs()) {
+        logOnceThatVerificationIsSkipped();
+        return viewConfig;
+      }
+
       const nativeViewConfig = native
         ? viewConfig
         : getNativeComponentAttributes(name);
@@ -147,9 +158,33 @@ export function getWithFallback_DEPRECATED<Config extends {...}>(
   return FallbackNativeComponent;
 }
 
+// `UIManager` has implementations outside this repository. One without
+// `unstable_hasNativeViewConfigInterop` is assumed to have native view configs.
+function canObtainNativeViewConfigs(): boolean {
+  return UIManager.unstable_hasNativeViewConfigInterop?.() ?? true;
+}
+
+let hasLoggedSkippedVerification = false;
+
+function logOnceThatVerificationIsSkipped(): void {
+  if (hasLoggedSkippedVerification) {
+    return;
+  }
+  hasLoggedSkippedVerification = true;
+  // A log, not a warning: this is the app's configuration, not a mistake in it.
+  console.log(
+    'NativeComponentRegistry: static view configs are not being verified. ' +
+      'Verification compares them with native view configs, which the new ' +
+      'architecture provides only through the legacy view config interop ' +
+      'layer, and that layer is off.',
+  );
+}
+
 function hasNativeViewConfig(name: string): boolean {
   invariant(getRuntimeConfig == null, 'Unexpected invocation!');
-  return UIManager.getViewManagerConfig(name) != null;
+  // On the new architecture, `getViewManagerConfig` raises a soft error and
+  // returns null unless the legacy view config interop layer is on.
+  return UIManager.hasViewManagerConfig(name);
 }
 
 /**

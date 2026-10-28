@@ -106,6 +106,10 @@ const UIManagerJS: UIManagerJSInterface = {
   hasViewManagerConfig(viewManagerName: string): boolean {
     return getViewManagerConfig(viewManagerName) != null;
   },
+  // The old architecture reads view configs from the view managers.
+  unstable_hasNativeViewConfigInterop(): boolean {
+    return true;
+  },
 };
 
 // TODO (T45220498): Remove this.
