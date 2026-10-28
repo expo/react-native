@@ -95,8 +95,11 @@ static PointerEventTarget retargetPointerEvent(
     const UIManager& uiManager) {
   PointerEvent retargetedEvent(event);
 
-  // TODO: is dereferencing latestNodeToTarget without null checking safe?
+  // A node that has left the tree has no newest clone and cannot be a target.
   auto latestNodeToTarget = uiManager.getNewestCloneOfShadowNode(nodeToTarget);
+  if (latestNodeToTarget == nullptr) {
+    return {.event = retargetedEvent, .target = nullptr};
+  }
 
   // Adjust offsetX/Y to be relative to the retargeted node
   // HACK: This is a basic/incomplete implementation which simply subtracts
@@ -121,20 +124,8 @@ static PointerEventTarget retargetPointerEvent(
 static std::shared_ptr<const ShadowNode> getCaptureTargetOverride(
     PointerIdentifier pointerId,
     CaptureTargetOverrideRegistry& registry) {
-  auto pendingPointerItr = registry.find(pointerId);
-  if (pendingPointerItr == registry.end()) {
-    return nullptr;
-  }
-
-  std::weak_ptr<const ShadowNode> maybeTarget = pendingPointerItr->second;
-  if (maybeTarget.expired()) {
-    // target has expired so it should functionally behave the same as if it
-    // was removed from the override list.
-    registry.erase(pointerId);
-    return nullptr;
-  }
-
-  return maybeTarget.lock();
+  auto it = registry.find(pointerId);
+  return it == registry.end() ? nullptr : it->second;
 }
 
 /*
@@ -223,9 +214,10 @@ void PointerEventsProcessor::interceptPointerEvent(
       overrideTarget->getTag() != targetNode->getTag()) {
     auto retargeted =
         retargetPointerEvent(pointerEvent, *overrideTarget, uiManager);
-
-    pointerEvent = retargeted.event;
-    targetNode = retargeted.target;
+    if (retargeted.target != nullptr) {
+      pointerEvent = retargeted.event;
+      targetNode = retargeted.target;
+    }
   }
 
   if (type == "topClick") {
@@ -378,6 +370,13 @@ void PointerEventsProcessor::processPendingPointerCapture(
     const UIManager& uiManager) {
   auto pendingOverride = getCaptureTargetOverride(
       event.pointerId, pendingPointerCaptureTargetOverrides_);
+  // A capture target that has left the tree loses its capture:
+  // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
+  if (pendingOverride != nullptr &&
+      uiManager.getNewestCloneOfShadowNode(*pendingOverride) == nullptr) {
+    pendingPointerCaptureTargetOverrides_.erase(event.pointerId);
+    pendingOverride = nullptr;
+  }
   bool hasPendingOverride = pendingOverride != nullptr;
 
   auto activeOverride = getCaptureTargetOverride(
@@ -396,7 +395,8 @@ void PointerEventsProcessor::processPendingPointerCapture(
   if (hasActiveOverride && activeOverrideTag != pendingOverrideTag) {
     auto retargeted = retargetPointerEvent(event, *activeOverride, uiManager);
 
-    if (shouldEmitPointerEvent(
+    if (retargeted.target != nullptr &&
+        shouldEmitPointerEvent(
             *retargeted.target, "topLostPointerCapture", uiManager)) {
       eventDispatcher(
           *retargeted.target,
@@ -408,7 +408,8 @@ void PointerEventsProcessor::processPendingPointerCapture(
 
   if (hasPendingOverride && activeOverrideTag != pendingOverrideTag) {
     auto retargeted = retargetPointerEvent(event, *pendingOverride, uiManager);
-    if (shouldEmitPointerEvent(
+    if (retargeted.target != nullptr &&
+        shouldEmitPointerEvent(
             *retargeted.target, "topGotPointerCapture", uiManager)) {
       eventDispatcher(
           *retargeted.target,

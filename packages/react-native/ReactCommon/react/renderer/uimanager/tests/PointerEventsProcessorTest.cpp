@@ -395,4 +395,65 @@ TEST_F(PointerEventsProcessorTest, indirectPress) {
   EXPECT_EQ(upLog[0].eventName, "topPointerUp");
 }
 
+TEST_F(PointerEventsProcessorTest, captureOutlivesTheNodeItWasSetOn) {
+  auto eventPayload = PointerEvent{};
+  eventPayload.pointerId = 1;
+  eventPayload.buttons = 1;
+
+  dispatchPointerEvent(nodeAA_, "topPointerDown", eventPayload);
+
+  // Capture to a revision of nodeAA that is then released, as the revision an
+  // element was rendered with is once the element renders again
+  {
+    auto revision = nodeAA_->clone({});
+    processor_.setPointerCapture(eventPayload.pointerId, revision);
+  }
+
+  // The pointer moves over nodeBB but stays captured to nodeAA
+  auto moveLog = dispatchPointerEvent(nodeBB_, "topPointerMove", eventPayload);
+
+  ASSERT_FALSE(moveLog.empty());
+
+  EXPECT_EQ(moveLog.front().tag, nodeAA_->getTag());
+  EXPECT_EQ(moveLog.front().eventName, "topGotPointerCapture");
+
+  EXPECT_EQ(moveLog.back().tag, nodeAA_->getTag());
+  EXPECT_EQ(moveLog.back().eventName, "topPointerMove");
+}
+
+TEST_F(PointerEventsProcessorTest, captureEndsWhenTheTargetLeavesTheTree) {
+  auto eventPayload = PointerEvent{};
+  eventPayload.pointerId = 1;
+  eventPayload.buttons = 1;
+
+  dispatchPointerEvent(nodeAA_, "topPointerDown", eventPayload);
+  processor_.setPointerCapture(eventPayload.pointerId, nodeAA_);
+  dispatchPointerEvent(nodeAA_, "topPointerMove", eventPayload);
+
+  // Remove nodeAA from the tree
+  uiManager_->getShadowTreeRegistry().visit(
+      surfaceId_, [this](const ShadowTree& shadowTree) {
+        shadowTree.commit(
+            [this](const RootShadowNode& oldRootShadowNode) {
+              return std::static_pointer_cast<RootShadowNode>(
+                  oldRootShadowNode.cloneTree(
+                      nodeA_->getFamily(), [](const ShadowNode& oldShadowNode) {
+                        return oldShadowNode.clone({
+                            .children =
+                                ShadowNode::emptySharedShadowNodeSharedList(),
+                        });
+                      }));
+            },
+            {});
+      });
+
+  // The pointer moves over nodeBB and is no longer captured
+  auto moveLog = dispatchPointerEvent(nodeBB_, "topPointerMove", eventPayload);
+
+  ASSERT_FALSE(moveLog.empty());
+
+  EXPECT_EQ(moveLog.back().tag, nodeBB_->getTag());
+  EXPECT_EQ(moveLog.back().eventName, "topPointerMove");
+}
+
 } // namespace facebook::react
