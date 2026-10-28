@@ -46,7 +46,10 @@ using DispatchEvent = std::function<void(
     const EventPayload &payload)>;
 
 using PointerIdentifier = int32_t;
-using CaptureTargetOverrideRegistry = std::unordered_map<PointerIdentifier, std::weak_ptr<const ShadowNode>>;
+// The node each pointer is captured to. It is held strongly until the capture
+// ends because the node passed to `setPointerCapture` is released when its
+// element renders again. Events go to the node's newest clone.
+using CaptureTargetOverrideRegistry = std::unordered_map<PointerIdentifier, std::shared_ptr<const ShadowNode>>;
 
 using ActivePointerRegistry = std::unordered_map<PointerIdentifier, ActivePointer>;
 using PointerHoverTrackerRegistry = std::unordered_map<PointerIdentifier, PointerHoverTracker::Unique>;
