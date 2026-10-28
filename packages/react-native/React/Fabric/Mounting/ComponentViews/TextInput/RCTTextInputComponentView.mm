@@ -57,6 +57,47 @@ using namespace facebook::react;
 
 static NSSet<NSNumber *> *returnKeyTypesSet;
 
+/*
+ * A single-line field draws its text without its line height.
+ *
+ * `lineHeight` reaches the field as the paragraph style's minimum and maximum
+ * line height, and TextKit puts all of the extra leading above the glyphs: a
+ * 16 pt font in a 24 pt line is drawn 4 pt low. CSS splits the leading equally
+ * above and below (https://www.w3.org/TR/CSS2/visudet.html#leading). Layout
+ * makes a single-line field's text rect as tall as its line, and `UITextField`
+ * centers the font's own line in that rect, so the field centers its text, its
+ * placeholder and what is typed when the line height is left out of what it
+ * draws. The text kept in the state, which layout measures, keeps the line
+ * height (`_updateState`). A multi-line field keeps it in what it draws,
+ * because it spaces the lines.
+ */
+static NSParagraphStyle *RCTParagraphStyleWithLineHeights(NSParagraphStyle *style, CGFloat minimum, CGFloat maximum)
+{
+  NSMutableParagraphStyle *copy = [style mutableCopy];
+  copy.minimumLineHeight = minimum;
+  copy.maximumLineHeight = maximum;
+  return copy;
+}
+
+// Returns `string` with each paragraph's line height set to `minimum` and
+// `maximum`.
+static NSAttributedString *
+RCTAttributedStringWithLineHeights(NSAttributedString *string, CGFloat minimum, CGFloat maximum)
+{
+  NSMutableAttributedString *copy = [string mutableCopy];
+  [string enumerateAttribute:NSParagraphStyleAttributeName
+                     inRange:NSMakeRange(0, string.length)
+                     options:0
+                  usingBlock:^(NSParagraphStyle *style, NSRange range, BOOL *stop) {
+                    if (style != nil && (style.minimumLineHeight != minimum || style.maximumLineHeight != maximum)) {
+                      [copy addAttribute:NSParagraphStyleAttributeName
+                                   value:RCTParagraphStyleWithLineHeights(style, minimum, maximum)
+                                   range:range];
+                    }
+                  }];
+  return copy;
+}
+
 @implementation RCTTextInputComponentView {
   TextInputShadowNode::ConcreteState::Shared _state;
   UIView<RCTBackedTextInputViewProtocol, RCTBackedTextInputViewPendingEdit> *_backedTextInputView;
@@ -95,6 +136,11 @@ static NSSet<NSNumber *> *returnKeyTypesSet;
 
   BOOL _hasInputAccessoryView;
   CGSize _previousContentSize;
+
+  // The minimum and maximum line height that a single-line field leaves out
+  // of what it draws; zero when there is none.
+  CGFloat _minimumLineHeight;
+  CGFloat _maximumLineHeight;
 }
 
 #pragma mark - UIView overrides
@@ -157,8 +203,7 @@ static NSSet<NSNumber *> *returnKeyTypesSet;
   if (UITraitCollection.currentTraitCollection.preferredContentSizeCategory !=
       previousTraitCollection.preferredContentSizeCategory) {
     const auto &newTextInputProps = static_cast<const TextInputProps &>(*_props);
-    _backedTextInputView.defaultTextAttributes =
-        RCTNSTextAttributesFromTextAttributes(newTextInputProps.getEffectiveTextAttributes(RCTFontSizeMultiplier()));
+    _backedTextInputView.defaultTextAttributes = [self _defaultTextAttributesFor:newTextInputProps];
   }
 }
 
@@ -315,12 +360,28 @@ static NSSet<NSNumber *> *returnKeyTypesSet;
     _backedTextInputView.placeholderColor = RCTUIColorFromSharedColor(newTextInputProps.placeholderTextColor);
   }
 
-  if (newTextInputProps.textAttributes != oldTextInputProps.textAttributes) {
+  // Also rebuilt when `multiline` changes, because only a single-line field
+  // leaves the line height out.
+  if (newTextInputProps.textAttributes != oldTextInputProps.textAttributes ||
+      newTextInputProps.multiline != oldTextInputProps.multiline) {
+    const CGFloat leftOutMinimum = _minimumLineHeight;
+    const CGFloat leftOutMaximum = _maximumLineHeight;
     NSMutableDictionary<NSAttributedStringKey, id> *defaultAttributes =
-        RCTNSTextAttributesFromTextAttributes(newTextInputProps.getEffectiveTextAttributes(RCTFontSizeMultiplier()));
+        [self _defaultTextAttributesFor:newTextInputProps];
     defaultAttributes[RCTAttributedStringEventEmitterKey] =
         _backedTextInputView.defaultTextAttributes[RCTAttributedStringEventEmitterKey];
     _backedTextInputView.defaultTextAttributes = defaultAttributes;
+    // A backed view created for the new `multiline` value copied its text from
+    // the previous one, which drew the line height the other way.
+    if (newTextInputProps.multiline != oldTextInputProps.multiline && _backedTextInputView.attributedText.length > 0) {
+      if (_maximumLineHeight > 0 || _minimumLineHeight > 0) {
+        _backedTextInputView.attributedText =
+            RCTAttributedStringWithLineHeights(_backedTextInputView.attributedText, 0, 0);
+      } else if (leftOutMaximum > 0 || leftOutMinimum > 0) {
+        _backedTextInputView.attributedText =
+            RCTAttributedStringWithLineHeights(_backedTextInputView.attributedText, leftOutMinimum, leftOutMaximum);
+      }
+    }
   }
 
   if (newTextInputProps.selectionColor != oldTextInputProps.selectionColor) {
@@ -811,7 +872,12 @@ static NSSet<NSNumber *> *returnKeyTypesSet;
   NSAttributedString *attributedString = _backedTextInputView.attributedText;
   auto data = _state->getData();
   _lastStringStateWasUpdatedWith = attributedString;
-  data.attributedStringBox = RCTAttributedStringBoxFromNSAttributedString(attributedString);
+  // The state keeps the line height that the field leaves out, because layout
+  // measures the field with it.
+  data.attributedStringBox = RCTAttributedStringBoxFromNSAttributedString(
+      _maximumLineHeight > 0 || _minimumLineHeight > 0
+          ? RCTAttributedStringWithLineHeights(attributedString, _minimumLineHeight, _maximumLineHeight)
+          : attributedString);
   _mostRecentEventCount += _comingFromJS ? 0 : 1;
   data.mostRecentEventCount = _mostRecentEventCount;
   _state->updateState(std::move(data));
@@ -848,8 +914,28 @@ static NSSet<NSNumber *> *returnKeyTypesSet;
   [_backedTextInputView setSelectedTextRange:range notifyDelegate:YES];
 }
 
+// The field's default text attributes as it draws them. Records the line
+// height that a single-line field leaves out.
+- (NSMutableDictionary<NSAttributedStringKey, id> *)_defaultTextAttributesFor:(const TextInputProps &)props
+{
+  NSMutableDictionary<NSAttributedStringKey, id> *attributes =
+      RCTNSTextAttributesFromTextAttributes(props.getEffectiveTextAttributes(RCTFontSizeMultiplier()));
+  NSParagraphStyle *paragraphStyle = attributes[NSParagraphStyleAttributeName];
+  const BOOL leavesOut = !props.multiline && paragraphStyle != nil &&
+      (paragraphStyle.minimumLineHeight > 0 || paragraphStyle.maximumLineHeight > 0);
+  _minimumLineHeight = leavesOut ? paragraphStyle.minimumLineHeight : 0;
+  _maximumLineHeight = leavesOut ? paragraphStyle.maximumLineHeight : 0;
+  if (leavesOut) {
+    attributes[NSParagraphStyleAttributeName] = RCTParagraphStyleWithLineHeights(paragraphStyle, 0, 0);
+  }
+  return attributes;
+}
+
 - (void)_setAttributedString:(NSAttributedString *)attributedString
 {
+  if (_maximumLineHeight > 0 || _minimumLineHeight > 0) {
+    attributedString = RCTAttributedStringWithLineHeights(attributedString, 0, 0);
+  }
   if ([self _textOf:attributedString equals:_backedTextInputView.attributedText]) {
     return;
   }
