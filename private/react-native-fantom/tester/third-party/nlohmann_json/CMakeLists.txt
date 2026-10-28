@@ -8,4 +8,4 @@ set(CMAKE_VERBOSE_MAKEFILE on)
 
 add_library(nlohmann_json INTERFACE)
 
-target_include_directories(nlohmann_json INTERFACE include)
+target_include_directories(nlohmann_json SYSTEM INTERFACE include)
