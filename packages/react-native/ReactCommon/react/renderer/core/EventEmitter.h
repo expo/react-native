@@ -81,6 +81,33 @@ class EventEmitter {
   }
 
   /*
+   * Experimental API that will change in the future.
+   *
+   * Calls `syncFunc`, which dispatches events, then runs the event beat on the
+   * calling thread and returns once JavaScript has handled the events. Unlike
+   * `experimental_flushSync`, which only makes the next beat synchronous, the
+   * handlers have run when this returns, and React has committed the updates
+   * they made in discrete events. The JS thread and the calling thread are
+   * blocked until then, so use it only where the caller needs the result
+   * before it returns, and not on a path that runs every frame.
+   *
+   * Returns false, without calling `syncFunc`, when there is no event
+   * dispatcher.
+   */
+  template <typename Lambda>
+  bool experimental_dispatchSyncNow(Lambda syncFunc) const
+  {
+    auto eventDispatcher = eventDispatcher_.lock();
+    if (!eventDispatcher) {
+      return false;
+    }
+
+    syncFunc();
+    eventDispatcher->experimental_flushSyncNow();
+    return true;
+  }
+
+  /*
    * Initiates an event delivery process.
    * Is used by particular subclasses only.
    */
