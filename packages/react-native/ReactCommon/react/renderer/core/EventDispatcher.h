@@ -50,6 +50,13 @@ class EventDispatcher {
   void experimental_flushSync(Tag tag) const;
 
   /*
+   * Runs the event beat now, on the calling thread, and returns once
+   * JavaScript has handled the queued events. See
+   * `EventBeat::flushSynchronouslyNow`.
+   */
+  void experimental_flushSyncNow() const;
+
+  /*
    * Dispatches a raw event with asynchronous batched priority. Before the
    * dispatch we make sure that no other RawEvent of same type and same target
    * is on the queue.

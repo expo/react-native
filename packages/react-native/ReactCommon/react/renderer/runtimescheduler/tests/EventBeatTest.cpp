@@ -182,4 +182,44 @@ TEST_F(EventBeatTest, synchronousRequestIsNotStrandedBehindScheduledBeat) {
   EXPECT_EQ(stubQueue_->size(), 0);
 }
 
+TEST_F(EventBeatTest, flushSynchronouslyNowRunsTheBeatBeforeReturning) {
+  int beatCount = 0;
+  eventBeat_->setBeatCallback(
+      [&beatCount](jsi::Runtime& /*runtime*/) { beatCount++; });
+
+  eventBeat_->requestSynchronous();
+
+  // The beat runs without waiting for the platform to induce it.
+  std::thread driver([this]() {
+    stubQueue_->waitForTask();
+    stubQueue_->tick();
+  });
+  eventBeat_->flushSynchronouslyNow();
+  driver.join();
+
+  EXPECT_EQ(beatCount, 1);
+
+  // The request was consumed: the platform's next induce does nothing.
+  eventBeat_->induce();
+  EXPECT_EQ(beatCount, 1);
+  EXPECT_EQ(stubQueue_->size(), 0);
+}
+
+TEST_F(EventBeatTest, flushSynchronouslyNowDoesNothingAfterOwnerIsGone) {
+  int beatCount = 0;
+  eventBeat_->setBeatCallback(
+      [&beatCount](jsi::Runtime& /*runtime*/) { beatCount++; });
+
+  owner_.reset();
+
+  std::thread driver([this]() {
+    stubQueue_->waitForTask();
+    stubQueue_->tick();
+  });
+  eventBeat_->flushSynchronouslyNow();
+  driver.join();
+
+  EXPECT_EQ(beatCount, 0);
+}
+
 } // namespace facebook::react

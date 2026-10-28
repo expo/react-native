@@ -124,6 +124,20 @@ class EventBeat {
   void requestSynchronous() const;
 
   /*
+   * Runs the beat callback now, on the calling thread, via
+   * `RuntimeScheduler::executeNowOnTheSameThread`, and returns once it has
+   * finished. Both threads are blocked until then.
+   *
+   * `requestSynchronous` only makes the next beat synchronous: the beat still
+   * runs when the platform next calls `induce`. Use this instead when the
+   * caller must see the effects of the beat before it returns. It consumes any
+   * pending request; a beat that is already scheduled still runs later.
+   *
+   * Call it on the thread that calls `induce`.
+   */
+  void flushSynchronouslyNow() const;
+
+  /*
    * The callback will be executed once a consumer (for example EventQueue)
    * calls either `EventBeat::request` or `EventBeat::requestSynchronous`. The
    * callback will be executed on the proper thread.
@@ -145,6 +159,11 @@ class EventBeat {
    * Receiver might ignore the call if a beat was not requested.
    */
   void induce() const;
+
+  /*
+   * The beat callback, wrapped to run only while the owner is alive.
+   */
+  std::function<void(jsi::Runtime &)> makeBeat() const;
 
   BeatCallback beatCallback_;
   std::function<void()> induceCallback_;
