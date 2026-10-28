@@ -104,9 +104,9 @@ const RNTesterApp = ({
   );
   const colorScheme = useColorScheme();
   // Null until the native tabs report the insets of their content area (the
-  // status bar, the tab bar, a notch). The first frame is drawn before that
-  // event arrives, so until then the window's safe area stands in through
-  // `env()`, which the renderer resolves as it lays out.
+  // status bar, the tab bar, a notch), which they do before the first frame
+  // is drawn. Until then the window's safe area stands in through `env()`,
+  // which the renderer resolves as it lays out.
   const [contentInsets, setContentInsets] = useState<?ContentInsets>(null);
 
   const {
