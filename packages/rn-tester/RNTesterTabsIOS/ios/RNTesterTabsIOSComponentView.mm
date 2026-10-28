@@ -272,13 +272,35 @@ static constexpr CGFloat LegacyBottomInset = 65;
     return;
   }
   _contentInsets = insets;
-  static_cast<const RNTesterTabsIOSEventEmitter &>(*_eventEmitter)
-      .onContentInsetsChange({
-          .top = insets.top,
-          .left = insets.left,
-          .bottom = insets.bottom,
-          .right = insets.right,
-      });
+  [self sendContentInsets:insets];
+}
+
+// Until the first report arrives, RNTester pads its content by the window's safe area, which the tab bar
+// and the rules above can move by tens of points. Reported synchronously, JavaScript handles the event
+// and React commits and mounts the new padding before this returns, so the frame UIKit is preparing,
+// the first one at launch, draws the content where these insets put it.
+- (void)sendContentInsets:(UIEdgeInsets)insets
+{
+  const auto &eventEmitter = *_eventEmitter;
+  auto dispatch = [&]() {
+    // Discrete, so React commits the update inside the synchronous beat. The generated
+    // onContentInsetsChange leaves the category unspecified, which is not discrete in every configuration.
+    eventEmitter.dispatchEvent(
+        "contentInsetsChange",
+        [insets](facebook::jsi::Runtime &runtime) {
+          auto payload = facebook::jsi::Object(runtime);
+          payload.setProperty(runtime, "top", insets.top);
+          payload.setProperty(runtime, "left", insets.left);
+          payload.setProperty(runtime, "bottom", insets.bottom);
+          payload.setProperty(runtime, "right", insets.right);
+          return payload;
+        },
+        RawEvent::Category::Discrete);
+  };
+  // With no event dispatcher to run yet, it dispatches nothing; the event then goes as usual.
+  if (!eventEmitter.experimental_dispatchSyncNow(dispatch)) {
+    dispatch();
+  }
 }
 
 @end
