@@ -757,6 +757,18 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
       self, @selector(_lastSentSafeAreaInsets), lastSentSafeAreaInsets, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
+// From when the view moves into a window until its insets are read there.
+- (BOOL)_safeAreaInsetsUnreadInWindow
+{
+  return [objc_getAssociatedObject(self, _cmd) boolValue];
+}
+
+- (void)_setSafeAreaInsetsUnreadInWindow:(BOOL)unread
+{
+  objc_setAssociatedObject(
+      self, @selector(_safeAreaInsetsUnreadInWindow), unread ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
 static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, CGFloat threshold)
 {
   return ABS(lhs.left - rhs.left) <= threshold && ABS(lhs.top - rhs.top) <= threshold &&
@@ -779,6 +791,11 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
     return;
   }
 
+  const BOOL arrived = [self _safeAreaInsetsUnreadInWindow];
+  if (arrived) {
+    [self _setSafeAreaInsetsUnreadInWindow:NO];
+  }
+
   UIEdgeInsets insets = self.safeAreaInsets;
   NSValue *lastSentSafeAreaInsets = [self _lastSentSafeAreaInsets];
   if (lastSentSafeAreaInsets != nil &&
@@ -788,13 +805,34 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
 
   [self _setLastSentSafeAreaInsets:[NSValue valueWithUIEdgeInsets:insets]];
 
-  static_cast<const ViewEventEmitter &>(*_eventEmitter)
-      .onSafeAreaInsetsChange(
-          EdgeInsets{
-              .left = (Float)insets.left,
-              .top = (Float)insets.top,
-              .right = (Float)insets.right,
-              .bottom = (Float)insets.bottom});
+  const auto &eventEmitter = static_cast<const ViewEventEmitter &>(*_eventEmitter);
+  const auto edgeInsets = EdgeInsets{
+      .left = (Float)insets.left,
+      .top = (Float)insets.top,
+      .right = (Float)insets.right,
+      .bottom = (Float)insets.bottom};
+  // Inside a UIKit animation, such as a rotation or a split view resizing its
+  // columns, deliver the change before this layout pass returns. React commits
+  // the update the handler makes, and it mounts inside the animation, with its
+  // duration and curve. Otherwise the handler runs in the display phase, after
+  // the animation block has closed, and its layout lands in one step while the
+  // views around it animate. A nested change, from a view laid out by that
+  // mount, is delivered the usual way. So are a view's first insets, and its
+  // first in a window it has just moved into, such as a pushed or presented
+  // screen or a column being shown: the view is arriving, and its content would
+  // animate in.
+  static BOOL isDeliveringInsideAnimation = NO;
+  if (lastSentSafeAreaInsets != nil && !arrived && UIView.inheritedAnimationDuration > 0 &&
+      !isDeliveringInsideAnimation) {
+    isDeliveringInsideAnimation = YES;
+    const bool delivered =
+        eventEmitter.experimental_dispatchSyncNow([&]() { eventEmitter.onSafeAreaInsetsChange(edgeInsets); });
+    isDeliveringInsideAnimation = NO;
+    if (delivered) {
+      return;
+    }
+  }
+  eventEmitter.onSafeAreaInsetsChange(edgeInsets);
 }
 
 - (BOOL)_observesSafeAreaInsets
@@ -814,6 +852,7 @@ static BOOL RCTEdgeInsetsEqualWithThreshold(UIEdgeInsets lhs, UIEdgeInsets rhs, 
 {
   [super didMoveToWindow];
   if ([self _observesSafeAreaInsets]) {
+    [self _setSafeAreaInsetsUnreadInWindow:YES];
     [self setNeedsLayout];
   }
 }
