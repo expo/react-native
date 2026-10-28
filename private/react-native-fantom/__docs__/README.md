@@ -280,6 +280,44 @@ expect(root.getRenderedOutput().toJSX()).toEqual(
 );
 ```
 
+### When a prop you expect is not in the output
+
+The rendered output does not list the props a component was given. It lists what
+the C++ `Props` class reports about itself, so a prop can be missing for three
+reasons:
+
+- **The `Props` class does not report it.** Only props emitted from
+  `getDebugProps()` appear. Adding one is a few lines in the relevant
+  `Props.cpp`.
+- **Its value is the default.** `debugStringConvertibleItem` omits a value equal
+  to its default, so a prop at its default and a prop that is not implemented
+  look the same.
+- **The view was flattened away.** A `<View>` with only layout styles paints
+  nothing and never reaches the mounting layer, so `toJSX()` returns `null`.
+  Give it a `backgroundColor` to have something to assert on.
+
+Tests rely on each of these on purpose (`FlatList`'s `inverted` is checked by
+its absence), so none of them warns. When a read comes back empty and you need
+to know why, call `explain()`:
+
+```javascript
+Fantom.runTask(() => {
+  root.render(
+    <View
+      style={{width: 100, height: 50, backgroundColor: 'red', opacity: 1}}
+    />,
+  );
+});
+
+console.log(root.getRenderedOutput({props: ['opacity']}).explain());
+//   /opacity/ matched NOTHING
+//
+// Present anywhere in the tree: backgroundColor, height, width
+//
+// A prop is only visible here if the C++ Props class emits it from
+// getDebugProps() AND its value differs from the default. …
+```
+
 ### Limitations
 
 - `Fantom.runTask()` calls cannot be nested — doing so will throw.
