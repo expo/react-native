@@ -34,6 +34,7 @@
 #include <react/utils/ContextContainer.h>
 #include <react/utils/RunLoopObserverManager.h>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -169,7 +170,9 @@ void TesterAppDelegate::loadScript(
     const std::string& bundlePath,
     const std::string& sourcePath) {
   LOG(INFO) << "Loading script: " << bundlePath << " source " << sourcePath;
-  reactHost_->loadScript(bundlePath, sourcePath);
+  if (!reactHost_->loadScript(bundlePath, sourcePath)) {
+    throw std::runtime_error("Failed to load the JS bundle at " + bundlePath);
+  }
 
   reactHost_->runOnRuntimeScheduler(
       [this](jsi::Runtime& runtime) { runtime_ = &runtime; });
