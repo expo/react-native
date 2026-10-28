@@ -412,8 +412,12 @@ bool ReactHost::loadScriptFromBundlePath(const std::string& bundlePath) {
     reactInstance_->loadScript(std::move(script), bundlePath);
     LOG(INFO) << "Loaded JS bundle from bundle path: " << bundlePath;
     return true;
+  } catch (const std::exception& e) {
+    LOG(ERROR) << "Unable to read bundle from bundle path " << bundlePath
+               << ": " << e.what();
+    return false;
   } catch (...) {
-    LOG(WARNING) << "Unable to read bundle from bundle path" << bundlePath;
+    LOG(ERROR) << "Unable to read bundle from bundle path " << bundlePath;
     return false;
   }
 }
