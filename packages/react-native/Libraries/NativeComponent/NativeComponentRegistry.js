@@ -76,6 +76,15 @@ export function get<Config extends {...}>(
     );
 
     if (verify) {
+      // In bridgeless mode, native view configs come from the legacy view
+      // config interop binding. Without it, asking for one logs an error.
+      if (
+        global.RN$Bridgeless === true &&
+        global.RN$LegacyInterop_UIManager_getConstants == null
+      ) {
+        return viewConfig;
+      }
+
       const nativeViewConfig = native
         ? viewConfig
         : getNativeComponentAttributes(name);
@@ -149,7 +158,7 @@ export function getWithFallback_DEPRECATED<Config extends {...}>(
 
 function hasNativeViewConfig(name: string): boolean {
   invariant(getRuntimeConfig == null, 'Unexpected invocation!');
-  return UIManager.getViewManagerConfig(name) != null;
+  return UIManager.hasViewManagerConfig(name);
 }
 
 /**
