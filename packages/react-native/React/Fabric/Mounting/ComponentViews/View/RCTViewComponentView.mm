@@ -1480,7 +1480,9 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
           RCTCornerRadiiFromBorderRadii(borderMetrics.borderRadii),
           RCTUIEdgeInsetsFromEdgeInsets(borderMetrics.borderWidths),
           self.layer.bounds.size);
-      shadowLayer.zPosition = _borderLayer.zPosition;
+      // CSS paints box shadows above the background and below the border and the children
+      // (https://drafts.csswg.org/css-backgrounds-3/#box-shadow).
+      shadowLayer.zPosition = BACKGROUND_COLOR_ZPOSITION + 0.5;
       [layer addSublayer:shadowLayer];
       [_boxShadowLayers addObject:shadowLayer];
     }

@@ -408,4 +408,26 @@ static RCTViewComponentView *makeViewWithOutlineStyle(OutlineStyle outlineStyle)
   }
 }
 
+#pragma mark - box shadow paint order
+
+- (void)testInsetBoxShadowIsBelowChildrenWithoutBorderLayer
+{
+  RCTViewComponentView *view = [RCTViewComponentView new];
+  view.frame = CGRectMake(0, 0, 100, 100);
+
+  // A view without borders draws with Core Animation and has no border layer.
+  auto props = std::make_shared<ViewProps>();
+  props->boxShadow = {BoxShadow{.spreadDistance = 8, .color = colorFromRGBA(0, 0, 0, 255), .inset = true}};
+  [view updateProps:props oldProps:ViewShadowNode::defaultSharedProps()];
+
+  UIView *child = [UIView new];
+  [view addSubview:child];
+  [view finalizeUpdates:RNComponentViewUpdateMaskProps];
+
+  NSArray<CALayer *> *shadowLayers = [view valueForKey:@"_boxShadowLayers"];
+  XCTAssertEqual(shadowLayers.count, 1u);
+  XCTAssertNil([view valueForKey:@"_borderLayer"]);
+  XCTAssertLessThan(shadowLayers.firstObject.zPosition, child.layer.zPosition);
+}
+
 @end
