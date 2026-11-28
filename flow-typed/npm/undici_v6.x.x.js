@@ -38,6 +38,7 @@ declare module 'undici' {
     headers: Headers,
     body: {
       read(): Promise<Buffer>,
+      text(): Promise<string>,
       ...
     },
     ...

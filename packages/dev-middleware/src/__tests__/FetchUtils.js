@@ -62,12 +62,12 @@ export async function fetchJson<T extends JSONSerializable>(
 }
 
 /**
- * Change the global fetch dispatcher to allow self-signed certificates.
- * This runs with Jest's `beforeAll` and `afterAll`, and restores the original dispatcher.
+ * Serve the global `fetch` with undici's `request` so that it accepts the
+ * self-signed certificate of the HTTPS server created in ServerUtils.
+ * This runs with Jest's `beforeAll` and `afterAll`, and restores the original `fetch`.
  */
 export function withFetchSelfSignedCertsForAllTests(
   fetchSpy: JestMockFn<Parameters<typeof fetch>, ReturnType<typeof fetch>>,
-  fetchOriginal: typeof fetch,
 ) {
   const selfSignedCertDispatcher = new Agent({
     connect: {
@@ -76,15 +76,17 @@ export function withFetchSelfSignedCertsForAllTests(
   });
 
   beforeAll(() => {
-    // For some reason, setting the `selfSignedCertDispatcher` with `setGlobalDispatcher` doesn't work.
-    // Instead of using `setGlobalDispatcher`, we'll use a spy to intercept the fetch calls and add the dispatcher.
-    fetchSpy.mockImplementation((url, options) =>
-      fetchOriginal(url, {
+    // The global `fetch` runs on the undici bundled with Node, which may not
+    // accept a dispatcher from the undici package: Node 26 rejects one from
+    // undici 6. The package's own `fetch` throws under Jest, whose
+    // `performance` global lacks `markResourceTiming`.
+    fetchSpy.mockImplementation(async (url, options) => {
+      const {statusCode, body} = await request(url.toString(), {
         ...options,
-        // $FlowFixMe[prop-missing]: dispatcher
-        dispatcher: options?.dispatcher ?? selfSignedCertDispatcher,
-      }),
-    );
+        dispatcher: selfSignedCertDispatcher,
+      });
+      return new Response(await body.text(), {status: statusCode});
+    });
   });
 
   afterAll(() => {
