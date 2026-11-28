@@ -43,7 +43,7 @@ const packageJson = JSON.stringify({
     });
 
     afterAll(() => {
-      fs.rmdirSync(outputDir, {recursive: true});
+      fs.rmSync(outputDir, {recursive: true, force: true});
     });
 
     [
