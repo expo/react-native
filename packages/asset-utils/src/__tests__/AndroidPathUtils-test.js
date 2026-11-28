@@ -72,6 +72,12 @@ describe('getAndroidResourceFolderName', () => {
     expect(getAndroidResourceFolderName(NON_DRAWABLE_ASSET, 1)).toBe('raw');
     expect(getAndroidResourceFolderName(NON_DRAWABLE_ASSET, 1.25)).toBe('raw');
   });
+
+  test.each(['heic', 'heif'])('returns "raw" for %s images', type => {
+    expect(getAndroidResourceFolderName({...DRAWABLE_ASSET, type}, 1)).toBe(
+      'raw',
+    );
+  });
 });
 
 describe('getAndroidResourceIdentifier', () => {

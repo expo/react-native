@@ -48,10 +48,11 @@ function getAndroidAssetSuffix(scale /*: number */) /*: string */ {
 }
 
 // See https://developer.android.com/guide/topics/resources/drawable-resource.html
+// HEIC and HEIF are absent because the Android Gradle plugin fails the build on
+// such a file in a drawable folder, so those images are packaged as raw
+// resources.
 const drawableFileTypes /*: Set<string> */ = new Set([
   'gif',
-  'heic',
-  'heif',
   'jpeg',
   'jpg',
   'ktx',

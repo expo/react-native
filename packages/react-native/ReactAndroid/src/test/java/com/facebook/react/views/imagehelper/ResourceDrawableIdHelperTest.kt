@@ -8,11 +8,15 @@
 package com.facebook.react.views.imagehelper
 
 import android.content.Context
+import android.content.res.Resources
+import android.net.Uri
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
@@ -20,11 +24,15 @@ import org.robolectric.RuntimeEnvironment
 class ResourceDrawableIdHelperTest {
 
   private lateinit var context: Context
+  private val mockContext = mock<Context>()
+  private val resources = mock<Resources>()
 
   @Before
   fun setUp() {
     context = RuntimeEnvironment.getApplication()
     ResourceDrawableIdHelper.clear()
+    whenever(mockContext.resources).thenReturn(resources)
+    whenever(mockContext.packageName).thenReturn("test.images")
   }
 
   @After
@@ -71,5 +79,30 @@ class ResourceDrawableIdHelperTest {
   fun returnsZeroForUnknownDrawable() {
     assertThat(ResourceDrawableIdHelper.getResourceDrawableId(context, "unknown_image"))
         .isEqualTo(0)
+  }
+
+  @Test
+  fun uriFallsBackToRawResourceForNameWithoutADrawable() {
+    whenever(resources.getIdentifier("photo", "raw", "test.images")).thenReturn(42)
+
+    assertThat(ResourceDrawableIdHelper.getResourceDrawableUri(mockContext, "photo"))
+        .isEqualTo(Uri.parse("res:/42"))
+  }
+
+  @Test
+  fun uriPrefersDrawableOverRawResourceWithTheSameName() {
+    whenever(resources.getIdentifier("photo", "drawable", "test.images")).thenReturn(23)
+    whenever(resources.getIdentifier("photo", "raw", "test.images")).thenReturn(42)
+
+    assertThat(ResourceDrawableIdHelper.getResourceDrawableUri(mockContext, "photo"))
+        .isEqualTo(Uri.parse("res:/23"))
+  }
+
+  @Test
+  fun drawableIdIgnoresRawResources() {
+    whenever(resources.getIdentifier("photo", "raw", "test.images")).thenReturn(42)
+
+    assertThat(ResourceDrawableIdHelper.getResourceDrawableId(mockContext, "photo")).isEqualTo(0)
+    assertThat(ResourceDrawableIdHelper.getResourceDrawable(mockContext, "photo")).isNull()
   }
 }

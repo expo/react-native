@@ -17,15 +17,25 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 public object ResourceDrawableIdHelper {
   private val resourceDrawableIdMap: MutableMap<String, Int> = HashMap()
+  private val rawResourceIdMap: MutableMap<String, Int> = HashMap()
 
   @Synchronized
   @JvmStatic
   public fun clear() {
     resourceDrawableIdMap.clear()
+    rawResourceIdMap.clear()
   }
 
   @JvmStatic
-  public fun getResourceDrawableId(context: Context, name: String?): Int {
+  public fun getResourceDrawableId(context: Context, name: String?): Int =
+      getResourceId(context, name, "drawable", resourceDrawableIdMap)
+
+  private fun getResourceId(
+      context: Context,
+      name: String?,
+      type: String,
+      idMap: MutableMap<String, Int>,
+  ): Int {
     if (name.isNullOrEmpty()) {
       return 0
     }
@@ -38,14 +48,10 @@ public object ResourceDrawableIdHelper {
     }
 
     synchronized(this) {
-      return resourceDrawableIdMap.get(normalizedName) ?: addDrawableId(context, normalizedName)
+      return idMap.getOrPut(normalizedName) {
+        context.resources.getIdentifier(normalizedName, type, context.packageName)
+      }
     }
-  }
-
-  private fun addDrawableId(context: Context, normalizedName: String): Int {
-    val newId = context.resources.getIdentifier(normalizedName, "drawable", context.packageName)
-    resourceDrawableIdMap[normalizedName] = newId
-    return newId
   }
 
   @JvmStatic
@@ -56,7 +62,11 @@ public object ResourceDrawableIdHelper {
 
   @JvmStatic
   public fun getResourceDrawableUri(context: Context, name: String?): Uri {
-    val resId = getResourceDrawableId(context, name)
+    val drawableId = getResourceDrawableId(context, name)
+    // An image in a format that cannot be packaged as a drawable, such as HEIC, is bundled as a
+    // raw resource.
+    val resId =
+        if (drawableId > 0) drawableId else getResourceId(context, name, "raw", rawResourceIdMap)
     return if (resId > 0) {
       Uri.Builder().scheme(LOCAL_RESOURCE_SCHEME).path(resId.toString()).build()
     } else {
