@@ -79,23 +79,34 @@ static constexpr CGFloat LegacyBottomInset = 65;
 
     _tabBarController = [UITabBarController new];
     _tabBarController.delegate = self;
-    self.contentView = _tabBarController.view;
   }
   return self;
 }
 
+// The tab bar controller's view is installed only while the controller is a child of the view controller
+// above it, as view controller containment requires:
+// https://developer.apple.com/documentation/uikit/creating-a-custom-container-view-controller
+// A tab bar that the window lays out before its controller has a parent, and again after, can lose its
+// items, as the iPhone Duo's side tab bar does.
 - (void)didMoveToWindow
 {
   [super didMoveToWindow];
-  if (self.window == nil) {
-    [_tabBarController willMoveToParentViewController:nil];
-    [_tabBarController removeFromParentViewController];
+  UIViewController *parentViewController = self.window != nil ? self.reactViewController : nil;
+  if (_tabBarController.parentViewController == parentViewController) {
     return;
   }
 
-  UIViewController *parentViewController = self.reactViewController;
-  if (parentViewController != nil && _tabBarController.parentViewController == nil) {
+  if (_tabBarController.parentViewController != nil) {
+    [_tabBarController willMoveToParentViewController:nil];
+    self.contentView = nil;
+    [_tabBarController removeFromParentViewController];
+  }
+  if (parentViewController != nil) {
     [parentViewController addChildViewController:_tabBarController];
+    // Sized before it enters the window, so that its first layout there does not use the controller's
+    // default full-screen frame.
+    _tabBarController.view.frame = RCTCGRectFromRect(_layoutMetrics.getContentFrame());
+    self.contentView = _tabBarController.view;
     [_tabBarController didMoveToParentViewController:parentViewController];
   }
 }
