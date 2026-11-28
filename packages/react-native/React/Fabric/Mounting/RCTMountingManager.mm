@@ -279,6 +279,7 @@ static void RCTPerformMountInstructions(
   RCTExecuteOnMainQueue(^{
     UIView<RCTComponentViewProtocol> *componentView = [self->_componentViewRegistry findComponentViewWithTag:reactTag];
     [componentView setIsJSResponder:isJSResponder];
+    [componentView setBlocksNativeResponder:isJSResponder && blockNativeResponder];
   });
 }
 

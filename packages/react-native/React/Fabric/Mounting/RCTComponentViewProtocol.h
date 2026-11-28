@@ -123,6 +123,14 @@ typedef NS_OPTIONS(NSInteger, RNComponentViewUpdateMask) {
 - (void)setIsJSResponder:(BOOL)isJSResponder;
 
 /*
+ * Whether the view is the JavaScript responder and asked to block native
+ * responders, such as an enclosing scroll view, when it was granted the
+ * responder (the `blockNativeResponder` argument of `setIsJSResponder`).
+ */
+- (BOOL)blocksNativeResponder;
+- (void)setBlocksNativeResponder:(BOOL)blocksNativeResponder;
+
+/*
  * This is broken. Do not use.
  */
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(nullable NSSet<NSString *> *)props;

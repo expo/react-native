@@ -5,9 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#import <React/RCTComponentViewFactory.h>
+#import <React/RCTComponentViewRegistry.h>
 #import <React/RCTEnhancedScrollView.h>
+#import <React/RCTMountingManager.h>
 #import <React/RCTScrollContentViewComponentView.h>
 #import <React/RCTScrollViewComponentView.h>
+#import <React/RCTViewComponentView.h>
 #import <XCTest/XCTest.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/featureflags/ReactNativeFeatureFlagsDefaults.h>
@@ -19,6 +23,7 @@
 #import <react/renderer/core/EventDispatcher.h>
 #import <react/renderer/core/EventQueueProcessor.h>
 #import <react/renderer/core/StateUpdate.h>
+#import <react/renderer/mounting/ShadowView.h>
 #import <react/renderer/runtimescheduler/RuntimeScheduler.h>
 #import <react/utils/ContextContainer.h>
 
@@ -226,6 +231,36 @@ class ScrollContentStateDispatch {
   [view updateProps:props oldProps:nullptr];
   [view _keyboardWillChangeFrame:notification];
   XCTAssertEqual(view.scrollView.contentInset.bottom, 50);
+}
+
+- (void)testAncestorJSResponderDisablesScrollingOnlyWhileItBlocksNativeResponder
+{
+  RCTMountingManager *mountingManager = [RCTMountingManager new];
+  RCTComponentViewRegistry *registry = mountingManager.componentViewRegistry;
+  [registry.componentViewFactory registerComponentViewClass:[RCTViewComponentView class]];
+
+  facebook::react::ShadowView ancestorShadowView{};
+  ancestorShadowView.tag = 2;
+  UIView *ancestor =
+      [registry dequeueComponentViewWithComponentHandle:[RCTViewComponentView componentDescriptorProvider].handle
+                                                    tag:ancestorShadowView.tag]
+          .view;
+  RCTScrollViewComponentView *view = [[RCTScrollViewComponentView alloc] initWithFrame:CGRectMake(0, 0, 100, 100)];
+  [ancestor addSubview:view];
+  UIView *contentView = [UIView new];
+
+  [mountingManager setIsJSResponder:YES blockNativeResponder:NO forShadowView:ancestorShadowView];
+  XCTAssertTrue([view.scrollView touchesShouldCancelInContentView:contentView]);
+
+  [mountingManager setIsJSResponder:YES blockNativeResponder:YES forShadowView:ancestorShadowView];
+  XCTAssertFalse([view.scrollView touchesShouldCancelInContentView:contentView]);
+
+  [mountingManager setIsJSResponder:NO blockNativeResponder:YES forShadowView:ancestorShadowView];
+  XCTAssertTrue([view.scrollView touchesShouldCancelInContentView:contentView]);
+
+  [mountingManager setIsJSResponder:YES blockNativeResponder:YES forShadowView:ancestorShadowView];
+  [ancestor prepareForRecycle];
+  XCTAssertTrue([view.scrollView touchesShouldCancelInContentView:contentView]);
 }
 
 // XCTest assertion macros use variadic reporting and catch framework exceptions by value.

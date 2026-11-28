@@ -620,16 +620,16 @@ static inline UIViewAnimationOptions animationOptionsWithCurve(UIViewAnimationCu
 
 /*
  * Returns whether or not the scroll view interaction should be blocked because
- * JavaScript was found to be the responder.
+ * an ancestor is the JavaScript responder and blocks native responders.
  */
 - (BOOL)_shouldDisableScrollInteraction
 {
   UIView *ancestorView = self.superview;
 
   while (ancestorView) {
-    if ([ancestorView respondsToSelector:@selector(isJSResponder)]) {
-      BOOL isJSResponder = ((UIView<RCTComponentViewProtocol> *)ancestorView).isJSResponder;
-      if (isJSResponder) {
+    if ([ancestorView respondsToSelector:@selector(blocksNativeResponder)]) {
+      BOOL blocksNativeResponder = ((UIView<RCTComponentViewProtocol> *)ancestorView).blocksNativeResponder;
+      if (blocksNativeResponder) {
         return YES;
       }
     }
