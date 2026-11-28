@@ -216,7 +216,10 @@ class PreparePrefabHeadersTaskTest {
           it.input.set(listOf(PrefabPreprocessingEntry("sample_library", "input/" to "")))
         }
 
-    assertThat(task.inputs.files.files).containsExactly(header)
+    // Gradle reports the files by canonical path, and on macOS the temporary folder is behind a
+    // symbolic link (/var).
+    assertThat(task.inputs.files.files.map { it.canonicalFile })
+        .containsExactly(header.canonicalFile)
   }
 
   @Test
