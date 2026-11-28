@@ -217,8 +217,9 @@ static constexpr CGFloat LegacyBottomInset = 65;
 {
   CGRect tabBarFrame = _tabBarController.tabBar.frame;
   CGRect bounds = _tabBarController.view.bounds;
-  BOOL hasBottomTabBar = !_tabBarController.tabBar.hidden && CGRectGetWidth(tabBarFrame) >= CGRectGetWidth(bounds) &&
-      CGRectGetMaxY(tabBarFrame) >= CGRectGetMaxY(bounds);
+  // Where a floating tab bar along the top replaces it, as on iPad, the tab bar has no window.
+  BOOL hasBottomTabBar = _tabBarController.tabBar.window != nil && !_tabBarController.tabBar.hidden &&
+      CGRectGetWidth(tabBarFrame) >= CGRectGetWidth(bounds) && CGRectGetMaxY(tabBarFrame) >= CGRectGetMaxY(bounds);
   if (hasBottomTabBar) {
     insets.top = MAX(insets.top, LegacyTopInset);
     // Never go below the system inset: anything less leaves content under the tab bar, where taps switch tabs.
