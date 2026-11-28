@@ -27,11 +27,31 @@ static constexpr CGFloat LegacyTopInset = 50;
 static constexpr CGFloat LegacyBottomInset = 65;
 
 /**
+ * Reports each of its layout passes, after which the tab bar is where the pass
+ * put it: along the bottom, along a side, or replaced by a floating bar.
+ */
+@interface RNTesterTabBarController : UITabBarController
+@property (nonatomic, copy) void (^didLayoutSubviews)(void);
+@end
+
+@implementation RNTesterTabBarController
+
+- (void)viewDidLayoutSubviews
+{
+  [super viewDidLayoutSubviews];
+  if (self.didLayoutSubviews != nil) {
+    self.didLayoutSubviews();
+  }
+}
+
+@end
+
+/**
  * A tab's view controller, which reports when the tab bar or window changes
  * the area its content needs to clear.
  */
 @interface RNTesterTabViewController : UIViewController
-@property (nonatomic, copy) void (^safeAreaInsetsDidChange)(UIEdgeInsets insets);
+@property (nonatomic, copy) void (^safeAreaInsetsDidChange)(void);
 @end
 
 @implementation RNTesterTabViewController
@@ -40,7 +60,7 @@ static constexpr CGFloat LegacyBottomInset = 65;
 {
   [super viewSafeAreaInsetsDidChange];
   if (self.safeAreaInsetsDidChange != nil) {
-    self.safeAreaInsetsDidChange(self.view.safeAreaInsets);
+    self.safeAreaInsetsDidChange();
   }
 }
 
@@ -50,7 +70,7 @@ static constexpr CGFloat LegacyBottomInset = 65;
 @end
 
 @implementation RNTesterTabsIOSComponentView {
-  UITabBarController *_tabBarController;
+  RNTesterTabBarController *_tabBarController;
   // Holds the mounted React children, and moves into the selected tab.
   UIView *_containerView;
   NSArray<NSString *> *_tabKeys;
@@ -77,8 +97,12 @@ static constexpr CGFloat LegacyBottomInset = 65;
     _containerView = [UIView new];
     _containerView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
-    _tabBarController = [UITabBarController new];
+    __weak RNTesterTabsIOSComponentView *weakSelf = self;
+    _tabBarController = [RNTesterTabBarController new];
     _tabBarController.delegate = self;
+    _tabBarController.didLayoutSubviews = ^{
+      [weakSelf updateContentInsets];
+    };
   }
   return self;
 }
@@ -174,8 +198,8 @@ static constexpr CGFloat LegacyBottomInset = 65;
                                       image:[UIImage systemImageNamed:RCTNSStringFromString(tab.systemImage)]
                                         tag:0];
     viewController.tabBarItem.accessibilityIdentifier = RCTNSStringFromString(tab.testID);
-    viewController.safeAreaInsetsDidChange = ^(UIEdgeInsets insets) {
-      [weakSelf tabSafeAreaInsetsDidChange:insets];
+    viewController.safeAreaInsetsDidChange = ^{
+      [weakSelf updateContentInsets];
     };
     [viewControllers addObject:viewController];
   }
@@ -217,15 +241,19 @@ static constexpr CGFloat LegacyBottomInset = 65;
 {
   [super updateEventEmitter:eventEmitter];
   // The insets can settle before the first event emitter arrives.
-  UIViewController *selectedViewController = _tabBarController.selectedViewController;
-  if (selectedViewController.isViewLoaded && selectedViewController.view.window != nil) {
-    _contentInsets = UIEdgeInsetsZero;
-    [self tabSafeAreaInsetsDidChange:selectedViewController.view.safeAreaInsets];
-  }
+  _contentInsets = UIEdgeInsetsZero;
+  [self updateContentInsets];
 }
 
-- (void)tabSafeAreaInsetsDidChange:(UIEdgeInsets)insets
+// Runs when the selected tab's safe area changes and after each layout pass of the tab bar controller. The
+// safe area can change before the pass that moves the tab bar, and the insets depend on where the bar is.
+- (void)updateContentInsets
 {
+  UIViewController *selectedViewController = _tabBarController.selectedViewController;
+  if (!selectedViewController.isViewLoaded || selectedViewController.view.window == nil) {
+    return;
+  }
+  UIEdgeInsets insets = selectedViewController.view.safeAreaInsets;
   CGRect tabBarFrame = _tabBarController.tabBar.frame;
   CGRect bounds = _tabBarController.view.bounds;
   BOOL hasBottomTabBar = !_tabBarController.tabBar.hidden && CGRectGetWidth(tabBarFrame) >= CGRectGetWidth(bounds) &&
