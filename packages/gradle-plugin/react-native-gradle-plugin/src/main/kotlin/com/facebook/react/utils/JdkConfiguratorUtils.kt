@@ -32,6 +32,12 @@ internal object JdkConfiguratorUtils {
       if (project.hasProperty(INTERNAL_DISABLE_JAVA_VERSION_ALIGNMENT)) {
         return@allprojects
       }
+      // AGP finalizes a project's DSL when the project is evaluated, and fails the build if
+      // `finalizeDsl` is called after that. A project is already evaluated here if Gradle
+      // configured it before this app, or if another app in the build has already run this.
+      if (project.state.executed) {
+        return@allprojects
+      }
 
       val applicationAction =
           Action<AppliedPlugin> {
